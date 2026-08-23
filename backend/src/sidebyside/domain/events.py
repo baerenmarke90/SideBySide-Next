@@ -1,0 +1,54 @@
+"""Domain-Ereignisse.
+
+Die Domäne kennt weder Push noch Mail noch eine Integration. Sie stellt
+fest, dass etwas geschehen ist; was daraus folgt, entscheidet ein Worker.
+
+Ereignisnutzlasten enthalten bewusst KEINE sensiblen Inhalte. Ein Ereignis
+transportiert Verweise - wer, wo, welches Objekt -, nicht den Text einer
+Erinnerung. Zwei Gründe: die Nutzlast überlebt in der Outbox und in Logs,
+und nach der Umstellung auf Ende-zu-Ende-Verschlüsselung stünde der Text
+ohnehin nicht mehr zur Verfügung.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
+
+
+class EventType(StrEnum):
+    """Der Katalog. Ein ausgelieferter Name wird nicht umbenannt."""
+
+    MEMORY_CREATED = "MEMORY_CREATED"
+    HEART_MOMENT_CREATED = "HEART_MOMENT_CREATED"
+    MILESTONE_CREATED = "MILESTONE_CREATED"
+    COMMENT_CREATED = "COMMENT_CREATED"
+    PLAN_COMPLETED = "PLAN_COMPLETED"
+    WISH_COMPLETED = "WISH_COMPLETED"
+    IMPORTANT_DATE_APPROACHING = "IMPORTANT_DATE_APPROACHING"
+    PARTNER_THINKING_OF_YOU = "PARTNER_THINKING_OF_YOU"
+    REMINDER_DUE = "REMINDER_DUE"
+    PROFILE_PREFERENCE_CHANGED = "PROFILE_PREFERENCE_CHANGED"
+    PARTNER_JOINED = "PARTNER_JOINED"
+
+
+class DomainEvent(BaseModel):
+    """Ein fachliches Ereignis.
+
+    `payload` ist auf Verweise und unkritische Merkmale beschränkt. Wer
+    Inhalt braucht, lädt ihn beim Verarbeiten aus der Domäne - dann greifen
+    die Sichtbarkeitsregeln erneut, statt dass eine Kopie an ihnen vorbei
+    unterwegs ist.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    type: EventType
+    space_id: UUID
+    actor_id: UUID | None = None
+    subject_type: str
+    subject_id: UUID
+    payload: dict[str, Any] = {}
