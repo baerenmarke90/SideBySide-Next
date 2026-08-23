@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Android
+android/.gradle/
+android/local.properties
+android/**/build/
+*.apk
+*.keystore
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local media and data
+media/
+data/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
