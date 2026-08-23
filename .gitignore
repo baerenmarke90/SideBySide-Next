@@ -29,9 +29,16 @@ android/**/build/
 *.pem
 *.key
 
-# Local media and data
-media/
-data/
+# Lokale Medien und Daten.
+#
+# Mit Anker. Ohne fuehrenden Schraegstrich trifft ein Muster JEDES
+# Verzeichnis dieses Namens - "media/" hat das Quellpaket
+# backend/src/sidebyside/media/ verschluckt, und zwar lautlos: lokal lag
+# es auf der Platte, nur in der CI fehlte es.
+/backend/data/
+/backend/media/
+/data/
+/media/
 
 # Editors and OS
 .idea/
