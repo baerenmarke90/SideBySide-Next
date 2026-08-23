@@ -54,8 +54,10 @@ def engine() -> Iterator[Engine]:
         pytest.skip("Keine Datenbank erreichbar.")
 
     from sidebyside.db.base import Base
+    from sidebyside.identity import models as _identity  # noqa: F401
     from sidebyside.jobs import models as _jobs  # noqa: F401
     from sidebyside.outbox import models as _outbox  # noqa: F401
+    from sidebyside.relationship import models as _relationship  # noqa: F401
 
     eng = create_engine(INTEGRATION_DATABASE_URL, future=True)
     Base.metadata.create_all(eng)
@@ -80,3 +82,52 @@ def session(engine: Engine) -> Iterator[Session]:
         sitzung.close()
         transaktion.rollback()
         verbindung.close()
+
+
+@pytest.fixture
+def client(session: Session):  # type: ignore[no-untyped-def]
+    """Ein HTTP-Client auf derselben Transaktion wie der Test.
+
+    Ohne die Umleitung wuerde die Anwendung eigene Sitzungen oeffnen und
+    die noch nicht uebergebenen Testdaten nicht sehen.
+    """
+    from fastapi.testclient import TestClient
+
+    from sidebyside.db.session import get_session
+    from sidebyside.main import create_app
+
+    app = create_app()
+    app.dependency_overrides[get_session] = lambda: session
+    return TestClient(app, raise_server_exceptions=False)
+
+
+def make_account(session: Session, name: str = "Testperson"):  # type: ignore[no-untyped-def]
+    from sidebyside.identity.models import Account
+
+    konto = Account(display_name=name)
+    session.add(konto)
+    session.flush()
+    return konto
+
+
+def make_space(session: Session, founder):  # type: ignore[no-untyped-def]
+    from sidebyside.relationship.service import create_space
+
+    return create_space(session, founder)
+
+
+def sign_in(session: Session, account) -> str:  # type: ignore[no-untyped-def]
+    """Einen echten Access Token ausstellen.
+
+    Ueber den regulaeren Dienst, nicht an ihm vorbei - ein gefaelschter
+    Token wuerde genau den Weg ueberspringen, der geprueft werden soll.
+    """
+    from sidebyside.auth.sessions import start_session
+
+    _, tokens = start_session(session, account)
+    session.flush()
+    return tokens.access_token
+
+
+def auth(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}

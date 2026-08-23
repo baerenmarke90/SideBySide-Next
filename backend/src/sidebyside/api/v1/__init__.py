@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from sidebyside.api.v1 import health
+from sidebyside.api.v1 import health, spaces
 
 router = APIRouter()
 router.include_router(health.router)
+router.include_router(spaces.router)
