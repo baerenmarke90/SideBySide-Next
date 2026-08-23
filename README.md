@@ -26,7 +26,8 @@ allein anhand einer Ressourcen-ID.
 backend/        FastAPI, SQLAlchemy 2, Alembic, PostgreSQL
 web/            React, TypeScript, Vite
 android/        Kotlin, Jetpack Compose
-deploy/         Docker Compose für Self-Hosted und Entwicklung
+compose.yaml    Docker Compose für Self-Hosted
+deploy/         Docker Compose für die Entwicklungsdatenbank
 docs/           Architektur, Sicherheit, Datenschutzmodell, Abhängigkeiten
 specification/  Produktspezifikation als verbindliche Vorgabe
 tools/          Hilfsskripte
@@ -54,6 +55,23 @@ cd backend && pytest -m "not integration"   # ohne Datenbank
 
 Integrationstests brauchen eine erreichbare PostgreSQL-Instanz. Ohne sie
 werden sie übersprungen, nicht stillschweigend als bestanden gewertet.
+
+## Self-Hosted
+
+```bash
+cp .env.example .env    # und ausfüllen
+docker compose up -d
+```
+
+`compose.yaml` liegt bewusst im Wurzelverzeichnis: der Build-Kontext
+`./backend` muss unterhalb des Verzeichnisses liegen, in dem die
+Compose-Datei steht. Oberflächen wie Arcane oder Portainer legen jedes
+Projekt in einem eigenen Verzeichnis ab — ein Pfad wie `../backend` zeigt
+dort ins Leere. Das ganze Repository ist deshalb das Projektverzeichnis.
+
+Der Dienst `migrate` zieht das Schema einmalig hoch, bevor `api` und
+`worker` starten. Die Anwendung migriert nicht selbst; zwei startende
+API-Container würden das sonst gleichzeitig tun.
 
 ## Stand
 

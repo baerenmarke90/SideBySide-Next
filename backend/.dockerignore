@@ -1,0 +1,22 @@
+# Was nicht ins Image gehoert, gehoert auch nicht in den Build-Kontext:
+# der Kontext wird vollstaendig an den Docker-Daemon uebertragen, und ein
+# lokales .venv sind schnell einige hundert Megabyte ueber die Leitung.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+tests/
+
+.env
+.env.*
+!.env.example
+
+data/
+media/

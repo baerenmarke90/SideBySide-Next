@@ -1,0 +1,85 @@
+# Self-Hosted.
+#
+#   cp .env.example .env    # und ausfuellen
+#   docker compose up -d
+#
+# Die Datei liegt im Wurzelverzeichnis, nicht in deploy/, damit der
+# Build-Kontext ./backend unterhalb des Verzeichnisses liegt, in dem die
+# Compose-Datei steht. Oberflaechen wie Arcane oder Portainer legen ein
+# Projekt in einem eigenen Verzeichnis ab und kopieren nur die
+# Compose-Datei dorthin; ein Pfad wie ../backend zeigt dann ins Leere.
+#
+# Vier Bausteine: API, Worker, Migration, PostgreSQL. Medien liegen im
+# Volume oder, wenn konfiguriert, in einem S3-kompatiblen Speicher.
+
+x-backend: &backend
+  image: sidebyside/api:local
+  build:
+    context: ./backend
+  environment:
+    SBS_ENVIRONMENT: production
+    SBS_DEPLOYMENT: self_hosted
+    SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
+    SBS_MEDIA_ROOT: /var/lib/sidebyside/media
+  volumes:
+    - media_data:/var/lib/sidebyside/media
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER fehlt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt}
+      POSTGRES_DB: ${POSTGRES_DB:-sidebyside}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Das Schema wird vor dem ersten Start der Anwendung gezogen, nicht von
+  # ihr selbst: zwei startende API-Container wuerden sonst gleichzeitig
+  # migrieren. Ein einmaliger Dienst laeuft genau einmal durch, und api
+  # und worker warten auf seinen Erfolg.
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    healthcheck:
+      # Das schlanke Image bringt kein curl mit; Python ist ohnehin da.
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health")
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *backend
+    restart: unless-stopped
+    command: ["python", "-m", "sidebyside.jobs.runner"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+  media_data:
