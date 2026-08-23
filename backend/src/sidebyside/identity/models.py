@@ -160,3 +160,29 @@ class DeviceSession(IdMixin, Base):
         Index("ix_device_sessions_access_token_hash", "access_token_hash"),
         Index("ix_device_sessions_account_id", "account_id"),
     )
+
+
+class RateLimitEvent(IdMixin, Base):
+    """Ein gezaehlter Versuch.
+
+    Der Schluessel steht nur gehasht hier - er ist oft eine E-Mail-Adresse,
+    und wer wann einen Anmeldeversuch hatte, ist mehr Wissen, als die
+    Begrenzung braucht.
+    """
+
+    __tablename__ = "rate_limit_events"
+
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_rate_limit_events_action_key_hash_occurred_at",
+            "action",
+            "key_hash",
+            "occurred_at",
+        ),
+    )

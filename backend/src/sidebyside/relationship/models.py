@@ -139,3 +139,46 @@ class SpaceProfile(IdMixin, TimestampMixin, VersionMixin, Base):
             name="duration_display_mode_is_known",
         ),
     )
+
+
+class Invitation(IdMixin, TimestampMixin, Base):
+    """Eine Einladung in einen Space.
+
+    Der Token steht nur gehasht hier. Wer die Datenbank liest, kann damit
+    keinem fremden Space beitreten.
+
+    Angenommen wird genau einmal: `accepted_at` ist die Sperre. Zusammen mit
+    einer Zeilensperre beim Annehmen verhindert das, dass zwei gleichzeitige
+    Versuche beide durchgehen.
+    """
+
+    __tablename__ = "invitations"
+
+    space_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("spaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_by: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    accepted_by: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="SET NULL")
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_invitations_token_hash"),
+        Index("ix_invitations_space_id", "space_id"),
+    )
+
+    def is_open(self, at: datetime) -> bool:
+        """Offen heisst: nicht angenommen, nicht widerrufen, nicht abgelaufen."""
+        return self.accepted_at is None and self.revoked_at is None and self.expires_at > at

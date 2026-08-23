@@ -6,9 +6,11 @@ nicht ins Projekt.
 
 Stand: 2026-08-23
 
-Die Sicherheitsgrundlage kam ohne neue Abhaengigkeit aus: Tokens nutzen
-`secrets` und `hashlib` aus der Standardbibliothek. Eine
-Kryptografie-Bibliothek weniger ist eine Angriffsflaeche weniger.
+`argon2-cffi` ist die einzige Kryptografie-Bibliothek im Projekt und deckt
+genau einen Zweck ab: die Ableitung von Passwoertern. Tokens kommen mit
+`secrets` und `hashlib` aus der Standardbibliothek aus - fuer einen Wert
+mit voller Entropie waere ein absichtlich langsames Verfahren nur eine
+Bremse bei jeder Anfrage.
 
 ## Backend — Laufzeit
 
@@ -22,6 +24,7 @@ Kryptografie-Bibliothek weniger ist eine Angriffsflaeche weniger.
 | pydantic | 2.13.4 | PyPI | MIT |
 | pydantic-settings | 2.15.0 | PyPI | MIT |
 | uuid6 | 2025.0.1 | PyPI | MIT |
+| argon2-cffi | 25.1.0 | PyPI | MIT |
 
 ## Backend — Entwicklung
 

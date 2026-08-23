@@ -15,11 +15,11 @@ from uuid import UUID
 from fastapi import Depends, Path, Request
 from sqlalchemy.orm import Session
 
-from sidebyside.auth.sessions import authenticate
+from sidebyside.auth.sessions import resolve
 from sidebyside.core.errors import ErrorCode, NotFoundError, UnauthenticatedError
 from sidebyside.core.ids import parse_id
 from sidebyside.db.session import get_session
-from sidebyside.identity.models import Account
+from sidebyside.identity.models import Account, DeviceSession
 from sidebyside.relationship.models import Membership
 from sidebyside.relationship.service import SpaceErrorCode, require_membership
 
@@ -40,11 +40,21 @@ def _bearer_token(request: Request) -> str:
     return wert.strip()
 
 
+def current_session(request: Request, session: DbSession) -> DeviceSession:
+    """Die Geraetesitzung hinter dem Token.
+
+    Fuer Abmelden und Sitzungsverwaltung - alles andere braucht nur den
+    Account.
+    """
+    return resolve(session, _bearer_token(request))[0]
+
+
 def current_account(request: Request, session: DbSession) -> Account:
-    return authenticate(session, _bearer_token(request))
+    return resolve(session, _bearer_token(request))[1]
 
 
 CurrentAccount = Annotated[Account, Depends(current_account)]
+CurrentSession = Annotated[DeviceSession, Depends(current_session)]
 
 
 @dataclass(frozen=True)

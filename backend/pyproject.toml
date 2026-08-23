@@ -12,6 +12,7 @@ dependencies = [
     "pydantic>=2.13",
     "pydantic-settings>=2.15",
     "uuid6>=2025.0.1",
+    "argon2-cffi>=25.1",
 ]
 
 [project.optional-dependencies]

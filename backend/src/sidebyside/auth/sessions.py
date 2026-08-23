@@ -64,7 +64,12 @@ def start_session(
 
 
 def authenticate(session: Session, access_token: str) -> Account:
-    """Den Account zu einem Access Token ermitteln.
+    """Der Account zu einem Access Token."""
+    return resolve(session, access_token)[1]
+
+
+def resolve(session: Session, access_token: str) -> tuple[DeviceSession, Account]:
+    """Sitzung und Account zu einem Access Token ermitteln.
 
     Jeder Fehlschlag ergibt dieselbe Meldung. Ein Aufrufer soll nicht
     unterscheiden koennen, ob ein Token unbekannt, abgelaufen oder
@@ -91,7 +96,7 @@ def authenticate(session: Session, access_token: str) -> Account:
         raise UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
 
     geraet.last_used_at = jetzt
-    return account
+    return geraet, account
 
 
 def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
