@@ -57,9 +57,21 @@ werden sie übersprungen, nicht stillschweigend als bestanden gewertet.
 
 ## Stand
 
-Milestone M0 — technische Plattform. Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-für den Zielaufbau und [specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md)
-für den fachlichen Umfang.
+**M0 — technische Plattform.** Fehlerformat, Transactional Outbox,
+Job-Warteschlange, MediaStore- und Provider-Schnittstellen, E2EE-Grenze.
+
+**Sicherheitsgrundlage.** Account, Space, Membership, Tenant Context und
+Membership Guard, dazu Geraetesitzungen mit rotierenden Tokens. Jeder
+Zugriff auf Space-Daten laeuft durch `require_membership`, bevor eine
+Ressource geladen wird.
+
+Als Naechstes M1: Anmeldewege (Magic Link, Passkey, OIDC, lokales
+Passwort), Invitations, Partnerprofile und Praeferenzen.
+
+Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
+[docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten und
+[specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md) für den
+fachlichen Umfang.
 
 ## Lizenz
 

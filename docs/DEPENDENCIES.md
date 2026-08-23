@@ -6,6 +6,10 @@ nicht ins Projekt.
 
 Stand: 2026-08-23
 
+Die Sicherheitsgrundlage kam ohne neue Abhaengigkeit aus: Tokens nutzen
+`secrets` und `hashlib` aus der Standardbibliothek. Eine
+Kryptografie-Bibliothek weniger ist eine Angriffsflaeche weniger.
+
 ## Backend — Laufzeit
 
 | Paket | Version | Quelle | Lizenz |
