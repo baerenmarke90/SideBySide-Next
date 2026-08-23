@@ -13,9 +13,13 @@
 # Volume oder, wenn konfiguriert, in einem S3-kompatiblen Speicher.
 
 x-backend: &backend
-  image: sidebyside/api:local
   build:
     context: ./backend
+  # Ohne image: gibt es keinen Namen, den eine Oberflaeche aus der
+  # Registry zu ziehen versucht - Arcane hat genau das getan und ist an
+  # "pull access denied" gescheitert. pull_policy sagt es zusaetzlich
+  # ausdruecklich: dieses Image entsteht hier, es wird nicht geholt.
+  pull_policy: build
   environment:
     SBS_ENVIRONMENT: production
     SBS_DEPLOYMENT: self_hosted
