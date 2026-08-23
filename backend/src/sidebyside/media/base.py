@@ -56,8 +56,7 @@ class MediaStore(ABC):
         """Entfernen. Ein bereits fehlendes Objekt ist kein Fehler."""
 
     @abstractmethod
-    def exists(self, storage_key: str) -> bool:
-        ...
+    def exists(self, storage_key: str) -> bool: ...
 
     @abstractmethod
     def create_read_url(self, storage_key: str, expires_in: timedelta) -> str | None:
