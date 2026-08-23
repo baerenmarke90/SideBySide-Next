@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    # Die Integrationstests laufen hier gegen echtes PostgreSQL. Auf
+    # Entwicklungsrechnern ohne Datenbank werden sie uebersprungen - die CI
+    # ist der Ort, an dem sie verbindlich laufen.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sidebyside
+          POSTGRES_PASSWORD: sidebyside
+          POSTGRES_DB: sidebyside_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sidebyside -d sidebyside_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      SBS_ENVIRONMENT: test
+      SBS_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+      SBS_TEST_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Abhaengigkeiten
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src tests
+
+      - name: Formatierung
+        run: ruff format --check src tests
+
+      - name: Typpruefung
+        run: mypy
+
+      - name: Migrationen
+        run: alembic upgrade head
+
+      - name: Migrationen sind vollstaendig
+        # Weicht das Modell vom Schema ab, fehlt eine Migration. Das faellt
+        # sonst erst beim Deployment auf.
+        run: |
+          alembic revision --autogenerate -m "drift check" --rev-id drift_check
+          if grep -qE "op\.(create|drop|alter|add)_" alembic/versions/drift_check_*.py; then
+            echo "Modell und Migrationen weichen ab:"
+            cat alembic/versions/drift_check_*.py
+            exit 1
+          fi
+          rm alembic/versions/drift_check_*.py
+
+      - name: Tests
+        run: pytest -q
+
+      - name: Integrationstests sind wirklich gelaufen
+        # Ein uebersprungener Sicherheitstest darf nicht wie ein bestandener
+        # aussehen. Hier muessen sie tatsaechlich gelaufen sein.
+        run: |
+          set -o pipefail
+          pytest -m integration -q --no-header | tee /tmp/integration.txt
+          if grep -qE "[0-9]+ skipped" /tmp/integration.txt; then
+            echo "Integrationstests wurden uebersprungen - Datenbank nicht erreichbar?"
+            exit 1
+          fi
+          if ! grep -qE "[0-9]+ passed" /tmp/integration.txt; then
+            echo "Keine Integrationstests gelaufen."
+            exit 1
+          fi
+
+  secrets:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  provenance:
+    name: Provenance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Pflichtdokumente vorhanden
+        run: |
+          for datei in PROVENANCE.md docs/DEPENDENCIES.md \
+                       docs/SECURITY.md docs/PRIVACY-MODEL.md \
+                       specification/PRODUCT-SPEC.md; do
+            test -f "$datei" || { echo "fehlt: $datei"; exit 1; }
+          done
+      - name: Keine Lizenzdatei ohne ausdrueckliche Entscheidung
+        # Die Lizenz fuer den eigenen Quellcode ist bewusst offen. Eine
+        # versehentlich hinzugefuegte LICENSE waere ein Angebot, das so
+        # nicht beschlossen wurde.
+        run: |
+          if ls LICENSE LICENSE.* COPYING 2>/dev/null | grep -q .; then
+            echo "LICENSE vorhanden, aber noch keine Lizenzentscheidung getroffen."
+            exit 1
+          fi
