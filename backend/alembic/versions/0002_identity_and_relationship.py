@@ -4,6 +4,13 @@ Die Sicherheitsgrundlage: Accounts, Anmeldewege, Geraetesitzungen, Spaces
 und Mitgliedschaften. Vor jeder Inhaltsdomaene, damit kein Inhalt entstehen
 kann, bevor klar ist, wem er gehoert.
 
+Zu Constraint-Namen: hier steht der NACKTE Name, etwa "status_is_known".
+Die Namenskonvention aus db/base.py setzt "ck_<tabelle>_" davor. Wer den
+bereits aufgeloesten Namen einsetzt, bekommt ihn ein zweites Mal
+praefixiert - und bei laengeren Namen zusaetzlich an der 63-Zeichen-Grenze
+von PostgreSQL abgeschnitten. Die Drift-Pruefung in der CI faengt das,
+aber es kostet einen Durchlauf.
+
 Revision ID: 0002
 Revises: 0001
 Create Date: 2026-08-23
@@ -71,7 +78,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("email", name="uq_account_emails_email"),
         # Klein geschrieben abgelegt - sonst waeren "A@b.de" und "a@b.de"
         # zwei Adressen und die Eindeutigkeit haette ein Loch.
-        sa.CheckConstraint("email = lower(email)", name="ck_account_emails_email_is_lowercase"),
+        sa.CheckConstraint("email = lower(email)", name="email_is_lowercase"),
     )
 
     op.create_table(
@@ -93,7 +100,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("provider", "subject", name="uq_auth_identities_provider_subject"),
         sa.CheckConstraint(
             "provider IN ('MAGIC_LINK', 'PASSKEY', 'LOCAL_PASSWORD', 'OIDC')",
-            name="ck_auth_identities_provider_is_known",
+            name="provider_is_known",
         ),
     )
     op.create_index("ix_auth_identities_account_id", "auth_identities", ["account_id"])
@@ -167,9 +174,9 @@ def upgrade() -> None:
         sa.UniqueConstraint("space_id", "account_id", name="uq_memberships_space_id_account_id"),
         sa.CheckConstraint(
             "status IN ('ACTIVE', 'LEFT', 'REMOVED')",
-            name="ck_memberships_status_is_known",
+            name="status_is_known",
         ),
-        sa.CheckConstraint("role IN ('PARTNER')", name="ck_memberships_role_is_known"),
+        sa.CheckConstraint("role IN ('PARTNER')", name="role_is_known"),
     )
     # Der Guard fragt bei jeder Anfrage nach genau dieser Kombination.
     op.create_index(
@@ -197,7 +204,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("space_id", name="uq_space_profiles_space_id"),
         sa.CheckConstraint(
             "duration_display_mode IN ('YEARS_MONTHS', 'DAYS')",
-            name="ck_space_profiles_duration_display_mode_is_known",
+            name="duration_display_mode_is_known",
         ),
     )
 
