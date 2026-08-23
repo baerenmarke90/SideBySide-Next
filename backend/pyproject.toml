@@ -20,8 +20,8 @@ dev = [
     "pytest-asyncio>=1.4",
     "httpx>=0.28",
     "httpx2>=0.1",
-    "ruff>=0.16",
-    "mypy>=2.3",
+    "ruff==0.16.4",
+    "mypy==2.3.1",
 ]
 
 [build-system]
@@ -47,6 +47,11 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+# Ausdruecklich, nicht geraten: in der CI ist das Paket installiert und
+# waere sonst Fremdcode, lokal liegt es unter src und waere eigener.
+known-first-party = ["sidebyside", "tests"]
 
 [tool.mypy]
 python_version = "3.12"
