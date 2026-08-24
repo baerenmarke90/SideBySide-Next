@@ -29,7 +29,7 @@ bekommt eine neue Datei.
 - [x] HTTP-Integrationstests mit dem echten produktiven Session-Lifecycle ergänzen.
 - [x] Membership-Änderungen je Space serialisieren; Race mit zwei Einladungen testen.
 - [x] Refresh-Rotation atomar machen; parallelen Refresh testen.
-- [ ] Bootstrap der ersten Self-Hosted-Registrierung absichern und serialisieren.
+- [x] Bootstrap der ersten Self-Hosted-Registrierung absichern und serialisieren.
 - [x] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
 - [ ] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entscheiden.
 
