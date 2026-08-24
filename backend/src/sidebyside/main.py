@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from sidebyside.api.errors import register_error_handlers
+from sidebyside.api.openapi import SideBySideFastAPI
 from sidebyside.api.transport import RequireHttpsForExternalHostsMiddleware
 from sidebyside.api.v1 import router as v1_router
 from sidebyside.config import get_settings
@@ -21,7 +22,7 @@ logging.basicConfig(
 def create_app() -> FastAPI:
     settings = get_settings()
 
-    app = FastAPI(
+    app = SideBySideFastAPI(
         title="SideBySide Next",
         version="0.1.0",
         description="Application Core. OpenAPI ist der verbindliche Vertrag.",
