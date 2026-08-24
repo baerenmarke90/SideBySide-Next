@@ -28,6 +28,17 @@ class Environment(StrEnum):
     PRODUCTION = "production"
 
 
+class MailTransport(StrEnum):
+    """Wie ausgehende Post das Haus verlaesst.
+
+    `LOG` ist der Entwicklungsweg und schreibt die Nachricht ins Log -
+    mitsamt Einmal-Token. In Produktion ist er deshalb nicht zulaessig.
+    """
+
+    LOG = "log"
+    SMTP = "smtp"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SBS_", env_file=".env", extra="ignore")
 
@@ -52,6 +63,19 @@ class Settings(BaseSettings):
     # Instanz. SecretStr verhindert, dass ein Settings-Repr den Wert zeigt.
     bootstrap_token: SecretStr | None = None
 
+    # Die oeffentliche Adresse dieser Instanz. Sie steht in jedem Magic
+    # Link; aus einem Request-Header darf sie nicht kommen, sonst baut ein
+    # gefaelschter Host-Header den Link auf einen fremden Server um.
+    public_base_url: str = "http://localhost:8000"
+
+    mail_transport: MailTransport = MailTransport.LOG
+    mail_from: str = "no-reply@localhost"
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: SecretStr | None = None
+    smtp_starttls: bool = True
+
     @field_validator("bootstrap_token", mode="before")
     @classmethod
     def empty_bootstrap_token_is_unset(cls, value: object) -> object | None:
@@ -69,6 +93,20 @@ class Settings(BaseSettings):
             secret = self.bootstrap_token.get_secret_value()
             if len(secret) < 32:
                 raise ValueError("SBS_BOOTSTRAP_TOKEN must contain at least 32 characters.")
+        return self
+
+    @model_validator(mode="after")
+    def production_sends_real_mail(self) -> Self:
+        """In Produktion kein Log-Versand und keine Klartext-Links im Log.
+
+        Ein Fehlstart ist hier die freundlichere Antwort: der stille
+        Gegenentwurf waere eine Instanz, die Anmeldenachweise ins Log
+        schreibt, und das faellt niemandem auf.
+        """
+        if self.is_production and self.mail_transport is not MailTransport.SMTP:
+            raise ValueError("Production requires SBS_MAIL_TRANSPORT=smtp.")
+        if self.is_production and not self.public_base_url.startswith("https://"):
+            raise ValueError("Production requires an https SBS_PUBLIC_BASE_URL.")
         return self
 
 

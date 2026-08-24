@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from sidebyside.config import Environment, Settings
+from sidebyside.config import Environment, MailTransport, Settings
 from sidebyside.main import create_app
 
 
@@ -54,7 +54,11 @@ class TestProduktion:
         """Ein offenes Schema ist eine Landkarte der Angriffsflaeche."""
         monkeypatch.setattr(
             "sidebyside.main.get_settings",
-            lambda: Settings(environment=Environment.PRODUCTION),
+            lambda: Settings(
+                environment=Environment.PRODUCTION,
+                mail_transport=MailTransport.SMTP,
+                public_base_url="https://app.example",
+            ),
         )
         produktion = TestClient(
             create_app(), base_url="http://localhost", raise_server_exceptions=False

@@ -68,6 +68,16 @@ services:
       # Wert laesst die Erstregistrierung sicher geschlossen.
       SBS_BOOTSTRAP_TOKEN: "${SBS_BOOTSTRAP_TOKEN:-}"
       SBS_ALLOWED_HOSTS: '${SBS_ALLOWED_HOSTS:-["localhost","127.0.0.1"]}'
+      # Anmelde- und Wiederherstellungslinks werden mit dieser Adresse
+      # gebaut - nie aus dem Host-Header, den ein Angreifer setzen kann.
+      SBS_PUBLIC_BASE_URL: "${SBS_PUBLIC_BASE_URL:-http://localhost:8000}"
+      SBS_MAIL_TRANSPORT: "${SBS_MAIL_TRANSPORT:-log}"
+      SBS_MAIL_FROM: "${SBS_MAIL_FROM:-no-reply@localhost}"
+      SBS_SMTP_HOST: "${SBS_SMTP_HOST:-localhost}"
+      SBS_SMTP_PORT: "${SBS_SMTP_PORT:-587}"
+      SBS_SMTP_USERNAME: "${SBS_SMTP_USERNAME:-}"
+      SBS_SMTP_PASSWORD: "${SBS_SMTP_PASSWORD:-}"
+      SBS_SMTP_STARTTLS: "${SBS_SMTP_STARTTLS:-true}"
       # Uvicorn wertet Forwarded Headers nur von diesen Adressen aus. Fuer
       # einen Reverse-Proxy muss hier dessen kleinster moeglicher IP-Bereich
       # eingetragen werden - niemals pauschal "*".
