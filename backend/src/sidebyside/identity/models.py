@@ -12,15 +12,19 @@ from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import (
+    BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
     Index,
+    LargeBinary,
     SmallInteger,
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -115,10 +119,16 @@ class AccountEmail(IdMixin, TimestampMixin, Base):
 class AuthIdentity(IdMixin, TimestampMixin, Base):
     """Ein Anmeldeweg.
 
-    `subject` ist der Bezeichner beim jeweiligen Verfahren: die Adresse beim
-    Magic Link, die Credential-ID beim Passkey, das Subject beim OIDC.
+    `subject` ist der Bezeichner beim jeweiligen Verfahren. Fuer OIDC ist
+    ein Subject erst zusammen mit dem Issuer eindeutig; `connection_id`
+    bezeichnet die konfigurierte Verbindung (zum Beispiel ``pocket-id``).
     `secret_hash` traegt ausschliesslich Abgeleitetes - nie ein Geheimnis im
     Klartext.
+
+    Passkeys liegen in einem eigenen Modell, weil Credential-ID, Public Key
+    und Signaturzaehler keine Eigenschaften einer generischen Identitaet
+    sind. MAGIC_LINK und PASSKEY bleiben hier als Legacy-Werte zulaessig,
+    damit bestehende Installationen ohne Datenverlust migrieren koennen.
     """
 
     __tablename__ = "auth_identities"
@@ -130,16 +140,144 @@ class AuthIdentity(IdMixin, TimestampMixin, Base):
     )
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     subject: Mapped[str] = mapped_column(String(512), nullable=False)
+    issuer: Mapped[str | None] = mapped_column(String(512))
+    connection_id: Mapped[str | None] = mapped_column(String(128))
     secret_hash: Mapped[str | None] = mapped_column(String(255))
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
-        UniqueConstraint("provider", "subject", name="uq_auth_identities_provider_subject"),
+        # OIDC definiert die externe Identitaet als (issuer, subject), nicht
+        # als Subject allein. Zwei verschiedene Issuer duerfen dasselbe
+        # Subject verwenden.
+        UniqueConstraint("issuer", "subject", name="uq_auth_identities_issuer_subject"),
         CheckConstraint(
             "provider IN ('MAGIC_LINK', 'PASSKEY', 'LOCAL_PASSWORD', 'OIDC')",
             name="provider_is_known",
         ),
+        CheckConstraint(
+            "(provider = 'OIDC' AND issuer IS NOT NULL AND connection_id IS NOT NULL) "
+            "OR (provider <> 'OIDC' AND issuer IS NULL AND connection_id IS NULL)",
+            name="oidc_metadata_matches_provider",
+        ),
+        # Fuer alle anderen Verfahren bleibt die bisherige Eindeutigkeit
+        # erhalten. PostgreSQL behandelt NULL in einem normalen Unique-
+        # Constraint sonst als mehrfach zulaessig.
+        Index(
+            "uq_auth_identities_non_oidc_provider_subject",
+            "provider",
+            "subject",
+            unique=True,
+            postgresql_where=text("provider <> 'OIDC'"),
+        ),
         Index("ix_auth_identities_account_id", "account_id"),
+    )
+
+
+class WebAuthnCredential(IdMixin, TimestampMixin, Base):
+    """Ein Passkey in der Form, die eine WebAuthn-Pruefung benoetigt.
+
+    Credential-ID und Public Key sind keine Geheimnisse. Private Schluessel
+    verlassen den Authenticator nie. Der Zaehler und die Backup-Metadaten
+    werden nach jeder erfolgreichen Assertion aktualisiert und helfen,
+    geklonte oder zurueckgesetzte Credentials zu erkennen.
+    """
+
+    __tablename__ = "webauthn_credentials"
+
+    account_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    credential_id: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    public_key: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    sign_count: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    aaguid: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
+    transports: Mapped[list[str]] = mapped_column(
+        postgresql.JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    is_discoverable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    backup_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    backup_state: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("credential_id", name="uq_webauthn_credentials_credential_id"),
+        CheckConstraint("sign_count >= 0", name="sign_count_is_non_negative"),
+        Index("ix_webauthn_credentials_account_id", "account_id"),
+    )
+
+
+class OneTimeTokenMixin:
+    """Gemeinsame Sicherheitsinvarianten, keine gemeinsame Token-Tabelle."""
+
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    def is_open(self, at: datetime) -> bool:
+        return self.consumed_at is None and self.revoked_at is None and self.expires_at > at
+
+
+class EmailVerificationToken(IdMixin, OneTimeTokenMixin, Base):
+    """Einmaliger Nachweis fuer genau eine E-Mail-Adresse."""
+
+    __tablename__ = "email_verification_tokens"
+
+    account_email_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("account_emails.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_email_verification_tokens_token_hash"),
+        Index("ix_email_verification_tokens_account_email_id", "account_email_id"),
+        Index("ix_email_verification_tokens_expires_at", "expires_at"),
+    )
+
+
+class MagicLinkToken(IdMixin, OneTimeTokenMixin, Base):
+    """Einmaliger passwortloser Anmeldenachweis fuer eine E-Mail-Adresse."""
+
+    __tablename__ = "magic_link_tokens"
+
+    account_email_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("account_emails.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_magic_link_tokens_token_hash"),
+        Index("ix_magic_link_tokens_account_email_id", "account_email_id"),
+        Index("ix_magic_link_tokens_expires_at", "expires_at"),
+    )
+
+
+class AccountRecoveryToken(IdMixin, OneTimeTokenMixin, Base):
+    """Einmaliger Recovery-Nachweis fuer einen Account."""
+
+    __tablename__ = "account_recovery_tokens"
+
+    account_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_account_recovery_tokens_token_hash"),
+        Index("ix_account_recovery_tokens_account_id", "account_id"),
+        Index("ix_account_recovery_tokens_expires_at", "expires_at"),
     )
 
 
