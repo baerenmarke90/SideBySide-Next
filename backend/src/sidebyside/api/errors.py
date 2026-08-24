@@ -28,6 +28,8 @@ from sidebyside.core.errors import DomainError, ErrorCode
 
 log = logging.getLogger(__name__)
 
+_API_V1_PREFIX = "/api/v1"
+
 
 class ProblemDetails(ApiModel):
     """Der Rumpf jeder Fehlerantwort.
@@ -96,6 +98,11 @@ def problem(status: int, type_: str, title: str, detail: str, code: str) -> JSON
     return JSONResponse(status_code=status, content=body.model_dump())
 
 
+def _is_api_v1_path(path: str) -> bool:
+    """Nur echte API-v1-Pfade treffen die explizite Route-Miss-Regel."""
+    return path == _API_V1_PREFIX or path.startswith(f"{_API_V1_PREFIX}/")
+
+
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(DomainError)
     async def _domain(_: Request, exc: DomainError) -> JSONResponse:
@@ -119,7 +126,16 @@ def register_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(StarletteHTTPException)
-    async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+    async def _http(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+        # Ein Router-Miss erreicht keine fachliche Route und kann deshalb
+        # keinen NotFoundError mit einem Domain-Code erzeugen. Fuer /api/v1
+        # wird der Framework-404 hier ausdruecklich als ProblemDetails
+        # festgeschrieben. Fachliche 404 laufen weiterhin ueber _domain.
+        if exc.status_code == 404 and _is_api_v1_path(request.url.path):
+            return problem(404, "not_found", "Not found", str(exc.detail), "HTTP_404")
+
+        # Das bisherige Verhalten fuer alle anderen Framework-Fehler und
+        # fuer Pfade ausserhalb /api/v1 bleibt unveraendert.
         type_, title = _STATUS_TYPES.get(exc.status_code, ("error", "Error"))
         return problem(
             exc.status_code,
