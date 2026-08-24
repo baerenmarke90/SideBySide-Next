@@ -163,4 +163,3 @@ def sign_in(session: Session, account) -> str:  # type: ignore[no-untyped-def]
 
 def auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
-
