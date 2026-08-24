@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 import pytest
 from sqlalchemy import func, select
@@ -399,6 +400,50 @@ class TestProduktiveTransaktionsgrenze:
         assert replay.json()["code"] == "AUTHENTICATION_REQUIRED"
         assert alter_refresh not in replay.text
 
+        assert (
+            client.get(
+                "/api/v1/auth/me",
+                headers=auth(neue_tokens["accessToken"]),
+            ).status_code
+            == 401
+        )
+        with maker() as committed:
+            device_session = committed.execute(select(DeviceSession)).scalar_one()
+            assert device_session.revoked_at is not None
+            assert device_session.access_token_hash is None
+
+    def test_parallele_refresh_rotation_hat_genau_einen_sieger(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        client, maker = production_client
+        registrierung = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Anna",
+                "email": "anna@example.org",
+                "password": GUTES_PASSWORT,
+            },
+        )
+        assert registrierung.status_code == 201
+        refresh_token = registrierung.json()["tokens"]["refreshToken"]
+        start = Barrier(2)
+
+        def rotation(_: int):  # type: ignore[no-untyped-def]
+            start.wait(timeout=5)
+            return client.post(
+                "/api/v1/auth/refresh",
+                json={"refreshToken": refresh_token},
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            antworten = list(pool.map(rotation, range(2)))
+
+        assert sorted(antwort.status_code for antwort in antworten) == [200, 401]
+        erfolgreich = next(antwort for antwort in antworten if antwort.status_code == 200)
+        replay = next(antwort for antwort in antworten if antwort.status_code == 401)
+        assert replay.json()["code"] == "AUTHENTICATION_REQUIRED"
+        assert refresh_token not in replay.text
+
+        neue_tokens = erfolgreich.json()
+        assert neue_tokens["refreshToken"] != refresh_token
         assert (
             client.get(
                 "/api/v1/auth/me",
