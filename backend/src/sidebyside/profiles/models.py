@@ -13,7 +13,15 @@ from typing import ClassVar
 from uuid import UUID
 
 from pydantic import Field
-from sqlalchemy import CheckConstraint, ForeignKey, Index, SmallInteger, String, UniqueConstraint, text
+from sqlalchemy import (
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -57,7 +65,7 @@ class PreferenceSentiment(StrEnum):
 
 
 class ProfilePreferencePayload(ProtectedPayload):
-    """Der schuetenzwerte Klartext einer Praeferenz.
+    """Der schuetenswerte Klartext einer Praeferenz.
 
     Version 1 speichert ihn als JSONB-Klartext. Die getrennte Payload-Grenze
     erlaubt spaeter Client-Verschluesselung, ohne Kategorie, Ownership und
