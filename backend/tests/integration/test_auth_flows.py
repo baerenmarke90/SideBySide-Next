@@ -316,6 +316,50 @@ class TestBegrenzung:
         assert 401 in codes
         assert codes[-1] == 429
 
+    def test_enge_schleife_erfolgreicher_rotationen_wird_gebremst(self, client, session) -> None:  # type: ignore[no-untyped-def]
+        """Auch der geglueckte Weg hat ein Budget - er schreibt Historie."""
+        angemeldet = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Anna",
+                "email": "anna@example.org",
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
+        ).json()
+
+        token = angemeldet["tokens"]["refreshToken"]
+        for _ in range(rate_limit.REFRESH.attempts):
+            antwort = client.post("/api/v1/auth/refresh", json={"refreshToken": token})
+            assert antwort.status_code == 200
+            token = antwort.json()["refreshToken"]
+
+        gebremst = client.post("/api/v1/auth/refresh", json={"refreshToken": token})
+        assert gebremst.status_code == 429
+        assert gebremst.json()["code"] == "RATE_LIMITED"
+
+    def test_unbekannter_refresh_token_bleibt_401(self, client, session) -> None:  # type: ignore[no-untyped-def]
+        """Die Bremse darf nicht verraten, dass es die Sitzung gibt."""
+        angemeldet = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Anna",
+                "email": "anna@example.org",
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
+        ).json()
+
+        token = angemeldet["tokens"]["refreshToken"]
+        for _ in range(rate_limit.REFRESH.attempts):
+            token = client.post("/api/v1/auth/refresh", json={"refreshToken": token}).json()[
+                "refreshToken"
+            ]
+
+        fremd = client.post("/api/v1/auth/refresh", json={"refreshToken": "nicht-von-hier"})
+        assert fremd.status_code == 401
+        assert fremd.json()["code"] == "AUTHENTICATION_REQUIRED"
+
     def test_erfolgreiche_anmeldung_raeumt_den_zaehler(self, client, session) -> None:  # type: ignore[no-untyped-def]
         """Sonst sperrten Tippfehler den rechtmaessigen Nutzer aus."""
         client.post(

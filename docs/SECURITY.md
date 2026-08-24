@@ -191,6 +191,29 @@ Access Token endet an dieser Grenze, sonst wäre sie keine.
 `expires_at` wird nie über `absolute_expires_at` hinaus gesetzt. Der Client
 erfährt über `refreshExpiresAt` also den Zeitpunkt, der tatsächlich gilt.
 
+### Begrenzte Rotationsrate
+
+Die absolute Grenze macht das Wachstum der Historie endlich, aber nicht
+langsam: ein Client mit gültigem Token könnte in einer engen Schleife
+innerhalb kurzer Zeit sehr viele Generationen erzeugen. `/api/v1/auth/refresh`
+hat deshalb ein eigenes Budget (`rate_limit.REFRESH`, derzeit 20 Rotationen
+je 15 Minuten). Das ist ein Vielfaches der regulären Rate — ein Access Token
+lebt 15 Minuten, ein normaler Client erneuert also etwa einmal pro Fenster.
+
+Gezählt wird gegen die **`DeviceSession`**, nicht gegen den Tokenwert. Der
+wechselt bei jeder Rotation; eine Begrenzung darauf wäre nach genau einem
+Versuch wieder bei null. Andere Sitzungen desselben Accounts bleiben
+unberührt.
+
+Anders als bei der Anmeldung zählen hier die **erfolgreichen** Versuche, und
+der Zähler wird nach einem Erfolg nicht geräumt — der Erfolg ist ja gerade
+das, was begrenzt wird.
+
+Die Prüfung sitzt hinter der Token-Prüfung. Eine 429 bekommt nur, wer den
+aktuellen Token der Familie besitzt; unbekannte, alte und widerrufene Tokens
+enden unverändert bei 401 und werden nicht gezählt. Damit wird die Bremse
+nicht zur Auskunft darüber, ob es eine Sitzung gibt.
+
 Bis dahin bleibt **jede** Generation der Familie zuordenbar. Die Grenze
 verkürzt die Historie nicht und ist ausdrücklich kein Zeitfenster, durch
 das alte Tokens wieder aus der Erkennung fallen.

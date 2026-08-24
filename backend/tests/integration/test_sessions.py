@@ -10,10 +10,10 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import sessions
+from sidebyside.auth import rate_limit, sessions
 from sidebyside.auth.tokens import (
     ACCESS_TOKEN_LIFETIME,
     REFRESH_TOKEN_LIFETIME,
@@ -21,8 +21,8 @@ from sidebyside.auth.tokens import (
     hash_token,
 )
 from sidebyside.core.clock import now
-from sidebyside.core.errors import UnauthenticatedError
-from sidebyside.identity.models import ConsumedRefreshToken, DeviceSession
+from sidebyside.core.errors import RateLimitedError, UnauthenticatedError
+from sidebyside.identity.models import ConsumedRefreshToken, DeviceSession, RateLimitEvent
 from tests.conftest import make_account, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -659,3 +659,91 @@ class TestAlleWiderrufen:
             .all()
         )
         assert len(offen) == 1
+
+
+class TestRotationsflut:
+    """Erfolgreiche Rotationen sind selbst begrenzt.
+
+    Ohne Grenze koennte ein Client mit gueltigem Token in einer engen
+    Schleife beliebig viele Generationen und damit beliebig viele Zeilen
+    Replay-Historie erzeugen. Die absolute Lebensdauer macht das Wachstum
+    endlich, aber nicht langsam.
+    """
+
+    def test_budget_begrenzt_die_rotationen(self, session: Session) -> None:
+        konto = make_account(session)
+        _, tokens = sessions.start_session(session, konto)
+        session.flush()
+
+        token = tokens.refresh_token
+        for _ in range(rate_limit.REFRESH.attempts):
+            token = sessions.refresh_session(session, token).refresh_token
+            session.flush()
+
+        with pytest.raises(RateLimitedError):
+            sessions.refresh_session(session, token)
+
+    def test_die_grenze_haengt_an_der_sitzung_und_nicht_am_token(self, session: Session) -> None:
+        """Der Tokenwert wechselt bei jeder Rotation - der Zaehler nicht."""
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        session.flush()
+
+        token = tokens.refresh_token
+        for _ in range(3):
+            token = sessions.refresh_session(session, token).refresh_token
+            session.flush()
+
+        schluessel = (
+            session.execute(
+                select(RateLimitEvent.key_hash).where(RateLimitEvent.action == "refresh")
+            )
+            .scalars()
+            .all()
+        )
+        assert len(schluessel) == 3
+        assert set(schluessel) == {hash_token(str(geraet.id))}
+
+    def test_andere_sitzung_desselben_accounts_bleibt_frei(self, session: Session) -> None:
+        konto = make_account(session)
+        _, erste = sessions.start_session(session, konto, device_name="Pixel")
+        _, zweite = sessions.start_session(session, konto, device_name="Laptop")
+        session.flush()
+
+        token = erste.refresh_token
+        for _ in range(rate_limit.REFRESH.attempts):
+            token = sessions.refresh_session(session, token).refresh_token
+            session.flush()
+        with pytest.raises(RateLimitedError):
+            sessions.refresh_session(session, token)
+
+        assert sessions.refresh_session(session, zweite.refresh_token).refresh_token
+
+    def test_unbekannter_token_bleibt_401_und_wird_nicht_gezaehlt(self, session: Session) -> None:
+        """Eine 429 darf nicht zur Auskunft werden, dass es eine Sitzung gibt."""
+        konto = make_account(session)
+        _, tokens = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, tokens.refresh_token)
+        session.flush()
+
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, "voellig-unbekannt")
+
+        versuche = session.execute(
+            select(func.count())
+            .select_from(RateLimitEvent)
+            .where(RateLimitEvent.action == "refresh")
+        ).scalar_one()
+        assert versuche == 1
+
+    def test_replay_bleibt_401_und_widerruft_weiterhin(self, session: Session) -> None:
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, tokens.refresh_token)
+        session.flush()
+
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, tokens.refresh_token)
+        assert geraet.revoked_at is not None

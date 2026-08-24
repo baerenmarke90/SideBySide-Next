@@ -1146,6 +1146,16 @@
               }
             },
             "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
           }
         },
         "summary": "Refresh",

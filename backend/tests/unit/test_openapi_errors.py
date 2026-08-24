@@ -12,7 +12,7 @@ READINESS_REF = "#/components/schemas/Readiness"
 EXPECTED_PROBLEM_RESPONSES: dict[tuple[str, str], set[int]] = {
     ("/api/v1/auth/register", "post"): {403, 409, 422, 429},
     ("/api/v1/auth/sign-in", "post"): {401, 422, 429},
-    ("/api/v1/auth/refresh", "post"): {401, 422},
+    ("/api/v1/auth/refresh", "post"): {401, 422, 429},
     ("/api/v1/auth/sign-out", "post"): {401},
     ("/api/v1/auth/password", "post"): {401, 422},
     ("/api/v1/auth/me", "get"): {401},

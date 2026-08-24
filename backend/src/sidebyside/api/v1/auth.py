@@ -129,7 +129,7 @@ def sign_in(body: SignInRequest, session: DbSession) -> SessionView:
 @router.post(
     "/auth/refresh",
     response_model=TokenView,
-    responses=problem_responses(401, 422),
+    responses=problem_responses(401, 422, 429),
 )
 def refresh(body: RefreshRequest, session: DbSession) -> TokenView:
     tokens = sessions.refresh_session(session, body.refresh_token)

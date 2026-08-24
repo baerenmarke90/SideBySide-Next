@@ -41,6 +41,17 @@ SIGN_IN = Limit(attempts=10, window=timedelta(minutes=15))
 MAGIC_LINK = Limit(attempts=5, window=timedelta(minutes=15))
 INVITATION_ACCEPT = Limit(attempts=10, window=timedelta(minutes=15))
 
+# Erneuern: der einzige Fall, in dem nicht Fehlversuche begrenzt werden,
+# sondern Erfolge. Jede Rotation schreibt eine Zeile Replay-Historie; ein
+# Client mit gueltigem Token koennte davon in einer engen Schleife beliebig
+# viele erzeugen.
+#
+# Ein Access Token lebt 15 Minuten, ein regulaerer Client erneuert also
+# etwa einmal pro Fenster. Das Budget liegt bewusst um ein Vielfaches
+# darueber: Neustarts, Netzwechsel und Wiederholungen sollen niemanden
+# aussperren, eine Schleife aber schon.
+REFRESH = Limit(attempts=20, window=timedelta(minutes=15))
+
 
 def _record_hashed_attempt(session: Session, *, action: str, key_hash: str) -> None:
     session.add(RateLimitEvent(action=action, key_hash=key_hash, occurred_at=now()))
