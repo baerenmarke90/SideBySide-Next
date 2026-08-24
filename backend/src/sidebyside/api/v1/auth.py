@@ -16,6 +16,7 @@ from sidebyside.api.deps import CurrentAccount, CurrentSession, DbSession
 from sidebyside.api.schema import ApiModel
 from sidebyside.auth import local, sessions
 from sidebyside.auth.local import SignedIn
+from sidebyside.config import get_settings
 
 router = APIRouter(tags=["auth"])
 
@@ -27,6 +28,7 @@ class RegisterRequest(ApiModel):
     email: str
     password: str
     invitation_token: str | None = None
+    bootstrap_token: str | None = None
     device_name: str = ""
     platform: str = ""
 
@@ -80,11 +82,10 @@ def _view(result: SignedIn) -> SessionView:
 def register(body: RegisterRequest, session: DbSession) -> SessionView:
     """Einen Account anlegen.
 
-    Der erste Account einer Instanz darf ohne Einladung entstehen - das ist
-    die Inbetriebnahme. Danach braucht jede Registrierung eine gueltige
-    Einladung, sonst koennte sich auf einer privaten Instanz anlegen, wer
-    ihre Adresse kennt.
+    Der erste Account braucht den einmaligen Bootstrap-Nachweis. Danach
+    braucht jede Registrierung eine gueltige Einladung.
     """
+    configured = get_settings().bootstrap_token
     return _view(
         local.register(
             session,
@@ -92,6 +93,10 @@ def register(body: RegisterRequest, session: DbSession) -> SessionView:
             email=body.email,
             password=body.password,
             invitation_token=body.invitation_token,
+            bootstrap_token=body.bootstrap_token,
+            configured_bootstrap_token=(
+                configured.get_secret_value() if configured is not None else None
+            ),
             device_name=body.device_name[:MAX_DEVICE_NAME],
             platform=body.platform,
         )
