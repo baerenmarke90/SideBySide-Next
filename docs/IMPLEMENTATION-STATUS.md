@@ -57,7 +57,7 @@ Aktuelle G1-Blocker:
 
 Zusätzliche Härtung:
 
-- [ ] #24 – Refresh-Replay über die gesamte Token-Familie erkennen; vor M2 schließen.
+- [x] #24 – Refresh-Replay über die gesamte Token-Familie erkennen.
 - [ ] #25 – Branch Protection/Ruleset für `main`: Ruleset angelegt, aber bei diesem privaten Repository durch den aktuellen GitHub-Tarif nicht erzwungen; zusätzlich muss das Targeting nach einem Planwechsel auf `main` geprüft werden. Kein eigenständiger G1-Codeblocker, aber offenes Repository-Hardening.
 
 ## M0 – Clean Foundation
@@ -94,9 +94,18 @@ Zusätzliche Härtung:
 - [x] Passkey-/WebAuthn-fähiges Credential-Modell
 - [x] Getrennte, gehashte Einmal-Tokenmodelle für E-Mail-Verifikation, Magic Link und Recovery
 - [ ] OIDC-/WebAuthn-Adapter und vollständige Cloud-Auth-API-Flows
-- [ ] Eigene Owner-/Private-Authorization-Grundlage
-- [x] SpaceProfile-Schreib-API mit Versionskonflikt/409
-- [x] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen
+- [x] Eigene Owner-/Private-Authorization-Grundlage (#27): zentrale, in der
+      Abfrage erzwungene `SPACE_SHARED`-/`OWNER_ONLY`-Autorisierung samt
+      Privacy-Testmatrix. Eine produktive `OWNER_ONLY`-Fachdomäne setzt
+      darauf noch nicht auf; das gehört zu den restlichen M1-/M2-Domänen.
+- [x] SpaceProfile-Schreib-API mit Versionskonflikt/409 (#28): `PUT` auf
+      `relationshipStartedOn`, `showRelationshipDuration` und
+      `durationDisplayMode` mit ETag und `If-Match` als Pflichtkopf.
+      `SpaceProfile` bleibt `SPACE_SHARED` und trägt bewusst keine
+      Owner-Einschränkung.
+- [x] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen (#28):
+      Tagesgrenze über `Account.timezone` der lesenden Person statt
+      `today_utc()`.
 - [ ] PartnerProfile und ProfilePreference
 - [ ] RelatedPerson und ImportantDate
 - [ ] Cross-Tenant- und Privacy-Tests für jedes neue M1-Feature

@@ -54,6 +54,40 @@ Kommentare, Benachrichtigungen, Export oder eine indirekte Beziehung.
 Abfrage. Ein Treffer, der entsteht und danach verworfen wird, ist bereits
 ein Leck — er war im Speicher, im Log, in der Antwortgröße.
 
+### Durchsetzung
+
+Der Tenant Guard beantwortet, ob ein Account zu einem Space gehört. Die
+Owner-/Privacy-Autorisierung in `sidebyside.authorization` beantwortet
+danach, was er innerhalb dieses Space sehen und ändern darf. Beide
+Bedingungen stehen gemeinsam in der Abfrage, nicht hinter ihr.
+
+Eine Domäne erbt drei Spalten — `space_id`, `owner_id`, `privacy_class` —
+und ruft `readable()`, `require_readable()` oder `require_writable()` auf.
+Sie formuliert ihre Sichtbarkeitsbedingung nicht selbst. Es gibt weder eine
+gemeinsame Universal-Inhaltstabelle noch einen zweiten, handgeschriebenen
+Guard je Domäne.
+
+Serverseitig erzwingbar sind derzeit `SPACE_SHARED` und `OWNER_ONLY`. Nur
+diese beiden sind auch speicherbar: eine Klasse ohne Regel erzeugte Zeilen,
+deren Schutz niemand einlöst. Eine Klasse ohne Regel ergibt in der Abfrage
+`false` — ein Versäumnis macht Inhalte unsichtbar, nicht sichtbar. Eine
+weitere Klasse aufzunehmen heißt deshalb immer dreierlei zugleich: Regel,
+Freigabe des Wertebereichs und Migration.
+
+Geschrieben wird nur vom Eigentümer, auch bei `SPACE_SHARED`: der Autor
+bearbeitet, der Partner liest.
+
+Die Ablehnung ist zweigeteilt, und der Unterschied ist Absicht:
+
+| Lage | Antwort |
+|---|---|
+| nicht lesbar — fremder Space, fremdes `OWNER_ONLY`, unbekannte oder fehlgeformte ID | 404, in allen Fällen wortgleich |
+| lesbar, aber nicht änderbar — geteilte Zeile des Partners | 403 |
+
+Ein 404 auf etwas, das der Aufrufer sich gerade hat anzeigen lassen, wäre
+kein Schutz, sondern eine Unwahrheit. Ein 403 auf etwas, das er nicht sehen
+darf, wäre die Existenzauskunft, die `OWNER_ONLY` gerade verhindern soll.
+
 ## Authentifizierung
 
 Android und andere native Clients nutzen Bearer Tokens, kein
@@ -100,6 +134,56 @@ Nachweis. PostgreSQL serialisiert konkurrierende Erstregistrierungen; nach
 dem ersten Erfolg bleibt der Bootstrap dauerhaft geschlossen und alle
 weiteren Registrierungen brauchen eine Einladung. Der geheime Wert wird
 nicht persistiert oder geloggt.
+
+### Refresh-Token-Familie
+
+Die `DeviceSession` ist zugleich die Token-Familie: jeder Refresh Token, der
+aus einer Anmeldung hervorgeht, gehört zu genau dieser Sitzung. Jede
+verbrauchte Generation bleibt als `ConsumedRefreshToken` mit ihrem Hash der
+Familie zugeordnet, solange die Sitzung lebt.
+
+Damit ist die Erkennung nicht auf die unmittelbar vorherige Generation
+beschränkt. Taucht nach `T0 → T1 → T2` erneut `T0` auf, ist es kein bloß
+ungültiger Token, sondern eine Kopie: der rechtmäßige Client hätte `T2`.
+Die Sitzung wird deshalb dauerhaft widerrufen — auch dann, wenn die Anfrage
+selbst mit 401 endet und zurückgerollt wird.
+
+Der Widerruf setzt einen echten Token dieser Familie voraus. Ein beliebiger
+unbekannter Wert widerruft nichts, sonst könnte jeder eine fremde Sitzung
+beenden. Nach außen sind unbekannt, abgelaufen, widerrufen und als Replay
+erkannt nicht unterscheidbar.
+
+Die Historie hält ausschließlich Hashes und ist damit keine zweite Quelle
+für Anmeldenachweise. Sie verschwindet mit der Sitzung und wird für
+beendete Sitzungen nach einer Aufbewahrungsfrist geräumt; laufende
+Sitzungen behalten ihre Historie, denn sie *ist* die Erkennung.
+
+### Zwei Ablaufzeitpunkte je Sitzung
+
+Damit die Familie und mit ihr die Historie tatsächlich endlich ist, trägt
+`DeviceSession` zwei verschiedene Grenzen:
+
+| Feld | Bedeutung | Wird verlängert? |
+|---|---|---|
+| `expires_at` | gleitendes Fenster gegen Untätigkeit | ja, bei jeder Rotation |
+| `absolute_expires_at` | harte Obergrenze ab Anmeldung | **nein** |
+
+Das gleitende Fenster allein wäre keine Begrenzung: Wer regelmäßig
+erneuert, schiebt es beliebig weit vor sich her. Eine dauerhaft genutzte
+Sitzung liefe dann unbegrenzt weiter und sammelte pro Rotation eine weitere
+Zeile Historie, die nie geräumt würde.
+
+Die absolute Grenze steht ab der Anmeldung fest. Keine Rotation verschiebt
+sie. Ist sie erreicht, hilft kein Refresh mehr — es braucht eine neue
+Anmeldung und damit eine neue Familie. Auch ein kurz zuvor ausgestellter
+Access Token endet an dieser Grenze, sonst wäre sie keine.
+
+`expires_at` wird nie über `absolute_expires_at` hinaus gesetzt. Der Client
+erfährt über `refreshExpiresAt` also den Zeitpunkt, der tatsächlich gilt.
+
+Bis dahin bleibt **jede** Generation der Familie zuordenbar. Die Grenze
+verkürzt die Historie nicht und ist ausdrücklich kein Zeitfenster, durch
+das alte Tokens wieder aus der Erkennung fallen.
 
 ## Invitations
 

@@ -16,6 +16,7 @@ from fastapi import Depends, Path, Request
 from sqlalchemy.orm import Session
 
 from sidebyside.auth.sessions import resolve
+from sidebyside.authorization import AuthorizationContext
 from sidebyside.core.errors import ErrorCode, NotFoundError, UnauthenticatedError
 from sidebyside.core.ids import parse_id
 from sidebyside.db.session import get_session
@@ -92,3 +93,17 @@ def tenant_context(
 
 
 Tenant = Annotated[TenantContext, Depends(tenant_context)]
+
+
+def authorization_context(tenant: Tenant) -> AuthorizationContext:
+    """Der Kontext fuer Owner- und Privacy-Fragen.
+
+    Entsteht ausschliesslich aus dem bereits geprueften Tenant Context. Es
+    gibt keinen zweiten Weg, ihn zu bauen - damit kann keine Route eine
+    Sichtbarkeitsentscheidung auf einen Account oder Space stuetzen, der
+    nicht durch die Mitgliedschaftspruefung gegangen ist.
+    """
+    return AuthorizationContext(account_id=tenant.account.id, space_id=tenant.space_id)
+
+
+Authorization = Annotated[AuthorizationContext, Depends(authorization_context)]
