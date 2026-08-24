@@ -31,6 +31,7 @@ MAGIC_LINK_LIFETIME = timedelta(minutes=15)
 ACCOUNT_RECOVERY_LIFETIME = timedelta(minutes=30)
 ACTION_TOKEN_BYTES = 32
 
+
 class ActionTokenErrorCode:
     INVALID = "ACTION_TOKEN_INVALID"
 
@@ -93,9 +94,7 @@ def _consume[TokenModel: OneTimeTokenMixin](
         raise invalid
 
     model = session.execute(
-        select(model_type)
-        .where(model_type.token_hash == hash_token(token))
-        .with_for_update()
+        select(model_type).where(model_type.token_hash == hash_token(token)).with_for_update()
     ).scalar_one_or_none()
     current_time = now()
     if model is None or not model.is_open(current_time):
