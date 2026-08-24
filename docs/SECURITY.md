@@ -281,6 +281,30 @@ Content-Type genügt nicht.
 - Autorisierung von Backups
 - Privacy-Lecks in der Suche
 
+### Wo sie stehen
+
+Die Liste oben ist die Anforderung; diese Tabelle sagt, wo sie eingelöst
+ist. Sie wird beim Schließen einer Lücke fortgeschrieben, nicht beim
+Anlegen eines Tests.
+
+| Invariante | Nachweis |
+|---|---|
+| Jeder Space-Endpunkt weist anonym, Fremde und fehlgeformte IDs gleich ab | `test_endpoint_matrix.py` |
+| Der veröffentlichte Vertrag ist vollständig durch diese Matrix abgedeckt | `test_endpoint_matrix.py::test_der_vertrag_ist_vollstaendig_abgedeckt` |
+| Kein Schreibzugriff ohne `If-Match` | `test_endpoint_matrix.py::test_ohne_if_match_wird_nicht_geschrieben` |
+| Private Ressourcen bleiben für den Partner unsichtbar — Detail, Liste, Filter, Fehlerantwort | `test_private_authorization.py`, `test_related_persons.py`, `test_partner_profiles.py` |
+| Fehlversuche bleiben trotz abgelehnter Anfrage dauerhaft gezählt | `test_auth_flows.py::TestProduktiveTransaktionsgrenze` |
+| Refresh-Replay widerruft die Familie dauerhaft, auch über Generationen | `test_auth_flows.py`, `test_sessions.py::TestReplay` |
+| Paralleler Refresh hat genau einen Sieger | `test_auth_flows.py::test_parallele_refresh_rotation_hat_genau_einen_sieger` |
+| Erfolgreiche Rotationen sind selbst begrenzt | `test_sessions.py::TestRotationsflut` |
+| Zwei gleichzeitige Einladungsannahmen füllen den Space nicht über zwei Partner | `test_invitations.py::TestWettlauf` |
+| Paralleler Bootstrap erzeugt genau einen initialen Owner | `test_auth_flows.py::test_paralleler_bootstrap_hat_genau_einen_owner` |
+| Sicherheitsrelevante Tests laufen in CI wirklich und werden nicht still übersprungen | CI-Schritt „Integrationstests sind wirklich gelaufen" |
+
+Die Zeilen zu Uploads, signierten URLs, Backups und Suche bleiben offen —
+die zugehörigen Funktionen gibt es noch nicht. Sie werden mit ihrer Domäne
+eingelöst, nicht vorher.
+
 ### Tenant-Matrix
 
 | Zugriff | Erwartung |
