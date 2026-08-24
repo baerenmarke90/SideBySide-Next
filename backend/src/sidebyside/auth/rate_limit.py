@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import delete, func, select
@@ -24,6 +25,7 @@ from sqlalchemy.orm import Session
 from sidebyside.auth.tokens import hash_token
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ErrorCode, RateLimitedError
+from sidebyside.db.session import schedule_after_rollback
 from sidebyside.identity.models import RateLimitEvent
 
 
@@ -40,10 +42,29 @@ MAGIC_LINK = Limit(attempts=5, window=timedelta(minutes=15))
 INVITATION_ACCEPT = Limit(attempts=10, window=timedelta(minutes=15))
 
 
+def _record_hashed_attempt(session: Session, *, action: str, key_hash: str) -> None:
+    session.add(RateLimitEvent(action=action, key_hash=key_hash, occurred_at=now()))
+    session.flush()
+
+
 def record_attempt(session: Session, action: str, key: str) -> None:
     """Einen Versuch vermerken. Zaehlt unabhaengig vom Ausgang."""
-    session.add(RateLimitEvent(action=action, key_hash=hash_token(key.lower()), occurred_at=now()))
-    session.flush()
+    _record_hashed_attempt(session, action=action, key_hash=hash_token(key.lower()))
+
+
+def preserve_attempt_after_rollback(session: Session, action: str, key: str) -> None:
+    """Den Versuch auch bei einer abgelehnten Anfrage dauerhaft erhalten.
+
+    Der Klartext-Schluessel wird nicht in der spaeteren Aktion gehalten.
+    """
+    schedule_after_rollback(
+        session,
+        partial(
+            _record_hashed_attempt,
+            action=action,
+            key_hash=hash_token(key.lower()),
+        ),
+    )
 
 
 def check(session: Session, action: str, key: str, limit: Limit) -> None:
@@ -91,3 +112,4 @@ def prune(session: Session, older_than: datetime | None = None) -> int:
         session.execute(delete(RateLimitEvent).where(RateLimitEvent.occurred_at < grenze)),
     )
     return int(ergebnis.rowcount or 0)
+
