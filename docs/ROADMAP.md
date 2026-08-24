@@ -1,7 +1,7 @@
 # SideBySide Next Roadmap
 
 **Status:** Menschenlesbare Orientierungs- und Priorisierungsansicht  
-**Version:** 1.0  
+**Version:** 1.1  
 **Stand:** 24.08.2026  
 **Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
 
@@ -11,7 +11,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 
 ![Grafische Roadmap von M0 Foundation bis M9 Release und der strategischen E2EE-Spur](./assets/roadmap/roadmap-overview.svg)
 
-**Aktuell:** Foundation-Gates aus M0 schließen und M1 Identity & Relationship vervollständigen. M2 beginnt erst, wenn die sicherheitskritischen Vorbedingungen erfüllt sind.
+**Aktuell:** M0 ist für den aktuellen Umfang abgeschlossen. M1 Identity & Relationship wird bis zum Security Gate G1 vervollständigt; produktiver M2-Runtime-Code beginnt erst nach bestandenem G1.
 
 ## So ist die Roadmap zu lesen
 
@@ -19,6 +19,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 |---|---|
 | diese Roadmap | Wohin gehen wir, in welcher Reihenfolge und warum? |
 | [Implementation Status](./IMPLEMENTATION-STATUS.md) | Was ist auf `main` tatsächlich umgesetzt oder noch offen? |
+| [G1/M1 Security Review](./reviews/2026-08-24-g1-m1-security-review.md) | Welche Security-Gates sind aktuell bestanden oder offen? |
 | GitHub Issues/PRs | Welche konkreten Arbeitspakete werden bearbeitet? |
 | [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | Was ist fachlich und technisch verbindlich? |
 
@@ -29,47 +30,50 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 
 ## Aktueller Snapshot
 
-Der Snapshot fasst den [Implementation Status vom 24.08.2026](./IMPLEMENTATION-STATUS.md) zusammen. Bei Abweichungen gilt das Statusdokument.
+Der Snapshot fasst den [Implementation Status vom 24.08.2026](./IMPLEMENTATION-STATUS.md) und den aktuellen G1/M1-Security-Review zusammen. Bei Abweichungen gilt das Statusdokument für den Arbeitsstand; datierte Reviews bleiben unveränderliche Prüfsnapshots.
 
-### M0 — Clean Foundation: weitgehend aufgebaut
+### M0 — Clean Foundation: abgeschlossen
 
-Bereits vorhanden sind unter anderem:
+Für den aktuellen M0-Umfang sind unter anderem umgesetzt:
 
 - FastAPI, SQLAlchemy 2, PostgreSQL und Alembic,
 - REST API v1, camelCase und einheitliches Fehlerformat,
 - UUIDv7 sowie Timestamp-/Date-Konventionen,
 - Transactional Outbox und PostgreSQL-Job-Queue,
-- MediaStore- und ProtectedPayload-Grundlagen,
-- Backend-CI mit echten PostgreSQL-Integrationstests und Secret Scan.
-
-Noch zu schließen sind insbesondere:
-
+- MediaStore-, Provider- und ProtectedPayload-Grundlagen,
 - initiale `web/`, `android/` und `tools/`-Strukturen,
-- fehlende Provider-Interfaces,
-- Dependency-/Vulnerability-Scan und reproduzierbare Locks,
-- expliziter Backend-/Container-Build in CI,
-- versionierter OpenAPI-Vertrag mit Contract-Tests,
-- technische Erzwingung der E2EE-Grenze bei den ersten sensiblen Modellen.
+- reproduzierbare Python-Abhängigkeiten mit Lockfile,
+- Dependency-/Vulnerability-Scan,
+- versionierter OpenAPI-Vertrag mit Contract-Check,
+- Backend-/Container-Build,
+- echte PostgreSQL-Integrationstests, Secret Scan und Provenance-Prüfung.
 
-### M1 — Identity & Relationship: aktiv
+M0 wird nicht erneut geöffnet, nur weil spätere Milestones zusätzliche Härtungen auf derselben Infrastruktur benötigen. Neue Findings werden im jeweils betroffenen Issue/Milestone verfolgt.
 
-Bereits vorhanden sind Account/AuthIdentity, lokaler Passwortlogin, Device Sessions, Bearer Tokens, Space, Membership, Tenant Guard, sichere Invitations und lesendes SpaceProfile.
+### M1 — Identity & Relationship: aktiv, G1 noch offen
+
+Bereits vorhanden sind Account/AuthIdentity, lokaler Passwortlogin, Device Sessions, Bearer Tokens, Space, Membership, Tenant Guard, sichere Invitations, lesendes SpaceProfile, OIDC-Persistenz mit `(issuer, subject)`, WebAuthn-Credential-Modell sowie getrennte Tokenmodelle für E-Mail-Verifikation, Magic Link und Recovery.
+
+Ebenfalls abgeschlossen sind der sichere Self-Hosted-Bootstrap, die HTTPS-/Loopback-Grenze und die formale Provenienzklassifikation gemäß ADR 0001.
 
 Als Nächstes folgen:
 
-- Self-Hosted-Bootstrap und sicherer HTTPS-/Loopback-Standard,
-- OIDC-, Passkey-, Magic-Link- und Recovery-Grundlagen,
-- Owner-/Private-Authorization,
-- SpaceProfile-Schreib-API mit `version` und 409,
-- Beziehungsdauer, PartnerProfile, ProfilePreference,
-- RelatedPerson und ImportantDate,
-- Cross-Tenant- und Privacy-Tests für jedes neue M1-Feature.
+- tatsächliche OIDC-/Pocket-ID-, WebAuthn-/Passkey-, Magic-Link-, Verification- und Recovery-Flows,
+- Owner-/Private-Authorization als zentrale Grundlage vor privaten M2-Inhalten,
+- SpaceProfile-Schreib-API mit `version` und HTTP 409,
+- fachlich korrekte Zeitzonenbehandlung der Beziehungsdauer,
+- PartnerProfile, ProfilePreference, RelatedPerson und ImportantDate,
+- vollständige Rollen-/Owner-/Privacy-/Cross-Tenant-Testmatrix,
+- Refresh-Replay-Härtung über die gesamte Token-Familie.
 
-### Noch offene Gates vor M2
+### Noch offene Bedingungen vor M2
 
-1. Erste Self-Hosted-Registrierung sicher serialisieren.
-2. Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
-3. Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entscheiden.
+1. Gate G1: echte Auth-/Recovery-Wege für die vorgesehenen Betriebsmodi abschließen (#26).
+2. Gate G1: Owner-/Private-Authorization und die fehlenden M1-Profile/Concurrency-/Timezone-Funktionen abschließen (#11).
+3. Gate G1: die zugehörige HTTP-/Privacy-/Tenant-Testmatrix vervollständigen (#7).
+4. Security-Härtung #24 vor M2 schließen und anschließend einen neuen datierten G1-Review durchführen.
+
+Repository-Hardening #25 bleibt separat offen: Das Ruleset wurde angelegt, wird für dieses private Repository mit dem aktuellen GitHub-Tarif jedoch nicht erzwungen. Dieser Plan-Blocker ist kein Ersatz für G1 und kein Grund, Security-Anforderungen im Code abzusenken.
 
 ## Meilensteine
 
@@ -91,20 +95,20 @@ Als Nächstes folgen:
 
 ![Roadmap mit parallelen Spuren für Produkt, Backend, Web, Android, Design-System, Security/QA und Betrieb](./assets/roadmap/roadmap-tracks.svg)
 
-Die Spuren laufen parallel, aber nicht unabhängig. Eine Clientoberfläche darf einen Domainflow erst als fertig darstellen, wenn API, Autorisierung, Fehlerfälle, Privacy-Tests und plattformspezifische Accessibility gemeinsam erfüllt sind.
+Die Spuren laufen parallel, aber nicht unabhängig. Eine Clientoberfläche darf einen Domainflow erst als fertig darstellen, wenn API, Autorisierung, Fehlerfälle, Privacy-Tests und plattformspezifische Accessibility gemeinsam erfüllt sind. Für parallele Implementierungsagenten gelten die Koordinationsregeln im [Implementation Status](./IMPLEMENTATION-STATUS.md): ein Issue-Scope pro Branch/PR und keine stillen Scope-Erweiterungen.
 
 ## Horizonte
 
-### Now — Foundation stabilisieren und Space vervollständigen
+### Now — M1 vervollständigen und G1 bestehen
 
-**Umfasst:** Rest M0 + M1.
+**Umfasst:** Rest M1 plus zugehörige Security-Härtung.
 
-- technische Release-Blocker schließen,
-- OpenAPI und Contract-Tests versionieren,
-- Owner-only- und Tenant-Grundlagen festigen,
-- Cloud- und Self-Hosted-Anmeldewege vorbereiten,
-- Web-/Android-Grundgerüste und Tokenadapter anlegen,
-- Invitation-, Profil- und Privacy-Flows produktionsreif machen.
+- Owner-only- und Tenant-Grundlagen vervollständigen,
+- Cloud- und Self-Hosted-Anmelde-/Recovery-Wege tatsächlich implementieren,
+- Invitation-, Profil- und Privacy-Flows produktionsreif machen,
+- SpaceProfile-Concurrency und Zeitzonen korrekt abschließen,
+- Refresh-Replay-Härtung und vollständige HTTP-Security-Matrix abschließen,
+- neuen datierten G1-Security-Review durchführen.
 
 **Verlassen, wenn:** Gate G1 erfüllt ist.
 
@@ -194,6 +198,8 @@ Kritische Reihenfolge:
 - versioniertes OpenAPI mit Contract-Tests,
 - Outbox/Jobs/MediaStore und ProtectedPayload-Grenze abgesichert.
 
+**Aktueller Stand:** bestanden für den M0-Umfang.
+
 ### G1 — Sicherer Paar-Space
 
 - Auth- und Recovery-Wege für den jeweiligen Betriebsmodus,
@@ -201,6 +207,8 @@ Kritische Reihenfolge:
 - Tenant Guard und Owner-only-Autorisierung,
 - Profile/SpaceProfile mit Versionskonflikten,
 - Cross-Tenant-, Session- und Privacy-Tests grün.
+
+**Aktueller Stand:** noch nicht bestanden; maßgeblich ist der [G1/M1 Security Review](./reviews/2026-08-24-g1-m1-security-review.md).
 
 ### G2 — Story Alpha
 
@@ -248,6 +256,7 @@ Kritische Reihenfolge:
 | Risiko | Schutzmaßnahme |
 |---|---|
 | Features beginnen vor offenen Security-Gates | Gate G1 blockiert M2-Freigabe |
+| Parallele Agenten überschreiben denselben Scope | ein Issue pro Branch/PR, klarer Owner und Abgleich gegen aktuellen `main` |
 | Web und Android driften auseinander | gemeinsamer OpenAPI-Vertrag, Component Contracts und Paritäts-DoD |
 | Design-System wird zur Dokumentation ohne Code | Manifest, Tokenadapter, Plattformkataloge und CI-Gates |
 | spätere Integrationen dominieren den Core | Provideradapter und klare M7/M8-Grenze |
@@ -260,11 +269,12 @@ Kritische Reihenfolge:
 - Meilensteine ändern sich nur bei einer fachlichen Entscheidung in der Spezifikation.
 - Offene Aufgaben werden nicht in dieser Datei gepflegt, sondern im Implementation Status und in Issues.
 - Ein Roadmap-Update nennt Grund und Auswirkung, nicht nur eine neue Reihenfolge.
-- Grafiken und Text werden gemeinsam geändert, damit keine widersprüchlichen Ansichten entstehen.
+- Grafiken und Text werden gemeinsam geändert, wenn sich die dargestellte Phase ändert, damit keine widersprüchlichen Ansichten entstehen.
 
 ## Verwandte Dokumente
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
+- [G1/M1 Security Review](./reviews/2026-08-24-g1-m1-security-review.md)
 - [Produktspezifikation](../specification/PRODUCT-SPEC.md)
 - [Critical User Flows](./USER-FLOWS.md)
 - [API-/UI-Verträge](./API-UI-CONTRACTS.md)

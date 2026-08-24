@@ -83,12 +83,19 @@ recorded in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
 ## Assets
 
-No assets of unclear origin are included. Branding assets are used only
-when explicitly provided for SideBySide Next. Origin, license, and creator
-are recorded in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
+No assets of unclear third-party origin are admitted to the project. The
+repository currently contains project-specific product-preview, roadmap and
+M2 handoff graphics. Their paths and provenance classification are recorded
+in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
-At the time of writing, this repository contains no image, font, audio, or
-icon assets.
+The product-preview files under `docs/assets/playstore/` are mockups for
+SideBySide Next, not screenshots or assets copied from a predecessor. The
+roadmap graphics under `docs/assets/roadmap/` and the M2 SVG diagrams were
+created specifically for this repository's documentation and handoff.
+
+Unless an individual entry states otherwise, these project assets have no
+separate public license grant. No font or audio assets are currently part of
+the repository.
 
 ## Contributors
 
@@ -96,8 +103,8 @@ icon assets.
 |---|---|---|
 | baerenmarke90 | Specification, product decisions, review | since 2026-08-23 |
 
-Development is AI-assisted. Code is produced by an AI assistant acting on
-the specification above, under human review.
+Development is AI-assisted. Code and project documentation are produced with
+AI assistance under human review.
 
 ## License of this source code
 

@@ -111,16 +111,34 @@ Diese Einschätzung ist keine Rechtsberatung.
 
 ## Assets
 
-Zum Zeitpunkt dieses Eintrags enthält das Repository **keine** Bild-,
-Schrift-, Ton- oder Symboldateien.
+Das Repository enthält inzwischen projektspezifische Bild- und SVG-Assets.
+Sie wurden für SideBySide Next bzw. dessen Roadmap und M2-Handoff erstellt;
+Assets ungeklärter Drittanbieter- oder Vorgängerherkunft werden weiterhin
+nicht aufgenommen. Die Produktbilder sind ausdrücklich Mockups und keine
+Screenshots einer bereits fertigen App.
 
-Branding-Assets werden nur aufgenommen, wenn sie ausdrücklich für
-SideBySide Next bereitgestellt wurden. Assets ungeklärter Herkunft werden
-nicht aufgenommen — auch nicht vorläufig.
+Für die unten als **Projektasset** gekennzeichneten Dateien wird derzeit keine
+separate öffentliche Lizenz eingeräumt. Diese Einordnung ändert nichts an
+der noch offenen Lizenzentscheidung für den eigenen Quellcode.
 
 | Asset | Ursprung | Ersteller | Lizenz |
 |---|---|---|---|
-| — | — | — | — |
+| `docs/assets/playstore/app-icon.png` | SideBySide Next Produktvorschau | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/feature-graphic.png` | SideBySide Next Produktvorschau | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/screen-01-onboarding.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/screen-02-heute.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/screen-03-story.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/screen-04-wuensche.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/screen-05-plan.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/screen-06-discovery.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/screen-07-einkauf.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/screen-08-privacy.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/roadmap/roadmap-overview.svg` | SideBySide Next Roadmap | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/roadmap/roadmap-tracks.svg` | SideBySide Next Roadmap | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `design/m2/m2-screenflow.svg` | M2 Client-Handoff | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/m2/m2-privacy-flow.svg` | M2 Privacy-/Acceptance-Handoff | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+
+Derzeit sind keine Schrift- oder Audio-Assets im Repository dokumentiert.
 
 ## Pflege
 
@@ -128,3 +146,7 @@ Eine neue direkte Abhängigkeit wird zusammen mit ihrem Eintrag hier
 hinzugefügt. Die CI prüft Vollständigkeit, genaue Version und Lizenz gegen
 die gesperrte, installierte Umgebung. Transitive Versionen stehen vollständig
 in `backend/uv.lock`.
+
+Neue Assets werden in derselben Änderung hier dokumentiert. Bei unklarer
+Herkunft, Lizenz oder Erstellerschaft wird das Asset nicht aufgenommen, bis
+die Provenienz geklärt ist.

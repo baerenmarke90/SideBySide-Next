@@ -8,6 +8,7 @@ Ausgangspunkt: `main` bei Commit `c69195ca58a0c65a4bedf976c2c2d898c0b39e2c`
 - **Verbindliche Quelle:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
 - **Unveränderlicher Ausgangsreview:** [2026-08-24-spec-gap-review.md](reviews/2026-08-24-spec-gap-review.md)
+- **Aktueller Security-Snapshot:** [2026-08-24-g1-m1-security-review.md](reviews/2026-08-24-g1-m1-security-review.md)
 - **Dieses Dokument:** laufende, kurze Arbeits- und Fortschrittsliste
 
 Bei Widersprüchen gilt die Master-Spezifikation. Datierte Dateien unter
@@ -21,6 +22,15 @@ bekommt eine neue Datei.
 3. Sicherheits- und Tenant-Invarianten vor neuen Inhaltsdomänen stabilisieren.
 4. Nach jedem Block Tests, Lint, Typprüfung, `git diff --check` und `git status` prüfen.
 5. Nur dieses Statusdokument fortschreiben; historische Reviews unverändert lassen.
+
+### Parallele Arbeit mit mehreren Implementierungsagenten
+
+- GitHub Issues sind die verbindliche Einheit für Arbeitsumfang und Abnahme.
+- Ein Agent bearbeitet einen klar abgegrenzten Issue-Scope auf einer eigenen Branch/PR.
+- Zwei Agenten sollen nicht gleichzeitig denselben Issue oder dieselben Kern-Dateien verändern.
+- Vor Merge/Übergabe wird gegen den aktuellen `main` abgeglichen; Konflikte werden nicht durch Force Push aufgelöst.
+- Direkte Pushes auf `main` werden organisatorisch vermieden, solange GitHub sie für dieses private Repository tarifbedingt nicht technisch blockieren kann.
+- Neue Findings werden als eigenes Issue erfasst, statt den Scope eines laufenden Issues still zu erweitern.
 
 ## Release-Blocker vor M2
 
@@ -47,8 +57,8 @@ Aktuelle G1-Blocker:
 
 Zusätzliche Härtung:
 
-- [ ] #24 – Refresh-Replay über die gesamte Token-Familie erkennen.
-- [ ] #25 – Branch Protection/Ruleset für `main` erzwingen.
+- [ ] #24 – Refresh-Replay über die gesamte Token-Familie erkennen; vor M2 schließen.
+- [ ] #25 – Branch Protection/Ruleset für `main`: Ruleset angelegt, aber bei diesem privaten Repository durch den aktuellen GitHub-Tarif nicht erzwungen; zusätzlich muss das Targeting nach einem Planwechsel auf `main` geprüft werden. Kein eigenständiger G1-Codeblocker, aber offenes Repository-Hardening.
 
 ## M0 – Clean Foundation
 
@@ -69,6 +79,8 @@ Zusätzliche Härtung:
 - [x] Expliziten Backend-/Container-Build in CI ergänzen
 - [x] OpenAPI-Vertrag versionieren und Contract-Tests ergänzen
 - [x] ProtectedPayload-Persistenztyp und Outbox-Payload-Allowlist technisch erzwingen
+
+**M0 ist für den aktuellen Umfang abgeschlossen.** Weitere Security-Härtungen werden in den jeweils betroffenen Milestones und Issues verfolgt.
 
 ## M1 – Identity & Relationship
 
@@ -101,4 +113,4 @@ Zusätzliche Härtung:
 
 ## Nächster Prüfpunkt
 
-Neuen datierten G1-Review nach Abschluss von #11, #26 und dem relevanten Rest von #7 sowie nach Entscheidung/Umsetzung von #24 durchführen. Der nächste Review muss den dann aktuellen `main`-Commit und eine erfolgreiche CI eindeutig referenzieren.
+Neuen datierten G1-Review nach Abschluss von #11, #26 und dem relevanten Rest von #7 sowie nach Umsetzung von #24 durchführen. Der nächste Review muss den dann aktuellen `main`-Commit und eine erfolgreiche CI eindeutig referenzieren. #25 bleibt als tarifbedingt blockiertes Repository-Hardening separat offen.
