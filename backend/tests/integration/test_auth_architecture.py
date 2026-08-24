@@ -47,12 +47,13 @@ class TestOidcIdentities:
         )
 
         assert left.issuer != right.issuer
-        assert service.oidc_identity(
-            session, issuer=left.issuer or "", subject=left.subject
-        ) == left
-        assert service.oidc_identity(
-            session, issuer=right.issuer or "", subject=right.subject
-        ) == right
+        assert (
+            service.oidc_identity(session, issuer=left.issuer or "", subject=left.subject) == left
+        )
+        assert (
+            service.oidc_identity(session, issuer=right.issuer or "", subject=right.subject)
+            == right
+        )
 
     def test_issuer_and_subject_are_database_unique(self, session: Session) -> None:
         first = make_account(session, "Erste Person")
