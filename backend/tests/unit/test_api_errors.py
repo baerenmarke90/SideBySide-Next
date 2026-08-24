@@ -39,6 +39,10 @@ def client() -> TestClient:
     def _not_found() -> None:
         raise NotFoundError("Memory not found.", "MEMORY_NOT_FOUND")
 
+    @app.get("/api/v1/domain-not-found")
+    def _api_domain_not_found() -> None:
+        raise NotFoundError("Space not found.", "SPACE_NOT_FOUND")
+
     @app.get("/forbidden")
     def _forbidden() -> None:
         raise ForbiddenError("Not allowed.", "SPACE_ACCESS_DENIED")
@@ -99,6 +103,34 @@ class TestFormat:
         koerper = antwort.json()
         assert koerper["code"] == ErrorCode.VALIDATION_FAILED
         assert "title" in koerper["detail"]
+
+
+class TestApiRouteMisses:
+    def test_unbekannte_api_route_hat_problem_details(self, client: TestClient) -> None:
+        antwort = client.get("/api/v1/gibt-es-nicht")
+        assert antwort.status_code == 404
+        assert antwort.json() == {
+            "type": "not_found",
+            "title": "Not found",
+            "status": 404,
+            "detail": "Not Found",
+            "code": "HTTP_404",
+        }
+
+    def test_route_miss_durch_zusaetzliches_pfadsegment_hat_problem_details(
+        self, client: TestClient
+    ) -> None:
+        antwort = client.get("/api/v1/domain-not-found/unerwartetes-segment")
+        assert antwort.status_code == 404
+        assert set(antwort.json()) == PFLICHTFELDER
+        assert antwort.json()["code"] == "HTTP_404"
+
+    def test_fachliche_api_404_behaelt_domain_code(self, client: TestClient) -> None:
+        antwort = client.get("/api/v1/domain-not-found")
+        assert antwort.status_code == 404
+        assert set(antwort.json()) == PFLICHTFELDER
+        assert antwort.json()["code"] == "SPACE_NOT_FOUND"
+        assert antwort.json()["detail"] == "Space not found."
 
 
 class TestKeineInternenDetails:

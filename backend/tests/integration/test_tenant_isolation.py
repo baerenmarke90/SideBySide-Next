@@ -119,18 +119,31 @@ class TestFehlgeformteIds:
         [
             "nicht-echt",
             "12345",
-            "../../etc/passwd",
             "' OR 1=1 --",
             "00000000-0000-0000-0000-000000000000",
             "%2e%2e",
         ],
     )
-    def test_ergeben_404_und_keinen_fehler(self, client, paar, boese: str) -> None:  # type: ignore[no-untyped-def]
-        """404 und nicht 422: sonst liesse sich an der Antwort ablesen, ob
-        eine wohlgeformte ID existiert."""
+    def test_router_match_bleibt_fachliche_privacy_404(self, client, paar, boese: str) -> None:  # type: ignore[no-untyped-def]
+        """Wohlgeformtheit darf bei gematchter Route keine Existenzauskunft liefern."""
         antwort = client.get(f"/api/v1/spaces/{boese}", headers=auth(paar["token_a"]))
         assert antwort.status_code == 404
-        assert antwort.json()["code"] in {"SPACE_NOT_FOUND", "HTTP_404"}
+        assert antwort.json()["code"] == "SPACE_NOT_FOUND"
+
+    def test_zusaetzliches_pfadsegment_wird_framework_404(self, client, paar) -> None:  # type: ignore[no-untyped-def]
+        """Ein Route-Miss unter /api/v1 bleibt im ProblemDetails-Vertrag."""
+        antwort = client.get(
+            "/api/v1/spaces/nicht-echt/unerwartetes-segment",
+            headers=auth(paar["token_a"]),
+        )
+        assert antwort.status_code == 404
+        assert antwort.json() == {
+            "type": "not_found",
+            "title": "Not found",
+            "status": 404,
+            "detail": "Not Found",
+            "code": "HTTP_404",
+        }
 
 
 class TestBeendeteMitgliedschaft:
