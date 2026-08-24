@@ -7,7 +7,7 @@ from datetime import datetime
 from functools import partial
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from sidebyside.auth.tokens import (
@@ -125,20 +125,28 @@ def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
 
     jetzt = now()
 
-    wiederverwendet = session.execute(
-        select(DeviceSession).where(DeviceSession.previous_refresh_token_hash == gehasht)
+    # Aktuellen und vorherigen Hash in EINER gesperrten Abfrage suchen.
+    # Wartet ein paralleler Request auf die Sperre, wird die Bedingung nach
+    # der ersten Rotation erneut gegen die aktuelle Zeile geprueft. Der
+    # Token steht dann unter ``previous`` und wird sicher als Replay erkannt.
+    geraet = session.execute(
+        select(DeviceSession)
+        .where(
+            or_(
+                DeviceSession.refresh_token_hash == gehasht,
+                DeviceSession.previous_refresh_token_hash == gehasht,
+            )
+        )
+        .with_for_update()
     ).scalar_one_or_none()
-    if wiederverwendet is not None:
-        revoke(wiederverwendet)
+
+    if geraet is not None and geraet.previous_refresh_token_hash == gehasht:
+        revoke(geraet)
         schedule_after_rollback(
             session,
-            partial(_revoke_by_id, device_session_id=wiederverwendet.id),
+            partial(_revoke_by_id, device_session_id=geraet.id),
         )
         raise gescheitert
-
-    geraet = session.execute(
-        select(DeviceSession).where(DeviceSession.refresh_token_hash == gehasht)
-    ).scalar_one_or_none()
 
     if geraet is None or geraet.revoked_at is not None or geraet.expires_at <= jetzt:
         raise gescheitert

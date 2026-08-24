@@ -151,6 +151,15 @@ class TestErneuern:
         with pytest.raises(UnauthenticatedError):
             sessions.refresh_session(session, tokens.refresh_token)
 
+    def test_widerrufener_refresh_token_wird_abgewiesen(self, session: Session) -> None:
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        sessions.revoke(geraet)
+        session.flush()
+
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, tokens.refresh_token)
+
 
 class TestReplay:
     def test_wiederverwendeter_refresh_token_widerruft_die_sitzung(self, session: Session) -> None:
