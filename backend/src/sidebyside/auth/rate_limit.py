@@ -112,4 +112,3 @@ def prune(session: Session, older_than: datetime | None = None) -> int:
         session.execute(delete(RateLimitEvent).where(RateLimitEvent.occurred_at < grenze)),
     )
     return int(ergebnis.rowcount or 0)
-
