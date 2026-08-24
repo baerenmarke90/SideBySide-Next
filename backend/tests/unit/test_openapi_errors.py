@@ -47,12 +47,18 @@ def test_request_validation_verweist_nicht_mehr_auf_fastapi_defaultmodell() -> N
     schema = create_app().openapi()
 
     for (path, method), statuses in EXPECTED_PROBLEM_RESPONSES.items():
-        if 422 not in statuses:
-            continue
-        response = schema["paths"][path][method]["responses"]["422"]
-        assert _response_schema(response) == {"$ref": PROBLEM_DETAILS_REF}
+        responses = schema["paths"][path][method]["responses"]
+        if 422 in statuses:
+            assert _response_schema(responses["422"]) == {"$ref": PROBLEM_DETAILS_REF}
+        else:
+            # FastAPI erfindet fuer reine str-Path-Parameter ebenfalls einen
+            # generischen 422. SideBySide mappt solche IDs absichtlich auf
+            # 404; der unmoegliche Framework-Default darf nicht im Vertrag stehen.
+            assert "422" not in responses
 
-    assert "HTTPValidationError" not in schema["components"]["schemas"]
+    schemas = schema["components"]["schemas"]
+    assert "HTTPValidationError" not in schemas
+    assert "ValidationError" not in schemas
 
 
 def test_readiness_503_hat_sein_tatsaechliches_betriebsmodell() -> None:
