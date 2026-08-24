@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+
 import pytest
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from sidebyside.auth import passwords, rate_limit
+from sidebyside.auth.tokens import hash_token
+from sidebyside.identity.models import DeviceSession, RateLimitEvent
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -285,10 +290,6 @@ class TestBegrenzung:
     def test_der_schluessel_steht_nur_gehasht_da(self, session: Session) -> None:
         """Wer wann einen Anmeldeversuch hatte, ist mehr Wissen, als die
         Begrenzung braucht."""
-        from sqlalchemy import select
-
-        from sidebyside.identity.models import RateLimitEvent
-
         rate_limit.record_attempt(session, "sign_in", "anna@example.org")
         session.flush()
 
@@ -296,6 +297,119 @@ class TestBegrenzung:
         assert zeilen
         for zeile in zeilen:
             assert "anna@example.org" not in zeile.key_hash
+
+
+class TestProduktiveTransaktionsgrenze:
+    def test_fehlversuche_bleiben_nach_abgelehnten_requests_erhalten(
+        self, production_client
+    ) -> None:  # type: ignore[no-untyped-def]
+        client, maker = production_client
+        email = "anna@example.org"
+        assert (
+            client.post(
+                "/api/v1/auth/register",
+                json={"displayName": "Anna", "email": email, "password": GUTES_PASSWORT},
+            ).status_code
+            == 201
+        )
+
+        for _ in range(rate_limit.SIGN_IN.attempts):
+            antwort = client.post(
+                "/api/v1/auth/sign-in",
+                json={"email": email, "password": "falsch-falsch"},
+            )
+            assert antwort.status_code == 401
+
+        gesperrt = client.post(
+            "/api/v1/auth/sign-in",
+            json={"email": email, "password": "falsch-falsch"},
+        )
+        assert gesperrt.status_code == 429
+        assert gesperrt.json()["code"] == "RATE_LIMITED"
+
+        with maker() as committed:
+            versuche = committed.execute(
+                select(func.count())
+                .select_from(RateLimitEvent)
+                .where(
+                    RateLimitEvent.action == "sign_in",
+                    RateLimitEvent.key_hash == hash_token(email),
+                )
+            ).scalar_one()
+        assert versuche == rate_limit.SIGN_IN.attempts
+
+    def test_parallele_fehlversuche_verlieren_keine_zaehler(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        client, maker = production_client
+        email = "parallel@example.org"
+        assert (
+            client.post(
+                "/api/v1/auth/register",
+                json={"displayName": "Anna", "email": email, "password": GUTES_PASSWORT},
+            ).status_code
+            == 201
+        )
+
+        def fehlversuch(_: int) -> int:
+            return client.post(
+                "/api/v1/auth/sign-in",
+                json={"email": email, "password": "falsch-falsch"},
+            ).status_code
+
+        anzahl = 5
+        with ThreadPoolExecutor(max_workers=anzahl) as pool:
+            codes = list(pool.map(fehlversuch, range(anzahl)))
+
+        assert codes == [401] * anzahl
+        with maker() as committed:
+            versuche = committed.execute(
+                select(func.count())
+                .select_from(RateLimitEvent)
+                .where(
+                    RateLimitEvent.action == "sign_in",
+                    RateLimitEvent.key_hash == hash_token(email),
+                )
+            ).scalar_one()
+        assert versuche == anzahl
+
+    def test_refresh_replay_widerruft_die_sitzung_dauerhaft(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        client, maker = production_client
+        registrierung = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Anna",
+                "email": "anna@example.org",
+                "password": GUTES_PASSWORT,
+            },
+        )
+        assert registrierung.status_code == 201
+        alter_refresh = registrierung.json()["tokens"]["refreshToken"]
+
+        rotation = client.post(
+            "/api/v1/auth/refresh",
+            json={"refreshToken": alter_refresh},
+        )
+        assert rotation.status_code == 200
+        neue_tokens = rotation.json()
+
+        replay = client.post(
+            "/api/v1/auth/refresh",
+            json={"refreshToken": alter_refresh},
+        )
+        assert replay.status_code == 401
+        assert replay.json()["code"] == "AUTHENTICATION_REQUIRED"
+        assert alter_refresh not in replay.text
+
+        assert (
+            client.get(
+                "/api/v1/auth/me",
+                headers=auth(neue_tokens["accessToken"]),
+            ).status_code
+            == 401
+        )
+        with maker() as committed:
+            device_session = committed.execute(select(DeviceSession)).scalar_one()
+            assert device_session.revoked_at is not None
+            assert device_session.access_token_hash is None
 
 
 class TestPasswortAbleitung:

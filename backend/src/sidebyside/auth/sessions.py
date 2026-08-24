@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,6 +19,7 @@ from sidebyside.auth.tokens import (
 )
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ErrorCode, UnauthenticatedError
+from sidebyside.db.session import schedule_after_rollback
 from sidebyside.identity.models import Account, DeviceSession
 
 
@@ -28,6 +31,12 @@ class IssuedTokens:
     refresh_token: str
     access_expires_at: datetime
     refresh_expires_at: datetime
+
+
+def _revoke_by_id(session: Session, *, device_session_id: UUID) -> None:
+    device_session = session.get(DeviceSession, device_session_id)
+    if device_session is not None and device_session.revoked_at is None:
+        revoke(device_session)
 
 
 def start_session(
@@ -121,6 +130,10 @@ def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
     ).scalar_one_or_none()
     if wiederverwendet is not None:
         revoke(wiederverwendet)
+        schedule_after_rollback(
+            session,
+            partial(_revoke_by_id, device_session_id=wiederverwendet.id),
+        )
         raise gescheitert
 
     geraet = session.execute(

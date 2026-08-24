@@ -9,14 +9,18 @@ und Ereignis müssen gemeinsam wirksam werden oder gemeinsam ausbleiben.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from functools import lru_cache
+from typing import cast
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from sidebyside.config import get_settings
+
+AfterRollbackAction = Callable[[Session], None]
+_AFTER_ROLLBACK_KEY = "sidebyside.after_rollback"
 
 
 @lru_cache
@@ -35,6 +39,44 @@ def get_sessionmaker() -> sessionmaker[Session]:
     return sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False, future=True)
 
 
+def schedule_after_rollback(session: Session, action: AfterRollbackAction) -> None:
+    """Eine Sicherheitsaenderung nach einem Request-Rollback dauerhaft ausfuehren.
+
+    Die Aktion bekommt eine frische Session. So kann beispielsweise ein
+    fehlgeschlagener Anmeldeversuch gespeichert werden, ohne dass fachliche
+    Teilaenderungen aus der abgelehnten Anfrage mit uebernommen werden.
+    """
+    actions = cast(
+        "list[AfterRollbackAction]",
+        session.info.setdefault(_AFTER_ROLLBACK_KEY, []),
+    )
+    actions.append(action)
+
+
+def _take_after_rollback_actions(session: Session) -> tuple[AfterRollbackAction, ...]:
+    actions = cast(
+        "list[AfterRollbackAction]",
+        session.info.pop(_AFTER_ROLLBACK_KEY, []),
+    )
+    return tuple(actions)
+
+
+def _run_after_rollback_actions(actions: tuple[AfterRollbackAction, ...]) -> None:
+    if not actions:
+        return
+
+    security_session = get_sessionmaker()()
+    try:
+        for action in actions:
+            action(security_session)
+        security_session.commit()
+    except Exception:
+        security_session.rollback()
+        raise
+    finally:
+        security_session.close()
+
+
 @contextmanager
 def unit_of_work() -> Iterator[Session]:
     """Eine Transaktion.
@@ -49,7 +91,9 @@ def unit_of_work() -> Iterator[Session]:
         yield session
         session.commit()
     except Exception:
+        actions = _take_after_rollback_actions(session)
         session.rollback()
+        _run_after_rollback_actions(actions)
         raise
     finally:
         session.close()
