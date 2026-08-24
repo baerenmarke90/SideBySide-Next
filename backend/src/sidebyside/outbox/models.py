@@ -15,7 +15,6 @@ zurückgerollt wurde. Ein Worker liest die Tabelle und stellt zu.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy import DateTime, Index, Integer, String, Text, func
@@ -24,6 +23,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from sidebyside.db.base import Base
 from sidebyside.db.mixins import IdMixin
+from sidebyside.domain.events import PublicEventPayload
+from sidebyside.outbox.payload import PublicEventPayloadJSON
 
 
 class OutboxEvent(IdMixin, Base):
@@ -36,7 +37,9 @@ class OutboxEvent(IdMixin, Base):
     subject_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
 
     # Nur Verweise und unkritische Merkmale - siehe domain/events.py.
-    payload: Mapped[dict[str, Any]] = mapped_column(postgresql.JSONB, nullable=False, default=dict)
+    payload: Mapped[PublicEventPayload] = mapped_column(
+        PublicEventPayloadJSON(), nullable=False, default=PublicEventPayload
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

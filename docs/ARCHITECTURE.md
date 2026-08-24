@@ -125,6 +125,18 @@ In Version 1 ist der Payload Klartext (`crypto_version = 0`). Die Grenze
 existiert aber schon in API und Persistenz, sodass ein späterer Wechsel auf
 clientseitig erzeugten Ciphertext eine Formatänderung ist und kein Umbau.
 
+Die Persistenz verwendet dafür `ProtectedPayloadJSON` mit einer konkreten
+`ProtectedPayload`-Klasse. Ein rohes Dictionary oder die Payload einer
+anderen Domäne wird bereits vor dem SQL-Bind abgewiesen. Das ist eine
+Typ- und Architekturgrenze, **keine Verschlüsselung**: Bei
+`crypto_version = 0` kann der Server den Inhalt weiterhin lesen.
+
+Outbox-Ereignisse bilden die Gegenrichtung ab. Ihre Nutzlast ist kein
+beliebiges JSON-Dictionary, sondern `PublicEventPayload` mit einer zentralen
+Allowlist unkritischer Metadaten. Der JSONB-Persistenztyp weist auch bei
+direkter ORM-Nutzung rohe Dictionaries ab. Sensibler Text bleibt damit im
+ProtectedPayload und wird nicht dauerhaft in Outbox, Worker oder Logs kopiert.
+
 Ableitende Funktionen — Dashboard, Rückblicke, Regeln, Benachrichtigungen —
 sollen möglichst mit Metadaten auskommen. Was den Klartext braucht, wird
 später nicht mehr funktionieren.
@@ -138,6 +150,17 @@ Discovery, Rezepte, Unterhaltung, externe Medien, Standortverlauf.
 
 Der Domain-Code kennt keinen konkreten Anbieter. Externe Daten werden vor
 dem Eintritt in die Domain in eigene, normalisierte Formen überführt.
+
+Die Verträge heißen `MapProvider`, `GeocodingProvider`, `PlacesProvider`,
+`DiscoveryProvider`, `RecipeProvider`, `EntertainmentProvider`,
+`ExternalMediaProvider` und `LocationHistoryProvider`. Sie geben nur eigene,
+immutable Modelle wie `GeoPoint`, `MapRoute`, `PlaceCandidate`, `RecipeItem`
+oder `EntertainmentItem` zurück; DTOs einzelner Anbieter enden im Adapter.
+
+Eine `ProviderRegistry` verbindet Interface und frei konfigurierbaren Namen
+erst an der Composition Root. Damit kann Cloud oder Self-Hosted einen Adapter
+wechseln, ohne Domain-Code zu ändern. M0 implementiert ausdrücklich keinen
+kommerziellen Anbieter und keine darauf aufbauende M6-/M7-Funktion.
 
 ## Was bewusst fehlt
 

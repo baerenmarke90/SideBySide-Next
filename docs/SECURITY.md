@@ -154,3 +154,14 @@ Error Tracking wird ebenso bereinigt.
 Der Claim, dass selbst der Betreiber Inhalte nicht lesen kann, darf **erst**
 nach tatsächlicher Umsetzung und externem Audit verwendet werden. Stufe 1
 ist keine E2EE und wird nicht so genannt.
+
+Stufe 1 erzwingt nur die technische Trennung: sensible Fachinhalte werden
+als konkrete `ProtectedPayload`-Klasse an eine dafür vorgesehene JSONB-Spalte
+gebunden; rohe Dictionaries werden abgewiesen. Bei `crypto_version = 0`
+liegt dieser Inhalt weiterhin als serverlesbarer Klartext vor. Es gibt noch
+keine Schlüssel, keine clientseitige Versiegelung und keinen Schutz vor dem
+Serverbetreiber.
+
+Outbox-Nutzlasten sind separat auf explizit freigegebene, nicht sensible
+Metadaten beschränkt. Freitextfelder und `ProtectedPayload`-Objekte scheitern
+sowohl an der Domain-Validierung als auch beim direkten ORM-Bind.
