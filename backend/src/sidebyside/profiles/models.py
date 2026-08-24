@@ -86,6 +86,10 @@ class PartnerProfile(IdMixin, TimestampMixin, PrivateResourceMixin, Base):
 
     __table_args__ = (
         UniqueConstraint("space_id", "owner_id", name="uq_partner_profiles_space_id_owner_id"),
+        CheckConstraint(
+            "privacy_class IN ('SPACE_SHARED', 'OWNER_ONLY')",
+            name="privacy_class",
+        ),
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
     )
 
@@ -139,6 +143,10 @@ class ProfilePreference(
     )
 
     __table_args__ = (
+        CheckConstraint(
+            "privacy_class IN ('SPACE_SHARED', 'OWNER_ONLY')",
+            name="privacy_class",
+        ),
         CheckConstraint(
             "category IN ('FOOD', 'DRINK', 'FLOWERS', 'MOVIES', 'SERIES', 'MUSIC', "
             "'HOBBIES', 'ACTIVITIES', 'TRAVEL', 'RESTAURANTS', 'COLORS', 'OTHER')",
