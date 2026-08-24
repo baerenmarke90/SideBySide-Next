@@ -10,6 +10,51 @@ Betriebsformen angeboten:
 
 Beide teilen denselben Application Core.
 
+## Produktvorschau
+
+<p align="center">
+  <img src="docs/assets/playstore/app-icon.png" alt="SideBySide Next App-Icon" width="112">
+</p>
+
+<p align="center">
+  <img src="docs/assets/playstore/feature-graphic.png" alt="SideBySide Next – gemeinsam leben, privat verbunden" width="100%">
+</p>
+
+<p align="center">
+  <strong>Erinnerungen, Wünsche, Pläne und gemeinsame Zeit – ruhig gestaltet und privacy-first gedacht.</strong>
+</p>
+
+> Die folgenden Screens sind Produkt- und Google-Play-Mockups. Der technische
+> Implementierungsstand ist im Abschnitt [Stand](#stand) dokumentiert.
+
+<table>
+  <tr>
+    <th>Gemeinsam starten</th>
+    <th>Unser Heute</th>
+    <th>Unsere Story</th>
+    <th>Unsere Wünsche</th>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/playstore/screen-01-onboarding.png" alt="Onboarding-Mockup" width="200"></td>
+    <td><img src="docs/assets/playstore/screen-02-heute.png" alt="Heute-Mockup" width="200"></td>
+    <td><img src="docs/assets/playstore/screen-03-story.png" alt="Story-Mockup" width="200"></td>
+    <td><img src="docs/assets/playstore/screen-04-wuensche.png" alt="Wünsche-Mockup" width="200"></td>
+  </tr>
+  <tr>
+    <th>Gemeinsam planen</th>
+    <th>Für euch entdecken</th>
+    <th>Gemeinsam einkaufen</th>
+    <th>Privatsphäre</th>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/playstore/screen-05-plan.png" alt="Planungs-Mockup" width="200"></td>
+    <td><img src="docs/assets/playstore/screen-06-discovery.png" alt="Discovery-Mockup" width="200"></td>
+    <td><img src="docs/assets/playstore/screen-07-einkauf.png" alt="Einkaufs-Mockup" width="200"></td>
+    <td><img src="docs/assets/playstore/screen-08-privacy.png" alt="Privacy-Mockup" width="200"></td>
+  </tr>
+</table>
+
+
 ## Leitsätze
 
 Privatsphäre ist Kernfunktion, nicht Beiwerk. Keine Werbung, kein Verkauf
