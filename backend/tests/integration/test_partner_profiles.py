@@ -153,12 +153,8 @@ class TestPreferencePrivacy:
         assert created.status_code == 201
         preference_id = created.json()["id"]
 
-        owner_list = client.get(
-            preferences_path(paar["space"].id), headers=auth(paar["token_a"])
-        )
-        partner_list = client.get(
-            preferences_path(paar["space"].id), headers=auth(paar["token_b"])
-        )
+        owner_list = client.get(preferences_path(paar["space"].id), headers=auth(paar["token_a"]))
+        partner_list = client.get(preferences_path(paar["space"].id), headers=auth(paar["token_b"]))
         assert [item["id"] for item in owner_list.json()] == [preference_id]
         assert partner_list.json() == []
 
