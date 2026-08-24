@@ -546,6 +546,100 @@ class TestProduktiveTransaktionsgrenze:
             assert device_session.revoked_at is not None
             assert device_session.access_token_hash is None
 
+    def test_replay_der_aeltesten_generation_widerruft_dauerhaft(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        """T0 -> T1 -> T2, danach Replay von T0 ueber HTTP.
+
+        Der produktive Lifecycle rollt die Anfrage wegen des 401 zurueck.
+        Der Widerruf muss den Rollback trotzdem ueberleben, sonst bliebe die
+        kompromittierte Sitzung offen.
+        """
+        client, maker = production_client
+        registrierung = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Anna",
+                "email": "anna@example.org",
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
+        )
+        assert registrierung.status_code == 201
+        t0 = registrierung.json()["tokens"]["refreshToken"]
+
+        erste = client.post("/api/v1/auth/refresh", json={"refreshToken": t0})
+        assert erste.status_code == 200
+        t1 = erste.json()["refreshToken"]
+
+        zweite = client.post("/api/v1/auth/refresh", json={"refreshToken": t1})
+        assert zweite.status_code == 200
+        t2 = zweite.json()
+
+        replay = client.post("/api/v1/auth/refresh", json={"refreshToken": t0})
+        assert replay.status_code == 401
+        assert replay.json()["code"] == "AUTHENTICATION_REQUIRED"
+        assert t0 not in replay.text
+
+        assert client.get("/api/v1/auth/me", headers=auth(t2["accessToken"])).status_code == 401
+        assert (
+            client.post(
+                "/api/v1/auth/refresh", json={"refreshToken": t2["refreshToken"]}
+            ).status_code
+            == 401
+        )
+        with maker() as committed:
+            device_session = committed.execute(select(DeviceSession)).scalar_one()
+            assert device_session.revoked_at is not None
+            assert device_session.access_token_hash is None
+
+    def test_replay_einer_mittleren_generation_widerruft_dauerhaft(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        client, maker = production_client
+        registrierung = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Anna",
+                "email": "anna@example.org",
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
+        )
+        assert registrierung.status_code == 201
+        t0 = registrierung.json()["tokens"]["refreshToken"]
+
+        t1 = client.post("/api/v1/auth/refresh", json={"refreshToken": t0}).json()["refreshToken"]
+        t2 = client.post("/api/v1/auth/refresh", json={"refreshToken": t1}).json()
+
+        replay = client.post("/api/v1/auth/refresh", json={"refreshToken": t1})
+        assert replay.status_code == 401
+        assert t1 not in replay.text
+
+        assert client.get("/api/v1/auth/me", headers=auth(t2["accessToken"])).status_code == 401
+        with maker() as committed:
+            device_session = committed.execute(select(DeviceSession)).scalar_one()
+            assert device_session.revoked_at is not None
+
+    def test_unbekannter_refresh_token_widerruft_keine_sitzung(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        """Sonst koennte jeder eine fremde Sitzung mit Unfug abschiessen."""
+        client, maker = production_client
+        registrierung = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Anna",
+                "email": "anna@example.org",
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
+        )
+        assert registrierung.status_code == 201
+        tokens = registrierung.json()["tokens"]
+
+        abgewiesen = client.post("/api/v1/auth/refresh", json={"refreshToken": "gibt-es-nicht"})
+        assert abgewiesen.status_code == 401
+
+        assert client.get("/api/v1/auth/me", headers=auth(tokens["accessToken"])).status_code == 200
+        with maker() as committed:
+            device_session = committed.execute(select(DeviceSession)).scalar_one()
+            assert device_session.revoked_at is None
+
     def test_parallele_refresh_rotation_hat_genau_einen_sieger(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         registrierung = client.post(

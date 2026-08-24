@@ -16,7 +16,7 @@ from sidebyside.auth import sessions
 from sidebyside.auth.tokens import hash_token
 from sidebyside.core.clock import now
 from sidebyside.core.errors import UnauthenticatedError
-from sidebyside.identity.models import DeviceSession
+from sidebyside.identity.models import ConsumedRefreshToken, DeviceSession
 from tests.conftest import make_account, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -180,6 +180,218 @@ class TestReplay:
         assert geraet.revoked_at is not None
         with pytest.raises(UnauthenticatedError):
             sessions.authenticate(session, zweite.access_token)
+
+    def test_aelteste_generation_wird_nach_mehreren_rotationen_erkannt(
+        self, session: Session
+    ) -> None:
+        """T0 -> T1 -> T2, dann Replay von T0.
+
+        Ein Zwei-Slot-Fenster aus aktuellem und vorherigem Token verliert T0
+        nach der zweiten Rotation aus dem Blick. Der Token wuerde zwar
+        abgewiesen, aber nicht mehr seiner Familie zugeordnet - und die
+        kompromittierte Sitzung liefe weiter.
+        """
+        konto = make_account(session)
+        geraet, t0 = sessions.start_session(session, konto)
+        session.flush()
+
+        t1 = sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+        t2 = sessions.refresh_session(session, t1.refresh_token)
+        session.flush()
+
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        assert geraet.revoked_at is not None
+        with pytest.raises(UnauthenticatedError):
+            sessions.authenticate(session, t2.access_token)
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, t2.refresh_token)
+
+    def test_mittlere_generation_wird_nach_der_naechsten_rotation_erkannt(
+        self, session: Session
+    ) -> None:
+        """Replay von T1, nachdem T2 ausgestellt wurde."""
+        konto = make_account(session)
+        geraet, t0 = sessions.start_session(session, konto)
+        session.flush()
+
+        t1 = sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+        t2 = sessions.refresh_session(session, t1.refresh_token)
+        session.flush()
+
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, t1.refresh_token)
+        session.flush()
+
+        assert geraet.revoked_at is not None
+        with pytest.raises(UnauthenticatedError):
+            sessions.authenticate(session, t2.access_token)
+
+    def test_jede_generation_bleibt_der_familie_zugeordnet(self, session: Session) -> None:
+        konto = make_account(session)
+        geraet, t0 = sessions.start_session(session, konto)
+        session.flush()
+
+        t1 = sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+        sessions.refresh_session(session, t1.refresh_token)
+        session.flush()
+
+        verbraucht = (
+            session.execute(
+                select(ConsumedRefreshToken).where(
+                    ConsumedRefreshToken.device_session_id == geraet.id
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert {eintrag.token_hash for eintrag in verbraucht} == {
+            hash_token(t0.refresh_token),
+            hash_token(t1.refresh_token),
+        }
+
+    def test_historie_haelt_nur_hashes(self, session: Session) -> None:
+        """Die Replay-Historie darf keine zweite Quelle fuer Anmeldenachweise sein."""
+        konto = make_account(session)
+        _, t0 = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        eintrag = session.execute(select(ConsumedRefreshToken)).scalar_one()
+        assert eintrag.token_hash == hash_token(t0.refresh_token)
+        assert t0.refresh_token not in str(eintrag.__dict__)
+
+    def test_replay_einer_fremden_familie_laesst_andere_sitzungen_leben(
+        self, session: Session
+    ) -> None:
+        konto = make_account(session)
+        betroffen, t0 = sessions.start_session(session, konto)
+        unbeteiligt, andere = sessions.start_session(session, konto)
+        session.flush()
+
+        sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        assert betroffen.revoked_at is not None
+        assert unbeteiligt.revoked_at is None
+        assert sessions.authenticate(session, andere.access_token).id == konto.id
+
+    def test_unbekannter_token_widerruft_nichts(self, session: Session) -> None:
+        """Nur ein echter Token der Familie loest den Widerruf aus.
+
+        Sonst koennte jeder eine fremde Sitzung abschiessen, indem er
+        beliebigen Unfug an den Refresh-Endpunkt schickt.
+        """
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        session.flush()
+
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, "gibt-es-nicht")
+        session.flush()
+
+        assert geraet.revoked_at is None
+        assert sessions.authenticate(session, tokens.access_token).id == konto.id
+
+    def test_der_fehler_verraet_den_grund_nicht(self, session: Session) -> None:
+        """Unbekannt, abgelaufen und als Replay erkannt sehen gleich aus.
+
+        Ein unterscheidbarer Fehler waere die Auskunft, welcher Token
+        einmal echt war.
+        """
+        konto = make_account(session)
+        _, t0 = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        abgelaufen_konto = make_account(session, "Abgelaufen")
+        abgelaufen_geraet, abgelaufen = sessions.start_session(session, abgelaufen_konto)
+        abgelaufen_geraet.expires_at = now() - timedelta(seconds=1)
+        session.flush()
+
+        meldungen = set()
+        codes = set()
+        for token in ["gibt-es-nicht", t0.refresh_token, abgelaufen.refresh_token]:
+            with pytest.raises(UnauthenticatedError) as fehler:
+                sessions.refresh_session(session, token)
+            session.flush()
+            meldungen.add(str(fehler.value))
+            codes.add(fehler.value.code)
+        assert len(meldungen) == 1
+        assert len(codes) == 1
+
+
+class TestReplayHistorieAufraeumen:
+    def test_laufende_sitzung_behaelt_ihre_historie(self, session: Session) -> None:
+        """Die Historie einer lebenden Familie IST die Replay-Erkennung."""
+        konto = make_account(session)
+        _, t0 = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        assert sessions.prune_replay_history(session) == 0
+        session.flush()
+        assert session.execute(select(ConsumedRefreshToken)).scalars().all()
+
+    def test_beendete_sitzung_wird_nach_der_frist_geraeumt(self, session: Session) -> None:
+        konto = make_account(session)
+        geraet, t0 = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        sessions.revoke(geraet)
+        geraet.revoked_at = now() - sessions.REPLAY_HISTORY_RETENTION - timedelta(days=1)
+        session.flush()
+
+        assert sessions.prune_replay_history(session) == 1
+        session.flush()
+        assert session.execute(select(ConsumedRefreshToken)).scalars().all() == []
+
+    def test_frisch_widerrufene_sitzung_bleibt_zunaechst_stehen(self, session: Session) -> None:
+        konto = make_account(session)
+        geraet, t0 = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, t0.refresh_token)
+        sessions.revoke(geraet)
+        session.flush()
+
+        assert sessions.prune_replay_history(session) == 0
+
+    def test_abgelaufene_sitzung_wird_ohne_widerruf_geraeumt(self, session: Session) -> None:
+        konto = make_account(session)
+        geraet, t0 = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, t0.refresh_token)
+        geraet.expires_at = now() - sessions.REPLAY_HISTORY_RETENTION - timedelta(days=1)
+        session.flush()
+
+        assert sessions.prune_replay_history(session) == 1
+
+    def test_geloeschte_sitzung_nimmt_ihre_historie_mit(self, session: Session) -> None:
+        """Der Fremdschluessel raeumt kaskadierend auf."""
+        konto = make_account(session)
+        geraet, t0 = sessions.start_session(session, konto)
+        session.flush()
+        sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        session.delete(geraet)
+        session.flush()
+
+        assert session.execute(select(ConsumedRefreshToken)).scalars().all() == []
 
 
 class TestAlleWiderrufen:

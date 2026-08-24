@@ -57,7 +57,7 @@ Aktuelle G1-Blocker:
 
 Zusätzliche Härtung:
 
-- [ ] #24 – Refresh-Replay über die gesamte Token-Familie erkennen; vor M2 schließen.
+- [x] #24 – Refresh-Replay über die gesamte Token-Familie erkennen.
 - [ ] #25 – Branch Protection/Ruleset für `main`: Ruleset angelegt, aber bei diesem privaten Repository durch den aktuellen GitHub-Tarif nicht erzwungen; zusätzlich muss das Targeting nach einem Planwechsel auf `main` geprüft werden. Kein eigenständiger G1-Codeblocker, aber offenes Repository-Hardening.
 
 ## M0 – Clean Foundation

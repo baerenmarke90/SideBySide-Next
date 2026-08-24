@@ -101,6 +101,29 @@ dem ersten Erfolg bleibt der Bootstrap dauerhaft geschlossen und alle
 weiteren Registrierungen brauchen eine Einladung. Der geheime Wert wird
 nicht persistiert oder geloggt.
 
+### Refresh-Token-Familie
+
+Die `DeviceSession` ist zugleich die Token-Familie: jeder Refresh Token, der
+aus einer Anmeldung hervorgeht, gehört zu genau dieser Sitzung. Jede
+verbrauchte Generation bleibt als `ConsumedRefreshToken` mit ihrem Hash der
+Familie zugeordnet, solange die Sitzung lebt.
+
+Damit ist die Erkennung nicht auf die unmittelbar vorherige Generation
+beschränkt. Taucht nach `T0 → T1 → T2` erneut `T0` auf, ist es kein bloß
+ungültiger Token, sondern eine Kopie: der rechtmäßige Client hätte `T2`.
+Die Sitzung wird deshalb dauerhaft widerrufen — auch dann, wenn die Anfrage
+selbst mit 401 endet und zurückgerollt wird.
+
+Der Widerruf setzt einen echten Token dieser Familie voraus. Ein beliebiger
+unbekannter Wert widerruft nichts, sonst könnte jeder eine fremde Sitzung
+beenden. Nach außen sind unbekannt, abgelaufen, widerrufen und als Replay
+erkannt nicht unterscheidbar.
+
+Die Historie hält ausschließlich Hashes und ist damit keine zweite Quelle
+für Anmeldenachweise. Sie verschwindet mit der Sitzung und wird für
+beendete Sitzungen nach einer Aufbewahrungsfrist geräumt; laufende
+Sitzungen behalten ihre Historie, denn sie *ist* die Erkennung.
+
 ## Invitations
 
 Einladungstoken: zufällig, ausreichend Entropie, **nur gehasht**

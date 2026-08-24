@@ -288,9 +288,11 @@ class DeviceSession(IdMixin, Base):
     kann sich damit nicht anmelden - ein gestohlener Datenbestand ist
     schlimm genug, ohne dass er auch noch Zugang verschafft.
 
-    `previous_refresh_token_hash` dient der Replay-Erkennung: taucht ein
-    bereits rotierter Refresh Token wieder auf, ist er kopiert worden. Die
-    Sitzung wird dann sofort widerrufen.
+    Die Sitzung ist zugleich die Refresh-Token-Familie: jeder Token, der
+    aus ihr hervorgeht, gehoert zu genau dieser Zeile. Verbrauchte
+    Generationen stehen in `ConsumedRefreshToken` und bleiben der Familie
+    zuordenbar, damit ein spaeter auftauchender alter Token nicht nur
+    abgewiesen, sondern als Kompromittierung erkannt wird.
     """
 
     __tablename__ = "device_sessions"
@@ -305,7 +307,6 @@ class DeviceSession(IdMixin, Base):
     platform: Mapped[str] = mapped_column(String(32), nullable=False, default="")
 
     refresh_token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    previous_refresh_token_hash: Mapped[str | None] = mapped_column(String(64))
 
     access_token_hash: Mapped[str | None] = mapped_column(String(64))
     access_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -321,6 +322,43 @@ class DeviceSession(IdMixin, Base):
         UniqueConstraint("refresh_token_hash", name="uq_device_sessions_refresh_token_hash"),
         Index("ix_device_sessions_access_token_hash", "access_token_hash"),
         Index("ix_device_sessions_account_id", "account_id"),
+    )
+
+
+class ConsumedRefreshToken(IdMixin, Base):
+    """Eine bereits verbrauchte Refresh-Token-Generation.
+
+    Die Rotation allein macht einen alten Token nur ungueltig. Damit ein
+    spaeter auftauchender alter Token auch nach mehreren Rotationen noch
+    seiner Familie zugeordnet werden kann - und damit als gestohlen erkannt
+    statt bloss abgewiesen wird -, bleibt jede verbrauchte Generation hier
+    stehen, solange die Sitzung lebt.
+
+    Gespeichert wird ausschliesslich der Hash. Diese Tabelle ist damit
+    keine zweite Kopie der Anmeldenachweise: wer sie liest, kann sich
+    weder anmelden noch einen Token rekonstruieren.
+
+    Der Hash ist global eindeutig. Ein Refresh Token gehoert deshalb zu
+    genau einer Familie, und ein Replay laesst sich nicht durch
+    Untergeschieben einer zweiten Zeile mehrdeutig machen.
+    """
+
+    __tablename__ = "consumed_refresh_tokens"
+
+    device_session_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("device_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    consumed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_consumed_refresh_tokens_token_hash"),
+        Index("ix_consumed_refresh_tokens_device_session_id", "device_session_id"),
     )
 
 
