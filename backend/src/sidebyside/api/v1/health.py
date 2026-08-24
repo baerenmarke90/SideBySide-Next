@@ -33,7 +33,16 @@ def health() -> Health:
     return Health(status="ok")
 
 
-@router.get("/health/ready", response_model=Readiness)
+@router.get(
+    "/health/ready",
+    response_model=Readiness,
+    responses={
+        503: {
+            "model": Readiness,
+            "description": "Der Prozess laeuft, aber die Datenbank ist nicht erreichbar.",
+        }
+    },
+)
 def readiness(response: Response) -> Readiness:
     try:
         with get_engine().connect() as verbindung:

@@ -15,6 +15,8 @@ Fehlermeldung anzeigen will, braucht dafür genau einen Weg.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -52,6 +54,41 @@ _STATUS_TYPES: dict[int, tuple[str, str]] = {
     422: ("validation_error", "Invalid request"),
     429: ("rate_limited", "Too many requests"),
 }
+
+_PROBLEM_RESPONSE_DESCRIPTIONS: dict[int, str] = {
+    400: "Die Anfrage ist syntaktisch gueltig, kann aber so nicht verarbeitet werden.",
+    401: "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen.",
+    403: "Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt.",
+    404: "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar.",
+    405: "Die HTTP-Methode ist fuer diese Ressource nicht vorgesehen.",
+    409: "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource.",
+    422: "Anfrageparameter oder fachliche Eingaben sind ungueltig.",
+    429: "Zu viele Versuche innerhalb des erlaubten Zeitfensters.",
+}
+
+
+def problem_responses(
+    *status_codes: int,
+    descriptions: Mapping[int, str] | None = None,
+) -> dict[int | str, dict[str, Any]]:
+    """Wiederverwendbare OpenAPI-Antworten fuer bekannte ProblemDetails.
+
+    Die Route nennt nur Fehler, die ihr produktiver Pfad tatsaechlich
+    ausloesen kann. So bleibt der Vertrag vollstaendig, ohne moegliche
+    Fehler zu erfinden. Ein explizites 422 ersetzt zugleich FastAPIs
+    Standard-HTTPValidationError durch unser tatsaechliches Runtime-Modell.
+    """
+    overrides = descriptions or {}
+    antworten: dict[int | str, dict[str, Any]] = {}
+    for status_code in status_codes:
+        standard = _PROBLEM_RESPONSE_DESCRIPTIONS.get(status_code)
+        if standard is None:
+            raise ValueError(f"No ProblemDetails OpenAPI description for HTTP {status_code}.")
+        antworten[status_code] = {
+            "model": ProblemDetails,
+            "description": overrides.get(status_code, standard),
+        }
+    return antworten
 
 
 def problem(status: int, type_: str, title: str, detail: str, code: str) -> JSONResponse:
