@@ -56,6 +56,8 @@ class TestProduktion:
             "sidebyside.main.get_settings",
             lambda: Settings(environment=Environment.PRODUCTION),
         )
-        produktion = TestClient(create_app(), raise_server_exceptions=False)
+        produktion = TestClient(
+            create_app(), base_url="http://localhost", raise_server_exceptions=False
+        )
         assert produktion.get("/openapi.json").status_code == 404
         assert produktion.get("/docs").status_code == 404
