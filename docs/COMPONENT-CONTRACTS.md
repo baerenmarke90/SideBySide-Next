@@ -1,7 +1,7 @@
 # SideBySide Component Contracts
 
 **Status:** Verbindliche Produktgrundlage  
-**Version:** 1.0  
+**Version:** 1.1  
 **Stand:** 24.08.2026
 
 Component Contracts beschreiben Verhalten und Bedeutung gemeinsamer UI-Bausteine unabhängig vom technischen Framework. WebApp und Smartphone-App dürfen unterschiedliche Implementierungen besitzen, müssen aber dieselben Verträge erfüllen.
@@ -25,15 +25,16 @@ Neue visuelle Varianten werden nur ergänzt, wenn sie eine neue Bedeutung oder I
 
 ```text
 LoadState       = idle | loading | content | empty | error | offline
-SyncState       = local | syncing | synced | failed | conflict
-Visibility      = private | shared
+SyncState       = local_draft | submitting | synced | failed | conflict
+PrivacyClass    = SPACE_SHARED | OWNER_ONLY | TEMPORARY_SHARED | EPHEMERAL_CONTEXT | SYSTEM_METADATA
 PermissionState = unknown | explaining | requesting | granted | denied | blocked
 ActionState     = idle | submitting | success | error
 ```
 
 - `LoadState` beschreibt das Laden einer Ansicht.
 - `SyncState` beschreibt die Persistenz eines bereits sichtbaren Inhalts.
-- `Visibility` beschreibt, wer einen Inhalt sehen darf.
+- `PrivacyClass` beschreibt die fachliche Zugriffsklasse. UI-Kürzel wie `private`
+  und `shared` sind keine API-Werte.
 - Zustände werden nicht zu einem unklaren Boolean wie `isLoading` verdichtet, wenn mehrere Übergänge möglich sind.
 - Fehlermeldungen besitzen einen stabilen Fehlercode für Technik und eine verständliche Nachricht für Menschen.
 
@@ -153,19 +154,21 @@ ActionState     = idle | submitting | success | error
 
 - Checkbox und Text bilden eine gemeinsame verständliche Bedienung.
 - Erledigte Einträge bleiben lesbar und können wieder geöffnet werden.
-- Gleichzeitige Änderungen werden synchronisiert; Konflikte überschreiben nichts still.
+- Gleichzeitige Online-Änderungen verwenden `version`; Konflikte überschreiben nichts still.
 - Löschen ist über Menü und optional ergänzend über Geste erreichbar.
 
 ## 7. Privacy und Status Components
 
 ### 7.1 Visibility Control
 
-**Werte:** `private`, `shared`.
+**MVP-Auswahlwerte, wenn die Domain sie unterstützt:** `OWNER_ONLY`, `SPACE_SHARED`.
 
-- Zeigt Icon und Text: „Privat“ oder „Geteilt“.
+- Zeigt Icon und Text: „Nur für mich“ oder „Geteilt“.
 - Im Anzeigezustand als Chip/Status, im Formular als echte Auswahlkomponente.
 - Ein Wechsel erklärt Empfänger und Wirkung.
 - Pink markiert privaten/geschützten Kontext, Grün geteilten Kontext; Text bleibt verpflichtend.
+- Memory, Wish und Plan zeigen nur ihren Status; sie bieten im aktuellen Core
+  keinen Wechsel der Privacy-Klasse. HeartMoment darf beide MVP-Werte anbieten.
 
 ### 7.2 Status Badge
 
@@ -176,7 +179,8 @@ ActionState     = idle | submitting | success | error
 
 ### 7.3 Sync Indicator
 
-- Verwendet die Texte „Wird gespeichert“, „Gespeichert“, „Offline gespeichert“ oder „Aktion nötig“.
+- Verwendet die Texte „Wird gespeichert“, „Gespeichert“ oder „Aktion nötig“.
+- Für einen fehlgeschlagenen Offline-Schreibversuch gilt separat: „Noch nicht gespeichert“.
 - `synced` darf nach kurzer Zeit visuell zurücktreten.
 - `failed` und `conflict` bleiben sichtbar, bis sie gelöst oder bewusst verworfen wurden.
 
@@ -253,7 +257,7 @@ permission_result
 sync_conflict_opened
 ```
 
-Nicht erlaubt sind Freitext, Nachrichtentexte, Bildinhalte, exakte private Datumsangaben oder andere sensible Nutzinhalte. IDs werden nur pseudonymisiert und nur bei begründetem Analysezweck übertragen.
+Nicht erlaubt sind Freitext, Suchtext, Nachrichtentexte, Bildinhalte, exakte private Datumsangaben, direkte Resource-IDs oder andere sensible Nutzinhalte. Technische/pseudonymisierte Referenzen werden nur bei dokumentiertem Zweck und nicht als Inhaltsmerkmal übertragen.
 
 ## 12. Definition of Done
 
@@ -276,3 +280,5 @@ Eine gemeinsame Komponente ist bereit, wenn:
 - [UX Patterns](./UX-PATTERNS.md)
 - [Screen-Templates](./SCREEN-TEMPLATES.md)
 - [Design-Tokens](../design/tokens.json)
+- [API-/UI-Verträge](./API-UI-CONTRACTS.md)
+- [Design-System-Umsetzung](./DESIGN-SYSTEM-DELIVERY.md)

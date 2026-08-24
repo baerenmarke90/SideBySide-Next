@@ -1,7 +1,7 @@
 # SideBySide UX Patterns
 
 **Status:** Verbindliche Produktgrundlage  
-**Version:** 1.0  
+**Version:** 1.1  
 **Stand:** 24.08.2026
 
 Dieses Dokument legt die wiederkehrenden Interaktionsmuster für WebApp und Smartphone-App fest. Beide Oberflächen teilen dieselbe Informationsarchitektur, Semantik und Zustandslogik. Die konkrete Darstellung passt sich an Plattform, Fensterbreite und Eingabemethode an.
@@ -89,7 +89,7 @@ Jede datenbasierte Komponente und jeder Screen unterstützt diese Zustände:
 | Content | echte Inhalte | Kernaufgabe ausführen |
 | Empty | Ursache und Nutzen erklären | Inhalt anlegen oder entdecken |
 | Error | verständliche Ursache, soweit bekannt | erneut versuchen |
-| Offline | lokale Inhalte plus Status | offline weiterarbeiten oder erneut verbinden |
+| Offline | letzter autorisierter Read-Cache plus Stand | lesen; Schreiben klar blockieren |
 | Syncing | dezenter, persistenter Status | weiterarbeiten |
 | Conflict | Unterschiede und Folgen erklären | Version bewusst auswählen |
 
@@ -102,16 +102,21 @@ Jede datenbasierte Komponente und jeder Screen unterstützt diese Zustände:
 
 - Sichere, reversible Änderungen dürfen optimistisch dargestellt werden.
 - Bei fehlgeschlagenem Speichern wird der lokale Entwurf erhalten.
-- Synchronisationsstatus lautet klar: **Wird gespeichert**, **Gespeichert**, **Offline gespeichert**, **Aktion nötig**.
+- Synchronisationsstatus lautet klar: **Wird gespeichert**, **Gespeichert** oder **Aktion nötig**.
+- Android unterstützt im MVP Offline-Lesen, aber kein Offline-Schreiben und keine lokale Outbox. Ein Schreibversuch endet mit **Noch nicht gespeichert**; ein sicherer Formularentwurf darf erhalten bleiben.
 - Löschungen sind nach Möglichkeit über „Rückgängig“ wiederherstellbar.
 - Konflikte werden niemals still überschrieben.
 - Zeitstempel dienen nur als Zusatz; der verständliche Status steht zuerst.
 
 ## 6. Privacy und Teilen
 
-- Jedes teilbare Objekt besitzt den Zustand `private` oder `shared`.
+- Jedes Objekt besitzt eine fachliche Privacy-Klasse. Die UI bildet `OWNER_ONLY`
+  als „Nur für mich“ und `SPACE_SHARED` als „Geteilt“ ab.
+- Eine Privacy-Auswahl erscheint nur in Domains, die mehrere Klassen unterstützen;
+  Memory, Wish und Plan bleiben im aktuellen Core `SPACE_SHARED`.
 - Der Sichtbarkeitsstatus steht nahe Titel, Formularabschluss oder Hauptaktion.
-- Die Voreinstellung ist der datensparsamere Zustand, sofern der Produktkontext nichts anderes zwingend verlangt.
+- Wo eine Auswahl fachlich erlaubt ist, ist die datensparsamere zulässige Klasse
+  die Voreinstellung, sofern die Produktspezifikation nichts anderes vorgibt.
 - Vor dem ersten Teilen werden Empfänger, Inhalt und Wirkung erklärt.
 - Ein Wechsel von privat zu geteilt ist eine bewusste Aktion und erhält eine klare Bestätigung im Ergebnis.
 - Ein Wechsel zurück zu privat erklärt, ob bereits synchronisierte Kopien oder Benachrichtigungen betroffen sind.
@@ -202,3 +207,5 @@ Ein neuer Flow ist erst bereit für Umsetzung, wenn:
 - [Component Contracts](./COMPONENT-CONTRACTS.md)
 - [Screen-Templates](./SCREEN-TEMPLATES.md)
 - [Design-Tokens](../design/tokens.json)
+- [Critical User Flows](./USER-FLOWS.md)
+- [API-/UI-Verträge](./API-UI-CONTRACTS.md)

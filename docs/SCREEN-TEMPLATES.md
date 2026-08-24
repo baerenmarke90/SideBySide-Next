@@ -1,7 +1,7 @@
 # SideBySide Screen Templates
 
 **Status:** Verbindliche Produktgrundlage  
-**Version:** 1.0  
+**Version:** 1.1  
 **Stand:** 24.08.2026
 
 Screen-Templates übersetzen Informationsarchitektur, UX-Patterns und Components in wiederholbare Seitenstrukturen. Sie sind keine fertigen Screens, sondern verbindliche Layout- und Verhaltensrahmen.
@@ -74,17 +74,18 @@ Auf Compact darf eine Floating Action Button-ähnliche Aktion nur verwendet werd
 
 ## 5. Template: Planen Hub
 
-**Zweck:** Einstieg in Wünsche, Pläne und Einkauf.
+**Zweck:** Einstieg in Wünsche und Pläne; Einkauf wird später als eigene Domain ergänzt.
 
 ### Compact
 
-- Drei klar benannte Einstiege mit aktuellem Status.
+- Zwei klar benannte Einstiege mit aktuellem Status; ein späterer Einkaufseinstieg
+  erscheint erst bei implementierter und aktivierter Domain.
 - Letzte oder dringende Inhalte unterhalb der Einstiege.
 - Keine verschachtelte Kartenlandschaft.
 
 ### Expanded
 
-- Lokale Navigation oder Segmentierung für Wünsche, Pläne und Einkauf.
+- Lokale Navigation oder Segmentierung für Wünsche und Pläne; Einkauf später.
 - List-Detail-Struktur für gewählten Bereich.
 - Unterstützendes Pane nur bei echtem Zusatznutzen.
 
@@ -92,7 +93,7 @@ Auf Compact darf eine Floating Action Button-ähnliche Aktion nur verwendet werd
 
 **Pflichtzustände:** leerer Bereich, gemeinsame und private Einträge, Sync-Konflikt, erledigte Einträge.
 
-## 6. Template: Einkaufsliste
+## 6. Template: Einkaufsliste (spätere Domain)
 
 **Zweck:** Schnelles gemeinsames Abhaken, auch bei schlechter Verbindung.
 
@@ -100,7 +101,7 @@ Auf Compact darf eine Floating Action Button-ähnliche Aktion nur verwendet werd
 
 - Direkteingabe am oberen Rand.
 - Gruppierte Checkliste mit großen Touch-Zielen.
-- Offline-/Sync-Status bleibt sichtbar, aber kompakt.
+- Offline-Stand bleibt sichtbar; Schreiben ist im MVP ohne Verbindung nicht erlaubt.
 - Zusatzinformationen öffnen ein Sheet oder eine Seite.
 
 ### Expanded
@@ -109,7 +110,7 @@ Auf Compact darf eine Floating Action Button-ähnliche Aktion nur verwendet werd
 - Optionales Nebenpane: ausgewähltes Rezept, Notiz oder Verlauf.
 - Tastaturkürzel für Hinzufügen und Fokuswechsel.
 
-**Pflichtzustände:** offline editierbar, wird synchronisiert, Konflikt, alles erledigt, gelöschten Eintrag rückgängig machen.
+**Pflichtzustände:** Offline-Read-Cache, Offline-Schreibversuch „Noch nicht gespeichert“, Online-Konflikt, alles erledigt, gelöschten Eintrag rückgängig machen.
 
 ## 7. Template: Entdecken
 
@@ -164,7 +165,7 @@ Auf Compact darf eine Floating Action Button-ähnliche Aktion nur verwendet werd
 
 **Reihenfolge:** Titel → Hauptinhalt → Datum/Metadaten → Medien → Sichtbarkeit → Abschluss.
 
-**Pflichtzustände:** Validierungsfehler, Upload läuft/fehlt, ungespeicherte Änderungen, offline gespeichert, Speichern fehlgeschlagen.
+**Pflichtzustände:** Validierungsfehler, Upload läuft/fehlt, ungespeicherte Änderungen, Offline-Schreibversuch „Noch nicht gespeichert“, Speichern fehlgeschlagen.
 
 ## 10. Template: Auth und Einladung
 
@@ -222,8 +223,10 @@ Auf Compact darf eine Floating Action Button-ähnliche Aktion nur verwendet werd
 ### Offline
 
 - Globaler Status erscheint kompakt in der Shell.
-- Betroffene Aktionen erklären, ob sie lokal gespeichert oder blockiert werden.
-- Wiederverbinden synchronisiert im Hintergrund; Konflikte werden sichtbar.
+- Betroffene Schreibaktionen erklären, dass sie nicht gespeichert wurden. Ein
+  sicherer Formularentwurf darf erhalten bleiben, ist aber kein Domainobjekt.
+- Wiederverbinden aktualisiert den Read-Cache; ein erneuter Schreibversuch erfolgt
+  im MVP bewusst und nicht über eine lokale Outbox.
 
 ### No Permission
 
@@ -260,3 +263,5 @@ Auf Compact darf eine Floating Action Button-ähnliche Aktion nur verwendet werd
 - [UX Patterns](./UX-PATTERNS.md)
 - [Component Contracts](./COMPONENT-CONTRACTS.md)
 - [Design-Tokens](../design/tokens.json)
+- [Critical User Flows](./USER-FLOWS.md)
+- [Accessibility- und QA-Matrix](./ACCESSIBILITY-QA-MATRIX.md)

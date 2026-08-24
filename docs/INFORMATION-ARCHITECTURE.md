@@ -1,7 +1,7 @@
 # Informationsarchitektur für SideBySide Next
 
 **Status:** Verbindliche Grundlage für Web und App  
-**Version:** 1.0  
+**Version:** 1.1  
 **Gültig ab:** 24. August 2026
 
 Dieses Dokument definiert Navigation, Benennung, Routen und die Zuordnung der
@@ -14,8 +14,8 @@ passen ihre Navigation aber an Fenstergröße und Plattformkonventionen an.
 - Die Hauptnavigation enthält höchstens fünf Ziele.
 - Ein Inhalt hat genau einen fachlichen Hauptort; Querverweise sind Deep Links.
 - Routen spiegeln Aufgaben und Inhalte, nicht technische Module.
-- Private und geteilte Inhalte verwenden dieselbe Navigation, zeigen ihren
-  Sichtbarkeitsstatus aber direkt am Inhalt.
+- Privacy-Klassen verändern nicht die Hauptnavigation; wo eine Domain mehrere
+  Klassen unterstützt, steht der Status direkt am Inhalt.
 - Navigation darf keine ungespeicherten Eingaben ohne Warnung verwerfen.
 - Web und App verwenden dieselben Begriffe und stabilen Route-IDs.
 
@@ -24,8 +24,8 @@ passen ihre Navigation aber an Fenstergröße und Plattformkonventionen an.
 | Route-ID | Deutscher Name | Zweck |
 |---|---|---|
 | `today` | Heute | gemeinsamer Überblick und nächste sinnvolle Schritte |
-| `story` | Story | private Timeline der gemeinsamen Erinnerungen |
-| `plan` | Planen | Wünsche, konkrete Pläne und Einkauf |
+| `story` | Story | nicht öffentliche gemeinsame Timeline der Erinnerungen |
+| `plan` | Planen | Wünsche und konkrete Pläne; später Einkauf |
 | `discover` | Entdecken | kuratierte Inspiration für gemeinsame Zeit |
 | `more` | Mehr | Space, Privacy, Profil und Einstellungen |
 
@@ -52,20 +52,21 @@ SideBySide Next
 │   ├── Erinnerung
 │   │   ├── Medien
 │   │   ├── Ort und Datum
-│   │   ├── Sichtbarkeit
+│   │   ├── Status „Geteilt“
 │   │   └── Bearbeitung
 │   └── neue Erinnerung
 ├── Planen
 │   ├── Wünsche
-│   │   ├── privat
-│   │   ├── geteilt
+│   │   ├── offen
+│   │   ├── geplant
+│   │   ├── abgeschlossen
 │   │   └── Wunschdetail
 │   ├── Pläne
 │   │   ├── Status
 │   │   ├── Termin
 │   │   ├── Checkliste
 │   │   └── Medien und Notizen
-│   └── Einkauf
+│   └── Einkauf (später, feature-gesteuert)
 │       ├── gemeinsame Liste
 │       ├── Zuständigkeiten
 │       └── Rezeptideen
@@ -85,11 +86,13 @@ SideBySide Next
 
 ## 4. Planen als gemeinsamer Hub
 
-`Planen` bündelt drei eng verbundene Zustände:
+`Planen` bündelt im Core zwei eng verbundene Zustände und hält einen späteren
+Bereich architektonisch frei:
 
 1. **Wunsch:** eine Idee ohne verbindlichen Termin.
 2. **Plan:** eine konkretisierte Idee mit Status, Termin oder Aufgaben.
-3. **Einkauf:** eine wiederkehrende gemeinsame Alltagsliste.
+3. **Einkauf (später):** eine eigenständige Shopping-Domäne, nicht bloß eine
+   generische Collection.
 
 Wünsche und Pläne dürfen nicht als voneinander isolierte Datenwelten wirken.
 Eine Umwandlung von Wunsch zu Plan ist ein sichtbarer, nachvollziehbarer
@@ -98,7 +101,8 @@ eine Empfehlung als Wunsch oder Plan übernehmen.
 
 ### Sekundärnavigation
 
-- Smartphone: Segmented Control oder Tabs `Wünsche | Pläne | Einkauf`.
+- Smartphone: zunächst Segmented Control oder Tabs `Wünsche | Pläne`; Einkauf
+  wird erst bei implementierter und aktivierter Shopping-Domäne ergänzt.
 - Web: dieselben Tabs innerhalb des Planen-Bereichs; auf großen Fenstern kann
   eine Liste mit Detail-Pane verwendet werden.
 - Der zuletzt gewählte Unterbereich darf lokal wiederhergestellt werden.
@@ -120,7 +124,7 @@ App-Deep-Links. IDs sind undurchsichtige, stabile Bezeichner.
 | Wunsch öffnen | `/plan/wishes/:wishId` |
 | Pläne | `/plan/plans` |
 | Plan öffnen | `/plan/plans/:planId` |
-| Einkauf | `/plan/shopping` |
+| Einkauf, reserviert für spätere Domain | `/plan/shopping` |
 | Entdecken | `/discover` |
 | Empfehlung öffnen | `/discover/:recommendationId` |
 | Mehr | `/more` |
@@ -149,7 +153,7 @@ App-Deep-Links. IDs sind undurchsichtige, stabile Bezeichner.
 | Story | Liste oder Detail | Liste oder Detail | Timeline + Detail |
 | Wünsche | Liste oder Detail | Liste oder Detail | Liste + Detail |
 | Pläne | Liste oder Detail | Liste oder Detail | Liste + Detail + optionale Unterstützung |
-| Einkauf | eine Liste | Liste + optionale Rezeptkarte | Liste + Rezept-/Detail-Pane |
+| Einkauf, später | eine Liste | Liste + optionale Rezeptkarte | Liste + Rezept-/Detail-Pane |
 | Entdecken | Feed + Detail-Screen | Feed + Detail | Grid/Feed + Detail-Pane |
 | Einstellungen | gestapelte Seiten | Seite mit Kategorien | Kategorien + Einstellungsdetail |
 
@@ -181,15 +185,20 @@ Zurück-Zustand muss beim Wechsel zwischen Fenstergrößen erhalten bleiben.
 Navigation ist nicht gleich Berechtigung. Ein sichtbarer Navigationsbereich
 garantiert keinen Zugriff auf jedes Objekt darin.
 
-### Sichtbarkeitswerte
+### Privacy-Klassen
 
-| Wert | Bedeutung | UI-Label |
+| API-Wert | Bedeutung | UI-Label |
 |---|---|---|
-| `private` | nur die erstellende Person | Nur für mich |
-| `shared` | beide aktiven Space-Mitglieder | Mit Partner teilen |
+| `OWNER_ONLY` | nur die Eigentümerperson | Nur für mich |
+| `SPACE_SHARED` | beide aktiven Space-Mitglieder | Geteilt / Mit Partner teilen |
+| `TEMPORARY_SHARED` | zeitlich begrenzte Freigabe | erst bei implementierter Domain |
+| `EPHEMERAL_CONTEXT` | kurzlebiger Kontext mit Ablauf | kontextabhängig |
+| `SYSTEM_METADATA` | technische Metadaten | kein reguläres UI-Label |
 
-Weitere Sichtbarkeitsstufen werden erst eingeführt, wenn das Produkt tatsächlich
-mehr als zwei Space-Mitglieder unterstützt. `public` ist kein zulässiger Wert.
+Die UI darf `private` und `shared` als interne Präsentationszustände verwenden,
+sendet aber die fachlichen API-Werte. Nicht jede Domain unterstützt eine Wahl:
+Memory, Wish und Plan sind im aktuellen Core `SPACE_SHARED`; HeartMoment kann
+`OWNER_ONLY` oder `SPACE_SHARED` sein. `public` ist kein zulässiger Wert.
 
 ## 9. URL-, Verlauf- und Zurück-Verhalten
 
@@ -205,11 +214,11 @@ mehr als zwei Space-Mitglieder unterstützt. `public` ist kein zulässiger Wert.
 
 Vor M1 müssen diese Punkte entschieden werden:
 
-- Ist `private` oder `shared` der Standard für neue Wünsche?
 - Welche Inhalte erscheinen in Benachrichtigungsvorschauen?
 - Darf eine Empfehlung direkt als Plan übernommen werden oder zunächst nur als Wunsch?
 - Welche Filter werden zwischen Sitzungen gespeichert?
-- Wie werden Inhalte dargestellt, wenn eine Partnerschaft beendet wurde?
+- Welche Retention-Fristen gelten vor dem Cloud-Launch für Account- und Space-Löschung?
+- Wie wird eine später eingeführte Partnerentfernung dargestellt? Sie ist nicht Teil des MVP.
 
 ## 11. Akzeptanzkriterien
 
@@ -227,3 +236,5 @@ Vor M1 müssen diese Punkte entschieden werden:
 - [UX-Patterns](UX-PATTERNS.md)
 - [Component Contracts](COMPONENT-CONTRACTS.md)
 - [Screen-Templates](SCREEN-TEMPLATES.md)
+- [Critical User Flows](USER-FLOWS.md)
+- [API-/UI-Verträge](API-UI-CONTRACTS.md)
