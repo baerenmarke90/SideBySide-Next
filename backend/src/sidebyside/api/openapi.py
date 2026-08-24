@@ -60,7 +60,10 @@ def _remove_implicit_fastapi_validation(schema: dict[str, Any], routes: list[Any
                 continue
             responses = operation.get("responses", {})
             implicit = responses.get("422")
-            if isinstance(implicit, dict) and _response_schema_ref(implicit) == _HTTP_VALIDATION_REF:
+            if (
+                isinstance(implicit, dict)
+                and _response_schema_ref(implicit) == _HTTP_VALIDATION_REF
+            ):
                 del responses["422"]
 
     schemas = schema.get("components", {}).get("schemas", {})
