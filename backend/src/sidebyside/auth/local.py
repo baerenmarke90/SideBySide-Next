@@ -137,8 +137,10 @@ def sign_in(
     stimmt = passwords.verify_password(hash_wert, password)
 
     if konto is None or identitaet is None or not stimmt:
+        rate_limit.preserve_attempt_after_rollback(session, ACTION_SIGN_IN, adresse)
         raise gescheitert
     if not konto.is_active:
+        rate_limit.preserve_attempt_after_rollback(session, ACTION_SIGN_IN, adresse)
         raise gescheitert
 
     if passwords.needs_rehash(hash_wert):
@@ -169,3 +171,4 @@ def change_password(session: Session, account: Account, *, current: str, new: st
     identitaet.secret_hash = passwords.hash_password(new)
     sessions.revoke_all(session, account)
     session.flush()
+
