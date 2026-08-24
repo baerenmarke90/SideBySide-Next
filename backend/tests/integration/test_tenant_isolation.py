@@ -124,9 +124,7 @@ class TestFehlgeformteIds:
             "%2e%2e",
         ],
     )
-    def test_router_match_bleibt_fachliche_privacy_404(
-        self, client, paar, boese: str
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_router_match_bleibt_fachliche_privacy_404(self, client, paar, boese: str) -> None:  # type: ignore[no-untyped-def]
         """Wohlgeformtheit darf bei gematchter Route keine Existenzauskunft liefern."""
         antwort = client.get(f"/api/v1/spaces/{boese}", headers=auth(paar["token_a"]))
         assert antwort.status_code == 404
