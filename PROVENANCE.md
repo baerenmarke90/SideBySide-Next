@@ -108,5 +108,18 @@ AI assistance under human review.
 
 ## License of this source code
 
-Not yet chosen. No open-source license is offered for this project's own
-source code until an explicit decision is recorded here.
+SideBySide Next's own source code is made available under the
+**PolyForm Noncommercial License 1.0.0**. Noncommercial use, modification,
+and distribution are permitted subject to that license. Commercial use
+requires a separate commercial license from the rights holder.
+
+See [LICENSE](LICENSE) for the license terms,
+[COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) for commercial licensing,
+[CONTRIBUTING.md](CONTRIBUTING.md) and [CLA.md](CLA.md) for contributions,
+and [TRADEMARKS.md](TRADEMARKS.md) for the separate treatment of the
+SideBySide name, logos, and branding.
+
+Because commercial use is not granted generally, SideBySide Next is
+**source-available**, not Open Source in the narrower OSI sense. Third-party
+components remain subject to their own licenses as documented in
+[docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).

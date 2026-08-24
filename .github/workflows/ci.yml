@@ -200,15 +200,16 @@ jobs:
         run: |
           for datei in PROVENANCE.md docs/DEPENDENCIES.md \
                        docs/SECURITY.md docs/PRIVACY-MODEL.md \
-                       specification/PRODUCT-SPEC.md; do
+                       specification/PRODUCT-SPEC.md LICENSE \
+                       COMMERCIAL-LICENSE.md CONTRIBUTING.md CLA.md \
+                       TRADEMARKS.md; do
             test -f "$datei" || { echo "fehlt: $datei"; exit 1; }
           done
-      - name: Keine Lizenzdatei ohne ausdrueckliche Entscheidung
-        # Die Lizenz fuer den eigenen Quellcode ist bewusst offen. Eine
-        # versehentlich hinzugefuegte LICENSE waere ein Angebot, das so
-        # nicht beschlossen wurde.
+      - name: Lizenzentscheidung ist konsistent
+        # Seit der ausdruecklichen Lizenzentscheidung ist LICENSE verpflichtend.
+        # Die CI stellt sicher, dass Lizenz, Provenance und Commercial-Policy
+        # nicht versehentlich wieder auf den frueheren offenen Stand geraten.
         run: |
-          if ls LICENSE LICENSE.* COPYING 2>/dev/null | grep -q .; then
-            echo "LICENSE vorhanden, aber noch keine Lizenzentscheidung getroffen."
-            exit 1
-          fi
+          grep -Fq "# PolyForm Noncommercial License 1.0.0" LICENSE
+          grep -Fq "PolyForm Noncommercial License 1.0.0" PROVENANCE.md
+          grep -Fq "Commercial use requires a separate commercial license" COMMERCIAL-LICENSE.md
