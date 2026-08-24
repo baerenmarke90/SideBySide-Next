@@ -59,6 +59,17 @@ def require_membership(session: Session, account: Account, space_id: UUID) -> Me
     return mitgliedschaft
 
 
+def _ensure_partner_profile(session: Session, space_id: UUID, account_id: UUID) -> None:
+    """Profil-Lifecycle an den Membership-Lifecycle koppeln.
+
+    Der Import bleibt lokal, damit Relationship- und Profiles-Domain keine
+    zyklische Modulinitialisierung erzeugen.
+    """
+    from sidebyside.profiles.service import ensure_profile
+
+    ensure_profile(session, space_id, account_id)
+
+
 def create_space(session: Session, founder: Account) -> Space:
     """Einen Space anlegen und den Gruender als Partner aufnehmen."""
     space = Space()
@@ -76,6 +87,7 @@ def create_space(session: Session, founder: Account) -> Space:
         )
     )
     session.flush()
+    _ensure_partner_profile(session, space.id, founder.id)
     return space
 
 
@@ -129,6 +141,7 @@ def add_member(session: Session, space_id: UUID, account: Account) -> Membership
         vorhanden.joined_at = now()
         vorhanden.ended_at = None
         session.flush()
+        _ensure_partner_profile(session, space_id, account.id)
         return vorhanden
 
     mitgliedschaft = Membership(
@@ -140,6 +153,7 @@ def add_member(session: Session, space_id: UUID, account: Account) -> Membership
     )
     session.add(mitgliedschaft)
     session.flush()
+    _ensure_partner_profile(session, space_id, account.id)
     return mitgliedschaft
 
 
