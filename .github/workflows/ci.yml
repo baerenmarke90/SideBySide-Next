@@ -96,6 +96,15 @@ jobs:
       - name: Typpruefung
         run: uv run --frozen mypy
 
+      - name: OpenAPI-Vertrag fuer Aktualisierung erzeugen
+        run: uv run --frozen python scripts/openapi_contract.py write --contract /tmp/openapi.json
+
+      - name: Generierten OpenAPI-Vertrag bereitstellen
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: generated-openapi
+          path: /tmp/openapi.json
+
       - name: OpenAPI-Vertrag
         run: uv run --frozen python scripts/openapi_contract.py check
 
