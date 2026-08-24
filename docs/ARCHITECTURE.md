@@ -103,6 +103,34 @@ Zwei Partner an zwei Orten sehen deshalb kurzzeitig verschiedene Werte. Das
 ist gewollt: jeder sieht seinen eigenen Tag. Ein unbrauchbarer Zonenname
 fällt protokolliert auf UTC zurück, statt die Antwort zu verlieren.
 
+#### Zeitzone und Locale werden geschrieben, nicht geraten
+
+Der UTC-Rückfall beim Lesen ist eine Rückfallebene für Altbestände und
+ausdrücklich kein Normalfall. Damit er einer bleibt, gibt es genau **eine**
+Stelle, die `Account.timezone` und `Account.locale` schreibt:
+`identity.preferences.set_preferences`. Jeder künftige Schreibpfad —
+Account-Einstellungen, Import, Datenmigration — geht dort durch.
+
+| Feld | Regel | Fehler |
+|---|---|---|
+| `timezone` | exakter IANA-Name, geprüft gegen die vorhandene Zonendatenbank | `ACCOUNT_TIMEZONE_INVALID` |
+| `locale` | BCP-47-Teilmenge `sprache[-Schrift][-REGION]` | `ACCOUNT_LOCALE_INVALID` |
+
+Geprüft wird gegen die Zonendatenbank und nicht gegen ein Muster:
+`Europe/Berlinn` sieht aus wie ein Zonenname und ist keiner. Die
+Schreibweise bleibt unangetastet — `europe/berlin` wird abgewiesen, nicht
+still zurechtgerückt.
+
+Für die Locale ist die Normalisierung vollständig festgelegt und damit
+deterministisch: `_` wird zu `-`, Sprache klein, Schrift mit großem
+Anfangsbuchstaben, Region groß (`de_DE` → `de-DE`, `zh-hans-cn` →
+`zh-Hans-CN`). Zweimal normalisieren ändert nichts mehr; gespeicherter und
+ausgelieferter Wert sind derselbe. Alles, was danach nicht dem Muster
+entspricht, wird abgewiesen statt korrigiert.
+
+Beide Werte werden erst vollständig geprüft und dann zugewiesen — ein
+ungültiger zweiter Wert hinterlässt keinen halb geänderten Account.
+
 ### JSON
 
 Nach außen **camelCase**, intern **snake_case**. Die Umsetzung geschieht an
