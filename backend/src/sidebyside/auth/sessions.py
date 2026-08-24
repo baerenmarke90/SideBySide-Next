@@ -192,4 +192,3 @@ def revoke_all(session: Session, account: Account) -> int:
     for geraet in offen:
         revoke(geraet)
     return len(offen)
-
