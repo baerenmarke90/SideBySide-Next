@@ -10,6 +10,7 @@ from __future__ import annotations
 from enum import StrEnum
 from functools import lru_cache
 from typing import Self
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -102,6 +103,13 @@ class Settings(BaseSettings):
     # ohne Codeaenderung nebeneinander stehen koennen.
     oidc_connections: list[OidcConnection] = Field(default_factory=list)
 
+    # Die Relying Party ist die Anwendung, fuer die ein Passkey gilt. Ohne
+    # eigenen Wert wird sie aus der oeffentlichen Adresse abgeleitet - ein
+    # Passkey fuer "app.example" darf auf "boese.example" nicht gelten.
+    webauthn_rp_id: str = ""
+    webauthn_rp_name: str = "SideBySide"
+    webauthn_origins: list[str] = Field(default_factory=list)
+
     mail_transport: MailTransport = MailTransport.LOG
     mail_from: str = "no-reply@localhost"
     smtp_host: str = "localhost"
@@ -118,6 +126,20 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment is Environment.PRODUCTION
+
+    @property
+    def relying_party_id(self) -> str:
+        """Die RP ID: der Host der oeffentlichen Adresse, sofern nicht gesetzt."""
+        if self.webauthn_rp_id:
+            return self.webauthn_rp_id
+        return urlsplit(self.public_base_url).hostname or "localhost"
+
+    @property
+    def relying_party_origins(self) -> list[str]:
+        """Die Herkuenfte, die eine Ceremony vorweisen darf."""
+        if self.webauthn_origins:
+            return self.webauthn_origins
+        return [self.public_base_url.rstrip("/")]
 
     def oidc_connection(self, connection_id: str) -> OidcConnection | None:
         for verbindung in self.oidc_connections:

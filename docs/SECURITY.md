@@ -165,6 +165,33 @@ Credential-ID, Public Key, Signaturzähler, AAGUID, Transports sowie
 Discoverable-/Backup-Metadaten. Der private Schlüssel bleibt im
 Authenticator und wird vom Server weder empfangen noch gespeichert.
 
+### Die beiden Ceremonies
+
+Registriert wird **nur aus einer bestehenden Anmeldung heraus**: ein Passkey
+ist ein zusätzlicher Zugang zu einem Konto, das es schon gibt. Angemeldet
+wird **ohne Kontobezug** — die Optionen enthalten keine Kandidatenliste, der
+Authenticator wählt selbst, welches auffindbare Credential er anbietet. Ein
+Endpunkt, der zu einer Adresse die passenden Credentials nennt, wäre ein
+Verzeichnis der Konten.
+
+Geprüft werden Challenge, Herkunft, RP ID, Signatur und Signaturzähler.
+Jeder Fehlschlag ergibt dieselbe Antwort (`PASSKEY_CEREMONY_INVALID`);
+welche der Prüfungen gescheitert ist, steht nicht in der Antwort.
+
+Die Challenge liegt in `webauthn_challenges`, fünf Minuten lang, und wird
+beim Abschluss **immer** verbraucht — auch wenn die Prüfung danach
+scheitert. Sonst ließe sich dieselbe Challenge beliebig oft durchprobieren.
+
+Ein Signaturzähler, der nicht weitergelaufen ist, obwohl er einmal lief,
+deutet auf eine Kopie des Authenticators und führt zur Ablehnung. Zählt ein
+Gerät gar nicht — beide Werte bleiben 0 —, ist das erlaubt: viele Passkeys
+tun das, und ein Verbot sperrte sie alle aus.
+
+Credential-IDs sind global eindeutig, auch über Konten hinweg. Ob ein
+Credential auffindbar ist, sagt die Registrierung nicht (`residentKey` ist
+ein Wunsch, keine Zusage); es zeigt sich erst bei einer Anmeldung ohne
+Kandidatenliste und wird dort vermerkt.
+
 E-Mail-Verifikation, Magic Link und Account Recovery verwenden getrennte
 Tabellen und getrennte Konsumfunktionen. Jeder Nachweis ist zufällig,
 kurzlebig, widerrufbar, genau einmal verwendbar und nur als Hash

@@ -18,6 +18,9 @@ dependencies = [
     # ID-Token-Pruefung. Signaturverfahren selbst zu schreiben waere im
     # Auth-Pfad genau der falsche Ort fuer Eigenbau.
     "pyjwt[crypto]>=2.10",
+    # WebAuthn: CBOR, COSE und Attestation von Hand zu lesen waere
+    # Eigenbau an der empfindlichsten Stelle.
+    "webauthn>=2.5",
 ]
 
 [dependency-groups]
@@ -25,6 +28,10 @@ dev = [
     "pytest>=9.1",
     "pytest-asyncio>=1.4",
     "httpx2>=0.1",
+    # Nur fuer den virtuellen Authenticator in den WebAuthn-Tests: er baut
+    # attestationObject und COSE-Schluessel selbst, damit die Suite echte
+    # Signaturen prueft statt aufgezeichneter Beispieldaten.
+    "cbor2>=5.6",
     "ruff==0.16.4",
     "mypy==2.3.1",
 ]

@@ -8,7 +8,7 @@ Konten aufzaehlen will.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path, Response, status
@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Path, Response, status
 from sidebyside.api.deps import CurrentAccount, CurrentSession, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.auth import cloud, local, oidc, sessions
+from sidebyside.auth import cloud, local, oidc, passkeys, sessions
 from sidebyside.auth.local import SignedIn
 from sidebyside.config import get_settings
 from sidebyside.mail import MailSender, sender
@@ -73,6 +73,23 @@ class TokenOnlyRequest(ApiModel):
     token: str
 
 
+class PasskeyRegistrationRequest(ApiModel):
+    credential: dict[str, Any]
+    name: str = ""
+
+
+class PasskeyAuthenticationRequest(ApiModel):
+    credential: dict[str, Any]
+    device_name: str = ""
+    platform: str = ""
+
+
+class PasskeyView(ApiModel):
+    id: UUID
+    name: str
+    created_at: datetime
+
+
 class OidcCallbackRequest(ApiModel):
     code: str
     state: str
@@ -110,7 +127,7 @@ class SessionView(ApiModel):
     tokens: TokenView
 
 
-def _view(result: SignedIn | cloud.SignedIn | oidc.SignedIn) -> SessionView:
+def _view(result: SignedIn | cloud.SignedIn | oidc.SignedIn | passkeys.SignedIn) -> SessionView:
     return SessionView(
         account=AccountView(id=result.account.id, display_name=result.account.display_name),
         tokens=TokenView(
@@ -369,6 +386,69 @@ def complete_oidc(
             connection_id,
             code=body.code,
             state=body.state,
+            device_name=body.device_name[:MAX_DEVICE_NAME],
+            platform=body.platform,
+        )
+    )
+
+
+@router.post(
+    "/auth/passkeys/registration/start",
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(401),
+)
+def start_passkey_registration(account: CurrentAccount, session: DbSession) -> dict[str, Any]:
+    """Die Registrierung eines Passkeys beginnen.
+
+    Nur aus einer bestehenden Anmeldung heraus: ein Passkey ist ein
+    zusaetzlicher Zugang zu einem Konto, das es schon gibt.
+    """
+    return passkeys.start_registration(session, account)
+
+
+@router.post(
+    "/auth/passkeys/registration/finish",
+    response_model=PasskeyView,
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(401, 422),
+)
+def finish_passkey_registration(
+    body: PasskeyRegistrationRequest, account: CurrentAccount, session: DbSession
+) -> PasskeyView:
+    passkey = passkeys.finish_registration(
+        session, account, credential=body.credential, name=body.name
+    )
+    return PasskeyView(id=passkey.id, name=passkey.name, created_at=passkey.created_at)
+
+
+@router.post(
+    "/auth/passkeys/authentication/start",
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(422),
+)
+def start_passkey_authentication(session: DbSession) -> dict[str, Any]:
+    """Eine Anmeldung mit Passkey beginnen.
+
+    Ohne Kontobezug: der Authenticator waehlt selbst, welches auffindbare
+    Credential er anbietet. Ein Endpunkt, der zu einer Adresse die
+    passenden Credentials nennt, waere ein Verzeichnis der Konten.
+    """
+    return passkeys.start_authentication(session)
+
+
+@router.post(
+    "/auth/passkeys/authentication/finish",
+    response_model=SessionView,
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(401, 422),
+)
+def finish_passkey_authentication(
+    body: PasskeyAuthenticationRequest, session: DbSession
+) -> SessionView:
+    return _view(
+        passkeys.finish_authentication(
+            session,
+            credential=body.credential,
             device_name=body.device_name[:MAX_DEVICE_NAME],
             platform=body.platform,
         )

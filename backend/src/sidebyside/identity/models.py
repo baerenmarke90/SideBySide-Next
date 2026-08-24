@@ -212,6 +212,39 @@ class WebAuthnCredential(IdMixin, TimestampMixin, Base):
     )
 
 
+class WebAuthnChallenge(IdMixin, Base):
+    """Die Herausforderung einer laufenden WebAuthn-Ceremony.
+
+    Sie steht im Klartext, und das ist richtig: der Server muss sie mit
+    der im `clientDataJSON` vergleichen. Ein Geheimnis ist sie nicht - ihr
+    Zweck ist Einmaligkeit, und die kommt daher, dass sie hier verbraucht
+    wird.
+
+    `account_id` ist bei der Registrierung gesetzt (sie geschieht aus einer
+    bestehenden Anmeldung heraus) und bei einer Anmeldung mit auffindbarem
+    Passkey leer - dort sagt erst die Antwort, wer sich anmeldet.
+    """
+
+    __tablename__ = "webauthn_challenges"
+
+    purpose: Mapped[str] = mapped_column(String(16), nullable=False)
+    challenge: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    account_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint("purpose IN ('REGISTRATION', 'AUTHENTICATION')", name="purpose_is_known"),
+        Index("ix_webauthn_challenges_expires_at", "expires_at"),
+    )
+
+
 class OneTimeTokenMixin:
     """Gemeinsame Sicherheitsinvarianten, keine gemeinsame Token-Tabelle."""
 
