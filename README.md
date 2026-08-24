@@ -78,7 +78,7 @@ Beide teilen denselben Application Core.
 </p>
 
 <p align="center">
-  <strong>Aktuell: Foundation-Gates schließen und M1 Identity &amp; Relationship vervollständigen.</strong><br>
+  <strong>Aktuell: M0 abgeschlossen; M1 bis zum Security Gate G1 vervollständigen.</strong><br>
   <a href="docs/ROADMAP.md">Roadmap, parallele Arbeitsströme und Release Gates ansehen</a> ·
   <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a>
 </p>
@@ -162,18 +162,23 @@ Smoke-Test stehen in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md).
 
 ## Stand
 
-**M0 — technische Plattform.** Fehlerformat, Transactional Outbox,
-Job-Warteschlange, MediaStore- und Provider-Schnittstellen, E2EE-Grenze.
+**M0 — technische Plattform abgeschlossen.** Fehlerformat, Transactional
+Outbox, Job-Warteschlange, MediaStore- und Provider-Schnittstellen,
+ProtectedPayload-Grenze, reproduzierbare Dependencies, OpenAPI-Contract und
+CI-/Supply-Chain-Prüfungen sind für den M0-Umfang vorhanden.
 
 **Sicherheitsgrundlage.** Account, Space, Membership, Tenant Context und
 Membership Guard, dazu Geraetesitzungen mit rotierenden Tokens. Jeder
 Zugriff auf Space-Daten laeuft durch `require_membership`, bevor eine
 Ressource geladen wird.
 
-M1 ist teilweise umgesetzt: lokales Passwort, Sessions, Invitations sowie
-die Persistenzgrundlage für Magic Link, Passkey, OIDC, E-Mail-Verifikation
-und Recovery sind vorhanden. Als Naechstes folgen die Protokoll-/API-Flows,
-Private Authorization, Partnerprofile und Praeferenzen.
+**M1 ist aktiv, G1 noch nicht bestanden.** Lokales Passwort, Sessions,
+Invitations, sicherer Self-Hosted-Bootstrap sowie die Persistenzgrundlage für
+Magic Link, Passkey, OIDC, E-Mail-Verifikation und Recovery sind vorhanden.
+Offen sind insbesondere die echten OIDC-/WebAuthn-/Cloud-Auth-Flows,
+Owner-/Private-Authorization, die fehlenden Profile/SpaceProfile-Schreibpfade
+und die vollständige Privacy-Testmatrix. Der aktuelle Prüfstand steht im
+[G1/M1 Security Review](docs/reviews/2026-08-24-g1-m1-security-review.md).
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
 [docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten und
@@ -188,6 +193,11 @@ Der [laufende Umsetzungsstand](docs/IMPLEMENTATION-STATUS.md) enthält die
 aktuelle Arbeitsliste. Datierte Dateien unter [docs/reviews](docs/reviews)
 sind unveränderliche Prüf-Snapshots; bei Widersprüchen gilt immer die
 Master-Spezifikation.
+
+Parallele Implementierungsarbeit wird über klar abgegrenzte GitHub Issues,
+eigene Branches und Pull Requests koordiniert. Solange Branch Protection bei
+diesem privaten Repository tarifbedingt nicht technisch erzwungen werden
+kann, gilt die PR-/CI-Pflicht als Projektregel.
 
 ## Lizenz
 
