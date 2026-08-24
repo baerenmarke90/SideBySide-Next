@@ -33,6 +33,23 @@ bekommt eine neue Datei.
 - [x] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
 - [x] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entschieden: keine Behauptung eines strikten/formalen Clean Rooms; Fortführung als eigenständige Neuimplementierung mit dokumentierter Vorbefassung gemäß [ADR 0001](decisions/0001-clean-room-classification.md).
 
+## Aktueller G1/M1 Security Review
+
+Der datierte [G1/M1 Security Review vom 24.08.2026](reviews/2026-08-24-g1-m1-security-review.md) bewertet den Stand nach Abschluss der bisherigen P0-Fixes und der Auth-Persistenzarchitektur.
+
+**Ergebnis: G1 ist noch nicht bestanden; produktive M2-Domainimplementierung bleibt gesperrt.**
+
+Aktuelle G1-Blocker:
+
+- [ ] #26 – OIDC-/WebAuthn-/Cloud-Auth-Flows tatsächlich implementieren.
+- [ ] #11 – Owner-/Private-Authorization, SpaceProfile-Schreibpfad/409/Timezone sowie PartnerProfile, ProfilePreference, RelatedPerson und ImportantDate abschließen.
+- [ ] #7 – Rollen-/Owner-/Privacy-/Tenant-Matrix für die neuen M1-Endpunkte vervollständigen.
+
+Zusätzliche Härtung:
+
+- [ ] #24 – Refresh-Replay über die gesamte Token-Familie erkennen.
+- [ ] #25 – Branch Protection/Ruleset für `main` erzwingen.
+
 ## M0 – Clean Foundation
 
 - [x] Separates Repository und eigener Quellbaum
@@ -84,5 +101,4 @@ bekommt eine neue Datei.
 
 ## Nächster Prüfpunkt
 
-Nach Abschluss der Release-Blocker und vor Beginn von M2 einen neuen,
-commitbezogenen Soll-/Ist- und Sicherheitsreview durchführen.
+Neuen datierten G1-Review nach Abschluss von #11, #26 und dem relevanten Rest von #7 sowie nach Entscheidung/Umsetzung von #24 durchführen. Der nächste Review muss den dann aktuellen `main`-Commit und eine erfolgreiche CI eindeutig referenzieren.
