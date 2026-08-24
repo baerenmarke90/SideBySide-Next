@@ -62,6 +62,11 @@ def engine() -> Iterator[Engine]:
     from sidebyside.outbox import models as _outbox  # noqa: F401
     from sidebyside.relationship import models as _relationship  # noqa: F401
 
+    # Die Testsonde fuer die Owner-/Privacy-Autorisierung. Sie steht
+    # bewusst nur hier: alembic/env.py kennt sie nicht, also erscheint
+    # sie in keiner Migration und in keiner Produktionsdatenbank.
+    from tests.support import privacy_probe as _privacy_probe  # noqa: F401
+
     eng = create_engine(INTEGRATION_DATABASE_URL, future=True)
     Base.metadata.create_all(eng)
     yield eng
