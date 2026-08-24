@@ -16,11 +16,21 @@ import socket
 import time
 from types import FrameType
 
+from sidebyside.db.session import unit_of_work
+from sidebyside.jobs import maintenance
 from sidebyside.jobs.worker import run_once
 
 log = logging.getLogger(__name__)
 
 IDLE_SLEEP_SECONDS = 2.0
+
+MAINTENANCE_CHECK_SECONDS = 300.0
+"""Wie oft nachgesehen wird, ob die Wartung ueberhaupt noch ansteht.
+
+Die Kette plant sich selbst fort; dieser Blick ist die Rueckfallebene fuer
+den Fall, dass eine Aufgabe endgueltig aufgibt. Ohne ihn bliebe der
+Cleanup danach still aus - und genau das soll er nicht.
+"""
 
 _shutdown = False
 
@@ -36,6 +46,15 @@ def _request_shutdown(signum: int, frame: FrameType | None) -> None:
     log.info("shutdown requested", extra={"signal": signum})
 
 
+def _ensure_maintenance() -> None:
+    """Fehlt die Wartung, wird sie eingeplant. Fehler beenden den Worker nicht."""
+    try:
+        with unit_of_work() as session:
+            maintenance.ensure_scheduled(session)
+    except Exception:
+        log.exception("could not schedule maintenance")
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -48,7 +67,15 @@ def main() -> None:
     name = f"{socket.gethostname()}-{os.getpid()}"
     log.info("worker started", extra={"worker": name})
 
+    maintenance.register_handlers()
+    _ensure_maintenance()
+    zuletzt_geprueft = time.monotonic()
+
     while not _shutdown:
+        if time.monotonic() - zuletzt_geprueft >= MAINTENANCE_CHECK_SECONDS:
+            _ensure_maintenance()
+            zuletzt_geprueft = time.monotonic()
+
         try:
             erledigt = run_once(name)
         except Exception:
