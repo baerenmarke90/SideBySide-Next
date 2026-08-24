@@ -168,6 +168,29 @@ für Anmeldenachweise. Sie verschwindet mit der Sitzung und wird für
 beendete Sitzungen nach einer Aufbewahrungsfrist geräumt; laufende
 Sitzungen behalten ihre Historie, denn sie *ist* die Erkennung.
 
+### Die Aufbewahrung wird tatsächlich ausgeführt
+
+Eine Frist, die nur als Funktion im Code steht, ist keine Frist. Der Job
+`security_retention` führt `sessions.prune_replay_history()` und
+`rate_limit.prune()` regelmäßig aus — als gewöhnliche Aufgabe in der
+PostgreSQL-Warteschlange, die sich nach getaner Arbeit selbst neu einstellt
+(Standardtakt: alle sechs Stunden, deutlich kürzer als die kürzeste Frist).
+
+Kein zweiter Scheduler und kein Cron im Container: die Warteschlange liegt
+ohnehin in der Datenbank und übersteht einen Neustart. Eingeplant wird unter
+einer Advisory Lock, damit zwei gleichzeitig startende Worker nicht beide
+eine Aufgabe einstellen; ein doppelter Lauf wäre allerdings ohnehin harmlos,
+weil beide Prune-Funktionen idempotent sind.
+
+Gibt eine Aufgabe endgültig auf, hängt keine Kette mehr an ihr. Der Worker
+sieht deshalb zusätzlich regelmäßig nach, ob überhaupt ein Lauf ansteht, und
+plant ihn sonst neu — ein dauerhaft ausbleibender Cleanup soll nicht still
+passieren.
+
+**Betriebliche Folge:** Die Retention hängt am laufenden Worker-Prozess
+(`python -m sidebyside.jobs.runner`, im Compose-Setup der Dienst `worker`).
+Wer nur die API betreibt, hält seine Daten länger als dokumentiert.
+
 ### Zwei Ablaufzeitpunkte je Sitzung
 
 Damit die Familie und mit ihr die Historie tatsächlich endlich ist, trägt
