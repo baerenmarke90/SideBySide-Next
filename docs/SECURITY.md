@@ -126,6 +126,40 @@ ID ist damit eine normale OIDC-Verbindung und kein Sonderfall. Ein neuer
 Eintrag darf erst nach vollständiger Prüfung von Discovery, Signatur und
 Claims gespeichert werden.
 
+### Was am ID Token geprüft wird
+
+Ein ID Token ist zunächst nur die Behauptung eines fremden Servers. Sie wird
+erst zu einer Identität, wenn fünf Dinge stimmen — und keine dieser
+Prüfungen steht im Endpunkt, sondern in `auth.oidc`, wo jeder Anbieter sie
+durchläuft:
+
+| Prüfung | Wogegen | Warum |
+|---|---|---|
+| Signatur | JWKS des Issuers, nur asymmetrische Verfahren | `none` und HMAC sind ausgeschlossen: bei `HS256` wäre der Signaturschlüssel das Client Secret |
+| Issuer | konfigurierter Wert **und** das Discovery-Dokument, das sich selbst benennen muss | sonst zeigte ein Dokument unter erwarteter Adresse auf fremde Endpunkte |
+| Audience | `client_id`, zusätzlich `azp` wenn vorhanden | ein Token für eine andere Anwendung gilt hier nicht |
+| Nonce | der beim Start erzeugte Wert | bindet das Token an genau diese Anfrage; ohne sie ließe sich ein anderswo erbeutetes Token einspielen |
+| State | serverseitig gespeicherter Hash, genau einmal einlösbar | bindet den Rückweg an genau diesen Browser |
+
+PKCE ist Pflicht (`S256`). Der Verifier bleibt beim Server und geht nie in
+die Autorisierungsadresse; der Client sieht nur die Challenge.
+
+`oidc_auth_requests` hält State-Hash, Nonce und Verifier für zehn Minuten.
+Nonce und Verifier stehen dort im Klartext, und das ist richtig: der Server
+muss beide selbst vorzeigen beziehungsweise vergleichen. Sie sind keine
+Anmeldenachweise, sondern eine Bindung — und der Wartungsjob räumt sie weg,
+sobald sie verbraucht oder abgelaufen sind.
+
+**Eine OIDC-Anmeldung legt kein Konto an.** Ohne bestehende Identität endet
+sie mit 401. Eine neue Identität entsteht ausschließlich über
+`/auth/oidc/{connectionId}/link` aus einer bestehenden Anmeldung heraus.
+Sonst umginge ein externer Anbieter die Bootstrap- und Einladungsgrenze.
+
+Die Fehlermeldung des Anbieters verlässt den Adapter nicht: sie kann interne
+Adressen oder das Client Secret enthalten. Nach außen bleiben es die
+immergleichen Codes `OIDC_TOKEN_INVALID`, `OIDC_STATE_INVALID` und
+`OIDC_PROVIDER_UNREACHABLE`.
+
 Passkeys liegen als eigene WebAuthn-Credentials vor: global eindeutige
 Credential-ID, Public Key, Signaturzähler, AAGUID, Transports sowie
 Discoverable-/Backup-Metadaten. Der private Schlüssel bleibt im

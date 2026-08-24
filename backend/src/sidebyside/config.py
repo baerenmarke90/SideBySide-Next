@@ -11,7 +11,7 @@ from enum import StrEnum
 from functools import lru_cache
 from typing import Self
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,6 +37,36 @@ class MailTransport(StrEnum):
 
     LOG = "log"
     SMTP = "smtp"
+
+
+class OidcConnection(BaseModel):
+    """Eine konfigurierte OIDC-Verbindung.
+
+    Der `id` waehlt sie im Pfad aus; er ist frei vergeben und hat keine
+    Bedeutung fuer das Protokoll. Ein Anbieter ist damit eine Zeile
+    Konfiguration und kein Sonderfall im Code - Pocket ID ebenso wie jeder
+    andere.
+    """
+
+    id: str = Field(min_length=1, max_length=64)
+    issuer: str = Field(min_length=1, max_length=512)
+    client_id: str = Field(min_length=1, max_length=256)
+    client_secret: SecretStr | None = None
+    redirect_uri: str = Field(min_length=1, max_length=512)
+    scopes: str = "openid email profile"
+
+    @field_validator("issuer")
+    @classmethod
+    def issuer_is_https(cls, value: str) -> str:
+        """Ohne TLS waere die gesamte Pruefkette wertlos.
+
+        Discovery-Dokument, JWKS und Token-Endpunkt kaemen dann von einem
+        Gegenueber, das jeder auf dem Weg ersetzen kann.
+        """
+        adresse = value.rstrip("/")
+        if not adresse.startswith("https://"):
+            raise ValueError("Ein OIDC-Issuer muss mit https:// beginnen.")
+        return adresse
 
 
 class Settings(BaseSettings):
@@ -68,6 +98,10 @@ class Settings(BaseSettings):
     # gefaelschter Host-Header den Link auf einen fremden Server um.
     public_base_url: str = "http://localhost:8000"
 
+    # Als JSON-Liste in einer Umgebungsvariablen, damit mehrere Anbieter
+    # ohne Codeaenderung nebeneinander stehen koennen.
+    oidc_connections: list[OidcConnection] = Field(default_factory=list)
+
     mail_transport: MailTransport = MailTransport.LOG
     mail_from: str = "no-reply@localhost"
     smtp_host: str = "localhost"
@@ -84,6 +118,12 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment is Environment.PRODUCTION
+
+    def oidc_connection(self, connection_id: str) -> OidcConnection | None:
+        for verbindung in self.oidc_connections:
+            if verbindung.id == connection_id:
+                return verbindung
+        return None
 
     @model_validator(mode="after")
     def production_hosts_are_restricted(self) -> Self:

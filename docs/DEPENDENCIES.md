@@ -44,11 +44,17 @@ uv lock --directory "$probe"
 uv audit --preview --frozen --directory "$probe"
 ```
 
-`argon2-cffi` ist die einzige Kryptografie-Bibliothek im Projekt und deckt
-genau einen Zweck ab: die Ableitung von Passwoertern. Tokens kommen mit
-`secrets` und `hashlib` aus der Standardbibliothek aus - fuer einen Wert
-mit voller Entropie waere ein absichtlich langsames Verfahren nur eine
-Bremse bei jeder Anfrage.
+`argon2-cffi` deckt genau einen Zweck ab: die Ableitung von Passwoertern.
+Eigene Tokens kommen mit `secrets` und `hashlib` aus der Standardbibliothek
+aus - fuer einen Wert mit voller Entropie waere ein absichtlich langsames
+Verfahren nur eine Bremse bei jeder Anfrage.
+
+Dazu kommt mit OIDC `pyjwt[crypto]` und damit `cryptography`: die Signatur
+eines fremden ID Tokens laesst sich nicht mit `hashlib` pruefen, und ein
+selbst geschriebener RSA-/ECDSA-Verifizierer waere im Auth-Pfad genau der
+falsche Ort fuer Eigenbau. `httpx` wird von der Entwicklungs- zur
+Laufzeitabhaengigkeit, weil Discovery, JWKS-Abruf und Token-Endpunkt
+ausgehendes HTTP brauchen.
 
 ## Backend — Laufzeit
 
@@ -63,6 +69,8 @@ Bremse bei jeder Anfrage.
 | pydantic-settings | 2.15.0 | PyPI | MIT |
 | uuid6 | 2025.0.1 | PyPI | MIT |
 | argon2-cffi | 25.1.0 | PyPI | MIT |
+| httpx | 0.28.1 | PyPI | BSD-3-Clause |
+| pyjwt[crypto] | 2.13.0 | PyPI | MIT |
 
 ## Backend — Entwicklung
 
@@ -70,7 +78,6 @@ Bremse bei jeder Anfrage.
 |---|---|---|---|
 | pytest | 9.1.1 | PyPI | MIT |
 | pytest-asyncio | 1.4.0 | PyPI | Apache-2.0 |
-| httpx | 0.28.1 | PyPI | BSD-3-Clause |
 | httpx2 | 2.12.0 | PyPI | BSD-3-Clause |
 | ruff | 0.16.4 | PyPI | MIT |
 | mypy | 2.3.1 | PyPI | MIT |
