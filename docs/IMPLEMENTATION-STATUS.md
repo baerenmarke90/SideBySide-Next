@@ -95,8 +95,8 @@ Zusätzliche Härtung:
 - [x] Getrennte, gehashte Einmal-Tokenmodelle für E-Mail-Verifikation, Magic Link und Recovery
 - [ ] OIDC-/WebAuthn-Adapter und vollständige Cloud-Auth-API-Flows
 - [ ] Eigene Owner-/Private-Authorization-Grundlage
-- [ ] SpaceProfile-Schreib-API mit Versionskonflikt/409
-- [ ] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen
+- [x] SpaceProfile-Schreib-API mit Versionskonflikt/409
+- [x] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen
 - [ ] PartnerProfile und ProfilePreference
 - [ ] RelatedPerson und ImportantDate
 - [ ] Cross-Tenant- und Privacy-Tests für jedes neue M1-Feature

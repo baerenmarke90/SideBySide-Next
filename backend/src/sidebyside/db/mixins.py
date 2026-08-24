@@ -40,6 +40,14 @@ class TimestampMixin:
     )
 
 
+INITIAL_VERSION = 1
+"""Die Version, mit der ein neues Objekt beginnt.
+
+Ausdrücklich benannt: eine Leseantwort muss diesen Stand auch für ein
+Objekt angeben können, dessen Zeile noch nicht existiert.
+"""
+
+
 class VersionMixin:
     """Optimistic Concurrency.
 
@@ -52,6 +60,6 @@ class VersionMixin:
     lässt sich ein Konflikt nicht von einer normalen Änderung unterscheiden.
     """
 
-    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=INITIAL_VERSION)
 
     __mapper_args__: ClassVar[dict[str, Any]] = {"version_id_col": version}

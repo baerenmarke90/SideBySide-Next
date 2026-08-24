@@ -51,6 +51,15 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "DurationDisplayMode": {
+        "description": "Wie die gemeinsame Zeit dargestellt wird.",
+        "enum": [
+          "YEARS_MONTHS",
+          "DAYS"
+        ],
+        "title": "DurationDisplayMode",
+        "type": "string"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -176,6 +185,40 @@
           "displayName"
         ],
         "title": "PartnerView",
+        "type": "object"
+      },
+      "ProblemDetails": {
+        "description": "Der Rumpf jeder Fehlerantwort.\n\nDasselbe Modell erzeugt die Antwort und beschreibt sie im OpenAPI-\nVertrag. Getrennt gepflegt wuerden beide irgendwann auseinanderlaufen,\nund der Vertrag beschriebe dann einen Fehler, den es so nicht gibt.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail",
+          "code"
+        ],
+        "title": "ProblemDetails",
         "type": "object"
       },
       "Readiness": {
@@ -306,6 +349,111 @@
           "password"
         ],
         "title": "SignInRequest",
+        "type": "object"
+      },
+      "SpaceProfileUpdate": {
+        "description": "Der vollstaendige neue Stand des Profils.\n\nAlle drei Felder sind Pflicht. Ein weggelassenes Feld waere sonst nicht\nvon \"auf leer setzen\" zu unterscheiden - und der Unterschied entscheidet\ndarueber, ob ein Beziehungsbeginn erhalten bleibt oder verschwindet.\n`relationshipStartedOn` wird mit `null` ausdruecklich geloescht.",
+        "properties": {
+          "durationDisplayMode": {
+            "$ref": "#/components/schemas/DurationDisplayMode"
+          },
+          "relationshipStartedOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationshipstartedon"
+          },
+          "showRelationshipDuration": {
+            "title": "Showrelationshipduration",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "relationshipStartedOn",
+          "showRelationshipDuration",
+          "durationDisplayMode"
+        ],
+        "title": "SpaceProfileUpdate",
+        "type": "object"
+      },
+      "SpaceProfileView": {
+        "description": "Das Beziehungsprofil eines Space.\n\n`version` ist der Stand, den ein spaeterer Schreibzugriff per `If-Match`\nvorlegen muss. Die Antwort traegt ihn zusaetzlich als ETag.",
+        "properties": {
+          "durationDisplayMode": {
+            "$ref": "#/components/schemas/DurationDisplayMode",
+            "default": "YEARS_MONTHS"
+          },
+          "relationshipDays": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationshipdays"
+          },
+          "relationshipMonths": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationshipmonths"
+          },
+          "relationshipStartedOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationshipstartedon"
+          },
+          "relationshipYears": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationshipyears"
+          },
+          "showRelationshipDuration": {
+            "default": true,
+            "title": "Showrelationshipduration",
+            "type": "boolean"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "spaceId",
+          "version"
+        ],
+        "title": "SpaceProfileView",
         "type": "object"
       },
       "SpaceView": {
@@ -918,6 +1066,136 @@
         "summary": "Revoke Invitation",
         "tags": [
           "invitations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/profile": {
+      "get": {
+        "operationId": "get_space_profile_api_v1_spaces__spaceId__profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceProfileView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Die Version der Ressource. Gehoert unveraendert in das `If-Match` des naechsten Schreibzugriffs.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Space Profile",
+        "tags": [
+          "spaces"
+        ]
+      },
+      "put": {
+        "description": "Das Beziehungsprofil ersetzen.\n\nDer Aufrufer legt mit `If-Match` die Version vor, die er gelesen hat.\nHat der Partner inzwischen geschrieben, antwortet der Endpunkt mit 409\nund aendert nichts - ein stilles Ueberschreiben gaebe es sonst genau\ndann, wenn beide gleichzeitig am selben Profil arbeiten.",
+        "operationId": "update_space_profile_api_v1_spaces__spaceId__profile_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpaceProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceProfileView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Die Version der Ressource. Gehoert unveraendert in das `If-Match` des naechsten Schreibzugriffs.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die vorgelegte Version ist nicht mehr aktuell. Es wurde nichts geaendert; der aktuelle Stand ist neu zu laden."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Space Profile",
+        "tags": [
+          "spaces"
         ]
       }
     }
