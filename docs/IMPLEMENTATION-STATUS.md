@@ -45,13 +45,13 @@ bekommt eine neue Datei.
 - [x] ProtectedPayload-Grundabstraktion
 - [x] Dokumentation, Provenienz und Dependency-Verzeichnis
 - [x] Backend-CI mit echten PostgreSQL-Integrationstests und Secret Scan
-- [ ] Initiale Verzeichnisse `web/`, `android/` und `tools/` ergänzen
-- [ ] Fehlende Provider-Interfaces ergänzen: Map, Places, Recipe, Entertainment
+- [x] Initiale Verzeichnisse `web/`, `android/` und `tools/` ergänzen
+- [x] Fehlende Provider-Interfaces ergänzen: Map, Places, Recipe, Entertainment
 - [x] Dependency-/Vulnerability-Scan aktivieren
 - [x] Reproduzierbare Abhängigkeitsauflösung mit Lock/Constraints und Hashes
 - [x] Expliziten Backend-/Container-Build in CI ergänzen
 - [x] OpenAPI-Vertrag versionieren und Contract-Tests ergänzen
-- [ ] E2EE-Grenze bei ersten sensiblen Modellen und Outbox-Payloads technisch erzwingen
+- [x] ProtectedPayload-Persistenztyp und Outbox-Payload-Allowlist technisch erzwingen
 
 ## M1 – Identity & Relationship
 
