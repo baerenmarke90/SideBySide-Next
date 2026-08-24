@@ -285,8 +285,9 @@ Sitzungen behalten ihre Historie, denn sie *ist* die Erkennung.
 ### Die Aufbewahrung wird tatsächlich ausgeführt
 
 Eine Frist, die nur als Funktion im Code steht, ist keine Frist. Der Job
-`security_retention` führt `sessions.prune_replay_history()` und
-`rate_limit.prune()` regelmäßig aus — als gewöhnliche Aufgabe in der
+`security_retention` führt `sessions.prune_replay_history()`,
+`rate_limit.prune()`, `oidc.prune_auth_requests()` und
+`passkeys.prune_challenges()` regelmäßig aus — als gewöhnliche Aufgabe in der
 PostgreSQL-Warteschlange, die sich nach getaner Arbeit selbst neu einstellt
 (Standardtakt: alle sechs Stunden, deutlich kürzer als die kürzeste Frist).
 
