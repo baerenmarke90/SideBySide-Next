@@ -101,6 +101,38 @@ def client(session: Session):  # type: ignore[no-untyped-def]
     return TestClient(app, raise_server_exceptions=False)
 
 
+def _clear_database(engine: Engine) -> None:
+    """Fest geschriebene Testdaten in FK-sicherer Reihenfolge entfernen."""
+    from sidebyside.db.base import Base
+
+    with engine.begin() as connection:
+        for table in reversed(Base.metadata.sorted_tables):
+            connection.execute(table.delete())
+
+
+@pytest.fixture
+def production_client(engine: Engine, monkeypatch):  # type: ignore[no-untyped-def]
+    """HTTP-Client mit dem echten Request-Unit-of-Work.
+
+    Im Gegensatz zum normalen ``client`` bekommt jede Anfrage eine eigene
+    Session und damit genau die Commit-/Rollback-Grenze aus der Produktion.
+    """
+    from fastapi.testclient import TestClient
+
+    from sidebyside.db import session as db_session
+    from sidebyside.main import create_app
+
+    maker = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, future=True)
+    monkeypatch.setattr(db_session, "get_sessionmaker", lambda: maker)
+
+    _clear_database(engine)
+    try:
+        with TestClient(create_app(), raise_server_exceptions=False) as test_client:
+            yield test_client, maker
+    finally:
+        _clear_database(engine)
+
+
 def make_account(session: Session, name: str = "Testperson"):  # type: ignore[no-untyped-def]
     from sidebyside.identity.models import Account
 
@@ -131,3 +163,4 @@ def sign_in(session: Session, account) -> str:  # type: ignore[no-untyped-def]
 
 def auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
