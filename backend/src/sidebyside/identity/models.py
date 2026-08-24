@@ -17,6 +17,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    SmallInteger,
     String,
     UniqueConstraint,
     func,
@@ -40,6 +41,29 @@ class AuthProvider(StrEnum):
     PASSKEY = "PASSKEY"
     LOCAL_PASSWORD = "LOCAL_PASSWORD"
     OIDC = "OIDC"
+
+
+class InstanceBootstrapState(Base):
+    """Dauerhafter Einmaligkeitsnachweis fuer die Erstregistrierung.
+
+    Der geheime Bootstrap-Wert steht ausschliesslich in der Laufzeit-
+    Konfiguration. Die Datenbank merkt nur, ob die Inbetriebnahme bereits
+    abgeschlossen ist.
+    """
+
+    __tablename__ = "instance_bootstrap_state"
+
+    singleton_key: Mapped[int] = mapped_column(SmallInteger, primary_key=True, default=1)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_by: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="SET NULL"),
+    )
+
+    __table_args__ = (CheckConstraint("singleton_key = 1", name="singleton_key_is_one"),)
 
 
 class Account(IdMixin, TimestampMixin, Base):

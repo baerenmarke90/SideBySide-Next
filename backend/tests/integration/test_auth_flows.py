@@ -11,8 +11,20 @@ from sqlalchemy.orm import Session
 
 from sidebyside.auth import passwords, rate_limit
 from sidebyside.auth.tokens import hash_token
-from sidebyside.identity.models import DeviceSession, RateLimitEvent
-from tests.conftest import auth, make_account, make_space, requires_database, sign_in
+from sidebyside.identity.models import (
+    Account,
+    DeviceSession,
+    InstanceBootstrapState,
+    RateLimitEvent,
+)
+from tests.conftest import (
+    TEST_BOOTSTRAP_TOKEN,
+    auth,
+    make_account,
+    make_space,
+    requires_database,
+    sign_in,
+)
 
 pytestmark = [pytest.mark.integration, requires_database]
 
@@ -20,18 +32,47 @@ GUTES_PASSWORT = "ein-ausreichend-langes-passwort"
 
 
 class TestRegistrierung:
-    def test_erster_account_darf_ohne_einladung(self, client, session) -> None:  # type: ignore[no-untyped-def]
-        """Die Inbetriebnahme der Instanz."""
+    def test_erster_account_braucht_bootstrap_nachweis(self, client, session) -> None:  # type: ignore[no-untyped-def]
         antwort = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "Anna@Example.ORG",
                 "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         assert antwort.status_code == 201
         assert antwort.json()["tokens"]["accessToken"]
+
+    def test_erster_account_ohne_bootstrap_nachweis_wird_abgewiesen(self, client, session) -> None:  # type: ignore[no-untyped-def]
+        antwort = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Fremd",
+                "email": "fremd@example.org",
+                "password": GUTES_PASSWORT,
+            },
+        )
+        assert antwort.status_code == 403
+        assert antwort.json()["code"] == "BOOTSTRAP_INVALID"
+        assert session.execute(select(func.count()).select_from(Account)).scalar_one() == 0
+
+    def test_falscher_bootstrap_nachweis_wird_nicht_zurueckgegeben(self, client, session) -> None:  # type: ignore[no-untyped-def]
+        geheimnis = "falscher-bootstrap-nachweis-mit-genuegend-laenge"
+        antwort = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Fremd",
+                "email": "fremd@example.org",
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": geheimnis,
+            },
+        )
+        assert antwort.status_code == 403
+        assert antwort.json()["code"] == "BOOTSTRAP_INVALID"
+        assert geheimnis not in antwort.text
+        assert session.execute(select(func.count()).select_from(Account)).scalar_one() == 0
 
     def test_zweiter_account_braucht_eine_einladung(self, client, session) -> None:  # type: ignore[no-untyped-def]
         """Sonst koennte sich auf einer privaten Instanz anlegen, wer ihre
@@ -81,6 +122,7 @@ class TestRegistrierung:
                 "displayName": "Anna",
                 "email": "  Anna@Example.ORG ",
                 "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         antwort = client.post(
@@ -93,7 +135,12 @@ class TestRegistrierung:
     def test_zu_kurzes_passwort_wird_abgewiesen(self, client, kurz: str) -> None:  # type: ignore[no-untyped-def]
         antwort = client.post(
             "/api/v1/auth/register",
-            json={"displayName": "Anna", "email": "a@example.org", "password": kurz},
+            json={
+                "displayName": "Anna",
+                "email": "a@example.org",
+                "password": kurz,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
         )
         assert antwort.status_code == 422
         assert antwort.json()["code"] == "PASSWORD_TOO_SHORT"
@@ -102,7 +149,12 @@ class TestRegistrierung:
     def test_krumme_adresse_wird_abgewiesen(self, client, krumm: str) -> None:  # type: ignore[no-untyped-def]
         antwort = client.post(
             "/api/v1/auth/register",
-            json={"displayName": "Anna", "email": krumm, "password": GUTES_PASSWORT},
+            json={
+                "displayName": "Anna",
+                "email": krumm,
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
         )
         assert antwort.status_code == 422
 
@@ -112,7 +164,12 @@ class TestRegistrierung:
 
         client.post(
             "/api/v1/auth/register",
-            json={"displayName": "Anna", "email": "a@example.org", "password": "kurz"},
+            json={
+                "displayName": "Anna",
+                "email": "a@example.org",
+                "password": "kurz",
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
         )
         assert accounts.find_by_email(session, "a@example.org") is None
 
@@ -126,6 +183,7 @@ class TestAnmeldung:
                 "displayName": "Anna",
                 "email": "anna@example.org",
                 "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         return "anna@example.org"
@@ -186,6 +244,7 @@ class TestSitzungsverwaltung:
                 "displayName": "Anna",
                 "email": "anna@example.org",
                 "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         ).json()
 
@@ -241,6 +300,7 @@ class TestBegrenzung:
                 "displayName": "Anna",
                 "email": "anna@example.org",
                 "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
 
@@ -264,6 +324,7 @@ class TestBegrenzung:
                 "displayName": "Anna",
                 "email": "anna@example.org",
                 "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         for _ in range(5):
@@ -301,6 +362,68 @@ class TestBegrenzung:
 
 
 class TestProduktiveTransaktionsgrenze:
+    def test_bootstrap_nachweis_ist_nach_erfolg_dauerhaft_verbraucht(
+        self, production_client
+    ) -> None:  # type: ignore[no-untyped-def]
+        client, maker = production_client
+        erste = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Anna",
+                "email": "anna@example.org",
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
+        )
+        assert erste.status_code == 201
+
+        wiederverwendung = client.post(
+            "/api/v1/auth/register",
+            json={
+                "displayName": "Fremd",
+                "email": "fremd@example.org",
+                "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+            },
+        )
+        assert wiederverwendung.status_code == 403
+        assert wiederverwendung.json()["code"] == "REGISTRATION_REQUIRES_INVITATION"
+
+        with maker() as committed:
+            assert committed.execute(select(func.count()).select_from(Account)).scalar_one() == 1
+            state = committed.get(InstanceBootstrapState, 1)
+            assert state is not None
+            assert state.completed_at is not None
+
+    def test_paralleler_bootstrap_hat_genau_einen_owner(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        client, maker = production_client
+        start = Barrier(2)
+
+        def registrieren(index: int):  # type: ignore[no-untyped-def]
+            start.wait(timeout=5)
+            return client.post(
+                "/api/v1/auth/register",
+                json={
+                    "displayName": f"Owner {index}",
+                    "email": f"owner{index}@example.org",
+                    "password": GUTES_PASSWORT,
+                    "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+                },
+            )
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            antworten = list(pool.map(registrieren, range(2)))
+
+        assert sorted(antwort.status_code for antwort in antworten) == [201, 403]
+        abgewiesen = next(antwort for antwort in antworten if antwort.status_code == 403)
+        assert abgewiesen.json()["code"] == "REGISTRATION_REQUIRES_INVITATION"
+
+        with maker() as committed:
+            assert committed.execute(select(func.count()).select_from(Account)).scalar_one() == 1
+            state = committed.get(InstanceBootstrapState, 1)
+            assert state is not None
+            assert state.completed_at is not None
+
     def test_fehlversuche_bleiben_nach_abgelehnten_requests_erhalten(
         self, production_client
     ) -> None:  # type: ignore[no-untyped-def]
@@ -309,7 +432,12 @@ class TestProduktiveTransaktionsgrenze:
         assert (
             client.post(
                 "/api/v1/auth/register",
-                json={"displayName": "Anna", "email": email, "password": GUTES_PASSWORT},
+                json={
+                    "displayName": "Anna",
+                    "email": email,
+                    "password": GUTES_PASSWORT,
+                    "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+                },
             ).status_code
             == 201
         )
@@ -345,7 +473,12 @@ class TestProduktiveTransaktionsgrenze:
         assert (
             client.post(
                 "/api/v1/auth/register",
-                json={"displayName": "Anna", "email": email, "password": GUTES_PASSWORT},
+                json={
+                    "displayName": "Anna",
+                    "email": email,
+                    "password": GUTES_PASSWORT,
+                    "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
+                },
             ).status_code
             == 201
         )
@@ -380,6 +513,7 @@ class TestProduktiveTransaktionsgrenze:
                 "displayName": "Anna",
                 "email": "anna@example.org",
                 "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         assert registrierung.status_code == 201
@@ -420,6 +554,7 @@ class TestProduktiveTransaktionsgrenze:
                 "displayName": "Anna",
                 "email": "anna@example.org",
                 "password": GUTES_PASSWORT,
+                "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         assert registrierung.status_code == 201

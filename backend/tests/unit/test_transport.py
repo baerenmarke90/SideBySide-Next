@@ -29,6 +29,17 @@ class TestAllowedHosts:
             Settings(environment=Environment.PRODUCTION, allowed_hosts=["*"])
 
 
+class TestBootstrapKonfiguration:
+    def test_kurzes_geheimnis_wird_abgewiesen(self) -> None:
+        with pytest.raises(ValueError, match="SBS_BOOTSTRAP_TOKEN"):
+            Settings(bootstrap_token="zu-kurz")
+
+    def test_geheimnis_erscheint_nicht_in_settings_ausgabe(self) -> None:
+        geheimnis = "test-bootstrap-secret-with-at-least-32-characters"
+        settings = Settings(bootstrap_token=geheimnis)
+        assert geheimnis not in repr(settings)
+
+
 class TestHttpsGrenze:
     def test_loopback_darf_klartext_verwenden(self, monkeypatch: pytest.MonkeyPatch) -> None:
         client = production_client(monkeypatch, "http://127.0.0.1", ["127.0.0.1"])

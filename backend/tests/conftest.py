@@ -21,6 +21,9 @@ from sqlalchemy.orm import Session, sessionmaker
 # Nie versehentlich gegen eine echte Instanz laufen.
 os.environ.setdefault("SBS_ENVIRONMENT", "test")
 
+TEST_BOOTSTRAP_TOKEN = "test-bootstrap-token-with-at-least-32-characters"
+os.environ.setdefault("SBS_BOOTSTRAP_TOKEN", TEST_BOOTSTRAP_TOKEN)
+
 INTEGRATION_DATABASE_URL = os.environ.get("SBS_TEST_DATABASE_URL", "")
 
 
