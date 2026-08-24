@@ -137,6 +137,11 @@ cp .env.example .env    # und ausfüllen
 docker compose up -d
 ```
 
+Die API ist danach unter `http://127.0.0.1:8000` erreichbar. Dieser
+Klartextzugang ist absichtlich auf den lokalen Rechner begrenzt. Fuer Zugriff
+aus LAN oder Internet muss ein HTTPS-Reverse-Proxy vorgeschaltet werden; die
+API darf dafuer nicht direkt auf allen Interfaces veroeffentlicht werden.
+
 `compose.yaml` liegt bewusst im Wurzelverzeichnis: der Build-Kontext
 `./backend` muss unterhalb des Verzeichnisses liegen, in dem die
 Compose-Datei steht. Oberflächen wie Arcane oder Portainer legen jedes
@@ -146,6 +151,9 @@ dort ins Leere. Das ganze Repository ist deshalb das Projektverzeichnis.
 Der Dienst `migrate` zieht das Schema einmalig hoch, bevor `api` und
 `worker` starten. Die Anwendung migriert nicht selbst; zwei startende
 API-Container würden das sonst gleichzeitig tun.
+
+Der vollstaendige sichere Startablauf, Reverse-Proxy-Anforderungen und ein
+Smoke-Test stehen in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md).
 
 ## Stand
 

@@ -25,6 +25,11 @@ x-backend: &backend
     SBS_DEPLOYMENT: self_hosted
     SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
     SBS_MEDIA_ROOT: /var/lib/sidebyside/media
+    SBS_ALLOWED_HOSTS: '${SBS_ALLOWED_HOSTS:-["localhost","127.0.0.1"]}'
+    # Uvicorn wertet Forwarded Headers nur von diesen Adressen aus. Fuer
+    # einen Reverse-Proxy muss hier dessen kleinster moeglicher IP-Bereich
+    # eingetragen werden - niemals pauschal "*".
+    FORWARDED_ALLOW_IPS: "${TRUSTED_PROXY_IPS:-127.0.0.1}"
   volumes:
     - media_data:/var/lib/sidebyside/media
 
@@ -60,7 +65,13 @@ services:
     <<: *backend
     restart: unless-stopped
     ports:
-      - "${API_PORT:-8000}:8000"
+      # Der sichere Standard ist nur vom Host selbst erreichbar. LAN und
+      # Internet gehen ausschliesslich ueber einen HTTPS-Reverse-Proxy.
+      - name: api-loopback
+        target: 8000
+        published: "${API_PORT:-8000}"
+        host_ip: 127.0.0.1
+        protocol: tcp
     healthcheck:
       # Das schlanke Image bringt kein curl mit; Python ist ohnehin da.
       test:

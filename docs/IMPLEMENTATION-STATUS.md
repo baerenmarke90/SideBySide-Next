@@ -30,7 +30,7 @@ bekommt eine neue Datei.
 - [x] Membership-Änderungen je Space serialisieren; Race mit zwei Einladungen testen.
 - [x] Refresh-Rotation atomar machen; parallelen Refresh testen.
 - [ ] Bootstrap der ersten Self-Hosted-Registrierung absichern und serialisieren.
-- [ ] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
+- [x] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
 - [ ] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entscheiden.
 
 ## M0 – Clean Foundation
