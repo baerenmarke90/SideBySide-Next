@@ -8,7 +8,9 @@ nicht nur, dass sich eine Zeile schreiben laesst.
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import Engine, select
+from sqlalchemy.exc import StatementError
 from sqlalchemy.orm import Session, sessionmaker
 
 from sidebyside.core.ids import new_id
@@ -116,4 +118,31 @@ class TestNutzlast:
         ohnehin nicht mehr zur Verfuegung."""
         zeile = service.record(session, _event())
         session.flush()
-        assert set(zeile.payload) <= {"has_attachment"}
+        assert set(zeile.payload.model_dump(exclude_none=True)) <= {"has_attachment"}
+
+    def test_sensible_klartextnutzlast_wird_vor_persistenz_abgewiesen(self) -> None:
+        with pytest.raises(ValidationError):
+            DomainEvent.model_validate(
+                {
+                    "type": EventType.MEMORY_CREATED,
+                    "space_id": new_id(),
+                    "subject_type": "memory",
+                    "subject_id": new_id(),
+                    "payload": {"body": "privater Klartext"},
+                }
+            )
+
+    def test_rohes_dictionary_kann_orm_grenze_nicht_umgehen(self, session: Session) -> None:
+        event = _event()
+        row = OutboxEvent(
+            event_type=event.type.value,
+            space_id=event.space_id,
+            actor_id=event.actor_id,
+            subject_type=event.subject_type,
+            subject_id=event.subject_id,
+            payload={"body": "privater Klartext"},  # type: ignore[arg-type]
+        )
+        session.add(row)
+
+        with pytest.raises(StatementError, match="PublicEventPayload erforderlich"):
+            session.flush()
