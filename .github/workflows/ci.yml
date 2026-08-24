@@ -9,6 +9,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+
 jobs:
   backend:
     name: Backend
@@ -42,16 +46,19 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.13"
+          python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: backend/pyproject.toml
+          cache-dependency-path: backend/uv.lock
 
-      - name: Abhaengigkeiten
-        run: pip install -e ".[dev]"
+      - name: Gesperrte Abhaengigkeiten
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv lock --check
+          uv sync --frozen
 
       - name: Sichere Self-Hosted-Konfiguration
         working-directory: .
@@ -81,22 +88,25 @@ jobs:
           fi
 
       - name: Lint
-        run: ruff check src tests
+        run: uv run --frozen ruff check src tests scripts
 
       - name: Formatierung
-        run: ruff format --check src tests
+        run: uv run --frozen ruff format --check src tests scripts
 
       - name: Typpruefung
-        run: mypy
+        run: uv run --frozen mypy
+
+      - name: OpenAPI-Vertrag
+        run: uv run --frozen python scripts/openapi_contract.py check
 
       - name: Migrationen
-        run: alembic upgrade head
+        run: uv run --frozen alembic upgrade head
 
       - name: Migrationen sind vollstaendig
         # Weicht das Modell vom Schema ab, fehlt eine Migration. Das faellt
         # sonst erst beim Deployment auf.
         run: |
-          alembic revision --autogenerate -m "drift check" --rev-id drift_check
+          uv run --frozen alembic revision --autogenerate -m "drift check" --rev-id drift_check
           if grep -qE "op\.(create|drop|alter|add)_" alembic/versions/drift_check_*.py; then
             echo "Modell und Migrationen weichen ab:"
             cat alembic/versions/drift_check_*.py
@@ -105,14 +115,14 @@ jobs:
           rm alembic/versions/drift_check_*.py
 
       - name: Tests
-        run: pytest -q
+        run: uv run --frozen pytest -q
 
       - name: Integrationstests sind wirklich gelaufen
         # Ein uebersprungener Sicherheitstest darf nicht wie ein bestandener
         # aussehen. Hier muessen sie tatsaechlich gelaufen sein.
         run: |
           set -o pipefail
-          pytest -m integration -q --no-header | tee /tmp/integration.txt
+          uv run --frozen pytest -m integration -q --no-header | tee /tmp/integration.txt
           if grep -qE "[0-9]+ skipped" /tmp/integration.txt; then
             echo "Integrationstests wurden uebersprungen - Datenbank nicht erreichbar?"
             exit 1
@@ -122,11 +132,42 @@ jobs:
             exit 1
           fi
 
+  supply-chain:
+    name: Supply Chain
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+      - name: uv exakt installieren
+        run: python -m pip install "uv==$UV_VERSION"
+      - name: Lockdatei ist aktuell
+        run: uv lock --check
+      - name: Dependency- und Vulnerability-Scan
+        # Policy: jeder bekannte OSV-Fund oder nachteilige Paketstatus laesst
+        # den Job fehlschlagen. Ausnahmen muessen explizit, begruendet und
+        # befristet in pyproject.toml stehen; aktuell gibt es keine.
+        run: uv audit --preview --frozen
+      - name: Abhaengigkeitsinventar
+        run: |
+          uv sync --frozen
+          uv run --frozen python scripts/check_dependency_inventory.py ../docs/DEPENDENCIES.md
+      - name: Backend-Wheel ohne Cache bauen
+        run: uv build --no-cache --wheel --out-dir /tmp/sidebyside-dist
+      - name: Produktionscontainer frisch bauen
+        run: docker build --pull --no-cache --tag sidebyside-next:ci .
+
   secrets:
     name: Secret Scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -145,7 +186,7 @@ jobs:
     name: Provenance
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Pflichtdokumente vorhanden
         run: |
           for datei in PROVENANCE.md docs/DEPENDENCIES.md \

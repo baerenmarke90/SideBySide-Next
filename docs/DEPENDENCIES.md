@@ -4,7 +4,45 @@ Jede Abhängigkeit wird mit Name, Version, Quelle und Lizenz geführt. Jedes
 Asset mit Ursprung, Lizenz und Ersteller. Was hier nicht steht, gehört
 nicht ins Projekt.
 
-Stand: 2026-08-23
+Stand: 2026-08-24
+
+## Reproduzierbarkeit und Prüfung
+
+`backend/uv.lock` ist die verbindliche, plattformübergreifende Auflösung
+aller direkten und transitiven Python-Abhängigkeiten. Die verwendete
+uv-Version `0.12.5`, Python `3.13.7`, das Build-Backend und das
+Python-Container-Image sind exakt gepinnt. Installationen in CI und Container
+laufen ausschließlich im Frozen-/Locked-Modus; `uv lock --check` verhindert
+eine veraltete Lockdatei.
+
+Die CI führt `uv audit --preview --frozen` gegen OSV aus. Die Policy erlaubt
+keinen bekannten Sicherheitsfund und keinen nachteiligen Paketstatus. Eine
+Ausnahme dürfte nur mit Advisory-ID, Begründung, Ablaufdatum und verlinktem
+Issue unter `[tool.uv.audit]` eingetragen werden; derzeit gibt es keine.
+
+Der dokumentierte Stand wird nach der gesperrten Installation automatisch
+mit den tatsächlich installierten Versionen und den `License-Expression`-
+beziehungsweise `License`-Metadaten der Pakete verglichen. Damit sind die
+Tabellen unten prüfbar und nicht nur eine manuell gepflegte Behauptung.
+
+`.github/dependabot.yml` lässt uv-, Docker- und GitHub-Actions-Abhängigkeiten
+wöchentlich aktualisieren. Bei einem neuen Fork oder Repository müssen unter
+**Settings → Security and analysis** zusätzlich „Dependabot alerts“ und
+„Dependabot security updates“ aktiviert werden; die normalen Versionsupdates
+starten bereits durch die Konfigurationsdatei.
+
+### Dokumentierter Policy-Dry-Run
+
+Der folgende Test legt nur in einem temporären Verzeichnis einen absichtlich
+verwundbaren Lockstand an. Er muss mit einem Fund und einem von null
+verschiedenen Exit-Code enden; die echte Projekt-Lockdatei bleibt unverändert.
+
+```bash
+probe=$(mktemp -d)
+printf '[project]\nname="audit-probe"\nversion="0"\nrequires-python=">=3.12"\ndependencies=["jinja2==2.10"]\n' > "$probe/pyproject.toml"
+uv lock --directory "$probe"
+uv audit --preview --frozen --directory "$probe"
+```
 
 `argon2-cffi` ist die einzige Kryptografie-Bibliothek im Projekt und deckt
 genau einen Zweck ab: die Ableitung von Passwoertern. Tokens kommen mit
@@ -41,7 +79,7 @@ Bremse bei jeder Anfrage.
 
 | Image | Version | Quelle | Lizenz |
 |---|---|---|---|
-| python | 3.13-slim | Docker Hub | PSF-2.0 (Python), Debian-Pakete je eigene Lizenz |
+| python | 3.13.7-slim@sha256:5f55cdf0c5d9dc1a415637a5ccc4a9e18663ad203673173b8cda8f8dcacef689 | Docker Hub | PSF-2.0 (Python), Debian-Pakete je eigene Lizenz |
 | postgres | 17-alpine | Docker Hub | PostgreSQL License |
 
 ## Web und Android
@@ -86,6 +124,7 @@ nicht aufgenommen — auch nicht vorläufig.
 
 ## Pflege
 
-Eine neue Abhängigkeit wird zusammen mit ihrem Eintrag hier hinzugefügt.
-Die CI prüft, dass diese Datei existiert; ihre Vollständigkeit liegt beim
-Review.
+Eine neue direkte Abhängigkeit wird zusammen mit ihrem Eintrag hier
+hinzugefügt. Die CI prüft Vollständigkeit, genaue Version und Lizenz gegen
+die gesperrte, installierte Umgebung. Transitive Versionen stehen vollständig
+in `backend/uv.lock`.

@@ -47,10 +47,10 @@ bekommt eine neue Datei.
 - [x] Backend-CI mit echten PostgreSQL-Integrationstests und Secret Scan
 - [ ] Initiale Verzeichnisse `web/`, `android/` und `tools/` ergänzen
 - [ ] Fehlende Provider-Interfaces ergänzen: Map, Places, Recipe, Entertainment
-- [ ] Dependency-/Vulnerability-Scan aktivieren
-- [ ] Reproduzierbare Abhängigkeitsauflösung mit Lock/Constraints und Hashes
-- [ ] Expliziten Backend-/Container-Build in CI ergänzen
-- [ ] OpenAPI-Vertrag versionieren und Contract-Tests ergänzen
+- [x] Dependency-/Vulnerability-Scan aktivieren
+- [x] Reproduzierbare Abhängigkeitsauflösung mit Lock/Constraints und Hashes
+- [x] Expliziten Backend-/Container-Build in CI ergänzen
+- [x] OpenAPI-Vertrag versionieren und Contract-Tests ergänzen
 - [ ] E2EE-Grenze bei ersten sensiblen Modellen und Outbox-Payloads technisch erzwingen
 
 ## M1 – Identity & Relationship
