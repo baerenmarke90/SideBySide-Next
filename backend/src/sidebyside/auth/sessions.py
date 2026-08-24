@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from sqlalchemy import CursorResult
 from sqlalchemy.orm import Session
 
+from sidebyside.auth import rate_limit
 from sidebyside.auth.tokens import (
     ACCESS_TOKEN_LIFETIME,
     REFRESH_TOKEN_BYTES,
@@ -26,6 +27,14 @@ from sidebyside.core.clock import now
 from sidebyside.core.errors import ErrorCode, UnauthenticatedError
 from sidebyside.db.session import schedule_after_rollback
 from sidebyside.identity.models import Account, ConsumedRefreshToken, DeviceSession
+
+ACTION_REFRESH = "refresh"
+"""Der Rate-Limit-Schluessel haengt an der Sitzung, nicht am Token.
+
+Der Tokenwert wechselt bei jeder Rotation - eine Begrenzung darauf waere
+nach genau einem Versuch wieder bei null. Die `DeviceSession` ist die
+Familie und bleibt ueber alle Generationen dieselbe.
+"""
 
 # Wie lange die Replay-Historie eine beendete Familie ueberlebt.
 #
@@ -215,6 +224,15 @@ def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
     account = session.get(Account, geraet.account_id)
     if account is None or not account.is_active:
         raise gescheitert
+
+    # Erst hier, und das ist der Punkt: bis hierher kommt nur, wer den
+    # aktuellen Token dieser Familie besitzt. Ein unbekannter, alter oder
+    # widerrufener Token ist laengst mit 401 abgebogen und kann aus einer
+    # 429 nichts ueber die Existenz einer Sitzung ableiten.
+    rate_limit.check(session, ACTION_REFRESH, str(geraet.id), rate_limit.REFRESH)
+    # Kein `clear` nach dem Erfolg: hier zaehlen die geglueckten
+    # Rotationen selbst, nicht die Fehlversuche davor.
+    rate_limit.record_attempt(session, ACTION_REFRESH, str(geraet.id))
 
     access = generate_token()
     refresh_neu = generate_token(REFRESH_TOKEN_BYTES)
