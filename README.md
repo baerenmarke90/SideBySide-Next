@@ -70,6 +70,20 @@ Beide teilen denselben Application Core.
 </table>
 
 
+## Roadmap
+
+<p align="center">
+  <a href="docs/ROADMAP.md">
+    <img src="docs/assets/roadmap/roadmap-overview.svg" alt="SideBySide Next Roadmap von Foundation bis Release" width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <strong>Aktuell: Foundation-Gates schließen und M1 Identity &amp; Relationship vervollständigen.</strong><br>
+  <a href="docs/ROADMAP.md">Roadmap, parallele Arbeitsströme und Release Gates ansehen</a> ·
+  <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a>
+</p>
+
 ## Leitsätze
 
 Privatsphäre ist Kernfunktion, nicht Beiwerk. Keine Werbung, kein Verkauf
