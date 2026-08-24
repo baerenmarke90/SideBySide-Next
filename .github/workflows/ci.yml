@@ -88,10 +88,10 @@ jobs:
           fi
 
       - name: Lint
-        run: uv run --frozen ruff check src tests scripts
+        run: uv run --frozen ruff check src tests scripts alembic
 
       - name: Formatierung
-        run: uv run --frozen ruff format --check src tests scripts
+        run: uv run --frozen ruff format --check src tests scripts alembic
 
       - name: Typpruefung
         run: uv run --frozen mypy
