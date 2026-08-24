@@ -50,6 +50,18 @@ filterwarnings = ["error::DeprecationWarning"]
 line-length = 100
 src = ["src", "tests", "scripts"]
 target-version = "py312"
+# 0001-0007 sind bereits angewandte historische Migrationen und werden nicht
+# nachtraeglich nur fuer Stil umgeschrieben. Die Liste ist absichtlich exakt:
+# jede neue Migration faellt automatisch unter Ruff. Siehe alembic/README.md.
+extend-exclude = [
+    "alembic/versions/0001_outbox_and_jobs_foundation.py",
+    "alembic/versions/0002_identity_and_relationship.py",
+    "alembic/versions/0003_auth_and_invitations.py",
+    "alembic/versions/0004_instance_bootstrap.py",
+    "alembic/versions/0005_auth_architecture.py",
+    "alembic/versions/0006_refresh_token_family.py",
+    "alembic/versions/0007_absolute_session_lifetime.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
