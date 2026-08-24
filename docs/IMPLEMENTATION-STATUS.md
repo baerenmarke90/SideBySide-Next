@@ -24,11 +24,11 @@ bekommt eine neue Datei.
 
 ## Release-Blocker vor M2
 
-- [ ] Rate-Limit-Ereignisse trotz erwarteter Auth-Fehler dauerhaft und atomar speichern.
-- [ ] Refresh-Replay-Widerruf trotz 401 dauerhaft und atomar speichern.
-- [ ] HTTP-Integrationstests mit dem echten produktiven Session-Lifecycle ergänzen.
+- [x] Rate-Limit-Ereignisse trotz erwarteter Auth-Fehler dauerhaft und atomar speichern.
+- [x] Refresh-Replay-Widerruf trotz 401 dauerhaft und atomar speichern.
+- [x] HTTP-Integrationstests mit dem echten produktiven Session-Lifecycle ergänzen.
 - [ ] Membership-Änderungen je Space serialisieren; Race mit zwei Einladungen testen.
-- [ ] Refresh-Rotation atomar machen; parallelen Refresh testen.
+- [x] Refresh-Rotation atomar machen; parallelen Refresh testen.
 - [ ] Bootstrap der ersten Self-Hosted-Registrierung absichern und serialisieren.
 - [ ] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
 - [ ] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entscheiden.
@@ -85,5 +85,3 @@ bekommt eine neue Datei.
 
 Nach Abschluss der Release-Blocker und vor Beginn von M2 einen neuen,
 commitbezogenen Soll-/Ist- und Sicherheitsreview durchführen.
-
-
