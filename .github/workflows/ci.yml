@@ -129,10 +129,10 @@ jobs:
           import xml.etree.ElementTree as ET
 
           root = ET.parse(sys.argv[1]).getroot()
-          tests = int(root.attrib.get("tests", 0))
-          skipped = int(root.attrib.get("skipped", 0))
+          testcases = root.findall(".//testcase")
+          skipped = sum(case.find("skipped") is not None for case in testcases)
 
-          if tests == 0:
+          if not testcases:
               raise SystemExit("Keine Integrationstests gelaufen.")
           if skipped:
               raise SystemExit(
