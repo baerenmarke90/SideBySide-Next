@@ -155,14 +155,20 @@ def get_preference(
 def _clean_topic(topic: str) -> str:
     value = topic.strip()
     if not value:
-        raise ValidationError("The preference topic must not be empty.", ProfileErrorCode.TOPIC_REQUIRED)
+        raise ValidationError(
+            "The preference topic must not be empty.",
+            ProfileErrorCode.TOPIC_REQUIRED,
+        )
     return value
 
 
 def _clean_value(value: str) -> str:
     cleaned = value.strip()
     if not cleaned:
-        raise ValidationError("The preference value must not be empty.", ProfileErrorCode.VALUE_REQUIRED)
+        raise ValidationError(
+            "The preference value must not be empty.",
+            ProfileErrorCode.VALUE_REQUIRED,
+        )
     return cleaned
 
 
