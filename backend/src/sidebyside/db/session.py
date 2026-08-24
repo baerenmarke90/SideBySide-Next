@@ -19,7 +19,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from sidebyside.config import get_settings
 
-
 AfterRollbackAction = Callable[[Session], None]
 _AFTER_ROLLBACK_KEY = "sidebyside.after_rollback"
 
