@@ -98,7 +98,17 @@ def add_member(session: Session, space_id: UUID, account: Account) -> Membership
     Die Obergrenze wird hier geprueft, nicht erst beim Annehmen einer
     Einladung: ein Paar-Space hat hoechstens zwei aktive Partner, und diese
     Regel darf nicht davon abhaengen, ueber welchen Weg jemand hereinkommt.
+
+    Die Space-Zeile serialisiert Pruefung und Aenderung bis zum Commit. So
+    koennen auch zwei verschiedene Einladungen den letzten freien Platz
+    nicht gleichzeitig belegen.
     """
+    space = session.execute(
+        select(Space).where(Space.id == space_id).with_for_update()
+    ).scalar_one_or_none()
+    if space is None:
+        raise NotFoundError("Space not found.", SpaceErrorCode.NOT_FOUND)
+
     vorhanden = session.execute(
         select(Membership).where(
             Membership.space_id == space_id,
