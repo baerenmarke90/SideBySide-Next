@@ -10,66 +10,6 @@ Betriebsformen angeboten:
 
 Beide teilen denselben Application Core.
 
-## Produktvorschau
-
-<p align="center">
-  <img src="docs/assets/playstore/app-icon.png" alt="SideBySide Next App-Icon" width="112">
-</p>
-
-<p align="center">
-  <img src="docs/assets/playstore/feature-graphic.png" alt="SideBySide Next – gemeinsam leben, privat verbunden" width="100%">
-</p>
-
-<p align="center">
-  <strong>Erinnerungen, Wünsche, Pläne und gemeinsame Zeit – ruhig gestaltet und privacy-first gedacht.</strong>
-</p>
-
-> Die folgenden Screens sind Produkt- und Google-Play-Mockups. Der technische
-> Implementierungsstand ist im Abschnitt [Stand](#stand) dokumentiert.
-
-### Design- und UX-Grundlagen
-
-- [Design-Prinzipien](docs/DESIGN-PRINCIPLES.md) – visuelle Sprache, Accessibility und Privacy-first Leitlinien
-- [Informationsarchitektur](docs/INFORMATION-ARCHITECTURE.md) – Navigation, Bereiche, Routen und Deep Links
-- [Critical User Flows](docs/USER-FLOWS.md) – End-to-End-Abläufe für Auth, Einladung, Inhalte, Offline und Konflikte
-- [UX-Patterns](docs/UX-PATTERNS.md) – plattformübergreifende Interaktions- und Zustandsmuster
-- [Screen-Templates](docs/SCREEN-TEMPLATES.md) – responsive Layouts für Compact, Medium und Expanded
-- [Component Contracts](docs/COMPONENT-CONTRACTS.md) – Verhalten, Varianten und Accessibility gemeinsamer Bausteine
-- [API-/UI-Verträge](docs/API-UI-CONTRACTS.md) – gemeinsame DTOs, Fehler, Privacy-Klassen, Cache und Concurrency
-- [Accessibility- und QA-Matrix](docs/ACCESSIBILITY-QA-MATRIX.md) – verbindliche Release Gates für Web und Android
-- [Content- und Privacy-Guidelines](docs/CONTENT-PRIVACY-GUIDELINES.md) – Tonalität, Systemtexte, Notifications und Analytics-Grenzen
-- [Design-System-Umsetzung](docs/DESIGN-SYSTEM-DELIVERY.md) – Token-Pipeline, Komponentenstufen und Lieferphasen
-- [Design-Tokens](design/tokens.json) – Farben, Typografie, Abstände, Layout und Motion als maschinenlesbare Quelle
-- [Component Manifest](design/component-manifest.json) – plattformübergreifender Implementierungsstatus
-
-<table>
-  <tr>
-    <th>Gemeinsam starten</th>
-    <th>Unser Heute</th>
-    <th>Unsere Story</th>
-    <th>Unsere Wünsche</th>
-  </tr>
-  <tr>
-    <td><img src="docs/assets/playstore/screen-01-onboarding.png" alt="Onboarding-Mockup" width="200"></td>
-    <td><img src="docs/assets/playstore/screen-02-heute.png" alt="Heute-Mockup" width="200"></td>
-    <td><img src="docs/assets/playstore/screen-03-story.png" alt="Story-Mockup" width="200"></td>
-    <td><img src="docs/assets/playstore/screen-04-wuensche.png" alt="Wünsche-Mockup" width="200"></td>
-  </tr>
-  <tr>
-    <th>Gemeinsam planen</th>
-    <th>Für euch entdecken</th>
-    <th>Gemeinsam einkaufen</th>
-    <th>Privatsphäre</th>
-  </tr>
-  <tr>
-    <td><img src="docs/assets/playstore/screen-05-plan.png" alt="Planungs-Mockup" width="200"></td>
-    <td><img src="docs/assets/playstore/screen-06-discovery.png" alt="Discovery-Mockup" width="200"></td>
-    <td><img src="docs/assets/playstore/screen-07-einkauf.png" alt="Einkaufs-Mockup" width="200"></td>
-    <td><img src="docs/assets/playstore/screen-08-privacy.png" alt="Privacy-Mockup" width="200"></td>
-  </tr>
-</table>
-
-
 ## Leitsätze
 
 Privatsphäre ist Kernfunktion, nicht Beiwerk. Keine Werbung, kein Verkauf
@@ -123,6 +63,11 @@ cp .env.example .env    # und ausfüllen
 docker compose up -d
 ```
 
+Die API ist danach unter `http://127.0.0.1:8000` erreichbar. Dieser
+Klartextzugang ist absichtlich auf den lokalen Rechner begrenzt. Fuer Zugriff
+aus LAN oder Internet muss ein HTTPS-Reverse-Proxy vorgeschaltet werden; die
+API darf dafuer nicht direkt auf allen Interfaces veroeffentlicht werden.
+
 `compose.yaml` liegt bewusst im Wurzelverzeichnis: der Build-Kontext
 `./backend` muss unterhalb des Verzeichnisses liegen, in dem die
 Compose-Datei steht. Oberflächen wie Arcane oder Portainer legen jedes
@@ -132,6 +77,9 @@ dort ins Leere. Das ganze Repository ist deshalb das Projektverzeichnis.
 Der Dienst `migrate` zieht das Schema einmalig hoch, bevor `api` und
 `worker` starten. Die Anwendung migriert nicht selbst; zwei startende
 API-Container würden das sonst gleichzeitig tun.
+
+Der vollstaendige sichere Startablauf, Reverse-Proxy-Anforderungen und ein
+Smoke-Test stehen in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md).
 
 ## Stand
 
