@@ -6,8 +6,10 @@ SideBySide Next is an independently implemented software project based on a
 functional product specification. No source code from SharedMoments or
 SideBySide Classic is copied into this implementation.
 
-Implementation follows the written specification in
-[specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md).
+Implementation follows the complete written specification in
+[specification/CLEAN-ROOM-MASTER-SPEC.md](specification/CLEAN-ROOM-MASTER-SPEC.md).
+The shorter [specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md)
+is an overview and does not replace the master specification.
 
 ## Facts
 
