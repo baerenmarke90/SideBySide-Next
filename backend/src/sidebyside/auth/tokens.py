@@ -31,7 +31,22 @@ ACCESS_TOKEN_BYTES = 32
 REFRESH_TOKEN_BYTES = 32
 
 ACCESS_TOKEN_LIFETIME = timedelta(minutes=15)
+
+# Gleitendes Fenster: jede Rotation setzt es neu. Es begrenzt, wie lange ein
+# Geraet unbenutzt liegen darf, bevor es sich neu anmelden muss.
 REFRESH_TOKEN_LIFETIME = timedelta(days=60)
+
+# Harte Obergrenze der Sitzung, gerechnet ab der Anmeldung und bei keiner
+# Rotation verlaengert.
+#
+# Ohne sie ist die Sitzungsdauer unbegrenzt: wer regelmaessig erneuert,
+# schiebt das gleitende Fenster beliebig weit vor sich her. Damit waere
+# weder die Familie noch ihre Replay-Historie nach oben beschraenkt, und
+# ein einmal gestohlenes Geraet bliebe dauerhaft angemeldet.
+#
+# Nach Ablauf hilft keine Rotation mehr; es braucht eine neue Anmeldung und
+# damit eine neue Token-Familie.
+SESSION_ABSOLUTE_LIFETIME = timedelta(days=180)
 
 
 def generate_token(size: int = ACCESS_TOKEN_BYTES) -> str:

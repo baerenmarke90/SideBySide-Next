@@ -293,6 +293,11 @@ class DeviceSession(IdMixin, Base):
     Generationen stehen in `ConsumedRefreshToken` und bleiben der Familie
     zuordenbar, damit ein spaeter auftauchender alter Token nicht nur
     abgewiesen, sondern als Kompromittierung erkannt wird.
+
+    Zwei Ablaufzeitpunkte, die Verschiedenes bedeuten: `expires_at` ist das
+    gleitende Fenster gegen Untaetigkeit, `absolute_expires_at` die harte
+    Obergrenze der Familie ab Anmeldung. Ohne die zweite waere die erste
+    beliebig weit vorschiebbar und die Familie unendlich.
     """
 
     __tablename__ = "device_sessions"
@@ -315,7 +320,16 @@ class DeviceSession(IdMixin, Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # Gleitend: jede Rotation setzt diesen Zeitpunkt neu. Er begrenzt die
+    # Untaetigkeit, nicht die Sitzung.
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    # Fest ab Anmeldung und von keiner Rotation verschoben. Erst diese
+    # Grenze macht Sitzung und Token-Familie endlich - und damit auch ihre
+    # Replay-Historie. `expires_at` wird nie darueber hinaus gesetzt.
+    absolute_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (

@@ -124,6 +124,33 @@ für Anmeldenachweise. Sie verschwindet mit der Sitzung und wird für
 beendete Sitzungen nach einer Aufbewahrungsfrist geräumt; laufende
 Sitzungen behalten ihre Historie, denn sie *ist* die Erkennung.
 
+### Zwei Ablaufzeitpunkte je Sitzung
+
+Damit die Familie und mit ihr die Historie tatsächlich endlich ist, trägt
+`DeviceSession` zwei verschiedene Grenzen:
+
+| Feld | Bedeutung | Wird verlängert? |
+|---|---|---|
+| `expires_at` | gleitendes Fenster gegen Untätigkeit | ja, bei jeder Rotation |
+| `absolute_expires_at` | harte Obergrenze ab Anmeldung | **nein** |
+
+Das gleitende Fenster allein wäre keine Begrenzung: Wer regelmäßig
+erneuert, schiebt es beliebig weit vor sich her. Eine dauerhaft genutzte
+Sitzung liefe dann unbegrenzt weiter und sammelte pro Rotation eine weitere
+Zeile Historie, die nie geräumt würde.
+
+Die absolute Grenze steht ab der Anmeldung fest. Keine Rotation verschiebt
+sie. Ist sie erreicht, hilft kein Refresh mehr — es braucht eine neue
+Anmeldung und damit eine neue Familie. Auch ein kurz zuvor ausgestellter
+Access Token endet an dieser Grenze, sonst wäre sie keine.
+
+`expires_at` wird nie über `absolute_expires_at` hinaus gesetzt. Der Client
+erfährt über `refreshExpiresAt` also den Zeitpunkt, der tatsächlich gilt.
+
+Bis dahin bleibt **jede** Generation der Familie zuordenbar. Die Grenze
+verkürzt die Historie nicht und ist ausdrücklich kein Zeitfenster, durch
+das alte Tokens wieder aus der Erkennung fallen.
+
 ## Invitations
 
 Einladungstoken: zufällig, ausreichend Entropie, **nur gehasht**

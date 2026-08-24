@@ -18,6 +18,7 @@ from sidebyside.auth.tokens import (
     ACCESS_TOKEN_LIFETIME,
     REFRESH_TOKEN_BYTES,
     REFRESH_TOKEN_LIFETIME,
+    SESSION_ABSOLUTE_LIFETIME,
     generate_token,
     hash_token,
 )
@@ -34,9 +35,10 @@ from sidebyside.identity.models import Account, ConsumedRefreshToken, DeviceSess
 # Replay ohnehin nichts mehr ausloesen: der Refresh scheitert dann bereits
 # an der toten Sitzung. Die Frist danach ist reine Nachvollziehbarkeit.
 #
-# Die Tabelle waechst damit nicht unbegrenzt: je Sitzung eine Zeile pro
-# Rotation, begrenzt durch die Lebensdauer der Sitzung, und danach begrenzt
-# durch diese Frist.
+# Begrenzt ist die Historie dadurch aber erst zusammen mit
+# SESSION_ABSOLUTE_LIFETIME. Das gleitende Refresh-Fenster allein wuerde
+# eine regelmaessig genutzte Sitzung beliebig lange am Leben halten, und
+# mit ihr eine Historie, die nie geraeumt wird.
 REPLAY_HISTORY_RETENTION = timedelta(days=30)
 
 
@@ -77,6 +79,9 @@ def start_session(
         access_token_hash=hash_token(access),
         access_expires_at=jetzt + ACCESS_TOKEN_LIFETIME,
         expires_at=jetzt + REFRESH_TOKEN_LIFETIME,
+        # Ab hier laeuft die Uhr der Familie. Keine Rotation stellt sie
+        # zurueck.
+        absolute_expires_at=jetzt + SESSION_ABSOLUTE_LIFETIME,
         last_used_at=jetzt,
     )
     session.add(geraet)
@@ -114,6 +119,10 @@ def resolve(session: Session, access_token: str) -> tuple[DeviceSession, Account
         or geraet.revoked_at is not None
         or geraet.access_expires_at is None
         or geraet.access_expires_at <= jetzt
+        # Sonst liefe ein kurz vor der Grenze ausgestellter Access Token
+        # noch bis zu seiner eigenen Frist weiter, und die harte Obergrenze
+        # waere keine.
+        or geraet.absolute_expires_at <= jetzt
     ):
         raise UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
 
@@ -169,6 +178,10 @@ def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
     Nach aussen ist das nicht unterscheidbar. Unbekannt, abgelaufen,
     widerrufen und als Replay erkannt ergeben dieselbe Antwort - sonst
     verriete die Fehlermeldung, welche Token einmal echt waren.
+
+    Die Rotation verlaengert nur das gleitende Fenster, nie die absolute
+    Lebensdauer der Familie. Ist die erreicht, hilft kein Refresh mehr; es
+    braucht eine neue Anmeldung und damit eine neue Familie.
     """
     gehasht = hash_token(refresh_token) if refresh_token else ""
     gescheitert = UnauthenticatedError(
@@ -192,7 +205,11 @@ def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
         _revoke_family_on_replay(session, token_hash=gehasht)
         raise gescheitert
 
-    if geraet.revoked_at is not None or geraet.expires_at <= jetzt:
+    if (
+        geraet.revoked_at is not None
+        or geraet.expires_at <= jetzt
+        or geraet.absolute_expires_at <= jetzt
+    ):
         raise gescheitert
 
     account = session.get(Account, geraet.account_id)
@@ -211,8 +228,10 @@ def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
     )
     geraet.refresh_token_hash = hash_token(refresh_neu)
     geraet.access_token_hash = hash_token(access)
-    geraet.access_expires_at = jetzt + ACCESS_TOKEN_LIFETIME
-    geraet.expires_at = jetzt + REFRESH_TOKEN_LIFETIME
+    # Beide Fenster enden spaetestens mit der Familie. Sonst nennte die
+    # Antwort dem Client Ablaufdaten, die der Server nicht einhaelt.
+    geraet.access_expires_at = min(jetzt + ACCESS_TOKEN_LIFETIME, geraet.absolute_expires_at)
+    geraet.expires_at = min(jetzt + REFRESH_TOKEN_LIFETIME, geraet.absolute_expires_at)
     geraet.last_used_at = jetzt
 
     return IssuedTokens(

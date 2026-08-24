@@ -6,14 +6,20 @@ abgelaufenen, widerrufenen und kopierten Token.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from collections.abc import Callable
+from datetime import datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from sidebyside.auth import sessions
-from sidebyside.auth.tokens import hash_token
+from sidebyside.auth.tokens import (
+    ACCESS_TOKEN_LIFETIME,
+    REFRESH_TOKEN_LIFETIME,
+    SESSION_ABSOLUTE_LIFETIME,
+    hash_token,
+)
 from sidebyside.core.clock import now
 from sidebyside.core.errors import UnauthenticatedError
 from sidebyside.identity.models import ConsumedRefreshToken, DeviceSession
@@ -330,6 +336,230 @@ class TestReplay:
             codes.add(fehler.value.code)
         assert len(meldungen) == 1
         assert len(codes) == 1
+
+
+class TestAbsoluteLebensdauer:
+    """Die Familie hat eine harte Obergrenze.
+
+    Ohne sie waere die Sitzungsdauer unbegrenzt: das gleitende Fenster
+    laesst sich durch regelmaessiges Erneuern beliebig weit vorschieben,
+    und mit ihm waechst eine Replay-Historie, die nie geraeumt wird.
+    """
+
+    @staticmethod
+    def _uhr(monkeypatch: pytest.MonkeyPatch, start: datetime) -> Callable[[datetime], None]:
+        """Eine stellbare Uhr fuer das Sitzungsmodul."""
+        stand = {"jetzt": start}
+        monkeypatch.setattr(sessions, "now", lambda: stand["jetzt"])
+
+        def stelle(auf: datetime) -> None:
+            stand["jetzt"] = auf
+
+        return stelle
+
+    @staticmethod
+    def _halte_am_leben(
+        session: Session,
+        tokens: sessions.IssuedTokens,
+        stelle: Callable[[datetime], None],
+        *,
+        von: datetime,
+        bis: datetime,
+        schritt: timedelta = timedelta(days=14),
+    ) -> tuple[sessions.IssuedTokens, datetime]:
+        """Die Sitzung durch regelmaessiges Erneuern bis kurz vor `bis` tragen.
+
+        Ohne das liefe das gleitende Fenster ab, und der Test pruefte die
+        falsche Grenze.
+        """
+        zeitpunkt = von
+        while zeitpunkt + schritt < bis:
+            zeitpunkt += schritt
+            stelle(zeitpunkt)
+            tokens = sessions.refresh_session(session, tokens.refresh_token)
+            session.flush()
+        return tokens, zeitpunkt
+
+    def test_regelmaessiges_erneuern_verschiebt_die_grenze_nicht(
+        self, session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Der Kern der Sache: die Familie altert, auch wenn sie benutzt wird.
+
+        Ein Client, der brav alle zwei Wochen erneuert, haelt das gleitende
+        Fenster dauerhaft offen. Die absolute Grenze darf sich davon nicht
+        bewegen, sonst gibt es keine obere Schranke - weder fuer die Sitzung
+        noch fuer ihre Historie.
+        """
+        beginn = now()
+        stelle = self._uhr(monkeypatch, beginn)
+
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        session.flush()
+
+        grenze = geraet.absolute_expires_at
+        assert grenze == beginn + SESSION_ABSOLUTE_LIFETIME
+
+        schritt = timedelta(days=14)
+        zeitpunkt = beginn
+        while zeitpunkt + schritt < grenze:
+            zeitpunkt += schritt
+            stelle(zeitpunkt)
+            tokens = sessions.refresh_session(session, tokens.refresh_token)
+            session.flush()
+
+            assert geraet.absolute_expires_at == grenze, "die Grenze ist mitgewandert"
+            assert geraet.expires_at > zeitpunkt
+
+        # Zwischenstand: die Sitzung lebt kurz vor der Grenze noch.
+        assert zeitpunkt > beginn + timedelta(days=150)
+        assert sessions.authenticate(session, tokens.access_token).id == konto.id
+
+        stelle(grenze + timedelta(seconds=1))
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, tokens.refresh_token)
+        session.flush()
+
+    def test_gleitendes_fenster_ueberholt_die_grenze_nicht(
+        self, session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sonst nennte die Antwort ein Ablaufdatum, das nicht gilt."""
+        beginn = now()
+        stelle = self._uhr(monkeypatch, beginn)
+
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        session.flush()
+
+        kurz_davor = geraet.absolute_expires_at - timedelta(hours=1)
+        tokens, _ = self._halte_am_leben(session, tokens, stelle, von=beginn, bis=kurz_davor)
+
+        stelle(kurz_davor)
+        erneuert = sessions.refresh_session(session, tokens.refresh_token)
+        session.flush()
+
+        assert erneuert.refresh_expires_at == geraet.absolute_expires_at
+        assert erneuert.refresh_expires_at < kurz_davor + REFRESH_TOKEN_LIFETIME
+        assert erneuert.access_expires_at <= geraet.absolute_expires_at
+
+    def test_access_token_endet_mit_der_familie(
+        self, session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Ein kurz vor der Grenze ausgestellter Token darf sie nicht ueberleben."""
+        beginn = now()
+        stelle = self._uhr(monkeypatch, beginn)
+
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        session.flush()
+
+        kurz_davor = geraet.absolute_expires_at - timedelta(minutes=1)
+        tokens, _ = self._halte_am_leben(session, tokens, stelle, von=beginn, bis=kurz_davor)
+
+        stelle(kurz_davor)
+        erneuert = sessions.refresh_session(session, tokens.refresh_token)
+        session.flush()
+        assert sessions.authenticate(session, erneuert.access_token).id == konto.id
+
+        stelle(geraet.absolute_expires_at + timedelta(seconds=1))
+        assert erneuert.access_expires_at > beginn
+        with pytest.raises(UnauthenticatedError):
+            sessions.authenticate(session, erneuert.access_token)
+
+    def test_historie_einer_dauerhaft_genutzten_familie_wird_endlich(
+        self, session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Der eigentliche Zweck der Grenze.
+
+        Erst weil die Familie endet, endet auch ihre Historie. Waere die
+        Sitzung unbegrenzt verlaengerbar, waere die Tabelle es auch.
+        """
+        beginn = now()
+        stelle = self._uhr(monkeypatch, beginn)
+
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        session.flush()
+
+        zeitpunkt = beginn
+        schritt = timedelta(days=14)
+        while zeitpunkt + schritt < geraet.absolute_expires_at:
+            zeitpunkt += schritt
+            stelle(zeitpunkt)
+            tokens = sessions.refresh_session(session, tokens.refresh_token)
+            session.flush()
+
+        gesammelt = session.execute(select(ConsumedRefreshToken)).scalars().all()
+        assert len(gesammelt) > 1
+
+        # Solange die Familie lebt, bleibt jede Generation zuordenbar.
+        assert sessions.prune_replay_history(session) == 0
+
+        stelle(geraet.absolute_expires_at + sessions.REPLAY_HISTORY_RETENTION + timedelta(days=1))
+        assert sessions.prune_replay_history(session) == len(gesammelt)
+        session.flush()
+        assert session.execute(select(ConsumedRefreshToken)).scalars().all() == []
+
+    def test_replay_bleibt_bis_zur_grenze_ueber_alle_generationen_erkennbar(
+        self, session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Die Grenze darf kein Historienfenster durch die Hintertuer sein."""
+        beginn = now()
+        stelle = self._uhr(monkeypatch, beginn)
+
+        konto = make_account(session)
+        geraet, t0 = sessions.start_session(session, konto)
+        session.flush()
+
+        tokens = t0
+        zeitpunkt = beginn
+        for _ in range(10):
+            zeitpunkt += timedelta(days=14)
+            stelle(zeitpunkt)
+            tokens = sessions.refresh_session(session, tokens.refresh_token)
+            session.flush()
+
+        # Die allererste Generation, viele Rotationen und Monate spaeter.
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, t0.refresh_token)
+        session.flush()
+
+        assert geraet.revoked_at is not None
+
+    def test_neue_anmeldung_beginnt_eine_neue_familie(
+        self, session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Nach der Grenze hilft nur Re-Authentifizierung."""
+        beginn = now()
+        stelle = self._uhr(monkeypatch, beginn)
+
+        konto = make_account(session)
+        alt_geraet, alt = sessions.start_session(session, konto)
+        session.flush()
+
+        nach_der_grenze = alt_geraet.absolute_expires_at + timedelta(days=1)
+        stelle(nach_der_grenze)
+        with pytest.raises(UnauthenticatedError):
+            sessions.refresh_session(session, alt.refresh_token)
+        session.flush()
+
+        neu_geraet, neu = sessions.start_session(session, konto)
+        session.flush()
+
+        assert neu_geraet.id != alt_geraet.id
+        assert neu_geraet.absolute_expires_at == nach_der_grenze + SESSION_ABSOLUTE_LIFETIME
+        assert sessions.authenticate(session, neu.access_token).id == konto.id
+
+    def test_frische_sitzung_haelt_beide_fenster_auseinander(self, session: Session) -> None:
+        konto = make_account(session)
+        geraet, tokens = sessions.start_session(session, konto)
+        session.flush()
+
+        assert geraet.expires_at < geraet.absolute_expires_at
+        assert geraet.absolute_expires_at - geraet.expires_at == (
+            SESSION_ABSOLUTE_LIFETIME - REFRESH_TOKEN_LIFETIME
+        )
+        assert tokens.access_expires_at - now() <= ACCESS_TOKEN_LIFETIME
 
 
 class TestReplayHistorieAufraeumen:
