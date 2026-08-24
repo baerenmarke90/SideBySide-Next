@@ -11,11 +11,8 @@ Fehler: wer die Adresse kennt, koennte sich ein Konto anlegen. Ein
 Space-Beitritt gaebe das zwar noch nicht, aber ein Fremder haette einen
 Fuss in der Tuer und koennte Anmeldeversuche zaehlen lassen.
 
-Deshalb gilt:
-
-- Ist noch kein Account vorhanden, darf sich der erste anlegen. Das ist die
-  Inbetriebnahme der Instanz.
-- Danach braucht jede Registrierung eine gueltige Einladung.
+Deshalb gilt: Der erste Account braucht einen einmaligen geheimen Bootstrap-
+Nachweis. Danach braucht jede Registrierung eine gueltige Einladung.
 
 Wer das anders will, aendert es an dieser Stelle - bewusst und sichtbar.
 """
@@ -26,9 +23,9 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import passwords, rate_limit, sessions
+from sidebyside.auth import bootstrap, passwords, rate_limit, sessions
 from sidebyside.auth.sessions import IssuedTokens
-from sidebyside.core.errors import ErrorCode, ForbiddenError, UnauthenticatedError, ValidationError
+from sidebyside.core.errors import ErrorCode, UnauthenticatedError, ValidationError
 from sidebyside.identity import service as accounts
 from sidebyside.identity.models import Account
 from sidebyside.relationship import invitations
@@ -40,7 +37,6 @@ ACTION_ACCEPT = "invitation_accept"
 
 class AuthErrorCode:
     INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
-    REGISTRATION_CLOSED = "REGISTRATION_REQUIRES_INVITATION"
 
 
 @dataclass(frozen=True)
@@ -56,29 +52,30 @@ def register(
     email: str,
     password: str,
     invitation_token: str | None = None,
+    bootstrap_token: str | None = None,
+    configured_bootstrap_token: str | None = None,
     device_name: str = "",
     platform: str = "",
 ) -> SignedIn:
     """Einen Account anlegen und sofort anmelden.
 
-    Der erste Account der Instanz bekommt einen eigenen Space. Jeder
-    weitere tritt ueber seine Einladung dem bestehenden bei.
+    Der erste Account braucht den einmaligen Bootstrap-Nachweis und bekommt
+    einen eigenen Space. Jeder weitere tritt ueber seine Einladung bei.
     """
-    ist_erster = accounts.account_count(session) == 0
-
-    if not ist_erster and not invitation_token:
-        raise ForbiddenError(
-            "Registration on this instance requires an invitation.",
-            AuthErrorCode.REGISTRATION_CLOSED,
-        )
-
     # Das Passwort wird vor dem Anlegen geprueft. Sonst entstuende ein
     # Account, dessen Registrierung anschliessend scheitert.
     passwords.validate(password)
 
-    if not ist_erster and invitation_token:
+    bootstrap_state = None
+    if invitation_token:
         rate_limit.check(session, ACTION_ACCEPT, invitation_token, rate_limit.INVITATION_ACCEPT)
         rate_limit.record_attempt(session, ACTION_ACCEPT, invitation_token)
+    else:
+        bootstrap_state = bootstrap.claim(
+            session,
+            presented_token=bootstrap_token,
+            configured_token=configured_bootstrap_token,
+        )
 
     konto = accounts.create_account(
         session,
@@ -87,8 +84,9 @@ def register(
         password_hash=passwords.hash_password(password),
     )
 
-    if ist_erster:
+    if bootstrap_state is not None:
         spaces.create_space(session, konto)
+        bootstrap.complete(bootstrap_state, konto)
     else:
         assert invitation_token is not None
         invitations.accept(session, invitation_token, konto)
