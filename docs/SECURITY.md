@@ -76,6 +76,12 @@ Cloud setzt auf E-Mail-Verifikation, Magic Link, Passkey und Recovery —
 ohne Passwortpflicht. Self-Hosted zusätzlich lokaler Passwortlogin und
 OIDC, womit ein externer Provider später ohne Sonderweg möglich ist.
 
+Der erste Self-Hosted-Account braucht einen einmaligen geheimen Bootstrap-
+Nachweis. PostgreSQL serialisiert konkurrierende Erstregistrierungen; nach
+dem ersten Erfolg bleibt der Bootstrap dauerhaft geschlossen und alle
+weiteren Registrierungen brauchen eine Einladung. Der geheime Wert wird
+nicht persistiert oder geloggt.
+
 ## Invitations
 
 Einladungstoken: zufällig, ausreichend Entropie, **nur gehasht**
@@ -109,6 +115,7 @@ Content-Type genügt nicht.
 - Refresh Rotation
 - widerrufene Sitzungen
 - Rate Limiting
+- paralleler und wiederverwendeter Self-Hosted-Bootstrap
 - Upload-Missbrauch, bösartige Medien
 - XSS, CSRF bei Browser-Flows, SQL Injection
 - Ablauf signierter URLs
