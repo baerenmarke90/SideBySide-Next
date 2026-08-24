@@ -91,6 +91,15 @@ Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
 [specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md) für den
 fachlichen Umfang.
 
+## Projektsteuerung
+
+Die vollständige verbindliche Vorgabe ist die
+[Clean-Room Master Specification](specification/CLEAN-ROOM-MASTER-SPEC.md).
+Der [laufende Umsetzungsstand](docs/IMPLEMENTATION-STATUS.md) enthält die
+aktuelle Arbeitsliste. Datierte Dateien unter [docs/reviews](docs/reviews)
+sind unveränderliche Prüf-Snapshots; bei Widersprüchen gilt immer die
+Master-Spezifikation.
+
 ## Lizenz
 
 Noch nicht festgelegt. Bis zu einer ausdrücklichen Entscheidung gilt für
