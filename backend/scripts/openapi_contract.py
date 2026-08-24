@@ -70,13 +70,6 @@ def main() -> int:
         check_contract(arguments.contract, actual)
     except ContractMismatchError as error:
         print(error)
-        # Voruebergehend fuer die Aktualisierung des versionierten Vertrags:
-        # CI ist die autoritative Laufzeitumgebung und gibt den exakt dort
-        # erzeugten kanonischen Vertrag aus. Nach dem Sync wird dieser Block
-        # im selben Issue wieder entfernt.
-        print("--- BEGIN GENERATED OPENAPI ---")
-        print(canonical_json(actual), end="")
-        print("--- END GENERATED OPENAPI ---")
         return 1
     print("OpenAPI-Vertrag stimmt mit der aktuellen API ueberein.")
     return 0
