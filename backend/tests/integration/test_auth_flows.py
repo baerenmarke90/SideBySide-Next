@@ -338,9 +338,7 @@ class TestProduktiveTransaktionsgrenze:
             ).scalar_one()
         assert versuche == rate_limit.SIGN_IN.attempts
 
-    def test_parallele_fehlversuche_verlieren_keine_zaehler(
-        self, production_client
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_parallele_fehlversuche_verlieren_keine_zaehler(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         email = "parallel@example.org"
         assert (
@@ -373,9 +371,7 @@ class TestProduktiveTransaktionsgrenze:
             ).scalar_one()
         assert versuche == anzahl
 
-    def test_refresh_replay_widerruft_die_sitzung_dauerhaft(
-        self, production_client
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_refresh_replay_widerruft_die_sitzung_dauerhaft(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         registrierung = client.post(
             "/api/v1/auth/register",
