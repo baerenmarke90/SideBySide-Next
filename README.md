@@ -170,8 +170,10 @@ Membership Guard, dazu Geraetesitzungen mit rotierenden Tokens. Jeder
 Zugriff auf Space-Daten laeuft durch `require_membership`, bevor eine
 Ressource geladen wird.
 
-Als Naechstes M1: Anmeldewege (Magic Link, Passkey, OIDC, lokales
-Passwort), Invitations, Partnerprofile und Praeferenzen.
+M1 ist teilweise umgesetzt: lokales Passwort, Sessions, Invitations sowie
+die Persistenzgrundlage für Magic Link, Passkey, OIDC, E-Mail-Verifikation
+und Recovery sind vorhanden. Als Naechstes folgen die Protokoll-/API-Flows,
+Private Authorization, Partnerprofile und Praeferenzen.
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
 [docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten und

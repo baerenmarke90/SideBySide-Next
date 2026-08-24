@@ -76,6 +76,25 @@ Cloud setzt auf E-Mail-Verifikation, Magic Link, Passkey und Recovery —
 ohne Passwortpflicht. Self-Hosted zusätzlich lokaler Passwortlogin und
 OIDC, womit ein externer Provider später ohne Sonderweg möglich ist.
 
+Bei OIDC ist das externe Konto ausschließlich durch `(issuer, subject)`
+bestimmt. Ein frei konfigurierbarer `connection_id` wählt den Adapter; Pocket
+ID ist damit eine normale OIDC-Verbindung und kein Sonderfall. Ein neuer
+Eintrag darf erst nach vollständiger Prüfung von Discovery, Signatur und
+Claims gespeichert werden.
+
+Passkeys liegen als eigene WebAuthn-Credentials vor: global eindeutige
+Credential-ID, Public Key, Signaturzähler, AAGUID, Transports sowie
+Discoverable-/Backup-Metadaten. Der private Schlüssel bleibt im
+Authenticator und wird vom Server weder empfangen noch gespeichert.
+
+E-Mail-Verifikation, Magic Link und Account Recovery verwenden getrennte
+Tabellen und getrennte Konsumfunktionen. Jeder Nachweis ist zufällig,
+kurzlebig, widerrufbar, genau einmal verwendbar und nur als Hash
+persistiert. Ein Token eines Ablaufs kann deshalb nicht in einem anderen
+Ablauf eingelöst werden. Die eigentlichen OIDC-/WebAuthn-Adapter und
+öffentlichen Cloud-Auth-Endpunkte sind noch nicht implementiert; die lokale
+Argon2-Anmeldung bleibt davon unabhängig erhalten.
+
 Der erste Self-Hosted-Account braucht einen einmaligen geheimen Bootstrap-
 Nachweis. PostgreSQL serialisiert konkurrierende Erstregistrierungen; nach
 dem ersten Erfolg bleibt der Bootstrap dauerhaft geschlossen und alle
@@ -142,9 +161,11 @@ Update und Delete.
 Erlaubt: `request_id`, `account_id`, `space_id`, Route, Dauer, Status,
 Fehlercode.
 
-Nicht geloggt: Inhalte von Memories, Herzmomenten, Antworten, privaten
-Notizen und Geschenkideen, sensible Präferenzwerte, präzise Standorte.
-Error Tracking wird ebenso bereinigt.
+Nicht geloggt: Passwörter, Bearer-/Refresh-/Magic-Link-/Verifikations- oder
+Recovery-Tokens, OIDC-Tokens und WebAuthn-Challenges; außerdem Inhalte von
+Memories, Herzmomenten, Antworten, privaten Notizen und Geschenkideen,
+sensible Präferenzwerte und präzise Standorte. Error Tracking wird ebenso
+bereinigt.
 
 ## Ende-zu-Ende-Verschlüsselung
 

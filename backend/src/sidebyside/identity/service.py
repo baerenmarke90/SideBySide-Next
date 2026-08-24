@@ -6,7 +6,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from sidebyside.core.errors import ConflictError, ValidationError
-from sidebyside.identity.models import Account, AccountEmail, AuthIdentity, AuthProvider
+from sidebyside.identity.models import (
+    Account,
+    AccountEmail,
+    AuthIdentity,
+    AuthProvider,
+    WebAuthnCredential,
+)
 
 MAX_DISPLAY_NAME = 120
 
@@ -15,6 +21,8 @@ class AccountErrorCode:
     EMAIL_INVALID = "EMAIL_INVALID"
     EMAIL_TAKEN = "EMAIL_ALREADY_REGISTERED"
     DISPLAY_NAME_REQUIRED = "DISPLAY_NAME_REQUIRED"
+    OIDC_IDENTITY_INVALID = "OIDC_IDENTITY_INVALID"
+    PASSKEY_INVALID = "PASSKEY_INVALID"
 
 
 def normalize_email(email: str) -> str:
@@ -92,4 +100,93 @@ def local_identity(session: Session, account: Account) -> AuthIdentity | None:
             AuthIdentity.account_id == account.id,
             AuthIdentity.provider == AuthProvider.LOCAL_PASSWORD.value,
         )
+    ).scalar_one_or_none()
+
+
+def oidc_identity(session: Session, *, issuer: str, subject: str) -> AuthIdentity | None:
+    """Eine OIDC-Identitaet anhand des vom Standard definierten Paars finden."""
+    return session.execute(
+        select(AuthIdentity).where(
+            AuthIdentity.provider == AuthProvider.OIDC.value,
+            AuthIdentity.issuer == issuer.strip(),
+            AuthIdentity.subject == subject,
+        )
+    ).scalar_one_or_none()
+
+
+def add_oidc_identity(
+    session: Session,
+    account: Account,
+    *,
+    issuer: str,
+    subject: str,
+    connection_id: str,
+) -> AuthIdentity:
+    """Eine verifizierte externe Identitaet mit ihrer Verbindung speichern.
+
+    Diese Funktion prueft kein OIDC-Token. Der aufrufende Adapter darf sie
+    erst nach Discovery, Signatur- und Claim-Pruefung verwenden.
+    """
+    issuer_value = issuer.strip()
+    connection_value = connection_id.strip()
+    if not issuer_value or not subject.strip() or not connection_value:
+        raise ValidationError(
+            "Issuer, subject and connection ID are required.",
+            AccountErrorCode.OIDC_IDENTITY_INVALID,
+        )
+    if len(issuer_value) > 512 or len(subject) > 512 or len(connection_value) > 128:
+        raise ValidationError(
+            "OIDC identity metadata is too long.", AccountErrorCode.OIDC_IDENTITY_INVALID
+        )
+
+    identity = AuthIdentity(
+        account_id=account.id,
+        provider=AuthProvider.OIDC.value,
+        issuer=issuer_value,
+        subject=subject,
+        connection_id=connection_value,
+    )
+    session.add(identity)
+    session.flush()
+    return identity
+
+
+def store_webauthn_credential(
+    session: Session,
+    account: Account,
+    *,
+    credential_id: bytes,
+    public_key: bytes,
+    sign_count: int = 0,
+    transports: list[str] | None = None,
+    name: str = "",
+    is_discoverable: bool = True,
+    backup_eligible: bool = False,
+    backup_state: bool = False,
+) -> WebAuthnCredential:
+    """Das Ergebnis einer bereits verifizierten Registration Ceremony speichern."""
+    if not credential_id or not public_key or sign_count < 0:
+        raise ValidationError(
+            "Credential ID, public key and a valid sign count are required.",
+            AccountErrorCode.PASSKEY_INVALID,
+        )
+    credential = WebAuthnCredential(
+        account_id=account.id,
+        credential_id=credential_id,
+        public_key=public_key,
+        sign_count=sign_count,
+        transports=list(transports or []),
+        name=name.strip()[:120],
+        is_discoverable=is_discoverable,
+        backup_eligible=backup_eligible,
+        backup_state=backup_state,
+    )
+    session.add(credential)
+    session.flush()
+    return credential
+
+
+def webauthn_credential(session: Session, credential_id: bytes) -> WebAuthnCredential | None:
+    return session.execute(
+        select(WebAuthnCredential).where(WebAuthnCredential.credential_id == credential_id)
     ).scalar_one_or_none()
