@@ -171,4 +171,3 @@ def change_password(session: Session, account: Account, *, current: str, new: st
     identitaet.secret_hash = passwords.hash_password(new)
     sessions.revoke_all(session, account)
     session.flush()
-
