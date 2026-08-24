@@ -281,6 +281,46 @@ class AccountRecoveryToken(IdMixin, OneTimeTokenMixin, Base):
     )
 
 
+class OidcAuthRequest(IdMixin, Base):
+    """Eine begonnene OIDC-Anmeldung.
+
+    Sie haelt die drei Werte, die den Rueckweg an genau diese Anfrage
+    binden: den State (nur als Hash - er kommt mit dem Browser zurueck),
+    die Nonce und den PKCE-Verifier.
+
+    Nonce und Verifier stehen im Klartext, und das ist hier richtig: der
+    Server muss beide selbst vorzeigen beziehungsweise vergleichen. Sie
+    sind kein Anmeldenachweis, sondern eine Bindung, und sie leben
+    Minuten. Der Wartungsjob raeumt sie danach weg.
+    """
+
+    __tablename__ = "oidc_auth_requests"
+
+    connection_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    state_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    nonce: Mapped[str] = mapped_column(String(128), nullable=False)
+    code_verifier: Mapped[str] = mapped_column(String(128), nullable=False)
+    redirect_uri: Mapped[str] = mapped_column(String(512), nullable=False)
+
+    # Gesetzt, wenn ein bereits angemeldeter Account eine externe
+    # Identitaet mit sich verknuepfen will.
+    account_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+    )
+
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("state_hash", name="uq_oidc_auth_requests_state_hash"),
+        Index("ix_oidc_auth_requests_expires_at", "expires_at"),
+    )
+
+
 class DeviceSession(IdMixin, Base):
     """Eine angemeldete Geraetesitzung.
 

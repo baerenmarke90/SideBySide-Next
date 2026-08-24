@@ -19,7 +19,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import rate_limit, sessions
+from sidebyside.auth import oidc, rate_limit, sessions
 from sidebyside.jobs import queue
 from sidebyside.jobs.models import Job, JobStatus
 from sidebyside.jobs.worker import JobRegistry, registry
@@ -96,10 +96,11 @@ def schedule_next(session: Session, *, delay: timedelta | None = None) -> Job | 
 def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
     """Abgelaufenen Security-State raeumen und den naechsten Lauf einplanen.
 
-    Beide Fristen bleiben dort definiert, wo die Daten entstehen:
-    `sessions.REPLAY_HISTORY_RETENTION` und die Voreinstellung in
-    `rate_limit.prune()`. Dieser Job entscheidet nichts ueber die
-    Aufbewahrung - er sorgt nur dafuer, dass sie tatsaechlich eintritt.
+    Die Fristen bleiben dort definiert, wo die Daten entstehen:
+    `sessions.REPLAY_HISTORY_RETENTION`, die Voreinstellung in
+    `rate_limit.prune()` und die Lebensdauer einer begonnenen
+    OIDC-Anmeldung. Dieser Job entscheidet nichts ueber die Aufbewahrung -
+    er sorgt nur dafuer, dass sie tatsaechlich eintritt.
 
     Laufende Token-Familien behalten ihre vollstaendige Historie: sie
     *ist* die Replay-Erkennung, und `prune_replay_history` fasst sie nicht
@@ -109,10 +110,15 @@ def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
 
     historie = sessions.prune_replay_history(session)
     limits = rate_limit.prune(session)
+    anmeldeversuche = oidc.prune_auth_requests(session)
 
     log.info(
         "security retention completed",
-        extra={"replay_history_removed": historie, "rate_limit_events_removed": limits},
+        extra={
+            "replay_history_removed": historie,
+            "rate_limit_events_removed": limits,
+            "oidc_auth_requests_removed": anmeldeversuche,
+        },
     )
 
     schedule_next(session)

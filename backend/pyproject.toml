@@ -13,13 +13,17 @@ dependencies = [
     "pydantic-settings>=2.15",
     "uuid6>=2025.0.1",
     "argon2-cffi>=25.1",
+    # Ausgehendes HTTP fuer OIDC: Discovery, JWKS und Token-Endpunkt.
+    "httpx>=0.28",
+    # ID-Token-Pruefung. Signaturverfahren selbst zu schreiben waere im
+    # Auth-Pfad genau der falsche Ort fuer Eigenbau.
+    "pyjwt[crypto]>=2.10",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.1",
     "pytest-asyncio>=1.4",
-    "httpx>=0.28",
     "httpx2>=0.1",
     "ruff==0.16.4",
     "mypy==2.3.1",

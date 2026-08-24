@@ -11,12 +11,12 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Path, Response, status
 
 from sidebyside.api.deps import CurrentAccount, CurrentSession, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.auth import cloud, local, sessions
+from sidebyside.auth import cloud, local, oidc, sessions
 from sidebyside.auth.local import SignedIn
 from sidebyside.config import get_settings
 from sidebyside.mail import MailSender, sender
@@ -73,6 +73,19 @@ class TokenOnlyRequest(ApiModel):
     token: str
 
 
+class OidcCallbackRequest(ApiModel):
+    code: str
+    state: str
+    device_name: str = ""
+    platform: str = ""
+
+
+class OidcStartView(ApiModel):
+    authorization_url: str
+    state: str
+    """Der Client haelt ihn und schickt ihn beim Rueckweg wieder mit."""
+
+
 class RecoveryConsumeRequest(ApiModel):
     token: str
     new_password: str
@@ -97,7 +110,7 @@ class SessionView(ApiModel):
     tokens: TokenView
 
 
-def _view(result: SignedIn | cloud.SignedIn) -> SessionView:
+def _view(result: SignedIn | cloud.SignedIn | oidc.SignedIn) -> SessionView:
     return SessionView(
         account=AccountView(id=result.account.id, display_name=result.account.display_name),
         tokens=TokenView(
@@ -292,6 +305,70 @@ def consume_recovery(body: RecoveryConsumeRequest, session: DbSession) -> Sessio
             session,
             token=body.token,
             new_password=body.new_password,
+            device_name=body.device_name[:MAX_DEVICE_NAME],
+            platform=body.platform,
+        )
+    )
+
+
+@router.post(
+    "/auth/oidc/{connectionId}/start",
+    response_model=OidcStartView,
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(422, 429),
+)
+def start_oidc(
+    session: DbSession,
+    connection_id: Annotated[str, Path(alias="connectionId")],
+) -> OidcStartView:
+    """Eine Anmeldung ueber einen externen Anbieter beginnen.
+
+    State, Nonce und PKCE-Verifier entstehen serverseitig. Der Client
+    bekommt nur die Adresse und den State.
+    """
+    begonnen = oidc.start(session, connection_id)
+    return OidcStartView(authorization_url=begonnen.authorization_url, state=begonnen.state)
+
+
+@router.post(
+    "/auth/oidc/{connectionId}/link",
+    response_model=OidcStartView,
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(401, 422, 429),
+)
+def link_oidc(
+    account: CurrentAccount,
+    session: DbSession,
+    connection_id: Annotated[str, Path(alias="connectionId")],
+) -> OidcStartView:
+    """Eine externe Identitaet mit dem angemeldeten Konto verknuepfen.
+
+    Der einzige Weg, wie eine neue Identitaet zu einem Konto kommt: eine
+    Anmeldung allein legt kein Konto an, sonst umginge ein externer
+    Anbieter die Einladungsgrenze.
+    """
+    begonnen = oidc.start(session, connection_id, account_id=account.id)
+    return OidcStartView(authorization_url=begonnen.authorization_url, state=begonnen.state)
+
+
+@router.post(
+    "/auth/oidc/{connectionId}/callback",
+    response_model=SessionView,
+    status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(401, 422),
+)
+def complete_oidc(
+    body: OidcCallbackRequest,
+    session: DbSession,
+    connection_id: Annotated[str, Path(alias="connectionId")],
+) -> SessionView:
+    """Den Rueckweg vom Anbieter abschliessen."""
+    return _view(
+        oidc.complete(
+            session,
+            connection_id,
+            code=body.code,
+            state=body.state,
             device_name=body.device_name[:MAX_DEVICE_NAME],
             platform=body.platform,
         )

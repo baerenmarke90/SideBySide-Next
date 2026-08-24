@@ -162,6 +162,9 @@ NUR_ANGEMELDET: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/auth/sign-out"),
     ("POST", "/api/v1/auth/password"),
     ("POST", "/api/v1/auth/email/verification/request"),
+    # Verknuepfen setzt voraus, dass schon jemand angemeldet ist - genau
+    # das unterscheidet es vom Anmelden ueber denselben Anbieter.
+    ("POST", "/api/v1/auth/oidc/{connectionId}/link"),
 )
 """Kontobezogen, aber nicht an einen Space gebunden. Anonym: 401."""
 
@@ -179,6 +182,8 @@ OEFFENTLICH: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/auth/email/verification/confirm"),
     ("POST", "/api/v1/auth/recovery/request"),
     ("POST", "/api/v1/auth/recovery/consume"),
+    ("POST", "/api/v1/auth/oidc/{connectionId}/start"),
+    ("POST", "/api/v1/auth/oidc/{connectionId}/callback"),
 )
 """Absichtlich ohne Token erreichbar - sie sind der Weg *zu* einem Token.
 
