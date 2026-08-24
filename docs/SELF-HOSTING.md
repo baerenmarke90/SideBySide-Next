@@ -9,6 +9,8 @@ erreichbar, wenn die Firewall des Hosts zu offen konfiguriert ist.
 ```bash
 cp .env.example .env
 # Mindestens POSTGRES_PASSWORD durch ein langes, zufaelliges Geheimnis ersetzen.
+# SBS_BOOTSTRAP_TOKEN in .env auf ein separat erzeugtes Geheimnis mit
+# mindestens 32 Zeichen setzen.
 docker compose config --quiet
 docker compose up -d
 curl --fail http://127.0.0.1:8000/api/v1/health
@@ -21,6 +23,31 @@ nicht zulaessig.
 Der Entwicklungsablauf ist davon getrennt: `deploy/docker-compose.dev.yml`
 startet nur PostgreSQL. Das lokal gestartete Uvicorn ist ein Entwicklungsserver
 und keine Vorlage fuer einen extern erreichbaren produktiven Dienst.
+
+## Einmalige Erstregistrierung
+
+Eine leere Instanz nimmt den ersten Account nur mit dem in der lokalen `.env`
+gesetzten `SBS_BOOTSTRAP_TOKEN` an. Der Wert wird als `bootstrapToken` an
+`POST /api/v1/auth/register` uebergeben. Er wird weder in der Datenbank
+gespeichert noch von der Anwendung geloggt.
+
+Fuer einen Start ohne vorhandene Benutzer gilt:
+
+1. Ein zufaelliges Geheimnis mit mindestens 32 Zeichen erzeugen und nur in der
+   nicht versionierten `.env` als `SBS_BOOTSTRAP_TOKEN` speichern.
+2. Den Stack starten und die erste Registrierung lokal ueber `127.0.0.1`
+   ausfuehren.
+3. Nach erfolgreicher Registrierung `SBS_BOOTSTRAP_TOKEN` aus `.env` entfernen
+   und den API-Container neu erstellen: `docker compose up -d --force-recreate api`.
+4. Weitere Accounts ausschliesslich ueber Einladungen registrieren.
+
+Die Datenbank speichert den erfolgreichen Abschluss dauerhaft. Derselbe oder
+ein spaeter neu gesetzter Bootstrap-Wert kann danach keinen zweiten initialen
+Owner erzeugen. Zwei parallele Erstregistrierungen werden in PostgreSQL
+serialisiert; genau eine kann erfolgreich sein.
+
+Das Geheimnis darf nicht in Shell-Historie, Screenshots, Support-Anfragen oder
+Repository-Dateien gelangen. `.env` ist deshalb in `.gitignore` ausgeschlossen.
 
 ## Zugriff aus LAN oder Internet
 
