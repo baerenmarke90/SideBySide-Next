@@ -54,6 +54,40 @@ Kommentare, Benachrichtigungen, Export oder eine indirekte Beziehung.
 Abfrage. Ein Treffer, der entsteht und danach verworfen wird, ist bereits
 ein Leck — er war im Speicher, im Log, in der Antwortgröße.
 
+### Durchsetzung
+
+Der Tenant Guard beantwortet, ob ein Account zu einem Space gehört. Die
+Owner-/Privacy-Autorisierung in `sidebyside.authorization` beantwortet
+danach, was er innerhalb dieses Space sehen und ändern darf. Beide
+Bedingungen stehen gemeinsam in der Abfrage, nicht hinter ihr.
+
+Eine Domäne erbt drei Spalten — `space_id`, `owner_id`, `privacy_class` —
+und ruft `readable()`, `require_readable()` oder `require_writable()` auf.
+Sie formuliert ihre Sichtbarkeitsbedingung nicht selbst. Es gibt weder eine
+gemeinsame Universal-Inhaltstabelle noch einen zweiten, handgeschriebenen
+Guard je Domäne.
+
+Serverseitig erzwingbar sind derzeit `SPACE_SHARED` und `OWNER_ONLY`. Nur
+diese beiden sind auch speicherbar: eine Klasse ohne Regel erzeugte Zeilen,
+deren Schutz niemand einlöst. Eine Klasse ohne Regel ergibt in der Abfrage
+`false` — ein Versäumnis macht Inhalte unsichtbar, nicht sichtbar. Eine
+weitere Klasse aufzunehmen heißt deshalb immer dreierlei zugleich: Regel,
+Freigabe des Wertebereichs und Migration.
+
+Geschrieben wird nur vom Eigentümer, auch bei `SPACE_SHARED`: der Autor
+bearbeitet, der Partner liest.
+
+Die Ablehnung ist zweigeteilt, und der Unterschied ist Absicht:
+
+| Lage | Antwort |
+|---|---|
+| nicht lesbar — fremder Space, fremdes `OWNER_ONLY`, unbekannte oder fehlgeformte ID | 404, in allen Fällen wortgleich |
+| lesbar, aber nicht änderbar — geteilte Zeile des Partners | 403 |
+
+Ein 404 auf etwas, das der Aufrufer sich gerade hat anzeigen lassen, wäre
+kein Schutz, sondern eine Unwahrheit. Ein 403 auf etwas, das er nicht sehen
+darf, wäre die Existenzauskunft, die `OWNER_ONLY` gerade verhindern soll.
+
 ## Authentifizierung
 
 Android und andere native Clients nutzen Bearer Tokens, kein

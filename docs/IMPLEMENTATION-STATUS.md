@@ -94,7 +94,10 @@ Zusätzliche Härtung:
 - [x] Passkey-/WebAuthn-fähiges Credential-Modell
 - [x] Getrennte, gehashte Einmal-Tokenmodelle für E-Mail-Verifikation, Magic Link und Recovery
 - [ ] OIDC-/WebAuthn-Adapter und vollständige Cloud-Auth-API-Flows
-- [ ] Eigene Owner-/Private-Authorization-Grundlage
+- [x] Eigene Owner-/Private-Authorization-Grundlage (#27): zentrale, in der
+      Abfrage erzwungene `SPACE_SHARED`-/`OWNER_ONLY`-Autorisierung samt
+      Privacy-Testmatrix. Eine produktive `OWNER_ONLY`-Fachdomäne setzt
+      darauf noch nicht auf; das gehört zu den restlichen M1-/M2-Domänen.
 - [ ] SpaceProfile-Schreib-API mit Versionskonflikt/409
 - [ ] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen
 - [ ] PartnerProfile und ProfilePreference
