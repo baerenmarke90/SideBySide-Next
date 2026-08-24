@@ -154,6 +154,51 @@
         "title": "MembershipView",
         "type": "object"
       },
+      "PartnerProfileView": {
+        "properties": {
+          "accountId": {
+            "format": "uuid",
+            "title": "Accountid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "preferences": {
+            "items": {
+              "$ref": "#/components/schemas/ProfilePreferenceView"
+            },
+            "title": "Preferences",
+            "type": "array"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "displayName",
+          "createdAt",
+          "updatedAt",
+          "preferences"
+        ],
+        "title": "PartnerProfileView",
+        "type": "object"
+      },
       "PartnerView": {
         "description": "Was von einem Account nach aussen geht.\n\nAusdruecklich eine Whitelist. Am Account haengen Anmeldedaten und\nKontaktangaben, die in einer Space-Antwort nichts verloren haben - und\neine allgemeine Modell-Serialisierung wuerde sie irgendwann mitnehmen.",
         "properties": {
@@ -173,6 +218,35 @@
         ],
         "title": "PartnerView",
         "type": "object"
+      },
+      "PreferenceCategory": {
+        "enum": [
+          "FOOD",
+          "DRINK",
+          "FLOWERS",
+          "MOVIES",
+          "SERIES",
+          "MUSIC",
+          "HOBBIES",
+          "ACTIVITIES",
+          "TRAVEL",
+          "RESTAURANTS",
+          "COLORS",
+          "OTHER"
+        ],
+        "title": "PreferenceCategory",
+        "type": "string"
+      },
+      "PreferenceSentiment": {
+        "enum": [
+          "LOVE",
+          "LIKE",
+          "NEUTRAL",
+          "DISLIKE",
+          "AVOID"
+        ],
+        "title": "PreferenceSentiment",
+        "type": "string"
       },
       "ProblemDetails": {
         "description": "Der Rumpf jeder Fehlerantwort.\n\nDasselbe Modell erzeugt die Antwort und beschreibt sie im OpenAPI-\nVertrag. Getrennt gepflegt wuerden beide irgendwann auseinanderlaufen,\nund der Vertrag beschriebe dann einen Fehler, den es so nicht gibt.",
@@ -207,6 +281,143 @@
         ],
         "title": "ProblemDetails",
         "type": "object"
+      },
+      "ProfilePreferenceCreate": {
+        "properties": {
+          "accountId": {
+            "format": "uuid",
+            "title": "Accountid",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/PreferenceCategory"
+          },
+          "sentiment": {
+            "$ref": "#/components/schemas/PreferenceSentiment"
+          },
+          "topic": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Topic",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/ProfileVisibility"
+          }
+        },
+        "required": [
+          "category",
+          "topic",
+          "sentiment",
+          "value",
+          "accountId",
+          "visibility"
+        ],
+        "title": "ProfilePreferenceCreate",
+        "type": "object"
+      },
+      "ProfilePreferenceUpdate": {
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/PreferenceCategory"
+          },
+          "sentiment": {
+            "$ref": "#/components/schemas/PreferenceSentiment"
+          },
+          "topic": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Topic",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "topic",
+          "sentiment",
+          "value"
+        ],
+        "title": "ProfilePreferenceUpdate",
+        "type": "object"
+      },
+      "ProfilePreferenceView": {
+        "properties": {
+          "accountId": {
+            "format": "uuid",
+            "title": "Accountid",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/PreferenceCategory"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sentiment": {
+            "$ref": "#/components/schemas/PreferenceSentiment"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/ProfileVisibility"
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "category",
+          "topic",
+          "sentiment",
+          "value",
+          "visibility",
+          "version",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "ProfilePreferenceView",
+        "type": "object"
+      },
+      "ProfileVisibility": {
+        "enum": [
+          "SELF_PROFILE",
+          "PRIVATE_PARTNER_NOTE"
+        ],
+        "title": "ProfileVisibility",
+        "type": "string"
       },
       "Readiness": {
         "properties": {
@@ -1343,6 +1554,491 @@
         "summary": "Update Space Profile",
         "tags": [
           "spaces"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/profile-preferences": {
+      "get": {
+        "operationId": "list_profile_preferences_api_v1_spaces__spaceId__profile_preferences_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProfilePreferenceView"
+                  },
+                  "title": "Response List Profile Preferences Api V1 Spaces  Spaceid  Profile Preferences Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          }
+        },
+        "summary": "List Profile Preferences",
+        "tags": [
+          "profiles"
+        ]
+      },
+      "post": {
+        "operationId": "create_profile_preference_api_v1_spaces__spaceId__profile_preferences_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilePreferenceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfilePreferenceView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Version der ProfilePreference fuer den naechsten If-Match-Schreibzugriff.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Create Profile Preference",
+        "tags": [
+          "profiles"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}": {
+      "delete": {
+        "operationId": "delete_profile_preference_api_v1_spaces__spaceId__profile_preferences__preferenceId__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "preferenceId",
+            "required": true,
+            "schema": {
+              "title": "Preferenceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Delete Profile Preference",
+        "tags": [
+          "profiles"
+        ]
+      },
+      "get": {
+        "operationId": "get_profile_preference_api_v1_spaces__spaceId__profile_preferences__preferenceId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "preferenceId",
+            "required": true,
+            "schema": {
+              "title": "Preferenceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfilePreferenceView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Version der ProfilePreference fuer den naechsten If-Match-Schreibzugriff.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          }
+        },
+        "summary": "Get Profile Preference",
+        "tags": [
+          "profiles"
+        ]
+      },
+      "put": {
+        "operationId": "update_profile_preference_api_v1_spaces__spaceId__profile_preferences__preferenceId__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "preferenceId",
+            "required": true,
+            "schema": {
+              "title": "Preferenceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilePreferenceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfilePreferenceView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Version der ProfilePreference fuer den naechsten If-Match-Schreibzugriff.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Update Profile Preference",
+        "tags": [
+          "profiles"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/profiles/{accountId}": {
+      "get": {
+        "operationId": "get_partner_profile_api_v1_spaces__spaceId__profiles__accountId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerProfileView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          }
+        },
+        "summary": "Get Partner Profile",
+        "tags": [
+          "profiles"
         ]
       }
     }
