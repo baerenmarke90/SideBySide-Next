@@ -53,6 +53,17 @@ jobs:
       - name: Abhaengigkeiten
         run: pip install -e ".[dev]"
 
+      - name: Sichere Self-Hosted-Konfiguration
+        working-directory: .
+        run: |
+          docker compose --env-file .env.example config --quiet
+          host_ip=$(docker compose --env-file .env.example config --format json \
+            | jq -r '.services.api.ports[0].host_ip')
+          if [ "$host_ip" != "127.0.0.1" ]; then
+            echo "Die API ist im Standard nicht auf Loopback begrenzt: $host_ip"
+            exit 1
+          fi
+
       - name: Keine Quelldatei wird von .gitignore verschluckt
         # Ein ungeankertes Muster wie "media/" trifft jedes Verzeichnis
         # dieses Namens. Lokal faellt das nie auf, weil die Datei auf der
