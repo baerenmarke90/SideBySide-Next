@@ -12,6 +12,12 @@
 # Vier Bausteine: API, Worker, Migration, PostgreSQL. Medien liegen im
 # Volume oder, wenn konfiguriert, in einem S3-kompatiblen Speicher.
 
+x-backend-environment: &backend-environment
+  SBS_ENVIRONMENT: production
+  SBS_DEPLOYMENT: self_hosted
+  SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
+  SBS_MEDIA_ROOT: /var/lib/sidebyside/media
+
 x-backend: &backend
   build:
     context: ./backend
@@ -21,15 +27,7 @@ x-backend: &backend
   # ausdruecklich: dieses Image entsteht hier, es wird nicht geholt.
   pull_policy: build
   environment:
-    SBS_ENVIRONMENT: production
-    SBS_DEPLOYMENT: self_hosted
-    SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
-    SBS_MEDIA_ROOT: /var/lib/sidebyside/media
-    SBS_ALLOWED_HOSTS: '${SBS_ALLOWED_HOSTS:-["localhost","127.0.0.1"]}'
-    # Uvicorn wertet Forwarded Headers nur von diesen Adressen aus. Fuer
-    # einen Reverse-Proxy muss hier dessen kleinster moeglicher IP-Bereich
-    # eingetragen werden - niemals pauschal "*".
-    FORWARDED_ALLOW_IPS: "${TRUSTED_PROXY_IPS:-127.0.0.1}"
+    <<: *backend-environment
   volumes:
     - media_data:/var/lib/sidebyside/media
 
@@ -64,6 +62,16 @@ services:
   api:
     <<: *backend
     restart: unless-stopped
+    environment:
+      <<: *backend-environment
+      # Nur die API braucht den einmaligen Bootstrap-Nachweis. Ein leerer
+      # Wert laesst die Erstregistrierung sicher geschlossen.
+      SBS_BOOTSTRAP_TOKEN: "${SBS_BOOTSTRAP_TOKEN:-}"
+      SBS_ALLOWED_HOSTS: '${SBS_ALLOWED_HOSTS:-["localhost","127.0.0.1"]}'
+      # Uvicorn wertet Forwarded Headers nur von diesen Adressen aus. Fuer
+      # einen Reverse-Proxy muss hier dessen kleinster moeglicher IP-Bereich
+      # eingetragen werden - niemals pauschal "*".
+      FORWARDED_ALLOW_IPS: "${TRUSTED_PROXY_IPS:-127.0.0.1}"
     ports:
       # Der sichere Standard ist nur vom Host selbst erreichbar. LAN und
       # Internet gehen ausschliesslich ueber einen HTTPS-Reverse-Proxy.
