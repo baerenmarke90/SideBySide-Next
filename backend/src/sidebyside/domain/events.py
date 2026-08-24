@@ -13,10 +13,9 @@ ohnehin nicht mehr zur Verfügung.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EventType(StrEnum):
@@ -35,6 +34,20 @@ class EventType(StrEnum):
     PARTNER_JOINED = "PARTNER_JOINED"
 
 
+class PublicEventPayload(BaseModel):
+    """Explizite Allowlist für dauerhaft gespeicherte Ereignismetadaten.
+
+    „Public“ bedeutet hier nur: außerhalb eines ProtectedPayload sicher
+    transportierbar. Es ist keine öffentliche API und keine Freigabe an
+    Dritte. Neue Felder brauchen eine bewusste Prüfung an dieser zentralen
+    Grenze; beliebige Dictionaries und damit Klartexte sind ausgeschlossen.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    has_attachment: bool | None = None
+
+
 class DomainEvent(BaseModel):
     """Ein fachliches Ereignis.
 
@@ -51,4 +64,4 @@ class DomainEvent(BaseModel):
     actor_id: UUID | None = None
     subject_type: str
     subject_id: UUID
-    payload: dict[str, Any] = {}
+    payload: PublicEventPayload = Field(default_factory=PublicEventPayload)
