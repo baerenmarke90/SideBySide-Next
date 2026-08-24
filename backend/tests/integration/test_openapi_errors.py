@@ -32,9 +32,7 @@ def _assert_problem_contract(
 
     schema: dict[str, Any] = client.get("/openapi.json").json()
     dokumentiert = schema["paths"][path_template][method]["responses"][str(response.status_code)]
-    assert dokumentiert["content"]["application/json"]["schema"] == {
-        "$ref": PROBLEM_DETAILS_REF
-    }
+    assert dokumentiert["content"]["application/json"]["schema"] == {"$ref": PROBLEM_DETAILS_REF}
 
 
 def test_401_authentication_runtime_passt_zum_vertrag(client: TestClient) -> None:
@@ -61,9 +59,7 @@ def test_422_request_validation_runtime_passt_zum_vertrag(client: TestClient) ->
     )
 
 
-def test_404_tenant_grenze_runtime_passt_zum_vertrag(
-    client: TestClient, session: Session
-) -> None:
+def test_404_tenant_grenze_runtime_passt_zum_vertrag(client: TestClient, session: Session) -> None:
     account = make_account(session, "Anna")
     token = sign_in(session, account)
 
@@ -78,9 +74,7 @@ def test_404_tenant_grenze_runtime_passt_zum_vertrag(
     )
 
 
-def test_409_concurrency_runtime_passt_zum_vertrag(
-    client: TestClient, session: Session
-) -> None:
+def test_409_concurrency_runtime_passt_zum_vertrag(client: TestClient, session: Session) -> None:
     account = make_account(session, "Anna")
     space = make_space(session, account)
     token = sign_in(session, account)
@@ -104,9 +98,7 @@ def test_409_concurrency_runtime_passt_zum_vertrag(
     )
 
 
-def test_429_rate_limit_runtime_passt_zum_vertrag(
-    client: TestClient, session: Session
-) -> None:
+def test_429_rate_limit_runtime_passt_zum_vertrag(client: TestClient, session: Session) -> None:
     email = "rate-limit-openapi@example.test"
     for _ in range(rate_limit.SIGN_IN.attempts):
         rate_limit.record_attempt(session, local.ACTION_SIGN_IN, email)
