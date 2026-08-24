@@ -53,6 +53,60 @@ class DiscoveryItem:
 
 
 @dataclass(frozen=True)
+class MapRoute:
+    """Eine anbieterneutrale Route; Geometrie und Kennzahlen sind SI-Werte."""
+
+    geometry: tuple[GeoPoint, ...]
+    distance_meters: int
+    duration_seconds: int
+
+
+@dataclass(frozen=True)
+class RecipeIngredient:
+    name: str
+    amount: Decimal | None = None
+    unit: str | None = None
+
+
+@dataclass(frozen=True)
+class RecipeItem:
+    """Normalisierte Rezeptdaten ohne DTO eines konkreten Katalogs."""
+
+    external_id: str
+    title: str
+    ingredients: tuple[RecipeIngredient, ...]
+    instructions: tuple[str, ...]
+    source: str
+    description: str | None = None
+    total_minutes: int | None = None
+    source_url: str | None = None
+    image_url: str | None = None
+
+
+class EntertainmentKind(StrEnum):
+    MOVIE = "MOVIE"
+    SERIES = "SERIES"
+    BOOK = "BOOK"
+    GAME = "GAME"
+    MUSIC = "MUSIC"
+    OTHER = "OTHER"
+
+
+@dataclass(frozen=True)
+class EntertainmentItem:
+    """Normalisierter Medienfund, unabhängig von Shop oder Streamingdienst."""
+
+    external_id: str
+    title: str
+    kind: EntertainmentKind
+    source: str
+    release_year: int | None = None
+    description: str | None = None
+    source_url: str | None = None
+    image_url: str | None = None
+
+
+@dataclass(frozen=True)
 class ExternalMediaItem:
     """Ein Foto oder Video in einem externen Dienst.
 
@@ -74,6 +128,16 @@ class SharingMode(StrEnum):
     SPACE_SHARED = "SPACE_SHARED"
 
 
+class MapProvider(ABC):
+    @abstractmethod
+    def route(
+        self,
+        origin: GeoPoint,
+        destination: GeoPoint,
+        via: tuple[GeoPoint, ...] = (),
+    ) -> MapRoute: ...
+
+
 class GeocodingProvider(ABC):
     @abstractmethod
     def search(self, query: str, limit: int = 10) -> list[PlaceCandidate]: ...
@@ -82,11 +146,43 @@ class GeocodingProvider(ABC):
     def reverse(self, position: GeoPoint) -> PlaceCandidate | None: ...
 
 
+class PlacesProvider(ABC):
+    @abstractmethod
+    def search(
+        self,
+        query: str,
+        near: GeoPoint | None = None,
+        radius_km: int | None = None,
+        limit: int = 10,
+    ) -> list[PlaceCandidate]: ...
+
+    @abstractmethod
+    def get(self, external_id: str) -> PlaceCandidate | None: ...
+
+
 class DiscoveryProvider(ABC):
     @abstractmethod
     def find(
         self, position: GeoPoint, radius_km: int, on: date | None = None
     ) -> list[DiscoveryItem]: ...
+
+
+class RecipeProvider(ABC):
+    @abstractmethod
+    def search(self, query: str, limit: int = 20) -> list[RecipeItem]: ...
+
+    @abstractmethod
+    def get(self, external_id: str) -> RecipeItem | None: ...
+
+
+class EntertainmentProvider(ABC):
+    @abstractmethod
+    def search(
+        self,
+        query: str,
+        kinds: tuple[EntertainmentKind, ...] = (),
+        limit: int = 20,
+    ) -> list[EntertainmentItem]: ...
 
 
 class ExternalMediaProvider(ABC):
