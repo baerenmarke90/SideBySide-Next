@@ -12,7 +12,8 @@ from __future__ import annotations
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import CheckConstraint, engine_from_config, pool
+from sqlalchemy.schema import SchemaItem
 
 from sidebyside.config import get_settings
 from sidebyside.db.base import Base
@@ -33,6 +34,52 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def _typgebundene_pruefregeln(tabellenname: str) -> set[str]:
+    """Namen der CHECK-Regeln, die am Spaltentyp haengen statt an der Tabelle.
+
+    `SqlEnum(native_enum=False, create_constraint=True)` erzeugt seine
+    Wertebereichspruefung aus dem Typ heraus. Sie steht in der Tabelle, gehoert
+    aber dem Typ - Alembic nennt das typgebunden.
+    """
+    tabelle = Base.metadata.tables.get(tabellenname)
+    if tabelle is None:
+        return set()
+    return {
+        regel.name
+        for regel in tabelle.constraints
+        if isinstance(regel, CheckConstraint)
+        # Kein oeffentliches Attribut, aber genau das Merkmal, an dem auch
+        # Alembic selbst typgebundene Regeln erkennt.
+        and getattr(regel, "_type_bound", False)
+        and regel.name is not None
+    }
+
+
+def include_object(
+    objekt: SchemaItem,
+    name: str | None,
+    typ: str,
+    reflektiert: bool,
+    verglichen_mit: SchemaItem | None,
+) -> bool:
+    """Typgebundene CHECK-Regeln aus dem Autogenerate-Vergleich nehmen.
+
+    Autogenerate laesst sie auf der Modellseite bewusst aus, liest sie in der
+    Datenbank aber mit - und schlaegt deshalb bei jedem Lauf vor, sie zu
+    loeschen. Der Drift-Check waere damit dauerhaft rot.
+
+    Dieselbe Regel zusaetzlich von Hand an die Tabelle zu haengen ist der
+    naheliegende Ausweg und der falsche: sie bekaeme denselben Namen wie die
+    des Typs, und `create_all` scheitert an der doppelten Constraint.
+    """
+    if typ != "check_constraint" or not reflektiert or name is None:
+        return True
+    tabelle = getattr(objekt, "table", None)
+    if tabelle is None:
+        return True
+    return name not in _typgebundene_pruefregeln(tabelle.name)
+
+
 def run_migrations_offline() -> None:
     context.configure(
         url=config.get_main_option("sqlalchemy.url"),
@@ -40,6 +87,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -56,6 +104,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            include_object=include_object,
         )
         with context.begin_transaction():
             context.run_migrations()
