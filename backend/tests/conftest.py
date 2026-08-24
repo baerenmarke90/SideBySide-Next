@@ -60,6 +60,7 @@ def engine() -> Iterator[Engine]:
     from sidebyside.identity import models as _identity  # noqa: F401
     from sidebyside.jobs import models as _jobs  # noqa: F401
     from sidebyside.outbox import models as _outbox  # noqa: F401
+    from sidebyside.profiles import models as _profiles  # noqa: F401
     from sidebyside.relationship import models as _relationship  # noqa: F401
 
     # Die Testsonde fuer die Owner-/Privacy-Autorisierung. Sie steht

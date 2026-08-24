@@ -14,12 +14,13 @@ gelesen worden, bevor jemand nach der Berechtigung gefragt hat.
 
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization.models import PrivateResource
+from sidebyside.authorization.models import PrivateResource, PrivateResourceMixin
 from sidebyside.authorization.privacy import (
     AuthorizationContext,
     AuthorizationErrorCode,
@@ -30,11 +31,27 @@ from sidebyside.core.errors import ForbiddenError
 from sidebyside.core.ids import parse_id
 
 
-def absence_of(model: type[PrivateResource]) -> ResourceAbsence:
+def _rule_model[ResourceT: PrivateResourceMixin](
+    model: type[ResourceT],
+) -> type[PrivateResource]:
+    """Das ORM-Modell an die strukturelle Regel-Schnittstelle anpassen.
+
+    SQLAlchemy stellt die gemappten Deskriptoren zur Laufzeit genau in der
+    Form bereit, die `PrivateResource` beschreibt. Ohne SQLAlchemy-mypy-
+    Plugin kann mypy diese strukturelle Uebereinstimmung bei geerbten
+    Declarative-Mixins jedoch nicht beweisen. Der Cast sitzt deshalb nur an
+    dieser zentralen Typgrenze; die fachlichen Domaenen bleiben streng auf
+    `PrivateResourceMixin` gebunden und formulieren keine Privacy-Regeln
+    selbst.
+    """
+    return cast(type[PrivateResource], model)
+
+
+def absence_of(model: type[PrivateResourceMixin]) -> ResourceAbsence:
     return model.privacy_absence
 
 
-def readable[ResourceT: PrivateResource](
+def readable[ResourceT: PrivateResourceMixin](
     model: type[ResourceT], context: AuthorizationContext
 ) -> Select[tuple[ResourceT]]:
     """Der Einstieg fuer jede Liste, Suche und Zaehlung.
@@ -45,21 +62,21 @@ def readable[ResourceT: PrivateResource](
     zaehlt deshalb auch nur Sichtbares - eine Trefferzahl ist sonst selbst
     schon eine Auskunft.
     """
-    return select(model).where(access_clause(model, context, Access.READ))
+    return select(model).where(access_clause(_rule_model(model), context, Access.READ))
 
 
-def writable[ResourceT: PrivateResource](
+def writable[ResourceT: PrivateResourceMixin](
     model: type[ResourceT], context: AuthorizationContext
 ) -> Select[tuple[ResourceT]]:
     """Dasselbe fuer aendernde Zugriffe."""
-    return select(model).where(access_clause(model, context, Access.WRITE))
+    return select(model).where(access_clause(_rule_model(model), context, Access.WRITE))
 
 
 def _identifier(value: UUID | str) -> UUID | None:
     return value if isinstance(value, UUID) else parse_id(value)
 
 
-def require_readable[ResourceT: PrivateResource](
+def require_readable[ResourceT: PrivateResourceMixin](
     session: Session,
     model: type[ResourceT],
     context: AuthorizationContext,
@@ -76,8 +93,9 @@ def require_readable[ResourceT: PrivateResource](
     if identifier is None:
         raise absence.error()
 
+    rule_model = _rule_model(model)
     found = session.execute(
-        readable(model, context).where(model.id == identifier)
+        readable(model, context).where(rule_model.id == identifier)
     ).scalar_one_or_none()
 
     if found is None:
@@ -85,7 +103,7 @@ def require_readable[ResourceT: PrivateResource](
     return found
 
 
-def require_writable[ResourceT: PrivateResource](
+def require_writable[ResourceT: PrivateResourceMixin](
     session: Session,
     model: type[ResourceT],
     context: AuthorizationContext,
@@ -112,10 +130,11 @@ def require_writable[ResourceT: PrivateResource](
     if identifier is None:
         raise absence.error()
 
+    rule_model = _rule_model(model)
     row = session.execute(
-        select(model, access_clause(model, context, Access.WRITE).label("is_writable"))
-        .where(access_clause(model, context, Access.READ))
-        .where(model.id == identifier)
+        select(model, access_clause(rule_model, context, Access.WRITE).label("is_writable"))
+        .where(access_clause(rule_model, context, Access.READ))
+        .where(rule_model.id == identifier)
     ).one_or_none()
 
     if row is None:

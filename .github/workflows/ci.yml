@@ -119,18 +119,27 @@ jobs:
 
       - name: Integrationstests sind wirklich gelaufen
         # Ein uebersprungener Sicherheitstest darf nicht wie ein bestandener
-        # aussehen. Hier muessen sie tatsaechlich gelaufen sein.
+        # aussehen. Der maschinenlesbare JUnit-Report belegt, dass mindestens
+        # ein Integrationstest lief und keiner uebersprungen wurde.
         run: |
-          set -o pipefail
-          uv run --frozen pytest -m integration -q --no-header | tee /tmp/integration.txt
-          if grep -qE "[0-9]+ skipped" /tmp/integration.txt; then
-            echo "Integrationstests wurden uebersprungen - Datenbank nicht erreichbar?"
-            exit 1
-          fi
-          if ! grep -qE "[0-9]+ passed" /tmp/integration.txt; then
-            echo "Keine Integrationstests gelaufen."
-            exit 1
-          fi
+          report=$(mktemp)
+          uv run --frozen pytest -m integration -q --junitxml="$report"
+          uv run --frozen python - "$report" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse(sys.argv[1]).getroot()
+          testcases = root.findall(".//testcase")
+          skipped = sum(case.find("skipped") is not None for case in testcases)
+
+          if not testcases:
+              raise SystemExit("Keine Integrationstests gelaufen.")
+          if skipped:
+              raise SystemExit(
+                  f"{skipped} Integrationstest(s) wurden uebersprungen - "
+                  "Datenbank nicht erreichbar?"
+              )
+          PY
 
   supply-chain:
     name: Supply Chain
