@@ -61,9 +61,10 @@ bekommt eine neue Datei.
 - [x] Space, Membership und zentraler Tenant Guard
 - [x] Invitations mit Hash, Ablauf, Widerruf und Einmaligkeit
 - [x] SpaceProfile-Modell und lesende API
-- [ ] OIDC-Modell mit Issuer/Connection-ID und eindeutigem `(issuer, subject)`
-- [ ] Passkey-/WebAuthn-fähiges Credential-Modell
-- [ ] Cloud-Anmeldewege: E-Mail-Verifikation, Magic Link und Recovery
+- [x] OIDC-Modell mit Issuer/Connection-ID und eindeutigem `(issuer, subject)`
+- [x] Passkey-/WebAuthn-fähiges Credential-Modell
+- [x] Getrennte, gehashte Einmal-Tokenmodelle für E-Mail-Verifikation, Magic Link und Recovery
+- [ ] OIDC-/WebAuthn-Adapter und vollständige Cloud-Auth-API-Flows
 - [ ] Eigene Owner-/Private-Authorization-Grundlage
 - [ ] SpaceProfile-Schreib-API mit Versionskonflikt/409
 - [ ] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen
