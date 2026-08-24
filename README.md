@@ -27,6 +27,9 @@ Beide teilen denselben Application Core.
 > Die folgenden Screens sind Produkt- und Google-Play-Mockups. Der technische
 > Implementierungsstand ist im Abschnitt [Stand](#stand) dokumentiert.
 
+Die verbindlichen [Design-Prinzipien für Web und App](docs/DESIGN-PRINCIPLES.md)
+legen Farbsemantik, Typografie, Komponenten, Accessibility und Privacy-Zustände fest.
+
 <table>
   <tr>
     <th>Gemeinsam starten</th>
