@@ -72,6 +72,9 @@ services:
       # gebaut - nie aus dem Host-Header, den ein Angreifer setzen kann.
       SBS_PUBLIC_BASE_URL: "${SBS_PUBLIC_BASE_URL:-http://localhost:8000}"
       SBS_OIDC_CONNECTIONS: '${SBS_OIDC_CONNECTIONS:-[]}'
+      SBS_WEBAUTHN_RP_ID: "${SBS_WEBAUTHN_RP_ID:-}"
+      SBS_WEBAUTHN_RP_NAME: "${SBS_WEBAUTHN_RP_NAME:-SideBySide}"
+      SBS_WEBAUTHN_ORIGINS: '${SBS_WEBAUTHN_ORIGINS:-[]}'
       SBS_MAIL_TRANSPORT: "${SBS_MAIL_TRANSPORT:-log}"
       SBS_MAIL_FROM: "${SBS_MAIL_FROM:-no-reply@localhost}"
       SBS_SMTP_HOST: "${SBS_SMTP_HOST:-localhost}"

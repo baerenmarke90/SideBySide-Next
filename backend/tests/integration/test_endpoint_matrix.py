@@ -165,6 +165,10 @@ NUR_ANGEMELDET: tuple[tuple[str, str], ...] = (
     # Verknuepfen setzt voraus, dass schon jemand angemeldet ist - genau
     # das unterscheidet es vom Anmelden ueber denselben Anbieter.
     ("POST", "/api/v1/auth/oidc/{connectionId}/link"),
+    # Ein Passkey ist ein zusaetzlicher Zugang zu einem bestehenden Konto;
+    # registriert wird er aus der Anmeldung heraus.
+    ("POST", "/api/v1/auth/passkeys/registration/start"),
+    ("POST", "/api/v1/auth/passkeys/registration/finish"),
 )
 """Kontobezogen, aber nicht an einen Space gebunden. Anonym: 401."""
 
@@ -184,6 +188,8 @@ OEFFENTLICH: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/auth/recovery/consume"),
     ("POST", "/api/v1/auth/oidc/{connectionId}/start"),
     ("POST", "/api/v1/auth/oidc/{connectionId}/callback"),
+    ("POST", "/api/v1/auth/passkeys/authentication/start"),
+    ("POST", "/api/v1/auth/passkeys/authentication/finish"),
 )
 """Absichtlich ohne Token erreichbar - sie sind der Weg *zu* einem Token.
 

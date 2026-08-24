@@ -56,6 +56,14 @@ falsche Ort fuer Eigenbau. `httpx` wird von der Entwicklungs- zur
 Laufzeitabhaengigkeit, weil Discovery, JWKS-Abruf und Token-Endpunkt
 ausgehendes HTTP brauchen.
 
+`webauthn` (py_webauthn) kommt aus demselben Grund dazu: eine Passkey-
+Registrierung bringt CBOR, COSE-Schluessel und Attestation mit, und diese
+Formate von Hand zu lesen waere Eigenbau an der empfindlichsten Stelle.
+
+`cbor2` steht nur in der Entwicklung: der virtuelle Authenticator in den
+Tests baut `attestationObject` und COSE-Schluessel selbst, damit die Suite
+echte Signaturen prueft statt aufgezeichneter Beispieldaten.
+
 ## Backend — Laufzeit
 
 | Paket | Version | Quelle | Lizenz |
@@ -71,6 +79,7 @@ ausgehendes HTTP brauchen.
 | argon2-cffi | 25.1.0 | PyPI | MIT |
 | httpx | 0.28.1 | PyPI | BSD-3-Clause |
 | pyjwt[crypto] | 2.13.0 | PyPI | MIT |
+| webauthn | 3.0.0 | PyPI | BSD-3-Clause |
 
 ## Backend — Entwicklung
 
@@ -79,6 +88,7 @@ ausgehendes HTTP brauchen.
 | pytest | 9.1.1 | PyPI | MIT |
 | pytest-asyncio | 1.4.0 | PyPI | Apache-2.0 |
 | httpx2 | 2.12.0 | PyPI | BSD-3-Clause |
+| cbor2 | 6.1.4 | PyPI | MIT |
 | ruff | 0.16.4 | PyPI | MIT |
 | mypy | 2.3.1 | PyPI | MIT |
 

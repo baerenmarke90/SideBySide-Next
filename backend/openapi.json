@@ -440,6 +440,74 @@
         "title": "PartnerView",
         "type": "object"
       },
+      "PasskeyAuthenticationRequest": {
+        "properties": {
+          "credential": {
+            "additionalProperties": true,
+            "title": "Credential",
+            "type": "object"
+          },
+          "deviceName": {
+            "default": "",
+            "title": "Devicename",
+            "type": "string"
+          },
+          "platform": {
+            "default": "",
+            "title": "Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential"
+        ],
+        "title": "PasskeyAuthenticationRequest",
+        "type": "object"
+      },
+      "PasskeyRegistrationRequest": {
+        "properties": {
+          "credential": {
+            "additionalProperties": true,
+            "title": "Credential",
+            "type": "object"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "credential"
+        ],
+        "title": "PasskeyRegistrationRequest",
+        "type": "object"
+      },
+      "PasskeyView": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "createdAt"
+        ],
+        "title": "PasskeyView",
+        "type": "object"
+      },
       "PersonRelationship": {
         "enum": [
           "CHILD",
@@ -1511,6 +1579,176 @@
           }
         },
         "summary": "Start Oidc",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/authentication/finish": {
+      "post": {
+        "operationId": "finish_passkey_authentication_api_v1_auth_passkeys_authentication_finish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyAuthenticationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Finish Passkey Authentication",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/authentication/start": {
+      "post": {
+        "description": "Eine Anmeldung mit Passkey beginnen.\n\nOhne Kontobezug: der Authenticator waehlt selbst, welches auffindbare\nCredential er anbietet. Ein Endpunkt, der zu einer Adresse die\npassenden Credentials nennt, waere ein Verzeichnis der Konten.",
+        "operationId": "start_passkey_authentication_api_v1_auth_passkeys_authentication_start_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Passkey Authentication Api V1 Auth Passkeys Authentication Start Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Start Passkey Authentication",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/registration/finish": {
+      "post": {
+        "operationId": "finish_passkey_registration_api_v1_auth_passkeys_registration_finish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyRegistrationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Finish Passkey Registration",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/registration/start": {
+      "post": {
+        "description": "Die Registrierung eines Passkeys beginnen.\n\nNur aus einer bestehenden Anmeldung heraus: ein Passkey ist ein\nzusaetzlicher Zugang zu einem Konto, das es schon gibt.",
+        "operationId": "start_passkey_registration_api_v1_auth_passkeys_registration_start_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Passkey Registration Api V1 Auth Passkeys Registration Start Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          }
+        },
+        "summary": "Start Passkey Registration",
         "tags": [
           "auth"
         ]

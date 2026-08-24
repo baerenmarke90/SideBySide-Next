@@ -19,7 +19,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import oidc, rate_limit, sessions
+from sidebyside.auth import oidc, passkeys, rate_limit, sessions
 from sidebyside.jobs import queue
 from sidebyside.jobs.models import Job, JobStatus
 from sidebyside.jobs.worker import JobRegistry, registry
@@ -111,6 +111,7 @@ def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
     historie = sessions.prune_replay_history(session)
     limits = rate_limit.prune(session)
     anmeldeversuche = oidc.prune_auth_requests(session)
+    ceremonies = passkeys.prune_challenges(session)
 
     log.info(
         "security retention completed",
@@ -118,6 +119,7 @@ def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
             "replay_history_removed": historie,
             "rate_limit_events_removed": limits,
             "oidc_auth_requests_removed": anmeldeversuche,
+            "webauthn_challenges_removed": ceremonies,
         },
     )
 
