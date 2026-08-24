@@ -201,7 +201,17 @@ kann, gilt die PR-/CI-Pflicht als Projektregel.
 
 ## Lizenz
 
-Noch nicht festgelegt. Bis zu einer ausdrücklichen Entscheidung gilt für
-diesen Quellcode kein Open-Source-Lizenzangebot. Pflichten aus
-Drittanbieter-Lizenzen werden erfüllt und in
-[docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) dokumentiert.
+Der eigene SideBySide-Next-Quellcode wird unter der **PolyForm Noncommercial
+License 1.0.0** bereitgestellt. Nichtkommerzielle Nutzung, Änderung und
+Weitergabe sind im Rahmen dieser Lizenz erlaubt. Für kommerzielle Nutzung ist
+eine separate kommerzielle Lizenz des Rechteinhabers erforderlich.
+
+- [LICENSE](LICENSE) — PolyForm Noncommercial License 1.0.0
+- [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) — kommerzielle Lizenzierung
+- [CONTRIBUTING.md](CONTRIBUTING.md) und [CLA.md](CLA.md) — Beiträge und Rechte an Contributions
+- [TRADEMARKS.md](TRADEMARKS.md) — Name, Logo und Branding
+
+SideBySide Next ist damit **source-available**, nicht Open Source im engeren
+OSI-Sinn, da kommerzielle Nutzung nicht allgemein freigegeben wird.
+Drittanbieter-Abhängigkeiten bleiben unter ihren jeweiligen Lizenzen; die
+Pflichten sind in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) dokumentiert.
