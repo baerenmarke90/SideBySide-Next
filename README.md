@@ -5,10 +5,13 @@ Ein privater digitaler Begleiter für das gemeinsame Leben eines Paares.
 SideBySide Next ist eine eigenständige Neuimplementierung. Sie wird in zwei
 Betriebsformen angeboten:
 
-- **SideBySide Cloud** — betriebener Dienst
-- **SideBySide Self-Hosted** — eigene Installation
+- **SideBySide Cloud** — betriebener Dienst für Nutzer, die keine eigene Infrastruktur administrieren möchten
+- **SideBySide Self-Hosted** — eigene Installation für persönliche und nichtkommerzielle Nutzung
 
-Beide teilen denselben Application Core.
+Beide teilen denselben Application Core. Die Cloud monetarisiert Betrieb,
+Komfort und Service; Self-Hosted soll nicht allein zur Verkaufsförderung
+künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
+[docs/BUSINESS-MODEL.md](docs/BUSINESS-MODEL.md) dokumentiert.
 
 ## Produktvorschau
 
@@ -210,6 +213,7 @@ eine separate kommerzielle Lizenz des Rechteinhabers erforderlich.
 - [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) — kommerzielle Lizenzierung
 - [CONTRIBUTING.md](CONTRIBUTING.md) und [CLA.md](CLA.md) — Beiträge und Rechte an Contributions
 - [TRADEMARKS.md](TRADEMARKS.md) — Name, Logo und Branding
+- [docs/BUSINESS-MODEL.md](docs/BUSINESS-MODEL.md) — Self-Hosted, SideBySide Cloud und Produktprinzipien
 
 SideBySide Next ist damit **source-available**, nicht Open Source im engeren
 OSI-Sinn, da kommerzielle Nutzung nicht allgemein freigegeben wird.
