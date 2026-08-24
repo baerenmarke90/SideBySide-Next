@@ -27,7 +27,7 @@ bekommt eine neue Datei.
 - [x] Rate-Limit-Ereignisse trotz erwarteter Auth-Fehler dauerhaft und atomar speichern.
 - [x] Refresh-Replay-Widerruf trotz 401 dauerhaft und atomar speichern.
 - [x] HTTP-Integrationstests mit dem echten produktiven Session-Lifecycle ergänzen.
-- [ ] Membership-Änderungen je Space serialisieren; Race mit zwei Einladungen testen.
+- [x] Membership-Änderungen je Space serialisieren; Race mit zwei Einladungen testen.
 - [x] Refresh-Rotation atomar machen; parallelen Refresh testen.
 - [ ] Bootstrap der ersten Self-Hosted-Registrierung absichern und serialisieren.
 - [ ] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
