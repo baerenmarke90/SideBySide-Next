@@ -42,6 +42,25 @@ und externe Systeme hinter Schnittstellen.
 Die Abhängigkeit zeigt nach innen: API kennt Domain, Domain kennt
 Infrastructure nur über Schnittstellen.
 
+## Auth-Architektur
+
+Profilidentität und Anmeldeverfahren bleiben getrennt. Der bestehende lokale
+Self-Hosted-Weg hält ausschließlich den Argon2-Hash in `AuthIdentity`.
+OIDC ergänzt dort den standardgemäßen Schlüssel `(issuer, subject)` und eine
+frei konfigurierbare `connection_id`; konkrete Anbieter wie Pocket ID
+benötigen dadurch kein eigenes Domain-Modell.
+
+WebAuthn ist kein generischer String-Provider. `WebAuthnCredential` hält die
+für Registration und Assertion nötigen öffentlichen Credential-Daten und den
+Signaturzähler; private Schlüssel existieren nur im Authenticator.
+
+Kurzlebige Nachweise für E-Mail-Verifikation, Magic Link und Recovery sind
+drei getrennte Modelle. Gemeinsame Invarianten — Hash statt Klartext, Ablauf,
+Widerruf und einmaliger Verbrauch — werden geteilt, die Tabellen und
+Konsumwege jedoch nicht. So kann ein Token nicht zwischen Auth-Flows
+verwechselt werden. Protokolladapter und HTTP-Flows werden darauf aufgebaut,
+sind aber nicht Teil dieser Persistenzgrundlage.
+
 ## Konventionen
 
 ### Identifikatoren
