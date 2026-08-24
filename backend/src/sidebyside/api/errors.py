@@ -15,16 +15,32 @@ Fehlermeldung anzeigen will, braucht dafür genau einen Weg.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from sidebyside.api.schema import ApiModel
 from sidebyside.core.errors import DomainError, ErrorCode
 
 log = logging.getLogger(__name__)
+
+
+class ProblemDetails(ApiModel):
+    """Der Rumpf jeder Fehlerantwort.
+
+    Dasselbe Modell erzeugt die Antwort und beschreibt sie im OpenAPI-
+    Vertrag. Getrennt gepflegt wuerden beide irgendwann auseinanderlaufen,
+    und der Vertrag beschriebe dann einen Fehler, den es so nicht gibt.
+    """
+
+    type: str
+    title: str
+    status: int
+    detail: str
+    code: str
+
 
 _STATUS_TYPES: dict[int, tuple[str, str]] = {
     400: ("bad_request", "Bad request"),
@@ -39,14 +55,8 @@ _STATUS_TYPES: dict[int, tuple[str, str]] = {
 
 
 def problem(status: int, type_: str, title: str, detail: str, code: str) -> JSONResponse:
-    body: dict[str, Any] = {
-        "type": type_,
-        "title": title,
-        "status": status,
-        "detail": detail,
-        "code": code,
-    }
-    return JSONResponse(status_code=status, content=body)
+    body = ProblemDetails(type=type_, title=title, status=status, detail=detail, code=code)
+    return JSONResponse(status_code=status, content=body.model_dump())
 
 
 def register_error_handlers(app: FastAPI) -> None:

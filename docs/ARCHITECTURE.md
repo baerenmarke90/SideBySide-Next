@@ -80,6 +80,29 @@ Primärschlüssel indexfreundlich.
 Ein fachlicher Tag ist kein Zeitpunkt. Ein Geburtstag hat keine Zeitzone,
 und ihn als Zeitstempel zu speichern verschiebt ihn irgendwann um einen Tag.
 
+#### Welcher Tag ist heute?
+
+Ein gespeicherter fachlicher Tag hat keine Zeitzone. Die Frage, welcher Tag
+gerade *ist*, hat sehr wohl eine — und sie entscheidet über gemeinsame Tage,
+Jahrestage und jede andere sichtbare Tagesgrenze.
+
+Maßgeblich ist die Zeitzone der **lesenden Person** (`Account.timezone`),
+nicht UTC:
+
+```
+today_utc()             technische Zwecke
+today_in(zone)          jede nutzersichtbare Tagesgrenze
+```
+
+`today_utc()` wäre für Menschen westlich von UTC bis zu einen Tag zu weit
+und für Menschen östlich davon einen Tag zu kurz. Ein Jahrestag träte dann
+Stunden zu früh oder zu spät ein — sichtbar falsch an genau dem Tag, an dem
+er zählt.
+
+Zwei Partner an zwei Orten sehen deshalb kurzzeitig verschiedene Werte. Das
+ist gewollt: jeder sieht seinen eigenen Tag. Ein unbrauchbarer Zonenname
+fällt protokolliert auf UTC zurück, statt die Antwort zu verlieren.
+
 ### JSON
 
 Nach außen **camelCase**, intern **snake_case**. Die Umsetzung geschieht an
@@ -91,6 +114,25 @@ Veränderbare Domain-Objekte tragen eine `version`. Updates prüfen sie und
 antworten bei Abweichung mit **409**. Das ist zugleich die Vorbereitung auf
 späteren Offline-Sync: ohne Versionsbegriff lässt sich ein Konflikt nicht
 von einem Überschreiben unterscheiden.
+
+Über HTTP läuft das als ETag und `If-Match`:
+
+```
+GET  .../profile        -> 200, ETag: "3"
+PUT  .../profile        If-Match: "3"  -> 200, ETag: "4"
+PUT  .../profile        If-Match: "3"  -> 409
+```
+
+`If-Match` ist **Pflicht**, auch im OpenAPI-Vertrag. Ein optionaler Kopf
+wäre die Einladung, ihn wegzulassen — und damit der Weg, auf dem ein Client
+den Konfliktschutz versehentlich abschaltet. `*` und schwache Validatoren
+werden abgewiesen, weil beide keine konkrete Version benennen.
+
+Zwei Sicherungen greifen unabhängig voneinander: konkurrierende Schreiber
+werden je Space serialisiert, sodass der 409 deterministisch entsteht und
+nicht vom zeitlichen Zufall abhängt; zusätzlich prüft die Datenbank die
+Versionsspalte im `UPDATE` selbst. Ein Lost Update entsteht auch dann nicht,
+wenn eine der beiden Sicherungen später einmal umgangen würde.
 
 ## Transactional Outbox
 

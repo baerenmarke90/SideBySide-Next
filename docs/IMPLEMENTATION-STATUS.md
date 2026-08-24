@@ -98,8 +98,14 @@ Zusätzliche Härtung:
       Abfrage erzwungene `SPACE_SHARED`-/`OWNER_ONLY`-Autorisierung samt
       Privacy-Testmatrix. Eine produktive `OWNER_ONLY`-Fachdomäne setzt
       darauf noch nicht auf; das gehört zu den restlichen M1-/M2-Domänen.
-- [ ] SpaceProfile-Schreib-API mit Versionskonflikt/409
-- [ ] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen
+- [x] SpaceProfile-Schreib-API mit Versionskonflikt/409 (#28): `PUT` auf
+      `relationshipStartedOn`, `showRelationshipDuration` und
+      `durationDisplayMode` mit ETag und `If-Match` als Pflichtkopf.
+      `SpaceProfile` bleibt `SPACE_SHARED` und trägt bewusst keine
+      Owner-Einschränkung.
+- [x] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen (#28):
+      Tagesgrenze über `Account.timezone` der lesenden Person statt
+      `today_utc()`.
 - [ ] PartnerProfile und ProfilePreference
 - [ ] RelatedPerson und ImportantDate
 - [ ] Cross-Tenant- und Privacy-Tests für jedes neue M1-Feature
