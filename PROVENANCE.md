@@ -11,6 +11,13 @@ Implementation follows the complete written specification in
 The shorter [specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md)
 is an overview and does not replace the master specification.
 
+The project does **not** claim to be a strict or formal clean-room
+implementation. The accepted project classification is an independent
+reimplementation from a written specification with documented prior exposure
+of the initial implementing session. The formal governance decision is
+recorded in
+[docs/decisions/0001-clean-room-classification.md](docs/decisions/0001-clean-room-classification.md).
+
 ## Facts
 
 | | |
@@ -56,8 +63,11 @@ What applies instead:
 
 This entry exists so that anyone assessing provenance later sees the actual
 situation rather than an unqualified assurance. A stricter separation — a
-fresh implementing context with no prior exposure — remains available and
-would strengthen the claim.
+fresh implementing context with no prior exposure — remains technically
+possible, but the project has formally decided not to restart the current
+implementation solely to obtain that process classification. The current
+source tree must therefore not be described as a strict or formal clean-room
+implementation.
 
 ## Legal note
 

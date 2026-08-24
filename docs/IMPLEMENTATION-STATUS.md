@@ -31,7 +31,7 @@ bekommt eine neue Datei.
 - [x] Refresh-Rotation atomar machen; parallelen Refresh testen.
 - [x] Bootstrap der ersten Self-Hosted-Registrierung absichern und serialisieren.
 - [x] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
-- [ ] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entscheiden.
+- [x] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entschieden: keine Behauptung eines strikten/formalen Clean Rooms; Fortführung als eigenständige Neuimplementierung mit dokumentierter Vorbefassung gemäß [ADR 0001](decisions/0001-clean-room-classification.md).
 
 ## M0 – Clean Foundation
 
