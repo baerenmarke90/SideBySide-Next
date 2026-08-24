@@ -5,8 +5,25 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from sidebyside.config import Environment, Settings
+from sidebyside.config import Environment, MailTransport, Settings
 from sidebyside.main import create_app
+
+
+def production_settings(**ueberschreibungen: object) -> Settings:
+    """Eine vollstaendige Produktionskonfiguration.
+
+    In Produktion sind mehrere Felder Pflicht - unter anderem echter
+    Mailversand. Die Tests hier pruefen den Transport und sollen an dieser
+    Pflicht nicht scheitern, sie aber auch nicht umgehen.
+    """
+    werte: dict[str, object] = {
+        "environment": Environment.PRODUCTION,
+        "allowed_hosts": ["app.example"],
+        "mail_transport": MailTransport.SMTP,
+        "public_base_url": "https://app.example",
+    }
+    werte.update(ueberschreibungen)
+    return Settings(**werte)  # type: ignore[arg-type]
 
 
 def production_client(
@@ -14,7 +31,7 @@ def production_client(
 ) -> TestClient:
     monkeypatch.setattr(
         "sidebyside.main.get_settings",
-        lambda: Settings(environment=Environment.PRODUCTION, allowed_hosts=allowed_hosts),
+        lambda: production_settings(allowed_hosts=allowed_hosts),
     )
     return TestClient(create_app(), base_url=base_url, raise_server_exceptions=False)
 
@@ -26,7 +43,7 @@ class TestAllowedHosts:
 
     def test_offener_wildcard_ist_in_produktion_verboten(self) -> None:
         with pytest.raises(ValueError, match="SBS_ALLOWED_HOSTS"):
-            Settings(environment=Environment.PRODUCTION, allowed_hosts=["*"])
+            production_settings(allowed_hosts=["*"])
 
 
 class TestBootstrapKonfiguration:

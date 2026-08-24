@@ -78,6 +78,19 @@
         "title": "DurationDisplayMode",
         "type": "string"
       },
+      "EmailRequest": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "EmailRequest",
+        "type": "object"
+      },
       "Health": {
         "properties": {
           "status": {
@@ -267,6 +280,29 @@
           "token"
         ],
         "title": "IssuedInvitationView",
+        "type": "object"
+      },
+      "MagicLinkConsumeRequest": {
+        "properties": {
+          "deviceName": {
+            "default": "",
+            "title": "Devicename",
+            "type": "string"
+          },
+          "platform": {
+            "default": "",
+            "title": "Platform",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "MagicLinkConsumeRequest",
         "type": "object"
       },
       "MembershipView": {
@@ -585,6 +621,34 @@
           "database"
         ],
         "title": "Readiness",
+        "type": "object"
+      },
+      "RecoveryConsumeRequest": {
+        "properties": {
+          "deviceName": {
+            "default": "",
+            "title": "Devicename",
+            "type": "string"
+          },
+          "newPassword": {
+            "title": "Newpassword",
+            "type": "string"
+          },
+          "platform": {
+            "default": "",
+            "title": "Platform",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
+        ],
+        "title": "RecoveryConsumeRequest",
         "type": "object"
       },
       "RefreshRequest": {
@@ -988,6 +1052,19 @@
         "title": "SpaceView",
         "type": "object"
       },
+      "TokenOnlyRequest": {
+        "properties": {
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "TokenOnlyRequest",
+        "type": "object"
+      },
       "TokenView": {
         "properties": {
           "accessExpiresAt": {
@@ -1027,6 +1104,162 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/auth/email/verification/confirm": {
+      "post": {
+        "description": "Die Adresse bestaetigen.\n\nOhne Anmeldung: der Link wird oft in einem anderen Programm geoeffnet\nals dem, in dem die Sitzung liegt.",
+        "operationId": "confirm_email_api_v1_auth_email_verification_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenOnlyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Confirm Email",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/email/verification/request": {
+      "post": {
+        "description": "Die Bestaetigung der eigenen Adresse anfordern.",
+        "operationId": "request_email_verification_api_v1_auth_email_verification_request_post",
+        "responses": {
+          "202": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
+          }
+        },
+        "summary": "Request Email Verification",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/magic-link/consume": {
+      "post": {
+        "operationId": "consume_magic_link_api_v1_auth_magic_link_consume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MagicLinkConsumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Consume Magic Link",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/magic-link/request": {
+      "post": {
+        "description": "Einen passwortlosen Anmeldelink anfordern.\n\nAntwortet immer gleich - ob es die Adresse gibt, steht nicht in der\nAntwort. Sonst waere dieser Endpunkt ein Verzeichnis aller Konten.",
+        "operationId": "request_magic_link_api_v1_auth_magic_link_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
+          }
+        },
+        "summary": "Request Magic Link",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/me": {
       "get": {
         "operationId": "me_api_v1_auth_me_get",
@@ -1098,6 +1331,93 @@
           }
         },
         "summary": "Change Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recovery/consume": {
+      "post": {
+        "description": "Ein neues Passwort setzen; alle bisherigen Sitzungen enden.",
+        "operationId": "consume_recovery_api_v1_auth_recovery_consume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecoveryConsumeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Consume Recovery",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recovery/request": {
+      "post": {
+        "description": "Das Zuruecksetzen des Passworts anfordern. Antwortet immer gleich.",
+        "operationId": "request_recovery_api_v1_auth_recovery_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
+          }
+        },
+        "summary": "Request Recovery",
         "tags": [
           "auth"
         ]

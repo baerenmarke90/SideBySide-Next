@@ -161,6 +161,7 @@ NUR_ANGEMELDET: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/auth/me"),
     ("POST", "/api/v1/auth/sign-out"),
     ("POST", "/api/v1/auth/password"),
+    ("POST", "/api/v1/auth/email/verification/request"),
 )
 """Kontobezogen, aber nicht an einen Space gebunden. Anonym: 401."""
 
@@ -171,6 +172,13 @@ OEFFENTLICH: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/auth/sign-in"),
     ("POST", "/api/v1/auth/refresh"),
     ("POST", "/api/v1/invitations/accept"),
+    # Die Wege zurueck ins Konto: sie beginnen ohne Sitzung, und ihr
+    # Nachweis ist der Einmal-Token aus der Mail.
+    ("POST", "/api/v1/auth/magic-link/request"),
+    ("POST", "/api/v1/auth/magic-link/consume"),
+    ("POST", "/api/v1/auth/email/verification/confirm"),
+    ("POST", "/api/v1/auth/recovery/request"),
+    ("POST", "/api/v1/auth/recovery/consume"),
 )
 """Absichtlich ohne Token erreichbar - sie sind der Weg *zu* einem Token.
 

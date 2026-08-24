@@ -75,6 +75,31 @@ Die Anwendung lehnt einen erlaubten externen Host trotzdem ab, solange das von
 Uvicorn bereinigte Request-Scheme nicht `https` ist. Ein normaler Client kann
 diese Pruefung nicht allein durch einen gefaelschten Forwarded Header umgehen.
 
+## Ausgehende E-Mail
+
+Magic Link und Passwort-Wiederherstellung brauchen einen Mailweg. Im
+Standard steht `SBS_MAIL_TRANSPORT=log`: die Nachricht landet im Log der
+API, damit sich beides ohne Mailserver ausprobieren laesst.
+
+Fuer den echten Betrieb wird ein SMTP-Server eingetragen:
+
+```
+SBS_MAIL_TRANSPORT=smtp
+SBS_MAIL_FROM=no-reply@deine-domain.example
+SBS_SMTP_HOST=smtp.deine-domain.example
+SBS_SMTP_PORT=587
+SBS_SMTP_USERNAME=...
+SBS_SMTP_PASSWORD=...
+SBS_PUBLIC_BASE_URL=https://deine-domain.example
+```
+
+`SBS_PUBLIC_BASE_URL` steht in jedem Link. Sie kommt bewusst aus der
+Konfiguration und nicht aus dem Host-Header der Anfrage.
+
+Mit `SBS_ENVIRONMENT=production` sind beide Einstellungen Pflicht: bleibt
+der Log-Versand stehen oder ist die Basisadresse kein `https://`, startet
+die API nicht. Sonst stuenden gueltige Anmeldelinks im Log.
+
 ## Smoke-Test nach Aenderungen
 
 ```bash

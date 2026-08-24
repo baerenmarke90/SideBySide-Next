@@ -135,9 +135,62 @@ E-Mail-Verifikation, Magic Link und Account Recovery verwenden getrennte
 Tabellen und getrennte Konsumfunktionen. Jeder Nachweis ist zufällig,
 kurzlebig, widerrufbar, genau einmal verwendbar und nur als Hash
 persistiert. Ein Token eines Ablaufs kann deshalb nicht in einem anderen
-Ablauf eingelöst werden. Die eigentlichen OIDC-/WebAuthn-Adapter und
-öffentlichen Cloud-Auth-Endpunkte sind noch nicht implementiert; die lokale
-Argon2-Anmeldung bleibt davon unabhängig erhalten.
+Ablauf eingelöst werden — nicht, weil eine Prüfung das verbietet, sondern
+weil er dort gar nicht gesucht wird. Die OIDC-/WebAuthn-Adapter fehlen noch;
+die lokale Argon2-Anmeldung bleibt davon unabhängig erhalten.
+
+### Die drei Mail-Abläufe
+
+| Ablauf | Endpunkte | Frist |
+|---|---|---|
+| Magic Link | `/auth/magic-link/request`, `/auth/magic-link/consume` | 15 Minuten |
+| E-Mail-Verifikation | `/auth/email/verification/request` (angemeldet), `/auth/email/verification/confirm` | 24 Stunden |
+| Account Recovery | `/auth/recovery/request`, `/auth/recovery/consume` | 30 Minuten |
+
+**Keine Existenzauskunft.** Die beiden `request`-Endpunkte antworten immer
+mit `202` und leerem Rumpf — für eine bekannte Adresse ebenso wie für eine
+unbekannte. Auch das Rate Limit greift für beide gleich, sonst wäre der
+Unterschied im Verhalten selbst die Auskunft. Ein Zustellfehler des
+Mailservers wird protokolliert, ändert die Antwort aber nicht.
+
+Es bleibt eine Restdifferenz in der Antwortzeit: für eine bekannte Adresse
+wird eine Mail übergeben, für eine unbekannte nicht. Sie wird in Kauf
+genommen — die Endpunkte sind rate-limitiert, und ein Ausgleich hieße,
+den Versand künstlich zu verzögern.
+
+**Nur der zuletzt angeforderte Link gilt.** Eine neue Anforderung entwertet
+die noch offenen Vorgänger desselben Ablaufs. Sonst sammelten sich gültige
+Anmeldenachweise in einem Postfach an.
+
+**Ein eingelöster Magic Link bestätigt die Adresse.** Wer den Link im
+Postfach öffnet, hat den Besitz nachgewiesen; ein zweiter Weg dafür wäre
+eine zweite Gelegenheit, ihn zu vergessen.
+
+**Recovery richtet keinen neuen Anmeldeweg ein.** Ein Konto ohne lokales
+Passwort — etwa ein reines OIDC-Konto — bekommt keinen Link; nach außen ist
+das von einer unbekannten Adresse nicht zu unterscheiden. Ein erfolgreiches
+Zurücksetzen beendet **alle** bestehenden Sitzungen und eröffnet genau eine
+neue: die auf diesem Gerät.
+
+**Jeder erfolgreiche Weg endet in der zentralen `DeviceSession`-Ausgabe.**
+Es gibt keinen zweiten Ort, an dem Tokens entstehen.
+
+### Ausgehende Post
+
+Der Klartext-Token existiert genau zweimal: im Rückgabewert der
+Ausgabefunktion und in der Mail. Er wird nicht persistiert und nicht
+geloggt.
+
+Deshalb ist der Entwicklungsadapter, der Nachrichten ins Log schreibt, in
+Produktion nicht zulässig: `SBS_MAIL_TRANSPORT` muss dort `smtp` sein und
+`SBS_PUBLIC_BASE_URL` mit `https://` beginnen, sonst verweigert die
+Anwendung den Start. Ein Fehlstart ist hier die freundlichere Antwort — der
+stille Gegenentwurf wäre eine Instanz, die Anmeldenachweise ins Log
+schreibt, und das fällt niemandem auf.
+
+Die Basisadresse der Links kommt aus der Konfiguration und niemals aus
+einem Request-Header. Ein gefälschter `Host` würde den Link sonst auf einen
+fremden Server umbiegen, und der Empfänger übergäbe seinen Token dorthin.
 
 Der erste Self-Hosted-Account braucht einen einmaligen geheimen Bootstrap-
 Nachweis. PostgreSQL serialisiert konkurrierende Erstregistrierungen; nach
