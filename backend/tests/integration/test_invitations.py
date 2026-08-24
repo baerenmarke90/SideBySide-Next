@@ -7,14 +7,18 @@ hat hier seinen Test.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from threading import Barrier
 
 import pytest
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, NotFoundError, ValidationError
 from sidebyside.relationship import invitations, service
+from sidebyside.relationship.models import Invitation
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -178,62 +182,58 @@ class TestMissbrauch:
 
 
 class TestWettlauf:
-    def test_zwei_gleichzeitige_annahmen_ergeben_ein_mitglied(self, engine, anna_mit_space) -> None:  # type: ignore[no-untyped-def]
-        """Die Einladung wird gesperrt geladen. Der zweite Versuch wartet auf
-        den ersten und sieht dann, dass sie verbraucht ist."""
-        macher = sessionmaker(bind=engine, expire_on_commit=False)
-
-        vorbereitung = macher()
-        try:
+    def test_zwei_einladungen_konkurrieren_um_letzten_platz(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        client, macher = production_client
+        with macher() as vorbereitung:
             anna = make_account(vorbereitung, "Anna Wettlauf")
             space = make_space(vorbereitung, anna)
-            ergebnis = invitations.create(vorbereitung, space.id, anna)
-            token = ergebnis.token
+            erste_einladung = invitations.create(vorbereitung, space.id, anna)
+            zweite_einladung = invitations.create(vorbereitung, space.id, anna)
             ben = make_account(vorbereitung, "Ben Wettlauf")
             clara = make_account(vorbereitung, "Clara Wettlauf")
-            ben_id, clara_id, space_id = ben.id, clara.id, space.id
+            ben_token = sign_in(vorbereitung, ben)
+            clara_token = sign_in(vorbereitung, clara)
+            space_id = space.id
             vorbereitung.commit()
-        finally:
-            vorbereitung.close()
 
-        from sidebyside.identity.models import Account
+        start = Barrier(2)
 
-        erste = macher()
-        zweite = macher()
-        erfolge = 0
-        try:
-            # Der erste nimmt an und haelt die Zeilensperre bis zum Commit.
-            invitations.accept(erste, token, erste.get(Account, ben_id))
-            erste.commit()
-            erfolge += 1
+        def annehmen(daten):  # type: ignore[no-untyped-def]
+            einladungs_token, zugangs_token = daten
+            start.wait(timeout=5)
+            return client.post(
+                "/api/v1/invitations/accept",
+                json={"token": einladungs_token},
+                headers=auth(zugangs_token),
+            )
 
-            try:
-                invitations.accept(zweite, token, zweite.get(Account, clara_id))
-                zweite.commit()
-                erfolge += 1
-            except (ValidationError, ConflictError):
-                zweite.rollback()
-        finally:
-            erste.close()
-            zweite.close()
+        versuche = [
+            (erste_einladung.token, ben_token),
+            (zweite_einladung.token, clara_token),
+        ]
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            antworten = list(pool.map(annehmen, versuche))
 
-        assert erfolge == 1
+        assert sorted(antwort.status_code for antwort in antworten) == [201, 409]
+        abgewiesen = next(antwort for antwort in antworten if antwort.status_code == 409)
+        assert abgewiesen.json() == {
+            "type": "conflict",
+            "title": "Conflict",
+            "status": 409,
+            "detail": "This space already has two partners.",
+            "code": "SPACE_FULL",
+        }
 
-        pruefer = macher()
-        try:
+        with macher() as pruefer:
             aktive = service.active_memberships(pruefer, space_id)
             assert len(aktive) == 2  # Anna und genau einer der beiden
-            _aufraeumen(pruefer, space_id)
-        finally:
-            pruefer.close()
-
-
-def _aufraeumen(session: Session, space_id) -> None:  # type: ignore[no-untyped-def]
-    from sidebyside.relationship.models import Invitation, Space
-
-    session.query(Invitation).filter_by(space_id=space_id).delete()
-    session.query(Space).filter_by(id=space_id).delete()
-    session.commit()
+            beide = (
+                pruefer.execute(select(Invitation).where(Invitation.space_id == space_id))
+                .scalars()
+                .all()
+            )
+            assert sum(einladung.accepted_at is not None for einladung in beide) == 1
+            assert sum(einladung.is_open(now()) for einladung in beide) == 1
 
 
 class TestWiderrufen:
