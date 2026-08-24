@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import DbSession, Tenant, TenantContext
-from sidebyside.api.errors import ProblemDetails
+from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
 from sidebyside.core.clock import today_in
 from sidebyside.db.mixins import INITIAL_VERSION
@@ -149,7 +149,11 @@ def _today_for(tenant: TenantContext) -> date:
     return today_in(tenant.account.timezone)
 
 
-@router.get("/spaces/{spaceId}", response_model=SpaceView)
+@router.get(
+    "/spaces/{spaceId}",
+    response_model=SpaceView,
+    responses=problem_responses(401, 404),
+)
 def get_space(tenant: Tenant, session: DbSession) -> SpaceView:
     profil = profile_service.load(session, tenant.space_id)
 
@@ -190,7 +194,10 @@ def get_space(tenant: Tenant, session: DbSession) -> SpaceView:
 @router.get(
     "/spaces/{spaceId}/profile",
     response_model=SpaceProfileView,
-    responses={200: {"headers": ETAG_KOPF}},
+    responses={
+        200: {"headers": ETAG_KOPF},
+        **problem_responses(401, 404),
+    },
 )
 def get_space_profile(tenant: Tenant, session: DbSession, response: Response) -> SpaceProfileView:
     ansicht = _profile_view(
@@ -207,13 +214,18 @@ def get_space_profile(tenant: Tenant, session: DbSession, response: Response) ->
     response_model=SpaceProfileView,
     responses={
         200: {"headers": ETAG_KOPF},
-        409: {
-            "model": ProblemDetails,
-            "description": (
-                "Die vorgelegte Version ist nicht mehr aktuell. Es wurde nichts "
-                "geaendert; der aktuelle Stand ist neu zu laden."
-            ),
-        },
+        **problem_responses(
+            401,
+            404,
+            409,
+            422,
+            descriptions={
+                409: (
+                    "Die vorgelegte Version ist nicht mehr aktuell. Es wurde nichts "
+                    "geaendert; der aktuelle Stand ist neu zu laden."
+                )
+            },
+        ),
     },
 )
 def update_space_profile(

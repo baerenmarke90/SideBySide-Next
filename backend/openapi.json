@@ -60,19 +60,6 @@
         "title": "DurationDisplayMode",
         "type": "string"
       },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "title": "Detail",
-            "type": "array"
-          }
-        },
-        "title": "HTTPValidationError",
-        "type": "object"
-      },
       "Health": {
         "properties": {
           "status": {
@@ -567,46 +554,6 @@
         ],
         "title": "TokenView",
         "type": "object"
-      },
-      "ValidationError": {
-        "properties": {
-          "ctx": {
-            "title": "Context",
-            "type": "object"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "title": "Location",
-            "type": "array"
-          },
-          "msg": {
-            "title": "Message",
-            "type": "string"
-          },
-          "type": {
-            "title": "Error Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError",
-        "type": "object"
       }
     }
   },
@@ -630,6 +577,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
           }
         },
         "summary": "Me",
@@ -656,15 +613,25 @@
           "204": {
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
           }
         },
         "summary": "Change Password",
@@ -697,15 +664,25 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
           }
         },
         "summary": "Refresh",
@@ -739,15 +716,45 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource."
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
           }
         },
         "summary": "Register",
@@ -780,15 +787,35 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
           }
         },
         "summary": "Sign In",
@@ -804,6 +831,16 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
           }
         },
         "summary": "Sign Out",
@@ -846,6 +883,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            },
+            "description": "Der Prozess laeuft, aber die Datenbank ist nicht erreichbar."
           }
         },
         "summary": "Readiness",
@@ -879,15 +926,35 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource."
+          },
           "422": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
           }
         },
         "summary": "Accept Invitation",
@@ -921,15 +988,25 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
           }
         },
         "summary": "Get Space",
@@ -968,15 +1045,25 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
           }
         },
         "summary": "List Invitations",
@@ -1008,15 +1095,35 @@
             },
             "description": "Successful Response"
           },
-          "422": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource."
           }
         },
         "summary": "Create Invitation",
@@ -1052,15 +1159,25 @@
           "204": {
             "description": "Successful Response"
           },
-          "422": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
           }
         },
         "summary": "Revoke Invitation",
@@ -1102,15 +1219,25 @@
               }
             }
           },
-          "422": {
+          "401": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
           }
         },
         "summary": "Get Space Profile",
@@ -1172,6 +1299,26 @@
               }
             }
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          },
           "409": {
             "content": {
               "application/json": {
@@ -1186,11 +1333,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
           }
         },
         "summary": "Update Space Profile",

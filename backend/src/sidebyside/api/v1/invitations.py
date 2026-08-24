@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Path, status
 
 from sidebyside.api.deps import CurrentAccount, DbSession, Tenant
+from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
 from sidebyside.core.errors import NotFoundError
 from sidebyside.core.ids import parse_id
@@ -43,6 +44,7 @@ class MembershipView(ApiModel):
     "/spaces/{spaceId}/invitations",
     response_model=IssuedInvitationView,
     status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(401, 404, 409),
 )
 def create_invitation(tenant: Tenant, session: DbSession) -> IssuedInvitationView:
     ergebnis = invitations.create(session, tenant.space_id, tenant.account)
@@ -54,7 +56,11 @@ def create_invitation(tenant: Tenant, session: DbSession) -> IssuedInvitationVie
     )
 
 
-@router.get("/spaces/{spaceId}/invitations", response_model=list[InvitationView])
+@router.get(
+    "/spaces/{spaceId}/invitations",
+    response_model=list[InvitationView],
+    responses=problem_responses(401, 404),
+)
 def list_invitations(tenant: Tenant, session: DbSession) -> list[InvitationView]:
     """Die offenen Einladungen. Ohne Token - der ist einmalig gewesen."""
     return [
@@ -66,6 +72,7 @@ def list_invitations(tenant: Tenant, session: DbSession) -> list[InvitationView]
 @router.delete(
     "/spaces/{spaceId}/invitations/{invitationId}",
     status_code=status.HTTP_204_NO_CONTENT,
+    responses=problem_responses(401, 404),
 )
 def revoke_invitation(
     tenant: Tenant,
@@ -82,6 +89,7 @@ def revoke_invitation(
     "/invitations/accept",
     response_model=MembershipView,
     status_code=status.HTTP_201_CREATED,
+    responses=problem_responses(401, 409, 422),
 )
 def accept_invitation(
     body: AcceptRequest, account: CurrentAccount, session: DbSession
