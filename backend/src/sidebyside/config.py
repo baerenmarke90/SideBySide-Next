@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
+from typing import Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -42,9 +43,20 @@ class Settings(BaseSettings):
 
     media_root: str = "./data/media"
 
+    # In Produktion entscheidet der Host-Header mit darueber, fuer welche
+    # oeffentliche Adresse eine Antwort bestimmt ist. Ein offenes "*" wuerde
+    # DNS-Rebinding und versehentlich erreichbare Nebenadressen zulassen.
+    allowed_hosts: list[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1"])
+
     @property
     def is_production(self) -> bool:
         return self.environment is Environment.PRODUCTION
+
+    @model_validator(mode="after")
+    def production_hosts_are_restricted(self) -> Self:
+        if self.is_production and (not self.allowed_hosts or "*" in self.allowed_hosts):
+            raise ValueError("Production requires an explicit SBS_ALLOWED_HOSTS list without '*'.")
+        return self
 
 
 @lru_cache
