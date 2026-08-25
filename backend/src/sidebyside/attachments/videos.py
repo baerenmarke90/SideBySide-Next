@@ -7,6 +7,7 @@ All client-controlled bytes are treated as hostile.
 
 from __future__ import annotations
 
+import contextlib
 import io
 import json
 import math
@@ -14,10 +15,11 @@ import os
 import resource
 import signal
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from PIL import Image, UnidentifiedImageError
 
@@ -134,10 +136,8 @@ def _run(
     try:
         stdout, _ = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as error:
-        try:
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
         process.communicate()
         raise VideoRejectedError("VIDEO_PROCESSING_TIMEOUT") from error
 
@@ -258,7 +258,11 @@ def _probe(path: Path, expected_mime: str, *, include_metadata: bool = False) ->
         raise VideoRejectedError("VIDEO_UNREADABLE")
 
     format_name = fmt.get("format_name")
-    if not isinstance(format_name, str) or "mp4" not in format_name or "mov" not in format_name:
+    if (
+        not isinstance(format_name, str)
+        or "mp4" not in format_name
+        or "mov" not in format_name
+    ):
         raise VideoRejectedError("VIDEO_TYPE_NOT_ALLOWED")
 
     video_streams = [
@@ -272,7 +276,12 @@ def _probe(path: Path, expected_mime: str, *, include_metadata: bool = False) ->
     stream = video_streams[0]
     width = stream.get("width")
     height = stream.get("height")
-    if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
+    if (
+        not isinstance(width, int)
+        or not isinstance(height, int)
+        or width <= 0
+        or height <= 0
+    ):
         raise VideoRejectedError("VIDEO_DIMENSIONS_INVALID")
 
     raw_duration = fmt.get("duration") or stream.get("duration") or 0
@@ -309,7 +318,11 @@ def _probe(path: Path, expected_mime: str, *, include_metadata: bool = False) ->
 
 
 def _enforce(probe: _Probe, rule: MediaRule) -> None:
-    if rule.max_duration_seconds is None or rule.max_edge is None or rule.max_short_edge is None:
+    if (
+        rule.max_duration_seconds is None
+        or rule.max_edge is None
+        or rule.max_short_edge is None
+    ):
         raise VideoRejectedError("VIDEO_RULE_INVALID")
     if probe.duration > rule.max_duration_seconds:
         raise VideoRejectedError("VIDEO_TOO_LONG")
@@ -365,9 +378,11 @@ def _validate_sanitized_metadata(probe: _Probe) -> None:
         raise VideoRejectedError("VIDEO_METADATA_UNSAFE")
 
     tags = fmt.get("tags")
-    if tags is not None:
-        if not isinstance(tags, dict) or any(str(key).lower() not in _SAFE_FORMAT_TAGS for key in tags):
-            raise VideoRejectedError("VIDEO_METADATA_UNSAFE")
+    if tags is not None and (
+        not isinstance(tags, dict)
+        or any(str(key).lower() not in _SAFE_FORMAT_TAGS for key in tags)
+    ):
+        raise VideoRejectedError("VIDEO_METADATA_UNSAFE")
 
     video_count = 0
     audio_count = 0
@@ -383,11 +398,11 @@ def _validate_sanitized_metadata(probe: _Probe) -> None:
             raise VideoRejectedError("VIDEO_METADATA_UNSAFE")
 
         stream_tags = stream.get("tags")
-        if stream_tags is not None:
-            if not isinstance(stream_tags, dict) or any(
-                str(key).lower() not in _SAFE_STREAM_TAGS for key in stream_tags
-            ):
-                raise VideoRejectedError("VIDEO_METADATA_UNSAFE")
+        if stream_tags is not None and (
+            not isinstance(stream_tags, dict)
+            or any(str(key).lower() not in _SAFE_STREAM_TAGS for key in stream_tags)
+        ):
+            raise VideoRejectedError("VIDEO_METADATA_UNSAFE")
 
         side_data = stream.get("side_data_list")
         if side_data is not None:
@@ -443,7 +458,11 @@ def _poster(path: Path) -> bytes | None:
             max_file_size=MAX_POSTER_BYTES,
             failure_code="VIDEO_POSTER_FAILED",
         )
-        if not raw.is_file() or raw.stat().st_size <= 0 or raw.stat().st_size > MAX_POSTER_BYTES:
+        if (
+            not raw.is_file()
+            or raw.stat().st_size <= 0
+            or raw.stat().st_size > MAX_POSTER_BYTES
+        ):
             return None
 
         with Image.open(raw) as decoded:
@@ -462,10 +481,8 @@ def _poster(path: Path) -> bytes | None:
     except (VideoRejectedError, OSError, ValueError, UnidentifiedImageError):
         return None
     finally:
-        try:
+        with contextlib.suppress(OSError):
             raw.unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 def process(source: Path, target: Path, rule: MediaRule) -> ProcessedVideo:
