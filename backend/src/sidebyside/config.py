@@ -99,6 +99,12 @@ class Settings(BaseSettings):
     s3_secret_access_key: SecretStr | None = None
     s3_session_token: SecretStr | None = None
 
+    # Runtime-Killswitch fuer den Video-Slice. Das reproduzierbare Docker-
+    # Image behaelt ffmpeg/ffprobe installiert; false garantiert aber, dass
+    # die Anwendung keine Videoverarbeitung startet und neue Video-Uploads
+    # fail-closed ablehnt. Bilder und der restliche Dienst bleiben nutzbar.
+    ffmpeg_enabled: bool = True
+
     # Keyset-Cursor verlassen den Server als opake, HMAC-geschuetzte Tokens.
     # Ein installationsspezifischer Schluessel verhindert Manipulation und
     # darf nicht aus DB-Passwort, Bootstrap-Token oder anderen Secrets
