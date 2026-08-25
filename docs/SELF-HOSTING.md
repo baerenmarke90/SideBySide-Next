@@ -31,13 +31,44 @@ cp .env.example .env
 # SBS_BOOTSTRAP_TOKEN in .env auf ein separat erzeugtes Geheimnis mit
 # mindestens 32 Zeichen setzen.
 docker compose config --quiet
-docker compose up -d
-curl --fail http://127.0.0.1:8000/api/v1/health
+docker compose up -d --wait --wait-timeout 300
 ```
 
-`docker compose port api 8000` muss eine Bindung an `127.0.0.1` melden. Eine
-Ausgabe mit `0.0.0.0`, `::` oder nur `:8000` ist fuer den produktiven Betrieb
-nicht zulaessig.
+`API_PORT=8000` ist nur der Vorgabewert. Der Port muss auf dem Docker-Host frei
+sein. Ist er bereits durch einen anderen Dienst belegt, vor dem Start in `.env`
+einen freien Port waehlen, zum Beispiel:
+
+```dotenv
+API_PORT=8010
+```
+
+Das aendert nur den Host-Port. Die API lauscht im Container weiterhin auf
+Port 8000. Ein belegter Host-Port darf nicht durch einen zweiten Dienst geteilt
+werden; `docker compose up` muss in diesem Fall eindeutig fehlschlagen.
+
+Den tatsaechlich veroeffentlichten Port zeigt Compose an:
+
+```bash
+docker compose port api 8000
+```
+
+Die Ausgabe muss an `127.0.0.1` gebunden sein. Eine Ausgabe mit `0.0.0.0`, `::`
+oder einer unerwarteten externen Adresse ist fuer den Standardbetrieb nicht
+zulaessig.
+
+Nach dem Start wird die Betriebsbereitschaft geprueft, nicht nur der laufende
+HTTP-Prozess:
+
+```bash
+api_port=$(docker compose port api 8000 | awk -F: '{print $NF}')
+curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
+```
+
+Erwartet wird:
+
+```json
+{"status":"ok","database":"ok"}
+```
 
 Dieser Stand ist zum Ausprobieren gedacht und nicht zum Veroeffentlichen. Wer
 die Instanz erreichbar machen will, arbeitet vorher die Checkliste unten ab.
@@ -46,6 +77,47 @@ Noch einmal getrennt davon ist der Entwicklungsablauf am Quellcode:
 `deploy/docker-compose.dev.yml` startet nur PostgreSQL. Das lokal gestartete
 Uvicorn ist ein Entwicklungsserver und keine Vorlage fuer einen extern
 erreichbaren produktiven Dienst.
+
+## Compose-Netzwerk und Readiness
+
+`postgres`, `migrate`, `api` und `worker` sind in `compose.yaml` explizit an
+dasselbe projektbezogene Bridge-Netzwerk `app` angeschlossen. Der konkrete
+Docker-Netzwerkname enthaelt zusaetzlich den Compose-Projektnamen, damit mehrere
+SideBySide-Stacks auf demselben Host nicht kollidieren.
+
+Die Datenbank-URL verwendet absichtlich den Compose-Service-Namen
+`postgres:5432`. Keine Container-ID, feste Docker-IP und kein Host-Port gehoeren
+in `SBS_DATABASE_URL`.
+
+Nach einem Deployment kann die Docker-DNS-Verbindung direkt aus der API
+geprueft werden:
+
+```bash
+docker compose exec -T api python -c \
+  'import socket; print(socket.gethostbyname("postgres"))'
+```
+
+Zusatzkontrolle des tatsaechlichen Netzwerkzustands:
+
+```bash
+api_id=$(docker compose ps -q api)
+docker inspect "$api_id" --format '{{json .NetworkSettings.Networks}}'
+```
+
+Ein laufender API-Container mit leerem Ergebnis `{}` ist **nicht**
+betriebsbereit. In diesem Zustand kann Docker-DNS `postgres` nicht aufloesen.
+
+SideBySide trennt zwei Gesundheitsfragen:
+
+- `/api/v1/health` ist reine **Liveness**: der API-Prozess antwortet.
+- `/api/v1/health/ready` ist **Readiness**: die API kann auch PostgreSQL
+  erreichen und einen echten `SELECT 1` ausfuehren.
+
+Der Docker-Healthcheck verwendet bewusst die Readiness-Route. Dadurch meldet
+`docker compose up -d --wait` einen fehlenden Datenbank-/Netzwerkpfad als
+Deploymentfehler, auch wenn Uvicorn selbst noch laeuft. Docker Compose startet
+einen Prozess nicht allein wegen des Status `unhealthy` neu; ein kurzfristiger
+Datenbankausfall bleibt damit von einem Prozessabsturz getrennt.
 
 ## Checkliste fuer den Produktionsbetrieb
 
@@ -89,8 +161,8 @@ stuenden gueltige Einmal-Token im Log der API und damit in jeder
 Log-Aggregation und jedem Backup davon. Der Unterschied zu `none` ist nicht
 formal: dort verlaesst kein Token das System.
 
-Danach `docker compose up -d --force-recreate` und pruefen, dass
-`docker compose logs api` den Produktionsbetrieb meldet.
+Danach `docker compose up -d --force-recreate --wait --wait-timeout 300` und
+pruefen, dass `docker compose logs api` den Produktionsbetrieb meldet.
 
 ## Medienablage
 
@@ -173,9 +245,15 @@ Repository-Dateien gelangen. `.env` ist deshalb in `.gitignore` ausgeschlossen.
 ## Zugriff aus LAN oder Internet
 
 Externer Zugriff erfolgt ausschliesslich ueber einen TLS-Reverse-Proxy auf
-demselben Host oder in einem kontrollierten privaten Netz. Der Proxy terminiert
-HTTPS und leitet intern an `http://127.0.0.1:8000` weiter. Die API-Portbindung in
-`compose.yaml` bleibt dabei unveraendert auf Loopback.
+demselben Host oder in einem kontrollierten privaten Netz. Der sichere
+Standard bindet die API in `compose.yaml` nur an Loopback. Ein Reverse-Proxy auf
+demselben Host kann daher an `http://127.0.0.1:<API_PORT>` weiterleiten.
+
+Steht der Reverse-Proxy auf einem **anderen** Host, ist Loopback dort nicht
+erreichbar. Dann braucht das Deployment eine bewusst konfigurierte, auf das
+private Netz begrenzte Weiterleitung statt einer pauschalen Freigabe auf
+`0.0.0.0`. Diese Freigabe gehoert zur Hoster-Konfiguration und darf nicht
+versehentlich durch den Standard-Compose-Stack entstehen.
 
 In `.env` werden zusaetzlich gesetzt:
 
@@ -227,8 +305,18 @@ Wer keinen Mailserver hat, setzt `SBS_MAIL_TRANSPORT=none` statt `log` - siehe
 ## Smoke-Test nach Aenderungen
 
 ```bash
-# Lokal bleibt der Healthcheck erreichbar.
-curl --fail http://127.0.0.1:8000/api/v1/health
+# Tatsaechlichen Host-Port ermitteln.
+api_port=$(docker compose port api 8000 | awk -F: '{print $NF}')
+
+# Liveness: der API-Prozess antwortet.
+curl --fail "http://127.0.0.1:${api_port}/api/v1/health"
+
+# Readiness: Docker-DNS und PostgreSQL funktionieren ebenfalls.
+curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
+
+# Der API-Container kann den Compose-Service postgres aufloesen.
+docker compose exec -T api python -c \
+  'import socket; print(socket.gethostbyname("postgres"))'
 
 # Die oeffentliche Adresse muss HTTPS verwenden.
 curl --fail https://sidebyside.example.com/api/v1/health
@@ -237,5 +325,7 @@ curl --fail https://sidebyside.example.com/api/v1/health
 curl --fail http://sidebyside.example.com/api/v1/health && exit 1 || true
 ```
 
-Der Container-Healthcheck greift intern auf `127.0.0.1` zu und funktioniert
-daher unabhaengig von TLS-Terminierung und oeffentlichem Hostnamen.
+Der Container-Healthcheck greift intern auf `127.0.0.1` zu und bewertet
+`/health/ready`. Damit wird ein API-Prozess ohne funktionsfaehigen
+Datenbankpfad als `unhealthy` sichtbar, ohne die separate Liveness-Route zu
+veraendern.
