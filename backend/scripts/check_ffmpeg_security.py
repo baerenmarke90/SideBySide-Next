@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
-import urllib.error
 import urllib.request
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -131,7 +130,7 @@ def fetch_tracker() -> Mapping[str, Any]:
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             payload = response.read(MAX_TRACKER_BYTES + 1)
-    except (OSError, urllib.error.URLError) as error:
+    except OSError as error:
         raise RuntimeError("Debian Security Tracker request failed") from error
     if len(payload) > MAX_TRACKER_BYTES:
         raise RuntimeError("Debian Security Tracker response exceeded size limit")
