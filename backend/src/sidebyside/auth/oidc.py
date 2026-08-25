@@ -26,7 +26,7 @@ import secrets
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from uuid import UUID
 
 import httpx
@@ -143,6 +143,33 @@ def _get_json(url: str, *, was: str) -> dict[str, Any]:
     return inhalt
 
 
+def _https_discovery_endpoint(value: object, *, connection_id: str, field: str) -> str:
+    """Einen vom Provider genannten Endpoint nur als HTTPS-URL akzeptieren."""
+    endpoint = str(value)
+    try:
+        parsed = urlsplit(endpoint)
+    except ValueError as error:
+        log.warning(
+            "oidc discovery endpoint invalid",
+            extra={"connection": connection_id, "field": field},
+        )
+        raise ValidationError(
+            "The sign-in provider is currently unavailable.",
+            OidcErrorCode.PROVIDER_UNREACHABLE,
+        ) from error
+
+    if parsed.scheme != "https" or parsed.hostname is None:
+        log.warning(
+            "oidc discovery endpoint is not https",
+            extra={"connection": connection_id, "field": field},
+        )
+        raise ValidationError(
+            "The sign-in provider is currently unavailable.",
+            OidcErrorCode.PROVIDER_UNREACHABLE,
+        )
+    return endpoint
+
+
 def discover(verbindung: OidcConnection) -> Discovery:
     """Das Discovery-Dokument holen und auf sich selbst pruefen."""
     dokument = _get_json(f"{verbindung.issuer}/.well-known/openid-configuration", was="discovery")
@@ -155,17 +182,33 @@ def discover(verbindung: OidcConnection) -> Discovery:
         )
 
     try:
-        return Discovery(
-            issuer=gefunden,
-            authorization_endpoint=str(dokument["authorization_endpoint"]),
-            token_endpoint=str(dokument["token_endpoint"]),
-            jwks_uri=str(dokument["jwks_uri"]),
+        authorization_endpoint = _https_discovery_endpoint(
+            dokument["authorization_endpoint"],
+            connection_id=verbindung.id,
+            field="authorization_endpoint",
+        )
+        token_endpoint = _https_discovery_endpoint(
+            dokument["token_endpoint"],
+            connection_id=verbindung.id,
+            field="token_endpoint",
+        )
+        jwks_uri = _https_discovery_endpoint(
+            dokument["jwks_uri"],
+            connection_id=verbindung.id,
+            field="jwks_uri",
         )
     except KeyError as fehlend:
         raise ValidationError(
             "The sign-in provider is currently unavailable.",
             OidcErrorCode.PROVIDER_UNREACHABLE,
         ) from fehlend
+
+    return Discovery(
+        issuer=gefunden,
+        authorization_endpoint=authorization_endpoint,
+        token_endpoint=token_endpoint,
+        jwks_uri=jwks_uri,
+    )
 
 
 def _challenge(verifier: str) -> str:
@@ -288,6 +331,29 @@ def _exchange_code(
     return inhalt
 
 
+def _audience_is_trusted(claims: dict[str, Any], client_id: str) -> bool:
+    """Nur die eigene Client-ID ist fuer diese Verbindung eine vertrauenswuerdige Audience."""
+    raw_audience = claims.get("aud")
+    if isinstance(raw_audience, str):
+        audiences = [raw_audience]
+    elif (
+        isinstance(raw_audience, list)
+        and raw_audience
+        and all(isinstance(value, str) for value in raw_audience)
+    ):
+        audiences = raw_audience
+    else:
+        return False
+
+    if any(audience != client_id for audience in audiences):
+        return False
+
+    azp = claims.get("azp")
+    if len(audiences) > 1 and azp != client_id:
+        return False
+    return azp is None or azp == client_id
+
+
 def _verified_claims(
     verbindung: OidcConnection,
     dokument: Discovery,
@@ -322,8 +388,8 @@ def _verified_claims(
         log.info("oidc nonce mismatch", extra={"connection": verbindung.id})
         raise ungueltig
 
-    azp = claims.get("azp")
-    if azp is not None and azp != verbindung.client_id:
+    if not _audience_is_trusted(claims, verbindung.client_id):
+        log.info("oidc audience rejected", extra={"connection": verbindung.id})
         raise ungueltig
 
     if not str(claims.get("sub", "")).strip():
