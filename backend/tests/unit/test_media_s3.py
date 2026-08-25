@@ -61,7 +61,9 @@ class PrivateS3:
             return httpx.Response(200)
 
         if request.method == "HEAD":
-            return httpx.Response(200 if key in self.objects else 404)
+            if key not in self.objects:
+                return httpx.Response(404)
+            return httpx.Response(200, headers={"Content-Length": str(len(self.objects[key]))})
 
         if request.method == "GET":
             if key not in self.objects:
@@ -178,6 +180,17 @@ def test_backend_requests_never_set_public_acl(
     assert provider.requests
     assert all("x-amz-acl" not in request.headers for request in provider.requests)
     assert all("acl" not in request.url.params for request in provider.requests)
+
+
+def test_object_size_comes_from_head_without_downloading_body(
+    s3: tuple[S3MediaStore, PrivateS3, Clock, httpx.Client],
+) -> None:
+    store, provider, _, _ = s3
+    store.put(key(), io.BytesIO(b"123456789"), "video/mp4")
+    provider.requests.clear()
+
+    assert store.object_size(key()) == 9
+    assert [request.method for request in provider.requests] == ["HEAD"]
 
 
 def test_provider_errors_do_not_expose_request_signatures() -> None:
