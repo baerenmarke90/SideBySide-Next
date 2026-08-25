@@ -20,7 +20,12 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
-from sidebyside.authorization import AuthorizationContext, readable, require_readable, require_writable
+from sidebyside.authorization import (
+    AuthorizationContext,
+    readable,
+    require_readable,
+    require_writable,
+)
 from sidebyside.config import get_settings
 from sidebyside.core.errors import BadRequestError, ConflictError, ErrorCode, ValidationError
 from sidebyside.domain.events import DomainEvent, EventType, PublicEventPayload
@@ -220,7 +225,7 @@ def _decode_cursor(
         memory_id = UUID(memory_raw)
     except BadRequestError:
         raise
-    except (ValueError, KeyError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as error:
+    except (ValueError, KeyError, TypeError, UnicodeDecodeError) as error:
         raise _invalid_cursor() from error
     return created_at.astimezone(UTC), memory_id
 
