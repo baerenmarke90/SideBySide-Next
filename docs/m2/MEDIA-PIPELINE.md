@@ -1,7 +1,7 @@
 # M2 Media Pipeline
 
-**Status:** Verbindlicher M2-S0 Media-Vertrag nach #69  
-**Version:** 1.1
+**Status:** Verbindlicher M2-S0 Media-Vertrag nach #69, ergänzt um M2-D14/D15 nach #78  
+**Version:** 1.2
 
 Ziel ist ein sicherer, adapterunabhängiger Medienfluss für LocalMediaStore und S3MediaStore. Cloud-Medien sind nie öffentlich; lokale Dateipfade und Storage Keys werden nicht zu Autorisierungsmechanismen.
 
@@ -133,12 +133,49 @@ Serverseitig prüfen:
 5. Parser kann das Medium unter Ressourcenlimits sicher öffnen.
 6. Attachment gehört zum erwarteten Space/Owner und Statusübergang ist zulässig.
 7. Provider-/Objektintegrität ist ausreichend für den Adapter bestätigt.
+8. Metadaten-Allowlist wird extrahiert und das Objekt anschließend bereinigt gespeichert (M2-D14).
+
+Erst nach allen acht Schritten wird `READY` gesetzt. Ein Providerupload oder eine bestandene Formatprüfung allein bedeuten kein `READY`.
+
+Die Erzeugung der abgeleiteten Variante (M2-D15) folgt danach und gehört bewusst **nicht** zu dieser Kette: ihr Fehlschlag führt nicht zu `FAILED`, siehe Abschnitt 7.2.
 
 Bei Fehler: `FAILED` mit einem stabilen, nicht sensitiven Fehlercode; Objekt wird für Cleanup markiert. Parserfehler oder unbekannte Typen führen fail-closed zu `FAILED`.
 
 Ein Malware-Scanner ist für M2 nicht als universelle Sicherheitsgarantie definiert. Uploads werden ausschließlich als Medien behandelt und nie serverseitig ausgeführt. Eine spätere AV-/Content-Scan-Erweiterung darf den Statusautomaten erweitern, aber `READY` weiterhin erst nach allen verpflichtenden Prüfungen setzen.
 
-EXIF-/GPS-Entfernung bleibt M2-D14 `BEFORE_CLIENTS`; bis dahin dürfen eingebettete Metadaten nicht in API, Logs, Events oder Suchindizes projiziert werden. Originalbytes bleiben privat im MediaStore.
+### 7.1 Metadaten-Entfernung (M2-D14)
+
+Vor dem Strippen wird genau diese Allowlist extrahiert und als ProtectedPayload abgelegt:
+
+| Feld | Zweck |
+|---|---|
+| Aufnahmezeitpunkt | Vorschlagsquelle für `happenedOn` |
+| Orientierung | korrekte Darstellung ohne Neucodierung im Client |
+| Breite, Höhe | bereits für die Limitprüfung ermittelt |
+| Dauer (nur Video) | bereits für die Limitprüfung ermittelt |
+
+Alles Übrige wird verworfen: GPS und sonstige Standortangaben, Geräte- und Seriennummern, Software-, Autor- und Copyrightfelder, Kommentar- und Beschreibungsfelder, im Container eingebettete Vorschaubilder sowie **jedes nicht aufgeführte oder unbekannte Segment**. Die Regel ist eine Allowlist, keine Blacklist bekannter Standortfelder — Container transportieren Position auch in herstellereigenen und künftig hinzukommenden Segmenten.
+
+Gespeichert wird ausschließlich die bereinigte Datei. Die hochgeladenen Originalbytes werden nicht dauerhaft aufbewahrt; es gibt in M2 keinen Pfad, der ein Medium mit eingebetteten Metadaten ausliefert. Ein Medium, das nicht sicher bereinigt werden kann, wird fail-closed `FAILED` und niemals ungestrippt gespeichert.
+
+Die extrahierte Allowlist ist ProtectedPayload und wird nicht in API-Metadaten außerhalb des Parent-Kontexts, Logs, Events, Metriken oder Suchindizes projiziert.
+
+### 7.2 Abgeleitete Varianten (M2-D15)
+
+M2 erzeugt je Attachment höchstens **eine** Variante:
+
+| Kategorie | Variante |
+|---|---|
+| Bild | verkleinertes Thumbnail |
+| Video | einzelner Posterframe |
+
+Transcoding, mehrere Auflösungsstufen, Audioextraktion und adaptives Streaming sind **nicht** Teil von M2.
+
+- Varianten entstehen serverseitig im selben Validierungsjob, **nach** Anwendung von M2-D14, und tragen daher selbst keine eingebetteten Metadaten.
+- Eine Variante besitzt keine eigene Autorisierung. Sie folgt exakt der ihres Attachments und damit dem Parent; ein Privacy-Wechsel des Parents sperrt auch die Variante.
+- Clients wählen keine Varianten-Keys. Der Server benennt Varianten über kontrollierte Suffixe nach dem Muster aus Abschnitt 5.
+- Schlägt die Variantenerzeugung fehl, bleibt das Attachment nutzbar und wird ohne Variante ausgeliefert. Ein fehlendes Thumbnail ist ein Darstellungs-, kein Sicherheitsproblem und setzt das Attachment nicht `FAILED`.
+- Cleanup entfernt Varianten gemeinsam mit dem Attachment. Ein verwaistes Variantenobjekt ist ein Cleanup-Fehler, kein zulässiger Zustand.
 
 ## 8. Autorisierung
 
@@ -202,7 +239,7 @@ Ein Attachment darf nach erfolgreicher Validierung vorübergehend `READY` und no
 | letzte Parent-Referenz entfernt / Parent gelöscht | sofort fachlich unreferenziert | `DELETING` atomar markieren; Providercleanup async |
 | DELETE_FAILED | kein automatisches Vergessen | exponentieller Retry + Alarm/Metrik bis Erfolg oder manueller Eingriff |
 
-Cleanup läuft mindestens **stündlich** und ist idempotent. Produktionsbetrieb benötigt Metriken für Anzahl/Alter von PENDING, FAILED, ungebunden READY und DELETE_FAILED sowie Cleanup-Erfolg/-Fehler. Keine Metrik enthält Dateinamen oder ProtectedPayload.
+Cleanup entfernt Original und abgeleitete Variante gemeinsam. Er läuft mindestens **stündlich** und ist idempotent. Produktionsbetrieb benötigt Metriken für Anzahl/Alter von PENDING, FAILED, ungebunden READY und DELETE_FAILED sowie Cleanup-Erfolg/-Fehler. Keine Metrik enthält Dateinamen oder ProtectedPayload.
 
 Providerlöschung erfolgt außerhalb der fachlichen DB-Transaktion. Ein Storagefehler darf einen bereits gelöschten/private gewordenen Parent nicht wieder sichtbar machen.
 

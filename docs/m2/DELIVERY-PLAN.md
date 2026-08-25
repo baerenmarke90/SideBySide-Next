@@ -72,7 +72,7 @@ S4 und S5 können nach S0 parallel zu S1–S3 vorbereitet werden. S7 startet ers
 - Cross-Tenant-, MIME-Spoof- und Race-Tests grün,
 - weder Bucket noch Local Storage sind unautorisiert lesbar.
 
-**Nicht enthalten:** Galerie, Memory-UI, Thumbnailing sofern nicht entschieden.
+**Nicht enthalten:** Galerie und Memory-UI. Thumbnail und Posterframe sind nach M2-D15 Teil von S1; Transcoding, mehrere Auflösungsstufen und adaptives Streaming sind es ausdrücklich nicht.
 
 ## S2 – Memory CRUD ohne Medien
 

@@ -160,7 +160,7 @@ Keine Titel, Bodies, Kommentare, Emotionen, Dateinamen, Storage Keys oder Read U
 | Thema | Restrisiko | benötigte Entscheidung |
 |---|---|---|
 | signierte URL nach Membership-Entzug | bis TTL-Ende eventuell nutzbar | TTL/Stream je Adapter `M2-D13` |
-| EXIF/GPS | eingebettete Standortdaten | Strip-Regel `M2-D14` |
+| EXIF/GPS | durch Ingest-Strippen geschlossen | entschieden in `M2-D14` |
 | Shared → Private | bereits gelesene Inhalte/Kommentare | Kommentarregel `M2-D07` |
 | Emotion | Metadatum versus ProtectedPayload | Klassifikation `M2-D06` |
 | Android Recents | Screenshot des privaten Screens | Plattformregel |
