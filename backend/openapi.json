@@ -357,6 +357,23 @@
         "title": "OidcCallbackRequest",
         "type": "object"
       },
+      "OidcStartRequest": {
+        "properties": {
+          "invitationToken": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitationtoken"
+          }
+        },
+        "title": "OidcStartRequest",
+        "type": "object"
+      },
       "OidcStartView": {
         "properties": {
           "authorizationUrl": {
@@ -1451,6 +1468,16 @@
             },
             "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -1470,7 +1497,7 @@
     },
     "/api/v1/auth/oidc/{connectionId}/link": {
       "post": {
-        "description": "Eine externe Identitaet mit dem angemeldeten Konto verknuepfen.\n\nDer einzige Weg, wie eine neue Identitaet zu einem Konto kommt: eine\nAnmeldung allein legt kein Konto an, sonst umginge ein externer\nAnbieter die Einladungsgrenze.",
+        "description": "Eine externe Identitaet mit dem angemeldeten Konto verknuepfen.",
         "operationId": "link_oidc_api_v1_auth_oidc__connectionId__link_post",
         "parameters": [
           {
@@ -1533,7 +1560,7 @@
     },
     "/api/v1/auth/oidc/{connectionId}/start": {
       "post": {
-        "description": "Eine Anmeldung ueber einen externen Anbieter beginnen.\n\nState, Nonce und PKCE-Verifier entstehen serverseitig. Der Client\nbekommt nur die Adresse und den State.",
+        "description": "Eine Anmeldung ueber einen externen Anbieter beginnen.\n\nState, Nonce und PKCE-Verifier entstehen serverseitig. Der Client\nbekommt nur die Adresse und den State. Eine Einladung bleibt dabei\nserverseitig gebunden und wird nie an den Anbieter weitergegeben.",
         "operationId": "start_oidc_api_v1_auth_oidc__connectionId__start_post",
         "parameters": [
           {
@@ -1546,6 +1573,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/OidcStartRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "content": {
