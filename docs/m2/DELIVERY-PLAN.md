@@ -74,6 +74,14 @@ S4 und S5 können nach S0 parallel zu S1–S3 vorbereitet werden. S7 startet ers
 
 **Nicht enthalten:** Galerie und Memory-UI. Thumbnail und Posterframe sind nach M2-D15 Teil von S1; Transcoding, mehrere Auflösungsstufen und adaptives Streaming sind es ausdrücklich nicht.
 
+**Aufteilung nach M2-D23:** S1 zerfällt in drei lieferbare Stücke.
+
+- **S1-a Bilder:** Persistenz, Statusautomat, LocalMediaStore, Upload, asynchrone Validierung einschließlich Strippen und Thumbnail, autorisiertes Lesen, Delete und Cleanup — für JPEG, PNG, WebP, HEIC und HEIF.
+- **S1-b S3-Adapter:** presigned Upload und Read-URL gegen denselben Contract-Test wie der lokale Adapter.
+- **S1-c Video:** ffmpeg, MP4/QuickTime und Posterframes. Klärt vorher Imagegröße, CVE-Nachverfolgung und Ressourcenlimits.
+
+Der Schnitt ist so gewählt, dass kein Zwischenstand `READY` erreicht, ohne dass M2-D14 angewendet wurde; sonst läge kurzzeitig eine ungestrippte Datei im Store.
+
 ## S2 – Memory CRUD ohne Medien
 
 **Ergebnis:** Memories mit Autor, fachlichem Datum und sicherer Concurrency.
