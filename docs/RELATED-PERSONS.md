@@ -69,11 +69,29 @@ Private Termine des Partners halten die Umstellung dagegen nicht auf: sie
 bleiben erlaubt, und eine Ablehnung ihretwegen waere die Auskunft, dass es
 sie gibt.
 
-**Loeschen:** Die abhaengigen Termine werden mitgeloescht, einschliesslich
-privater Termine des Partners an dieser Person. Ein `SET NULL` ist nicht
-moeglich, weil `space_id` Teil desselben Fremdschluessels ist und nicht
-leer werden darf; ein Termin ohne seine Person waere ausserdem ein Datum
-ohne Bezug.
+**Aktuelles Loeschverhalten:** Die abhaengigen Termine werden mitgeloescht,
+einschliesslich privater Termine des Partners an dieser Person. Der heutige
+Fremdschluessel verwendet dafuer `ON DELETE CASCADE`.
+
+**Beschlossene Client-/Produktsemantik:** Dieses destruktive Verhalten darf
+spaeter nicht still durch einen einzelnen Loesch-Button ausgeloest werden.
+Vor dem Loeschen muss die Oberflaeche deutlich warnen und aktiv fragen:
+
+- **Termine erhalten** oder
+- **Termine mit loeschen**.
+
+Die Warnung bleibt absichtlich allgemein. Sie darf nicht sagen, ob private
+Termine des Partners existieren, wie viele es sind oder welche Inhalte sie
+haben. Die Auswahl muss serverseitig und atomar umgesetzt werden; ein
+clientseitiges Verbergen reicht nicht.
+
+Die Option **Termine mit loeschen** behaelt den heutigen Cascade bewusst
+bei. Fuer **Termine erhalten** braucht der API-/Datenvertrag noch eine
+Privacy-sichere Loesung, die gebundene Termine von der geloeschten Person
+loest oder in eine neutrale Form ueberfuehrt, ohne dem loeschenden Partner
+partnerfremde private Ressourcen offenzulegen. Umsetzung und Tests werden in
+GitHub-Issue **#61** verfolgt. Bis dahin wird das bestehende Runtime-Verhalten
+nicht stillschweigend geaendert.
 
 ## Geburtstag ohne bekanntes Jahr
 
