@@ -219,12 +219,9 @@ class TestTenantUndAuthentifizierung:
 
 
 class TestPagination:
-    def test_cursor_hat_keine_duplikate_und_ist_integritaetsgeschuetzt(
-        self, client, paar
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_cursor_hat_keine_duplikate_und_ist_integritaetsgeschuetzt(self, client, paar) -> None:  # type: ignore[no-untyped-def]
         created_ids = {
-            create_memory(client, paar, title=f"Memory {index}").json()["id"]
-            for index in range(3)
+            create_memory(client, paar, title=f"Memory {index}").json()["id"] for index in range(3)
         }
 
         first = client.get(
