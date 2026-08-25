@@ -1,3 +1,5 @@
+"""Contract-Abnahme fuer die eingefrorenen M2-Comment-Routen und DTOs."""
+
 from __future__ import annotations
 
 from sidebyside.main import create_app
