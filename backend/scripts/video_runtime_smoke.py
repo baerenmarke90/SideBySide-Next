@@ -18,33 +18,38 @@ CREATED_AT = "2026-01-02T03:04:05Z"
 
 def _generate(path: Path, container: str) -> None:
     """Create a tiny deterministic fixture using the production binary itself."""
+    args = [
+        videos.FFMPEG,
+        "-nostdin",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=blue:s=64x48:r=10:d=1",
+        "-metadata",
+        f"location={LOCATION}",
+        "-metadata",
+        f"com.apple.quicktime.location.ISO6709={LOCATION}",
+        "-metadata",
+        f"creation_time={CREATED_AT}",
+        "-c:v",
+        "mpeg4",
+        "-an",
+        "-threads",
+        "1",
+    ]
+    # MP4 stores arbitrary QuickTime-style metadata only when the mdta
+    # namespace is requested explicitly. Without this flag the fixture would
+    # silently lose the very location data this smoke test is meant to strip.
+    if container == "mp4":
+        args.extend(["-movflags", "use_metadata_tags"])
+    args.extend(["-f", container, str(path)])
+
     subprocess.run(
-        [
-            videos.FFMPEG,
-            "-nostdin",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-y",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=blue:s=64x48:r=10:d=1",
-            "-metadata",
-            f"location={LOCATION}",
-            "-metadata",
-            f"com.apple.quicktime.location.ISO6709={LOCATION}",
-            "-metadata",
-            f"creation_time={CREATED_AT}",
-            "-c:v",
-            "mpeg4",
-            "-an",
-            "-threads",
-            "1",
-            "-f",
-            container,
-            str(path),
-        ],
+        args,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
