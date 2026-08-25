@@ -16,6 +16,17 @@ def _schema() -> dict[str, object]:
     return create_app().openapi()
 
 
+def _allows_null(schema: object) -> bool:
+    if not isinstance(schema, dict):
+        return False
+    if schema.get("type") == "null":
+        return True
+    any_of = schema.get("anyOf")
+    return isinstance(any_of, list) and any(
+        isinstance(option, dict) and option.get("type") == "null" for option in any_of
+    )
+
+
 def test_milestone_routes_have_frozen_operation_ids() -> None:
     paths = _schema()["paths"]  # type: ignore[index]
     assert paths[COLLECTION]["post"]["operationId"] == "createMilestone"
@@ -46,6 +57,31 @@ def test_write_dtos_match_the_contract() -> None:
     update = components["MilestoneUpdate"]
     assert set(update["properties"]) == set(contract["clientWriteFields"]["MilestoneUpdate"])
     assert update["additionalProperties"] is False
+
+
+def test_write_nullability_matches_the_frozen_contract() -> None:
+    components = _schema()["components"]["schemas"]  # type: ignore[index]
+    create_properties = components["MilestoneCreate"]["properties"]
+    update_properties = components["MilestoneUpdate"]["properties"]
+
+    assert not _allows_null(create_properties["body"])
+    assert not _allows_null(update_properties["title"])
+    assert _allows_null(update_properties["body"])
+    assert not _allows_null(update_properties["happenedOn"])
+
+
+def test_m2_resources_share_one_author_summary_schema() -> None:
+    components = _schema()["components"]["schemas"]  # type: ignore[index]
+    author_schema_names = {name for name in components if name.endswith("AuthorSummary")}
+    assert author_schema_names == {"AuthorSummary"}
+
+    author = components["AuthorSummary"]
+    assert set(author["properties"]) == {"id", "displayName", "profileAttachmentId"}
+
+    for detail_name in ("MemoryDetail", "HeartMomentDetail", "MilestoneDetail"):
+        assert components[detail_name]["properties"]["author"] == {
+            "$ref": "#/components/schemas/AuthorSummary"
+        }
 
 
 def test_list_exposes_the_agreed_query_parameters() -> None:

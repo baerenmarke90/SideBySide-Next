@@ -12,7 +12,7 @@ from pydantic import ConfigDict, Field, field_validator, model_validator
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
-from sidebyside.api.schema import ApiModel
+from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.api.v1.attachments import AttachmentSummary
 from sidebyside.attachments import binding
 from sidebyside.attachments.models import MediaType
@@ -83,18 +83,6 @@ class MemoryAttachmentSummary(AttachmentSummary):
     """Wie jedes gebundene Attachment, plus seinen Platz in der Galerie."""
 
     position: int
-
-
-class AuthorSummary(ApiModel):
-    id: UUID
-    display_name: str
-    profile_attachment_id: UUID | None = None
-
-
-class ResourceCapabilities(ApiModel):
-    can_edit: bool
-    can_delete: bool
-    can_comment: bool
 
 
 class MemoryDetail(ApiModel):

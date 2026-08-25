@@ -46,6 +46,9 @@ def paar(session: Session):  # type: ignore[no-untyped-def]
     space = make_space(session, anna)
     relationship_service.add_member(session, space.id, ben)
     fremder_space = make_space(session, fremd)
+    # Ben ist bewusst Mitglied beider Spaces. Damit kann TEN-05 die
+    # Cursor-Bindung selbst pruefen, statt vorher an der Membership zu enden.
+    relationship_service.add_member(session, fremder_space.id, ben)
     session.flush()
     return {
         "anna": anna,
@@ -101,6 +104,14 @@ class TestCrud:
         )
         assert angelegt.status_code == 201
         assert angelegt.json()["body"] is None
+
+    def test_body_null_beim_anlegen_wird_abgelehnt(self, client, paar) -> None:  # type: ignore[no-untyped-def]
+        antwort = client.post(
+            path(paar["space"].id),
+            json={"title": "Verlobt", "body": None, "happenedOn": "2024-12-24"},
+            headers=auth(paar["token_a"]),
+        )
+        assert antwort.status_code == 422
 
     def test_happened_on_ist_pflicht(self, client, paar) -> None:  # type: ignore[no-untyped-def]
         antwort = client.post(
@@ -239,6 +250,23 @@ class TestPaginationUndFilter:
         antwort = client.get(
             f"{path(paar['space'].id)}?limit=1&year=2025&cursor={cursor}",
             headers=auth(paar["token_a"]),
+        )
+        assert antwort.status_code == 400
+        assert antwort.json()["code"] == "INVALID_CURSOR"
+
+    def test_cursor_ist_an_seinen_space_gebunden(self, client, paar) -> None:  # type: ignore[no-untyped-def]
+        for i in range(2):
+            erstelle(client, paar, title=f"M {i}")
+        seite = client.get(
+            f"{path(paar['space'].id)}?limit=1",
+            headers=auth(paar["token_b"]),
+        )
+        cursor = seite.json()["nextCursor"]
+        assert cursor is not None
+
+        antwort = client.get(
+            f"{path(paar['fremder_space'].id)}?limit=1&cursor={cursor}",
+            headers=auth(paar["token_b"]),
         )
         assert antwort.status_code == 400
         assert antwort.json()["code"] == "INVALID_CURSOR"

@@ -8,11 +8,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, field_validator, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
-from sidebyside.api.schema import ApiModel
+from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.identity.models import Account
 from sidebyside.milestones import service
 from sidebyside.milestones.models import Milestone
@@ -31,7 +32,7 @@ class MilestoneCreate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str
-    body: str | None = None
+    body: str | SkipJsonSchema[None] = None
     happened_on: date
 
     @field_validator("title")
@@ -42,13 +43,20 @@ class MilestoneCreate(ApiModel):
             raise ValueError("must not be blank")
         return cleaned
 
+    @field_validator("body")
+    @classmethod
+    def _body_not_null(cls, value: str | None) -> str:
+        if value is None:
+            raise ValueError("body must not be null")
+        return value
+
 
 class MilestoneUpdate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
-    title: str | None = None
+    title: str | SkipJsonSchema[None] = None
     body: str | None = None
-    happened_on: date | None = None
+    happened_on: date | SkipJsonSchema[None] = None
 
     @model_validator(mode="after")
     def _validate_patch(self) -> Self:
@@ -61,17 +69,6 @@ class MilestoneUpdate(ApiModel):
         if "happened_on" in self.model_fields_set and self.happened_on is None:
             raise ValueError("happenedOn must not be null")
         return self
-
-
-class AuthorSummary(ApiModel):
-    id: UUID
-    display_name: str
-
-
-class ResourceCapabilities(ApiModel):
-    can_edit: bool
-    can_delete: bool
-    can_comment: bool
 
 
 class MilestoneDetail(ApiModel):
