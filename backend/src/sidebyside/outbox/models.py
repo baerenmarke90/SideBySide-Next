@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, Index, Integer, String, Text, func
+from sqlalchemy import CheckConstraint, DateTime, Index, Integer, String, Text, func
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,6 +35,9 @@ class OutboxEvent(IdMixin, Base):
     actor_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
     subject_type: Mapped[str] = mapped_column(String(64), nullable=False)
     subject_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
+    # M2-D16: letzte/neue Ressourcen-Version im sicheren Envelope. Historische
+    # Nicht-M2-Ereignisse duerfen NULL bleiben.
+    resource_version: Mapped[int | None] = mapped_column(Integer)
 
     # Nur Verweise und unkritische Merkmale - siehe domain/events.py.
     payload: Mapped[PublicEventPayload] = mapped_column(
@@ -49,6 +52,10 @@ class OutboxEvent(IdMixin, Base):
     last_error: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
+        CheckConstraint(
+            "resource_version IS NULL OR resource_version >= 1",
+            name="resource_version_is_positive",
+        ),
         # Der Worker sucht ausschließlich unverarbeitete Zeilen. Ein
         # Teilindex haelt ihn klein, auch wenn die Tabelle waechst.
         Index(
