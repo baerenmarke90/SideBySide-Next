@@ -148,7 +148,11 @@ class TestLebenszyklus:
         assert detail.json()["hasThumbnail"] is True
 
     def test_video_wird_sanitized_ready_mit_poster(
-        self, client, paar, session, monkeypatch  # type: ignore[no-untyped-def]
+        self,
+        client,
+        paar,
+        session,
+        monkeypatch,  # type: ignore[no-untyped-def]
     ) -> None:
         original = b"untrusted-video-object"
         sanitized = b"server-sanitized-video"
@@ -239,7 +243,10 @@ class TestLebenszyklus:
 
 class TestFailClosed:
     def test_video_upload_wird_bei_aktivem_ffmpeg_angenommen(
-        self, client, paar, monkeypatch  # type: ignore[no-untyped-def]
+        self,
+        client,
+        paar,
+        monkeypatch,  # type: ignore[no-untyped-def]
     ) -> None:
         monkeypatch.setattr(service, "get_settings", lambda: Settings(ffmpeg_enabled=True))
         antwort = client.post(
@@ -251,7 +258,10 @@ class TestFailClosed:
         assert antwort.json()["attachment"]["mediaType"] == "VIDEO"
 
     def test_video_upload_wird_bei_deaktiviertem_ffmpeg_abgewiesen(
-        self, client, paar, monkeypatch  # type: ignore[no-untyped-def]
+        self,
+        client,
+        paar,
+        monkeypatch,  # type: ignore[no-untyped-def]
     ) -> None:
         monkeypatch.setattr(service, "get_settings", lambda: Settings(ffmpeg_enabled=False))
         antwort = client.post(
@@ -263,7 +273,11 @@ class TestFailClosed:
         assert antwort.json()["code"] == "ATTACHMENT_TYPE_NOT_ALLOWED"
 
     def test_worker_startet_ffmpeg_nach_spaeterem_abschalten_nicht(
-        self, client, paar, session, monkeypatch  # type: ignore[no-untyped-def]
+        self,
+        client,
+        paar,
+        session,
+        monkeypatch,  # type: ignore[no-untyped-def]
     ) -> None:
         monkeypatch.setattr(service, "get_settings", lambda: Settings(ffmpeg_enabled=True))
         antwort, kennung = lade_hoch(
