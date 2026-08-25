@@ -9,6 +9,7 @@ Aktueller Gate-Status: **G1 bestanden; M2-S0 freigegeben und aktiv**
 - **Verbindliche Quelle:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
 - **Aktuelle Gate-Entscheidung:** [2026-08-25-g1-gate-review-after-61.md](reviews/2026-08-25-g1-gate-review-after-61.md)
+- **M2-Steuerung:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
 - **Historische Reviews:** datierte Dateien unter `docs/reviews/`; sie werden nicht nachträglich geändert.
 - **Dieses Dokument:** laufende Arbeits- und Fortschrittsliste.
 
@@ -79,6 +80,8 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 - [ ] **#69 — Media:** Attachment-Lifecycle, Limits, Validation und Retention entscheiden.
 - [ ] **#70 — API:** Routen, DTOs, Concurrency, Pagination und Story-Sortierung festlegen.
 - [ ] **#71 — erster Runtime-Slice:** Memory CRUD ohne Medien; blockiert durch #67/#68/#70.
+
+Die Details und verbindlichen Milestone-Grenzen stehen in [M2 Project Control](m2/PROJECT-CONTROL.md).
 
 ### Verbindliche M2/M5-Grenze
 
