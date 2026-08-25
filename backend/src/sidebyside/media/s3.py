@@ -7,6 +7,7 @@ import hmac
 import io
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
+from typing import BinaryIO
 from urllib.parse import quote, urlsplit
 
 import httpx
@@ -36,6 +37,55 @@ def _canonical_query(parameters: Mapping[str, str]) -> str:
 
 def _normalize_header(value: str) -> str:
     return " ".join(value.strip().split())
+
+
+class _ResponseReader(io.RawIOBase):
+    """Binary reader over a streaming httpx response.
+
+    The old adapter returned ``BytesIO(response.content)`` which necessarily
+    buffered an entire untrusted object before the attachment limit could run.
+    This reader keeps at most the requested bytes plus one provider chunk.
+    """
+
+    def __init__(self, response: httpx.Response) -> None:
+        super().__init__()
+        self._response = response
+        self._chunks = response.iter_raw(_READ_CHUNK)
+        self._buffer = bytearray()
+
+    def readable(self) -> bool:
+        return True
+
+    def read(self, size: int = -1) -> bytes:
+        if self.closed:
+            raise ValueError("I/O operation on closed media stream.")
+        if size == 0:
+            return b""
+        if size < -1:
+            raise ValueError("invalid read size")
+
+        if size == -1:
+            output = bytearray(self._buffer)
+            self._buffer.clear()
+            for chunk in self._chunks:
+                output.extend(chunk)
+            return bytes(output)
+
+        while len(self._buffer) < size:
+            try:
+                chunk = next(self._chunks)
+            except StopIteration:
+                break
+            self._buffer.extend(chunk)
+
+        result = bytes(self._buffer[:size])
+        del self._buffer[:size]
+        return result
+
+    def close(self) -> None:
+        if not self.closed:
+            self._response.close()
+        super().close()
 
 
 class S3MediaStore(MediaStore):
@@ -182,6 +232,7 @@ class S3MediaStore(MediaStore):
         *,
         content: bytes = b"",
         content_type: str | None = None,
+        stream: bool = False,
     ) -> httpx.Response:
         moment = self._now()
         amz_date = moment.strftime("%Y%m%dT%H%M%SZ")
@@ -226,12 +277,13 @@ class S3MediaStore(MediaStore):
         )
 
         try:
-            return self._client.request(
+            request = self._client.build_request(
                 method,
                 self._url(storage_key),
                 headers=headers,
                 content=content,
             )
+            return self._client.send(request, stream=stream)
         except httpx.HTTPError:
             # Kein Requestobjekt an den Aufrufer durchreichen: Authorization-
             # Header/Signatur duerfen auch in Fehlerlogs nicht auftauchen.
@@ -242,7 +294,9 @@ class S3MediaStore(MediaStore):
         if 200 <= response.status_code < 300:
             return True
         if allow_not_found and response.status_code == 404:
+            response.close()
             return False
+        response.close()
         raise OSError(f"S3 request failed with status {response.status_code}.")
 
     def put(self, storage_key: str, data: ByteSource, content_type: str) -> StoredObject:
@@ -252,36 +306,43 @@ class S3MediaStore(MediaStore):
         payload = bytes(buffer)
         response = self._request("PUT", storage_key, content=payload, content_type=content_type)
         self._require_success(response)
+        response.close()
         return StoredObject(storage_key=storage_key, size=len(payload), content_type=content_type)
 
-    def open(self, storage_key: str) -> io.BytesIO:
-        response = self._request("GET", storage_key)
+    def open(self, storage_key: str) -> BinaryIO:
+        response = self._request("GET", storage_key, stream=True)
         self._require_success(response)
-        return io.BytesIO(response.content)
+        return _ResponseReader(response)
 
     def delete(self, storage_key: str) -> None:
         response = self._request("DELETE", storage_key)
         self._require_success(response, allow_not_found=True)
+        response.close()
 
     def exists(self, storage_key: str) -> bool:
         response = self._request("HEAD", storage_key)
-        return self._require_success(response, allow_not_found=True)
+        exists = self._require_success(response, allow_not_found=True)
+        response.close()
+        return exists
 
     def object_size(self, storage_key: str) -> int | None:
         """Read provider-declared size without downloading the object body."""
         response = self._request("HEAD", storage_key)
         if not self._require_success(response, allow_not_found=True):
             return None
-        value = response.headers.get("content-length")
-        if value is None:
-            raise OSError("S3 HEAD response is missing Content-Length.")
         try:
-            size = int(value)
-        except ValueError:
-            raise OSError("S3 HEAD response has an invalid Content-Length.") from None
-        if size < 0:
-            raise OSError("S3 HEAD response has an invalid Content-Length.")
-        return size
+            value = response.headers.get("content-length")
+            if value is None:
+                raise OSError("S3 HEAD response is missing Content-Length.")
+            try:
+                size = int(value)
+            except ValueError:
+                raise OSError("S3 HEAD response has an invalid Content-Length.") from None
+            if size < 0:
+                raise OSError("S3 HEAD response has an invalid Content-Length.")
+            return size
+        finally:
+            response.close()
 
     def create_upload_url(
         self,
