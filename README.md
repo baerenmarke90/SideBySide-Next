@@ -198,8 +198,8 @@ Owner-only-Privacy (#80), der Attachment-Lifecycle für Bilder (#79) samt
 Metadaten-Entfernung beim Ingest und Thumbnail, die Attachment-Bindung an
 Memory und HeartMoment (#90), die Milestone-Domain (#94), Comments samt Outbox
 und Notification Hook (#97) sowie der S3-kompatible MediaStore-Adapter (#87).
-Als Nächstes folgt das Story Read Model; Video folgt nach M2-D23 als eigener
-Slice (#88). Die präzisierten Milestone-Grenzen und der aktuelle Arbeitsstand
+Als Nächstes folgt das Story Read Model. Video ist nicht Teil von M2/G2 und
+als zukünftige Entwicklung in #88 vorgemerkt. Die präzisierten Milestone-Grenzen und der aktuelle Arbeitsstand
 stehen in [docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
