@@ -267,6 +267,22 @@ class S3MediaStore(MediaStore):
         response = self._request("HEAD", storage_key)
         return self._require_success(response, allow_not_found=True)
 
+    def object_size(self, storage_key: str) -> int | None:
+        """Read provider-declared size without downloading the object body."""
+        response = self._request("HEAD", storage_key)
+        if not self._require_success(response, allow_not_found=True):
+            return None
+        value = response.headers.get("content-length")
+        if value is None:
+            raise OSError("S3 HEAD response is missing Content-Length.")
+        try:
+            size = int(value)
+        except ValueError:
+            raise OSError("S3 HEAD response has an invalid Content-Length.") from None
+        if size < 0:
+            raise OSError("S3 HEAD response has an invalid Content-Length.")
+        return size
+
     def create_upload_url(
         self,
         storage_key: str,
