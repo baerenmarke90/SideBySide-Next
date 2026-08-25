@@ -193,11 +193,11 @@ bleibt Repository-Hardening.
 API-Entscheidungen sind über #67, #68, #69, #70 und #78 geschlossen; alle
 `BLOCKING`-Einträge im Decision Log stehen auf `DECIDED`.
 
-**M2-Runtime — laufend.** Der erste Slice, Memory CRUD ohne Medien (#71), ist
-geliefert und hat ProtectedPayload-Grenze, Tenant Guard, Autorregel und
-Optimistic Concurrency auf einer medienfreien Fläche validiert. Als Nächstes
-folgt der Attachment-Slice (#79), parallel dazu HeartMoment mit Owner-only-
-Privacy (#80). Die präzisierten Milestone-Grenzen und der aktuelle Arbeitsstand
+**M2-Runtime — laufend.** Geliefert sind Memory CRUD (#71), HeartMoment mit
+Owner-only-Privacy (#80) und der Attachment-Lifecycle für Bilder (#79) samt
+Metadaten-Entfernung beim Ingest und Thumbnail. Als Nächstes werden Attachments
+an Memory und HeartMoment gebunden (#90); Video folgt nach M2-D23 als eigener
+Slice (#88). Die präzisierten Milestone-Grenzen und der aktuelle Arbeitsstand
 stehen in [docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,

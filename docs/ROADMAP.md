@@ -44,8 +44,10 @@ Die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen sind über #6
 ### M2-Runtime: laufend
 
 1. #71 — Memory CRUD ohne Medien: **geliefert**.
-2. #79 — Attachment-Lifecycle und MediaStore-Adapter: nächster kritischer Pfad.
-3. #80 — HeartMoment mit Owner-only-Privacy: parallel möglich.
+2. #80 — HeartMoment mit Owner-only-Privacy: **geliefert**.
+3. #79 — Attachment-Lifecycle für Bilder: **geliefert**. Video folgt nach M2-D23 als eigener Slice (#88).
+4. #90 — Attachments an Memory und HeartMoment binden: nächster kritischer Pfad.
+5. #87 — S3-kompatibler MediaStore-Adapter: unabhängig.
 
 ## Milestones
 

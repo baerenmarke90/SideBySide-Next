@@ -1,7 +1,7 @@
 # Umsetzungsstand
 
 Stand: 25. August 2026  
-Aktueller `main`: `e461c7c` (Merge von #81)  
+Aktueller `main`: `b0873ea` (Merge von #89)  
 Aktueller Gate-Status: **G1 bestanden; M2-S0 abgeschlossen; M2-Runtime läuft**
 
 ## Dokumentenrollen
@@ -86,8 +86,13 @@ Offen bleiben ausschließlich `BEFORE_CLIENTS`-Entscheidungen, die erst vor stab
 **Status: laufend.**
 
 - [x] **#71 — Memory CRUD ohne Medien** (PR #77): Memory-Domain mit ProtectedPayload für Titel/Body, author-only writes bei gemeinsamer Lesbarkeit, `If-Match`/409, signierter Keyset-Cursor und `resourceVersion` im Outbox-Envelope.
-- [ ] **#79 — Attachment-Lifecycle und MediaStore-Adapter:** entsperrt durch #78.
-- [ ] **#80 — HeartMoment mit Owner-only-Privacy:** unabhängig von den Media-Slices, parallel möglich.
+- [x] **#80 — HeartMoment mit Owner-only-Privacy** (PR #84): erster Typ mit echter Nutzerentscheidung zur Sichtbarkeit; `SHARED -> PRIVATE` als eigene atomare Operation, Emotion als ProtectedPayload.
+- [x] **#79 — Attachment-Lifecycle für Bilder** (PR #89): Statusautomat, LocalMediaStore, asynchrone Validierung mit Metadaten-Entfernung und Thumbnail, autorisiertes Lesen, Retention und Cleanup.
+- [ ] **#90 — Attachments an Memory und HeartMoment binden:** nächster kritischer Pfad; Story setzt die Bindung voraus.
+- [ ] **#87 — S3-kompatibler MediaStore-Adapter:** unabhängig, gegen denselben Contract-Test.
+- [ ] **#88 — Video und Posterframes:** klärt vorher die ffmpeg-Frage.
+
+Video bleibt bis #88 nach M2-D23 fail-closed: M2-D04 erlaubt MP4 und QuickTime, der Server weist sie mit `ATTACHMENT_TYPE_NOT_ALLOWED` ab. Clients dürfen Video in M2 solange nicht als verfügbar anbieten.
 
 Die Details und verbindlichen Milestone-Grenzen stehen in [M2 Project Control](m2/PROJECT-CONTROL.md).
 
@@ -116,9 +121,9 @@ Globale Volltextsuche ist nicht Teil von G2. Der Story-Mindestvertrag umfasst `t
 ## M2-Runtime-Reihenfolge nach S0
 
 1. ~~Memory CRUD ohne Medien (#71)~~ — geliefert
-2. Attachment Foundation / MediaStore Contract (#79)
-3. HeartMoment Privacy (#80)
-4. Memory + mehrere Medien
+2. ~~Attachment Foundation / MediaStore Contract (#79)~~ — geliefert, Bilder
+3. ~~HeartMoment Privacy (#80)~~ — geliefert
+4. Memory + mehrere Medien (#90)
 5. Milestone
 6. Comments + Outbox/Notification Hook
 7. Story Read Model
