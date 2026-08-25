@@ -13,6 +13,7 @@ def produktion(**ueberschreibungen: object) -> Settings:
         "allowed_hosts": ["sidebyside.example"],
         "mail_transport": "smtp",
         "public_base_url": "https://sidebyside.example",
+        "cursor_signing_key": "cursor-test-" + ("x" * 40),
     }
     werte.update(ueberschreibungen)
     return Settings(**werte)  # type: ignore[arg-type]
