@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import io
 import logging
+import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import BinaryIO
 from uuid import UUID
 
@@ -23,7 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
-from sidebyside.attachments import images
+from sidebyside.attachments import images, videos
 from sidebyside.attachments.limits import MediaRule, rule_for
 from sidebyside.attachments.models import (
     Attachment,
@@ -37,6 +39,7 @@ from sidebyside.authorization import (
     require_readable,
     require_writable,
 )
+from sidebyside.config import get_settings
 from sidebyside.core.clock import now
 from sidebyside.core.errors import (
     ConflictError,
@@ -49,6 +52,7 @@ from sidebyside.core.errors import (
 from sidebyside.core.ids import parse_id
 from sidebyside.jobs import queue
 from sidebyside.media import build_storage_key, get_media_store, supports_signed_upload
+from sidebyside.media.base import MediaStore
 
 log = logging.getLogger(__name__)
 
@@ -61,6 +65,7 @@ ORIGINAL_VARIANT = "original"
 THUMBNAIL_VARIANT = "thumbnail"
 
 MAX_ORIGINAL_NAME = 255
+_COPY_CHUNK = 64 * 1024
 
 
 @dataclass(frozen=True)
@@ -120,15 +125,14 @@ def storage_key_for(attachment: Attachment, variant: str = ORIGINAL_VARIANT) -> 
 
 def _require_rule(mime_type: str, media_type: MediaType) -> MediaRule:
     rule = rule_for(mime_type)
-    if rule is None or rule.media_type is not media_type:
+    if rule is None or rule.media_type is not media_type or not rule.supported:
         raise UnsupportedMediaTypeError(
             "This media type is not accepted.",
             ErrorCode.ATTACHMENT_TYPE_NOT_ALLOWED,
         )
-    if not rule.supported:
-        # M2-D23: der Vertrag erlaubt den Typ, dieser Lieferstand nicht.
-        # Fail-closed und mit demselben Code wie ein unbekannter Typ - der
-        # Unterschied geht den Client nichts an.
+    if media_type is MediaType.VIDEO and not get_settings().ffmpeg_enabled:
+        # Betriebs-Killswitch: kein Video darf neu in den Lifecycle gelangen,
+        # wenn ffmpeg/ffprobe fuer diese Installation deaktiviert sind.
         raise UnsupportedMediaTypeError(
             "This media type is not accepted.",
             ErrorCode.ATTACHMENT_TYPE_NOT_ALLOWED,
@@ -477,6 +481,127 @@ def _fail(attachment: Attachment, code: str) -> None:
     attachment.failed_at = now()
 
 
+def _store_preview(store: MediaStore, attachment: Attachment, preview: bytes | None) -> None:
+    if preview is None:
+        return
+    try:
+        store.put(
+            storage_key_for(attachment, THUMBNAIL_VARIANT),
+            io.BytesIO(preview),
+            "image/jpeg",
+        )
+    except OSError:
+        log.warning("attachment preview store failed", extra={"attachmentId": str(attachment.id)})
+    else:
+        attachment.has_thumbnail = True
+
+
+def _validate_image(
+    store: MediaStore,
+    attachment: Attachment,
+    rule: MediaRule,
+    storage_key: str,
+) -> bool:
+    with store.open(storage_key) as source:
+        raw = source.read(rule.max_size + 1)
+    if len(raw) > rule.max_size:
+        _fail(attachment, ErrorCode.ATTACHMENT_TOO_LARGE)
+        return False
+
+    try:
+        processed = images.process(raw, rule)
+    except images.ImageRejectedError as error:
+        _fail(attachment, error.code)
+        return False
+
+    stored = store.put(storage_key, io.BytesIO(processed.content), processed.mime_type)
+    if stored.size != len(processed.content):
+        _fail(attachment, ErrorCode.ATTACHMENT_VALIDATION_FAILED)
+        return False
+
+    attachment.mime_type = processed.mime_type
+    attachment.size = stored.size
+    attachment.width = processed.width
+    attachment.height = processed.height
+    attachment.duration_seconds = None
+    attachment.payload = AttachmentPayload(
+        original_name=attachment.payload.original_name,
+        captured_at=processed.captured_at,
+        orientation=processed.orientation,
+    )
+    _store_preview(store, attachment, processed.thumbnail)
+    return True
+
+
+def _copy_limited(source: BinaryIO, target: Path, max_size: int) -> int:
+    """Copy no more than max_size+1 bytes from an untrusted media stream."""
+    total = 0
+    with target.open("xb") as output:
+        while True:
+            remaining = max_size - total + 1
+            if remaining <= 0:
+                return total
+            chunk = source.read(min(_COPY_CHUNK, remaining))
+            if not chunk:
+                return total
+            total += len(chunk)
+            if total > max_size:
+                return total
+            output.write(chunk)
+
+
+def _validate_video(
+    store: MediaStore,
+    attachment: Attachment,
+    rule: MediaRule,
+    storage_key: str,
+    known_size: int | None,
+) -> bool:
+    with tempfile.TemporaryDirectory(prefix="sidebyside-video-") as directory:
+        temporary = Path(directory)
+        source_path = temporary / "source.media"
+        sanitized_path = temporary / "sanitized.media"
+
+        with store.open(storage_key) as source:
+            copied_size = _copy_limited(source, source_path, rule.max_size)
+        if copied_size > rule.max_size:
+            _fail(attachment, ErrorCode.ATTACHMENT_TOO_LARGE)
+            return False
+        if copied_size <= 0 or (known_size is not None and copied_size != known_size):
+            _fail(attachment, ErrorCode.ATTACHMENT_VALIDATION_FAILED)
+            return False
+
+        try:
+            processed = videos.process(source_path, sanitized_path, rule)
+        except videos.VideoRejectedError as error:
+            _fail(attachment, error.code)
+            return False
+
+        try:
+            with sanitized_path.open("rb") as sanitized:
+                stored = store.put(storage_key, sanitized, processed.mime_type)
+        except OSError:
+            # Providerfehler bleibt ein Jobfehler und wird von der Queue
+            # wiederholt. Ein fachliches FAILED waere hier nicht korrekt.
+            raise
+        if stored.size != processed.size:
+            _fail(attachment, ErrorCode.ATTACHMENT_VALIDATION_FAILED)
+            return False
+
+        attachment.mime_type = processed.mime_type
+        attachment.size = stored.size
+        attachment.width = processed.width
+        attachment.height = processed.height
+        attachment.duration_seconds = processed.duration_seconds
+        attachment.payload = AttachmentPayload(
+            original_name=attachment.payload.original_name,
+            captured_at=processed.captured_at,
+            orientation=processed.orientation,
+        )
+        _store_preview(store, attachment, processed.poster)
+        return True
+
+
 def validate(session: Session, attachment_id: UUID) -> None:
     """Der Validierungslauf. Laeuft im Worker, nie im Requestpfad.
 
@@ -490,53 +615,38 @@ def validate(session: Session, attachment_id: UUID) -> None:
         # Abgebrochen, geloescht oder schon verarbeitet. Kein Fehler.
         return
 
+    media_type = MediaType(attachment.media_type)
     rule = rule_for(attachment.declared_mime_type)
-    if rule is None or not rule.supported:
+    if rule is None or not rule.supported or rule.media_type is not media_type:
+        _fail(attachment, ErrorCode.ATTACHMENT_TYPE_NOT_ALLOWED)
+        return
+    if media_type is MediaType.VIDEO and not get_settings().ffmpeg_enabled:
+        # Zweite Pruefung gegen das Rennen: Upload wurde bei true angelegt,
+        # der Betreiber deaktiviert ffmpeg aber bevor der Worker dran ist.
         _fail(attachment, ErrorCode.ATTACHMENT_TYPE_NOT_ALLOWED)
         return
 
     store = get_media_store()
-    schluessel = storage_key_for(attachment)
-    if not store.exists(schluessel):
+    storage_key = storage_key_for(attachment)
+    if not store.exists(storage_key):
         _fail(attachment, ErrorCode.ATTACHMENT_VALIDATION_FAILED)
         return
 
-    with store.open(schluessel) as quelle:
-        roh = quelle.read()
+    known_size = store.object_size(storage_key)
+    if known_size is not None:
+        if known_size <= 0:
+            _fail(attachment, ErrorCode.ATTACHMENT_VALIDATION_FAILED)
+            return
+        if known_size > rule.max_size:
+            _fail(attachment, ErrorCode.ATTACHMENT_TOO_LARGE)
+            return
 
-    if len(roh) > rule.max_size:
-        _fail(attachment, ErrorCode.ATTACHMENT_TOO_LARGE)
+    if media_type is MediaType.IMAGE:
+        valid = _validate_image(store, attachment, rule, storage_key)
+    else:
+        valid = _validate_video(store, attachment, rule, storage_key, known_size)
+    if not valid:
         return
-
-    try:
-        verarbeitet = images.process(roh, rule)
-    except images.ImageRejectedError as error:
-        _fail(attachment, error.code)
-        return
-
-    store.put(schluessel, io.BytesIO(verarbeitet.content), verarbeitet.mime_type)
-
-    attachment.mime_type = verarbeitet.mime_type
-    attachment.size = len(verarbeitet.content)
-    attachment.width = verarbeitet.width
-    attachment.height = verarbeitet.height
-    attachment.payload = AttachmentPayload(
-        original_name=attachment.payload.original_name,
-        captured_at=verarbeitet.captured_at,
-        orientation=verarbeitet.orientation,
-    )
-
-    if verarbeitet.thumbnail is not None:
-        try:
-            store.put(
-                storage_key_for(attachment, THUMBNAIL_VARIANT),
-                io.BytesIO(verarbeitet.thumbnail),
-                "image/jpeg",
-            )
-        except OSError:
-            log.warning("thumbnail store failed", extra={"attachmentId": str(attachment.id)})
-        else:
-            attachment.has_thumbnail = True
 
     attachment.status = AttachmentStatus.READY.value
     attachment.ready_at = now()
