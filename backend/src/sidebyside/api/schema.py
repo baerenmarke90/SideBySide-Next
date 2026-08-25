@@ -7,6 +7,8 @@ Darstellungsentscheidung mit sich herum.
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -23,3 +25,15 @@ class ApiModel(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
+
+
+class AuthorSummary(ApiModel):
+    id: UUID
+    display_name: str
+    profile_attachment_id: UUID | None = None
+
+
+class ResourceCapabilities(ApiModel):
+    can_edit: bool
+    can_delete: bool
+    can_comment: bool
