@@ -48,7 +48,7 @@ from sidebyside.core.errors import (
 )
 from sidebyside.core.ids import parse_id
 from sidebyside.jobs import queue
-from sidebyside.media import build_storage_key, get_media_store
+from sidebyside.media import build_storage_key, get_media_store, supports_signed_upload
 
 log = logging.getLogger(__name__)
 
@@ -245,6 +245,12 @@ def finalize_upload(
     erzeugen. Die Zeile wird deshalb gesperrt, bevor ihr Zustand gelesen
     wird; der zweite Aufruf sieht dann bereits VALIDATING und stellt keine
     zweite Aufgabe ein.
+
+    Beim presigned Transport sieht die API keinen Byte-Transfer. Dort wird
+    PENDING deshalb erst unter demselben Row Lock zu UPLOADING, nachdem der
+    Adapter das exakt gebundene Providerobjekt bestaetigt hat. Das ist nur
+    die Beobachtung des Transfers - die Validierungsentscheidung bleibt
+    unveraendert beim Worker.
     """
     attachment = require_writable(session, Attachment, context, attachment_id)
     gesperrt = session.execute(
@@ -253,6 +259,17 @@ def finalize_upload(
 
     if gesperrt.status == AttachmentStatus.VALIDATING.value:
         return gesperrt
+
+    store = get_media_store()
+    if gesperrt.status == AttachmentStatus.PENDING.value and supports_signed_upload(store):
+        if not store.exists(storage_key_for(gesperrt)):
+            raise ConflictError(
+                "The upload has not been transferred.",
+                ErrorCode.ATTACHMENT_NOT_READY,
+            )
+        gesperrt.status = AttachmentStatus.UPLOADING.value
+        gesperrt.uploaded_at = now()
+
     if gesperrt.status != AttachmentStatus.UPLOADING.value:
         raise ConflictError(
             "The upload has not been transferred.",

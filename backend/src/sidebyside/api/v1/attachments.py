@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated, Literal, Self
 from uuid import UUID
 
@@ -16,10 +16,14 @@ from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
 from sidebyside.attachments import service
 from sidebyside.attachments.models import Attachment, AttachmentStatus, MediaType
+from sidebyside.core.clock import now
+from sidebyside.media import create_signed_upload, get_media_store
 
 router = APIRouter(tags=["attachments"])
 
 STREAM_CHUNK = 64 * 1024
+SIGNED_UPLOAD_TTL = timedelta(minutes=10)
+SIGNED_READ_TTL = timedelta(minutes=5)
 
 _PUBLIC_STATUS: dict[str, str] = {
     AttachmentStatus.PENDING.value: "PENDING",
@@ -135,6 +139,13 @@ def _content_path(space_id: UUID, attachment_id: UUID) -> str:
     return f"/api/v1/spaces/{space_id}/attachments/{attachment_id}/content"
 
 
+def _no_store(response: Response) -> None:
+    # Descriptor-Antworten koennen Bearer-Capabilities enthalten. Weder der
+    # Browsercache noch ein vorgeschalteter Cache darf sie dauerhaft halten.
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+
+
 @router.post(
     "/spaces/{spaceId}/attachments",
     response_model=UploadDescriptor,
@@ -145,6 +156,7 @@ def _content_path(space_id: UUID, attachment_id: UUID) -> str:
 def create_attachment_upload(
     authorization: Authorization,
     session: DbSession,
+    response: Response,
     body: AttachmentUploadCreate,
 ) -> UploadDescriptor:
     attachment = service.create_upload(
@@ -155,6 +167,24 @@ def create_attachment_upload(
         expected_mime_type=body.expected_mime_type,
         expected_size=body.expected_size,
     )
+    _no_store(response)
+
+    store = get_media_store()
+    signed = create_signed_upload(
+        store,
+        service.storage_key_for(attachment),
+        attachment.declared_mime_type,
+        SIGNED_UPLOAD_TTL,
+    )
+    if signed is not None:
+        return UploadDescriptor(
+            attachment=_detail(attachment),
+            method="SIGNED_UPLOAD",
+            upload_url=signed.url,
+            expires_at=now() + SIGNED_UPLOAD_TTL,
+            required_headers=signed.required_headers,
+        )
+
     return UploadDescriptor(
         attachment=_detail(attachment),
         method="STREAM",
@@ -251,6 +281,7 @@ def get_attachment(
 def create_attachment_read_access(
     authorization: Authorization,
     session: DbSession,
+    response: Response,
     body: AttachmentReadRequest,
     attachment_id: Annotated[str, Path(alias="attachmentId")],
 ) -> ReadDescriptor:
@@ -262,6 +293,17 @@ def create_attachment_read_access(
         if body.parent_type == "NONE"
         else service.ReadTarget.parent(body.parent_type, body.parent_id),  # type: ignore[arg-type]
     )
+    _no_store(response)
+
+    store = get_media_store()
+    signed_url = store.create_read_url(service.storage_key_for(attachment), SIGNED_READ_TTL)
+    if signed_url is not None:
+        return ReadDescriptor(
+            method="SIGNED_URL",
+            url=signed_url,
+            expires_at=now() + SIGNED_READ_TTL,
+        )
+
     return ReadDescriptor(
         method="STREAM",
         url=_content_path(attachment.space_id, attachment.id),

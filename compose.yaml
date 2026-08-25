@@ -16,7 +16,14 @@ x-backend-environment: &backend-environment
   SBS_ENVIRONMENT: production
   SBS_DEPLOYMENT: self_hosted
   SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
+  SBS_MEDIA_STORE: "${SBS_MEDIA_STORE:-local}"
   SBS_MEDIA_ROOT: /var/lib/sidebyside/media
+  SBS_S3_ENDPOINT: "${SBS_S3_ENDPOINT:-}"
+  SBS_S3_REGION: "${SBS_S3_REGION:-us-east-1}"
+  SBS_S3_BUCKET: "${SBS_S3_BUCKET:-}"
+  SBS_S3_ACCESS_KEY_ID: "${SBS_S3_ACCESS_KEY_ID:-}"
+  SBS_S3_SECRET_ACCESS_KEY: "${SBS_S3_SECRET_ACCESS_KEY:-}"
+  SBS_S3_SESSION_TOKEN: "${SBS_S3_SESSION_TOKEN:-}"
 
 x-backend: &backend
   build:
