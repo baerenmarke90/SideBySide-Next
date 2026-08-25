@@ -1,4 +1,4 @@
-"""Die Medienregeln aus M2-D04 und der Lieferstand aus M2-D23."""
+"""Die Medienregeln aus M2-D04."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ from sidebyside.attachments.limits import (
     IMAGE_MAX_PIXELS,
     IMAGE_MAX_SIZE,
     VIDEO_MAX_DURATION_SECONDS,
+    VIDEO_MAX_LONG_EDGE,
+    VIDEO_MAX_SHORT_EDGE,
     VIDEO_MAX_SIZE,
     contracted_mime_types,
     rule_for,
@@ -27,19 +29,15 @@ def test_the_contract_allowlist_matches_m2_d04() -> None:
     }
 
 
-def test_only_images_are_supported_today() -> None:
-    """M2-D23: Video bleibt im Vertrag, aber nicht in diesem Lieferstand."""
-    assert supported_mime_types() == {
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/heic",
-        "image/heif",
-    }
+def test_images_and_m2_video_are_supported() -> None:
+    assert supported_mime_types() == contracted_mime_types()
     for video in ("video/mp4", "video/quicktime"):
-        regel = rule_for(video)
-        assert regel is not None
-        assert regel.supported is False
+        rule = rule_for(video)
+        assert rule is not None
+        assert rule.supported is True
+        assert rule.media_type is MediaType.VIDEO
+        assert rule.max_edge == VIDEO_MAX_LONG_EDGE
+        assert rule.max_short_edge == VIDEO_MAX_SHORT_EDGE
 
 
 def test_the_documented_numbers_are_the_enforced_ones() -> None:
@@ -48,14 +46,16 @@ def test_the_documented_numbers_are_the_enforced_ones() -> None:
     assert IMAGE_MAX_EDGE == 12_000
     assert VIDEO_MAX_SIZE == 250 * 1024 * 1024
     assert VIDEO_MAX_DURATION_SECONDS == 180
+    assert VIDEO_MAX_LONG_EDGE == 3840
+    assert VIDEO_MAX_SHORT_EDGE == 2160
 
 
 def test_unknown_types_have_no_default_rule() -> None:
-    for unbekannt in ("image/gif", "application/pdf", "text/plain", "", "image/svg+xml"):
-        assert rule_for(unbekannt) is None
+    for unknown in ("image/gif", "application/pdf", "text/plain", "", "image/svg+xml"):
+        assert rule_for(unknown) is None
 
 
 def test_lookup_is_case_insensitive_and_trimmed() -> None:
-    regel = rule_for("  IMAGE/JPEG ")
-    assert regel is not None
-    assert regel.media_type is MediaType.IMAGE
+    rule = rule_for("  IMAGE/JPEG ")
+    assert rule is not None
+    assert rule.media_type is MediaType.IMAGE
