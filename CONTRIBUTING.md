@@ -5,11 +5,26 @@ Contributions are welcome through GitHub Pull Requests.
 ## Contribution process
 
 1. Create a branch for your change.
-2. Describe the purpose and impact of the change.
-3. Submit a Pull Request.
-4. Maintainers review and decide whether the change is merged.
+2. Read the relevant project rules, especially `specification/CLEAN-ROOM-MASTER-SPEC.md` and `docs/REUSE-BEFORE-BUILD.md`.
+3. If the change adds technical commodity functionality, infrastructure, a provider/API, a platform integration or a substantial dependency, perform the reuse-before-build review before implementation.
+4. Describe the purpose, impact and relevant architectural decisions of the change.
+5. Submit a Pull Request using the repository template.
+6. Maintainers review and decide whether the change is merged.
 
 A Pull Request submission does not guarantee inclusion in the project.
+
+## Reuse-before-build requirement
+
+For relevant changes, the issue or Pull Request must document:
+
+- which standards, platform/framework capabilities, open-source components and external providers were considered
+- why the selected approach is preferred
+- why a custom implementation is necessary, if applicable
+- for third-party components/providers: license/ToS, commercial cloud use, Self-Hosted use, privacy/data flow, costs/rate limits, fallback and user/hoster effort
+
+The current candidate list is maintained in `docs/EXTERNAL-PROVIDER-CANDIDATES.md`, but it is not exhaustive and does not replace a current review.
+
+A relevant Pull Request without a documented reuse review is not merge-ready. Pure domain changes may mark the review as `not relevant` with a short justification.
 
 ## Contributor License Agreement
 
