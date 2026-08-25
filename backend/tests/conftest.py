@@ -56,9 +56,16 @@ def engine() -> Iterator[Engine]:
     if not DATABASE_AVAILABLE:
         pytest.skip("Keine Datenbank erreichbar.")
 
+    # Dieselbe Liste wie in alembic/env.py, und aus demselben Grund: was
+    # hier fehlt, existiert beim create_all nicht. Ein spaeterer Import
+    # durch die App wuerde das Modell zwar registrieren, aber erst nachdem
+    # die Tabellen angelegt sind - die Tests liefen dann nur zufaellig
+    # gruen, je nachdem was vorher importiert wurde.
     from sidebyside.db.base import Base
+    from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
     from sidebyside.identity import models as _identity  # noqa: F401
     from sidebyside.jobs import models as _jobs  # noqa: F401
+    from sidebyside.memories import models as _memories  # noqa: F401
     from sidebyside.outbox import models as _outbox  # noqa: F401
     from sidebyside.people import models as _people  # noqa: F401
     from sidebyside.profiles import models as _profiles  # noqa: F401
