@@ -8,7 +8,6 @@ from fastapi.testclient import TestClient
 from sidebyside.config import Environment, MailTransport, Settings
 from sidebyside.main import create_app
 
-
 CURSOR_SIGNING_KEY = "cursor-test-" + ("x" * 40)
 
 
