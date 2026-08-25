@@ -411,7 +411,7 @@ class TestTerminNieOffenerAlsSeinePerson:
         ).json()
 
         geloescht = client.delete(
-            f"{persons_path(paar['space'].id)}/{person['id']}",
+            f"{persons_path(paar['space'].id)}/{person['id']}?deletePolicy=cascade",
             headers=if_match(paar["token_a"], person["version"]),
         )
         assert geloescht.status_code == 204
