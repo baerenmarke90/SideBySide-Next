@@ -118,7 +118,25 @@ widerrufbar.
 
 Cloud setzt auf E-Mail-Verifikation, Magic Link, Passkey und Recovery —
 ohne Passwortpflicht. Self-Hosted zusätzlich lokaler Passwortlogin und
-OIDC, womit ein externer Provider später ohne Sonderweg möglich ist.
+OIDC, womit ein externer Provider ohne Sondermodell konfiguriert werden kann.
+
+### Ziel-Policy nach Betriebsform
+
+Cloud/Managed und Self-Hosted teilen denselben Application Core, aber nicht
+zwangsläufig dieselben freigeschalteten Anmeldewege. Ziel ist eine
+**serverseitige** Policy und kein bloßes Verstecken von Buttons im Client:
+
+| Betriebsform | vorgesehene Anmeldewege |
+|---|---|
+| Managed/Cloud | Passkey, Magic Link sowie später verwaltete Provider wie Google und Apple |
+| Self-Hosted | lokales Passwort, Passkey und frei konfigurierbares OIDC; Magic Link nur bei bewusst konfiguriertem Mailbetrieb |
+
+Der Konfigurationswert `SBS_DEPLOYMENT` existiert bereits. **Die obige
+Routen-/Provider-Policy wird im aktuellen Runtime-Router noch nicht
+vollständig erzwungen.** Bis diese Productization-Härtung umgesetzt ist, darf
+ein Client die Betriebsform nicht als Sicherheitsgrenze behandeln. Die
+Freischaltung muss später im Backend erfolgen; UI-Sichtbarkeit ist nur eine
+Darstellung derselben Serverentscheidung.
 
 Bei OIDC ist das externe Konto ausschließlich durch `(issuer, subject)`
 bestimmt. Ein frei konfigurierbarer `connection_id` wählt den Adapter; Pocket
@@ -137,9 +155,15 @@ durchläuft:
 |---|---|---|
 | Signatur | JWKS des Issuers, nur asymmetrische Verfahren | `none` und HMAC sind ausgeschlossen: bei `HS256` wäre der Signaturschlüssel das Client Secret |
 | Issuer | konfigurierter Wert **und** das Discovery-Dokument, das sich selbst benennen muss | sonst zeigte ein Dokument unter erwarteter Adresse auf fremde Endpunkte |
-| Audience | `client_id`, zusätzlich `azp` wenn vorhanden | ein Token für eine andere Anwendung gilt hier nicht |
+| Audience | ausschließlich die für diese Verbindung konfigurierte `client_id`; zusätzliche nicht vertrauenswürdige Audiences werden abgewiesen, bei mehreren Audience-Werten ist ein passendes `azp` Pflicht | ein Token für eine andere oder zusätzliche Anwendung gilt hier nicht |
 | Nonce | der beim Start erzeugte Wert | bindet das Token an genau diese Anfrage; ohne sie ließe sich ein anderswo erbeutetes Token einspielen |
 | State | serverseitig gespeicherter Hash, genau einmal einlösbar | bindet den Rückweg an genau diesen Browser |
+
+Auch das Discovery-Dokument ist nicht bloß Konfiguration: `issuer` muss
+exakt zur konfigurierten Verbindung passen und `authorization_endpoint`,
+`token_endpoint` sowie `jwks_uri` werden nur als echte HTTPS-URLs akzeptiert.
+Damit kann ein formal erreichbares Discovery-Dokument den anschließenden
+Protokollverkehr nicht auf Klartext-Endpunkte umbiegen.
 
 PKCE ist Pflicht (`S256`). Der Verifier bleibt beim Server und geht nie in
 die Autorisierungsadresse; der Client sieht nur die Challenge.
@@ -150,10 +174,29 @@ muss beide selbst vorzeigen beziehungsweise vergleichen. Sie sind keine
 Anmeldenachweise, sondern eine Bindung — und der Wartungsjob räumt sie weg,
 sobald sie verbraucht oder abgelaufen sind.
 
-**Eine OIDC-Anmeldung legt kein Konto an.** Ohne bestehende Identität endet
-sie mit 401. Eine neue Identität entsteht ausschließlich über
-`/auth/oidc/{connectionId}/link` aus einer bestehenden Anmeldung heraus.
-Sonst umginge ein externer Anbieter die Bootstrap- und Einladungsgrenze.
+### OIDC-Anmeldung, Verknüpfung und Einladung
+
+Eine unbekannte OIDC-Identität legt **nicht frei** ein Konto an. Ohne
+bestehende Identität, bestehende angemeldete Verknüpfung oder gültige
+Einladung endet der Callback mit 401.
+
+Es gibt zwei kontrollierte Wege, eine neue OIDC-Identität einzuführen:
+
+1. `/auth/oidc/{connectionId}/link` bindet sie nach erfolgreichem OIDC-
+   Callback an genau den bereits angemeldeten Account.
+2. Ein über `/auth/oidc/{connectionId}/start` begonnener Flow kann eine
+   Einladung mitführen. Gespeichert wird ausschließlich der Hash des
+   Einladungstokens. Erst nach erfolgreicher OIDC-Prüfung und erneuter,
+   gesperrter Validierung der Einladung werden Account, OIDC-Identität und
+   Membership in derselben Request-Transaktion erzeugt.
+
+Ein ungültiger, abgelaufener, widerrufener oder bereits verwendeter
+Einladungstoken öffnet keinen Sonderweg. Parallel eingehende Callbacks auf
+dieselbe Einladung serialisieren an der Einladung; dadurch kann daraus
+höchstens ein neuer Account entstehen. Eine OIDC-E-Mail führt niemals zu
+einem Account-Merge: sie wird nur übernommen, wenn der Provider sie
+explizit mit `email_verified=true` bestätigt und die Adresse noch keinem
+anderen Account gehört.
 
 Die Fehlermeldung des Anbieters verlässt den Adapter nicht: sie kann interne
 Adressen oder das Client Secret enthalten. Nach außen bleiben es die
@@ -182,6 +225,10 @@ Die Challenge liegt in `webauthn_challenges`, fünf Minuten lang, und wird
 beim Abschluss **immer** verbraucht — auch wenn die Prüfung danach
 scheitert. Sonst ließe sich dieselbe Challenge beliebig oft durchprobieren.
 
+Der anonyme Authentication-Start erzeugt derzeit bei jedem Aufruf eine
+Challenge-Zeile. Die noch offene Abuse-/Parallel-Härtung dieses Schreibpfads
+wird in GitHub-Issue **#59** verfolgt.
+
 Ein Signaturzähler, der nicht weitergelaufen ist, obwohl er einmal lief,
 deutet auf eine Kopie des Authenticators und führt zur Ablehnung. Zählt ein
 Gerät gar nicht — beide Werte bleiben 0 —, ist das erlaubt: viele Passkeys
@@ -197,8 +244,9 @@ Tabellen und getrennte Konsumfunktionen. Jeder Nachweis ist zufällig,
 kurzlebig, widerrufbar, genau einmal verwendbar und nur als Hash
 persistiert. Ein Token eines Ablaufs kann deshalb nicht in einem anderen
 Ablauf eingelöst werden — nicht, weil eine Prüfung das verbietet, sondern
-weil er dort gar nicht gesucht wird. Die OIDC-/WebAuthn-Adapter fehlen noch;
-die lokale Argon2-Anmeldung bleibt davon unabhängig erhalten.
+weil er dort gar nicht gesucht wird. OIDC, WebAuthn, Magic Link,
+E-Mail-Verifikation und Recovery besitzen produktive Adapter/API-Flows; alle
+erfolgreichen Auth-Wege münden in dieselbe `DeviceSession`-Ausgabe.
 
 ### Die drei Mail-Abläufe
 
@@ -355,6 +403,11 @@ nicht zur Auskunft darüber, ob es eine Sitzung gibt.
 Bis dahin bleibt **jede** Generation der Familie zuordenbar. Die Grenze
 verkürzt die Historie nicht und ist ausdrücklich kein Zeitfenster, durch
 das alte Tokens wieder aus der Erkennung fallen.
+
+Die noch offene Serialisierung der allgemeinen `count -> check -> record`-
+Schwelle bei parallelen Requests wird in GitHub-Issue **#60** verfolgt. Das
+ist kein Auth-Bypass, muss aber vor öffentlicher Managed-Exposition gehärtet
+werden, damit der konfigurierte Grenzwert auch unter Burst-Last gilt.
 
 ## Invitations
 
