@@ -7,10 +7,6 @@ mit der Transactional Outbox in derselben Request-Transaktion.
 
 from __future__ import annotations
 
-import base64
-import hashlib
-import hmac
-import json
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from typing import Any
@@ -26,14 +22,13 @@ from sidebyside.authorization import (
     require_readable,
     require_writable,
 )
-from sidebyside.config import get_settings
-from sidebyside.core.errors import BadRequestError, ConflictError, ErrorCode, ValidationError
+from sidebyside.core import cursor as cursor_codec
+from sidebyside.core.errors import ConflictError, ErrorCode, ValidationError
 from sidebyside.domain.events import DomainEvent, EventType, PublicEventPayload
 from sidebyside.memories.models import Memory, MemoryPayload, shared_privacy
 from sidebyside.outbox import service as outbox_service
 
 _MEMORY_SUBJECT_TYPE = "memory"
-_CURSOR_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -163,17 +158,9 @@ def delete_memory(
     _flush(session)
 
 
-def _cursor_signing_key() -> bytes:
-    return get_settings().cursor_signing_secret
-
-
-def _b64encode(value: bytes) -> str:
-    return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
-
-
-def _b64decode(value: str) -> bytes:
-    padding = "=" * (-len(value) % 4)
-    return base64.urlsafe_b64decode(value + padding)
+def _cursor_binding(context: AuthorizationContext, year: int | None) -> dict[str, Any]:
+    """Woran ein Memory-Cursor gebunden ist: Space und Jahresfilter."""
+    return {"collection": "memories", "spaceId": str(context.space_id), "year": year}
 
 
 def _encode_cursor(
@@ -183,20 +170,13 @@ def _encode_cursor(
     created_at: datetime,
     memory_id: UUID,
 ) -> str:
-    payload = {
-        "v": _CURSOR_VERSION,
-        "spaceId": str(context.space_id),
-        "year": year,
-        "createdAt": created_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
-        "id": str(memory_id),
-    }
-    raw = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    signature = hmac.new(_cursor_signing_key(), raw, hashlib.sha256).digest()
-    return f"{_b64encode(raw)}.{_b64encode(signature)}"
-
-
-def _invalid_cursor() -> BadRequestError:
-    return BadRequestError("The cursor is invalid for this request.", ErrorCode.INVALID_CURSOR)
+    return cursor_codec.encode(
+        binding=_cursor_binding(context, year),
+        position={
+            "createdAt": created_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+            "id": str(memory_id),
+        },
+    )
 
 
 def _decode_cursor(
@@ -205,32 +185,18 @@ def _decode_cursor(
     context: AuthorizationContext,
     year: int | None,
 ) -> tuple[datetime, UUID]:
+    position = cursor_codec.decode(token, binding=_cursor_binding(context, year))
+    created_raw = position.get("createdAt")
+    memory_raw = position.get("id")
+    if not isinstance(created_raw, str) or not isinstance(memory_raw, str):
+        raise cursor_codec.invalid_cursor()
     try:
-        raw_part, signature_part = token.split(".", 1)
-        raw = _b64decode(raw_part)
-        supplied_signature = _b64decode(signature_part)
-        expected_signature = hmac.new(_cursor_signing_key(), raw, hashlib.sha256).digest()
-        if not hmac.compare_digest(supplied_signature, expected_signature):
-            raise _invalid_cursor()
-        payload: dict[str, Any] = json.loads(raw.decode("utf-8"))
-        if (
-            payload.get("v") != _CURSOR_VERSION
-            or payload.get("spaceId") != str(context.space_id)
-            or payload.get("year") != year
-        ):
-            raise _invalid_cursor()
-        created_raw = payload["createdAt"]
-        memory_raw = payload["id"]
-        if not isinstance(created_raw, str) or not isinstance(memory_raw, str):
-            raise _invalid_cursor()
         created_at = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
-        if created_at.tzinfo is None:
-            raise _invalid_cursor()
         memory_id = UUID(memory_raw)
-    except BadRequestError:
-        raise
-    except (ValueError, KeyError, TypeError, UnicodeDecodeError) as error:
-        raise _invalid_cursor() from error
+    except ValueError as error:
+        raise cursor_codec.invalid_cursor() from error
+    if created_at.tzinfo is None:
+        raise cursor_codec.invalid_cursor()
     return created_at.astimezone(UTC), memory_id
 
 

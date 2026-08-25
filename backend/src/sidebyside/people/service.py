@@ -23,7 +23,9 @@ from sqlalchemy.orm.exc import StaleDataError
 
 from sidebyside.authorization import (
     AuthorizationContext,
+    ContentVisibility,
     PrivacyClass,
+    privacy_for,
     readable,
     require_readable,
     require_writable,
@@ -31,7 +33,6 @@ from sidebyside.authorization import (
 from sidebyside.core.errors import ConflictError, ErrorCode, ValidationError
 from sidebyside.people.models import (
     UNKNOWN_BIRTH_YEAR,
-    ContentVisibility,
     DateRepeat,
     ImportantDate,
     ImportantDatePayload,
@@ -39,7 +40,6 @@ from sidebyside.people.models import (
     PersonRelationship,
     RelatedPerson,
     RelatedPersonPayload,
-    privacy_for,
 )
 
 

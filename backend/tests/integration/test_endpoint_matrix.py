@@ -80,6 +80,12 @@ MEMORY = {
     "body": "Gemeinsame Erinnerung fuer die Endpoint-Matrix.",
     "happenedOn": "2025-06-13",
 }
+HEART_MOMENT = {
+    "text": "Matrix HeartMoment",
+    "emotion": "LOVED",
+    "visibility": "SHARED",
+    "happenedOn": "2025-06-13",
+}
 
 SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
@@ -182,6 +188,33 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/heart-moments"),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/heart-moments", body=HEART_MOMENT),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}",
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}",
+        body={"text": "Matrix HeartMoment aktualisiert"},
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/visibility",
+        body={"visibility": "PRIVATE"},
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}",
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
 )
 
 NUR_ANGEMELDET: tuple[tuple[str, str], ...] = (
@@ -254,6 +287,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
     person = client.post(f"{basis}/related-persons", json=PERSON, headers=kopf).json()
     termin = client.post(f"{basis}/important-dates", json=TERMIN, headers=kopf).json()
     memory = client.post(f"{basis}/memories", json=MEMORY, headers=kopf).json()
+    heart_moment = client.post(f"{basis}/heart-moments", json=HEART_MOMENT, headers=kopf).json()
 
     return {
         "client": client,
@@ -268,6 +302,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "personId": person["id"],
             "dateId": termin["id"],
             "memoryId": memory["id"],
+            "heartMomentId": heart_moment["id"],
         },
     }
 
@@ -370,6 +405,7 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "dateId",
             "accountId",
             "memoryId",
+            "heartMomentId",
         )
         if "{" + name + "}" in endpunkt.template
     )
