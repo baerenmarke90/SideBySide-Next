@@ -81,7 +81,7 @@ künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
 </p>
 
 <p align="center">
-  <strong>Aktuell: M0 abgeschlossen; M1 bis zum Security Gate G1 vervollständigen.</strong><br>
+  <strong>Aktuell: M1-Runtimeumfang umgesetzt; finaler G1-Security-Review vor M2.</strong><br>
   <a href="docs/ROADMAP.md">Roadmap, parallele Arbeitsströme und Release Gates ansehen</a> ·
   <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a>
 </p>
@@ -170,18 +170,22 @@ Outbox, Job-Warteschlange, MediaStore- und Provider-Schnittstellen,
 ProtectedPayload-Grenze, reproduzierbare Dependencies, OpenAPI-Contract und
 CI-/Supply-Chain-Prüfungen sind für den M0-Umfang vorhanden.
 
-**Sicherheitsgrundlage.** Account, Space, Membership, Tenant Context und
-Membership Guard, dazu Geraetesitzungen mit rotierenden Tokens. Jeder
-Zugriff auf Space-Daten laeuft durch `require_membership`, bevor eine
-Ressource geladen wird.
+**Sicherheitsgrundlage.** Account, Space, Membership, Tenant Context,
+Owner-/Privacy-Guard und Geraetesitzungen mit rotierenden Tokens sind
+implementiert. Private M1-Ressourcen werden bereits in der SQL-Abfrage nach
+Space, Owner und Privacy-Klasse begrenzt.
 
-**M1 ist aktiv, G1 noch nicht bestanden.** Lokales Passwort, Sessions,
-Invitations, sicherer Self-Hosted-Bootstrap sowie die Persistenzgrundlage für
-Magic Link, Passkey, OIDC, E-Mail-Verifikation und Recovery sind vorhanden.
-Offen sind insbesondere die echten OIDC-/WebAuthn-/Cloud-Auth-Flows,
-Owner-/Private-Authorization, die fehlenden Profile/SpaceProfile-Schreibpfade
-und die vollständige Privacy-Testmatrix. Der aktuelle Prüfstand steht im
-[G1/M1 Security Review](docs/reviews/2026-08-24-g1-m1-security-review.md).
+**M1-Runtimeumfang ist umgesetzt; G1 wartet auf den finalen Review.** Lokales
+Passwort, OIDC mit PKCE/State/Nonce, OIDC-Einladungs-Onboarding, Passkeys,
+Magic Link, E-Mail-Verifikation, Recovery, Invitations, SpaceProfile,
+PartnerProfile/ProfilePreference sowie RelatedPerson/ImportantDate sind im
+Backend vorhanden und durch PostgreSQL-/Privacy-/Tenant-Tests abgesichert.
+
+Der historische G1-Review vom 24.08.2026 beschreibt noch damalige Lücken und
+wird bewusst nicht umgeschrieben. Der aktuelle operative Stand steht in
+[docs/IMPLEMENTATION-STATUS.md](docs/IMPLEMENTATION-STATUS.md). Vor M2 folgt
+ein neuer datierter G1-Review; offene Hardening-/Produktpunkte werden unter
+anderem in #59, #60 und #61 verfolgt.
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
 [docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten und
