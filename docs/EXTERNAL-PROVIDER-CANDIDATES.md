@@ -25,6 +25,60 @@ Der SideBySide-Core kennt keinen konkreten Anbieter.
 
 Ein Wechsel des Providers darf keine Änderung an Domain-Modellen oder Fachlogik erzwingen.
 
+## Produktregel: Technik bleibt unsichtbar
+
+SideBySide richtet sich ausdrücklich auch an Menschen ohne technische Kenntnisse.
+Eine externe Integration darf deshalb nicht voraussetzen, dass normale Nutzer:
+
+- API-Keys beschaffen
+- technische URLs eintragen
+- Provider auswählen
+- Tokens verwalten
+- Serverkonfiguration verstehen
+
+Das Backend übernimmt möglichst die komplette technische Abwicklung.
+
+Normale Nutzer sehen ausschließlich den Nutzen:
+
+- "Fotos verbinden"
+- "Kalender verbinden"
+- "Wetter für eure Pläne anzeigen"
+- "Orte in der Nähe finden"
+
+Technische Details bleiben in den Betriebs- und Administrationsbereichen.
+
+## Pflichtdokumentation je Provider
+
+Bevor ein Provider implementiert wird, muss zusätzlich zur Lizenzprüfung dokumentiert werden:
+
+| Bereich | Frage |
+| --- | --- |
+| Nutzerwert | Was verbessert sich für ein Paar konkret? |
+| Nutzeraufwand | Welche Einrichtung muss ein normales Paar durchführen? |
+| Ziel | Der Nutzeraufwand soll möglichst bei 0 liegen. |
+| Hoster-Aufwand | Welche Einrichtung benötigt ein Betreiber der Cloud oder Self-Hosted-Instanz? |
+| Backend-Verantwortung | Welche Schritte übernimmt SideBySide automatisch? |
+| Datenschutz | Welche Daten verlassen die SideBySide-Instanz? |
+| Fallback | Was funktioniert ohne diesen Provider weiterhin? |
+| Kostenmodell | Wer trägt eventuelle API-Kosten? |
+
+## Betriebsmodelle
+
+Jeder Provider muss getrennt betrachtet werden für:
+
+### SideBySide Cloud
+
+- SideBySide betreibt die Infrastruktur.
+- API-Zugang und Kosten liegen beim Betreiber.
+- Nutzer müssen keine Providerkonten anlegen.
+- Datenschutz und Einwilligungen werden durch SideBySide gesteuert.
+
+### Self-Hosted
+
+- Betreiber einer eigenen Instanz kann eigene Provider verwenden.
+- Konfiguration erfolgt durch den Hoster, nicht durch normale Nutzer.
+- Bring-your-own-key ist möglich, wenn technisch und rechtlich sinnvoll.
+
 ## Aktuell interessante Kandidaten
 
 | Bereich | Kandidat | Möglicher Adapter | Erste Einschätzung |
@@ -55,3 +109,4 @@ Jeder neue externe Provider benötigt vor Merge:
 4. Datenschutzbewertung
 5. Attribution/Notice-Prüfung
 6. Konfigurationskonzept (z. B. eigener API-Key bei Self-Hosted)
+7. Beschreibung der Nutzererfahrung ohne technische Begriffe
