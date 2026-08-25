@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.json_schema import SkipJsonSchema
 
 
 def to_camel(value: str) -> str:
@@ -28,12 +29,19 @@ class ApiModel(BaseModel):
 
 
 class AuthorSummary(ApiModel):
+    """Gemeinsame Autorprojektion fuer M2-Ressourcen."""
+
     id: UUID
     display_name: str
-    profile_attachment_id: UUID | None = None
+    profile_attachment_id: UUID | SkipJsonSchema[None] = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
 
 class ResourceCapabilities(ApiModel):
+    """UX-Hinweise; die Autorisierung bleibt serverseitig massgeblich."""
+
     can_edit: bool
     can_delete: bool
     can_comment: bool
