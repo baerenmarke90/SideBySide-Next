@@ -12,7 +12,7 @@ from pydantic import ConfigDict, field_validator, model_validator
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
-from sidebyside.api.schema import ApiModel
+from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.identity.models import Account
 from sidebyside.milestones import service
 from sidebyside.milestones.models import Milestone
@@ -63,17 +63,6 @@ class MilestoneUpdate(ApiModel):
         return self
 
 
-class AuthorSummary(ApiModel):
-    id: UUID
-    display_name: str
-
-
-class ResourceCapabilities(ApiModel):
-    can_edit: bool
-    can_delete: bool
-    can_comment: bool
-
-
 class MilestoneDetail(ApiModel):
     id: UUID
     space_id: UUID
@@ -115,130 +104,8 @@ def _milestone_detail(
         updated_at=milestone.updated_at,
         author=AuthorSummary(id=author.id, display_name=author.display_name),
         capabilities=ResourceCapabilities(
-            # M2-D25: geteilte Lesbarkeit ist keine Schreibvollmacht.
             can_edit=is_author,
             can_delete=is_author,
             can_comment=True,
         ),
     )
-
-
-@router.post(
-    "/spaces/{spaceId}/milestones",
-    response_model=MilestoneDetail,
-    status_code=status.HTTP_201_CREATED,
-    operation_id="createMilestone",
-    responses={201: {"headers": ETAG_HEADERS}, **problem_responses(401, 404, 422)},
-)
-def create_milestone(
-    authorization: Authorization,
-    session: DbSession,
-    response: Response,
-    body: MilestoneCreate,
-) -> MilestoneDetail:
-    milestone = service.create_milestone(
-        session,
-        authorization,
-        title=body.title,
-        body=body.body,
-        happened_on=body.happened_on,
-    )
-    response.headers["ETag"] = etag_for(milestone.version)
-    return _milestone_detail(session, authorization, milestone)
-
-
-@router.get(
-    "/spaces/{spaceId}/milestones",
-    response_model=MilestonePage,
-    operation_id="listMilestones",
-    responses=problem_responses(400, 401, 404, 422),
-)
-def list_milestones(
-    authorization: Authorization,
-    session: DbSession,
-    cursor: Annotated[str | None, Query()] = None,
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
-    year: Annotated[int | None, Query(ge=1900, le=2100)] = None,
-) -> MilestonePage:
-    page = service.list_milestones(
-        session,
-        authorization,
-        cursor=cursor,
-        limit=limit,
-        year=year,
-    )
-    return MilestonePage(
-        items=[_milestone_detail(session, authorization, milestone) for milestone in page.items],
-        next_cursor=page.next_cursor,
-        has_more=page.has_more,
-    )
-
-
-@router.get(
-    "/spaces/{spaceId}/milestones/{milestoneId}",
-    response_model=MilestoneDetail,
-    operation_id="getMilestone",
-    responses={200: {"headers": ETAG_HEADERS}, **problem_responses(401, 404)},
-)
-def get_milestone(
-    authorization: Authorization,
-    session: DbSession,
-    response: Response,
-    milestone_id: Annotated[str, Path(alias="milestoneId")],
-) -> MilestoneDetail:
-    milestone = service.get_milestone(session, authorization, milestone_id)
-    response.headers["ETag"] = etag_for(milestone.version)
-    return _milestone_detail(session, authorization, milestone)
-
-
-@router.patch(
-    "/spaces/{spaceId}/milestones/{milestoneId}",
-    response_model=MilestoneDetail,
-    operation_id="updateMilestone",
-    responses={
-        200: {"headers": ETAG_HEADERS},
-        **problem_responses(401, 403, 404, 409, 422),
-    },
-)
-def update_milestone(
-    authorization: Authorization,
-    session: DbSession,
-    response: Response,
-    body: MilestoneUpdate,
-    expected_version: IfMatchVersion,
-    milestone_id: Annotated[str, Path(alias="milestoneId")],
-) -> MilestoneDetail:
-    milestone = service.update_milestone(
-        session,
-        authorization,
-        milestone_id,
-        expected_version=expected_version,
-        changed_fields=frozenset(body.model_fields_set),
-        title=body.title,
-        body=body.body,
-        happened_on=body.happened_on,
-    )
-    response.headers["ETag"] = etag_for(milestone.version)
-    return _milestone_detail(session, authorization, milestone)
-
-
-@router.delete(
-    "/spaces/{spaceId}/milestones/{milestoneId}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    response_class=Response,
-    operation_id="deleteMilestone",
-    responses=problem_responses(401, 403, 404, 409, 422),
-)
-def delete_milestone(
-    authorization: Authorization,
-    session: DbSession,
-    expected_version: IfMatchVersion,
-    milestone_id: Annotated[str, Path(alias="milestoneId")],
-) -> Response:
-    service.delete_milestone(
-        session,
-        authorization,
-        milestone_id,
-        expected_version=expected_version,
-    )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
