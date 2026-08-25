@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -218,8 +219,13 @@ class TestTenantUndAuthentifizierung:
 
 
 class TestPagination:
-    def test_cursor_hat_keine_duplikate_und_ist_integritaetsgeschuetzt(self, client, paar) -> None:  # type: ignore[no-untyped-def]
-        created_ids = {create_memory(client, paar, title=f"Memory {index}").json()["id"] for index in range(3)}
+    def test_cursor_hat_keine_duplikate_und_ist_integritaetsgeschuetzt(
+        self, client, paar
+    ) -> None:  # type: ignore[no-untyped-def]
+        created_ids = {
+            create_memory(client, paar, title=f"Memory {index}").json()["id"]
+            for index in range(3)
+        }
 
         first = client.get(
             f"{memories_path(paar['space'].id)}?limit=2",
@@ -271,22 +277,29 @@ class TestPagination:
         assert wrong_filter.json()["code"] == "INVALID_CURSOR"
 
     def test_year_verwendet_happened_on_und_created_at_fallback(self, client, paar) -> None:  # type: ignore[no-untyped-def]
-        old = create_memory(client, paar, title="Alt", happened_on="2025-12-31").json()
+        current_year = datetime.now(UTC).year
+        past_year = current_year - 1
+        old = create_memory(
+            client,
+            paar,
+            title="Alt",
+            happened_on=f"{past_year}-12-31",
+        ).json()
         current = create_memory(client, paar, title="Ohne Datum", happened_on=None).json()
 
-        year_2025 = client.get(
+        past = client.get(
             memories_path(paar["space"].id),
-            params={"year": 2025},
+            params={"year": past_year},
             headers=auth(paar["token_a"]),
         )
-        assert [item["id"] for item in year_2025.json()["items"]] == [old["id"]]
+        assert [item["id"] for item in past.json()["items"]] == [old["id"]]
 
-        year_2026 = client.get(
+        current_response = client.get(
             memories_path(paar["space"].id),
-            params={"year": 2026},
+            params={"year": current_year},
             headers=auth(paar["token_a"]),
         )
-        assert current["id"] in {item["id"] for item in year_2026.json()["items"]}
+        assert current["id"] in {item["id"] for item in current_response.json()["items"]}
 
 
 class TestProtectedPayloadUndOutbox:
@@ -303,7 +316,9 @@ class TestProtectedPayloadUndOutbox:
         assert "title" not in columns
         assert "body" not in columns
 
-    def test_create_update_delete_events_enthalten_keinen_klartext(self, client, paar, session) -> None:  # type: ignore[no-untyped-def]
+    def test_create_update_delete_events_enthalten_keinen_klartext(
+        self, client, paar, session
+    ) -> None:  # type: ignore[no-untyped-def]
         title = "CANARY_MEMORY_TITLE_71"
         body = "CANARY_MEMORY_BODY_71"
         memory = create_memory(client, paar, title=title, body=body).json()
