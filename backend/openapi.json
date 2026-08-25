@@ -278,6 +278,30 @@
         "title": "AttachmentUploadCreate",
         "type": "object"
       },
+      "AuthorSummary": {
+        "properties": {
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "profileAttachmentId": {
+            "format": "uuid",
+            "title": "Profileattachmentid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "displayName"
+        ],
+        "title": "AuthorSummary",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "properties": {
           "currentPassword": {
@@ -415,7 +439,7 @@
             ]
           },
           "author": {
-            "$ref": "#/components/schemas/sidebyside__api__v1__heart_moments__AuthorSummary"
+            "$ref": "#/components/schemas/AuthorSummary"
           },
           "authorId": {
             "format": "uuid",
@@ -976,7 +1000,7 @@
             "type": "array"
           },
           "author": {
-            "$ref": "#/components/schemas/sidebyside__api__v1__memories__AuthorSummary"
+            "$ref": "#/components/schemas/AuthorSummary"
           },
           "authorId": {
             "format": "uuid",
@@ -1126,15 +1150,8 @@
         "additionalProperties": false,
         "properties": {
           "body": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Body"
+            "title": "Body",
+            "type": "string"
           },
           "happenedOn": {
             "format": "date",
@@ -1156,7 +1173,7 @@
       "MilestoneDetail": {
         "properties": {
           "author": {
-            "$ref": "#/components/schemas/sidebyside__api__v1__milestones__AuthorSummary"
+            "$ref": "#/components/schemas/AuthorSummary"
           },
           "authorId": {
             "format": "uuid",
@@ -1275,27 +1292,13 @@
             "title": "Body"
           },
           "happenedOn": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Happenedon"
+            "format": "date",
+            "title": "Happenedon",
+            "type": "string"
           },
           "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
+            "title": "Title",
+            "type": "string"
           }
         },
         "title": "MilestoneUpdate",
@@ -2307,75 +2310,6 @@
           "requiredHeaders"
         ],
         "title": "UploadDescriptor",
-        "type": "object"
-      },
-      "sidebyside__api__v1__heart_moments__AuthorSummary": {
-        "properties": {
-          "displayName": {
-            "title": "Displayname",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "displayName"
-        ],
-        "title": "AuthorSummary",
-        "type": "object"
-      },
-      "sidebyside__api__v1__memories__AuthorSummary": {
-        "properties": {
-          "displayName": {
-            "title": "Displayname",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "profileAttachmentId": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Profileattachmentid"
-          }
-        },
-        "required": [
-          "id",
-          "displayName"
-        ],
-        "title": "AuthorSummary",
-        "type": "object"
-      },
-      "sidebyside__api__v1__milestones__AuthorSummary": {
-        "properties": {
-          "displayName": {
-            "title": "Displayname",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "displayName"
-        ],
-        "title": "AuthorSummary",
         "type": "object"
       }
     }
