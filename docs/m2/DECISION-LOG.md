@@ -40,6 +40,7 @@ Dieses Log trennt Spezifikationsaussagen von Umsetzungsvorschlägen. `PROPOSED` 
 | M2-D20 | BLOCKING | DECIDED | Domain | Kann ein Attachment ohne Parent `READY` sein und wie lange? | Ja, nur Owner und maximal 60 min ab `readyAt`; danach `DELETING`; Bind-vs-Cleanup wird serialisiert. Siehe #69. |
 | M2-D21 | BEFORE_CLIENTS | OPEN | Search + Privacy | Wird M2-Suche direkt in Postgres oder über separaten Index umgesetzt? | Globale Volltextsuche ist nicht G2-pflichtig und liegt grundsätzlich in M4; falls früher benötigt, neue explizite Gate-Entscheidung. |
 | M2-D22 | BEFORE_CLIENTS | OPEN | Product + UX | Ist der Owner-Bereich für private HeartMoments Teil der gemeinsamen Story-Route oder eine getrennte Ansicht? | Getrennte, klar markierte Owner-Ansicht reduziert versehentliche Offenlegung. |
+| M2-D23 | BLOCKING | DECIDED | Security + Media | In welcher Reihenfolge entstehen Bild- und Videoverarbeitung, und welche Parser kommen dafür ins Projekt? | Bilder zuerst mit Pillow und pillow-heif; Video mitsamt ffmpeg folgt als eigener Slice. Bis dahin weist der Server MP4/QuickTime fail-closed ab. Siehe #85. |
 
 ## Verbindliche Domain-/Privacy-Grundsätze für M2
 
@@ -214,6 +215,16 @@ Begründung: M2 erlaubt Bilder bis 25 MiB und 40 MP. Eine Story-Timeline, die Or
 Folgen: Der Storage Key erhält kontrollierte serverseitige Varianten-Suffixe gemäß bestehendem Muster; Clients wählen keine Varianten-Keys. Eine Variante hat keine eigene Autorisierung, sondern folgt exakt der ihres Attachments und damit dem Parent. Cleanup entfernt Varianten gemeinsam mit dem Attachment; ein verwaistes Variantenobjekt ist ein Cleanup-Fehler, kein zulässiger Zustand. Fehlgeschlagene Variantenerzeugung setzt das Attachment nicht `FAILED`, sondern liefert das Attachment ohne Variante aus – ein fehlendes Thumbnail ist ein Darstellungs-, kein Sicherheitsproblem. Video ohne erzeugbaren Posterframe wird im Client neutral dargestellt.  
 Tests: Thumbnail und Posterframe sind nach `READY` vorhanden und metadatenfrei; Variante ist ohne Leseberechtigung am Parent nicht abrufbar; Privacy-Wechsel des Parents sperrt auch die Variante; Delete entfernt Original und Varianten; fehlgeschlagene Variantenerzeugung lässt das Attachment nutzbar; kein Client-wählbarer Varianten-Key.  
 Verweise: #78, `MEDIA-PIPELINE.md`, `DELIVERY-PLAN.md`.
+
+### M2-D23 – Reihenfolge und Parser der Medienverarbeitung
+Status: DECIDED  
+Datum: 2026-08-25  
+Entscheider: Security + Media / Projektentscheidung #85  
+Entscheidung: Die Medienverarbeitung entsteht in zwei Schritten. Der erste Slice bedient ausschließlich Bilder — JPEG, PNG, WebP, HEIC und HEIF — vollständig: Validierung, Metadaten-Entfernung nach M2-D14 und Thumbnail nach M2-D15. Dafür kommen `Pillow` und `pillow-heif` ins Projekt; HEIC/HEIF steht in der D04-Allowlist und ist ohne libheif nicht zu bedienen. Video und Posterframes folgen als eigener Slice zusammen mit ffmpeg. Bis dieser Slice geliefert ist, weist der Server MP4 und QuickTime fail-closed ab, obwohl M2-D04 sie erlaubt.  
+Begründung: Das Parsen fremder Mediendateien ist die riskanteste Codestelle im Produkt. Bild- und Videoparser gleichzeitig aufzunehmen, erzeugt die gesamte Angriffsfläche in einem Zug und macht den ersten Media-Slice zu groß, um ihn sorgfältig zu prüfen. Die beiden Fragen sind zudem nicht gleicher Art: Pillow ist eine Bibliotheksentscheidung, ffmpeg eine Betriebsentscheidung über Container-Image und Self-Hosted-Installation — und ein Systembinary ist für das bestehende `uv audit`-Gate unsichtbar, braucht also einen eigenen Nachweisweg.  
+Folgen: M2-D04 bleibt als Vertrag unverändert; die Lücke zwischen erlaubtem Vertrag und heutiger Serverantwort ist ausdrücklich dokumentiert und kein stiller Unterschied. Ein Video-Upload endet bis dahin mit `ATTACHMENT_TYPE_NOT_ALLOWED`, nicht mit einem Serverfehler oder einem hängenden `PENDING`. Clients dürfen Video in M2 nicht als verfügbar anbieten. Der Video-Slice muss vor seiner Umsetzung die ffmpeg-Frage einschließlich Imagegröße, CVE-Nachverfolgung und Ressourcenlimits beim Transcodieren klären. Der Inventareintrag für `Pillow` und `pillow-heif` entsteht in #79 gemeinsam mit der Deklaration, weil das Dependency-Gate eine dokumentierte Zeile ohne Deklaration als Fehler meldet.  
+Tests: Video-MIME wird abgewiesen, solange der Video-Slice fehlt; die Ablehnung nennt einen stabilen Fehlercode und hinterlässt kein Objekt im Store; HEIC/HEIF erreicht `READY`; die Bildformate der Allowlist durchlaufen Strippen und Thumbnail vollständig.  
+Verweise: #85, #79, `MEDIA-PIPELINE.md`, `DELIVERY-PLAN.md`.
 
 ## Entscheidungsformat
 

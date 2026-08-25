@@ -1,7 +1,7 @@
 # M2 Media Pipeline
 
-**Status:** Verbindlicher M2-S0 Media-Vertrag nach #69, ergänzt um M2-D14/D15 nach #78  
-**Version:** 1.2
+**Status:** Verbindlicher M2-S0 Media-Vertrag nach #69, ergänzt um M2-D14/D15 nach #78 und M2-D23 nach #85  
+**Version:** 1.3
 
 Ziel ist ein sicherer, adapterunabhängiger Medienfluss für LocalMediaStore und S3MediaStore. Cloud-Medien sind nie öffentlich; lokale Dateipfade und Storage Keys werden nicht zu Autorisierungsmechanismen.
 
@@ -111,6 +111,8 @@ M2 unterstützt bewusst eine kleine Positivliste:
 
 Weitere Formate, Audio-only, RAW, GIF-Animation, MKV/WebM und Dokumente sind nicht Teil des M2-Vertrags und werden fail-closed abgewiesen, bis sie explizit freigegeben werden.
 
+> **Lieferstand (M2-D23):** Der erste Media-Slice bedient ausschließlich die Bildzeilen dieser Tabelle. MP4 und QuickTime bleiben Teil des Vertrags, werden bis zum Video-Slice aber ebenfalls fail-closed mit `ATTACHMENT_TYPE_NOT_ALLOWED` abgewiesen. Clients dürfen Video in M2 solange nicht als verfügbar anbieten.
+
 Zusätzlich:
 
 - Memory: maximal **20 Attachments** und maximal **500 MiB deklarierte/validierte Gesamtgröße**.
@@ -164,10 +166,10 @@ Die extrahierte Allowlist ist ProtectedPayload und wird nicht in API-Metadaten a
 
 M2 erzeugt je Attachment höchstens **eine** Variante:
 
-| Kategorie | Variante |
-|---|---|
-| Bild | verkleinertes Thumbnail |
-| Video | einzelner Posterframe |
+| Kategorie | Variante | Lieferstand |
+|---|---|---|
+| Bild | verkleinertes Thumbnail | erster Media-Slice |
+| Video | einzelner Posterframe | Video-Slice (M2-D23) |
 
 Transcoding, mehrere Auflösungsstufen, Audioextraktion und adaptives Streaming sind **nicht** Teil von M2.
 
