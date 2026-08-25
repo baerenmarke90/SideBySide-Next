@@ -75,6 +75,11 @@ PROFIL = {
     "showRelationshipDuration": True,
     "durationDisplayMode": "YEARS_MONTHS",
 }
+MEMORY = {
+    "title": "Matrix Memory",
+    "body": "Gemeinsame Erinnerung fuer die Endpoint-Matrix.",
+    "happenedOn": "2025-06-13",
+}
 
 SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
@@ -157,6 +162,26 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="IMPORTANT_DATE_NOT_FOUND",
     ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/memories"),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/memories", body=MEMORY),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}",
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}",
+        body={"title": "Matrix Memory aktualisiert"},
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}",
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
 )
 
 NUR_ANGEMELDET: tuple[tuple[str, str], ...] = (
@@ -228,6 +253,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
     ).json()
     person = client.post(f"{basis}/related-persons", json=PERSON, headers=kopf).json()
     termin = client.post(f"{basis}/important-dates", json=TERMIN, headers=kopf).json()
+    memory = client.post(f"{basis}/memories", json=MEMORY, headers=kopf).json()
 
     return {
         "client": client,
@@ -241,6 +267,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "preferenceId": praeferenz["id"],
             "personId": person["id"],
             "dateId": termin["id"],
+            "memoryId": memory["id"],
         },
     }
 
@@ -336,7 +363,14 @@ class TestJedeRessourcenId:
 def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
     return tuple(
         name
-        for name in ("invitationId", "preferenceId", "personId", "dateId", "accountId")
+        for name in (
+            "invitationId",
+            "preferenceId",
+            "personId",
+            "dateId",
+            "accountId",
+            "memoryId",
+        )
         if "{" + name + "}" in endpunkt.template
     )
 

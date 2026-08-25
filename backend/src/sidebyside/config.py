@@ -85,6 +85,12 @@ class Settings(BaseSettings):
 
     media_root: str = "./data/media"
 
+    # Keyset-Cursor verlassen den Server als opake, HMAC-geschuetzte Tokens.
+    # Ein installationsspezifischer Schluessel verhindert Manipulation und
+    # darf nicht aus DB-Passwort, Bootstrap-Token oder anderen Secrets
+    # abgeleitet werden. Entwicklung/Test nutzen nur einen lokalen Fallback.
+    cursor_signing_key: SecretStr | None = None
+
     # In Produktion entscheidet der Host-Header mit darueber, fuer welche
     # oeffentliche Adresse eine Antwort bestimmt ist. Ein offenes "*" wuerde
     # DNS-Rebinding und versehentlich erreichbare Nebenadressen zulassen.
@@ -123,9 +129,22 @@ class Settings(BaseSettings):
     def empty_bootstrap_token_is_unset(cls, value: object) -> object | None:
         return None if value == "" else value
 
+    @field_validator("cursor_signing_key", mode="before")
+    @classmethod
+    def empty_cursor_signing_key_is_unset(cls, value: object) -> object | None:
+        return None if value == "" else value
+
     @property
     def is_production(self) -> bool:
         return self.environment is Environment.PRODUCTION
+
+    @property
+    def cursor_signing_secret(self) -> bytes:
+        if self.cursor_signing_key is not None:
+            return self.cursor_signing_key.get_secret_value().encode("utf-8")
+        if self.is_production:
+            raise RuntimeError("Production cursor signing key is missing.")
+        return b"sidebyside-development-only-cursor-signing-key"
 
     @property
     def relying_party_id(self) -> str:
@@ -155,6 +174,12 @@ class Settings(BaseSettings):
             secret = self.bootstrap_token.get_secret_value()
             if len(secret) < 32:
                 raise ValueError("SBS_BOOTSTRAP_TOKEN must contain at least 32 characters.")
+        if self.cursor_signing_key is not None:
+            cursor_secret = self.cursor_signing_key.get_secret_value()
+            if len(cursor_secret) < 32:
+                raise ValueError("SBS_CURSOR_SIGNING_KEY must contain at least 32 characters.")
+        if self.is_production and self.cursor_signing_key is None:
+            raise ValueError("Production requires SBS_CURSOR_SIGNING_KEY.")
         return self
 
     @model_validator(mode="after")

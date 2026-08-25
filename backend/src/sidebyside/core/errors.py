@@ -30,6 +30,12 @@ class DomainError(Exception):
         self.code = code
 
 
+class BadRequestError(DomainError):
+    status = HTTPStatus.BAD_REQUEST
+    type = "bad_request"
+    title = "Bad request"
+
+
 class ValidationError(DomainError):
     status = HTTPStatus.UNPROCESSABLE_ENTITY
     type = "validation_error"
@@ -91,5 +97,7 @@ class ErrorCode:
     MALFORMED_ID = "MALFORMED_ID"
     AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED"
     VERSION_CONFLICT = "VERSION_CONFLICT"
+    RESOURCE_VERSION_CONFLICT = "RESOURCE_VERSION_CONFLICT"
+    INVALID_CURSOR = "INVALID_CURSOR"
     IF_MATCH_MALFORMED = "IF_MATCH_MALFORMED"
     RATE_LIMITED = "RATE_LIMITED"
