@@ -1,7 +1,7 @@
 # Umsetzungsstand
 
 Stand: 25. August 2026  
-Aktueller `main`: `b0873ea` (Merge von #89)  
+Aktueller `main`: `f6900ca` (Merge von #103)  
 Aktueller Gate-Status: **G1 bestanden; M2-S0 abgeschlossen; M2-Runtime läuft**
 
 ## Dokumentenrollen
@@ -79,7 +79,9 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 - [x] **#70 — API:** Routen, DTOs, Concurrency, Pagination und Story-Sortierung festgelegt.
 - [x] **#78 — Media-Metadaten:** EXIF-/GPS-Strippen beim Ingest und Variantenumfang entschieden (M2-D14/D15).
 
-Offen bleiben ausschließlich `BEFORE_CLIENTS`-Entscheidungen, die erst vor stabiler Web-/Android-Integration fällig sind: M2-D10 (Notification Preview), M2-D17 (Export/Backup), M2-D18 (Client-Cache), M2-D21 (Suchindex) und M2-D22 (Owner-Ansicht). Sie blockieren keinen Backend-Slice.
+Offen bleiben ausschließlich `BEFORE_CLIENTS`-Entscheidungen, die erst vor stabiler Web-/Android-Integration fällig sind: M2-D10 (Notification Preview), M2-D17 (Export/Backup), M2-D18 (Client-Cache) und M2-D21 (Suchindex). Sie blockieren keinen Backend-Slice.
+
+M2-D22 (Owner-Ansicht) gehört nicht mehr dazu: die Frage formt die Story-Route und wurde deshalb mit #104 auf `BLOCKING` gehoben und entschieden — genau wie zuvor M2-D14 und M2-D15 in #78.
 
 ## M2 — Runtime
 
@@ -88,9 +90,13 @@ Offen bleiben ausschließlich `BEFORE_CLIENTS`-Entscheidungen, die erst vor stab
 - [x] **#71 — Memory CRUD ohne Medien** (PR #77): Memory-Domain mit ProtectedPayload für Titel/Body, author-only writes bei gemeinsamer Lesbarkeit, `If-Match`/409, signierter Keyset-Cursor und `resourceVersion` im Outbox-Envelope.
 - [x] **#80 — HeartMoment mit Owner-only-Privacy** (PR #84): erster Typ mit echter Nutzerentscheidung zur Sichtbarkeit; `SHARED -> PRIVATE` als eigene atomare Operation, Emotion als ProtectedPayload.
 - [x] **#79 — Attachment-Lifecycle für Bilder** (PR #89): Statusautomat, LocalMediaStore, asynchrone Validierung mit Metadaten-Entfernung und Thumbnail, autorisiertes Lesen, Retention und Cleanup.
-- [ ] **#90 — Attachments an Memory und HeartMoment binden:** nächster kritischer Pfad; Story setzt die Bindung voraus.
-- [ ] **#87 — S3-kompatibler MediaStore-Adapter:** unabhängig, gegen denselben Contract-Test.
-- [ ] **#88 — Video und Posterframes:** klärt vorher die ffmpeg-Frage.
+- [x] **#90 — Attachments an Memory und HeartMoment binden** (PR #93): `MemoryAttachment` mit stabiler `position`, HeartMoment mit höchstens einem Attachment, atomares Bind/Unbind gegen das Bindungsfenster aus M2-D20 und keine Cross-Space-Bindung.
+- [x] **#94 — Milestone-Domain und API** (PR #95): eigenständiges Modell statt Typflag auf Memory, Autorregel nach M2-D25, `If-Match`/409 und Story-taugliche Felder.
+- [x] **#97 — Comments, Outbox und Notification Hook** (PR #98): Create/List am Parent verschachtelt, Update/Delete space-scoped, enumerierte Targets `MEMORY`/`MILESTONE`/`HEART_MOMENT`, atomarer Outbox-Eintrag und idempotenter Retry.
+- [x] **#87 — S3-kompatibler MediaStore-Adapter** (PR #100): presigned Upload und Read-URL mit den TTLs aus M2-D13, geprüft gegen denselben Contract-Test wie der lokale Adapter.
+- [ ] **#88 — Video und Posterframes:** klärt vorher die ffmpeg-Frage. Ein Branch mit Vorarbeit existiert; ein Pull Request steht noch aus.
+- [ ] **S7 — Story Read Model:** verbleibender kritischer Pfad zu G2. Alle vier Quelltypen und ihre Sichtbarkeitsregeln stehen; M2-D22 ist mit #104 geschlossen. Arbeitspaket noch anzulegen.
+- [ ] **S8 — dünne Web-/Android-Referenzflows:** letzter M2-Baustein vor dem G2-Nachweis. Arbeitspaket noch anzulegen.
 
 Video bleibt bis #88 nach M2-D23 fail-closed: M2-D04 erlaubt MP4 und QuickTime, der Server weist sie mit `ATTACHMENT_TYPE_NOT_ALLOWED` ab. Clients dürfen Video in M2 solange nicht als verfügbar anbieten.
 
@@ -123,12 +129,14 @@ Globale Volltextsuche ist nicht Teil von G2. Der Story-Mindestvertrag umfasst `t
 1. ~~Memory CRUD ohne Medien (#71)~~ — geliefert
 2. ~~Attachment Foundation / MediaStore Contract (#79)~~ — geliefert, Bilder
 3. ~~HeartMoment Privacy (#80)~~ — geliefert
-4. Memory + mehrere Medien (#90)
-5. Milestone
-6. Comments + Outbox/Notification Hook
+4. ~~Memory + mehrere Medien (#90)~~ — geliefert
+5. ~~Milestone (#94)~~ — geliefert
+6. ~~Comments + Outbox/Notification Hook (#97)~~ — geliefert
 7. Story Read Model
 8. dünne Web-/Android-Referenzflows
 9. G2 Review
+
+Der S3-Adapter (#87) und der Videoslice (#88) laufen daneben und sind nicht Teil dieser Kette; #87 ist geliefert, #88 offen.
 
 Der Memory-Slice kommt bewusst vor Media, um zuerst M2-Migrationstil, ProtectedPayload, Tenant Guard, Autorregel und Concurrency auf einer kleineren Sicherheitsfläche zu validieren.
 
