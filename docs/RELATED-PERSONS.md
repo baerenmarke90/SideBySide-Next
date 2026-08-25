@@ -69,29 +69,39 @@ Private Termine des Partners halten die Umstellung dagegen nicht auf: sie
 bleiben erlaubt, und eine Ablehnung ihretwegen waere die Auskunft, dass es
 sie gibt.
 
-**Aktuelles Loeschverhalten:** Die abhaengigen Termine werden mitgeloescht,
-einschliesslich privater Termine des Partners an dieser Person. Der heutige
-Fremdschluessel verwendet dafuer `ON DELETE CASCADE`.
+**Loeschen:** Der Client muss bei jedem Delete eine explizite
+`deletePolicy` senden. Zulassig sind ausschliesslich:
 
-**Beschlossene Client-/Produktsemantik:** Dieses destruktive Verhalten darf
-spaeter nicht still durch einen einzelnen Loesch-Button ausgeloest werden.
-Vor dem Loeschen muss die Oberflaeche deutlich warnen und aktiv fragen:
+- `preserve`: Die `RelatedPerson` wird geloescht, alle verknuepften
+  `ImportantDate` bleiben erhalten und verlieren ihre Personenverknuepfung.
+  Das gilt auch fuer `OWNER_ONLY`-Termine des Partners.
+- `cascade`: Die `RelatedPerson` und alle mit ihr verknuepften
+  `ImportantDate` werden geloescht. Das gilt bewusst auch fuer
+  `OWNER_ONLY`-Termine des Partners.
 
-- **Termine erhalten** oder
-- **Termine mit loeschen**.
+Ohne gueltige Policy wird der Request mit 422 abgelehnt. Es gibt keinen
+destruktiven Default.
 
-Die Warnung bleibt absichtlich allgemein. Sie darf nicht sagen, ob private
-Termine des Partners existieren, wie viele es sind oder welche Inhalte sie
-haben. Die Auswahl muss serverseitig und atomar umgesetzt werden; ein
-clientseitiges Verbergen reicht nicht.
+Beide Varianten laufen atomar in derselben DB-Transaktion. Die Person und
+bei `preserve` die verknuepften Termine werden fuer die Mutation gesperrt;
+die vorhandene `If-Match`-/Versionspruefung der Person bleibt verpflichtend.
+Beim Entkoppeln erhaltener Termine steigt deren Version wie bei jeder
+anderen ORM-Aenderung.
 
-Die Option **Termine mit loeschen** behaelt den heutigen Cascade bewusst
-bei. Fuer **Termine erhalten** braucht der API-/Datenvertrag noch eine
-Privacy-sichere Loesung, die gebundene Termine von der geloeschten Person
-loest oder in eine neutrale Form ueberfuehrt, ohne dem loeschenden Partner
-partnerfremde private Ressourcen offenzulegen. Umsetzung und Tests werden in
-GitHub-Issue **#61** verfolgt. Bis dahin wird das bestehende Runtime-Verhalten
-nicht stillschweigend geaendert.
+Die Delete-Antwort ist fuer beide Policies ein leerer 204 und darf keinerlei
+Count-, Exists- oder Metadaten ueber verknuepfte Termine enthalten. Das gilt
+insbesondere unabhaengig davon, ob der Partner null, einen oder mehrere
+private Termine an dieser Person besitzt.
+
+Die Oberflaeche muss vor der Ausfuehrung aktiv zwischen **Termine erhalten**
+und **Termine mit loeschen** waehlen lassen. Fuer `cascade` ist eine deutliche,
+aber allgemein formulierte Warnung Pflicht, zum Beispiel sinngemaess:
+
+> Mit dieser Person verknuepfte Termine koennen auch Eintraege deines Partners enthalten.
+
+Die UI darf niemals anzeigen oder indirekt verraten, ob solche privaten
+Partnertermine existieren, wie viele es sind oder welche Titel, Daten, Typen
+oder sonstigen Metadaten sie enthalten.
 
 ## Geburtstag ohne bekanntes Jahr
 
