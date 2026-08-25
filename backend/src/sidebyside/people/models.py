@@ -37,7 +37,6 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from sidebyside.authorization import (
-    PrivacyClass,
     PrivateResourceMixin,
     ResourceAbsence,
 )
@@ -73,17 +72,6 @@ class DateRepeat(StrEnum):
     ANNUALLY = "ANNUALLY"
 
 
-class ContentVisibility(StrEnum):
-    """Die fachliche Sichtbarkeit aus Abschnitt 15 der Spezifikation.
-
-    Der Request nennt sie, nicht die Privacy-Klasse: `privacyClass` ist
-    eine serverseitige Ableitung und kein Feld, das ein Client setzen kann.
-    """
-
-    SHARED = "SHARED"
-    PRIVATE = "PRIVATE"
-
-
 UNKNOWN_BIRTH_YEAR = 1904
 """Platzhalterjahr fuer einen Geburtstag ohne bekanntes Jahr.
 
@@ -96,19 +84,6 @@ Die Datenbank erzwingt den Platzhalter, damit nicht eine zweite Stelle im
 Code ein anderes Jahr waehlt und die beiden Bestaende danach nicht mehr
 vergleichbar sind.
 """
-
-
-def privacy_for(visibility: ContentVisibility) -> PrivacyClass:
-    """Die Privacy-Klasse folgt der fachlichen Sichtbarkeit, nicht dem Request."""
-    if visibility is ContentVisibility.SHARED:
-        return PrivacyClass.SPACE_SHARED
-    return PrivacyClass.OWNER_ONLY
-
-
-def visibility_of(privacy_class: str) -> ContentVisibility:
-    if privacy_class == PrivacyClass.SPACE_SHARED.value:
-        return ContentVisibility.SHARED
-    return ContentVisibility.PRIVATE
 
 
 class RelatedPersonPayload(ProtectedPayload):

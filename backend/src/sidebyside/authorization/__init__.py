@@ -33,9 +33,12 @@ from sidebyside.authorization.privacy import (
     ENFORCEABLE_PRIVACY_CLASSES,
     AuthorizationContext,
     AuthorizationErrorCode,
+    ContentVisibility,
     PrivacyClass,
     ResourceAbsence,
     privacy_class_type,
+    privacy_for,
+    visibility_of,
 )
 from sidebyside.authorization.rules import Access, access_clause, privacy_clause
 
@@ -44,6 +47,7 @@ __all__ = [
     "Access",
     "AuthorizationContext",
     "AuthorizationErrorCode",
+    "ContentVisibility",
     "PrivacyClass",
     "PrivateResource",
     "PrivateResourceMixin",
@@ -51,8 +55,10 @@ __all__ = [
     "access_clause",
     "privacy_class_type",
     "privacy_clause",
+    "privacy_for",
     "readable",
     "require_readable",
     "require_writable",
+    "visibility_of",
     "writable",
 ]

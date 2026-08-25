@@ -37,6 +37,35 @@ class PrivacyClass(StrEnum):
     SYSTEM_METADATA = "SYSTEM_METADATA"
 
 
+class ContentVisibility(StrEnum):
+    """Die fachliche Sichtbarkeit aus Abschnitt 15 der Spezifikation.
+
+    Der Request nennt sie, nicht die Privacy-Klasse: `privacyClass` ist
+    eine serverseitige Ableitung und kein Feld, das ein Client setzen kann.
+
+    Sie steht hier und nicht in einer Domaene, weil sie keiner gehoert:
+    RelatedPerson, ImportantDate und HeartMoment sprechen dieselbe
+    Sichtbarkeit. Laege sie bei der ersten Domaene, die sie brauchte,
+    importierten alle spaeteren aus einem fremden Fachmodul.
+    """
+
+    SHARED = "SHARED"
+    PRIVATE = "PRIVATE"
+
+
+def privacy_for(visibility: ContentVisibility) -> PrivacyClass:
+    """Die Privacy-Klasse folgt der fachlichen Sichtbarkeit, nicht dem Request."""
+    if visibility is ContentVisibility.SHARED:
+        return PrivacyClass.SPACE_SHARED
+    return PrivacyClass.OWNER_ONLY
+
+
+def visibility_of(privacy_class: str) -> ContentVisibility:
+    if privacy_class == PrivacyClass.SPACE_SHARED.value:
+        return ContentVisibility.SHARED
+    return ContentVisibility.PRIVATE
+
+
 ENFORCEABLE_PRIVACY_CLASSES: tuple[PrivacyClass, ...] = (
     PrivacyClass.SPACE_SHARED,
     PrivacyClass.OWNER_ONLY,

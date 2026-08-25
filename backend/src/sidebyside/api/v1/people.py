@@ -13,15 +13,14 @@ from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
+from sidebyside.authorization import ContentVisibility, visibility_of
 from sidebyside.people import service
 from sidebyside.people.models import (
-    ContentVisibility,
     DateRepeat,
     ImportantDate,
     ImportantDateType,
     PersonRelationship,
     RelatedPerson,
-    visibility_of,
 )
 
 router = APIRouter(tags=["people"])
