@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -51,7 +51,7 @@ class PeopleErrorCode:
     MORE_OPEN_THAN_PERSON = "IMPORTANT_DATE_MORE_OPEN_THAN_PERSON"
 
 
-class RelatedPersonDeletePolicy(str, Enum):
+class RelatedPersonDeletePolicy(StrEnum):
     PRESERVE = "preserve"
     CASCADE = "cascade"
 
