@@ -96,7 +96,7 @@ def downgrade() -> None:
     op.drop_index("ix_memories_space_id", table_name="memories")
     op.drop_table("memories")
     op.drop_constraint(
-        "ck_outbox_events_resource_version_is_positive",
+        op.f("ck_outbox_events_resource_version_is_positive"),
         "outbox_events",
         type_="check",
     )
