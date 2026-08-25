@@ -25,8 +25,8 @@ Dieses Log trennt Spezifikationsaussagen von Umsetzungsvorschlägen. `PROPOSED` 
 | M2-D05 | BLOCKING | DECIDED | Backend + Ops | Erfolgt Media-Validierung synchron beim Finalize oder asynchron? Welche internen Zustände sind nötig? | Asynchron; `PENDING/UPLOADING/VALIDATING/READY/FAILED/DELETING/DELETE_FAILED`. Siehe #69. |
 | M2-D06 | BLOCKING | DECIDED | Security + Privacy | Wird Emotion bei HeartMoment als Metadatum oder ProtectedPayload klassifiziert? | ProtectedPayload. Emotion ist sensibler Beziehungsinhalt und darf nicht als Analytics-/Event-/Log-Metadatum verwendet werden. Siehe #68. |
 | M2-D07 | BLOCKING | DECIDED | Domain + Privacy | Was geschieht mit Kommentaren beim Wechsel eines HeartMoment von `SHARED` zu `PRIVATE`? | Wechsel ist nur als atomare Privacy-Operation zulässig; vorhandene Kommentare werden in derselben DB-Transaktion gelöscht. Keine Partnerprojektion darf danach verbleiben. Siehe #68. |
-| M2-D08 | BLOCKING | PROPOSED | API + Data | Welche Story-Sortierung gilt bei fehlendem `happenedOn`, und welcher Tie-Breaker stabilisiert Cursor? | `COALESCE(happenedOn, createdAt)`, danach `createdAt`, danach `id`; Cursor opak und versioniert. Final in #70. |
-| M2-D09 | BLOCKING | OPEN | API | Exakte Routen, Nesting und DTO-Namen? | Erst nach Abschluss des OpenAPI-Gates verbindlich in den Vertrag überführen; `API-DESIGN.md` als fachliche Vorlage. #70. |
+| M2-D08 | BLOCKING | DECIDED | API + Data | Welche Story-Sortierung gilt bei fehlendem `happenedOn`, und welcher Tie-Breaker stabilisiert Cursor? | `effectiveDate = happenedOn ?? UTC_DATE(createdAt)`; Schlüssel `(effectiveDate, createdAt, kindRank, id)`, vollständige Keyset-Pagination; Cursor opak/integritätsgeschützt. Siehe #70. |
+| M2-D09 | BLOCKING | DECIDED | API | Exakte Routen, Nesting und DTO-Namen? | Space-scoped Routenkatalog und DTOs sind in `API-DESIGN.md`/`API-CONTRACT.json` eingefroren. Parent-Comments sind verschachtelt; Update/Delete per Space-scoped Comment-ID. Siehe #70. |
 | M2-D10 | BEFORE_CLIENTS | OPEN | Product + Privacy | Welche Notification Preview darf ein Kommentar zeigen? | Standardmäßig generisch; Content-Auszug nur nach expliziter Privacy-Freigabe. |
 | M2-D11 | BLOCKING | DECIDED | Data + Privacy | Delete-, Retention- und Cascade-Regeln für Entity, Relation, Blob, Event und Audit? | Domain-Anteil #68 plus Media-Anteil #69 entschieden: fachliche Entität sofort unsichtbar; Comments atomar; letzte Mediareferenz setzt `DELETING`; Providercleanup async/idempotent; `DELETE_FAILED` retrybar/messbar. |
 | M2-D12 | BLOCKING | DECIDED | Backend + Ops | Wie lange bleiben unvollständige/fehlgeschlagene Uploads erhalten? | PENDING/UPLOADING/FAILED 24 h; Cleanup mindestens stündlich; DELETE_FAILED bis Erfolg/manuellem Eingriff. Siehe #69. |
@@ -174,6 +174,26 @@ Entscheidung: Ein READY Attachment darf maximal 60 Minuten ab `readyAt` ungebund
 Begründung: Ein kurzes Fenster entkoppelt Upload und Parentmutation, ohne dauerhaft lesbare Orphans zu schaffen.  
 Folgen: Nach erfolgreicher Bindung folgt Lebensdauer dem Parent; kein Partnerzugriff allein aufgrund READY.  
 Verweise: #69, `MEDIA-PIPELINE.md`.
+
+### M2-D08 – Story-Sortierung und Cursor
+Status: DECIDED  
+Datum: 2026-08-25  
+Entscheider: API + Data / Projektentscheidung #70  
+Entscheidung: Story verwendet `effectiveDate = happenedOn ?? UTC_DATE(createdAt)` und den vollständigen Keyset-Schlüssel `(effectiveDate, createdAt, kindRank, id)`. `kindRank` ist `MEMORY=1`, `HEART_MOMENT=2`, `MILESTONE=3`. ASC/DESC wenden dieselbe Richtung auf das vollständige Tupel an. Der Cursor ist opak, versioniert, integritätsgeschützt und an Space sowie `type`/`year`/`order` gebunden.  
+Begründung: Ein vollständiger eindeutiger Schlüssel verhindert Tie-Duplikate/-Lücken ohne Offset-Pagination und bleibt für heterogene Story-Unionen deterministisch.  
+Folgen: `q` bleibt M4. Privacy/Tenant-Filter erfolgen vor Sortierung. Manipulierter oder kontextfremder Cursor liefert `400 INVALID_CURSOR` ohne fremde Metadaten. Bei konkurrierender Änderung eines Sortierfelds wird kein historischer Snapshot versprochen; Clients refreshen.  
+Tests: identische effectiveDate/createdAt über alle Kinds; ASC/DESC; Cursor mit geändertem Space/Filter/order; PRIVATE HeartMoment nie in Union; keine Tie-Duplikate/-Lücken auf unverändertem Datenbestand.  
+Verweise: #70, `API-DESIGN.md`, `API-CONTRACT.json`.
+
+### M2-D09 – Routen, Nesting und DTO-Namen
+Status: DECIDED  
+Datum: 2026-08-25  
+Entscheider: API / Projektentscheidung #70  
+Entscheidung: M2 bleibt vollständig unter `/api/v1/spaces/{spaceId}`. Memories, HeartMoments, Milestones und Attachments besitzen eigene Collections. Comment Create/List werden am Parent verschachtelt; Comment Update/Delete laufen über `/comments/{commentId}` im Space. Story bleibt `/timeline`. Privacy-Wechsel für HeartMoment ist eine explizite `/visibility`-Mutation. DTO-/operationId-Namen sind in `API-DESIGN.md` und maschinenlesbar in `API-CONTRACT.json` eingefroren.  
+Begründung: Parent-Nesting bei Comment Create/List eliminiert frei wählbare Target-IDs/-Typen im Body; Space-Scoping passt zum bestehenden Tenant-Guard. Ein eigener Privacy-Endpunkt macht die destruktive SHARED->PRIVATE-Semantik explizit.  
+Folgen: Clients schreiben weder `privacyClass` noch Storage-Interna. Alle mutierenden bestehenden Ressourcen verwenden If-Match. `backend/openapi.json` wird erst mit implementierten Runtime-Slices durch den bestehenden Generator aktualisiert; das Manifest ist kein zweiter produktiver OpenAPI-Vertrag.  
+Tests: eindeutige operationIds/Method-Path-Paare; alle Pfade Space-scoped; If-Match-Matrix; keine `privacyClass`-Write-Felder; Attachment-Descriptor ohne Storage Keys/Bucket/Provider.  
+Verweise: #70, `API-DESIGN.md`, `API-CONTRACT.json`, `backend/tests/test_m2_api_contract_manifest.py`.
 
 ## Entscheidungsformat
 
