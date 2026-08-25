@@ -15,10 +15,10 @@ from alembic import context
 from sqlalchemy import CheckConstraint, engine_from_config, pool
 from sqlalchemy.schema import SchemaItem
 
+# Modelle registrieren. Die Importe sehen ungenutzt aus, sind es aber nicht.
+from sidebyside.attachments import models as _attachments  # noqa: F401
 from sidebyside.config import get_settings
 from sidebyside.db.base import Base
-
-# Modelle registrieren. Die Importe sehen ungenutzt aus, sind es aber nicht.
 from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
 from sidebyside.identity import models as _identity  # noqa: F401
 from sidebyside.jobs import models as _jobs  # noqa: F401

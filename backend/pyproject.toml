@@ -98,3 +98,9 @@ plugins = []
 [[tool.mypy.overrides]]
 module = "uuid6.*"
 ignore_missing_imports = true
+
+# pillow-heif liefert keine py.typed-Markierung. Es wird nur einmal
+# aufgerufen, um sich als Pillow-Plugin zu registrieren.
+[[tool.mypy.overrides]]
+module = "pillow_heif.*"
+ignore_missing_imports = true
