@@ -122,9 +122,9 @@ def test_cross_space_target_erzeugt_weder_comment_noch_event(client, paar, sessi
     assert response.status_code == 404
     assert session.execute(select(Comment)).scalars().all() == []
     assert (
-        session.execute(
-            select(OutboxEvent).where(OutboxEvent.event_type == "COMMENT_CREATED")
-        ).scalars().all()
+        session.execute(select(OutboxEvent).where(OutboxEvent.event_type == "COMMENT_CREATED"))
+        .scalars()
+        .all()
         == []
     )
 
