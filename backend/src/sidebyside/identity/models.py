@@ -309,7 +309,7 @@ class AccountRecoveryToken(IdMixin, OneTimeTokenMixin, Base):
 
     __table_args__ = (
         UniqueConstraint("token_hash", name="uq_account_recovery_tokens_token_hash"),
-        Index("ix_account_recovery_tokens_account_id", "account_email_id"),
+        Index("ix_account_recovery_tokens_account_id", "account_id"),
         Index("ix_account_recovery_tokens_expires_at", "expires_at"),
     )
 
