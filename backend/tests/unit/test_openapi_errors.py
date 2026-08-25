@@ -16,11 +16,14 @@ EXPECTED_PROBLEM_RESPONSES: dict[tuple[str, str], set[int]] = {
     ("/api/v1/auth/sign-out", "post"): {401},
     ("/api/v1/auth/password", "post"): {401, 422},
     ("/api/v1/auth/me", "get"): {401},
-    ("/api/v1/auth/magic-link/request", "post"): {422, 429},
+    # 503: Instanzen ohne Mailweg (SBS_MAIL_TRANSPORT=none) koennen den
+    # Vorgang nicht anbieten. Der Fehler entsteht bereits beim Aufloesen
+    # der Mail-Abhaengigkeit.
+    ("/api/v1/auth/magic-link/request", "post"): {422, 429, 503},
     ("/api/v1/auth/magic-link/consume", "post"): {422},
-    ("/api/v1/auth/email/verification/request", "post"): {401, 429},
+    ("/api/v1/auth/email/verification/request", "post"): {401, 429, 503},
     ("/api/v1/auth/email/verification/confirm", "post"): {422},
-    ("/api/v1/auth/recovery/request", "post"): {422, 429},
+    ("/api/v1/auth/recovery/request", "post"): {422, 429, 503},
     ("/api/v1/auth/recovery/consume", "post"): {422},
     ("/api/v1/auth/oidc/{connectionId}/start", "post"): {422, 429},
     ("/api/v1/auth/oidc/{connectionId}/link", "post"): {401, 422, 429},

@@ -13,6 +13,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from http import HTTPStatus
+
+from sidebyside.core.errors import DomainError
 
 
 class MailTransportError(RuntimeError):
@@ -22,6 +25,30 @@ class MailTransportError(RuntimeError):
     von einem Programmierfehler unterscheiden koennen, ohne die
     Fehlermeldung zu lesen.
     """
+
+
+class MailUnavailableError(DomainError):
+    """Diese Instanz versendet ueberhaupt keine E-Mail.
+
+    Bewusst **kein** `MailTransportError`: ein Zustellfehler wird in den
+    Auth-Fluessen absichtlich geschluckt, damit die Antwort nicht verraet,
+    ob eine Adresse bekannt ist. Ein fehlender Mailweg ist aber kein
+    Zustellfehler, sondern eine Eigenschaft der Instanz - und die darf der
+    Aufrufer erfahren, weil sie fuer jede Adresse gleich gilt.
+
+    503 statt 404: der Endpunkt existiert, die Faehigkeit dahinter nicht.
+    """
+
+    status = HTTPStatus.SERVICE_UNAVAILABLE
+    type = "mail_unavailable"
+    title = "Mail unavailable"
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Diese Instanz versendet keine E-Mail. "
+            "Anmeldung ist ueber Passwort, Passkey oder OIDC moeglich.",
+            "MAIL_TRANSPORT_UNAVAILABLE",
+        )
 
 
 @dataclass(frozen=True)

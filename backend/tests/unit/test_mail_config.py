@@ -31,3 +31,11 @@ class TestProduktion:
     def test_unverschluesselte_basisadresse_verweigert_den_start(self) -> None:
         with pytest.raises(ValueError, match="SBS_PUBLIC_BASE_URL"):
             produktion(public_base_url="http://sidebyside.example")
+
+    def test_verzicht_auf_mail_ist_erlaubt(self) -> None:
+        """Eine Instanz ohne Mailserver ist eine zulaessige Betriebsform.
+
+        Der Unterschied zu `log` ist nicht formal: bei `none` verlaesst kein
+        Einmal-Token das System, bei `log` landet jedes in einer Logablage.
+        """
+        assert produktion(mail_transport="none").mail_transport.value == "none"
