@@ -1,7 +1,7 @@
 # Umsetzungsstand
 
 Stand: 25. August 2026  
-Ausgangspunkt dieses Audits: `main` bei Commit `9b4be168cec305c8a613889d2213f133429fe158`
+Aktueller G1-Prüfstand: `main` bei Commit `6bc2cc955da04933e0957be2f19ce14d29e59755`
 
 ## Dokumentenrollen
 
@@ -9,6 +9,7 @@ Ausgangspunkt dieses Audits: `main` bei Commit `9b4be168cec305c8a613889d2213f133
 - **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
 - **Unveränderlicher Ausgangsreview:** [2026-08-24-spec-gap-review.md](reviews/2026-08-24-spec-gap-review.md)
 - **Historischer G1-Snapshot:** [2026-08-24-g1-m1-security-review.md](reviews/2026-08-24-g1-m1-security-review.md)
+- **Aktueller G1-Follow-up-Review:** [2026-08-25-g1-m1-follow-up-review.md](reviews/2026-08-25-g1-m1-follow-up-review.md)
 - **Dieses Dokument:** laufende, kurze Arbeits- und Fortschrittsliste
 
 Bei Widersprüchen gilt die Master-Spezifikation. Datierte Dateien unter
@@ -34,18 +35,18 @@ bekommt eine neue Datei.
 
 ## G1/M1 – aktueller Stand
 
-Der datierte [G1/M1 Security Review vom 24.08.2026](reviews/2026-08-24-g1-m1-security-review.md) bleibt ein historischer Snapshot. Seine damaligen Blocker #7, #11, #24 und #26 sind inzwischen geschlossen; die dort beschriebenen fehlenden Auth-, Owner-/Privacy-, Profile- und Testpfade sind auf `main` vorhanden.
+Der [G1/M1 Follow-up Security Review vom 25.08.2026](reviews/2026-08-25-g1-m1-follow-up-review.md) prüft `main` bei `6bc2cc955da04933e0957be2f19ce14d29e59755`. Die früheren Blocker #7, #11, #24 und #26 sind geschlossen. Auth-/Recovery-Flows, zentrale Owner-/Privacy-Autorisierung, M1-Profile und die PostgreSQL-/HTTP-Testmatrix sind vorhanden; die OIDC-Härtung aus PR #62 ist enthalten und CI-grün.
 
-Der Merge von PR #57 (`9b4be168cec305c8a613889d2213f133429fe158`) hat zusätzlich OIDC-Onboarding über gültige Einladungen ergänzt. Der Merge-Commit selbst hat die vollständige CI mit PostgreSQL-Integrationstests, OpenAPI-/Migration-/Drift-Prüfung, Lint, Mypy, Supply Chain, Secret Scan und Provenance bestanden.
+**G1 ist noch nicht bestanden.** Der verbleibende Runtime-Gate-Blocker ist #61: Beim Löschen einer geteilten `RelatedPerson` kann der bestehende Datenbank-Cascade heute auch einen `OWNER_ONLY`-Termin des Partners löschen. Die beschlossene Produktregel verlangt stattdessen eine explizite serverseitige Auswahl zwischen `preserve` und `cascade`, keinen destruktiven Default und eine privacy-sichere Warn-/Bestätigungssemantik.
 
-**G1 wird trotzdem noch nicht als bestanden markiert.** Vor der Freigabe von produktivem M2-Runtime-Code folgt ein neuer datierter Review gegen den dann aktuellen `main`. Das Audit vom 25.08.2026 hat zusätzlich folgende Härtungen bzw. Entscheidungen herausgezogen:
+Offene Punkte sind damit verbindlich eingeordnet:
 
-- [ ] #59 – anonymen Passkey-Authentication-Start gegen Challenge-Flooding absichern; PostgreSQL-Parallel-/Abuse-Test ist Pflicht.
-- [ ] #60 – Rate-Limit-Schwellen bei parallelen Requests atomar/serialisiert erzwingen.
-- [ ] #61 – beim Löschen einer `RelatedPerson` die Produktentscheidung „Termine erhalten“ vs. „Termine mit löschen“ privacy-sicher in API und späteren Clients umsetzen. Der heutige Cascade bleibt bis dahin dokumentiert und unverändert.
-- [ ] #25 – Branch Protection/Ruleset für `main`: angelegt, aber bei diesem privaten Repository durch den aktuellen GitHub-Tarif nicht technisch erzwungen; nach einem Planwechsel Targeting und Enforcement erneut prüfen.
+- [ ] **#61 – G1-Blocker:** RelatedPerson-Delete-Policy `preserve`/`cascade` serverseitig und atomar umsetzen; Cross-owner-/Privacy-/PostgreSQL-Tests sind Pflicht.
+- [ ] **#59 – Pre-Exposure:** anonymen Passkey-Authentication-Start gegen Challenge-Flooding absichern; PostgreSQL-Parallel-/Abuse-Test ist Pflicht. Kein Blocker für interne M2-Domainimplementierung, aber vor öffentlicher/Managed-Exposition zu schließen.
+- [ ] **#60 – Pre-Exposure:** Rate-Limit-Schwellen bei parallelen Requests atomar/serialisiert erzwingen. Kein Blocker für interne M2-Domainimplementierung, aber vor öffentlicher/Managed-Exposition zu schließen.
+- [ ] **#25 – Repository-Hardening:** Branch Protection/Ruleset für `main` bleibt tarifbedingt nicht technisch erzwungen; kein Runtime-G1-Blocker.
 
-#59 und #60 sind Abuse-/Availability-Härtungen ohne bekannten Auth-Bypass. Der neue G1-Review entscheidet explizit, ob sie für den Beginn interner M2-Domainimplementierung blockieren oder als verpflichtende Pre-Exposure-Härtung vor Managed-/öffentlichem Betrieb geführt werden. #61 ist eine bewusste Datenintegritäts-/UX-Entscheidung; die aktuelle Privacy-Isolation wird dadurch nicht aufgehoben.
+Bis #61 geschlossen und in einem neuen datierten Gate-Review positiv bewertet ist, bleibt produktiver M2-Runtime-Code gesperrt.
 
 ## Bereits geschlossene Foundation-/M1-Sicherheitsarbeit
 
@@ -59,6 +60,7 @@ Der Merge von PR #57 (`9b4be168cec305c8a613889d2213f133429fe158`) hat zusätzlic
 - [x] Refresh-Replay über die gesamte Token-Familie erkennen (#24).
 - [x] OIDC-, WebAuthn-/Passkey-, Magic-Link-, E-Mail-Verifikations- und Recovery-Flows implementieren (#26).
 - [x] Owner-/Private-Authorization, Profile und zugehörige Privacy-/Tenant-Matrix vervollständigen (#11/#7).
+- [x] OIDC-Discovery-Endpunkte auf HTTPS begrenzen und zusätzliche nicht vertrauenswürdige Audiences/inkonsistentes `azp` ablehnen (PR #62).
 - [x] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entschieden: keine Behauptung eines strikten/formalen Clean Rooms; Fortführung als eigenständige Neuimplementierung mit dokumentierter Vorbefassung gemäß [ADR 0001](decisions/0001-clean-room-classification.md).
 
 ## M0 – Clean Foundation
@@ -101,6 +103,7 @@ Der Merge von PR #57 (`9b4be168cec305c8a613889d2213f133429fe158`) hat zusätzlic
 - [x] PartnerProfile und ProfilePreference inklusive `PRIVATE_PARTNER_NOTE`
 - [x] RelatedPerson und ImportantDate inklusive Privacy-/Owner-/Cross-Tenant-Regeln
 - [x] Rollen-/Owner-/Privacy-/Tenant-Matrix für die M1-Endpunkte
+- [ ] RelatedPerson-Delete-Policy aus #61: explizites `preserve`/`cascade` ohne destruktiven Default
 
 ### Noch offene Produkt-/Betriebsgrenzen
 
@@ -109,7 +112,7 @@ Der Merge von PR #57 (`9b4be168cec305c8a613889d2213f133429fe158`) hat zusätzlic
 - **Managed/Cloud:** Passkey, Magic Link und später verwaltete Provider wie Google/Apple.
 - **Self-Hosted:** lokales Passwort, Passkey und frei konfigurierbares OIDC; Mail-basierte Wege nur bei bewusster Mailkonfiguration.
 
-Bis die Productization-Policy implementiert ist, darf das Verstecken eines Login-Buttons im Client nicht als Sicherheitsgrenze gelten. Die verbindliche Zielregel steht in [SECURITY.md](SECURITY.md).
+Bis die Productization-Policy implementiert ist, darf das Verstecken eines Login-Buttons im Client nicht als Sicherheitsgrenze gelten. Die verbindliche Zielregel steht in [SECURITY.md](SECURITY.md). Die Roadmap ordnet diese Durchsetzung G5/Productization zu; öffentliche Managed-Exposition setzt zusätzlich die Schließung von #59 und #60 voraus.
 
 ## Spätere Meilensteine
 
@@ -123,4 +126,4 @@ Bis die Productization-Policy implementiert ist, darf das Verstecken eines Login
 
 ## Nächster Prüfpunkt
 
-Nach Merge des Audit-Hardening-PRs einen **neuen datierten G1-Review** gegen den dann aktuellen `main` und dessen erfolgreiche CI erstellen. Der Review muss die geschlossenen Altblocker, die OIDC-Härtung dieses Audits sowie die Einordnung von #59, #60, #61 und #25 ausdrücklich bewerten. Erst danach wird G1 auf „bestanden“ gesetzt und M2-S0 freigegeben.
+#61 implementieren und über einen eigenen Branch/PR mit PostgreSQL-/HTTP-/Privacy-Tests verifizieren. Nach dessen Merge einen kurzen neuen datierten G1-Gate-Review gegen den dann aktuellen `main` und dessen erfolgreiche CI erstellen. Erst eine positive Entscheidung dieses Reviews setzt G1 auf „bestanden“ und gibt M2-S0 bzw. produktiven M2-Runtime-Code frei.
