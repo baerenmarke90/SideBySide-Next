@@ -12,6 +12,7 @@ concurrency:
 env:
   PYTHON_VERSION: "3.13.7"
   UV_VERSION: "0.12.5"
+  FFMPEG_VERSION: "7:7.1.5-0+deb13u1"
 
 jobs:
   backend:
@@ -163,6 +164,11 @@ jobs:
         # den Job fehlschlagen. Ausnahmen muessen explizit, begruendet und
         # befristet in pyproject.toml stehen; aktuell gibt es keine.
         run: uv audit --preview --frozen
+      - name: ffmpeg Debian Security Tracker
+        # ffmpeg ist ein Systempaket und liegt ausserhalb von uv audit.
+        # Unlesbare Tracker-Daten, ein neueres Paket, ein undetermined-Fund
+        # oder ein offener nicht von Debian klassifizierter Fund blockieren.
+        run: python scripts/check_ffmpeg_security.py "$FFMPEG_VERSION"
       - name: Abhaengigkeitsinventar
         run: |
           uv sync --frozen
@@ -171,6 +177,27 @@ jobs:
         run: uv build --no-cache --wheel --out-dir /tmp/sidebyside-dist
       - name: Produktionscontainer frisch bauen
         run: docker build --pull --no-cache --tag sidebyside-next:ci .
+      - name: Produktions-ffmpeg und Image pruefen
+        run: |
+          installed=$(docker run --rm sidebyside-next:ci \
+            dpkg-query -W '-f=${Version}' ffmpeg)
+          if [ "$installed" != "$FFMPEG_VERSION" ]; then
+            echo "ffmpeg-Version im Image: $installed; erwartet: $FFMPEG_VERSION"
+            exit 1
+          fi
+          docker run --rm sidebyside-next:ci ffmpeg -version | head -n 1
+          uid=$(docker run --rm sidebyside-next:ci id -u)
+          if [ "$uid" != "10001" ]; then
+            echo "Produktionscontainer laeuft unerwartet als UID $uid"
+            exit 1
+          fi
+          size=$(docker image inspect sidebyside-next:ci --format '{{.Size}}')
+          echo "Produktionsimage-Groesse: $size Byte"
+      - name: Echter Video-Runtime-Smoke im Produktionscontainer
+        run: |
+          docker run --rm \
+            -v "$PWD/scripts/video_runtime_smoke.py:/tmp/video_runtime_smoke.py:ro" \
+            sidebyside-next:ci python /tmp/video_runtime_smoke.py
 
   secrets:
     name: Secret Scan
