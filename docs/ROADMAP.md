@@ -1,8 +1,8 @@
 # SideBySide Next Roadmap
 
 **Status:** Menschenlesbare Orientierungs- und Priorisierungsansicht  
-**Version:** 1.1  
-**Stand:** 24.08.2026  
+**Version:** 1.2  
+**Stand:** 25.08.2026  
 **Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
 
 Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht ausschließlich im [Implementation Status](./IMPLEMENTATION-STATUS.md).
@@ -11,7 +11,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 
 ![Grafische Roadmap von M0 Foundation bis M9 Release und der strategischen E2EE-Spur](./assets/roadmap/roadmap-overview.svg)
 
-**Aktuell:** M0 ist für den aktuellen Umfang abgeschlossen. M1 Identity & Relationship wird bis zum Security Gate G1 vervollständigt; produktiver M2-Runtime-Code beginnt erst nach bestandenem G1.
+**Aktuell:** M0 ist abgeschlossen und der vorgesehene M1-Runtimeumfang ist umgesetzt. Vor produktivem M2-Runtime-Code folgt der finale, neu datierte Security Review für Gate G1.
 
 ## So ist die Roadmap zu lesen
 
@@ -19,7 +19,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 |---|---|
 | diese Roadmap | Wohin gehen wir, in welcher Reihenfolge und warum? |
 | [Implementation Status](./IMPLEMENTATION-STATUS.md) | Was ist auf `main` tatsächlich umgesetzt oder noch offen? |
-| [G1/M1 Security Review](./reviews/2026-08-24-g1-m1-security-review.md) | Welche Security-Gates sind aktuell bestanden oder offen? |
+| [G1/M1 Security Review vom 24.08.2026](./reviews/2026-08-24-g1-m1-security-review.md) | Historischer Prüfstand vor Abschluss der damaligen M1-Blocker |
 | GitHub Issues/PRs | Welche konkreten Arbeitspakete werden bearbeitet? |
 | [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | Was ist fachlich und technisch verbindlich? |
 
@@ -30,7 +30,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 
 ## Aktueller Snapshot
 
-Der Snapshot fasst den [Implementation Status vom 24.08.2026](./IMPLEMENTATION-STATUS.md) und den aktuellen G1/M1-Security-Review zusammen. Bei Abweichungen gilt das Statusdokument für den Arbeitsstand; datierte Reviews bleiben unveränderliche Prüfsnapshots.
+Der Snapshot fasst den [Implementation Status vom 25.08.2026](./IMPLEMENTATION-STATUS.md) zusammen. Datierte Reviews bleiben unveränderliche Prüfsnapshots; der Review vom 24.08.2026 beschreibt deshalb bewusst noch Lücken, die inzwischen geschlossen sind.
 
 ### M0 — Clean Foundation: abgeschlossen
 
@@ -50,30 +50,38 @@ Für den aktuellen M0-Umfang sind unter anderem umgesetzt:
 
 M0 wird nicht erneut geöffnet, nur weil spätere Milestones zusätzliche Härtungen auf derselben Infrastruktur benötigen. Neue Findings werden im jeweils betroffenen Issue/Milestone verfolgt.
 
-### M1 — Identity & Relationship: aktiv, G1 noch offen
+### M1 — Identity & Relationship: Runtimeumfang umgesetzt, G1 finaler Review offen
 
-Bereits vorhanden sind Account/AuthIdentity, lokaler Passwortlogin, Device Sessions, Bearer Tokens, Space, Membership, Tenant Guard, sichere Invitations, lesendes SpaceProfile, OIDC-Persistenz mit `(issuer, subject)`, WebAuthn-Credential-Modell sowie getrennte Tokenmodelle für E-Mail-Verifikation, Magic Link und Recovery.
+Umgesetzt sind unter anderem:
 
-Ebenfalls abgeschlossen sind der sichere Self-Hosted-Bootstrap, die HTTPS-/Loopback-Grenze und die formale Provenienzklassifikation gemäß ADR 0001.
-
-Als Nächstes folgen:
-
-- tatsächliche OIDC-/Pocket-ID-, WebAuthn-/Passkey-, Magic-Link-, Verification- und Recovery-Flows,
-- Owner-/Private-Authorization als zentrale Grundlage vor privaten M2-Inhalten,
-- SpaceProfile-Schreib-API mit `version` und HTTP 409,
-- fachlich korrekte Zeitzonenbehandlung der Beziehungsdauer,
+- Account/AuthIdentity, lokaler Passwortlogin und Device Sessions,
+- Space, Membership, Tenant Guard und race-sichere Invitations,
+- zentrale Owner-/Private-Authorization mit SQL-seitigem `SPACE_SHARED`-/`OWNER_ONLY`-Filter,
+- SpaceProfile mit ETag/If-Match, 409-Concurrency und korrekter Benutzerzeitzone,
 - PartnerProfile, ProfilePreference, RelatedPerson und ImportantDate,
-- vollständige Rollen-/Owner-/Privacy-/Cross-Tenant-Testmatrix,
-- Refresh-Replay-Härtung über die gesamte Token-Familie.
+- OIDC Authorization Code + PKCE mit State/Nonce, Discovery/JWKS, Issuer/Audience/Signaturprüfung,
+- OIDC-Onboarding über eine weiterhin beim Callback gültige Einladung ohne E-Mail-Merge,
+- WebAuthn-/Passkey-Registration und -Authentication,
+- Magic Link, E-Mail-Verifikation und Recovery,
+- Refresh-Replay über die gesamte Token-Familie,
+- HTTP-/Owner-/Privacy-/Cross-Tenant-/Concurrency-Tests gegen PostgreSQL.
+
+Die früheren G1-Tracking-Issues #7, #11, #24 und #26 sind geschlossen. Der Audit vom 25.08.2026 hat keine neue bekannte Tenant-Isolation- oder Account-Takeover-Lücke ergeben, aber zusätzliche Härtungen und eine Produktentscheidung separat erfasst:
+
+- #59 — Passkey-Authentication-Start gegen Challenge-Flooding absichern,
+- #60 — Rate-Limit-Schwellen unter Parallelität atomar erzwingen,
+- #61 — beim Löschen einer RelatedPerson explizit zwischen „Termine erhalten“ und „Termine mit löschen“ wählen; Warnung privacy-sicher gestalten,
+- #25 — Repository-Ruleset/Branch-Protection bleibt tarifbedingt nicht erzwungen.
 
 ### Noch offene Bedingungen vor M2
 
-1. Gate G1: echte Auth-/Recovery-Wege für die vorgesehenen Betriebsmodi abschließen (#26).
-2. Gate G1: Owner-/Private-Authorization und die fehlenden M1-Profile/Concurrency-/Timezone-Funktionen abschließen (#11).
-3. Gate G1: die zugehörige HTTP-/Privacy-/Tenant-Testmatrix vervollständigen (#7).
-4. Security-Härtung #24 vor M2 schließen und anschließend einen neuen datierten G1-Review durchführen.
+1. Den aktuellen G1-Audit-/OIDC-Hardening-PR vollständig durch CI prüfen und mergen.
+2. Einen **neuen datierten G1-Security-Review** gegen den danach aktuellen `main` erstellen.
+3. Im Review #59 und #60 ausdrücklich als G1-Blocker oder als verpflichtende Pre-Exposure-Härtung klassifizieren; nicht still offen lassen.
+4. #61 als bewusste Delete-/UX-Policy dokumentiert halten und die serverseitige Preserve/Cascade-Auswahl vor dem ersten betroffenen Clientflow umsetzen.
+5. Erst nach positiver G1-Entscheidung M2-S0 und danach M2-Runtime-Code freigeben.
 
-Repository-Hardening #25 bleibt separat offen: Das Ruleset wurde angelegt, wird für dieses private Repository mit dem aktuellen GitHub-Tarif jedoch nicht erzwungen. Dieser Plan-Blocker ist kein Ersatz für G1 und kein Grund, Security-Anforderungen im Code abzusenken.
+Repository-Hardening #25 bleibt separat offen. Ein nicht erzwungenes Ruleset ist kein Grund, Security-Anforderungen im Code oder die PR-/CI-Pflicht abzusenken.
 
 ## Meilensteine
 
@@ -99,23 +107,23 @@ Die Spuren laufen parallel, aber nicht unabhängig. Eine Clientoberfläche darf 
 
 ## Horizonte
 
-### Now — M1 vervollständigen und G1 bestehen
+### Now — G1 final prüfen und M2 freigeben
 
-**Umfasst:** Rest M1 plus zugehörige Security-Härtung.
+**Umfasst:** Audit-Härtung und formale Gate-Entscheidung nach abgeschlossenem M1-Runtimeumfang.
 
-- Owner-only- und Tenant-Grundlagen vervollständigen,
-- Cloud- und Self-Hosted-Anmelde-/Recovery-Wege tatsächlich implementieren,
-- Invitation-, Profil- und Privacy-Flows produktionsreif machen,
-- SpaceProfile-Concurrency und Zeitzonen korrekt abschließen,
-- Refresh-Replay-Härtung und vollständige HTTP-Security-Matrix abschließen,
-- neuen datierten G1-Security-Review durchführen.
+- OIDC-Discovery-/Audience-Härtung abschließen und CI prüfen,
+- neue Audit-Findings #59/#60 sauber klassifizieren und verfolgen,
+- RelatedPerson-Delete-Entscheidung #61 als Privacy-/UX-Vertrag festhalten,
+- laufende Status-/Security-Dokumentation auf den aktuellen Code ziehen,
+- neuen datierten G1-Security-Review gegen aktuellen `main` durchführen.
 
-**Verlassen, wenn:** Gate G1 erfüllt ist.
+**Verlassen, wenn:** Gate G1 formell erfüllt und M2 freigegeben ist.
 
 ### Next — Der emotionale Kern
 
 **Umfasst:** M2.
 
+- M2-S0: blockierende Domain-, Privacy-, Media- und API-Entscheidungen aus dem Decision Log schließen,
 - Memory, Attachment und Media Pipeline,
 - HeartMoment mit `OWNER_ONLY`/`SPACE_SHARED`,
 - Milestones und sichere Comments,
@@ -144,6 +152,8 @@ Die Spuren laufen parallel, aber nicht unabhängig. Eine Clientoberfläche darf 
 - Fragen, Check-in und Rückblicke,
 - Shopping, Discovery und Providerintegrationen,
 - optionale Location-/Context-Funktionen,
+- serverseitige Managed-/Self-Hosted-Auth-Policy,
+- verwaltete Login-Provider wie Google/Apple,
 - Self-Hosted- und Cloud-Härtung,
 - Backup, Entitlements, Releasebetrieb und Supportfähigkeit.
 
@@ -208,7 +218,7 @@ Kritische Reihenfolge:
 - Profile/SpaceProfile mit Versionskonflikten,
 - Cross-Tenant-, Session- und Privacy-Tests grün.
 
-**Aktueller Stand:** noch nicht bestanden; maßgeblich ist der [G1/M1 Security Review](./reviews/2026-08-24-g1-m1-security-review.md).
+**Aktueller Stand:** die vorgesehenen Runtime-Kriterien sind implementiert; G1 ist **noch nicht formell freigegeben**, bis ein neuer datierter Review den aktuellen `main`, die aktuelle CI und die neuen Audit-Findings bewertet hat. Der Review vom 24.08.2026 bleibt historisch und ist nicht mehr der operative Soll-/Ist-Stand.
 
 ### G2 — Story Alpha
 
@@ -236,6 +246,7 @@ Kritische Reihenfolge:
 ### G5 — Launchfähig
 
 - Cloud und Self-Hosted dokumentiert, update- und backupfähig,
+- serverseitige Auth-/Provider-Policy je Betriebsform durchgesetzt,
 - Retention, vollständige Löschung und Supportprozesse geklärt,
 - Entitlements/Billing-Adapter ohne Domainkopplung,
 - Monitoring ohne sensible Inhalte,
@@ -274,7 +285,7 @@ Kritische Reihenfolge:
 ## Verwandte Dokumente
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
-- [G1/M1 Security Review](./reviews/2026-08-24-g1-m1-security-review.md)
+- [Historischer G1/M1 Security Review vom 24.08.2026](./reviews/2026-08-24-g1-m1-security-review.md)
 - [Produktspezifikation](../specification/PRODUCT-SPEC.md)
 - [Critical User Flows](./USER-FLOWS.md)
 - [API-/UI-Verträge](./API-UI-CONTRACTS.md)
