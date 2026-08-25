@@ -1,0 +1,51 @@
+name: Temporary PR98 Heart Comment Hook Fix
+
+on:
+  push:
+    branches:
+      - feat/m2-comments-97
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13.7'
+      - name: Make HeartMoment comment hook real
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          service = Path('backend/src/sidebyside/comments/service.py')
+          text = service.read_text()
+          text = text.replace('from sqlalchemy import and_, or_, select\n', 'from sqlalchemy import and_, delete, or_, select\n')
+          if 'def delete_for_parent(' not in text:
+              text += '''\n\ndef delete_for_parent(\n    session: Session,\n    *,\n    space_id: UUID,\n    target_type: CommentTarget,\n    target_id: UUID,\n) -> None:\n    """Abhaengige Comments innerhalb der laufenden Parent-Transaktion loeschen."""\n    session.execute(\n        delete(Comment).where(\n            Comment.space_id == space_id,\n            Comment.target_type == target_type.value,\n            Comment.target_id == target_id,\n        )\n    )\n'''
+          service.write_text(text)
+
+          heart = Path('backend/src/sidebyside/heart_moments/service.py')
+          text = heart.read_text()
+          old = '''def _delete_dependent_comments(session: Session, heart_moment: HeartMoment) -> None:\n    """Kommentare eines HeartMoments loeschen, der privat wird.\n\n    M2-D07 verlangt, dass der Wechsel `SHARED -> PRIVATE` vorhandene\n    Kommentare in derselben DB-Transaktion loescht - ein blosses Verstecken\n    koennte Partnerdaten spaeter erneut sichtbar machen.\n\n    Comments sind noch nicht implementiert; sie kommen im Comments-Slice.\n    Diese Funktion ist die Stelle, an der die Loeschung einzuhaengen ist,\n    und sie liegt bewusst innerhalb der Transaktion des Wechsels, damit sie\n    dort nicht nachtraeglich danebengesetzt wird. Solange es keine\n    Comment-Tabelle gibt, gibt es auch nichts zu loeschen - die Invariante\n    ist erfuellt, aber nicht bewiesen.\n    """\n    return None\n'''
+          new = '''def _delete_dependent_comments(session: Session, heart_moment: HeartMoment) -> None:\n    """Kommentare beim Privacy-Wechsel in derselben Transaktion loeschen.\n\n    Der Mapper-Cascade in ``comments.cascades`` wiederholt diese Loeschung\n    nach dem eigentlichen Privacy-UPDATE. Das ist absichtlich redundant:\n    dieser Domain-Hook bildet M2-D07 sichtbar ab; der Listener schliesst\n    gleichzeitig das Race-Fenster fuer einen parallel gestarteten Comment.\n    """\n    from sidebyside.comments import service as comment_service\n    from sidebyside.comments.models import CommentTarget\n\n    comment_service.delete_for_parent(\n        session,\n        space_id=heart_moment.space_id,\n        target_type=CommentTarget.HEART_MOMENT,\n        target_id=heart_moment.id,\n    )\n'''
+          if old not in text:
+              raise SystemExit('old HeartMoment placeholder not found')
+          heart.write_text(text.replace(old, new, 1))
+          PY
+      - name: Format and commit
+        working-directory: backend
+        run: |
+          python -m pip install 'uv==0.12.5'
+          uv sync --frozen
+          uv run --frozen ruff format src/sidebyside/comments/service.py src/sidebyside/heart_moments/service.py
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/src/sidebyside/comments/service.py backend/src/sidebyside/heart_moments/service.py
+          git commit -m 'fix: wire HeartMoment comment cascade hook'
+          git push origin HEAD:feat/m2-comments-97
