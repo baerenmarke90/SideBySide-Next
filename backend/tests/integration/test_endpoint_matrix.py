@@ -254,6 +254,52 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}/comments",
+        body=COMMENT,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}/comments",
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
+        body=COMMENT,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments",
+        body=COMMENT,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments",
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/comments/{commentId}",
+        body=COMMENT,
+        if_match=True,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/comments/{commentId}",
+        if_match=True,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
     Endpunkt(
         "GET",
