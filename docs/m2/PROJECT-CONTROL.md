@@ -2,7 +2,7 @@
 
 **Stand:** 25.08.2026  
 **Status:** M2-S0 abgeschlossen; M2-Runtime läuft  
-**Aktueller `main`:** `39cd132` (Merge von #114)
+**Aktueller `main`:** `f20b257` (Merge von #118)
 
 ## Verbindlicher Gate-Stand
 

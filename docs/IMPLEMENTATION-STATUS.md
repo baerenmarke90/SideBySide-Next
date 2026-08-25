@@ -1,7 +1,7 @@
 # Umsetzungsstand
 
 Stand: 25. August 2026  
-Aktueller `main`: `39cd132` (Merge von #114)  
+Aktueller `main`: `f20b257` (Merge von #118)  
 Aktueller Gate-Status: **G1 bestanden; M2-S0 abgeschlossen; M2-Runtime läuft**
 
 ## Dokumentenrollen
@@ -75,6 +75,7 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 ### Betrieb: Self-Hosted-Startpfad
 
 - [x] **#110 — Startpfad und Migration entkoppelt** (PR #111): `alembic upgrade head` hängt nicht mehr an Cursor-Signing-Key, SMTP und öffentlicher Adresse; Compose trennt Migrations- von Runtime-Konfiguration; CI fährt den realen Startpfad statt ihn nur zu parsen.
+- [x] **#115 — Netzwerk- und Portbereitschaft gehärtet** (PR #118): ein belegter API-Port und ein fehlender Netzwerkpfad hinterlassen die Instanz nicht mehr als scheinbar funktionsfähig; eigener Deployment-Guard in CI.
 
 Zwei Betriebszusagen daraus sind verbindlich und stehen in [ADR 0002](decisions/0002-self-hosted-first-start-mode.md):
 
