@@ -189,9 +189,11 @@ def _parse_datetime(value: object) -> datetime | None:
 def _orientation_from_rotation(value: object) -> int | None:
     if value is None:
         return None
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise VideoRejectedError("VIDEO_ORIENTATION_INVALID")
     try:
         rotation = float(value)
-    except (TypeError, ValueError):
+    except ValueError:
         raise VideoRejectedError("VIDEO_ORIENTATION_INVALID") from None
     if not math.isfinite(rotation):
         raise VideoRejectedError("VIDEO_ORIENTATION_INVALID")
@@ -283,8 +285,10 @@ def _probe(path: Path, expected_mime: str, *, include_metadata: bool = False) ->
     if not math.isfinite(duration) or duration <= 0:
         raise VideoRejectedError("VIDEO_DURATION_INVALID")
 
-    format_tags = fmt.get("tags") if isinstance(fmt.get("tags"), dict) else {}
-    stream_tags = stream.get("tags") if isinstance(stream.get("tags"), dict) else {}
+    raw_format_tags = fmt.get("tags")
+    format_tags: dict[Any, Any] = raw_format_tags if isinstance(raw_format_tags, dict) else {}
+    raw_stream_tags = stream.get("tags")
+    stream_tags: dict[Any, Any] = raw_stream_tags if isinstance(raw_stream_tags, dict) else {}
     captured_at = _parse_datetime(format_tags.get("creation_time")) or _parse_datetime(
         stream_tags.get("creation_time")
     )
