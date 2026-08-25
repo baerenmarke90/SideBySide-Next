@@ -214,7 +214,9 @@ def test_shared_to_private_loescht_comments_und_resurrected_nichts(client, paar)
     assert listed.json()["items"] == []
 
 
-def test_comment_created_event_ist_inhaltsfrei_und_nur_fuer_fremden_parent(client, paar, session) -> None:  # type: ignore[no-untyped-def]
+def test_comment_created_event_ist_inhaltsfrei_und_nur_fuer_fremden_parent(
+    client, paar, session
+) -> None:  # type: ignore[no-untyped-def]
     m = memory(client, paar)
     path = comment_path(paar["space"].id, "memories", m["id"])
     own = client.post(path, json={"body": "eigener"}, headers=auth(paar["token_a"]))
@@ -252,7 +254,9 @@ class RecordingSink:
         self.keys.append(idempotency_key)
 
 
-def test_notification_hook_nutzt_stabile_outbox_id_als_idempotency_key(client, paar, session) -> None:  # type: ignore[no-untyped-def]
+def test_notification_hook_nutzt_stabile_outbox_id_als_idempotency_key(
+    client, paar, session
+) -> None:  # type: ignore[no-untyped-def]
     m = memory(client, paar)
     path = comment_path(paar["space"].id, "memories", m["id"])
     client.post(path, json={"body": GEHEIM}, headers=auth(paar["token_b"]))
