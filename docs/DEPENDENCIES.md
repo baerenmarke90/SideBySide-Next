@@ -64,6 +64,25 @@ Formate von Hand zu lesen waere Eigenbau an der empfindlichsten Stelle.
 Tests baut `attestationObject` und COSE-Schluessel selbst, damit die Suite
 echte Signaturen prueft statt aufgezeichneter Beispieldaten.
 
+`Pillow` und `pillow-heif` kommen mit der Medienverarbeitung dazu. Bilder zu
+dekodieren, ihre Masse zu bestimmen, eingebettete Metadaten zu entfernen und
+ein Thumbnail zu erzeugen, ist nichts, was sich sinnvoll selbst schreiben
+laesst - ein eigener JPEG-, PNG- oder WebP-Dekoder waere Eigenbau an der
+groessten Angriffsflaeche des Produkts. `pillow-heif` bringt libheif und
+damit HEIC/HEIF, die in der M2-D04-Allowlist stehen; es registriert sich als
+Plugin in Pillow und wird nicht getrennt aufgerufen.
+
+Beide sind bewusst der einzige Zuwachs dieses Slices. Video und der dafuer
+noetige ffmpeg-Aufruf sind nach M2-D23 ein eigener spaeterer Schritt, weil
+ein Systembinary Container-Image und Installationsanleitung betrifft und
+sich dem `uv audit`-Gate entzieht.
+
+Medienparser sind erklaerte Angriffsflaeche. Deshalb gilt fuer sie
+besonders, was ohnehin Policy ist: kein bekannter Sicherheitsfund im Lock,
+Dependabot-Updates werden nicht liegengelassen, und die Verarbeitung laeuft
+ausschliesslich im Hintergrundjob unter Ressourcengrenzen - nie im
+Requestpfad.
+
 ## Backend — Laufzeit
 
 | Paket | Version | Quelle | Lizenz |
@@ -80,6 +99,8 @@ echte Signaturen prueft statt aufgezeichneter Beispieldaten.
 | httpx | 0.28.1 | PyPI | BSD-3-Clause |
 | pyjwt[crypto] | 2.13.0 | PyPI | MIT |
 | webauthn | 3.0.0 | PyPI | BSD-3-Clause |
+| pillow | 12.3.0 | PyPI | MIT-CMU |
+| pillow-heif | 1.5.0 | PyPI | BSD-3-Clause |
 
 ## Backend — Entwicklung
 
