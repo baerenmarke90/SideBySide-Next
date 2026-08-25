@@ -1,7 +1,11 @@
 """Alembic-Umgebung.
 
-Die Verbindung kommt aus der Anwendungskonfiguration, nicht aus alembic.ini
-- ein Zugangsdatum gehört nicht in eine eingecheckte Datei.
+Die Verbindung kommt aus der Umgebung, nicht aus alembic.ini - ein
+Zugangsdatum gehört nicht in eine eingecheckte Datei. Gelesen wird dafür
+`DatabaseSettings` und nicht die vollständige Anwendungskonfiguration:
+eine Migration braucht die Datenbank, aber weder Cursor-Signing-Key noch
+SMTP noch eine öffentliche Adresse. Hing sie an ihnen, scheiterte
+`alembic upgrade head` in Produktion, bevor die erste Revision lief.
 
 Alle Modelle werden hier importiert, damit `--autogenerate` sie sieht. Ein
 vergessener Import erzeugt eine Migration, die eine Tabelle löschen will.
@@ -12,6 +16,7 @@ from __future__ import annotations
 from logging.config import fileConfig
 
 from alembic import context
+from pydantic import ValidationError
 from sqlalchemy import CheckConstraint, engine_from_config, pool
 from sqlalchemy.schema import SchemaItem
 
@@ -20,7 +25,7 @@ from sidebyside.attachments import binding as _binding  # noqa: F401
 # Modelle registrieren. Die Importe sehen ungenutzt aus, sind es aber nicht.
 from sidebyside.attachments import models as _attachments  # noqa: F401
 from sidebyside.comments import models as _comments  # noqa: F401
-from sidebyside.config import get_settings
+from sidebyside.config import DatabaseSettings
 from sidebyside.db.base import Base
 from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
 from sidebyside.identity import models as _identity  # noqa: F401
@@ -32,8 +37,27 @@ from sidebyside.people import models as _people  # noqa: F401
 from sidebyside.profiles import models as _profiles  # noqa: F401
 from sidebyside.relationship import models as _relationship  # noqa: F401
 
+
+def _migrationsverbindung() -> str:
+    """Die Datenbank-URL für diesen Lauf, oder ein klarer Abbruch.
+
+    Der Fehler wird hier abgefangen und neu formuliert, weil ein
+    durchgereichter `ValidationError` wie ein Anwendungsfehler aussieht.
+    Wer eine Migration startet, soll lesen, welche Variable fehlt.
+    """
+    try:
+        return DatabaseSettings().database_url
+    except ValidationError as fehler:
+        raise SystemExit(
+            "Migration nicht möglich: SBS_DATABASE_URL fehlt oder ist unbrauchbar. "
+            "Erwartet wird eine PostgreSQL-URL, zum Beispiel "
+            "postgresql+psycopg://benutzer:passwort@host:5432/datenbank. "
+            f"Ursache: {fehler}"
+        ) from fehler
+
+
 config = context.config
-config.set_main_option("sqlalchemy.url", get_settings().database_url)
+config.set_main_option("sqlalchemy.url", _migrationsverbindung())
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

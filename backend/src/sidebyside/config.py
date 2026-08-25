@@ -77,6 +77,43 @@ class OidcConnection(BaseModel):
         return adresse
 
 
+# Der Vorgabewert zeigt auf die Datenbank aus `deploy/docker-compose.dev.yml`.
+# Er steht hier einmal, weil ihn zwei Konfigurationen brauchen und ein
+# auseinanderlaufendes Paar davon niemandem auffiele.
+DEFAULT_DATABASE_URL = "postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside"
+
+
+class DatabaseSettings(BaseSettings):
+    """Nur die Verbindung - fuer Pfade, die keine laufende Anwendung sind.
+
+    Eine Migration braucht die Datenbank und sonst nichts. Laedt sie die
+    vollstaendigen `Settings`, haengt `alembic upgrade head` an Cursor-Key-,
+    SMTP- und Public-URL-Pruefungen, die mit dem Schema nichts zu tun haben,
+    und bricht ab, bevor die erste Revision laeuft.
+
+    Bewusst weder Basisklasse noch Subtyp von `Settings`: ueber Vererbung
+    waeren beide nach der naechsten Erweiterung wieder eine Konfiguration.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="SBS_", env_file=".env", extra="ignore")
+
+    database_url: str = Field(default=DEFAULT_DATABASE_URL)
+
+    @field_validator("database_url")
+    @classmethod
+    def database_url_is_usable(cls, value: str) -> str:
+        """Ein leerer Wert ist kein Vorgabewert, sondern ein Fehler.
+
+        Setzt eine Umgebung die Variable auf den leeren String - eine
+        Interpolation ohne Ergebnis reicht dafuer -, greift der Default
+        nicht mehr. Ohne diese Pruefung liefe die Migration in einen
+        SQLAlchemy-Fehler ueber einen Dialekt ohne Namen.
+        """
+        if not value.strip():
+            raise ValueError("SBS_DATABASE_URL ist leer.")
+        return value
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SBS_", env_file=".env", extra="ignore")
 
@@ -85,9 +122,7 @@ class Settings(BaseSettings):
 
     # Kein SQLite-Rückfall: das Datenmodell nutzt PostgreSQL-Eigenschaften,
     # und ein zweiter Dialekt im Test prüft nicht, was in Produktion läuft.
-    database_url: str = Field(
-        default="postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside"
-    )
+    database_url: str = Field(default=DEFAULT_DATABASE_URL)
     database_echo: bool = False
 
     media_store: MediaStoreBackend = MediaStoreBackend.LOCAL
