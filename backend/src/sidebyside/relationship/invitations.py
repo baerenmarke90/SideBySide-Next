@@ -13,7 +13,7 @@ Der Token wird nur einmal ausgegeben und nur gehasht abgelegt.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from uuid import UUID
@@ -108,28 +108,33 @@ def revoke(session: Session, space_id: UUID, invitation_id: UUID) -> Invitation:
     return einladung
 
 
-def accept(session: Session, token: str, account: Account) -> Membership:
-    """Eine Einladung annehmen.
+def _invalid() -> ValidationError:
+    return ValidationError("This invitation is no longer valid.", InvitationErrorCode.INVALID)
 
-    Jeder Fehlschlag - unbekannt, abgelaufen, widerrufen, bereits benutzt -
-    ergibt dieselbe Meldung. Ein Unterschied waere eine Auskunft darueber,
-    welche Token existieren.
 
-    Die Zeile wird gesperrt geladen. Nehmen zwei Versuche gleichzeitig
-    dieselbe Einladung an, wartet der zweite auf den ersten und sieht dann
-    `accepted_at` gesetzt - statt dass beide durchgehen.
+def _open_for_update(session: Session, token_hash: str) -> Invitation:
+    """Eine noch offene Einladung unter Zeilensperre laden.
+
+    Auch interne Aufrufer arbeiten nur mit dem Hash. Damit muss ein
+    Klartext-Token nicht durch weitere Schichten gereicht oder gespeichert
+    werden.
     """
-    ungueltig = ValidationError("This invitation is no longer valid.", InvitationErrorCode.INVALID)
-    if not token:
-        raise ungueltig
+    if not token_hash:
+        raise _invalid()
 
     einladung = session.execute(
-        select(Invitation).where(Invitation.token_hash == hash_token(token)).with_for_update()
+        select(Invitation).where(Invitation.token_hash == token_hash).with_for_update()
     ).scalar_one_or_none()
 
-    jetzt = now()
-    if einladung is None or not einladung.is_open(jetzt):
-        raise ungueltig
+    if einladung is None or not einladung.is_open(now()):
+        raise _invalid()
+    return einladung
+
+
+def _accept_open(session: Session, einladung: Invitation, account: Account) -> Membership:
+    """Eine bereits gesperrte, offene Einladung fachlich annehmen."""
+    if not einladung.is_open(now()):
+        raise _invalid()
 
     # Der Ersteller kann seine eigene Einladung nicht annehmen. Sonst
     # verbraucht ein Fehlgriff die Einladung, und der Partner steht vor
@@ -143,7 +148,42 @@ def accept(session: Session, token: str, account: Account) -> Membership:
     # fehl, bleibt die Einladung offen - der Fehler liegt nicht an ihr.
     mitgliedschaft = service.add_member(session, einladung.space_id, account)
 
-    einladung.accepted_at = jetzt
+    einladung.accepted_at = now()
     einladung.accepted_by = account.id
     session.flush()
     return mitgliedschaft
+
+
+def accept(session: Session, token: str, account: Account) -> Membership:
+    """Eine Einladung annehmen.
+
+    Jeder Fehlschlag - unbekannt, abgelaufen, widerrufen, bereits benutzt -
+    ergibt dieselbe Meldung. Ein Unterschied waere eine Auskunft darueber,
+    welche Token existieren.
+
+    Die Zeile wird gesperrt geladen. Nehmen zwei Versuche gleichzeitig
+    dieselbe Einladung an, wartet der zweite auf den ersten und sieht dann
+    `accepted_at` gesetzt - statt dass beide durchgehen.
+    """
+    if not token:
+        raise _invalid()
+    einladung = _open_for_update(session, hash_token(token))
+    return _accept_open(session, einladung, account)
+
+
+def accept_with_new_account(
+    session: Session,
+    token_hash: str,
+    account_factory: Callable[[], Account],
+) -> tuple[Account, Membership]:
+    """Eine Einladung annehmen und das neue Konto erst unter der Sperre anlegen.
+
+    Dieser Weg ist fuer Onboarding-Verfahren gedacht, bei denen das Konto
+    noch nicht existiert. Entscheidend ist die Reihenfolge: zuerst wird die
+    Einladung gesperrt und erneut auf Gueltigkeit geprueft, erst danach darf
+    der Aufrufer das Konto erzeugen. Zwei parallele Rueckwege mit derselben
+    Einladung koennen so niemals zwei Konten anlegen.
+    """
+    einladung = _open_for_update(session, token_hash)
+    account = account_factory()
+    return account, _accept_open(session, einladung, account)
