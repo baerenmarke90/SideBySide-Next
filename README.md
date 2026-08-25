@@ -83,7 +83,8 @@ künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
 <p align="center">
   <strong>Aktuell: G1 ist bestanden. M2-S0 ist freigegeben und aktiv; M2-Runtime beginnt nach Abschluss der blockierenden S0-Entscheidungen.</strong><br>
   <a href="docs/ROADMAP.md">Roadmap, parallele Arbeitsströme und Release Gates ansehen</a> ·
-  <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a>
+  <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a> ·
+  <a href="docs/m2/PROJECT-CONTROL.md">M2 Project Control öffnen</a>
 </p>
 
 ## Leitsätze
