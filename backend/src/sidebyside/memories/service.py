@@ -105,14 +105,18 @@ def create_memory(
     return memory
 
 
-def get_memory(session: Session, context: AuthorizationContext, memory_id: object) -> Memory:
-    return require_readable(session, Memory, memory_id, context)
+def get_memory(
+    session: Session,
+    context: AuthorizationContext,
+    memory_id: UUID | str,
+) -> Memory:
+    return require_readable(session, Memory, context, memory_id)
 
 
 def update_memory(
     session: Session,
     context: AuthorizationContext,
-    memory_id: object,
+    memory_id: UUID | str,
     *,
     expected_version: int,
     changed_fields: frozenset[str],
@@ -120,7 +124,7 @@ def update_memory(
     body: str | None,
     happened_on: date | None,
 ) -> Memory:
-    memory = require_writable(session, Memory, memory_id, context)
+    memory = require_writable(session, Memory, context, memory_id)
     _ensure_expected_version(memory, expected_version)
 
     next_title = memory.payload.title
@@ -146,11 +150,11 @@ def update_memory(
 def delete_memory(
     session: Session,
     context: AuthorizationContext,
-    memory_id: object,
+    memory_id: UUID | str,
     *,
     expected_version: int,
 ) -> None:
-    memory = require_writable(session, Memory, memory_id, context)
+    memory = require_writable(session, Memory, context, memory_id)
     _ensure_expected_version(memory, expected_version)
     actor_id = context.account_id
     session.delete(memory)
