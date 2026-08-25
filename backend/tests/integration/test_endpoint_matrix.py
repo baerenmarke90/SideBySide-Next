@@ -428,6 +428,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "memoryId": memory["id"],
             "heartMomentId": heart_moment["id"],
             "milestoneId": milestone["id"],
+            "commentId": comment["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
