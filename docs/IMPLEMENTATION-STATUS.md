@@ -71,7 +71,7 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 
 ## M2-S0 — Readiness & Vertragsentscheidungen
 
-**Status: aktiv. Runtime-Code noch gesperrt, bis die BLOCKING-Decisions geschlossen sind.**
+**Status: aktiv. Runtime-Code noch gesperrt, bis die für den jeweiligen Slice relevanten BLOCKING-Decisions geschlossen sind.**
 
 ### Aktuelle Issue-Kette
 
@@ -80,6 +80,8 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 - [ ] **#69 — Media:** Attachment-Lifecycle, Limits, Validation und Retention entscheiden.
 - [ ] **#70 — API:** Routen, DTOs, Concurrency, Pagination und Story-Sortierung festlegen.
 - [ ] **#71 — erster Runtime-Slice:** Memory CRUD ohne Medien; blockiert durch #67/#68/#70.
+
+Nach Merge von #67 können #68 und #69 parallel bearbeitet werden. #70 übernimmt die freigegebenen Entscheidungen in den versionierten Contract. #71 startet erst, wenn seine relevanten S0-Abhängigkeiten erfüllt sind.
 
 Die Details und verbindlichen Milestone-Grenzen stehen in [M2 Project Control](m2/PROJECT-CONTROL.md).
 
