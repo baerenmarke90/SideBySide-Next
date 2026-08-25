@@ -11,17 +11,17 @@ gibt.
 from __future__ import annotations
 
 from sidebyside.story.service import (
-    StoryItem,
     StoryKind,
     StoryOrder,
     StoryPageResult,
+    StoryRow,
     read_timeline,
 )
 
 __all__ = [
-    "StoryItem",
     "StoryKind",
     "StoryOrder",
     "StoryPageResult",
+    "StoryRow",
     "read_timeline",
 ]

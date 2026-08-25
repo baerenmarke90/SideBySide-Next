@@ -2509,6 +2509,29 @@
         "title": "StoryHeartMomentItem",
         "type": "object"
       },
+      "StoryItem": {
+        "description": "Ein Eintrag der Zeitleiste, diskriminiert ueber `kind`.\n\nEin eigener Typ und keine anonyme Union im Listenfeld: sonst benennt\nder OpenAPI-Vertrag sie nach ihrem Fundort - `StoryPageItemsInner` -\nund jeder erzeugte Client traegt diesen Namen weiter. `API-DESIGN.md`\nnennt sie `StoryItem`, und das soll auch im Vertrag stehen.",
+        "discriminator": {
+          "mapping": {
+            "HEART_MOMENT": "#/components/schemas/StoryHeartMomentItem",
+            "MEMORY": "#/components/schemas/StoryMemoryItem",
+            "MILESTONE": "#/components/schemas/StoryMilestoneItem"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StoryMemoryItem"
+          },
+          {
+            "$ref": "#/components/schemas/StoryHeartMomentItem"
+          },
+          {
+            "$ref": "#/components/schemas/StoryMilestoneItem"
+          }
+        ],
+        "title": "StoryItem"
+      },
       "StoryKind": {
         "enum": [
           "MEMORY",
@@ -2582,25 +2605,7 @@
           },
           "items": {
             "items": {
-              "discriminator": {
-                "mapping": {
-                  "HEART_MOMENT": "#/components/schemas/StoryHeartMomentItem",
-                  "MEMORY": "#/components/schemas/StoryMemoryItem",
-                  "MILESTONE": "#/components/schemas/StoryMilestoneItem"
-                },
-                "propertyName": "kind"
-              },
-              "oneOf": [
-                {
-                  "$ref": "#/components/schemas/StoryMemoryItem"
-                },
-                {
-                  "$ref": "#/components/schemas/StoryHeartMomentItem"
-                },
-                {
-                  "$ref": "#/components/schemas/StoryMilestoneItem"
-                }
-              ]
+              "$ref": "#/components/schemas/StoryItem"
             },
             "title": "Items",
             "type": "array"
