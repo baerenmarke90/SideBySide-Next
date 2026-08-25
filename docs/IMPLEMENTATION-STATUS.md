@@ -1,14 +1,14 @@
 # Umsetzungsstand
 
-Stand: 24. August 2026  
-Ausgangspunkt: `main` bei Commit `c69195ca58a0c65a4bedf976c2c2d898c0b39e2c`
+Stand: 25. August 2026  
+Ausgangspunkt dieses Audits: `main` bei Commit `9b4be168cec305c8a613889d2213f133429fe158`
 
 ## Dokumentenrollen
 
 - **Verbindliche Quelle:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
 - **Unveränderlicher Ausgangsreview:** [2026-08-24-spec-gap-review.md](reviews/2026-08-24-spec-gap-review.md)
-- **Aktueller Security-Snapshot:** [2026-08-24-g1-m1-security-review.md](reviews/2026-08-24-g1-m1-security-review.md)
+- **Historischer G1-Snapshot:** [2026-08-24-g1-m1-security-review.md](reviews/2026-08-24-g1-m1-security-review.md)
 - **Dieses Dokument:** laufende, kurze Arbeits- und Fortschrittsliste
 
 Bei Widersprüchen gilt die Master-Spezifikation. Datierte Dateien unter
@@ -32,33 +32,34 @@ bekommt eine neue Datei.
 - Direkte Pushes auf `main` werden organisatorisch vermieden, solange GitHub sie für dieses private Repository tarifbedingt nicht technisch blockieren kann.
 - Neue Findings werden als eigenes Issue erfasst, statt den Scope eines laufenden Issues still zu erweitern.
 
-## Release-Blocker vor M2
+## G1/M1 – aktueller Stand
 
-- [x] Rate-Limit-Ereignisse trotz erwarteter Auth-Fehler dauerhaft und atomar speichern.
+Der datierte [G1/M1 Security Review vom 24.08.2026](reviews/2026-08-24-g1-m1-security-review.md) bleibt ein historischer Snapshot. Seine damaligen Blocker #7, #11, #24 und #26 sind inzwischen geschlossen; die dort beschriebenen fehlenden Auth-, Owner-/Privacy-, Profile- und Testpfade sind auf `main` vorhanden.
+
+Der Merge von PR #57 (`9b4be168cec305c8a613889d2213f133429fe158`) hat zusätzlich OIDC-Onboarding über gültige Einladungen ergänzt. Der Merge-Commit selbst hat die vollständige CI mit PostgreSQL-Integrationstests, OpenAPI-/Migration-/Drift-Prüfung, Lint, Mypy, Supply Chain, Secret Scan und Provenance bestanden.
+
+**G1 wird trotzdem noch nicht als bestanden markiert.** Vor der Freigabe von produktivem M2-Runtime-Code folgt ein neuer datierter Review gegen den dann aktuellen `main`. Das Audit vom 25.08.2026 hat zusätzlich folgende Härtungen bzw. Entscheidungen herausgezogen:
+
+- [ ] #59 – anonymen Passkey-Authentication-Start gegen Challenge-Flooding absichern; PostgreSQL-Parallel-/Abuse-Test ist Pflicht.
+- [ ] #60 – Rate-Limit-Schwellen bei parallelen Requests atomar/serialisiert erzwingen.
+- [ ] #61 – beim Löschen einer `RelatedPerson` die Produktentscheidung „Termine erhalten“ vs. „Termine mit löschen“ privacy-sicher in API und späteren Clients umsetzen. Der heutige Cascade bleibt bis dahin dokumentiert und unverändert.
+- [ ] #25 – Branch Protection/Ruleset für `main`: angelegt, aber bei diesem privaten Repository durch den aktuellen GitHub-Tarif nicht technisch erzwungen; nach einem Planwechsel Targeting und Enforcement erneut prüfen.
+
+#59 und #60 sind Abuse-/Availability-Härtungen ohne bekannten Auth-Bypass. Der neue G1-Review entscheidet explizit, ob sie für den Beginn interner M2-Domainimplementierung blockieren oder als verpflichtende Pre-Exposure-Härtung vor Managed-/öffentlichem Betrieb geführt werden. #61 ist eine bewusste Datenintegritäts-/UX-Entscheidung; die aktuelle Privacy-Isolation wird dadurch nicht aufgehoben.
+
+## Bereits geschlossene Foundation-/M1-Sicherheitsarbeit
+
+- [x] Rate-Limit-Ereignisse trotz erwarteter Auth-Fehler dauerhaft speichern.
 - [x] Refresh-Replay-Widerruf trotz 401 dauerhaft und atomar speichern.
-- [x] HTTP-Integrationstests mit dem echten produktiven Session-Lifecycle ergänzen.
+- [x] HTTP-Integrationstests mit dem echten produktiven Session-Lifecycle ergänzen (#7).
 - [x] Membership-Änderungen je Space serialisieren; Race mit zwei Einladungen testen.
 - [x] Refresh-Rotation atomar machen; parallelen Refresh testen.
 - [x] Bootstrap der ersten Self-Hosted-Registrierung absichern und serialisieren.
 - [x] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
+- [x] Refresh-Replay über die gesamte Token-Familie erkennen (#24).
+- [x] OIDC-, WebAuthn-/Passkey-, Magic-Link-, E-Mail-Verifikations- und Recovery-Flows implementieren (#26).
+- [x] Owner-/Private-Authorization, Profile und zugehörige Privacy-/Tenant-Matrix vervollständigen (#11/#7).
 - [x] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entschieden: keine Behauptung eines strikten/formalen Clean Rooms; Fortführung als eigenständige Neuimplementierung mit dokumentierter Vorbefassung gemäß [ADR 0001](decisions/0001-clean-room-classification.md).
-
-## Aktueller G1/M1 Security Review
-
-Der datierte [G1/M1 Security Review vom 24.08.2026](reviews/2026-08-24-g1-m1-security-review.md) bewertet den Stand nach Abschluss der bisherigen P0-Fixes und der Auth-Persistenzarchitektur.
-
-**Ergebnis: G1 ist noch nicht bestanden; produktive M2-Domainimplementierung bleibt gesperrt.**
-
-Aktuelle G1-Blocker:
-
-- [ ] #26 – OIDC-/WebAuthn-/Cloud-Auth-Flows tatsächlich implementieren.
-- [ ] #11 – Owner-/Private-Authorization, SpaceProfile-Schreibpfad/409/Timezone sowie PartnerProfile, ProfilePreference, RelatedPerson und ImportantDate abschließen.
-- [ ] #7 – Rollen-/Owner-/Privacy-/Tenant-Matrix für die neuen M1-Endpunkte vervollständigen.
-
-Zusätzliche Härtung:
-
-- [x] #24 – Refresh-Replay über die gesamte Token-Familie erkennen.
-- [ ] #25 – Branch Protection/Ruleset für `main`: Ruleset angelegt, aber bei diesem privaten Repository durch den aktuellen GitHub-Tarif nicht erzwungen; zusätzlich muss das Targeting nach einem Planwechsel auf `main` geprüft werden. Kein eigenständiger G1-Codeblocker, aber offenes Repository-Hardening.
 
 ## M0 – Clean Foundation
 
@@ -73,12 +74,12 @@ Zusätzliche Härtung:
 - [x] Dokumentation, Provenienz und Dependency-Verzeichnis
 - [x] Backend-CI mit echten PostgreSQL-Integrationstests und Secret Scan
 - [x] Initiale Verzeichnisse `web/`, `android/` und `tools/` ergänzen
-- [x] Fehlende Provider-Interfaces ergänzen: Map, Places, Recipe, Entertainment
-- [x] Dependency-/Vulnerability-Scan aktivieren
+- [x] Provider-Interfaces: Map, Places, Recipe, Entertainment
+- [x] Dependency-/Vulnerability-Scan
 - [x] Reproduzierbare Abhängigkeitsauflösung mit Lock/Constraints und Hashes
-- [x] Expliziten Backend-/Container-Build in CI ergänzen
-- [x] OpenAPI-Vertrag versionieren und Contract-Tests ergänzen
-- [x] ProtectedPayload-Persistenztyp und Outbox-Payload-Allowlist technisch erzwingen
+- [x] Backend-/Container-Build in CI
+- [x] OpenAPI-Vertrag versioniert und Contract-Tests
+- [x] ProtectedPayload-Persistenztyp und Outbox-Payload-Allowlist technisch erzwungen
 
 **M0 ist für den aktuellen Umfang abgeschlossen.** Weitere Security-Härtungen werden in den jeweils betroffenen Milestones und Issues verfolgt.
 
@@ -88,27 +89,27 @@ Zusätzliche Härtung:
 - [x] Lokaler Passwortlogin mit Argon2
 - [x] Device Sessions und Bearer Tokens
 - [x] Space, Membership und zentraler Tenant Guard
-- [x] Invitations mit Hash, Ablauf, Widerruf und Einmaligkeit
-- [x] SpaceProfile-Modell und lesende API
+- [x] Invitations mit Hash, Ablauf, Widerruf, Einmaligkeit und Race-Schutz
+- [x] SpaceProfile-Modell sowie Lese-/Schreib-API mit ETag/If-Match und 409
+- [x] Beziehungsdauer in der Zeitzone des lesenden Accounts
 - [x] OIDC-Modell mit Issuer/Connection-ID und eindeutigem `(issuer, subject)`
-- [x] Passkey-/WebAuthn-fähiges Credential-Modell
-- [x] Getrennte, gehashte Einmal-Tokenmodelle für E-Mail-Verifikation, Magic Link und Recovery
-- [ ] OIDC-/WebAuthn-Adapter und vollständige Cloud-Auth-API-Flows
-- [x] Eigene Owner-/Private-Authorization-Grundlage (#27): zentrale, in der
-      Abfrage erzwungene `SPACE_SHARED`-/`OWNER_ONLY`-Autorisierung samt
-      Privacy-Testmatrix. Eine produktive `OWNER_ONLY`-Fachdomäne setzt
-      darauf noch nicht auf; das gehört zu den restlichen M1-/M2-Domänen.
-- [x] SpaceProfile-Schreib-API mit Versionskonflikt/409 (#28): `PUT` auf
-      `relationshipStartedOn`, `showRelationshipDuration` und
-      `durationDisplayMode` mit ETag und `If-Match` als Pflichtkopf.
-      `SpaceProfile` bleibt `SPACE_SHARED` und trägt bewusst keine
-      Owner-Einschränkung.
-- [x] Beziehungsdauer in der fachlich richtigen Zeitzone berechnen (#28):
-      Tagesgrenze über `Account.timezone` der lesenden Person statt
-      `today_utc()`.
-- [ ] PartnerProfile und ProfilePreference
-- [ ] RelatedPerson und ImportantDate
-- [ ] Cross-Tenant- und Privacy-Tests für jedes neue M1-Feature
+- [x] OIDC Authorization Code + PKCE, Discovery/JWKS, State, Nonce, Issuer, Audience und Signaturprüfung
+- [x] OIDC-Onboarding mit gültiger Einladung; Einladung nur gehasht, Account/Identität/Membership atomar, kein E-Mail-Merge
+- [x] Passkey/WebAuthn Registration und Authentication mit realer Signatur-/Origin-/RP-ID-/Counter-Prüfung
+- [x] Getrennte, gehashte Einmal-Tokenmodelle und API-Flows für E-Mail-Verifikation, Magic Link und Recovery
+- [x] Zentrale Owner-/Private-Authorization mit SQL-seitigem `SPACE_SHARED`-/`OWNER_ONLY`-Filter
+- [x] PartnerProfile und ProfilePreference inklusive `PRIVATE_PARTNER_NOTE`
+- [x] RelatedPerson und ImportantDate inklusive Privacy-/Owner-/Cross-Tenant-Regeln
+- [x] Rollen-/Owner-/Privacy-/Tenant-Matrix für die M1-Endpunkte
+
+### Noch offene Produkt-/Betriebsgrenzen
+
+`SBS_DEPLOYMENT` unterscheidet bereits `cloud` und `self_hosted`, wird aber noch nicht als vollständige serverseitige Auth-Routen-/Provider-Policy durchgesetzt. Ziel ist:
+
+- **Managed/Cloud:** Passkey, Magic Link und später verwaltete Provider wie Google/Apple.
+- **Self-Hosted:** lokales Passwort, Passkey und frei konfigurierbares OIDC; Mail-basierte Wege nur bei bewusster Mailkonfiguration.
+
+Bis die Productization-Policy implementiert ist, darf das Verstecken eines Login-Buttons im Client nicht als Sicherheitsgrenze gelten. Die verbindliche Zielregel steht in [SECURITY.md](SECURITY.md).
 
 ## Spätere Meilensteine
 
@@ -117,9 +118,9 @@ Zusätzliche Härtung:
 - [ ] M4 – Reminders, Activity, Notifications, Dashboard, Search, Rules
 - [ ] M5 – Export/Import, Web, Android, Read Cache und Client-Parität
 - [ ] M6–M8 – Rich Features, Integrationen und Context
-- [ ] M9 – Productization und Security Hardening
+- [ ] M9 – Productization, Managed-/Self-Hosted-Policy und Security Hardening
 - [ ] MX – echte E2EE erst als eigener späterer Security-Milestone
 
 ## Nächster Prüfpunkt
 
-Neuen datierten G1-Review nach Abschluss von #11, #26 und dem relevanten Rest von #7 sowie nach Umsetzung von #24 durchführen. Der nächste Review muss den dann aktuellen `main`-Commit und eine erfolgreiche CI eindeutig referenzieren. #25 bleibt als tarifbedingt blockiertes Repository-Hardening separat offen.
+Nach Merge des Audit-Hardening-PRs einen **neuen datierten G1-Review** gegen den dann aktuellen `main` und dessen erfolgreiche CI erstellen. Der Review muss die geschlossenen Altblocker, die OIDC-Härtung dieses Audits sowie die Einordnung von #59, #60, #61 und #25 ausdrücklich bewerten. Erst danach wird G1 auf „bestanden“ gesetzt und M2-S0 freigegeben.
