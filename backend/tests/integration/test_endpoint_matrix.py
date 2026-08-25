@@ -234,6 +234,7 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/timeline"),
     Endpunkt("GET", "/api/v1/spaces/{spaceId}/milestones"),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
     Endpunkt(
