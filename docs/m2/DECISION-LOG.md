@@ -42,6 +42,7 @@ Dieses Log trennt Spezifikationsaussagen von Umsetzungsvorschlägen. `PROPOSED` 
 | M2-D22 | BEFORE_CLIENTS | OPEN | Product + UX | Ist der Owner-Bereich für private HeartMoments Teil der gemeinsamen Story-Route oder eine getrennte Ansicht? | Getrennte, klar markierte Owner-Ansicht reduziert versehentliche Offenlegung. |
 | M2-D23 | BLOCKING | DECIDED | Security + Media | In welcher Reihenfolge entstehen Bild- und Videoverarbeitung, und welche Parser kommen dafür ins Projekt? | Bilder zuerst mit Pillow und pillow-heif; Video mitsamt ffmpeg folgt als eigener Slice. Bis dahin weist der Server MP4/QuickTime fail-closed ab. Siehe #85. |
 | M2-D24 | BLOCKING | DECIDED | API + Security | Wie liest der Owner ein noch ungebundenes Attachment, wenn AttachmentReadRequest eine Parentreferenz verlangt? | Die Union erhält additiv `parentType: "NONE"` für den eigenen ungebundenen Upload im Bindungsfenster. Owner, `READY` und Fenster werden serverseitig geprüft. Siehe #79. |
+| M2-D25 | BLOCKING | DECIDED | Product + Domain | Darf der Partner einen Milestone des anderen ändern oder löschen? | Nein. Beide lesen; Update und Delete bleiben beim unveränderlichen Autor, wie bei Memory (M2-D01). Siehe #94. |
 
 ## Verbindliche Domain-/Privacy-Grundsätze für M2
 
@@ -236,6 +237,16 @@ Begründung: Abschnitt 8 der Media-Pipeline sieht den Fall bereits vor — ein `
 Folgen: Die Variante ist keine Abkürzung an der Autorisierung vorbei. Der Server verlangt Owner-Identität, Status `READY` und ein nicht abgelaufenes Bindungsfenster; danach folgt die Lesbarkeit wieder ausschließlich dem Parent. Ein Partner erhält mit `NONE` niemals Zugriff, auch nicht auf ein ungebundenes Attachment im selben Space. Nach Ablauf des Fensters wird das Attachment ohnehin `DELETING`. Die Erweiterung ist rückwärtskompatibel: bestehende Clients senden weiterhin eine Parentreferenz.  
 Tests: Owner liest eigenen ungebundenen Upload; Partner erhält 404; `NONE` auf einem gebundenen Attachment wird abgewiesen; abgelaufenes Fenster liefert 404; `NONE` auf fremdem oder nicht-`READY` Attachment liefert 404.  
 Verweise: #79, `API-DESIGN.md`, `API-CONTRACT.json`, `MEDIA-PIPELINE.md`.
+
+### M2-D25 – Schreibrechte für Milestone
+Status: DECIDED  
+Datum: 2026-08-25  
+Entscheider: Product + Domain / Projektentscheidung #94  
+Entscheidung: Ein Milestone ist gemeinsamer, für beide aktiven Space-Partner lesbarer Inhalt. Update und Delete dürfen ausschließlich durch den unveränderlichen `authorId` erfolgen — dieselbe Regel wie für Memory in M2-D01. Aus geteilter Lesbarkeit wird keine Schreibvollmacht abgeleitet.  
+Begründung: Das Domänenmodell hielt diese Frage ausdrücklich offen und verbot bis zur Klärung jede aus Shared-Lesbarkeit abgeleitete Partnerschreibvollmacht. Für die Entscheidung gab den Ausschlag, dass sie umkehrbar bleibt: gemeinsames Bearbeiten später zu öffnen ist additiv und gefährdet keinen bestehenden Inhalt, es später wieder zu schließen wäre ein Funktionsverlust für Paare, die sich darauf eingerichtet haben. Zudem bleibt die Autorisierung damit auf einer einzigen, bereits getesteten Regel; Milestone wäre sonst die erste Ressource, bei der Lese- und Schreibgrenze auseinanderfallen.  
+Folgen: `authorization.rules` braucht keine neue Regelklasse — `SPACE_SHARED` bleibt lesbar für den Space und schreibbar nur für den Owner. Create setzt `authorId` aus dem Authorization Context; der Partner sieht in `capabilities` weder Edit noch Delete. Ein späteres gemeinsames Bearbeiten benötigt eine neue explizite Entscheidung und eine eigene Regel in der Tabelle, nicht eine Ausnahme im Endpunkt.  
+Tests: Autor CRUD; Partner read/list; Partner update/delete abgelehnt mit 403; fremder Space 404; stale `If-Match` 409; `authorId` nicht mutierbar.  
+Verweise: #94, `DOMAIN-MODEL.md`, `authorization/rules.py`.
 
 ## Entscheidungsformat
 

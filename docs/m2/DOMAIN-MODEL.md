@@ -152,7 +152,7 @@ Ein Privacy-Wechsel ist eine Domainoperation, keine reine Clientdarstellung. `PR
 | Spätere Nutzung | Chapter, Suche, Jahresrückblick |
 | Concurrency | `version` |
 
-Die konkrete Partner-Schreibregel für Milestone muss vor dem Milestone-Runtime-Slice explizit bestätigt werden; bis dahin wird keine Partner-Schreibvollmacht aus Shared-Lesbarkeit abgeleitet.
+Die Partner-Schreibregel ist mit M2-D25 entschieden: beide lesen, Update und Delete bleiben beim unveränderlichen Autor — dieselbe Regel wie für Memory. Aus geteilter Lesbarkeit folgt keine Schreibvollmacht. Ein späteres gemeinsames Bearbeiten benötigt eine neue Entscheidung und eine eigene Regel in `authorization.rules`, nicht eine Ausnahme im Endpunkt.
 
 ### Attachment
 

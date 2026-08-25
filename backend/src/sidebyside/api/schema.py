@@ -7,7 +7,10 @@ Darstellungsentscheidung mit sich herum.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.json_schema import SkipJsonSchema
 
 
 def to_camel(value: str) -> str:
@@ -23,3 +26,18 @@ class ApiModel(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
+
+
+class AuthorSummary(ApiModel):
+    id: UUID
+    display_name: str
+    profile_attachment_id: UUID | SkipJsonSchema[None] = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+
+
+class ResourceCapabilities(ApiModel):
+    can_edit: bool
+    can_delete: bool
+    can_comment: bool

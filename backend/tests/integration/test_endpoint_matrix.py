@@ -92,6 +92,11 @@ ATTACHMENT = {
     "expectedMimeType": "image/jpeg",
     "expectedSize": 2048,
 }
+MILESTONE = {
+    "title": "Matrix Milestone",
+    "body": "Text",
+    "happenedOn": "2025-06-13",
+}
 
 SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
@@ -228,6 +233,26 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/milestones"),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/milestones/{milestoneId}",
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/milestones/{milestoneId}",
+        body={"title": "Matrix Milestone aktualisiert"},
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/milestones/{milestoneId}",
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
     Endpunkt(
         "GET",
@@ -335,6 +360,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
     termin = client.post(f"{basis}/important-dates", json=TERMIN, headers=kopf).json()
     memory = client.post(f"{basis}/memories", json=MEMORY, headers=kopf).json()
     heart_moment = client.post(f"{basis}/heart-moments", json=HEART_MOMENT, headers=kopf).json()
+    milestone = client.post(f"{basis}/milestones", json=MILESTONE, headers=kopf).json()
     attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=kopf).json()
 
     return {
@@ -351,6 +377,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "dateId": termin["id"],
             "memoryId": memory["id"],
             "heartMomentId": heart_moment["id"],
+            "milestoneId": milestone["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
@@ -456,6 +483,7 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "memoryId",
             "heartMomentId",
             "attachmentId",
+            "milestoneId",
         )
         if "{" + name + "}" in endpunkt.template
     )
