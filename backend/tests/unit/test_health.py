@@ -58,6 +58,7 @@ class TestProduktion:
                 environment=Environment.PRODUCTION,
                 mail_transport=MailTransport.SMTP,
                 public_base_url="https://app.example",
+                cursor_signing_key="cursor-test-" + ("x" * 40),
             ),
         )
         produktion = TestClient(
