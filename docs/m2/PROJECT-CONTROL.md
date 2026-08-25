@@ -82,3 +82,13 @@ M2 ist freigegeben, aber S0 ist noch nicht abgeschlossen. Ein Runtime-Slice star
 - #71 — `[M2][Memory] Memory CRUD, ProtectedPayload und Concurrency implementieren`
 
 #71 bleibt bis zu seinen S0-Abhängigkeiten ausdrücklich blockiert.
+
+## Aktive Statusquellen
+
+Die laufenden Statusquellen sind auf denselben Stand synchronisiert:
+
+- [`README.md`](../../README.md)
+- [`docs/ROADMAP.md`](../ROADMAP.md)
+- [`docs/IMPLEMENTATION-STATUS.md`](../IMPLEMENTATION-STATUS.md)
+
+Historische Reviews bleiben bewusst unverändert und dürfen daher frühere Gate-Stände enthalten.
