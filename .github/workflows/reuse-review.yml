@@ -1,0 +1,80 @@
+name: Reuse Review
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  reuse-review:
+    name: Reuse Review
+    runs-on: ubuntu-latest
+    env:
+      PR_BODY: ${{ github.event.pull_request.body }}
+    steps:
+      - name: Reuse-Entscheidung ist dokumentiert
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          body=${PR_BODY:-}
+
+          relevant='- [x] Reuse review relevant'
+          not_relevant='- [x] Reuse review not relevant'
+
+          relevant_count=0
+          not_relevant_count=0
+
+          if grep -Fqi -- "$relevant" <<< "$body"; then
+            relevant_count=1
+          fi
+
+          if grep -Fqi -- "$not_relevant" <<< "$body"; then
+            not_relevant_count=1
+          fi
+
+          if [ $((relevant_count + not_relevant_count)) -ne 1 ]; then
+            echo "Der PR muss genau eine Reuse-before-build-Entscheidung markieren."
+            echo "Erwartet wird eine der beiden Zeilen:"
+            echo "  - [x] Reuse review relevant"
+            echo "  - [x] Reuse review not relevant"
+            exit 1
+          fi
+
+          echo "Reuse-before-build-Entscheidung ist vorhanden."
+
+      - name: Begruendungsabschnitte sind vorhanden
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          body=${PR_BODY:-}
+
+          grep -Fq '## Reuse-before-build' <<< "$body" || {
+            echo "Abschnitt '## Reuse-before-build' fehlt."
+            exit 1
+          }
+
+          if grep -Fqi -- '- [x] Reuse review relevant' <<< "$body"; then
+            grep -Fq '**Gepruefte Alternativen**' <<< "$body" || {
+              echo "Bei relevanter Reuse-Pruefung fehlt 'Gepruefte Alternativen'."
+              exit 1
+            }
+            grep -Fq '**Entscheidung und Begruendung**' <<< "$body" || {
+              echo "Bei relevanter Reuse-Pruefung fehlt 'Entscheidung und Begruendung'."
+              exit 1
+            }
+            grep -Fq '**Drittkomponenten/Provider**' <<< "$body" || {
+              echo "Bei relevanter Reuse-Pruefung fehlt 'Drittkomponenten/Provider'."
+              exit 1
+            }
+          else
+            grep -Fq '**Begruendung**' <<< "$body" || {
+              echo "Bei 'nicht relevant' fehlt eine Begruendung."
+              exit 1
+            }
+          fi
+
+          echo "Erforderliche Reuse-Dokumentationsabschnitte sind vorhanden."
