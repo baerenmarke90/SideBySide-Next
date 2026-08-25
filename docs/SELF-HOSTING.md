@@ -1,10 +1,29 @@
 # Sicherer Self-Hosted-Betrieb
 
-## Lokaler Standard
+## Zwei Betriebsarten
 
-Der mitgelieferte Compose-Stack veroeffentlicht die API ausschliesslich auf
-`127.0.0.1`. Damit ist der erste Start auch dann nicht aus LAN oder Internet
-erreichbar, wenn die Firewall des Hosts zu offen konfiguriert ist.
+Der mitgelieferte Compose-Stack kennt zwei Betriebsarten, und der Unterschied
+ist kein Detail:
+
+| | lokaler Testbetrieb | Produktionsbetrieb |
+|---|---|---|
+| `SBS_ENVIRONMENT` | `development` (Standard) | `production` |
+| Cursor-Signing-Key | lokaler Rueckfallwert | Pflicht, mindestens 32 Zeichen |
+| Ausgehende Post | landet im Log | `smtp` oder `none`, kein `log` |
+| `SBS_PUBLIC_BASE_URL` | `http://localhost:8000` | muss `https://` sein |
+| HTTPS-Zwang, Host-Pruefung | aus | an |
+| Schema-Auskunft `/docs` | offen | geschlossen |
+
+Der Standard ist der Testbetrieb. Das ist eine bewusste Entscheidung
+([ADR 0002](decisions/0002-self-hosted-first-start-mode.md)): Ein Erststart
+soll ohne SMTP-Zugang und ohne HTTPS-Domain moeglich sein. Die API ist dabei
+ausschliesslich an `127.0.0.1` gebunden und damit auch dann nicht aus LAN oder
+Internet erreichbar, wenn die Firewall des Hosts zu offen konfiguriert ist.
+
+Die Anwendung sagt bei jedem Start, in welcher Betriebsart sie laeuft. Im
+Testbetrieb ist das eine Warnung in `docker compose logs api`.
+
+## Lokaler Test
 
 ```bash
 cp .env.example .env
@@ -20,9 +39,58 @@ curl --fail http://127.0.0.1:8000/api/v1/health
 Ausgabe mit `0.0.0.0`, `::` oder nur `:8000` ist fuer den produktiven Betrieb
 nicht zulaessig.
 
-Der Entwicklungsablauf ist davon getrennt: `deploy/docker-compose.dev.yml`
-startet nur PostgreSQL. Das lokal gestartete Uvicorn ist ein Entwicklungsserver
-und keine Vorlage fuer einen extern erreichbaren produktiven Dienst.
+Dieser Stand ist zum Ausprobieren gedacht und nicht zum Veroeffentlichen. Wer
+die Instanz erreichbar machen will, arbeitet vorher die Checkliste unten ab.
+
+Noch einmal getrennt davon ist der Entwicklungsablauf am Quellcode:
+`deploy/docker-compose.dev.yml` startet nur PostgreSQL. Das lokal gestartete
+Uvicorn ist ein Entwicklungsserver und keine Vorlage fuer einen extern
+erreichbaren produktiven Dienst.
+
+## Checkliste fuer den Produktionsbetrieb
+
+Vor dem ersten oeffentlichen Start in `.env` setzen:
+
+```dotenv
+SBS_ENVIRONMENT=production
+SBS_CURSOR_SIGNING_KEY=...        # openssl rand -base64 48
+SBS_PUBLIC_BASE_URL=https://deine-domain.example
+SBS_ALLOWED_HOSTS=["deine-domain.example"]
+TRUSTED_PROXY_IPS=...             # kleinster IP-Bereich des Reverse-Proxys
+
+# Mit Mailserver:
+SBS_MAIL_TRANSPORT=smtp
+SBS_MAIL_FROM=no-reply@deine-domain.example
+SBS_SMTP_HOST=smtp.deine-domain.example
+
+# Oder ohne Mailserver - siehe unten:
+# SBS_MAIL_TRANSPORT=none
+```
+
+Fehlt der Cursor-Signing-Key oder ist die Basisadresse kein `https://`, startet
+die Anwendung nicht. Das ist Absicht und wird nicht umgangen: Der
+Cursor-Signing-Key schuetzt die Integritaet opaker Pagination-Cursor, und ein
+Anmeldelink ueber Klartext-HTTP ist ein uebernehmbarer Zugang.
+
+### Betrieb ohne Mailserver
+
+Ein SMTP-Zugang ist **keine** Startvoraussetzung. Mit
+`SBS_MAIL_TRANSPORT=none` laeuft die Instanz ohne Mailweg:
+
+- Magic Link, Passwort-Recovery und Adressbestaetigung antworten mit
+  `503 MAIL_TRANSPORT_UNAVAILABLE` statt eine Nachricht zu versprechen, die
+  nie ankommt.
+- Anmeldung laeuft ueber Passwort, Passkey/WebAuthn und OIDC weiter.
+- Wer sein Passwort vergisst und keinen Passkey hat, kommt ohne Mailweg nicht
+  mehr selbst in sein Konto. Das ist der Preis dieser Betriebsart.
+
+Was Produktion **nicht** akzeptiert, ist `SBS_MAIL_TRANSPORT=log`. Dabei
+stuenden gueltige Einmal-Token im Log der API und damit in jeder
+Log-Aggregation und jedem Backup davon. Der Unterschied zu `none` ist nicht
+formal: dort verlaesst kein Token das System.
+
+Danach `docker compose up -d --force-recreate` und pruefen, dass
+`docker compose logs api` den Produktionsbetrieb meldet.
 
 ## Medienablage
 
@@ -149,9 +217,12 @@ SBS_PUBLIC_BASE_URL=https://deine-domain.example
 `SBS_PUBLIC_BASE_URL` steht in jedem Link. Sie kommt bewusst aus der
 Konfiguration und nicht aus dem Host-Header der Anfrage.
 
-Mit `SBS_ENVIRONMENT=production` sind beide Einstellungen Pflicht: bleibt
-der Log-Versand stehen oder ist die Basisadresse kein `https://`, startet
-die API nicht. Sonst stuenden gueltige Anmeldelinks im Log.
+Mit `SBS_ENVIRONMENT=production` startet die API nicht, wenn der Log-Versand
+stehen bleibt oder die Basisadresse kein `https://` ist. Sonst stuenden
+gueltige Anmeldelinks im Log.
+
+Wer keinen Mailserver hat, setzt `SBS_MAIL_TRANSPORT=none` statt `log` - siehe
+[Betrieb ohne Mailserver](#betrieb-ohne-mailserver).
 
 ## Smoke-Test nach Aenderungen
 

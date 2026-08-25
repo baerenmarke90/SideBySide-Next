@@ -30,6 +30,12 @@ Mail = Annotated[MailSender, Depends(sender)]
 
 Damit ist er an der Grenze austauschbar - im Test durch einen Sammler, im
 Betrieb durch den konfigurierten Adapter.
+
+Auf einer Instanz ohne Mailweg (`SBS_MAIL_TRANSPORT=none`) wirft schon das
+Aufloesen dieser Abhaengigkeit `MailUnavailableError`. Der Endpunkt laeuft
+dann gar nicht erst an: er wuerde sonst einen Token erzeugen, eine
+Rate-Limit-Zaehlung verbrauchen und `202 Accepted` antworten, obwohl
+niemals eine Nachricht entsteht.
 """
 
 
@@ -244,7 +250,7 @@ def me(account: CurrentAccount) -> AccountView:
     "/auth/magic-link/request",
     status_code=status.HTTP_202_ACCEPTED,
     response_class=Response,
-    responses=problem_responses(422, 429),
+    responses=problem_responses(422, 429, 503),
 )
 def request_magic_link(body: EmailRequest, session: DbSession, mail: Mail) -> Response:
     """Einen passwortlosen Anmeldelink anfordern.
@@ -277,7 +283,7 @@ def consume_magic_link(body: MagicLinkConsumeRequest, session: DbSession) -> Ses
     "/auth/email/verification/request",
     status_code=status.HTTP_202_ACCEPTED,
     response_class=Response,
-    responses=problem_responses(401, 429),
+    responses=problem_responses(401, 429, 503),
 )
 def request_email_verification(account: CurrentAccount, session: DbSession, mail: Mail) -> Response:
     """Die Bestaetigung der eigenen Adresse anfordern."""
@@ -305,7 +311,7 @@ def confirm_email(body: TokenOnlyRequest, session: DbSession) -> Response:
     "/auth/recovery/request",
     status_code=status.HTTP_202_ACCEPTED,
     response_class=Response,
-    responses=problem_responses(422, 429),
+    responses=problem_responses(422, 429, 503),
 )
 def request_recovery(body: EmailRequest, session: DbSession, mail: Mail) -> Response:
     """Das Zuruecksetzen des Passworts anfordern. Antwortet immer gleich."""

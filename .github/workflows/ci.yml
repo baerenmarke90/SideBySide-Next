@@ -141,6 +141,104 @@ jobs:
               )
           PY
 
+  self-hosted:
+    name: Self-Hosted Start
+    runs-on: ubuntu-latest
+    # Der Fehler aus #110 ist an allen Gates vorbeigekommen, weil CI die
+    # Compose-Datei nur geparst und Alembic unter SBS_ENVIRONMENT=test
+    # ausgefuehrt hat. Der dokumentierte Startpfad lief nirgends. Dieser Job
+    # faehrt ihn genau so, wie er in docs/SELF-HOSTING.md steht.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Dokumentierten Erststart vorbereiten
+        # Wie in der Anleitung: kopieren, Passwort ersetzen, starten. Der
+        # Testwert ist ein CI-Wert und kein Geheimnis.
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-nur-fuer-den-testlauf/' .env
+          docker compose config --quiet
+
+      - name: Stack starten
+        run: docker compose up -d --wait --wait-timeout 300
+
+      - name: Migration ist durchgelaufen
+        run: |
+          status=$(docker compose ps -a --format json migrate | jq -r '.ExitCode')
+          if [ "$status" != "0" ]; then
+            echo "migrate ist nicht sauber beendet (ExitCode $status):"
+            docker compose logs migrate
+            exit 1
+          fi
+
+      - name: Healthcheck ueber den veroeffentlichten Port
+        run: curl --fail --silent --show-error http://127.0.0.1:8000/api/v1/health
+
+      - name: Kein Runtime-Dienst ist an der Konfiguration gescheitert
+        # Ein fehlender Settings-Wert beendet den Prozess sofort; unter
+        # restart: unless-stopped sieht das nach kurzer Zeit wie ein
+        # Neustartkarussell aus und nicht wie ein Fehler.
+        run: |
+          for dienst in api worker; do
+            status=$(docker compose ps --format json "$dienst" | jq -r '.State')
+            if [ "$status" != "running" ]; then
+              echo "$dienst laeuft nicht ($status):"
+              docker compose logs "$dienst"
+              exit 1
+            fi
+          done
+          if docker compose logs api worker | grep -q "validation error for Settings"; then
+            echo "Ein Dienst hat einen Settings-Fehler protokolliert:"
+            docker compose logs api worker
+            exit 1
+          fi
+
+      - name: Migration ist wiederholbar
+        run: |
+          docker compose run --rm migrate
+          echo "zweiter Lauf gegen das bestehende Schema war erfolgreich"
+
+      - name: Produktionsbetrieb weist unsichere Konfiguration weiterhin ab
+        # Der Testbetrieb ist der Standard, nicht die Ausrede. Diese Pruefung
+        # haelt fest, dass die Production-Invarianten unveraendert greifen -
+        # sonst waere der bequemste Weg zu gruener CI, sie zu lockern.
+        run: |
+          set +e
+          for fall in "SBS_MAIL_TRANSPORT=log" "SBS_PUBLIC_BASE_URL=http://unsicher.invalid" "SBS_CURSOR_SIGNING_KEY="; do
+            ausgabe=$(docker compose run --rm --no-deps \
+              -e SBS_ENVIRONMENT=production \
+              -e SBS_CURSOR_SIGNING_KEY=ci-testwert-mit-mindestens-32-zeichen \
+              -e SBS_MAIL_TRANSPORT=smtp \
+              -e SBS_PUBLIC_BASE_URL=https://ci.invalid \
+              -e "$fall" \
+              api python -c "from sidebyside.config import Settings; Settings()" 2>&1)
+            if [ $? -eq 0 ]; then
+              echo "Production hat eine unsichere Konfiguration akzeptiert: $fall"
+              exit 1
+            fi
+            echo "abgewiesen wie erwartet: $fall"
+          done
+          set -e
+
+      - name: Produktionsbetrieb ohne Mailserver ist zulaessig
+        # Ein SMTP-Zugang ist keine Startvoraussetzung (ADR 0002). Verboten
+        # ist nur "log", weil dabei Einmal-Token ins Log wandern.
+        run: |
+          docker compose run --rm --no-deps \
+            -e SBS_ENVIRONMENT=production \
+            -e SBS_CURSOR_SIGNING_KEY=ci-testwert-mit-mindestens-32-zeichen \
+            -e SBS_MAIL_TRANSPORT=none \
+            -e SBS_PUBLIC_BASE_URL=https://ci.invalid \
+            api python -c "from sidebyside.config import Settings; Settings()"
+
+      - name: Logs bei Fehlschlag
+        if: failure()
+        run: docker compose logs
+
+      - name: Aufraeumen
+        if: always()
+        run: docker compose down -v
+
   supply-chain:
     name: Supply Chain
     runs-on: ubuntu-latest

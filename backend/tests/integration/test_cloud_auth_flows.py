@@ -99,6 +99,55 @@ def adresse_von(session: Session) -> AccountEmail:
     return eintrag
 
 
+class TestInstanzOhneMailweg:
+    """`SBS_MAIL_TRANSPORT=none`: die Faehigkeit fehlt, und das steht in der Antwort.
+
+    Der schlechte Gegenentwurf waere `202 Accepted` - eine Bestaetigung fuer
+    eine Nachricht, die niemals entsteht, samt verbrauchtem Rate-Limit und
+    erzeugtem Token in der Datenbank.
+    """
+
+    @pytest.fixture
+    def client_ohne_mailweg(self, session: Session, monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
+        from fastapi.testclient import TestClient
+
+        from sidebyside.config import MailTransport, get_settings
+        from sidebyside.db.session import get_session
+        from sidebyside.main import create_app
+
+        einstellungen = get_settings().model_copy(update={"mail_transport": MailTransport.NONE})
+        monkeypatch.setattr("sidebyside.config.get_settings", lambda: einstellungen)
+
+        app = create_app()
+        app.dependency_overrides[get_session] = lambda: session
+        with TestClient(app) as client:
+            yield client
+
+    def test_magic_link_meldet_die_fehlende_faehigkeit(self, client_ohne_mailweg, anna) -> None:  # type: ignore[no-untyped-def]
+        antwort = client_ohne_mailweg.post(
+            "/api/v1/auth/magic-link/request", json={"email": ADRESSE}
+        )
+        assert antwort.status_code == 503
+        assert antwort.json()["code"] == "MAIL_TRANSPORT_UNAVAILABLE"
+
+    def test_recovery_meldet_die_fehlende_faehigkeit(self, client_ohne_mailweg, anna) -> None:  # type: ignore[no-untyped-def]
+        antwort = client_ohne_mailweg.post("/api/v1/auth/recovery/request", json={"email": ADRESSE})
+        assert antwort.status_code == 503
+
+    def test_kein_token_entsteht(self, client_ohne_mailweg, session, anna) -> None:  # type: ignore[no-untyped-def]
+        """Der Endpunkt laeuft gar nicht erst an."""
+        client_ohne_mailweg.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
+        assert session.execute(select(MagicLinkToken)).scalars().all() == []
+
+    def test_passwortanmeldung_bleibt_moeglich(self, client_ohne_mailweg, anna) -> None:  # type: ignore[no-untyped-def]
+        """Ohne Mailweg fehlen Anmeldewege, aber nicht die Anmeldung."""
+        antwort = client_ohne_mailweg.post(
+            "/api/v1/auth/sign-in",
+            json={"email": ADRESSE, "password": GUTES_PASSWORT, "deviceName": "Test"},
+        )
+        assert antwort.status_code == 200
+
+
 class TestMagicLink:
     def test_bekannte_adresse_bekommt_einen_link(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
         antwort = client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})

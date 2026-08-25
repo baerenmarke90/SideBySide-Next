@@ -68,6 +68,7 @@ _PROBLEM_RESPONSE_DESCRIPTIONS: dict[int, str] = {
     415: "Der Medientyp steht nicht auf der Allowlist.",
     422: "Anfrageparameter oder fachliche Eingaben sind ungueltig.",
     429: "Zu viele Versuche innerhalb des erlaubten Zeitfensters.",
+    503: "Eine fuer diesen Vorgang noetige Faehigkeit ist auf dieser Instanz nicht eingerichtet.",
 }
 
 

@@ -41,10 +41,18 @@ class MailTransport(StrEnum):
 
     `LOG` ist der Entwicklungsweg und schreibt die Nachricht ins Log -
     mitsamt Einmal-Token. In Produktion ist er deshalb nicht zulaessig.
+
+    `NONE` ist der ausdrueckliche Verzicht: die Instanz versendet keine
+    E-Mail. Die mailabhaengigen Anmeldewege sind dann nicht verfuegbar und
+    sagen das auch, statt einen Link ins Leere zu schicken. Anmeldung laeuft
+    ueber Passwort, Passkey und OIDC weiter. Der Unterschied zu `LOG` ist
+    der entscheidende: hier verlaesst kein Token das System, waehrend `LOG`
+    gueltige Einmal-Token in jede Logablage schreibt.
     """
 
     LOG = "log"
     SMTP = "smtp"
+    NONE = "none"
 
 
 class OidcConnection(BaseModel):
@@ -273,9 +281,16 @@ class Settings(BaseSettings):
         Ein Fehlstart ist hier die freundlichere Antwort: der stille
         Gegenentwurf waere eine Instanz, die Anmeldenachweise ins Log
         schreibt, und das faellt niemandem auf.
+
+        Verboten ist ausschliesslich `LOG`. Eine Instanz ohne Mailweg ist
+        eine zulaessige Betriebsform - sie setzt `NONE` und verzichtet damit
+        ausdruecklich auf die mailabhaengigen Anmeldewege. Was Produktion
+        nicht darf, ist gueltige Einmal-Token in ein Log zu schreiben.
         """
-        if self.is_production and self.mail_transport is not MailTransport.SMTP:
-            raise ValueError("Production requires SBS_MAIL_TRANSPORT=smtp.")
+        if self.is_production and self.mail_transport is MailTransport.LOG:
+            raise ValueError(
+                "Production requires SBS_MAIL_TRANSPORT=smtp or SBS_MAIL_TRANSPORT=none."
+            )
         if self.is_production and not self.public_base_url.startswith("https://"):
             raise ValueError("Production requires an https SBS_PUBLIC_BASE_URL.")
         return self

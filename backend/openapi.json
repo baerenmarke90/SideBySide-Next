@@ -2496,6 +2496,16 @@
               }
             },
             "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Eine fuer diesen Vorgang noetige Faehigkeit ist auf dieser Instanz nicht eingerichtet."
           }
         },
         "summary": "Request Email Verification",
@@ -2582,6 +2592,16 @@
               }
             },
             "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Eine fuer diesen Vorgang noetige Faehigkeit ist auf dieser Instanz nicht eingerichtet."
           }
         },
         "summary": "Request Magic Link",
@@ -3121,6 +3141,16 @@
               }
             },
             "description": "Zu viele Versuche innerhalb des erlaubten Zeitfensters."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Eine fuer diesen Vorgang noetige Faehigkeit ist auf dieser Instanz nicht eingerichtet."
           }
         },
         "summary": "Request Recovery",
