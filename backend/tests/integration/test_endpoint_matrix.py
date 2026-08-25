@@ -44,6 +44,7 @@ class Endpunkt:
     """
 
     placeholders: tuple[str, ...] = field(default=())
+    query: dict[str, str] = field(default_factory=dict)
 
     def __str__(self) -> str:
         return f"{self.method} {self.template}"
@@ -134,6 +135,7 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         "/api/v1/spaces/{spaceId}/related-persons/{personId}",
         if_match=True,
         resource_absence="RELATED_PERSON_NOT_FOUND",
+        query={"deletePolicy": "preserve"},
     ),
     Endpunkt("GET", "/api/v1/spaces/{spaceId}/important-dates"),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/important-dates", body=TERMIN),
@@ -258,6 +260,8 @@ def _sende(welt, endpunkt: Endpunkt, pfad: str, kopf: dict[str, str] | None):  #
     zusatz: dict[str, Any] = {}
     if endpunkt.body is not None:
         zusatz["json"] = endpunkt.body
+    if endpunkt.query:
+        zusatz["params"] = endpunkt.query
     return welt["client"].request(endpunkt.method, pfad, headers=kopfzeilen, **zusatz)
 
 
@@ -345,6 +349,8 @@ def test_ohne_if_match_wird_nicht_geschrieben(welt, endpunkt: Endpunkt) -> None:
     """Ein fehlender Kopf ist der stille Weg, den Konfliktschutz abzuschalten."""
     pfad = _pfad(endpunkt, welt["ids"])
     zusatz: dict[str, Any] = {"json": endpunkt.body} if endpunkt.body is not None else {}
+    if endpunkt.query:
+        zusatz["params"] = endpunkt.query
     antwort = welt["client"].request(endpunkt.method, pfad, headers=welt["kopf_owner"], **zusatz)
     assert antwort.status_code == 422
 

@@ -226,8 +226,24 @@ def delete_related_person(
     session: DbSession,
     expected_version: IfMatchVersion,
     person_id: Annotated[str, Path(alias="personId")],
+    delete_policy: Annotated[
+        service.RelatedPersonDeletePolicy,
+        Query(
+            alias="deletePolicy",
+            description=(
+                "Explizite Behandlung verknuepfter Termine: preserve entfernt nur die "
+                "Personenverknuepfung; cascade loescht alle verknuepften Termine."
+            ),
+        ),
+    ],
 ) -> Response:
-    service.delete_person(session, authorization, person_id, expected_version=expected_version)
+    service.delete_person(
+        session,
+        authorization,
+        person_id,
+        expected_version=expected_version,
+        delete_policy=delete_policy,
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

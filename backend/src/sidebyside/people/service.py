@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import date
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -48,6 +49,11 @@ class PeopleErrorCode:
     HAS_SHARED_DATES = "RELATED_PERSON_HAS_SHARED_DATES"
     LABEL_REQUIRED = "IMPORTANT_DATE_LABEL_REQUIRED"
     MORE_OPEN_THAN_PERSON = "IMPORTANT_DATE_MORE_OPEN_THAN_PERSON"
+
+
+class RelatedPersonDeletePolicy(StrEnum):
+    PRESERVE = "preserve"
+    CASCADE = "cascade"
 
 
 def _clean_text(value: str, code: str) -> str:
@@ -189,16 +195,43 @@ def delete_person(
     person_id: UUID | str,
     *,
     expected_version: int,
+    delete_policy: RelatedPersonDeletePolicy,
 ) -> None:
-    """Die Person und mit ihr alle Termine, die auf sie zeigen.
+    """Eine Person mit expliziter, privacy-sicherer Terminbehandlung loeschen.
 
-    Das Loeschen kaskadiert in der Datenbank - auch in private Termine des
-    Partners. Ein Termin ohne seine Person waere ein Datum ohne Bezug, und
-    ein `SET NULL` ist bei einem Fremdschluessel, der `space_id` einschliesst,
-    ohnehin nicht moeglich.
+    Die Person wird vor der Versionspruefung per ``FOR UPDATE`` gesperrt.
+    Dadurch koennen parallele FK-Verknuepfungen nicht zwischen der Auswahl
+    der Termine und dem Loeschen der Person sichtbar werden.
+
+    ``preserve`` loest alle verknuepften Termine - einschliesslich privater
+    Partnertermine - von der Person. Die Termine werden absichtlich ohne
+    Privacy-Guard geladen: der Aufrufer erhaelt weder Zeilen noch Anzahl oder
+    Metadaten, die Mutation muss aber fuer alle Verknuepfungen gelten.
+
+    ``cascade`` behaelt die bestehende DB-Cascade bewusst bei.
     """
     person = require_writable(session, RelatedPerson, context, person_id)
+    session.refresh(person, with_for_update=True)
     _ensure_expected_version(person.version, expected_version, "related person")
+
+    if delete_policy is RelatedPersonDeletePolicy.PRESERVE:
+        linked_dates = (
+            session.execute(
+                select(ImportantDate)
+                .where(
+                    ImportantDate.space_id == context.space_id,
+                    ImportantDate.related_person_id == person.id,
+                )
+                .with_for_update()
+            )
+            .scalars()
+            .all()
+        )
+        for important_date in linked_dates:
+            important_date.related_person_id = None
+            important_date.related_person_privacy_class = None
+        _flush(session)
+
     session.delete(person)
     _flush(session)
 
