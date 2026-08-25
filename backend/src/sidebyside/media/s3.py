@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import io
-from collections.abc import Callable, Mapping
+from collections.abc import Buffer, Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import BinaryIO
 from urllib.parse import quote, urlsplit
@@ -81,6 +81,13 @@ class _ResponseReader(io.RawIOBase):
         result = bytes(self._buffer[:size])
         del self._buffer[:size]
         return result
+
+    def readinto(self, buffer: Buffer, /) -> int:
+        """Fill a writable buffer so ``BufferedReader`` can consume this raw stream."""
+        target = memoryview(buffer).cast("B")
+        chunk = self.read(len(target))
+        target[: len(chunk)] = chunk
+        return len(chunk)
 
     def close(self) -> None:
         if not self.closed:
@@ -312,7 +319,7 @@ class S3MediaStore(MediaStore):
     def open(self, storage_key: str) -> BinaryIO:
         response = self._request("GET", storage_key, stream=True)
         self._require_success(response)
-        return _ResponseReader(response)
+        return io.BufferedReader(_ResponseReader(response), buffer_size=_READ_CHUNK)
 
     def delete(self, storage_key: str) -> None:
         response = self._request("DELETE", storage_key)
