@@ -1,0 +1,102 @@
+name: Temporary PR98 Matrix Endpoint Fix
+
+on:
+  push:
+    branches:
+      - feat/m2-comments-97
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13.7'
+      - name: Insert all comment endpoints into tenant matrix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/tests/integration/test_endpoint_matrix.py')
+          text = path.read_text()
+          marker = '"/api/v1/spaces/{spaceId}/memories/{memoryId}/comments"'
+          if marker not in text.split('SPACE_ENDPUNKTE:', 1)[1].split('NUR_ANGEMELDET:', 1)[0]:
+              anchor = '''    Endpunkt(
+                  "DELETE",
+                  "/api/v1/spaces/{spaceId}/milestones/{milestoneId}",
+                  if_match=True,
+                  resource_absence="RESOURCE_NOT_FOUND",
+              ),
+          '''
+              block = anchor + '''    Endpunkt(
+                  "POST",
+                  "/api/v1/spaces/{spaceId}/memories/{memoryId}/comments",
+                  body=COMMENT,
+                  resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+              ),
+              Endpunkt(
+                  "GET",
+                  "/api/v1/spaces/{spaceId}/memories/{memoryId}/comments",
+                  resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+              ),
+              Endpunkt(
+                  "POST",
+                  "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
+                  body=COMMENT,
+                  resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+              ),
+              Endpunkt(
+                  "GET",
+                  "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
+                  resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+              ),
+              Endpunkt(
+                  "POST",
+                  "/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments",
+                  body=COMMENT,
+                  resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+              ),
+              Endpunkt(
+                  "GET",
+                  "/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments",
+                  resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+              ),
+              Endpunkt(
+                  "PATCH",
+                  "/api/v1/spaces/{spaceId}/comments/{commentId}",
+                  body=COMMENT,
+                  if_match=True,
+                  resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+              ),
+              Endpunkt(
+                  "DELETE",
+                  "/api/v1/spaces/{spaceId}/comments/{commentId}",
+                  if_match=True,
+                  resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+              ),
+          '''
+              if anchor not in text:
+                  raise SystemExit('milestone delete anchor not found')
+              text = text.replace(anchor, block, 1)
+              path.write_text(text)
+          PY
+      - name: Format and commit
+        working-directory: backend
+        run: |
+          python -m pip install 'uv==0.12.5'
+          uv sync --frozen
+          uv run --frozen ruff format tests/integration/test_endpoint_matrix.py
+          cd ..
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/tests/integration/test_endpoint_matrix.py
+          git commit -m 'test: add comment endpoints to tenant matrix'
+          git push origin HEAD:feat/m2-comments-97
