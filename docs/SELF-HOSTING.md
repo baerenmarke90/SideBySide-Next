@@ -58,6 +58,12 @@ gebunden. Ein Provider-Upload setzt das Attachment nicht auf `READY`:
 `finalizeUpload` bestaetigt das Objekt serverseitig und die vorhandene
 Validierung entscheidet weiterhin allein ueber `READY`.
 
+Vor der serverseitigen Medienverarbeitung wird bei S3 die Objektgroesse per
+`HEAD`/`Content-Length` geprueft. Der anschliessende GET wird streamend gelesen;
+der Worker kopiert nur bis zur fachlichen Grenze plus einem Pruefbyte. Stimmen
+Provider-Groesse und tatsaechlich gelesene Groesse nicht ueberein, scheitert die
+Validierung fail-closed.
+
 Lesen wird erst nach der normalen Membership-/Parent-Autorisierung freigegeben.
 Die signierte GET-URL gilt exakt 5 Minuten und nur fuer dieses Objekt. Bereits
 ausgestellte URLs koennen nach einem Membership- oder Privacy-Entzug technisch
@@ -76,6 +82,56 @@ konkrete SideBySide-Origin. Fuer den Upload sind `PUT` und die Header
 `Content-Type`, `Cache-Control` und `If-None-Match` erforderlich; fuer direkte
 Reads `GET`/`HEAD`. Keine CORS-Regel ersetzt die private Bucket-Policy oder die
 serverseitige Autorisierung.
+
+## Videoverarbeitung mit ffmpeg
+
+Das offizielle Docker-/Compose-Deployment bringt `ffmpeg` und `ffprobe` bereits
+im Backend-Image mit. Auf dem Docker-Host muss und soll dafuer kein separates
+ffmpeg installiert werden. API, Migration und Worker verwenden dasselbe
+reproduzierbare Image; fremde Videodateien werden nur im Worker interpretiert.
+
+Die Produktionsversion des Debian-Pakets ist im Dockerfile exakt gepinnt auf:
+
+```text
+7:7.1.5-0+deb13u1
+```
+
+Die CI prueft sowohl den Pin als auch den Debian Security Tracker. Ein Upgrade
+der Systembinaries erfolgt deshalb als bewusste Repository-Aenderung und nicht
+ueber ein unversioniertes Paketupdate beim Containerstart.
+
+Wer Video in einer Self-Hosted-Installation bewusst nicht anbieten will, setzt:
+
+```dotenv
+SBS_FFMPEG_ENABLED=false
+```
+
+`true` ist der Standard. Bei `false` werden neue Video-Uploads fail-closed
+abgewiesen und bereits eingereihte Videojobs starten ebenfalls kein
+ffmpeg/ffprobe mehr. Bilder und der restliche Dienst bleiben aktiv. Die
+Binaries bleiben absichtlich im Image; der Schalter erzeugt keinen zweiten
+Buildpfad.
+
+Der Worker ist im mitgelieferten Compose-Stack als zweite Schutzschicht fuer
+unvertrauenswuerdige Medien auf folgende Obergrenzen gesetzt:
+
+- 1 CPU,
+- 1 GiB RAM,
+- 64 PIDs.
+
+Die ffmpeg-/ffprobe-Kindprozesse besitzen zusaetzlich eigene CPU-, Wall-Clock-,
+Adressraum-, Dateigroessen-, FD- und Core-Dump-Limits. Der validierte
+Adressraum-Rahmen liegt bei 768 MiB pro Medienkindprozess. Diese Grenzen duerfen
+bei einem eigenen Deployment nicht still entfernt werden.
+
+Wer Backend/Worker ausserhalb des Docker-Images direkt aus dem Quellcode
+startet und Video verarbeiten moechte, braucht kompatible Binaries unter
+`/usr/bin/ffmpeg` und `/usr/bin/ffprobe`. Der reproduzierbare Produktionsnachweis
+gilt fuer die oben gepinnte Debian-Version; andere lokale Versionen sind reine
+Entwicklungsumgebungen und kein Ersatz fuer den Container-CI-Nachweis.
+
+Details zu Format-, Metadaten- und Ressourcenregeln stehen in
+[`m2/VIDEO-PROCESSING.md`](m2/VIDEO-PROCESSING.md).
 
 ## Einmalige Erstregistrierung
 
