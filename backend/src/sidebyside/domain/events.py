@@ -17,6 +17,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from sidebyside.authorization import ContentVisibility
+
 
 class EventType(StrEnum):
     """Der Katalog. Ein ausgelieferter Name wird nicht umbenannt."""
@@ -25,6 +27,9 @@ class EventType(StrEnum):
     MEMORY_UPDATED = "MEMORY_UPDATED"
     MEMORY_DELETED = "MEMORY_DELETED"
     HEART_MOMENT_CREATED = "HEART_MOMENT_CREATED"
+    HEART_MOMENT_UPDATED = "HEART_MOMENT_UPDATED"
+    HEART_MOMENT_DELETED = "HEART_MOMENT_DELETED"
+    HEART_MOMENT_VISIBILITY_CHANGED = "HEART_MOMENT_VISIBILITY_CHANGED"
     MILESTONE_CREATED = "MILESTONE_CREATED"
     COMMENT_CREATED = "COMMENT_CREATED"
     PLAN_COMPLETED = "PLAN_COMPLETED"
@@ -48,6 +53,18 @@ class PublicEventPayload(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     has_attachment: bool | None = None
+
+    visibility: ContentVisibility | None = None
+    """Die fachliche Sichtbarkeit der betroffenen Ressource.
+
+    Eine Kategorie, kein Inhalt - und fuer einen Consumer die einzige
+    Moeglichkeit, ein owner-only Ereignis von einem gemeinsamen zu
+    unterscheiden. Ohne sie muesste jede Projektion die Ressource erneut
+    laden, um zu wissen, ob sie dem Partner gezeigt werden darf; genau
+    diese Unsicherheit endet sonst in einer versehentlichen
+    Partnerprojektion. M2-D16 laesst sichere Zustaende und Kategorien im
+    ereignisspezifischen Teil ausdruecklich zu.
+    """
 
 
 class DomainEvent(BaseModel):

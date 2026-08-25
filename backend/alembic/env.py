@@ -19,6 +19,7 @@ from sidebyside.config import get_settings
 from sidebyside.db.base import Base
 
 # Modelle registrieren. Die Importe sehen ungenutzt aus, sind es aber nicht.
+from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
 from sidebyside.identity import models as _identity  # noqa: F401
 from sidebyside.jobs import models as _jobs  # noqa: F401
 from sidebyside.memories import models as _memories  # noqa: F401
