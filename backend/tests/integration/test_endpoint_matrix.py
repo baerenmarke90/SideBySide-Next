@@ -97,6 +97,7 @@ MILESTONE = {
     "body": "Text",
     "happenedOn": "2025-06-13",
 }
+COMMENT = {"body": "Matrix Comment"}
 
 SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
@@ -253,6 +254,52 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}/comments",
+        body=COMMENT,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}/comments",
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
+        body=COMMENT,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments",
+        body=COMMENT,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments",
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/comments/{commentId}",
+        body=COMMENT,
+        if_match=True,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/comments/{commentId}",
+        if_match=True,
+        resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
+    ),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
     Endpunkt(
         "GET",
@@ -361,6 +408,9 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
     memory = client.post(f"{basis}/memories", json=MEMORY, headers=kopf).json()
     heart_moment = client.post(f"{basis}/heart-moments", json=HEART_MOMENT, headers=kopf).json()
     milestone = client.post(f"{basis}/milestones", json=MILESTONE, headers=kopf).json()
+    comment = client.post(
+        f"{basis}/memories/{memory['id']}/comments", json=COMMENT, headers=kopf
+    ).json()
     attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=kopf).json()
 
     return {
@@ -378,6 +428,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "memoryId": memory["id"],
             "heartMomentId": heart_moment["id"],
             "milestoneId": milestone["id"],
+            "commentId": comment["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
@@ -484,6 +535,7 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "heartMomentId",
             "attachmentId",
             "milestoneId",
+            "commentId",
         )
         if "{" + name + "}" in endpunkt.template
     )
@@ -504,8 +556,16 @@ def test_ohne_if_match_wird_nicht_geschrieben(welt, endpunkt: Endpunkt) -> None:
 
     # Und die Ressource steht unveraendert da - auch die geloeschte nicht.
     if endpunkt.method == "DELETE":
-        nachher = welt["client"].get(pfad, headers=welt["kopf_owner"])
-        assert nachher.status_code == 200
+        if "{commentId}" in endpunkt.template:
+            nachher = welt["client"].patch(
+                pfad,
+                json=COMMENT,
+                headers={**welt["kopf_owner"], "If-Match": '"1"'},
+            )
+            assert nachher.status_code == 200
+        else:
+            nachher = welt["client"].get(pfad, headers=welt["kopf_owner"])
+            assert nachher.status_code == 200
 
 
 def test_der_vertrag_ist_vollstaendig_abgedeckt() -> None:

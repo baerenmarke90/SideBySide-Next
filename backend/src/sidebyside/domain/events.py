@@ -13,6 +13,7 @@ ohnehin nicht mehr zur Verfügung.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -55,17 +56,15 @@ class PublicEventPayload(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     has_attachment: bool | None = None
-
     visibility: ContentVisibility | None = None
-    """Die fachliche Sichtbarkeit der betroffenen Ressource.
 
-    Eine Kategorie, kein Inhalt - und fuer einen Consumer die einzige
-    Moeglichkeit, ein owner-only Ereignis von einem gemeinsamen zu
-    unterscheiden. Ohne sie muesste jede Projektion die Ressource erneut
-    laden, um zu wissen, ob sie dem Partner gezeigt werden darf; genau
-    diese Unsicherheit endet sonst in einer versehentlichen
-    Partnerprojektion. M2-D16 laesst sichere Zustaende und Kategorien im
-    ereignisspezifischen Teil ausdruecklich zu.
+    target_type: Literal["MEMORY", "HEART_MOMENT", "MILESTONE"] | None = None
+    target_id: UUID | None = None
+    recipient_id: UUID | None = None
+    """Sichere Comment-Referenzen fuer einen spaeteren Notification-Consumer.
+
+    Ausschliesslich IDs und die geschlossene Target-Kategorie. Comment-Body,
+    Parent-Titel/-Text und HeartMoment-Emotion duerfen hier nicht auftauchen.
     """
 
 

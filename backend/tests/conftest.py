@@ -80,6 +80,7 @@ def engine() -> Iterator[Engine]:
     # gruen, je nachdem was vorher importiert wurde.
     from sidebyside.attachments import binding as _binding  # noqa: F401
     from sidebyside.attachments import models as _attachments  # noqa: F401
+    from sidebyside.comments import models as _comments  # noqa: F401
     from sidebyside.db.base import Base
     from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
     from sidebyside.identity import models as _identity  # noqa: F401
