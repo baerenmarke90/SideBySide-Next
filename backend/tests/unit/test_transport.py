@@ -9,18 +9,23 @@ from sidebyside.config import Environment, MailTransport, Settings
 from sidebyside.main import create_app
 
 
+CURSOR_SIGNING_KEY = "test-cursor-signing-key-with-at-least-32-characters"
+
+
 def production_settings(**ueberschreibungen: object) -> Settings:
     """Eine vollstaendige Produktionskonfiguration.
 
     In Produktion sind mehrere Felder Pflicht - unter anderem echter
-    Mailversand. Die Tests hier pruefen den Transport und sollen an dieser
-    Pflicht nicht scheitern, sie aber auch nicht umgehen.
+    Mailversand und ein installationsspezifischer Cursor-Schluessel. Die
+    Tests hier pruefen den Transport und sollen an diesen Pflichten nicht
+    scheitern, sie aber auch nicht umgehen.
     """
     werte: dict[str, object] = {
         "environment": Environment.PRODUCTION,
         "allowed_hosts": ["app.example"],
         "mail_transport": MailTransport.SMTP,
         "public_base_url": "https://app.example",
+        "cursor_signing_key": CURSOR_SIGNING_KEY,
     }
     werte.update(ueberschreibungen)
     return Settings(**werte)  # type: ignore[arg-type]
@@ -55,6 +60,20 @@ class TestBootstrapKonfiguration:
         geheimnis = "test-bootstrap-secret-with-at-least-32-characters"
         settings = Settings(bootstrap_token=geheimnis)
         assert geheimnis not in repr(settings)
+
+
+class TestCursorKonfiguration:
+    def test_production_braucht_cursor_signing_key(self) -> None:
+        with pytest.raises(ValueError, match="SBS_CURSOR_SIGNING_KEY"):
+            production_settings(cursor_signing_key=None)
+
+    def test_kurzer_cursor_signing_key_wird_abgewiesen(self) -> None:
+        with pytest.raises(ValueError, match="SBS_CURSOR_SIGNING_KEY"):
+            Settings(cursor_signing_key="zu-kurz")
+
+    def test_cursor_signing_key_erscheint_nicht_in_settings_ausgabe(self) -> None:
+        settings = Settings(cursor_signing_key=CURSOR_SIGNING_KEY)
+        assert CURSOR_SIGNING_KEY not in repr(settings)
 
 
 class TestHttpsGrenze:
