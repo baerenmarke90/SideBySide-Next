@@ -79,6 +79,18 @@ class ConflictError(DomainError):
     title = "Conflict"
 
 
+class UnsupportedMediaTypeError(DomainError):
+    status = HTTPStatus.UNSUPPORTED_MEDIA_TYPE
+    type = "unsupported_media_type"
+    title = "Unsupported media type"
+
+
+class PayloadTooLargeError(DomainError):
+    status = HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+    type = "payload_too_large"
+    title = "Payload too large"
+
+
 class RateLimitedError(DomainError):
     status = HTTPStatus.TOO_MANY_REQUESTS
     type = "rate_limited"
@@ -100,4 +112,8 @@ class ErrorCode:
     RESOURCE_VERSION_CONFLICT = "RESOURCE_VERSION_CONFLICT"
     INVALID_CURSOR = "INVALID_CURSOR"
     IF_MATCH_MALFORMED = "IF_MATCH_MALFORMED"
+    ATTACHMENT_TYPE_NOT_ALLOWED = "ATTACHMENT_TYPE_NOT_ALLOWED"
+    ATTACHMENT_TOO_LARGE = "ATTACHMENT_TOO_LARGE"
+    ATTACHMENT_VALIDATION_FAILED = "ATTACHMENT_VALIDATION_FAILED"
+    ATTACHMENT_NOT_READY = "ATTACHMENT_NOT_READY"
     RATE_LIMITED = "RATE_LIMITED"

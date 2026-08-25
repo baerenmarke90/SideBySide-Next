@@ -41,6 +41,7 @@ Dieses Log trennt Spezifikationsaussagen von Umsetzungsvorschlägen. `PROPOSED` 
 | M2-D21 | BEFORE_CLIENTS | OPEN | Search + Privacy | Wird M2-Suche direkt in Postgres oder über separaten Index umgesetzt? | Globale Volltextsuche ist nicht G2-pflichtig und liegt grundsätzlich in M4; falls früher benötigt, neue explizite Gate-Entscheidung. |
 | M2-D22 | BEFORE_CLIENTS | OPEN | Product + UX | Ist der Owner-Bereich für private HeartMoments Teil der gemeinsamen Story-Route oder eine getrennte Ansicht? | Getrennte, klar markierte Owner-Ansicht reduziert versehentliche Offenlegung. |
 | M2-D23 | BLOCKING | DECIDED | Security + Media | In welcher Reihenfolge entstehen Bild- und Videoverarbeitung, und welche Parser kommen dafür ins Projekt? | Bilder zuerst mit Pillow und pillow-heif; Video mitsamt ffmpeg folgt als eigener Slice. Bis dahin weist der Server MP4/QuickTime fail-closed ab. Siehe #85. |
+| M2-D24 | BLOCKING | DECIDED | API + Security | Wie liest der Owner ein noch ungebundenes Attachment, wenn AttachmentReadRequest eine Parentreferenz verlangt? | Die Union erhält additiv `parentType: "NONE"` für den eigenen ungebundenen Upload im Bindungsfenster. Owner, `READY` und Fenster werden serverseitig geprüft. Siehe #79. |
 
 ## Verbindliche Domain-/Privacy-Grundsätze für M2
 
@@ -225,6 +226,16 @@ Begründung: Das Parsen fremder Mediendateien ist die riskanteste Codestelle im 
 Folgen: M2-D04 bleibt als Vertrag unverändert; die Lücke zwischen erlaubtem Vertrag und heutiger Serverantwort ist ausdrücklich dokumentiert und kein stiller Unterschied. Ein Video-Upload endet bis dahin mit `ATTACHMENT_TYPE_NOT_ALLOWED`, nicht mit einem Serverfehler oder einem hängenden `PENDING`. Clients dürfen Video in M2 nicht als verfügbar anbieten. Der Video-Slice muss vor seiner Umsetzung die ffmpeg-Frage einschließlich Imagegröße, CVE-Nachverfolgung und Ressourcenlimits beim Transcodieren klären. Der Inventareintrag für `Pillow` und `pillow-heif` entsteht in #79 gemeinsam mit der Deklaration, weil das Dependency-Gate eine dokumentierte Zeile ohne Deklaration als Fehler meldet.  
 Tests: Video-MIME wird abgewiesen, solange der Video-Slice fehlt; die Ablehnung nennt einen stabilen Fehlercode und hinterlässt kein Objekt im Store; HEIC/HEIF erreicht `READY`; die Bildformate der Allowlist durchlaufen Strippen und Thumbnail vollständig.  
 Verweise: #85, #79, `MEDIA-PIPELINE.md`, `DELIVERY-PLAN.md`.
+
+### M2-D24 – Lesezugriff auf ungebundene Attachments
+Status: DECIDED  
+Datum: 2026-08-25  
+Entscheider: API + Security / Projektentscheidung #79  
+Entscheidung: `AttachmentReadRequest` wird additiv um die Variante `{ parentType: "NONE" }` erweitert. Sie bezeichnet den eigenen, noch nicht gebundenen Upload innerhalb des Bindungsfensters aus M2-D20. Die bestehenden Varianten `MEMORY` und `HEART_MOMENT` bleiben unverändert gültig. Für ein bereits gebundenes Attachment ist `NONE` unzulässig; dort entscheidet ausschließlich die Erreichbarkeit des Parents.  
+Begründung: Abschnitt 8 der Media-Pipeline sieht den Fall bereits vor — ein `READY` Attachment ohne Parent ist für seinen Owner innerhalb des Fensters sichtbar. Der in #70 eingefrorene Requestvertrag konnte ihn nur nicht ausdrücken, weil er als geschlossene Union über zwei Parenttypen formuliert war. Ohne die Variante könnte der Owner ein gerade hochgeladenes Bild nicht ansehen, und der erste Media-Slice könnte seinen autorisierten Lesepfad nicht belegen, sondern nur dessen Abwesenheit.  
+Folgen: Die Variante ist keine Abkürzung an der Autorisierung vorbei. Der Server verlangt Owner-Identität, Status `READY` und ein nicht abgelaufenes Bindungsfenster; danach folgt die Lesbarkeit wieder ausschließlich dem Parent. Ein Partner erhält mit `NONE` niemals Zugriff, auch nicht auf ein ungebundenes Attachment im selben Space. Nach Ablauf des Fensters wird das Attachment ohnehin `DELETING`. Die Erweiterung ist rückwärtskompatibel: bestehende Clients senden weiterhin eine Parentreferenz.  
+Tests: Owner liest eigenen ungebundenen Upload; Partner erhält 404; `NONE` auf einem gebundenen Attachment wird abgewiesen; abgelaufenes Fenster liefert 404; `NONE` auf fremdem oder nicht-`READY` Attachment liefert 404.  
+Verweise: #79, `API-DESIGN.md`, `API-CONTRACT.json`, `MEDIA-PIPELINE.md`.
 
 ## Entscheidungsformat
 

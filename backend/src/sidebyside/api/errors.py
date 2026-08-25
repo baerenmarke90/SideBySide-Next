@@ -64,6 +64,8 @@ _PROBLEM_RESPONSE_DESCRIPTIONS: dict[int, str] = {
     404: "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar.",
     405: "Die HTTP-Methode ist fuer diese Ressource nicht vorgesehen.",
     409: "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource.",
+    413: "Der Inhalt ueberschreitet die serverseitige Groessengrenze.",
+    415: "Der Medientyp steht nicht auf der Allowlist.",
     422: "Anfrageparameter oder fachliche Eingaben sind ungueltig.",
     429: "Zu viele Versuche innerhalb des erlaubten Zeitfensters.",
 }

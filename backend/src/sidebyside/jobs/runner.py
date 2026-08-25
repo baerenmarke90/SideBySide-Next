@@ -16,6 +16,7 @@ import socket
 import time
 from types import FrameType
 
+from sidebyside.attachments import cleanup as media_cleanup
 from sidebyside.db.session import unit_of_work
 from sidebyside.jobs import maintenance
 from sidebyside.jobs.worker import run_once
@@ -51,6 +52,7 @@ def _ensure_maintenance() -> None:
     try:
         with unit_of_work() as session:
             maintenance.ensure_scheduled(session)
+            media_cleanup.ensure_scheduled(session)
     except Exception:
         log.exception("could not schedule maintenance")
 
@@ -68,6 +70,7 @@ def main() -> None:
     log.info("worker started", extra={"worker": name})
 
     maintenance.register_handlers()
+    media_cleanup.register_handlers()
     _ensure_maintenance()
     zuletzt_geprueft = time.monotonic()
 

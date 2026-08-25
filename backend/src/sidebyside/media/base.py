@@ -16,8 +16,21 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import BinaryIO
+from typing import BinaryIO, Protocol
 from uuid import UUID
+
+
+class ByteSource(Protocol):
+    """Was zum Ablegen wirklich gebraucht wird.
+
+    Nicht `BinaryIO`: das verlangt ein gutes Dutzend Methoden, von denen
+    hier eine benutzt wird. Ein Aufrufer, der einen begrenzenden oder
+    zaehlenden Strom vorschaltet, muesste sonst eine ganze Dateischnittstelle
+    nachbilden - oder casten, und ein Cast an dieser Stelle waere die
+    Behauptung, die Grenze sei egal.
+    """
+
+    def read(self, size: int = -1, /) -> bytes: ...
 
 
 @dataclass(frozen=True)
@@ -44,7 +57,7 @@ class MediaStore(ABC):
     """Ablage für Anhänge."""
 
     @abstractmethod
-    def put(self, storage_key: str, data: BinaryIO, content_type: str) -> StoredObject:
+    def put(self, storage_key: str, data: ByteSource, content_type: str) -> StoredObject:
         """Einen Datenstrom ablegen."""
 
     @abstractmethod

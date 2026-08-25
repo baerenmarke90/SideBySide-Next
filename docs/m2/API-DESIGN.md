@@ -253,10 +253,13 @@ Interne Zustände wie `VALIDATING`, `DELETING`, `DELETE_FAILED`, Storage Keys, B
 ```ts
 type AttachmentReadRequest =
   | { parentType: "MEMORY"; parentId: UUID }
-  | { parentType: "HEART_MOMENT"; parentId: UUID };
+  | { parentType: "HEART_MOMENT"; parentId: UUID }
+  | { parentType: "NONE" };
 ```
 
 Der Server prüft Parent, Space und Privacy neu; eine Parentreferenz ist kein Capability-Token.
+
+`parentType: "NONE"` bezeichnet den eigenen, noch ungebundenen Upload innerhalb des Bindungsfensters aus M2-D20 (M2-D24). Er ist keine Abkürzung an der Autorisierung vorbei: der Server verlangt Owner-Identität, `READY` und ein noch nicht abgelaufenes Fenster. Für ein gebundenes Attachment ist diese Variante unzulässig — dort gilt ausschließlich die Erreichbarkeit des Parents.
 
 ## 4. Story-Union
 

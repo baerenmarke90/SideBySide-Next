@@ -86,6 +86,12 @@ HEART_MOMENT = {
     "visibility": "SHARED",
     "happenedOn": "2025-06-13",
 }
+ATTACHMENT = {
+    "mediaType": "IMAGE",
+    "originalName": "matrix.jpg",
+    "expectedMimeType": "image/jpeg",
+    "expectedSize": 2048,
+}
 
 SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
@@ -215,6 +221,40 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/attachments/{attachmentId}",
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/attachments/{attachmentId}/content",
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/attachments/{attachmentId}/content",
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/attachments/{attachmentId}/finalize",
+        body={},
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/attachments/{attachmentId}/read-access",
+        body={"parentType": "NONE"},
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/attachments/{attachmentId}",
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
 )
 
 NUR_ANGEMELDET: tuple[tuple[str, str], ...] = (
@@ -288,6 +328,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
     termin = client.post(f"{basis}/important-dates", json=TERMIN, headers=kopf).json()
     memory = client.post(f"{basis}/memories", json=MEMORY, headers=kopf).json()
     heart_moment = client.post(f"{basis}/heart-moments", json=HEART_MOMENT, headers=kopf).json()
+    attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=kopf).json()
 
     return {
         "client": client,
@@ -303,6 +344,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "dateId": termin["id"],
             "memoryId": memory["id"],
             "heartMomentId": heart_moment["id"],
+            "attachmentId": attachment["attachment"]["id"],
         },
     }
 
@@ -406,6 +448,7 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "accountId",
             "memoryId",
             "heartMomentId",
+            "attachmentId",
         )
         if "{" + name + "}" in endpunkt.template
     )

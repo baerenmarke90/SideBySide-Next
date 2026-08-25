@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from sidebyside.api.v1 import (
+    attachments,
     auth,
     health,
     heart_moments,
@@ -24,6 +25,7 @@ router = APIRouter()
 router.include_router(auth.router)
 router.include_router(health.router)
 router.include_router(invitations.router)
+router.include_router(attachments.router)
 router.include_router(memories.router)
 router.include_router(heart_moments.router)
 router.include_router(people.router)

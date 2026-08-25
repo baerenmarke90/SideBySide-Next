@@ -7,7 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import BinaryIO
 
-from sidebyside.media.base import MediaStore, StoredObject
+from sidebyside.media.base import ByteSource, MediaStore, StoredObject
 
 
 class LocalMediaStore(MediaStore):
@@ -25,7 +25,7 @@ class LocalMediaStore(MediaStore):
             raise ValueError("Storage Key zeigt aus dem Wurzelverzeichnis heraus.")
         return ziel
 
-    def put(self, storage_key: str, data: BinaryIO, content_type: str) -> StoredObject:
+    def put(self, storage_key: str, data: ByteSource, content_type: str) -> StoredObject:
         ziel = self._path(storage_key)
         ziel.parent.mkdir(parents=True, exist_ok=True)
         with ziel.open("wb") as datei:

@@ -12,6 +12,8 @@ Zwei Ebenen, bewusst getrennt:
 from __future__ import annotations
 
 import os
+import shutil
+import tempfile
 from collections.abc import Iterator
 
 import pytest
@@ -24,7 +26,22 @@ os.environ.setdefault("SBS_ENVIRONMENT", "test")
 TEST_BOOTSTRAP_TOKEN = "test-bootstrap-token-with-at-least-32-characters"
 os.environ.setdefault("SBS_BOOTSTRAP_TOKEN", TEST_BOOTSTRAP_TOKEN)
 
+# Medien landen im temporaeren Verzeichnis, nicht im Arbeitsbaum. Der
+# Standardwert der Konfiguration ist "./data/media" - ein Testlauf wuerde
+# damit Dateien im Repository hinterlassen, und zwar genau die, die
+# niemand versehentlich einchecken will.
+MEDIA_ROOT = os.environ.setdefault(
+    "SBS_MEDIA_ROOT", tempfile.mkdtemp(prefix="sidebyside-test-media-")
+)
+
 INTEGRATION_DATABASE_URL = os.environ.get("SBS_TEST_DATABASE_URL", "")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _media_root() -> Iterator[None]:
+    yield
+    if MEDIA_ROOT.startswith(tempfile.gettempdir()):
+        shutil.rmtree(MEDIA_ROOT, ignore_errors=True)
 
 
 def _database_reachable(url: str) -> bool:
@@ -61,6 +78,7 @@ def engine() -> Iterator[Engine]:
     # durch die App wuerde das Modell zwar registrieren, aber erst nachdem
     # die Tabellen angelegt sind - die Tests liefen dann nur zufaellig
     # gruen, je nachdem was vorher importiert wurde.
+    from sidebyside.attachments import models as _attachments  # noqa: F401
     from sidebyside.db.base import Base
     from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
     from sidebyside.identity import models as _identity  # noqa: F401
