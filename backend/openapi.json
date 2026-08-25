@@ -850,6 +850,14 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "RelatedPersonDeletePolicy": {
+        "enum": [
+          "preserve",
+          "cascade"
+        ],
+        "title": "RelatedPersonDeletePolicy",
+        "type": "string"
+      },
       "RelatedPersonFields": {
         "properties": {
           "birthday": {
@@ -3715,6 +3723,16 @@
             "schema": {
               "title": "Spaceid",
               "type": "string"
+            }
+          },
+          {
+            "description": "Explizite Behandlung verknuepfter Termine: preserve entfernt nur die Personenverknuepfung; cascade loescht alle verknuepften Termine.",
+            "in": "query",
+            "name": "deletePolicy",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RelatedPersonDeletePolicy",
+              "description": "Explizite Behandlung verknuepfter Termine: preserve entfernt nur die Personenverknuepfung; cascade loescht alle verknuepften Termine."
             }
           },
           {
