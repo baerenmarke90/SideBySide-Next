@@ -37,7 +37,7 @@ def _probe(
     duration: float = 180.0,
     document: dict[str, object] | None = None,
 ) -> videos._Probe:
-    return videos._Probe(  # noqa: SLF001 - private boundary is the subject under test
+    return videos._Probe(
         mime_type="video/mp4",
         width=width,
         height=height,
@@ -54,8 +54,8 @@ def test_magic_distinguishes_mp4_and_quicktime(tmp_path: Path) -> None:
     mp4.write_bytes(_bmff(b"isom", b"mp42"))
     mov.write_bytes(_bmff(b"qt  "))
 
-    assert videos._detect_container(mp4) == "video/mp4"  # noqa: SLF001
-    assert videos._detect_container(mov) == "video/quicktime"  # noqa: SLF001
+    assert videos._detect_container(mp4) == "video/mp4"
+    assert videos._detect_container(mov) == "video/quicktime"
 
 
 def test_unknown_iso_bmff_brand_is_rejected(tmp_path: Path) -> None:
@@ -63,20 +63,20 @@ def test_unknown_iso_bmff_brand_is_rejected(tmp_path: Path) -> None:
     path.write_bytes(_bmff(b"3gp5"))
 
     with pytest.raises(videos.VideoRejectedError, match="VIDEO_TYPE_NOT_ALLOWED"):
-        videos._detect_container(path)  # noqa: SLF001
+        videos._detect_container(path)
 
 
 def test_duration_and_orientation_independent_resolution_limits() -> None:
     rule = _rule()
-    videos._enforce(_probe(), rule)  # noqa: SLF001
-    videos._enforce(_probe(width=2160, height=3840), rule)  # noqa: SLF001
+    videos._enforce(_probe(), rule)
+    videos._enforce(_probe(width=2160, height=3840), rule)
 
     with pytest.raises(videos.VideoRejectedError, match="VIDEO_TOO_LONG"):
-        videos._enforce(_probe(duration=180.001), rule)  # noqa: SLF001
+        videos._enforce(_probe(duration=180.001), rule)
     with pytest.raises(videos.VideoRejectedError, match="VIDEO_RESOLUTION_TOO_LARGE"):
-        videos._enforce(_probe(width=3841), rule)  # noqa: SLF001
+        videos._enforce(_probe(width=3841), rule)
     with pytest.raises(videos.VideoRejectedError, match="VIDEO_RESOLUTION_TOO_LARGE"):
-        videos._enforce(_probe(width=3840, height=2161), rule)  # noqa: SLF001
+        videos._enforce(_probe(width=3840, height=2161), rule)
 
 
 def test_location_metadata_after_remux_is_rejected() -> None:
@@ -96,7 +96,7 @@ def test_location_metadata_after_remux_is_rejected() -> None:
     }
 
     with pytest.raises(videos.VideoRejectedError, match="VIDEO_METADATA_UNSAFE"):
-        videos._validate_sanitized_metadata(_probe(document=document))  # noqa: SLF001
+        videos._validate_sanitized_metadata(_probe(document=document))
 
 
 def test_only_video_and_one_optional_audio_stream_survive() -> None:
@@ -105,25 +105,35 @@ def test_only_video_and_one_optional_audio_stream_survive() -> None:
         "streams": [
             {
                 "codec_type": "video",
-                "tags": {"language": "und", "handler_name": "VideoHandler", "vendor_id": "FFMP"},
+                "tags": {
+                    "language": "und",
+                    "handler_name": "VideoHandler",
+                    "vendor_id": "FFMP",
+                },
             },
             {
                 "codec_type": "audio",
-                "tags": {"language": "und", "handler_name": "SoundHandler", "vendor_id": "FFMP"},
+                "tags": {
+                    "language": "und",
+                    "handler_name": "SoundHandler",
+                    "vendor_id": "FFMP",
+                },
             },
         ],
     }
-    videos._validate_sanitized_metadata(_probe(document=document))  # noqa: SLF001
+    videos._validate_sanitized_metadata(_probe(document=document))
 
     document["streams"] = [
         {"codec_type": "video"},
         {"codec_type": "subtitle"},
     ]
     with pytest.raises(videos.VideoRejectedError, match="VIDEO_METADATA_UNSAFE"):
-        videos._validate_sanitized_metadata(_probe(document=document))  # noqa: SLF001
+        videos._validate_sanitized_metadata(_probe(document=document))
 
 
-def test_poster_is_rebuilt_without_exif(monkeypatch, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+def test_poster_is_rebuilt_without_exif(
+    monkeypatch, tmp_path: Path  # type: ignore[no-untyped-def]
+) -> None:
     video = tmp_path / "sanitized.mp4"
     video.write_bytes(b"placeholder")
 
@@ -136,7 +146,7 @@ def test_poster_is_rebuilt_without_exif(monkeypatch, tmp_path: Path) -> None:  #
         return b""
 
     monkeypatch.setattr(videos, "_run", fake_run)
-    poster = videos._poster(video)  # noqa: SLF001
+    poster = videos._poster(video)
 
     assert poster is not None
     assert b"Secret Camera" not in poster
