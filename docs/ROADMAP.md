@@ -5,7 +5,7 @@
 **Stand:** 25.08.2026  
 **Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
 
-Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht im [Implementation Status](./IMPLEMENTATION-STATUS.md).
+Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht im [Implementation Status](./IMPLEMENTATION-STATUS.md); die präzisierten M2-Grenzen stehen im [M2 Project Control](./m2/PROJECT-CONTROL.md).
 
 ## Roadmap auf einen Blick
 
@@ -21,6 +21,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 |---|---|
 | diese Roadmap | Wohin gehen wir, in welcher Reihenfolge und warum? |
 | [Implementation Status](./IMPLEMENTATION-STATUS.md) | Was ist auf `main` tatsächlich umgesetzt oder noch offen? |
+| [M2 Project Control](./m2/PROJECT-CONTROL.md) | Welche M2/M5-Grenzen, G2-Kriterien und S0-Reihenfolge gelten? |
 | [Finaler G1 Gate Review](./reviews/2026-08-25-g1-gate-review-after-61.md) | aktuelle Gate-Entscheidung |
 | datierte ältere Reviews | historische Prüfsnapshots, die nicht umgeschrieben werden |
 | GitHub Issues/PRs | Welche konkreten Arbeitspakete werden bearbeitet? |
@@ -219,6 +220,7 @@ G2 ist bestanden, wenn:
 ## Verwandte Dokumente
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
+- [M2 Project Control](./m2/PROJECT-CONTROL.md)
 - [M2 Technical Readiness Package](./m2/README.md)
 - [M2 Decision Log](./m2/DECISION-LOG.md)
 - [M2 Delivery Plan](./m2/DELIVERY-PLAN.md)
