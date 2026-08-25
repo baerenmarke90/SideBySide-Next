@@ -1,4 +1,4 @@
-"""Die Medienregeln aus M2-D04 und der Lieferstand aus M2-D23.
+"""Die Medienregeln aus M2-D04.
 
 Getrennt vom Lebenszyklus, damit die Grenzen an genau einer Stelle stehen.
 Wer eine Zahl aendern will, aendert sie hier - und nicht an der Stelle, an
@@ -21,15 +21,9 @@ class MediaRule:
     max_size: int
     max_pixels: int | None = None
     max_edge: int | None = None
+    max_short_edge: int | None = None
     max_duration_seconds: int | None = None
     supported: bool = True
-    """Ob dieser Typ heute tatsaechlich verarbeitet werden kann.
-
-    M2-D04 erlaubt Video, M2-D23 vertagt es auf einen eigenen Slice. Die
-    Zeile bleibt deshalb im Katalog stehen und wird nicht geloescht - der
-    Vertrag hat sich nicht geaendert, nur der Lieferstand. Ein nicht
-    unterstuetzter Typ wird fail-closed abgewiesen.
-    """
 
 
 IMAGE_MAX_SIZE = 25 * MEBIBYTE
@@ -38,7 +32,8 @@ IMAGE_MAX_EDGE = 12_000
 
 VIDEO_MAX_SIZE = 250 * MEBIBYTE
 VIDEO_MAX_DURATION_SECONDS = 180
-VIDEO_MAX_EDGE = 3840
+VIDEO_MAX_LONG_EDGE = 3840
+VIDEO_MAX_SHORT_EDGE = 2160
 
 
 def _image(mime_type: str) -> MediaRule:
@@ -56,9 +51,9 @@ def _video(mime_type: str) -> MediaRule:
         mime_type=mime_type,
         media_type=MediaType.VIDEO,
         max_size=VIDEO_MAX_SIZE,
-        max_edge=VIDEO_MAX_EDGE,
+        max_edge=VIDEO_MAX_LONG_EDGE,
+        max_short_edge=VIDEO_MAX_SHORT_EDGE,
         max_duration_seconds=VIDEO_MAX_DURATION_SECONDS,
-        supported=False,
     )
 
 
@@ -92,5 +87,5 @@ def supported_mime_types() -> frozenset[str]:
 
 
 def contracted_mime_types() -> frozenset[str]:
-    """Was der Vertrag erlaubt - einschliesslich des vertagten Videos."""
+    """Was der M2-Vertrag erlaubt."""
     return frozenset(RULES)
