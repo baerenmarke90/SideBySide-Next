@@ -1,0 +1,47 @@
+name: Temporary PR98 Lint Fix
+
+on:
+  push:
+    branches:
+      - feat/m2-comments-97
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13.7'
+      - name: Fix PR98 lint findings
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/tests/integration/test_endpoint_matrix.py')
+          text = path.read_text()
+          marker = '            "milestoneId": milestone["id"],\n'
+          addition = '            "commentId": comment["id"],\n'
+          if addition not in text:
+              if marker not in text:
+                  raise SystemExit('milestoneId fixture marker missing')
+              text = text.replace(marker, marker + addition, 1)
+          path.write_text(text)
+          PY
+          python -m pip install 'uv==0.12.5'
+          cd backend
+          uv sync --frozen
+          uv run --frozen ruff check --fix tests/integration/test_endpoint_matrix.py tests/unit/test_m2_comment_openapi.py
+          uv run --frozen ruff format tests/integration/test_endpoint_matrix.py tests/unit/test_m2_comment_openapi.py
+          uv run --frozen ruff check tests/integration/test_endpoint_matrix.py tests/unit/test_m2_comment_openapi.py
+          cd ..
+          rm .github/workflows/pr98-lint-fix.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/tests/integration/test_endpoint_matrix.py backend/tests/unit/test_m2_comment_openapi.py .github/workflows/pr98-lint-fix.yml
+          git commit -m 'test: fix PR98 lint findings'
+          git push origin HEAD:feat/m2-comments-97
