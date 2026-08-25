@@ -1,7 +1,7 @@
 # SideBySide Next Roadmap
 
 **Status:** Menschenlesbare Orientierungs- und Priorisierungsansicht  
-**Version:** 1.5  
+**Version:** 1.6  
 **Stand:** 25.08.2026  
 **Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
 
@@ -50,8 +50,10 @@ Die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen sind über #6
 5. #94 — Milestone-Domain und API: **geliefert**.
 6. #97 — Comments, Outbox und Notification Hook: **geliefert**.
 7. #87 — S3-kompatibler MediaStore-Adapter: **geliefert**.
-8. S7 — Story Read Model: verbleibender kritischer Pfad zu G2, Arbeitspaket noch anzulegen.
+8. #113 — Story Read Model und `/timeline`: **geliefert**.
 9. S8 — dünne Web-/Android-Referenzflows: letzter M2-Baustein vor dem G2-Nachweis.
+
+Die M2-Domain ist damit vollständig. Für G2 fehlt allein der End-to-End-Nachweis auf Web und Android.
 
 Offen daneben: #88 (Video, klärt vorher die ffmpeg-Frage) und #102 (OpenAPI-Generator als Tooling-Vorarbeit vor den Clientflächen).
 
