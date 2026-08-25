@@ -45,8 +45,19 @@ def _b64encode(value: bytes) -> str:
 
 
 def _b64decode(value: str) -> bytes:
+    """Base64url ohne Padding - und nur in der kanonischen Schreibweise.
+
+    Ein Token endet auf angebrochenen Bits, die der Decoder verwirft. Ohne
+    diese Pruefung haetten dieselben Bytes mehrere gueltige Schreibweisen:
+    fuer eine 32-Byte-Signatur decodieren vier verschiedene Schlusszeichen
+    identisch. Ein veraendertes Token waere dann nicht zwangslaeufig ein
+    anderes Token - genau die Eigenschaft, die eine Signatur zusichern soll.
+    """
     padding = "=" * (-len(value) % 4)
-    return base64.urlsafe_b64decode(value + padding)
+    raw = base64.urlsafe_b64decode(value + padding)
+    if base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii") != value:
+        raise ValueError("non-canonical base64")
+    return raw
 
 
 def invalid_cursor() -> BadRequestError:

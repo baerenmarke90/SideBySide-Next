@@ -247,7 +247,11 @@ class TestPagination:
         assert second_body["nextCursor"] is None
 
         cursor = first_body["nextCursor"]
-        tampered = cursor[:-1] + ("A" if cursor[-1] != "A" else "B")
+        # Die Nutzlast veraendern, nicht das letzte Signaturzeichen: dessen
+        # angebrochene Bits haben mehrere gleichwertige Schreibweisen, ein
+        # Austausch traefe deshalb nicht zuverlaessig die Signatur.
+        payload_part, signature_part = cursor.split(".", 1)
+        tampered = f"{payload_part[:-1]}{'A' if payload_part[-1] != 'A' else 'B'}.{signature_part}"
         invalid = client.get(
             memories_path(paar["space"].id),
             params={"cursor": tampered},
