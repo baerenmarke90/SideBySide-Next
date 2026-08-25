@@ -45,7 +45,12 @@ class PrivateS3:
             return httpx.Response(200)
 
         if request.method == "HEAD":
-            return httpx.Response(200 if key in self.objects else 404)
+            if key not in self.objects:
+                return httpx.Response(404)
+            return httpx.Response(
+                200,
+                headers={"Content-Length": str(len(self.objects[key]))},
+            )
 
         if request.method == "GET":
             if key not in self.objects:
