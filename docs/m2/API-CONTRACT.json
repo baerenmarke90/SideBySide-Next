@@ -11,82 +11,432 @@
     "staleVersionCode": "RESOURCE_VERSION_CONFLICT"
   },
   "operations": [
-    {"method":"POST","path":"/spaces/{spaceId}/memories","operationId":"createMemory","request":"MemoryCreate","response":"MemoryDetail","status":201,"ifMatch":false},
-    {"method":"GET","path":"/spaces/{spaceId}/memories","operationId":"listMemories","response":"MemoryPage","status":200,"ifMatch":false,"query":["cursor","limit","year"]},
-    {"method":"GET","path":"/spaces/{spaceId}/memories/{memoryId}","operationId":"getMemory","response":"MemoryDetail","status":200,"ifMatch":false},
-    {"method":"PATCH","path":"/spaces/{spaceId}/memories/{memoryId}","operationId":"updateMemory","request":"MemoryUpdate","response":"MemoryDetail","status":200,"ifMatch":true},
-    {"method":"DELETE","path":"/spaces/{spaceId}/memories/{memoryId}","operationId":"deleteMemory","status":204,"ifMatch":true},
-    {"method":"PUT","path":"/spaces/{spaceId}/memories/{memoryId}/attachments","operationId":"replaceMemoryAttachments","request":"MemoryAttachmentSet","response":"MemoryDetail","status":200,"ifMatch":true,"runtimeSlice":"media-integration"},
-
-    {"method":"POST","path":"/spaces/{spaceId}/heart-moments","operationId":"createHeartMoment","request":"HeartMomentCreate","response":"HeartMomentDetail","status":201,"ifMatch":false},
-    {"method":"GET","path":"/spaces/{spaceId}/heart-moments","operationId":"listHeartMoments","response":"HeartMomentPage","status":200,"ifMatch":false,"query":["cursor","limit","visibility"]},
-    {"method":"GET","path":"/spaces/{spaceId}/heart-moments/{heartMomentId}","operationId":"getHeartMoment","response":"HeartMomentDetail","status":200,"ifMatch":false},
-    {"method":"PATCH","path":"/spaces/{spaceId}/heart-moments/{heartMomentId}","operationId":"updateHeartMoment","request":"HeartMomentUpdate","response":"HeartMomentDetail","status":200,"ifMatch":true},
-    {"method":"PATCH","path":"/spaces/{spaceId}/heart-moments/{heartMomentId}/visibility","operationId":"changeHeartMomentVisibility","request":"HeartMomentVisibilityChange","response":"HeartMomentDetail","status":200,"ifMatch":true},
-    {"method":"DELETE","path":"/spaces/{spaceId}/heart-moments/{heartMomentId}","operationId":"deleteHeartMoment","status":204,"ifMatch":true},
-
-    {"method":"POST","path":"/spaces/{spaceId}/milestones","operationId":"createMilestone","request":"MilestoneCreate","response":"MilestoneDetail","status":201,"ifMatch":false},
-    {"method":"GET","path":"/spaces/{spaceId}/milestones","operationId":"listMilestones","response":"MilestonePage","status":200,"ifMatch":false,"query":["cursor","limit","year"]},
-    {"method":"GET","path":"/spaces/{spaceId}/milestones/{milestoneId}","operationId":"getMilestone","response":"MilestoneDetail","status":200,"ifMatch":false},
-    {"method":"PATCH","path":"/spaces/{spaceId}/milestones/{milestoneId}","operationId":"updateMilestone","request":"MilestoneUpdate","response":"MilestoneDetail","status":200,"ifMatch":true},
-    {"method":"DELETE","path":"/spaces/{spaceId}/milestones/{milestoneId}","operationId":"deleteMilestone","status":204,"ifMatch":true},
-
-    {"method":"POST","path":"/spaces/{spaceId}/attachments","operationId":"createAttachmentUpload","request":"AttachmentUploadCreate","response":"UploadDescriptor","status":201,"ifMatch":false},
-    {"method":"PUT","path":"/spaces/{spaceId}/attachments/{attachmentId}/content","operationId":"uploadAttachmentContent","request":"BinaryStream","status":204,"ifMatch":false,"adapter":"local"},
-    {"method":"POST","path":"/spaces/{spaceId}/attachments/{attachmentId}/finalize","operationId":"finalizeAttachmentUpload","request":"AttachmentFinalize","response":"AttachmentDetail","status":202,"ifMatch":false},
-    {"method":"GET","path":"/spaces/{spaceId}/attachments/{attachmentId}","operationId":"getAttachment","response":"AttachmentDetail","status":200,"ifMatch":false},
-    {"method":"POST","path":"/spaces/{spaceId}/attachments/{attachmentId}/read-access","operationId":"createAttachmentReadAccess","request":"AttachmentReadRequest","response":"ReadDescriptor","status":200,"ifMatch":false},
-    {"method":"DELETE","path":"/spaces/{spaceId}/attachments/{attachmentId}","operationId":"deleteAttachment","status":204,"ifMatch":true},
-
-    {"method":"POST","path":"/spaces/{spaceId}/memories/{memoryId}/comments","operationId":"createMemoryComment","request":"CommentCreate","response":"CommentDetail","status":201,"ifMatch":false},
-    {"method":"GET","path":"/spaces/{spaceId}/memories/{memoryId}/comments","operationId":"listMemoryComments","response":"CommentPage","status":200,"ifMatch":false,"query":["cursor","limit"]},
-    {"method":"POST","path":"/spaces/{spaceId}/heart-moments/{heartMomentId}/comments","operationId":"createHeartMomentComment","request":"CommentCreate","response":"CommentDetail","status":201,"ifMatch":false},
-    {"method":"GET","path":"/spaces/{spaceId}/heart-moments/{heartMomentId}/comments","operationId":"listHeartMomentComments","response":"CommentPage","status":200,"ifMatch":false,"query":["cursor","limit"]},
-    {"method":"POST","path":"/spaces/{spaceId}/milestones/{milestoneId}/comments","operationId":"createMilestoneComment","request":"CommentCreate","response":"CommentDetail","status":201,"ifMatch":false},
-    {"method":"GET","path":"/spaces/{spaceId}/milestones/{milestoneId}/comments","operationId":"listMilestoneComments","response":"CommentPage","status":200,"ifMatch":false,"query":["cursor","limit"]},
-    {"method":"PATCH","path":"/spaces/{spaceId}/comments/{commentId}","operationId":"updateComment","request":"CommentUpdate","response":"CommentDetail","status":200,"ifMatch":true},
-    {"method":"DELETE","path":"/spaces/{spaceId}/comments/{commentId}","operationId":"deleteComment","status":204,"ifMatch":true},
-
-    {"method":"GET","path":"/spaces/{spaceId}/timeline","operationId":"getStoryTimeline","response":"StoryPage","status":200,"ifMatch":false,"query":["type","year","order","cursor","limit"]}
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/memories",
+      "operationId": "createMemory",
+      "request": "MemoryCreate",
+      "response": "MemoryDetail",
+      "status": 201,
+      "ifMatch": false
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/memories",
+      "operationId": "listMemories",
+      "response": "MemoryPage",
+      "status": 200,
+      "ifMatch": false,
+      "query": [
+        "cursor",
+        "limit",
+        "year"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/memories/{memoryId}",
+      "operationId": "getMemory",
+      "response": "MemoryDetail",
+      "status": 200,
+      "ifMatch": false
+    },
+    {
+      "method": "PATCH",
+      "path": "/spaces/{spaceId}/memories/{memoryId}",
+      "operationId": "updateMemory",
+      "request": "MemoryUpdate",
+      "response": "MemoryDetail",
+      "status": 200,
+      "ifMatch": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/spaces/{spaceId}/memories/{memoryId}",
+      "operationId": "deleteMemory",
+      "status": 204,
+      "ifMatch": true
+    },
+    {
+      "method": "PUT",
+      "path": "/spaces/{spaceId}/memories/{memoryId}/attachments",
+      "operationId": "replaceMemoryAttachments",
+      "request": "MemoryAttachmentSet",
+      "response": "MemoryDetail",
+      "status": 200,
+      "ifMatch": true,
+      "runtimeSlice": "media-integration"
+    },
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/heart-moments",
+      "operationId": "createHeartMoment",
+      "request": "HeartMomentCreate",
+      "response": "HeartMomentDetail",
+      "status": 201,
+      "ifMatch": false
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/heart-moments",
+      "operationId": "listHeartMoments",
+      "response": "HeartMomentPage",
+      "status": 200,
+      "ifMatch": false,
+      "query": [
+        "cursor",
+        "limit",
+        "visibility"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/heart-moments/{heartMomentId}",
+      "operationId": "getHeartMoment",
+      "response": "HeartMomentDetail",
+      "status": 200,
+      "ifMatch": false
+    },
+    {
+      "method": "PATCH",
+      "path": "/spaces/{spaceId}/heart-moments/{heartMomentId}",
+      "operationId": "updateHeartMoment",
+      "request": "HeartMomentUpdate",
+      "response": "HeartMomentDetail",
+      "status": 200,
+      "ifMatch": true
+    },
+    {
+      "method": "PATCH",
+      "path": "/spaces/{spaceId}/heart-moments/{heartMomentId}/visibility",
+      "operationId": "changeHeartMomentVisibility",
+      "request": "HeartMomentVisibilityChange",
+      "response": "HeartMomentDetail",
+      "status": 200,
+      "ifMatch": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/spaces/{spaceId}/heart-moments/{heartMomentId}",
+      "operationId": "deleteHeartMoment",
+      "status": 204,
+      "ifMatch": true
+    },
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/milestones",
+      "operationId": "createMilestone",
+      "request": "MilestoneCreate",
+      "response": "MilestoneDetail",
+      "status": 201,
+      "ifMatch": false
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/milestones",
+      "operationId": "listMilestones",
+      "response": "MilestonePage",
+      "status": 200,
+      "ifMatch": false,
+      "query": [
+        "cursor",
+        "limit",
+        "year"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/milestones/{milestoneId}",
+      "operationId": "getMilestone",
+      "response": "MilestoneDetail",
+      "status": 200,
+      "ifMatch": false
+    },
+    {
+      "method": "PATCH",
+      "path": "/spaces/{spaceId}/milestones/{milestoneId}",
+      "operationId": "updateMilestone",
+      "request": "MilestoneUpdate",
+      "response": "MilestoneDetail",
+      "status": 200,
+      "ifMatch": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/spaces/{spaceId}/milestones/{milestoneId}",
+      "operationId": "deleteMilestone",
+      "status": 204,
+      "ifMatch": true
+    },
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/attachments",
+      "operationId": "createAttachmentUpload",
+      "request": "AttachmentUploadCreate",
+      "response": "UploadDescriptor",
+      "status": 201,
+      "ifMatch": false
+    },
+    {
+      "method": "PUT",
+      "path": "/spaces/{spaceId}/attachments/{attachmentId}/content",
+      "operationId": "uploadAttachmentContent",
+      "request": "BinaryStream",
+      "status": 204,
+      "ifMatch": false,
+      "adapter": "local"
+    },
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/attachments/{attachmentId}/finalize",
+      "operationId": "finalizeAttachmentUpload",
+      "request": "AttachmentFinalize",
+      "response": "AttachmentDetail",
+      "status": 202,
+      "ifMatch": false
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/attachments/{attachmentId}",
+      "operationId": "getAttachment",
+      "response": "AttachmentDetail",
+      "status": 200,
+      "ifMatch": false
+    },
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/attachments/{attachmentId}/read-access",
+      "operationId": "createAttachmentReadAccess",
+      "request": "AttachmentReadRequest",
+      "response": "ReadDescriptor",
+      "status": 200,
+      "ifMatch": false
+    },
+    {
+      "method": "DELETE",
+      "path": "/spaces/{spaceId}/attachments/{attachmentId}",
+      "operationId": "deleteAttachment",
+      "status": 204,
+      "ifMatch": true
+    },
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/memories/{memoryId}/comments",
+      "operationId": "createMemoryComment",
+      "request": "CommentCreate",
+      "response": "CommentDetail",
+      "status": 201,
+      "ifMatch": false
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/memories/{memoryId}/comments",
+      "operationId": "listMemoryComments",
+      "response": "CommentPage",
+      "status": 200,
+      "ifMatch": false,
+      "query": [
+        "cursor",
+        "limit"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
+      "operationId": "createHeartMomentComment",
+      "request": "CommentCreate",
+      "response": "CommentDetail",
+      "status": 201,
+      "ifMatch": false
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
+      "operationId": "listHeartMomentComments",
+      "response": "CommentPage",
+      "status": 200,
+      "ifMatch": false,
+      "query": [
+        "cursor",
+        "limit"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/spaces/{spaceId}/milestones/{milestoneId}/comments",
+      "operationId": "createMilestoneComment",
+      "request": "CommentCreate",
+      "response": "CommentDetail",
+      "status": 201,
+      "ifMatch": false
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/milestones/{milestoneId}/comments",
+      "operationId": "listMilestoneComments",
+      "response": "CommentPage",
+      "status": 200,
+      "ifMatch": false,
+      "query": [
+        "cursor",
+        "limit"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/spaces/{spaceId}/comments/{commentId}",
+      "operationId": "updateComment",
+      "request": "CommentUpdate",
+      "response": "CommentDetail",
+      "status": 200,
+      "ifMatch": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/spaces/{spaceId}/comments/{commentId}",
+      "operationId": "deleteComment",
+      "status": 204,
+      "ifMatch": true
+    },
+    {
+      "method": "GET",
+      "path": "/spaces/{spaceId}/timeline",
+      "operationId": "getStoryTimeline",
+      "response": "StoryPage",
+      "status": 200,
+      "ifMatch": false,
+      "query": [
+        "type",
+        "year",
+        "order",
+        "cursor",
+        "limit"
+      ]
+    }
   ],
   "story": {
-    "kinds": ["MEMORY", "HEART_MOMENT", "MILESTONE"],
+    "kinds": [
+      "MEMORY",
+      "HEART_MOMENT",
+      "MILESTONE"
+    ],
     "heartMomentVisibility": "SHARED_ONLY",
     "fullTextQuery": false,
-    "orderValues": ["ASC", "DESC"],
+    "orderValues": [
+      "ASC",
+      "DESC"
+    ],
     "defaultOrder": "DESC",
-    "sortTuple": ["effectiveDate", "createdAt", "kindRank", "id"],
-    "kindRank": {"MEMORY":1,"HEART_MOMENT":2,"MILESTONE":3},
+    "sortTuple": [
+      "effectiveDate",
+      "createdAt",
+      "kindRank",
+      "id"
+    ],
+    "kindRank": {
+      "MEMORY": 1,
+      "HEART_MOMENT": 2,
+      "MILESTONE": 3
+    },
     "effectiveDateFallback": "UTC_DATE(createdAt)",
     "cursor": {
       "opaque": true,
       "integrityProtected": true,
       "version": 1,
-      "binds": ["spaceId", "type", "year", "order"],
-      "payload": ["v", "order", "filterHash", "effectiveDate", "createdAt", "kind", "id"]
+      "binds": [
+        "spaceId",
+        "type",
+        "year",
+        "order"
+      ],
+      "payload": [
+        "v",
+        "order",
+        "filterHash",
+        "effectiveDate",
+        "createdAt",
+        "kind",
+        "id"
+      ]
     }
   },
   "clientWriteFields": {
-    "MemoryCreate": ["title", "body", "happenedOn"],
-    "MemoryUpdate": ["title", "body", "happenedOn"],
-    "HeartMomentCreate": ["text", "emotion", "visibility", "happenedOn", "attachmentId"],
-    "HeartMomentUpdate": ["text", "emotion", "happenedOn", "attachmentId"],
-    "HeartMomentVisibilityChange": ["visibility"],
-    "MilestoneCreate": ["title", "body", "happenedOn"],
-    "MilestoneUpdate": ["title", "body", "happenedOn"],
-    "CommentCreate": ["body"],
-    "CommentUpdate": ["body"],
-    "MemoryAttachmentSet": ["attachments"],
-    "AttachmentUploadCreate": ["mediaType", "originalName", "expectedMimeType", "expectedSize"],
+    "MemoryCreate": [
+      "title",
+      "body",
+      "happenedOn"
+    ],
+    "MemoryUpdate": [
+      "title",
+      "body",
+      "happenedOn"
+    ],
+    "HeartMomentCreate": [
+      "text",
+      "emotion",
+      "visibility",
+      "happenedOn",
+      "attachmentId"
+    ],
+    "HeartMomentUpdate": [
+      "text",
+      "emotion",
+      "happenedOn",
+      "attachmentId"
+    ],
+    "HeartMomentVisibilityChange": [
+      "visibility"
+    ],
+    "MilestoneCreate": [
+      "title",
+      "body",
+      "happenedOn"
+    ],
+    "MilestoneUpdate": [
+      "title",
+      "body",
+      "happenedOn"
+    ],
+    "CommentCreate": [
+      "body"
+    ],
+    "CommentUpdate": [
+      "body"
+    ],
+    "MemoryAttachmentSet": [
+      "attachments"
+    ],
+    "AttachmentUploadCreate": [
+      "mediaType",
+      "originalName",
+      "expectedMimeType",
+      "expectedSize"
+    ],
     "AttachmentFinalize": [],
-    "AttachmentReadRequest": ["parentType", "parentId"]
+    "AttachmentReadRequest": [
+      "parentType",
+      "parentId"
+    ]
   },
   "attachmentPublicFields": [
-    "id", "status", "mediaType", "mimeType", "size", "width", "height",
-    "durationSeconds", "version", "createdAt"
+    "id",
+    "status",
+    "mediaType",
+    "mimeType",
+    "size",
+    "width",
+    "height",
+    "durationSeconds",
+    "version",
+    "createdAt"
   ],
   "attachmentForbiddenClientFields": [
-    "storageKey", "bucket", "provider", "filesystemPath", "credentials", "privacyClass"
+    "storageKey",
+    "bucket",
+    "provider",
+    "filesystemPath",
+    "credentials",
+    "privacyClass"
   ],
   "errorCodes": {
     "RESOURCE_NOT_FOUND": 404,
@@ -100,5 +450,20 @@
     "ATTACHMENT_LIMIT_EXCEEDED": 409,
     "COMMENT_TARGET_NOT_AVAILABLE": 404,
     "RATE_LIMITED": 429
-  }
+  },
+  "attachmentReadRequestVariants": [
+    {
+      "parentType": "MEMORY",
+      "requiresParentId": true
+    },
+    {
+      "parentType": "HEART_MOMENT",
+      "requiresParentId": true
+    },
+    {
+      "parentType": "NONE",
+      "requiresParentId": false,
+      "note": "eigener, noch ungebundener Upload im Bindungsfenster (M2-D24)"
+    }
+  ]
 }
