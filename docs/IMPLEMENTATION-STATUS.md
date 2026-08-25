@@ -1,8 +1,8 @@
 # Umsetzungsstand
 
 Stand: 25. August 2026  
-Aktueller `main`: `76f5f086e1228662c22147590d5e85eac70e6fb4`  
-Aktueller Gate-Status: **G1 bestanden; M2-S0 freigegeben und aktiv**
+Aktueller `main`: `e461c7c` (Merge von #81)  
+Aktueller Gate-Status: **G1 bestanden; M2-S0 abgeschlossen; M2-Runtime läuft**
 
 ## Dokumentenrollen
 
@@ -71,17 +71,23 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 
 ## M2-S0 — Readiness & Vertragsentscheidungen
 
-**Status: aktiv. Runtime-Code noch gesperrt, bis die für den jeweiligen Slice relevanten BLOCKING-Decisions geschlossen sind.**
+**Status: abgeschlossen.** Alle `BLOCKING`-Entscheidungen im [Decision Log](m2/DECISION-LOG.md) sind `DECIDED`.
 
-### Aktuelle Issue-Kette
+- [x] **#67 — Planning:** G1-Status, Roadmap und Milestone-Grenzen synchronisiert.
+- [x] **#68 — Domain/Privacy:** Memory-, Comment- und Privacy-Entscheidungen geschlossen.
+- [x] **#69 — Media:** Attachment-Lifecycle, Limits, Validation und Retention entschieden.
+- [x] **#70 — API:** Routen, DTOs, Concurrency, Pagination und Story-Sortierung festgelegt.
+- [x] **#78 — Media-Metadaten:** EXIF-/GPS-Strippen beim Ingest und Variantenumfang entschieden (M2-D14/D15).
 
-- [ ] **#67 — Planning:** G1-Status, Roadmap und Milestone-Grenzen synchronisieren.
-- [ ] **#68 — Domain/Privacy:** Memory-, Comment- und Privacy-Entscheidungen schließen.
-- [ ] **#69 — Media:** Attachment-Lifecycle, Limits, Validation und Retention entscheiden.
-- [ ] **#70 — API:** Routen, DTOs, Concurrency, Pagination und Story-Sortierung festlegen.
-- [ ] **#71 — erster Runtime-Slice:** Memory CRUD ohne Medien; blockiert durch #67/#68/#70.
+Offen bleiben ausschließlich `BEFORE_CLIENTS`-Entscheidungen, die erst vor stabiler Web-/Android-Integration fällig sind: M2-D10 (Notification Preview), M2-D17 (Export/Backup), M2-D18 (Client-Cache), M2-D21 (Suchindex) und M2-D22 (Owner-Ansicht). Sie blockieren keinen Backend-Slice.
 
-Nach Merge von #67 können #68 und #69 parallel bearbeitet werden. #70 übernimmt die freigegebenen Entscheidungen in den versionierten Contract. #71 startet erst, wenn seine relevanten S0-Abhängigkeiten erfüllt sind.
+## M2 — Runtime
+
+**Status: laufend.**
+
+- [x] **#71 — Memory CRUD ohne Medien** (PR #77): Memory-Domain mit ProtectedPayload für Titel/Body, author-only writes bei gemeinsamer Lesbarkeit, `If-Match`/409, signierter Keyset-Cursor und `resourceVersion` im Outbox-Envelope.
+- [ ] **#79 — Attachment-Lifecycle und MediaStore-Adapter:** entsperrt durch #78.
+- [ ] **#80 — HeartMoment mit Owner-only-Privacy:** unabhängig von den Media-Slices, parallel möglich.
 
 Die Details und verbindlichen Milestone-Grenzen stehen in [M2 Project Control](m2/PROJECT-CONTROL.md).
 
@@ -105,13 +111,13 @@ M4 wird intern in drei Delivery-Slices geteilt:
 - M4-B Activity + Notifications
 - M4-C Reminders + Rules
 
-Globale Volltextsuche ist nicht automatisch Teil von G2. Der Story-Mindestvertrag beginnt mit `type`, `year`, `order`, `cursor` und `limit`; `q` wird nur nach explizitem Privacy-/Index-Review in #70 in M2 aufgenommen, sonst M4-A.
+Globale Volltextsuche ist nicht Teil von G2. Der Story-Mindestvertrag umfasst `type`, `year`, `order`, `cursor` und `limit`. #70 hat `q` nicht aufgenommen (M2-D08); globale Volltextsuche liegt damit in M4-A.
 
-## Geplante M2-Runtime-Reihenfolge nach S0
+## M2-Runtime-Reihenfolge nach S0
 
-1. Memory CRUD ohne Medien (#71)
-2. Attachment Foundation / MediaStore Contract
-3. HeartMoment Privacy
+1. ~~Memory CRUD ohne Medien (#71)~~ — geliefert
+2. Attachment Foundation / MediaStore Contract (#79)
+3. HeartMoment Privacy (#80)
 4. Memory + mehrere Medien
 5. Milestone
 6. Comments + Outbox/Notification Hook

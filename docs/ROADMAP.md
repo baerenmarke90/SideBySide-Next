@@ -11,7 +11,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 
 ![Grafische Roadmap von M0 Foundation bis M9 Release und der strategischen E2EE-Spur](./assets/roadmap/roadmap-overview.svg)
 
-**Aktuell:** M0 und M1 sind für ihren vorgesehenen Runtimeumfang abgeschlossen. **G1 ist bestanden. M2-S0 ist freigegeben und aktiv.** Der verbindliche Nachweis ist der [G1 Gate Review nach Abschluss von #61](./reviews/2026-08-25-g1-gate-review-after-61.md).
+**Aktuell:** M0 und M1 sind für ihren vorgesehenen Runtimeumfang abgeschlossen. **G1 ist bestanden. M2-S0 ist abgeschlossen; die M2-Runtime läuft.** Der verbindliche Gate-Nachweis ist der [G1 Gate Review nach Abschluss von #61](./reviews/2026-08-25-g1-gate-review-after-61.md); der aktuelle Arbeitsstand steht im [M2 Project Control](./m2/PROJECT-CONTROL.md).
 
 #59 und #60 bleiben verpflichtende Pre-Exposure-Härtungen vor öffentlicher bzw. Managed-Exposition. #25 bleibt Repository-Hardening. Diese Punkte blockieren die interne M2-Entwicklung nicht.
 
@@ -37,15 +37,15 @@ API-/DB-Konventionen, Migrationen, Outbox, Jobs, MediaStore-Grundlage, Protected
 
 Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, E-Mail-Verifikation und Recovery sind implementiert. PR #64 hat #61 mit expliziter `preserve`-/`cascade`-Semantik ohne destruktiven Default geschlossen; der folgende Gate-Review hat G1 ausdrücklich bestanden erklärt.
 
-### M2-S0 — Readiness & Vertragsentscheidungen: aktiv
+### M2-S0 — Readiness & Vertragsentscheidungen: abgeschlossen
 
-M2-Runtime-Code beginnt erst, wenn die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen geschlossen sind. Die aktuelle S0-Kette ist:
+Die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen sind über #67, #68, #69, #70 und #78 geschlossen. Alle `BLOCKING`-Einträge im [Decision Log](./m2/DECISION-LOG.md) stehen auf `DECIDED`; offen bleiben nur `BEFORE_CLIENTS`-Punkte, die erst vor stabiler Client-Integration fällig werden.
 
-1. #67 — Projektsteuerung, Roadmap und Milestone-Grenzen synchronisieren.
-2. #68 — Memory-/Comment-/Privacy-Entscheidungen schließen.
-3. #69 — Attachment-Lifecycle, Limits, Validation und Retention entscheiden.
-4. #70 — M2-Routen, DTOs, Concurrency, Pagination und Story-Sortierung festlegen.
-5. #71 — erster Runtime-Slice: Memory CRUD ohne Medien.
+### M2-Runtime: laufend
+
+1. #71 — Memory CRUD ohne Medien: **geliefert**.
+2. #79 — Attachment-Lifecycle und MediaStore-Adapter: nächster kritischer Pfad.
+3. #80 — HeartMoment mit Owner-only-Privacy: parallel möglich.
 
 ## Milestones
 

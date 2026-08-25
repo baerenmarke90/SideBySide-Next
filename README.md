@@ -81,7 +81,7 @@ künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
 </p>
 
 <p align="center">
-  <strong>Aktuell: G1 ist bestanden. M2-S0 ist freigegeben und aktiv; M2-Runtime beginnt nach Abschluss der blockierenden S0-Entscheidungen.</strong><br>
+  <strong>Aktuell: G1 ist bestanden. M2-S0 ist abgeschlossen; die M2-Runtime läuft.</strong><br>
   <a href="docs/ROADMAP.md">Roadmap, parallele Arbeitsströme und Release Gates ansehen</a> ·
   <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a> ·
   <a href="docs/m2/PROJECT-CONTROL.md">M2 Project Control öffnen</a>
@@ -189,12 +189,16 @@ setzt G1 auf **BESTANDEN** und gibt M2-S0 frei. #59 und #60 bleiben
 verpflichtende Pre-Exposure-Härtungen vor öffentlichem/Managed-Betrieb; #25
 bleibt Repository-Hardening.
 
-**M2-S0 — aktiv.** Vor produktivem M2-Runtime-Code werden die blockierenden
-Domain-, Privacy-, Media- und API-Entscheidungen geschlossen. Die aktuelle
-Reihenfolge ist #67 → #68/#69 → #70 → #71. Der erste Runtime-Slice ist
-Memory CRUD ohne Medien; Media wird anschließend über einen eigenen sicheren
-Attachment-Slice integriert. Die präzisierten Milestone-Grenzen stehen in
-[docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
+**M2-S0 — abgeschlossen.** Die blockierenden Domain-, Privacy-, Media- und
+API-Entscheidungen sind über #67, #68, #69, #70 und #78 geschlossen; alle
+`BLOCKING`-Einträge im Decision Log stehen auf `DECIDED`.
+
+**M2-Runtime — laufend.** Der erste Slice, Memory CRUD ohne Medien (#71), ist
+geliefert und hat ProtectedPayload-Grenze, Tenant Guard, Autorregel und
+Optimistic Concurrency auf einer medienfreien Fläche validiert. Als Nächstes
+folgt der Attachment-Slice (#79), parallel dazu HeartMoment mit Owner-only-
+Privacy (#80). Die präzisierten Milestone-Grenzen und der aktuelle Arbeitsstand
+stehen in [docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
 [docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten,
