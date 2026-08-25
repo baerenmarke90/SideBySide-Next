@@ -67,7 +67,7 @@ M6 Rich Features, M7 Integrationen, M8 freiwilliger Context und M9 Productizatio
 4. **#70 API:** Routen, DTOs, Error Codes, Concurrency, Pagination und Story-Sortierung in den versionierten Contract überführen.
 5. **#71 Memory Runtime:** erster medienfreier M2-Runtime-Slice nach Erfüllung seiner S0-Abhängigkeiten.
 
-#68 und #69 dürfen nach stabiler #67-Grenze parallel vorbereitet werden. #70 konsumiert die Entscheidungen aus #68/#69. Runtime-Code entscheidet keine offene BLOCKING-Frage stillschweigend.
+#68 und #69 dürfen nach Merge von #67 parallel bearbeitet werden. #70 konsumiert die freigegebenen Entscheidungen aus #68/#69. Runtime-Code entscheidet keine offene BLOCKING-Frage stillschweigend.
 
 ## Runtime-Startregel
 
