@@ -29,6 +29,13 @@ class Environment(StrEnum):
     PRODUCTION = "production"
 
 
+class MediaStoreBackend(StrEnum):
+    """Welcher Infrastrukturadapter Medien physisch ablegt."""
+
+    LOCAL = "local"
+    S3 = "s3"
+
+
 class MailTransport(StrEnum):
     """Wie ausgehende Post das Haus verlaesst.
 
@@ -83,7 +90,14 @@ class Settings(BaseSettings):
     )
     database_echo: bool = False
 
+    media_store: MediaStoreBackend = MediaStoreBackend.LOCAL
     media_root: str = "./data/media"
+    s3_endpoint: str = ""
+    s3_region: str = "us-east-1"
+    s3_bucket: str = ""
+    s3_access_key_id: SecretStr | None = None
+    s3_secret_access_key: SecretStr | None = None
+    s3_session_token: SecretStr | None = None
 
     # Keyset-Cursor verlassen den Server als opake, HMAC-geschuetzte Tokens.
     # Ein installationsspezifischer Schluessel verhindert Manipulation und
@@ -124,14 +138,16 @@ class Settings(BaseSettings):
     smtp_password: SecretStr | None = None
     smtp_starttls: bool = True
 
-    @field_validator("bootstrap_token", mode="before")
+    @field_validator(
+        "bootstrap_token",
+        "cursor_signing_key",
+        "s3_access_key_id",
+        "s3_secret_access_key",
+        "s3_session_token",
+        mode="before",
+    )
     @classmethod
-    def empty_bootstrap_token_is_unset(cls, value: object) -> object | None:
-        return None if value == "" else value
-
-    @field_validator("cursor_signing_key", mode="before")
-    @classmethod
-    def empty_cursor_signing_key_is_unset(cls, value: object) -> object | None:
+    def empty_secret_is_unset(cls, value: object) -> object | None:
         return None if value == "" else value
 
     @property
@@ -165,6 +181,39 @@ class Settings(BaseSettings):
             if verbindung.id == connection_id:
                 return verbindung
         return None
+
+    @model_validator(mode="after")
+    def media_store_is_complete(self) -> Self:
+        if self.media_store is MediaStoreBackend.LOCAL:
+            return self
+
+        required = {
+            "SBS_S3_ENDPOINT": self.s3_endpoint,
+            "SBS_S3_REGION": self.s3_region,
+            "SBS_S3_BUCKET": self.s3_bucket,
+            "SBS_S3_ACCESS_KEY_ID": self.s3_access_key_id,
+            "SBS_S3_SECRET_ACCESS_KEY": self.s3_secret_access_key,
+        }
+        missing = [name for name, value in required.items() if not value]
+        if missing:
+            raise ValueError(f"S3 media store requires: {', '.join(missing)}.")
+
+        endpoint = urlsplit(self.s3_endpoint.rstrip("/"))
+        if (
+            endpoint.scheme not in {"http", "https"}
+            or not endpoint.hostname
+            or endpoint.username is not None
+            or endpoint.password is not None
+            or endpoint.query
+            or endpoint.fragment
+            or endpoint.path not in {"", "/"}
+        ):
+            raise ValueError(
+                "SBS_S3_ENDPOINT must be an http(s) origin without credentials or path."
+            )
+        if "/" in self.s3_bucket:
+            raise ValueError("SBS_S3_BUCKET must be a bucket name, not a path.")
+        return self
 
     @model_validator(mode="after")
     def production_hosts_are_restricted(self) -> Self:
