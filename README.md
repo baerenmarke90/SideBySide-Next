@@ -81,7 +81,7 @@ künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
 </p>
 
 <p align="center">
-  <strong>Aktuell: M1-Runtimeumfang weitgehend umgesetzt; G1 wartet auf die RelatedPerson-Delete-Policy (#61).</strong><br>
+  <strong>Aktuell: G1 ist bestanden. M2-S0 ist freigegeben und aktiv; M2-Runtime beginnt nach Abschluss der blockierenden S0-Entscheidungen.</strong><br>
   <a href="docs/ROADMAP.md">Roadmap, parallele Arbeitsströme und Release Gates ansehen</a> ·
   <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a>
 </p>
@@ -95,6 +95,10 @@ in Analytics.
 Der zentrale Mandant heißt **Space** — der gemeinsame Raum eines Paares.
 Jeder gemeinsame Datensatz gehört genau einem Space. Kein Zugriff erfolgt
 allein anhand einer Ressourcen-ID.
+
+Für M2 gilt zusätzlich: `SHARED` und `PRIVATE` sind fachliche Domainwerte.
+`SPACE_SHARED` und `OWNER_ONLY` sind interne Authorization-/Privacy-Klassen.
+Clients schreiben `privacyClass` nicht redundant als zweite Wahrheitsquelle.
 
 ## Aufbau
 
@@ -170,29 +174,29 @@ Outbox, Job-Warteschlange, MediaStore- und Provider-Schnittstellen,
 ProtectedPayload-Grenze, reproduzierbare Dependencies, OpenAPI-Contract und
 CI-/Supply-Chain-Prüfungen sind für den M0-Umfang vorhanden.
 
-**Sicherheitsgrundlage.** Account, Space, Membership, Tenant Context,
-Owner-/Privacy-Guard und Geraetesitzungen mit rotierenden Tokens sind
-implementiert. Private M1-Ressourcen werden bereits in der SQL-Abfrage nach
-Space, Owner und Privacy-Klasse begrenzt.
+**M1 / G1 — abgeschlossen und bestanden.** Account, Space, Membership,
+Tenant Context, Owner-/Privacy-Guard und Geraetesitzungen mit rotierenden
+Tokens sind implementiert. Lokales Passwort, OIDC mit PKCE/State/Nonce,
+OIDC-Einladungs-Onboarding, Passkeys, Magic Link, E-Mail-Verifikation,
+Recovery, Invitations, SpaceProfile, PartnerProfile/ProfilePreference sowie
+RelatedPerson/ImportantDate sind im Backend vorhanden und durch
+PostgreSQL-/Privacy-/Tenant-Tests abgesichert. #61 wurde mit einer expliziten
+`preserve`-/`cascade`-Delete-Policy ohne destruktiven Default geschlossen.
 
-**M1-Runtimeumfang ist weitgehend umgesetzt; G1 ist noch nicht bestanden.**
-Lokales Passwort, OIDC mit PKCE/State/Nonce, OIDC-Einladungs-Onboarding,
-Passkeys, Magic Link, E-Mail-Verifikation, Recovery, Invitations,
-SpaceProfile, PartnerProfile/ProfilePreference sowie RelatedPerson/ImportantDate
-sind im Backend vorhanden und durch PostgreSQL-/Privacy-/Tenant-Tests
-abgesichert.
+Der [G1 Gate Review nach Abschluss von #61](docs/reviews/2026-08-25-g1-gate-review-after-61.md)
+setzt G1 auf **BESTANDEN** und gibt M2-S0 frei. #59 und #60 bleiben
+verpflichtende Pre-Exposure-Härtungen vor öffentlichem/Managed-Betrieb; #25
+bleibt Repository-Hardening.
 
-Der [G1/M1 Follow-up Security Review vom 25.08.2026](docs/reviews/2026-08-25-g1-m1-follow-up-review.md)
-ordnet #61 als verbliebenen Runtime-Gate-Blocker ein: Das Löschen einer
-geteilten RelatedPerson benötigt eine explizite serverseitige Auswahl
-zwischen „Termine erhalten“ und „Termine mit löschen“, ohne destruktiven
-Default und ohne Privacy-Leak über private Partnertermine. #59 und #60 sind
-verpflichtende Pre-Exposure-Härtungen vor öffentlichem/Managed-Betrieb, aber
-keine Blocker für interne M2-Domainimplementierung. Bis #61 geschlossen und
-neu bewertet ist, bleibt M2-Runtime gesperrt.
+**M2-S0 — aktiv.** Vor produktivem M2-Runtime-Code werden die blockierenden
+Domain-, Privacy-, Media- und API-Entscheidungen geschlossen. Die aktuelle
+Reihenfolge ist #67 → #68/#69 → #70 → #71. Der erste Runtime-Slice ist
+Memory CRUD ohne Medien; Media wird anschließend über einen eigenen sicheren
+Attachment-Slice integriert.
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
-[docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten und
+[docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten,
+[docs/m2/README.md](docs/m2/README.md) für das M2-Readiness-Paket und
 [specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md) für den
 fachlichen Umfang.
 
