@@ -71,6 +71,15 @@ class MediaStore(ABC):
     @abstractmethod
     def exists(self, storage_key: str) -> bool: ...
 
+    def object_size(self, storage_key: str) -> int | None:
+        """Bekannte Objektgroesse ohne Body-Download, sofern verfuegbar.
+
+        `None` bedeutet nur, dass der Adapter sie nicht billig bestimmen
+        kann. Der Aufrufer muss den anschliessenden Datenstrom trotzdem
+        begrenzen; diese Methode ist eine zusaetzliche Schutzschicht.
+        """
+        return None
+
     @abstractmethod
     def create_read_url(self, storage_key: str, expires_in: timedelta) -> str | None:
         """Eine kurzlebige Lese-URL, sofern die Ablage das kann.
