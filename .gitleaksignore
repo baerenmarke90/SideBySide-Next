@@ -1,0 +1,2 @@
+# Synthetic test-only cursor key from PR #77; not a credential.
+e92f7a51ddebc30ed3c4a8555f8d4bd81873e79e:backend/tests/unit/test_transport.py:generic-api-key:12
