@@ -194,6 +194,13 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
+    Endpunkt(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}/attachments",
+        body={"attachments": []},
+        if_match=True,
+        resource_absence="RESOURCE_NOT_FOUND",
+    ),
     Endpunkt("GET", "/api/v1/spaces/{spaceId}/heart-moments"),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/heart-moments", body=HEART_MOMENT),
     Endpunkt(

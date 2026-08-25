@@ -168,6 +168,83 @@
         "title": "AttachmentReadRequest",
         "type": "object"
       },
+      "AttachmentSummary": {
+        "description": "Die Projektion eines gebundenen Attachments an seinem Parent.\n\nEin Typ und nicht je Domaene einer: zwei gleichnamige DTOs haetten im\nOpenAPI-Vertrag modulqualifizierte Namen erzeugt und damit interne\nPfade nach aussen getragen.",
+        "properties": {
+          "hasThumbnail": {
+            "title": "Hasthumbnail",
+            "type": "boolean"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mediaType": {
+            "$ref": "#/components/schemas/MediaType"
+          },
+          "mimeType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mimetype"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "mediaType",
+          "mimeType",
+          "size",
+          "width",
+          "height",
+          "hasThumbnail"
+        ],
+        "title": "AttachmentSummary",
+        "type": "object"
+      },
       "AttachmentUploadCreate": {
         "additionalProperties": false,
         "properties": {
@@ -288,6 +365,18 @@
       "HeartMomentCreate": {
         "additionalProperties": false,
         "properties": {
+          "attachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachmentid"
+          },
           "emotion": {
             "$ref": "#/components/schemas/HeartEmotion"
           },
@@ -315,6 +404,16 @@
       },
       "HeartMomentDetail": {
         "properties": {
+          "attachment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttachmentSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "author": {
             "$ref": "#/components/schemas/sidebyside__api__v1__heart_moments__AuthorSummary"
           },
@@ -378,7 +477,8 @@
           "createdAt",
           "updatedAt",
           "author",
-          "capabilities"
+          "capabilities",
+          "attachment"
         ],
         "title": "HeartMomentDetail",
         "type": "object"
@@ -420,6 +520,18 @@
         "additionalProperties": false,
         "description": "Inhaltliche Aenderung.\n\n`visibility` fehlt hier bewusst: der Wechsel ist eine eigene Operation\nmit destruktiver Folge und darf nicht als Nebenwirkung eines\nTextupdates passieren.",
         "properties": {
+          "attachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachmentid"
+          },
           "emotion": {
             "anyOf": [
               {
@@ -703,6 +815,126 @@
         "title": "MembershipView",
         "type": "object"
       },
+      "MemoryAttachmentEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "attachmentId": {
+            "format": "uuid",
+            "title": "Attachmentid",
+            "type": "string"
+          },
+          "position": {
+            "minimum": 0.0,
+            "title": "Position",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attachmentId",
+          "position"
+        ],
+        "title": "MemoryAttachmentEntry",
+        "type": "object"
+      },
+      "MemoryAttachmentSet": {
+        "additionalProperties": false,
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryAttachmentEntry"
+            },
+            "title": "Attachments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attachments"
+        ],
+        "title": "MemoryAttachmentSet",
+        "type": "object"
+      },
+      "MemoryAttachmentSummary": {
+        "description": "Wie jedes gebundene Attachment, plus seinen Platz in der Galerie.",
+        "properties": {
+          "hasThumbnail": {
+            "title": "Hasthumbnail",
+            "type": "boolean"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mediaType": {
+            "$ref": "#/components/schemas/MediaType"
+          },
+          "mimeType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mimetype"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "mediaType",
+          "mimeType",
+          "size",
+          "width",
+          "height",
+          "hasThumbnail",
+          "position"
+        ],
+        "title": "MemoryAttachmentSummary",
+        "type": "object"
+      },
       "MemoryCreate": {
         "additionalProperties": false,
         "properties": {
@@ -736,6 +968,13 @@
       },
       "MemoryDetail": {
         "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryAttachmentSummary"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
           "author": {
             "$ref": "#/components/schemas/sidebyside__api__v1__memories__AuthorSummary"
           },
@@ -803,7 +1042,8 @@
           "createdAt",
           "updatedAt",
           "author",
-          "capabilities"
+          "capabilities",
+          "attachments"
         ],
         "title": "MemoryDetail",
         "type": "object"
@@ -5332,6 +5572,127 @@
           }
         },
         "summary": "Update Memory",
+        "tags": [
+          "memories"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/memories/{memoryId}/attachments": {
+      "put": {
+        "description": "Menge und Reihenfolge in einem Zug setzen.\n\nEin PUT, kein Hinzufuegen und Entfernen: der Client schickt den Zustand,\nden er gesehen hat, und `If-Match` sorgt dafuer, dass er ihn noch hat.",
+        "operationId": "replaceMemoryAttachments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memoryId",
+            "required": true,
+            "schema": {
+              "title": "Memoryid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryAttachmentSet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryDetail"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Version der Ressource fuer den naechsten If-Match-Schreibzugriff.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Replace Memory Attachments",
         "tags": [
           "memories"
         ]

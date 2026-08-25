@@ -46,12 +46,18 @@ def test_write_dtos_only_expose_approved_fields() -> None:
     components = _schema()["components"]["schemas"]  # type: ignore[index]
 
     create = components["HeartMomentCreate"]
-    assert set(create["properties"]) == {"text", "emotion", "visibility", "happenedOn"}
+    assert set(create["properties"]) == {
+        "text",
+        "emotion",
+        "visibility",
+        "happenedOn",
+        "attachmentId",
+    }
     assert set(create["required"]) == {"text", "emotion", "visibility", "happenedOn"}
     assert create["additionalProperties"] is False
 
     update = components["HeartMomentUpdate"]
-    assert set(update["properties"]) == {"text", "emotion", "happenedOn"}
+    assert set(update["properties"]) == {"text", "emotion", "happenedOn", "attachmentId"}
     assert update["additionalProperties"] is False
 
     change = components["HeartMomentVisibilityChange"]
@@ -71,18 +77,12 @@ def test_privacy_class_is_never_a_client_field() -> None:
         assert "privacyClass" not in components[name]["properties"]
 
 
-def test_media_free_heart_moment_detail_does_not_pretend_attachments_exist() -> None:
+def test_heart_moment_detail_projects_its_single_attachment() -> None:
+    """Hoechstens eines (M2-D03) - deshalb ein Feld und keine Liste."""
     components = _schema()["components"]["schemas"]  # type: ignore[index]
     detail = components["HeartMomentDetail"]
-    assert "attachmentId" not in detail["properties"]
-    assert "attachment" not in detail["properties"]
+    assert "attachment" in detail["properties"]
+    assert "attachments" not in detail["properties"]
     assert {"id", "spaceId", "authorId", "text", "emotion", "visibility", "version"} <= set(
         detail["properties"]
     )
-
-
-def test_create_does_not_yet_accept_an_attachment() -> None:
-    """Der Vertrag sieht `attachmentId` vor; der Media-Slice liefert ihn."""
-    components = _schema()["components"]["schemas"]  # type: ignore[index]
-    assert "attachmentId" not in components["HeartMomentCreate"]["properties"]
-    assert "attachmentId" not in components["HeartMomentUpdate"]["properties"]

@@ -5,8 +5,18 @@ from __future__ import annotations
 from datetime import date
 from enum import StrEnum
 from typing import ClassVar
+from uuid import UUID
 
-from sqlalchemy import CheckConstraint, Date, Index, SmallInteger, text
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
 from sidebyside.authorization import (
@@ -71,6 +81,14 @@ class HeartMoment(
     )
 
     happened_on: Mapped[date] = mapped_column(Date, nullable=False)
+
+    # Hoechstens ein Attachment (M2-D03). Als Fremdschluessel und nicht als
+    # Relationstabelle: die Kardinalitaet steht damit im Schema und nicht
+    # in einer Regel, die jemand vergessen kann.
+    attachment_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("attachments.id", ondelete="RESTRICT"),
+    )
     crypto_version: Mapped[int] = mapped_column(
         SmallInteger,
         nullable=False,
@@ -90,6 +108,8 @@ class HeartMoment(
             name="privacy_is_enforceable",
         ),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
+        # Dasselbe Attachment nicht an zwei HeartMoments.
+        UniqueConstraint("attachment_id", name="uq_heart_moments_attachment"),
         Index("ix_heart_moments_owner_id", "owner_id"),
         Index("ix_heart_moments_space_id_created_at_id", "space_id", "created_at", "id"),
         Index(

@@ -41,10 +41,12 @@ from sidebyside.core.clock import now
 from sidebyside.core.errors import (
     ConflictError,
     ErrorCode,
+    NotFoundError,
     PayloadTooLargeError,
     UnsupportedMediaTypeError,
     ValidationError,
 )
+from sidebyside.core.ids import parse_id
 from sidebyside.jobs import queue
 from sidebyside.media import build_storage_key, get_media_store
 
@@ -63,14 +65,36 @@ MAX_ORIGINAL_NAME = 255
 
 @dataclass(frozen=True)
 class ReadTarget:
-    """Woraufhin ein Lesezugriff geprueft wird.
+    """Was der Aufrufer ueber die Bindung behauptet - oder eben nichts.
 
-    `parent_type is None` bezeichnet den eigenen ungebundenen Upload im
-    Bindungsfenster (M2-D24).
+    Drei Faelle, die auseinandergehalten werden muessen. `NONE` aus dem
+    API-Vertrag ist eine *Behauptung* des Clients, das Attachment sei
+    ungebunden; sie ist nach M2-D24 bei einem gebundenen Attachment
+    unzulaessig. Die interne Streamingroute dagegen behauptet gar nichts
+    und laesst den Server die Bindung aufloesen.
+
+    Beides in einem `parent_type is None` zusammenzufassen war ein Fehler:
+    dann haette entweder die Behauptung nicht mehr gegolten oder die
+    Streamingroute kein gebundenes Attachment mehr ausliefern koennen.
     """
 
-    parent_type: str | None
-    parent_id: UUID | None
+    parent_type: str | None = None
+    parent_id: UUID | None = None
+    asserts_unbound: bool = False
+
+    @classmethod
+    def resolved_by_server(cls) -> ReadTarget:
+        """Keine Behauptung - der Server sieht nach, woran es haengt."""
+        return cls()
+
+    @classmethod
+    def unbound(cls) -> ReadTarget:
+        """Der Aufrufer behauptet, es sei ungebunden."""
+        return cls(asserts_unbound=True)
+
+    @classmethod
+    def parent(cls, parent_type: str, parent_id: UUID) -> ReadTarget:
+        return cls(parent_type=parent_type, parent_id=parent_id)
 
 
 def _flush(session: Session) -> None:
@@ -241,19 +265,64 @@ def finalize_upload(
     return gesperrt
 
 
-def get_attachment(
+def _load_in_space(
     session: Session,
     context: AuthorizationContext,
     attachment_id: UUID | str,
 ) -> Attachment:
-    attachment = require_readable(session, Attachment, context, attachment_id)
-    if attachment.status in (
+    """Die Zeile im eigenen Space finden - ohne ueber ihre Klasse zu urteilen.
+
+    Ein Attachment ist die einzige M2-Ressource, deren Lesbarkeit nicht aus
+    der eigenen Privacy-Klasse folgt: gebunden entscheidet der Parent
+    (Media-Pipeline, Abschnitt 8). Wuerde hier der Owner-only-Guard greifen,
+    saehe der Partner das Bild einer gemeinsamen Memory nicht.
+
+    Das ist keine zweite Sichtbarkeitsregel: die Entscheidung wird nur
+    verschoben, nicht selbst getroffen - `authorize_read` fragt anschliessend
+    fuer den Parent wieder die zentrale Autorisierung.
+    """
+    kennung = attachment_id if isinstance(attachment_id, UUID) else parse_id(attachment_id)
+    if kennung is None:
+        raise Attachment.privacy_absence.error()
+    gefunden = session.execute(
+        select(Attachment).where(
+            Attachment.id == kennung,
+            Attachment.space_id == context.space_id,
+        )
+    ).scalar_one_or_none()
+    if gefunden is None:
+        raise Attachment.privacy_absence.error()
+    if gefunden.status in (
         AttachmentStatus.DELETING.value,
         AttachmentStatus.DELETE_FAILED.value,
     ):
         # Fachlich sofort unsichtbar (M2-D11). Dass die Zeile technisch noch
         # existiert, weil der Providercleanup laeuft, ist keine Auskunft.
         raise Attachment.privacy_absence.error()
+    return gefunden
+
+
+def get_attachment(
+    session: Session,
+    context: AuthorizationContext,
+    attachment_id: UUID | str,
+) -> Attachment:
+    """Die Metadaten - unter derselben zweistufigen Regel wie der Inhalt.
+
+    Ein gebundenes Attachment ist fuer jeden lesbar, der seinen Parent
+    lesen darf; ein ungebundenes nur fuer seinen Owner im Bindungsfenster.
+    Beides muss hier gelten, sonst waere die Metadatenroute der Weg an der
+    Regel vorbei.
+    """
+    from sidebyside.attachments import binding
+
+    attachment = _load_in_space(session, context, attachment_id)
+    tatsaechlich = binding.parent_of(session, attachment.id)
+    if tatsaechlich is None:
+        if attachment.owner_id != context.account_id:
+            raise Attachment.privacy_absence.error()
+        return attachment
+    _require_readable_parent(session, context, *tatsaechlich)
     return attachment
 
 
@@ -265,27 +334,72 @@ def authorize_read(
 ) -> Attachment:
     """Pruefen, ob gelesen werden darf - und zwar jetzt.
 
+    Nach der Bindung folgt die Lesbarkeit ausschliesslich dem Parent. Der
+    Attachment-Owner ist dann *kein* alternativer Lesepfad mehr: wer eine
+    Memory nicht mehr lesen darf oder einen HeartMoment privat gestellt
+    bekommen hat, kommt auch nicht ueber die Attachment-Route an ihr Bild.
+
     Die Parentangabe des Clients ist kein Capability-Token. Sie wird nicht
-    geglaubt, sondern gegen den tatsaechlichen Zustand geprueft.
+    geglaubt, sondern gegen die tatsaechliche Bindung geprueft.
     """
-    attachment = get_attachment(session, context, attachment_id)
+    from sidebyside.attachments import binding
+
+    attachment = _load_in_space(session, context, attachment_id)
     if attachment.status != AttachmentStatus.READY.value:
         raise _not_ready()
 
-    if target.parent_type is not None:
-        # Bindung kommt im Media-Integrationsslice. Bis dahin gibt es kein
-        # gebundenes Attachment, also auch keinen Parent, der Zugriff
-        # verleihen koennte - fail-closed statt vorgetaeuschter Pruefung.
+    tatsaechlich = binding.parent_of(session, attachment.id)
+
+    if tatsaechlich is None:
+        # Ungebunden: nur der Owner, nur im Bindungsfenster (M2-D20/D24).
+        if target.parent_type is not None:
+            raise Attachment.privacy_absence.error()
+        if attachment.owner_id != context.account_id:
+            raise Attachment.privacy_absence.error()
+        if binding_window_expired(attachment):
+            raise Attachment.privacy_absence.error()
+        return attachment
+
+    if target.asserts_unbound:
+        # M2-D24 gilt nur fuer ungebundene Uploads. Eine falsche Behauptung
+        # wird abgewiesen und nicht stillschweigend korrigiert.
         raise Attachment.privacy_absence.error()
 
-    if attachment.owner_id != context.account_id:
+    parent_type, parent_id = tatsaechlich
+    if target.parent_type is not None and (
+        target.parent_type != parent_type or target.parent_id != parent_id
+    ):
+        # Eine falsche Parentangabe wird nicht korrigiert, sondern
+        # abgewiesen - sonst waere sie ein Rateversuch mit Rueckmeldung.
         raise Attachment.privacy_absence.error()
-    if _binding_window_expired(attachment):
-        raise Attachment.privacy_absence.error()
+
+    _require_readable_parent(session, context, parent_type, parent_id)
     return attachment
 
 
-def _binding_window_expired(attachment: Attachment) -> bool:
+def _require_readable_parent(
+    session: Session,
+    context: AuthorizationContext,
+    parent_type: str,
+    parent_id: UUID,
+) -> None:
+    """Der Parent entscheidet - ueber dieselbe zentrale Autorisierung.
+
+    Kein eigener Sichtbarkeitsausdruck: waere hier eine zweite Regel
+    formuliert, koennte sie von der der Domaene abweichen, und die
+    Attachment-Route waere der Weg daran vorbei.
+    """
+    from sidebyside.heart_moments.models import HeartMoment
+    from sidebyside.memories.models import Memory
+
+    modell = Memory if parent_type == "MEMORY" else HeartMoment
+    try:
+        require_readable(session, modell, context, parent_id)
+    except NotFoundError as error:
+        raise Attachment.privacy_absence.error() from error
+
+
+def binding_window_expired(attachment: Attachment) -> bool:
     if attachment.ready_at is None:
         return True
     bereit = attachment.ready_at
