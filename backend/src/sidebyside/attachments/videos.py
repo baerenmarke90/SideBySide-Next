@@ -258,11 +258,7 @@ def _probe(path: Path, expected_mime: str, *, include_metadata: bool = False) ->
         raise VideoRejectedError("VIDEO_UNREADABLE")
 
     format_name = fmt.get("format_name")
-    if (
-        not isinstance(format_name, str)
-        or "mp4" not in format_name
-        or "mov" not in format_name
-    ):
+    if not isinstance(format_name, str) or "mp4" not in format_name or "mov" not in format_name:
         raise VideoRejectedError("VIDEO_TYPE_NOT_ALLOWED")
 
     video_streams = [
@@ -276,12 +272,7 @@ def _probe(path: Path, expected_mime: str, *, include_metadata: bool = False) ->
     stream = video_streams[0]
     width = stream.get("width")
     height = stream.get("height")
-    if (
-        not isinstance(width, int)
-        or not isinstance(height, int)
-        or width <= 0
-        or height <= 0
-    ):
+    if not isinstance(width, int) or not isinstance(height, int) or width <= 0 or height <= 0:
         raise VideoRejectedError("VIDEO_DIMENSIONS_INVALID")
 
     raw_duration = fmt.get("duration") or stream.get("duration") or 0
@@ -318,11 +309,7 @@ def _probe(path: Path, expected_mime: str, *, include_metadata: bool = False) ->
 
 
 def _enforce(probe: _Probe, rule: MediaRule) -> None:
-    if (
-        rule.max_duration_seconds is None
-        or rule.max_edge is None
-        or rule.max_short_edge is None
-    ):
+    if rule.max_duration_seconds is None or rule.max_edge is None or rule.max_short_edge is None:
         raise VideoRejectedError("VIDEO_RULE_INVALID")
     if probe.duration > rule.max_duration_seconds:
         raise VideoRejectedError("VIDEO_TOO_LONG")
@@ -379,8 +366,7 @@ def _validate_sanitized_metadata(probe: _Probe) -> None:
 
     tags = fmt.get("tags")
     if tags is not None and (
-        not isinstance(tags, dict)
-        or any(str(key).lower() not in _SAFE_FORMAT_TAGS for key in tags)
+        not isinstance(tags, dict) or any(str(key).lower() not in _SAFE_FORMAT_TAGS for key in tags)
     ):
         raise VideoRejectedError("VIDEO_METADATA_UNSAFE")
 
@@ -458,11 +444,7 @@ def _poster(path: Path) -> bytes | None:
             max_file_size=MAX_POSTER_BYTES,
             failure_code="VIDEO_POSTER_FAILED",
         )
-        if (
-            not raw.is_file()
-            or raw.stat().st_size <= 0
-            or raw.stat().st_size > MAX_POSTER_BYTES
-        ):
+        if not raw.is_file() or raw.stat().st_size <= 0 or raw.stat().st_size > MAX_POSTER_BYTES:
             return None
 
         with Image.open(raw) as decoded:
