@@ -1,7 +1,7 @@
 """API-Version 1.
 
 Die Version steht im Pfad. Ein veröffentlichter Vertrag wird innerhalb
-seiner Version nicht brechend geändert; brechende Änderungen bekommen eine
+ihrer Version nicht brechend geändert; brechende Änderungen bekommen eine
 neue Version, damit ältere App-Installationen weiterlaufen.
 """
 
