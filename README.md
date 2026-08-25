@@ -197,10 +197,12 @@ API-Entscheidungen sind über #67, #68, #69, #70 und #78 geschlossen; alle
 Owner-only-Privacy (#80), der Attachment-Lifecycle für Bilder (#79) samt
 Metadaten-Entfernung beim Ingest und Thumbnail, die Attachment-Bindung an
 Memory und HeartMoment (#90), die Milestone-Domain (#94), Comments samt Outbox
-und Notification Hook (#97) sowie der S3-kompatible MediaStore-Adapter (#87).
-Als Nächstes folgt das Story Read Model; Video folgt nach M2-D23 als eigener
-Slice (#88). Die präzisierten Milestone-Grenzen und der aktuelle Arbeitsstand
-stehen in [docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
+und Notification Hook (#97), der S3-kompatible MediaStore-Adapter (#87) sowie
+die Story-Zeitleiste (#113). Damit ist die M2-Domain vollständig; als
+Nächstes folgen die dünnen Web-/Android-Referenzflows. Video folgt nach
+M2-D23 als eigener Slice (#88). Die präzisierten Milestone-Grenzen und der
+aktuelle Arbeitsstand stehen in
+[docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
 [docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten,

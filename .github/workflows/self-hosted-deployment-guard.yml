@@ -1,0 +1,127 @@
+name: Self-Hosted Deployment Guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deployment-guard:
+    name: Network and Port Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Testkonfiguration vorbereiten
+        run: |
+          cp .env.example .env
+          sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-nur-fuer-den-testlauf/' .env
+          sed -i 's/^API_PORT=.*/API_PORT=18081/' .env
+          docker compose config --quiet
+
+      - name: Belegter API-Port scheitert eindeutig
+        run: |
+          cp .env .env-conflict
+          sed -i 's/^API_PORT=.*/API_PORT=18080/' .env-conflict
+
+          python3 -m http.server 18080 --bind 0.0.0.0 >/tmp/occupied-api-port.log 2>&1 &
+          blocker_pid=$!
+          trap 'kill "$blocker_pid" 2>/dev/null || true; docker compose -p sidebyside-port-conflict --env-file .env-conflict down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
+          sleep 1
+
+          set +e
+          ausgabe=$(timeout 300 docker compose -p sidebyside-port-conflict --env-file .env-conflict up -d --build api 2>&1)
+          status=$?
+          set -e
+
+          printf '%s\n' "$ausgabe"
+          if [ "$status" -eq 0 ]; then
+            echo "Der Stack hat einen bereits belegten Host-Port akzeptiert."
+            exit 1
+          fi
+
+          api_id=$(docker compose -p sidebyside-port-conflict --env-file .env-conflict ps -aq api)
+          if [ -n "$api_id" ]; then
+            state=$(docker inspect "$api_id" --format '{{.State.Status}}')
+            networks=$(docker inspect "$api_id" --format '{{len .NetworkSettings.Networks}}')
+            echo "API nach erwartetem Fehlstart: state=$state networks=$networks"
+            if [ "$state" = "running" ]; then
+              echo "Nach dem Portkonflikt darf kein laufender API-Container zurueckbleiben."
+              exit 1
+            fi
+          fi
+
+          kill "$blocker_pid" 2>/dev/null || true
+          docker compose -p sidebyside-port-conflict --env-file .env-conflict down -v --remove-orphans
+          trap - EXIT
+
+      - name: Normalen Self-Hosted-Stack starten
+        run: docker compose up -d --build --wait --wait-timeout 300
+
+      - name: Gemeinsames Compose-Netz ist aktiv
+        run: |
+          for dienst in postgres api worker; do
+            id=$(docker compose ps -q "$dienst")
+            if [ -z "$id" ]; then
+              echo "$dienst hat keinen laufenden Container."
+              exit 1
+            fi
+            networks=$(docker inspect "$id" --format '{{len .NetworkSettings.Networks}}')
+            echo "$dienst: $networks Netzwerk(e)"
+            if [ "$networks" -lt 1 ]; then
+              echo "$dienst ist an kein Docker-Netzwerk angeschlossen."
+              exit 1
+            fi
+          done
+
+          migrate_id=$(docker compose ps -aq migrate)
+          if [ -z "$migrate_id" ]; then
+            echo "migrate-Container fehlt."
+            exit 1
+          fi
+          migrate_networks=$(docker inspect "$migrate_id" --format '{{len .NetworkSettings.Networks}}')
+          echo "migrate: $migrate_networks Netzwerk(e)"
+          if [ "$migrate_networks" -lt 1 ]; then
+            echo "migrate ist an kein Docker-Netzwerk angeschlossen."
+            exit 1
+          fi
+
+      - name: API kann postgres ueber Docker-DNS erreichen
+        run: |
+          docker compose exec -T api python - <<'PY'
+          import socket
+
+          address = socket.gethostbyname("postgres")
+          if not address:
+              raise SystemExit("postgres wurde nicht per Docker-DNS aufgeloest")
+          print(f"postgres -> {address}")
+          PY
+
+      - name: Readiness ueber veroeffentlichten Port
+        run: |
+          antwort=$(curl --fail --silent --show-error http://127.0.0.1:18081/api/v1/health/ready)
+          printf '%s\n' "$antwort"
+          printf '%s\n' "$antwort" | jq -e '.status == "ok" and .database == "ok"'
+
+      - name: API-Container ist healthy
+        run: |
+          id=$(docker compose ps -q api)
+          health=$(docker inspect "$id" --format '{{.State.Health.Status}}')
+          test "$health" = "healthy" || {
+            echo "API health=$health"
+            docker compose logs api
+            exit 1
+          }
+
+      - name: Logs bei Fehlschlag
+        if: failure()
+        run: docker compose logs
+
+      - name: Aufraeumen
+        if: always()
+        run: docker compose down -v --remove-orphans
