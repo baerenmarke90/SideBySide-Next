@@ -78,6 +78,7 @@ def engine() -> Iterator[Engine]:
     # durch die App wuerde das Modell zwar registrieren, aber erst nachdem
     # die Tabellen angelegt sind - die Tests liefen dann nur zufaellig
     # gruen, je nachdem was vorher importiert wurde.
+    from sidebyside.attachments import binding as _binding  # noqa: F401
     from sidebyside.attachments import models as _attachments  # noqa: F401
     from sidebyside.db.base import Base
     from sidebyside.heart_moments import models as _heart_moments  # noqa: F401

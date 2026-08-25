@@ -106,11 +106,14 @@ def _expire_stale_uploads(session: Session) -> int:
 def _expire_unbound_ready(session: Session) -> int:
     """Ungebundenes READY nach 60 Minuten verwerfen (M2-D20).
 
-    Solange es keine Bindung gibt, ist jedes READY ungebunden. Sobald der
-    Media-Integrationsslice sie einfuehrt, gehoert hier die Bedingung
-    'ohne Parent' dazu - und die Serialisierung gegen ein gleichzeitiges
-    Bind, damit kein gebundener Blob geloescht wird.
+    Nur ungebundenes: seit der Bindung folgt die Lebensdauer eines
+    Attachments seinem Parent. Die Zeilen werden gesperrt, damit ein
+    gleichzeitiges Bind entweder vorher oder nachher passiert - nie
+    dazwischen. Sonst zeigte eine frische Relation auf eine bereits
+    abgeraeumte Datei.
     """
+    from sidebyside.attachments import binding
+
     kandidaten = session.execute(
         select(Attachment)
         .where(Attachment.status == AttachmentStatus.READY.value)
@@ -119,9 +122,12 @@ def _expire_unbound_ready(session: Session) -> int:
 
     betroffen = 0
     for attachment in kandidaten:
-        if service.expired(attachment.ready_at, service.BINDING_WINDOW):
-            service.mark_for_deletion(session, attachment)
-            betroffen += 1
+        if not service.expired(attachment.ready_at, service.BINDING_WINDOW):
+            continue
+        if binding.parent_of(session, attachment.id) is not None:
+            continue
+        service.mark_for_deletion(session, attachment)
+        betroffen += 1
     return betroffen
 
 

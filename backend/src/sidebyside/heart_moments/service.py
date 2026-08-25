@@ -23,6 +23,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
+from sidebyside.attachments import service as attachment_service
 from sidebyside.authorization import (
     AuthorizationContext,
     ContentVisibility,
@@ -110,6 +111,7 @@ def create_heart_moment(
     emotion: HeartEmotion,
     visibility: ContentVisibility,
     happened_on: date,
+    attachment_id: UUID | None = None,
 ) -> HeartMoment:
     heart_moment = HeartMoment(
         space_id=context.space_id,
@@ -118,6 +120,8 @@ def create_heart_moment(
         happened_on=happened_on,
         payload=HeartMomentPayload(text=_normalize_text(text), emotion=emotion),
     )
+    if attachment_id is not None:
+        _bind(session, context, heart_moment, attachment_id)
     session.add(heart_moment)
     _flush(session)
     _record(
@@ -149,6 +153,7 @@ def update_heart_moment(
     text: str | None,
     emotion: HeartEmotion | None,
     happened_on: date | None,
+    attachment_id: UUID | None = None,
 ) -> HeartMoment:
     """Inhalt aendern - Sichtbarkeit ausdruecklich nicht.
 
@@ -173,6 +178,9 @@ def update_heart_moment(
 
     if "text" in changed_fields or "emotion" in changed_fields:
         heart_moment.payload = HeartMomentPayload(text=next_text, emotion=next_emotion)
+
+    if "attachment_id" in changed_fields:
+        _rebind(session, context, heart_moment, attachment_id)
 
     _flush(session)
     _record(
@@ -358,3 +366,55 @@ def list_heart_moments(
             heart_moment_id=last.id,
         )
     return HeartMomentPageResult(items=items, next_cursor=next_cursor, has_more=has_more)
+
+
+def _bind(
+    session: Session,
+    context: AuthorizationContext,
+    heart_moment: HeartMoment,
+    attachment_id: UUID,
+) -> None:
+    """Ein Attachment an diesen HeartMoment haengen (M2-D03).
+
+    Die Regeln liegen im Bindungsmodul und nicht hier: sonst haette jede
+    Domaene ihre eigene Teilmenge davon, und die Unterschiede faenden sich
+    erst, wenn eine Sichtbarkeit falsch entschieden wurde.
+    """
+    from sidebyside.attachments import binding
+
+    gesperrt = binding.lock_for_binding(session, [attachment_id])
+    binding.ensure_bindable(
+        gesperrt.get(attachment_id),
+        space_id=context.space_id,
+        account_id=context.account_id,
+    )
+    binding.ensure_unlinked(session, attachment_id, allow=("HEART_MOMENT", heart_moment.id))
+    heart_moment.attachment_id = attachment_id
+
+
+def _rebind(
+    session: Session,
+    context: AuthorizationContext,
+    heart_moment: HeartMoment,
+    attachment_id: UUID | None,
+) -> None:
+    """Attachment tauschen oder loesen.
+
+    Das abgeloeste Attachment verliert seine letzte Referenz und wird nach
+    M2-D11 sofort fachlich unsichtbar; der Providercleanup folgt asynchron.
+    """
+    from sidebyside.attachments.models import Attachment
+
+    vorher = heart_moment.attachment_id
+    if vorher == attachment_id:
+        return
+
+    if attachment_id is None:
+        heart_moment.attachment_id = None
+    else:
+        _bind(session, context, heart_moment, attachment_id)
+
+    if vorher is not None:
+        abgeloest = session.get(Attachment, vorher)
+        if abgeloest is not None:
+            attachment_service.mark_for_deletion(session, abgeloest)

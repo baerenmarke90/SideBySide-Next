@@ -83,6 +83,24 @@ class AttachmentDetail(ApiModel):
     created_at: datetime
 
 
+class AttachmentSummary(ApiModel):
+    """Die Projektion eines gebundenen Attachments an seinem Parent.
+
+    Ein Typ und nicht je Domaene einer: zwei gleichnamige DTOs haetten im
+    OpenAPI-Vertrag modulqualifizierte Namen erzeugt und damit interne
+    Pfade nach aussen getragen.
+    """
+
+    id: UUID
+    status: str
+    media_type: MediaType
+    mime_type: str | None
+    size: int | None
+    width: int | None
+    height: int | None
+    has_thumbnail: bool
+
+
 class UploadDescriptor(ApiModel):
     attachment: AttachmentDetail
     method: Literal["STREAM", "SIGNED_UPLOAD"]
@@ -240,10 +258,9 @@ def create_attachment_read_access(
         session,
         authorization,
         attachment_id,
-        service.ReadTarget(
-            parent_type=None if body.parent_type == "NONE" else body.parent_type,
-            parent_id=body.parent_id,
-        ),
+        service.ReadTarget.unbound()
+        if body.parent_type == "NONE"
+        else service.ReadTarget.parent(body.parent_type, body.parent_id),  # type: ignore[arg-type]
     )
     return ReadDescriptor(
         method="STREAM",
@@ -273,7 +290,7 @@ def get_attachment_content(
         session,
         authorization,
         attachment_id,
-        service.ReadTarget(parent_type=None, parent_id=None),
+        service.ReadTarget.resolved_by_server(),
     )
     if variant == "thumbnail" and not attachment.has_thumbnail:
         raise Attachment.privacy_absence.error()

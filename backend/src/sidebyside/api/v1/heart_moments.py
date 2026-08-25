@@ -13,6 +13,8 @@ from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
+from sidebyside.api.v1.attachments import AttachmentSummary
+from sidebyside.attachments.models import Attachment, MediaType
 from sidebyside.authorization import ContentVisibility, visibility_of
 from sidebyside.heart_moments import service
 from sidebyside.heart_moments.models import HeartEmotion, HeartMoment
@@ -35,6 +37,7 @@ class HeartMomentCreate(ApiModel):
     emotion: HeartEmotion
     visibility: ContentVisibility
     happened_on: date
+    attachment_id: UUID | None = None
 
     @field_validator("text")
     @classmethod
@@ -58,6 +61,7 @@ class HeartMomentUpdate(ApiModel):
     text: str | None = None
     emotion: HeartEmotion | None = None
     happened_on: date | None = None
+    attachment_id: UUID | None = None
 
     @model_validator(mode="after")
     def _validate_patch(self) -> Self:
@@ -104,6 +108,7 @@ class HeartMomentDetail(ApiModel):
     updated_at: datetime
     author: AuthorSummary
     capabilities: ResourceCapabilities
+    attachment: AttachmentSummary | None
 
 
 class HeartMomentPage(ApiModel):
@@ -122,6 +127,11 @@ def _heart_moment_detail(
         raise RuntimeError("Heart moment author disappeared despite foreign key protection.")
     is_author = heart_moment.owner_id == authorization.account_id
     visibility = visibility_of(heart_moment.privacy_class)
+    angehaengt = (
+        session.get(Attachment, heart_moment.attachment_id)
+        if heart_moment.attachment_id is not None
+        else None
+    )
     return HeartMomentDetail(
         id=heart_moment.id,
         space_id=heart_moment.space_id,
@@ -141,6 +151,20 @@ def _heart_moment_detail(
             # gaebe es dort nur vom Owner an sich selbst - und ein spaeteres
             # Oeffnen wuerde sie sichtbar machen.
             can_comment=visibility is ContentVisibility.SHARED,
+        ),
+        attachment=(
+            AttachmentSummary(
+                id=angehaengt.id,
+                status="READY",
+                media_type=MediaType(angehaengt.media_type),
+                mime_type=angehaengt.mime_type,
+                size=angehaengt.size,
+                width=angehaengt.width,
+                height=angehaengt.height,
+                has_thumbnail=angehaengt.has_thumbnail,
+            )
+            if angehaengt is not None
+            else None
         ),
     )
 
@@ -165,6 +189,7 @@ def create_heart_moment(
         emotion=body.emotion,
         visibility=body.visibility,
         happened_on=body.happened_on,
+        attachment_id=body.attachment_id,
     )
     response.headers["ETag"] = etag_for(heart_moment.version)
     return _heart_moment_detail(session, authorization, heart_moment)
@@ -243,6 +268,7 @@ def update_heart_moment(
         text=body.text,
         emotion=body.emotion,
         happened_on=body.happened_on,
+        attachment_id=body.attachment_id,
     )
     response.headers["ETag"] = etag_for(heart_moment.version)
     return _heart_moment_detail(session, authorization, heart_moment)

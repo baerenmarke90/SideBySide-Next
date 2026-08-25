@@ -12,10 +12,12 @@ from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, delete, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
+from sidebyside.attachments import service as attachment_service
+from sidebyside.attachments.models import Attachment
 from sidebyside.authorization import (
     AuthorizationContext,
     readable,
@@ -23,6 +25,7 @@ from sidebyside.authorization import (
     require_writable,
 )
 from sidebyside.core import cursor as cursor_codec
+from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, ErrorCode, ValidationError
 from sidebyside.domain.events import DomainEvent, EventType, PublicEventPayload
 from sidebyside.memories.models import Memory, MemoryPayload, shared_privacy
@@ -251,3 +254,81 @@ def list_memories(
             memory_id=last.id,
         )
     return MemoryPageResult(items=items, next_cursor=next_cursor, has_more=has_more)
+
+
+def replace_attachments(
+    session: Session,
+    context: AuthorizationContext,
+    memory_id: UUID | str,
+    *,
+    expected_version: int,
+    entries: list[tuple[UUID, int]],
+) -> Memory:
+    """Die Galerie einer Memory vollstaendig neu setzen.
+
+    Ein PUT und kein Hinzufuegen/Entfernen: die Menge samt Reihenfolge ist
+    der Zustand, den der Client gesehen hat, und `If-Match` sorgt dafuer,
+    dass er ihn auch noch hat. Ein partieller Fehler laesst die bestehende
+    Galerie unveraendert - alles laeuft in einer Transaktion.
+    """
+    from sidebyside.attachments import binding
+
+    memory = require_writable(session, Memory, context, memory_id)
+    _ensure_expected_version(memory, expected_version)
+
+    positionen = [position for _, position in entries]
+    if sorted(positionen) != list(range(len(entries))):
+        raise ValidationError(
+            "Positions must be a gapless zero-based sequence.",
+            "ATTACHMENT_POSITION_INVALID",
+        )
+    kennungen = [attachment_id for attachment_id, _ in entries]
+    if len(set(kennungen)) != len(kennungen):
+        raise ValidationError(
+            "An attachment may appear at most once.",
+            "ATTACHMENT_POSITION_INVALID",
+        )
+
+    gesperrt = binding.lock_for_binding(session, kennungen)
+    attachments = []
+    for attachment_id in kennungen:
+        attachment = binding.ensure_bindable(
+            gesperrt.get(attachment_id),
+            space_id=context.space_id,
+            account_id=context.account_id,
+        )
+        binding.ensure_unlinked(session, attachment_id, allow=("MEMORY", memory.id))
+        attachments.append(attachment)
+    binding.ensure_within_limits(attachments)
+
+    vorher = {
+        gebunden.attachment.id for gebunden in binding.attachments_of_memory(session, memory.id)
+    }
+    session.execute(
+        delete(binding.MemoryAttachment).where(binding.MemoryAttachment.memory_id == memory.id)
+    )
+    # Vor dem Einfuegen leeren und in derselben Anweisungsfolge neu setzen:
+    # sonst kollidierte die Eindeutigkeit von `position` mit sich selbst,
+    # wenn zwei Attachments die Plaetze tauschen.
+    session.flush()
+    for attachment_id, position in entries:
+        session.add(
+            binding.MemoryAttachment(
+                memory_id=memory.id,
+                attachment_id=attachment_id,
+                position=position,
+            )
+        )
+
+    for entfallen in vorher - set(kennungen):
+        geloest = session.get(Attachment, entfallen)
+        if geloest is not None:
+            # Letzte Referenz entfernt: fachlich unreferenziert, Cleanup
+            # asynchron (M2-D11).
+            attachment_service.mark_for_deletion(session, geloest)
+
+    memory.updated_at = now()
+    _flush(session)
+    _record(session, memory, context.account_id, EventType.MEMORY_UPDATED)
+    _flush(session)
+    return memory

@@ -82,7 +82,7 @@ class TestCrudUndOwnership:
             "canDelete": True,
             "canComment": True,
         }
-        assert "attachments" not in body
+        assert body["attachments"] == []
         assert created.headers["ETag"] == '"1"'
 
         detail = client.get(

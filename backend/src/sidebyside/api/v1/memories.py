@@ -7,12 +7,15 @@ from typing import Annotated, Self
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response, status
-from pydantic import ConfigDict, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
+from sidebyside.api.v1.attachments import AttachmentSummary
+from sidebyside.attachments import binding
+from sidebyside.attachments.models import MediaType
 from sidebyside.identity.models import Account
 from sidebyside.memories import service
 from sidebyside.memories.models import Memory
@@ -63,6 +66,25 @@ class MemoryUpdate(ApiModel):
         return self
 
 
+class MemoryAttachmentEntry(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
+    attachment_id: UUID
+    position: int = Field(ge=0)
+
+
+class MemoryAttachmentSet(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
+    attachments: list[MemoryAttachmentEntry]
+
+
+class MemoryAttachmentSummary(AttachmentSummary):
+    """Wie jedes gebundene Attachment, plus seinen Platz in der Galerie."""
+
+    position: int
+
+
 class AuthorSummary(ApiModel):
     id: UUID
     display_name: str
@@ -87,6 +109,7 @@ class MemoryDetail(ApiModel):
     updated_at: datetime
     author: AuthorSummary
     capabilities: ResourceCapabilities
+    attachments: list[MemoryAttachmentSummary]
 
 
 class MemoryPage(ApiModel):
@@ -104,6 +127,7 @@ def _memory_detail(
     if author is None:
         raise RuntimeError("Memory author disappeared despite foreign key protection.")
     is_author = memory.owner_id == authorization.account_id
+    gebunden = binding.attachments_of_memory(session, memory.id)
     return MemoryDetail(
         id=memory.id,
         space_id=memory.space_id,
@@ -120,6 +144,20 @@ def _memory_detail(
             can_delete=is_author,
             can_comment=True,
         ),
+        attachments=[
+            MemoryAttachmentSummary(
+                id=eintrag.attachment.id,
+                status="READY",
+                media_type=MediaType(eintrag.attachment.media_type),
+                mime_type=eintrag.attachment.mime_type,
+                size=eintrag.attachment.size,
+                width=eintrag.attachment.width,
+                height=eintrag.attachment.height,
+                has_thumbnail=eintrag.attachment.has_thumbnail,
+                position=eintrag.position,
+            )
+            for eintrag in gebunden
+        ],
     )
 
 
@@ -242,3 +280,36 @@ def delete_memory(
         expected_version=expected_version,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put(
+    "/spaces/{spaceId}/memories/{memoryId}/attachments",
+    response_model=MemoryDetail,
+    operation_id="replaceMemoryAttachments",
+    responses={
+        200: {"headers": ETAG_HEADERS},
+        **problem_responses(401, 403, 404, 409, 422),
+    },
+)
+def replace_memory_attachments(
+    authorization: Authorization,
+    session: DbSession,
+    response: Response,
+    body: MemoryAttachmentSet,
+    expected_version: IfMatchVersion,
+    memory_id: Annotated[str, Path(alias="memoryId")],
+) -> MemoryDetail:
+    """Menge und Reihenfolge in einem Zug setzen.
+
+    Ein PUT, kein Hinzufuegen und Entfernen: der Client schickt den Zustand,
+    den er gesehen hat, und `If-Match` sorgt dafuer, dass er ihn noch hat.
+    """
+    memory = service.replace_attachments(
+        session,
+        authorization,
+        memory_id,
+        expected_version=expected_version,
+        entries=[(eintrag.attachment_id, eintrag.position) for eintrag in body.attachments],
+    )
+    response.headers["ETag"] = etag_for(memory.version)
+    return _memory_detail(session, authorization, memory)

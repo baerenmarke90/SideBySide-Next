@@ -47,10 +47,30 @@ def test_memory_write_dtos_only_expose_approved_fields() -> None:
     assert update["additionalProperties"] is False
 
 
-def test_media_free_memory_detail_does_not_pretend_attachments_exist() -> None:
+def test_memory_detail_projects_its_gallery() -> None:
+    """Bis zum Media-Integrationsslice fehlte das Feld absichtlich."""
     schema = _schema()
     detail = schema["components"]["schemas"]["MemoryDetail"]  # type: ignore[index]
-    assert "attachments" not in detail["properties"]
+    assert "attachments" in detail["properties"]
     assert {"id", "spaceId", "authorId", "title", "body", "version", "capabilities"} <= set(
         detail["properties"]
     )
+
+
+def test_the_gallery_never_exposes_storage_internals() -> None:
+    schema = _schema()
+    summary = schema["components"]["schemas"]["MemoryAttachmentSummary"]  # type: ignore[index]
+    for verboten in ("storageKey", "bucket", "provider", "filesystemPath", "privacyClass"):
+        assert verboten not in summary["properties"]
+    assert "position" in summary["properties"]
+
+
+def test_the_gallery_is_replaced_as_a_whole_and_needs_if_match() -> None:
+    route = _schema()["paths"][  # type: ignore[index]
+        "/api/v1/spaces/{spaceId}/memories/{memoryId}/attachments"
+    ]["put"]
+    assert route["operationId"] == "replaceMemoryAttachments"
+    if_match = next(
+        parameter for parameter in route["parameters"] if parameter["name"] == "If-Match"
+    )
+    assert if_match["required"] is True
