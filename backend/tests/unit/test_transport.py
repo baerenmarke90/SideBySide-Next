@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from sidebyside.config import Environment, MailTransport, Settings
 from sidebyside.main import create_app
