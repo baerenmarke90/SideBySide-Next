@@ -191,9 +191,7 @@ def test_signed_upload_finalize_validation_and_read_access(
     assert replay.status_code == 412
 
 
-def test_finalize_without_provider_object_is_rejected(
-    client, pair, s3_store
-) -> None:  # type: ignore[no-untyped-def]
+def test_finalize_without_provider_object_is_rejected(client, pair, s3_store) -> None:  # type: ignore[no-untyped-def]
     del s3_store
     created = create(client, pair, image_bytes())
     attachment_id = created.json()["attachment"]["id"]
