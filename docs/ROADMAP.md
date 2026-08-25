@@ -1,177 +1,121 @@
 # SideBySide Next Roadmap
 
 **Status:** Menschenlesbare Orientierungs- und Priorisierungsansicht  
-**Version:** 1.3  
+**Version:** 1.4  
 **Stand:** 25.08.2026  
 **Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
 
-Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht ausschließlich im [Implementation Status](./IMPLEMENTATION-STATUS.md).
+Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht im [Implementation Status](./IMPLEMENTATION-STATUS.md); die präzisierten M2-Grenzen stehen im [M2 Project Control](./m2/PROJECT-CONTROL.md).
 
 ## Roadmap auf einen Blick
 
 ![Grafische Roadmap von M0 Foundation bis M9 Release und der strategischen E2EE-Spur](./assets/roadmap/roadmap-overview.svg)
 
-**Aktuell:** M0 ist abgeschlossen und der vorgesehene M1-Runtimeumfang ist weitgehend umgesetzt. Gate G1 bleibt wegen der fehlenden expliziten RelatedPerson-Delete-Policy aus #61 geschlossen.
+**Aktuell:** M0 und M1 sind für ihren vorgesehenen Runtimeumfang abgeschlossen. **G1 ist bestanden. M2-S0 ist freigegeben und aktiv.** Der verbindliche Nachweis ist der [G1 Gate Review nach Abschluss von #61](./reviews/2026-08-25-g1-gate-review-after-61.md).
 
-## So ist die Roadmap zu lesen
+#59 und #60 bleiben verpflichtende Pre-Exposure-Härtungen vor öffentlicher bzw. Managed-Exposition. #25 bleibt Repository-Hardening. Diese Punkte blockieren die interne M2-Entwicklung nicht.
+
+## Dokumentenrollen
 
 | Dokument | beantwortet |
 |---|---|
 | diese Roadmap | Wohin gehen wir, in welcher Reihenfolge und warum? |
 | [Implementation Status](./IMPLEMENTATION-STATUS.md) | Was ist auf `main` tatsächlich umgesetzt oder noch offen? |
-| [G1/M1 Follow-up Review vom 25.08.2026](./reviews/2026-08-25-g1-m1-follow-up-review.md) | Aktuelle Gate-Entscheidung und Einordnung der Restfindings |
-| [G1/M1 Security Review vom 24.08.2026](./reviews/2026-08-24-g1-m1-security-review.md) | Historischer Prüfstand vor Abschluss der damaligen M1-Blocker |
+| [M2 Project Control](./m2/PROJECT-CONTROL.md) | Welche M2/M5-Grenzen, G2-Kriterien und S0-Reihenfolge gelten? |
+| [Finaler G1 Gate Review](./reviews/2026-08-25-g1-gate-review-after-61.md) | aktuelle Gate-Entscheidung |
+| datierte ältere Reviews | historische Prüfsnapshots, die nicht umgeschrieben werden |
 | GitHub Issues/PRs | Welche konkreten Arbeitspakete werden bearbeitet? |
 | [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | Was ist fachlich und technisch verbindlich? |
 
-- Ein Meilenstein ist kein Datum, sondern ein kohärenter Produkt- und Technikblock.
-- Ein Release Gate ist eine prüfbare Bedingung für den nächsten Block.
-- „Later“ bedeutet bewusst nach dem Core, nicht unwichtig.
-- MX E2EE ist eine eigene strategische Spur und kein stilles Teilversprechen des MVP.
-
 ## Aktueller Snapshot
 
-Der Snapshot fasst den [Implementation Status vom 25.08.2026](./IMPLEMENTATION-STATUS.md) und den [G1/M1 Follow-up Review vom 25.08.2026](./reviews/2026-08-25-g1-m1-follow-up-review.md) zusammen. Datierte Reviews bleiben unveränderliche Prüfsnapshots.
+### M0 — Foundation: abgeschlossen
 
-### M0 — Clean Foundation: abgeschlossen
+API-/DB-Konventionen, Migrationen, Outbox, Jobs, MediaStore-Grundlage, ProtectedPayload-Grenze, versioniertes OpenAPI, PostgreSQL-Integrationstests, Supply-Chain-Prüfungen, Secret Scan und Provenance sind für den Foundation-Umfang vorhanden.
 
-Für den aktuellen M0-Umfang sind unter anderem umgesetzt:
+### M1 — Identity & Relationship: abgeschlossen, G1 bestanden
 
-- FastAPI, SQLAlchemy 2, PostgreSQL und Alembic,
-- REST API v1, camelCase und einheitliches Fehlerformat,
-- UUIDv7 sowie Timestamp-/Date-Konventionen,
-- Transactional Outbox und PostgreSQL-Job-Queue,
-- MediaStore-, Provider- und ProtectedPayload-Grundlagen,
-- initiale `web/`, `android/` und `tools/`-Strukturen,
-- reproduzierbare Python-Abhängigkeiten mit Lockfile,
-- Dependency-/Vulnerability-Scan,
-- versionierter OpenAPI-Vertrag mit Contract-Check,
-- Backend-/Container-Build,
-- echte PostgreSQL-Integrationstests, Secret Scan und Provenance-Prüfung.
+Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, E-Mail-Verifikation und Recovery sind implementiert. PR #64 hat #61 mit expliziter `preserve`-/`cascade`-Semantik ohne destruktiven Default geschlossen; der folgende Gate-Review hat G1 ausdrücklich bestanden erklärt.
 
-M0 wird nicht erneut geöffnet, nur weil spätere Milestones zusätzliche Härtungen auf derselben Infrastruktur benötigen. Neue Findings werden im jeweils betroffenen Issue/Milestone verfolgt.
+### M2-S0 — Readiness & Vertragsentscheidungen: aktiv
 
-### M1 — Identity & Relationship: Runtimeumfang weitgehend umgesetzt, G1 durch #61 blockiert
+M2-Runtime-Code beginnt erst, wenn die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen geschlossen sind. Die aktuelle S0-Kette ist:
 
-Umgesetzt sind unter anderem:
+1. #67 — Projektsteuerung, Roadmap und Milestone-Grenzen synchronisieren.
+2. #68 — Memory-/Comment-/Privacy-Entscheidungen schließen.
+3. #69 — Attachment-Lifecycle, Limits, Validation und Retention entscheiden.
+4. #70 — M2-Routen, DTOs, Concurrency, Pagination und Story-Sortierung festlegen.
+5. #71 — erster Runtime-Slice: Memory CRUD ohne Medien.
 
-- Account/AuthIdentity, lokaler Passwortlogin und Device Sessions,
-- Space, Membership, Tenant Guard und race-sichere Invitations,
-- zentrale Owner-/Private-Authorization mit SQL-seitigem `SPACE_SHARED`-/`OWNER_ONLY`-Filter,
-- SpaceProfile mit ETag/If-Match, 409-Concurrency und korrekter Benutzerzeitzone,
-- PartnerProfile, ProfilePreference, RelatedPerson und ImportantDate,
-- OIDC Authorization Code + PKCE mit State/Nonce, Discovery/JWKS, Issuer/Audience/Signaturprüfung,
-- OIDC-Onboarding über eine weiterhin beim Callback gültige Einladung ohne E-Mail-Merge,
-- WebAuthn-/Passkey-Registration und -Authentication,
-- Magic Link, E-Mail-Verifikation und Recovery,
-- Refresh-Replay über die gesamte Token-Familie,
-- HTTP-/Owner-/Privacy-/Cross-Tenant-/Concurrency-Tests gegen PostgreSQL.
-
-Die früheren G1-Tracking-Issues #7, #11, #24 und #26 sind geschlossen. Der Follow-up-Review vom 25.08.2026 hat die verbleibenden Punkte verbindlich eingeordnet:
-
-- **#61 — G1-Blocker:** RelatedPerson-Löschen braucht eine explizite serverseitige `preserve`-/`cascade`-Policy ohne destruktiven Default. Der heutige Cascade kann auch private ImportantDates des Partners indirekt löschen.
-- **#59 — Pre-Exposure:** Passkey-Authentication-Start gegen Challenge-Flooding absichern; kein Blocker für interne M2-Domainimplementierung, aber vor öffentlicher/Managed-Exposition zu schließen.
-- **#60 — Pre-Exposure:** Rate-Limit-Schwellen unter Parallelität atomar erzwingen; ebenfalls vor öffentlicher/Managed-Exposition zu schließen.
-- **#25 — Repository-Hardening:** Ruleset/Branch Protection bleibt tarifbedingt nicht erzwungen; kein Runtime-G1-Blocker.
-
-### Noch offene Bedingungen vor M2
-
-1. #61 serverseitig mit expliziter `preserve`-/`cascade`-Delete-Policy umsetzen.
-2. Kein destruktiver Default; privacy-sichere Warn-/Bestätigungssemantik ohne Existenzauskunft über unsichtbare Partnertermine.
-3. PostgreSQL-/HTTP-Tests für beide Policies und Cross-owner-/Tenant-Fälle grün bekommen.
-4. #61 über eigenen PR mit vollständiger CI mergen.
-5. Danach einen kurzen neuen datierten G1-Gate-Review gegen den aktuellen `main` erstellen und G1 ausdrücklich freigeben oder weiter blockieren.
-
-Repository-Hardening #25 bleibt separat offen. #59 und #60 blockieren interne M2-Implementierung nicht, müssen jedoch vor öffentlicher bzw. Managed-Exposition geschlossen sein.
-
-## Meilensteine
+## Milestones
 
 | Phase | Menschliches Ziel | Fachlicher Umfang | Ergebnis |
 |---|---|---|---|
 | **M0 · Foundation** | verlässliche technische Basis | API, DB, Outbox, Jobs, MediaStore, CI, Provenance | sicher erweiterbarer Core |
 | **M1 · Verbinden** | zwei Personen bilden einen privaten Space | Identity, Auth, Membership, Invitation, Profile | sicherer Account- und Beziehungsrahmen |
-| **M2 · Erinnern** | gemeinsame Geschichte entsteht | Attachments, Memories, HeartMoments, Milestones, Comments, Story | erster emotionaler Kernflow |
-| **M3 · Planen** | Ideen werden gemeinsame Vorhaben | Wishes, Plans, Places, Chapters, Collections, Private Area | Planung und private Ablage |
-| **M4 · Begleiten** | hilfreiche, kontrollierte Aktivierung | Reminders, Activity, Notifications, Dashboard, Search, Rules | relevanter Alltag ohne unnötiges Tracking |
-| **M5 · Erleben** | Web und Android sind vollständig nutzbar | Export/Import, Web, Android, Read Cache, Parität | produktfähiger Core auf beiden Clients |
+| **M2 · Erinnern / Story Alpha** | gemeinsame Geschichte funktioniert als erster vertikaler Kern | Attachments, Memories, HeartMoments, Milestones, Comments, Story plus minimale Web-/Android-Referenzflows | Domain/API vollständig und kritischer E2E-Flow technisch bewiesen |
+| **M3 · Planen & Private Area** | Ideen werden gemeinsame Vorhaben | Wishes, Plans, Places, Chapters, Collections, Private Area | Planung und private Ablage mit eigener Privacy-Grenze |
+| **M4 · Begleiten** | hilfreiche, kontrollierte Aktivierung | Search/Dashboard, Activity/Notifications, Reminders/Rules | Read Models und Aktivierung ohne unnötiges Tracking |
+| **M5 · Client Completion & Parity** | Web und Android sind vollständig nutzbar | vollständige Clientintegration, Export/Import, Read Cache, Deep Links, Accessibility, Performance, Parität | produktfähiger Core auf beiden Clients |
 | **M6 · Vertiefen** | freiwillige gemeinsame Reflexion | Questions, Check-in, Monats-/Jahresrückblicke | Rich Features nach stabilem Core |
-| **M7 · Entdecken** | externe Inspiration bleibt optional | Shopping, Rezepte, Events, Unterhaltung, Medienadapter | Integrationen ohne Core-Abhängigkeit |
+| **M7 · Entdecken** | externe Inspiration bleibt optional | Shopping, Rezepte, Events, Unterhaltung, Provideradapter | Integrationen ohne Core-Abhängigkeit |
 | **M8 · Kontext** | freiwilliger Ortskontext | Location, Karten, Geofencing, Presence | explizit aktivierbare Kontextfunktionen |
 | **M9 · Veröffentlichen** | sicher betreibbares Produkt | Self-Hosted, Cloud, Backup, Entitlements, Hardening, Release | launchfähiger Betrieb |
 | **MX · E2EE** | echter kryptografischer Schutz | Schlüsselmodell, Migration, Client-Crypto, Recovery | separat bewertete E2EE-Version |
 
-## Parallele Arbeitsströme
+## Präzisierte Milestone-Grenzen
 
-![Roadmap mit parallelen Spuren für Produkt, Backend, Web, Android, Design-System, Security/QA und Betrieb](./assets/roadmap/roadmap-tracks.svg)
+### M2 vs. M5
 
-Die Spuren laufen parallel, aber nicht unabhängig. Eine Clientoberfläche darf einen Domainflow erst als fertig darstellen, wenn API, Autorisierung, Fehlerfälle, Privacy-Tests und plattformspezifische Accessibility gemeinsam erfüllt sind. Für parallele Implementierungsagenten gelten die Koordinationsregeln im [Implementation Status](./IMPLEMENTATION-STATUS.md): ein Issue-Scope pro Branch/PR und keine stillen Scope-Erweiterungen.
+M2 ist **nicht backend-only**. M2 darf dünne Web-/Android-Referenzflows enthalten, wenn sie notwendig sind, um den kritischen Memory/Media/Story-Flow Ende-zu-Ende zu beweisen. M2 verspricht aber keine vollständige Client-Parität.
 
-## Horizonte
+M5 ist die vollständige Client-Produktisierung: vollständige Screens und Navigation, Deep Links, Read Cache, Export/Import, systematische Web-/Android-Parität, Accessibility, Performance und Release-Hardening.
 
-### Now — #61 schließen und G1 freigeben
+### M4 interne Slices
 
-**Umfasst:** letzter Runtime-Gate-Blocker nach abgeschlossenem M1-Hauptumfang.
+M4 wird intern in drei getrennte Risikoklassen geschnitten:
 
-- RelatedPerson-Delete-API um `preserve` und `cascade` erweitern,
-- destruktiven Default ausschließen,
-- private Partnertermine bei `preserve` erhalten, ohne ihre Existenz oder Inhalte zu leaken,
-- bestehenden Cascade als ausdrücklich gewählte Option erhalten,
-- PostgreSQL-/HTTP-/Privacy-Tests für beide Policies ergänzen,
-- nach grünem Merge einen neuen datierten G1-Gate-Review durchführen.
+- **M4-A:** Search + Dashboard Read Models,
+- **M4-B:** Activity + Notifications,
+- **M4-C:** Reminders + Rules.
 
-**Verlassen, wenn:** Gate G1 formell erfüllt und M2 freigegeben ist.
+Diese Aufteilung ist eine Delivery-Grenze, keine fachliche Scope-Erweiterung.
 
-### Next — Der emotionale Kern
+### Privacy-Sprache
 
-**Umfasst:** M2.
+- `SHARED` / `PRIVATE` sind öffentliche fachliche Domainwerte.
+- `SPACE_SHARED` / `OWNER_ONLY` sind interne Authorization-/Privacy-Klassen.
+- Clients schreiben `privacyClass` nicht redundant als zweite Wahrheitsquelle.
 
-- M2-S0: blockierende Domain-, Privacy-, Media- und API-Entscheidungen aus dem Decision Log schließen,
-- Memory, Attachment und Media Pipeline,
-- HeartMoment mit `OWNER_ONLY`/`SPACE_SHARED`,
-- Milestones und sichere Comments,
-- abgeleitete Story mit Cursor-Pagination und Privacy-Filtern,
-- erste vollständig paritätische End-to-End-Flows in Web und Android.
+## M2 Lieferfolge
 
-**Verlassen, wenn:** Gate G2 erfüllt ist.
+```text
+S0 Readiness
+   │
+   ├── Memory CRUD ohne Medien
+   │        │
+   │        ├──────────────┐
+   │        │              │
+   │   Attachment      HeartMoment
+   │        │              │
+   │        └── Memory+Media
+   │
+   ├── Milestone
+   ├── Comments + Outbox
+   └── Story Read Model
+              │
+              ▼
+      Thin Web/Android E2E
+              │
+              ▼
+             G2
+```
 
-### Then — Planung, Aktivierung und Client-Parität
+Der erste Runtime-Slice ist bewusst Memory CRUD ohne Medien. Damit werden M2-Migrationstil, ProtectedPayload, Tenant Guard, Autorregel und Concurrency validiert, bevor die komplexere Media-Sicherheitsfläche hinzukommt.
 
-**Umfasst:** M3 bis M5.
+## Search-Abgrenzung
 
-- Wunsch → Plan → erlebt → optional Chapter,
-- Collections und eigenständige private Ablage,
-- Suche, Dashboard, Reminder und kontrollierte Notifications,
-- Export/Import,
-- vollständige Web-/Android-Oberflächen und Android Read Cache,
-- Design-System P0/P1 und Accessibility-Gates.
-
-**Verlassen, wenn:** Gate G4 erfüllt ist.
-
-### Later — Freiwillige Erweiterungen und Productization
-
-**Umfasst:** M6 bis M9.
-
-- Fragen, Check-in und Rückblicke,
-- Shopping, Discovery und Providerintegrationen,
-- optionale Location-/Context-Funktionen,
-- serverseitige Managed-/Self-Hosted-Auth-Policy,
-- verwaltete Login-Provider wie Google/Apple,
-- Self-Hosted- und Cloud-Härtung einschließlich #59/#60,
-- Backup, Entitlements, Releasebetrieb und Supportfähigkeit.
-
-**Verlassen, wenn:** Gate G5 erfüllt ist.
-
-### Strategic — Echte Ende-zu-Ende-Verschlüsselung
-
-**Umfasst:** MX.
-
-- formales Threat Model und Schlüssel-/Recovery-Produktentscheidung,
-- Client-seitige Kryptografie in Web und Android,
-- Migration bestehender ProtectedPayload-Daten,
-- Auswirkungen auf Suche, Dashboard, Regeln, Notifications und Export,
-- unabhängiges Security Review vor jeder E2EE-Aussage.
-
-MX startet erst mit eigenem Scope und Gate. Bis dahin wird E2EE weder versprochen noch grafisch als MVP-Eigenschaft dargestellt.
+Für G2 ist globale Volltextsuche nicht zwingend. Der Story-Mindestvertrag umfasst zunächst `type`, `year`, `order`, `cursor` und `limit`. Ein `q`-Filter wird nur dann Bestandteil von G2, wenn #70 ihn nach Privacy-/Index-Review ausdrücklich aufnimmt; ansonsten gehört globale Volltextsuche nach M4-A.
 
 ## Abhängigkeiten
 
@@ -180,8 +124,8 @@ flowchart LR
   M0[M0 Foundation] --> M1[M1 Identity & Relationship]
   M1 --> M2[M2 Memories & Story]
   M2 --> M3[M3 Planning & Private Area]
-  M2 --> M4[M4 Engagement & Search]
-  M3 --> M5[M5 Clients & Parity]
+  M2 --> M4[M4 Engagement]
+  M3 --> M5[M5 Client Completion & Parity]
   M4 --> M5
   M5 --> M6[M6 Rich Features]
   M5 --> M7[M7 Integrations]
@@ -192,58 +136,48 @@ flowchart LR
   M5 -. mature clients .-> MX
 ```
 
-Kritische Reihenfolge:
-
-1. Tenant Isolation und Auth vor sensiblen Inhaltsdomänen.
-2. Owner-only-Grundlage vor privaten Inhalten.
-3. Media Security vor produktiver Attachment-Nutzung.
-4. Memory/Story vor Rückblicken und Discovery-Personalisierung.
-5. stabile API und Contract-Tests vor vollständiger Client-Parität.
-6. Core-Parität vor Shopping, Location und weiteren Integrationen.
-
 ## Release Gates
 
 ### G0 — Foundation prüfbar
 
-- API-/DB-Konventionen und Migrationen stabil,
-- CI, Integrationstests, Secret Scan und reproduzierbarer Build,
-- versioniertes OpenAPI mit Contract-Tests,
-- Outbox/Jobs/MediaStore und ProtectedPayload-Grenze abgesichert.
-
-**Aktueller Stand:** bestanden für den M0-Umfang.
+**Bestanden.**
 
 ### G1 — Sicherer Paar-Space
 
-- Auth- und Recovery-Wege für den jeweiligen Betriebsmodus,
-- Invitation atomar, einmalig, widerrufbar und race-sicher,
+- Auth- und Recovery-Wege,
+- race-sichere Invitations,
 - Tenant Guard und Owner-only-Autorisierung,
 - Profile/SpaceProfile mit Versionskonflikten,
-- Cross-Tenant-, Session- und Privacy-Tests grün.
+- Cross-Tenant-, Session- und Privacy-Tests.
 
-**Aktueller Stand:** **nicht bestanden.** Der Follow-up-Review vom 25.08.2026 bestätigt die früheren Runtime-Kriterien als umgesetzt, identifiziert aber #61 als verbleibenden G1-Blocker: Eine geteilte `RelatedPerson` kann aktuell über den impliziten Cascade auch einen privaten Termin des Partners löschen. G1 wird erst nach expliziter `preserve`-/`cascade`-Policy, grünen Privacy-/PostgreSQL-Tests und erneutem datiertem Gate-Review freigegeben.
+**Aktueller Stand: BESTANDEN.** Der datierte [G1 Gate Review nach Abschluss von #61](./reviews/2026-08-25-g1-gate-review-after-61.md) ist die aktuelle Entscheidungsquelle.
 
 ### G2 — Story Alpha
 
-- Memory, Media, HeartMoment, Milestone und Comment vollständig,
-- Story enthält niemals `OWNER_ONLY`,
-- Upload-Missbrauch und signierte URLs geprüft,
-- Web und Android bestehen die ersten kritischen Flows,
-- Accessibility- und Content-Review ohne hohe Befunde.
+G2 ist bestanden, wenn:
+
+- Memory, Attachment/Media, HeartMoment, Milestone und Comment für den M2-Scope vollständig sind,
+- Story `OWNER_ONLY` vor Suche, Gruppierung, Pagination und Projektion ausschließt,
+- Upload-/Media-Abuse, Parent-Autorisierung und Cross-Tenant-Races geprüft sind,
+- OpenAPI und PostgreSQL-Integrationstests vollständig grün sind,
+- mindestens ein kritischer Memory/Media/Story-Flow in **Web und Android** technisch Ende-zu-Ende validiert ist,
+- diese Referenzflows Accessibility-/Privacy-Abnahme ohne hohe Befunde bestehen,
+- vollständige Client-Parität ausdrücklich noch nicht vorausgesetzt wird.
 
 ### G3 — Gemeinsamer Alltag
 
-- Wünsche/Pläne/Places/Chapters/Collections fachlich konsistent,
-- private Ablage vollständig isoliert,
-- 409-Konflikte und Delete-Wirkungen verständlich,
-- Suche und Dashboard privacy-sicher vorbereitet.
+- Wishes/Plans/Places/Chapters/Collections konsistent,
+- Private Area vollständig isoliert,
+- Delete-/409-Wirkungen verständlich,
+- M4-Read-Model-Grenzen vorbereitet.
 
 ### G4 — Core Release Candidate
 
 - Web und Android fachlich gleichwertig,
-- Android Offline Read Cache ohne vorgetäuschten Write Sync,
+- Offline Read Cache ohne vorgetäuschten Write Sync,
 - Export/Import versioniert und getestet,
-- Design-System P0/P1 auf beiden Plattformen verifiziert,
-- Performance-, Accessibility-, Privacy- und Security-Gates bestanden.
+- Design-System und Accessibility verifiziert,
+- Performance-, Privacy- und Security-Gates bestanden.
 
 ### G5 — Launchfähig
 
@@ -251,17 +185,17 @@ Kritische Reihenfolge:
 - serverseitige Auth-/Provider-Policy je Betriebsform durchgesetzt,
 - #59 und #60 vor öffentlicher/Managed-Exposition geschlossen,
 - Retention, vollständige Löschung und Supportprozesse geklärt,
-- Entitlements/Billing-Adapter ohne Domainkopplung,
+- Entitlements/Billing ohne Domainkopplung,
 - Monitoring ohne sensible Inhalte,
 - Release-, Incident- und Recovery-Prozess getestet.
 
 ## Was bewusst nicht vorgezogen wird
 
+- globale Volltextsuche vor geklärter M4-Privacy-/Indexstrategie,
 - Shopping, Event Discovery und Providerintegrationen vor stabilem Core,
 - Offline Write Sync im MVP,
 - öffentliche Share Links,
 - KI-Funktionen,
-- Partnerentfernung,
 - Location/Geofencing ohne separaten Opt-in- und Privacy-Flow,
 - E2EE-Marketing vor echter Implementierung und Review.
 
@@ -269,29 +203,27 @@ Kritische Reihenfolge:
 
 | Risiko | Schutzmaßnahme |
 |---|---|
-| Features beginnen vor offenen Security-Gates | Gate G1 blockiert M2-Freigabe |
-| Parallele Agenten überschreiben denselben Scope | ein Issue pro Branch/PR, klarer Owner und Abgleich gegen aktuellen `main` |
-| Web und Android driften auseinander | gemeinsamer OpenAPI-Vertrag, Component Contracts und Paritäts-DoD |
-| Design-System wird zur Dokumentation ohne Code | Manifest, Tokenadapter, Plattformkataloge und CI-Gates |
-| spätere Integrationen dominieren den Core | Provideradapter und klare M7/M8-Grenze |
-| Privacy-Sprache übertreibt den Stand | Content Guidelines und unabhängiges Security Review |
-| Roadmap wird mit Status verwechselt | Implementation Status bleibt einzige operative Wahrheit |
+| Runtime beginnt vor geklärtem Vertrag | M2-S0 BLOCKING-Decisions und #70 vor #71 |
+| Web und Android driften auseinander | gemeinsamer OpenAPI-Vertrag und M5-Paritätsgate |
+| Privacy-Klassen werden Client-Domain | klare Trennung `SHARED/PRIVATE` vs. `SPACE_SHARED/OWNER_ONLY` |
+| Media erzeugt indirekte Leaks | Parent-Autorisierung, Adapter-Contract und Abuse-/Race-Tests |
+| Repository-Gates können umgangen werden | PR-/CI-Pflicht als Projektregel bis #25 technisch erzwingbar ist |
+| öffentlicher Betrieb erfolgt zu früh | #59/#60 und G5 bleiben Pre-Exposure-Pflicht |
 
 ## Pflege
 
+- Datierte Reviews werden nie nachträglich umgeschrieben.
 - Der Current-Marker wird nach jedem abgeschlossenen Gate aktualisiert.
-- Meilensteine ändern sich nur bei einer fachlichen Entscheidung in der Spezifikation.
-- Offene Aufgaben werden nicht in dieser Datei gepflegt, sondern im Implementation Status und in Issues.
-- Ein Roadmap-Update nennt Grund und Auswirkung, nicht nur eine neue Reihenfolge.
-- Grafiken und Text werden gemeinsam geändert, wenn sich die dargestellte Phase ändert, damit keine widersprüchlichen Ansichten entstehen.
+- Offene Aufgaben stehen im Implementation Status und in GitHub Issues.
+- Roadmap-Updates nennen Grund und Auswirkung, nicht nur eine neue Reihenfolge.
 
 ## Verwandte Dokumente
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
-- [G1/M1 Follow-up Security Review vom 25.08.2026](./reviews/2026-08-25-g1-m1-follow-up-review.md)
-- [Historischer G1/M1 Security Review vom 24.08.2026](./reviews/2026-08-24-g1-m1-security-review.md)
+- [M2 Project Control](./m2/PROJECT-CONTROL.md)
+- [M2 Technical Readiness Package](./m2/README.md)
+- [M2 Decision Log](./m2/DECISION-LOG.md)
+- [M2 Delivery Plan](./m2/DELIVERY-PLAN.md)
+- [Finaler G1 Gate Review](./reviews/2026-08-25-g1-gate-review-after-61.md)
 - [Produktspezifikation](../specification/PRODUCT-SPEC.md)
-- [Critical User Flows](./USER-FLOWS.md)
-- [API-/UI-Verträge](./API-UI-CONTRACTS.md)
-- [Design-System-Umsetzung](./DESIGN-SYSTEM-DELIVERY.md)
-- [Accessibility- und QA-Matrix](./ACCESSIBILITY-QA-MATRIX.md)
+- [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
