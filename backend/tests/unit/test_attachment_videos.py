@@ -132,7 +132,8 @@ def test_only_video_and_one_optional_audio_stream_survive() -> None:
 
 
 def test_poster_is_rebuilt_without_exif(
-    monkeypatch, tmp_path: Path  # type: ignore[no-untyped-def]
+    monkeypatch,
+    tmp_path: Path,  # type: ignore[no-untyped-def]
 ) -> None:
     video = tmp_path / "sanitized.mp4"
     video.write_bytes(b"placeholder")
