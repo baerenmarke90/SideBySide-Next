@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, ValidationError
 from sidebyside.identity.models import (
     Account,
@@ -91,6 +92,44 @@ def create_account(
         )
     )
     session.flush()
+    return konto
+
+
+def create_oidc_account(
+    session: Session,
+    *,
+    display_name: str,
+    verified_email: str | None = None,
+) -> Account:
+    """Ein Konto fuer ein bereits verifiziertes OIDC-Onboarding anlegen.
+
+    OIDC braucht weder ein lokales Passwort noch eine lokale AuthIdentity.
+    Eine E-Mail-Adresse ist nur zusaetzliche, optionale Profildaten. Sie wird
+    verworfen, wenn der Claim unbrauchbar oder die Adresse bereits vergeben
+    ist. Insbesondere wird darueber niemals ein bestehendes Konto gesucht
+    und uebernommen.
+    """
+    name = (display_name or "").strip() or "Partner"
+    konto = Account(display_name=name[:MAX_DISPLAY_NAME])
+    session.add(konto)
+    session.flush()
+
+    if verified_email:
+        try:
+            adresse = validate_email(verified_email)
+        except ValidationError:
+            adresse = ""
+        if adresse and find_by_email(session, adresse) is None:
+            session.add(
+                AccountEmail(
+                    account_id=konto.id,
+                    email=adresse,
+                    verified_at=now(),
+                    is_primary=True,
+                )
+            )
+            session.flush()
+
     return konto
 
 

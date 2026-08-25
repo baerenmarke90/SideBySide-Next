@@ -342,6 +342,10 @@ class OidcAuthRequest(IdMixin, Base):
         ForeignKey("accounts.id", ondelete="CASCADE"),
     )
 
+    # Gesetzt, wenn ein noch nicht angelegter Account per Einladung ueber
+    # OIDC onboardet werden soll. Wie alle Bearer-Nachweise nur gehasht.
+    invitation_token_hash: Mapped[str | None] = mapped_column(String(64))
+
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(

@@ -24,7 +24,7 @@ EXPECTED_PROBLEM_RESPONSES: dict[tuple[str, str], set[int]] = {
     ("/api/v1/auth/recovery/consume", "post"): {422},
     ("/api/v1/auth/oidc/{connectionId}/start", "post"): {422, 429},
     ("/api/v1/auth/oidc/{connectionId}/link", "post"): {401, 422, 429},
-    ("/api/v1/auth/oidc/{connectionId}/callback", "post"): {401, 422},
+    ("/api/v1/auth/oidc/{connectionId}/callback", "post"): {401, 409, 422},
     ("/api/v1/auth/passkeys/registration/start", "post"): {401},
     ("/api/v1/auth/passkeys/registration/finish", "post"): {401, 422},
     ("/api/v1/auth/passkeys/authentication/start", "post"): {422},
