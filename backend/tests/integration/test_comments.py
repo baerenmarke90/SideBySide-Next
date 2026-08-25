@@ -177,17 +177,27 @@ def test_cursor_ist_an_parent_und_space_gebunden(client, paar) -> None:  # type:
     assert wrong_parent.json()["code"] == "INVALID_CURSOR"
 
 
-def test_parent_delete_loescht_comments_atomar(client, paar, session) -> None:  # type: ignore[no-untyped-def]
-    m = milestone(client, paar)
-    path = comment_path(paar["space"].id, "milestones", m["id"])
-    c = client.post(path, json={"body": "weg"}, headers=auth(paar["token_b"])).json()
+@pytest.mark.parametrize(
+    ("factory", "segment"),
+    [(memory, "memories"), (milestone, "milestones"), (heart, "heart-moments")],
+)
+def test_parent_delete_loescht_comments_atomar(
+    client,
+    paar,
+    session,
+    factory,
+    segment,
+) -> None:  # type: ignore[no-untyped-def]
+    parent = factory(client, paar)
+    path = comment_path(paar["space"].id, segment, parent["id"])
+    comment = client.post(path, json={"body": "weg"}, headers=auth(paar["token_b"])).json()
 
     deleted = client.delete(
-        f"{basis(paar['space'].id)}/milestones/{m['id']}",
+        f"{basis(paar['space'].id)}/{segment}/{parent['id']}",
         headers=if_match(paar["token_a"], 1),
     )
     assert deleted.status_code == 204
-    assert session.get(Comment, UUID(c["id"])) is None
+    assert session.get(Comment, UUID(comment["id"])) is None
 
 
 def test_shared_to_private_loescht_comments_und_resurrected_nichts(client, paar) -> None:  # type: ignore[no-untyped-def]
@@ -254,6 +264,28 @@ class RecordingSink:
         self.keys.append(idempotency_key)
 
 
+class RetrySafeSink:
+    def __init__(self) -> None:
+        self.attempts: list[str] = []
+        self.deliveries: set[str] = set()
+        self.fail_after_first_delivery = True
+
+    def send_comment_notification(
+        self,
+        *,
+        idempotency_key: str,
+        recipient_id: UUID,
+        target_type: str,
+        target_id: UUID,
+    ) -> None:
+        del recipient_id, target_type, target_id
+        self.attempts.append(idempotency_key)
+        self.deliveries.add(idempotency_key)
+        if self.fail_after_first_delivery:
+            self.fail_after_first_delivery = False
+            raise RuntimeError("simulated crash after external delivery")
+
+
 def test_notification_hook_nutzt_stabile_outbox_id_als_idempotency_key(
     client, paar, session
 ) -> None:  # type: ignore[no-untyped-def]
@@ -267,6 +299,30 @@ def test_notification_hook_nutzt_stabile_outbox_id_als_idempotency_key(
     sink = RecordingSink()
     assert deliver(event, sink) is True
     assert sink.keys == [str(event.id)]
+    assert event.processed_at is not None
+
+
+def test_notification_retry_erzeugt_keine_doppelte_fachliche_zustellung(
+    client, paar, session
+) -> None:  # type: ignore[no-untyped-def]
+    m = memory(client, paar)
+    path = comment_path(paar["space"].id, "memories", m["id"])
+    client.post(path, json={"body": GEHEIM}, headers=auth(paar["token_b"]))
+    event = session.execute(
+        select(OutboxEvent).where(OutboxEvent.event_type == "COMMENT_CREATED")
+    ).scalar_one()
+
+    key = str(event.id)
+    sink = RetrySafeSink()
+    with pytest.raises(RuntimeError, match="simulated crash"):
+        deliver(event, sink)
+
+    assert event.processed_at is None
+    assert sink.deliveries == {key}
+
+    assert deliver(event, sink) is True
+    assert sink.attempts == [key, key]
+    assert sink.deliveries == {key}
     assert event.processed_at is not None
 
 
