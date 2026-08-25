@@ -195,20 +195,22 @@ def update_heart_moment(
 
 
 def _delete_dependent_comments(session: Session, heart_moment: HeartMoment) -> None:
-    """Kommentare eines HeartMoments loeschen, der privat wird.
+    """Kommentare beim Privacy-Wechsel in derselben Transaktion loeschen.
 
-    M2-D07 verlangt, dass der Wechsel `SHARED -> PRIVATE` vorhandene
-    Kommentare in derselben DB-Transaktion loescht - ein blosses Verstecken
-    koennte Partnerdaten spaeter erneut sichtbar machen.
-
-    Comments sind noch nicht implementiert; sie kommen im Comments-Slice.
-    Diese Funktion ist die Stelle, an der die Loeschung einzuhaengen ist,
-    und sie liegt bewusst innerhalb der Transaktion des Wechsels, damit sie
-    dort nicht nachtraeglich danebengesetzt wird. Solange es keine
-    Comment-Tabelle gibt, gibt es auch nichts zu loeschen - die Invariante
-    ist erfuellt, aber nicht bewiesen.
+    Der Mapper-Cascade in ``comments.cascades`` wiederholt diese Loeschung
+    nach dem eigentlichen Privacy-UPDATE. Das ist absichtlich redundant:
+    dieser Domain-Hook bildet M2-D07 sichtbar ab; der Listener schliesst
+    gleichzeitig das Race-Fenster fuer einen parallel gestarteten Comment.
     """
-    return None
+    from sidebyside.comments import service as comment_service
+    from sidebyside.comments.models import CommentTarget
+
+    comment_service.delete_for_parent(
+        session,
+        space_id=heart_moment.space_id,
+        target_type=CommentTarget.HEART_MOMENT,
+        target_id=heart_moment.id,
+    )
 
 
 def change_visibility(

@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -405,3 +405,20 @@ def list_comments(
             comment_id=last.id,
         )
     return CommentPageResult(items=items, next_cursor=next_cursor, has_more=has_more)
+
+
+def delete_for_parent(
+    session: Session,
+    *,
+    space_id: UUID,
+    target_type: CommentTarget,
+    target_id: UUID,
+) -> None:
+    """Abhaengige Comments innerhalb der laufenden Parent-Transaktion loeschen."""
+    session.execute(
+        delete(Comment).where(
+            Comment.space_id == space_id,
+            Comment.target_type == target_type.value,
+            Comment.target_id == target_id,
+        )
+    )
