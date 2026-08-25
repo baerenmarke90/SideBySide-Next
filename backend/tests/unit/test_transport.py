@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
+import pytest
 
 from sidebyside.config import Environment, MailTransport, Settings
 from sidebyside.main import create_app
 
 
-CURSOR_SIGNING_KEY = "test-cursor-signing-key-with-at-least-32-characters"
+CURSOR_SIGNING_KEY = "cursor-test-" + ("x" * 40)
 
 
 def production_settings(**ueberschreibungen: object) -> Settings:
