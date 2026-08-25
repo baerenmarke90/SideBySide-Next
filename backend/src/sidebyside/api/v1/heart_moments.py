@@ -12,7 +12,7 @@ from pydantic import ConfigDict, field_validator, model_validator
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
-from sidebyside.api.schema import ApiModel
+from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.api.v1.attachments import AttachmentSummary
 from sidebyside.attachments.models import Attachment, MediaType
 from sidebyside.authorization import ContentVisibility, visibility_of
@@ -82,17 +82,6 @@ class HeartMomentVisibilityChange(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     visibility: ContentVisibility
-
-
-class AuthorSummary(ApiModel):
-    id: UUID
-    display_name: str
-
-
-class ResourceCapabilities(ApiModel):
-    can_edit: bool
-    can_delete: bool
-    can_comment: bool
 
 
 class HeartMomentDetail(ApiModel):
