@@ -1,7 +1,7 @@
 # M2 Media Pipeline
 
-**Status:** Verbindlicher M2-S0 Media-Vertrag nach #69, ergänzt um M2-D14/D15 nach #78 und M2-D23 nach #85  
-**Version:** 1.3
+**Status:** Verbindlicher M2-S0 Media-Vertrag nach #69, ergänzt um M2-D14/D15 nach #78, M2-D23 nach #85 und Video-Slice #88  
+**Version:** 1.4
 
 Ziel ist ein sicherer, adapterunabhängiger Medienfluss für LocalMediaStore und S3MediaStore. Cloud-Medien sind nie öffentlich; lokale Dateipfade und Storage Keys werden nicht zu Autorisierungsmechanismen.
 
@@ -79,6 +79,8 @@ Ein Domainvertrag, zwei zulässige Adaptertransporte:
 - URL ist an exakt einen servergenerierten Storage Key gebunden und erlaubt keinen frei wählbaren Bucket/Key.
 - Bucket bleibt privat; Public ACLs sind verboten.
 - Presigned URL, Signatur und Credentials werden nicht geloggt oder dauerhaft im Client gespeichert.
+- Vor der serverseitigen Verarbeitung wird die Objektgröße per `HEAD`/`Content-Length` geprüft.
+- Der anschließende GET wird streamend konsumiert; Validierung kopiert höchstens das Medienlimit plus ein Prüfbyte. Eine Abweichung zwischen HEAD-Größe und tatsächlich gelesener Größe scheitert fail-closed.
 
 Für beide Adapter bleiben `createUpload`, `finalizeUpload`, Autorisierung, Statusautomat und Validierungsentscheidung serverkontrolliert. Ein erfolgreicher Providerupload ist niemals gleichbedeutend mit `READY`.
 
@@ -111,7 +113,7 @@ M2 unterstützt bewusst eine kleine Positivliste:
 
 Weitere Formate, Audio-only, RAW, GIF-Animation, MKV/WebM und Dokumente sind nicht Teil des M2-Vertrags und werden fail-closed abgewiesen, bis sie explizit freigegeben werden.
 
-> **Lieferstand (M2-D23):** Der erste Media-Slice bedient ausschließlich die Bildzeilen dieser Tabelle. MP4 und QuickTime bleiben Teil des Vertrags, werden bis zum Video-Slice aber ebenfalls fail-closed mit `ATTACHMENT_TYPE_NOT_ALLOWED` abgewiesen. Clients dürfen Video in M2 solange nicht als verfügbar anbieten.
+> **Lieferstand (M2-D23 / #88):** Bild- und Videozeilen dieser Tabelle sind serverseitig implementiert. MP4 und QuickTime werden anhand des gespeicherten Objekts validiert, per Stream-Copy bereinigt und erneut geprüft. `SBS_FFMPEG_ENABLED=false` kann Video für eine Installation fail-closed deaktivieren, ohne Bilder oder den übrigen Dienst abzuschalten.
 
 Zusätzlich:
 
@@ -119,7 +121,7 @@ Zusätzlich:
 - HeartMoment: maximal **1 Attachment**.
 - Serverwerte sind verbindlich; Clientlimits dienen nur UX.
 - Größe wird aus dem tatsächlich gespeicherten Objekt bestimmt, nicht aus Clientmetadata.
-- Bilddimensionen und Videodauer werden aus serverseitig erkannten Medieninformationen bestimmt.
+- Bilddimensionen sowie Videodauer und Videoauflösung werden aus serverseitig erkannten Medieninformationen bestimmt.
 - Deklarierter MIME, Dateiendung und Originalname sind keine Vertrauensquelle.
 
 ## 7. Validierung
@@ -138,6 +140,8 @@ Serverseitig prüfen:
 8. Metadaten-Allowlist wird extrahiert und das Objekt anschließend bereinigt gespeichert (M2-D14).
 
 Erst nach allen acht Schritten wird `READY` gesetzt. Ein Providerupload oder eine bestandene Formatprüfung allein bedeuten kein `READY`.
+
+Video wird zusätzlich nach dem Stream-Copy-Remux erneut mit ffprobe geprüft. Der Video-Slice übernimmt genau einen primären Videostream und optional einen primären Audiostream; Transcoding findet nicht statt. Unbekannte verbleibende Metadaten oder nicht erlaubte Streams machen die Bereinigung ungültig. Die verbindlichen ffmpeg-/ffprobe-Ressourcenlimits und Supply-Chain-Regeln stehen in [`VIDEO-PROCESSING.md`](./VIDEO-PROCESSING.md).
 
 Die Erzeugung der abgeleiteten Variante (M2-D15) folgt danach und gehört bewusst **nicht** zu dieser Kette: ihr Fehlschlag führt nicht zu `FAILED`, siehe Abschnitt 7.2.
 
@@ -160,6 +164,8 @@ Alles Übrige wird verworfen: GPS und sonstige Standortangaben, Geräte- und Ser
 
 Gespeichert wird ausschließlich die bereinigte Datei. Die hochgeladenen Originalbytes werden nicht dauerhaft aufbewahrt; es gibt in M2 keinen Pfad, der ein Medium mit eingebetteten Metadaten ausliefert. Ein Medium, das nicht sicher bereinigt werden kann, wird fail-closed `FAILED` und niemals ungestrippt gespeichert.
 
+Bei Video wird ein neuer MP4-/QuickTime-Container per Stream-Copy aufgebaut, Metadaten- und Chapter-Mapping deaktiviert und nur die erlaubten primären Streams übernommen. Nach dem Remux wird erneut geprobt. GPS-/Location-Metadaten dürfen weder im `READY`-Video noch im Poster verbleiben.
+
 Die extrahierte Allowlist ist ProtectedPayload und wird nicht in API-Metadaten außerhalb des Parent-Kontexts, Logs, Events, Metriken oder Suchindizes projiziert.
 
 ### 7.2 Abgeleitete Varianten (M2-D15)
@@ -169,14 +175,16 @@ M2 erzeugt je Attachment höchstens **eine** Variante:
 | Kategorie | Variante | Lieferstand |
 |---|---|---|
 | Bild | verkleinertes Thumbnail | erster Media-Slice |
-| Video | einzelner Posterframe | Video-Slice (M2-D23) |
+| Video | einzelner Posterframe | geliefert mit #88 |
 
 Transcoding, mehrere Auflösungsstufen, Audioextraktion und adaptives Streaming sind **nicht** Teil von M2.
+
+Der vorhandene serverkontrollierte Variantenslot `thumbnail` ist die einzige Still-Variante: bei Bildern enthält er das Thumbnail, bei Videos den Posterframe. Es gibt kein separates `hasPoster`, keinen zweiten Varianten-Key und keine zweite ACL.
 
 - Varianten entstehen serverseitig im selben Validierungsjob, **nach** Anwendung von M2-D14, und tragen daher selbst keine eingebetteten Metadaten.
 - Eine Variante besitzt keine eigene Autorisierung. Sie folgt exakt der ihres Attachments und damit dem Parent; ein Privacy-Wechsel des Parents sperrt auch die Variante.
 - Clients wählen keine Varianten-Keys. Der Server benennt Varianten über kontrollierte Suffixe nach dem Muster aus Abschnitt 5.
-- Schlägt die Variantenerzeugung fehl, bleibt das Attachment nutzbar und wird ohne Variante ausgeliefert. Ein fehlendes Thumbnail ist ein Darstellungs-, kein Sicherheitsproblem und setzt das Attachment nicht `FAILED`.
+- Schlägt die Variantenerzeugung fehl, bleibt das Attachment nutzbar und wird ohne Variante ausgeliefert. Ein fehlendes Thumbnail/Poster ist ein Darstellungs-, kein Sicherheitsproblem und setzt das Attachment nicht `FAILED`.
 - Cleanup entfernt Varianten gemeinsam mit dem Attachment. Ein verwaistes Variantenobjekt ist ein Cleanup-Fehler, kein zulässiger Zustand.
 
 ## 8. Autorisierung
@@ -307,6 +315,9 @@ Nicht loggen:
 - LocalMediaStore und S3MediaStore bestehen denselben Domain-/Lifecycle-Contract.
 - Upload-Lifecycle ist idempotent und race-sicher.
 - MIME, Größe, Dimensionen, Dauer und Space werden serverseitig geprüft.
+- MP4 und QuickTime werden aus den gespeicherten Bytes erkannt, innerhalb 250 MiB / 180 s / 3840×2160 validiert, metadatenbereinigt und erneut geprüft.
+- Video-Location-Daten sind nach `READY` entfernt; der Posterframe ist metadatenfrei.
+- `SBS_FFMPEG_ENABLED=false` verhindert ffmpeg/ffprobe auch für bereits eingereihte Videojobs.
 - Cross-Tenant- und Owner-only-Abruf liefern keine Leaks.
 - S3 Upload URL ≤10 min; Read URL ≤5 min; Bucket nicht öffentlich.
 - PENDING/UPLOADING/FAILED ≤24 h; ungebunden READY ≤60 min.
@@ -321,3 +332,4 @@ Nicht loggen:
 - [API Design](./API-DESIGN.md)
 - [Security Test Matrix](./SECURITY-TEST-MATRIX.md)
 - [Decision Log](./DECISION-LOG.md)
+- [Video Processing](./VIDEO-PROCESSING.md)
