@@ -295,7 +295,7 @@ class TestDeletePolicyValidation:
             headers=if_match(paar["token_fremd"], person["version"]),
         )
         assert response.status_code == 404
-        assert response.json()["code"] == "SPACE_NOT_FOUND"
+        assert response.json()["code"] == "RELATED_PERSON_NOT_FOUND"
 
     def test_veraltetes_if_match_bleibt_versionskonflikt(self, client, paar) -> None:  # type: ignore[no-untyped-def]
         person = create_person(client, paar)
