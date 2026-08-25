@@ -194,9 +194,11 @@ API-Entscheidungen sind über #67, #68, #69, #70 und #78 geschlossen; alle
 `BLOCKING`-Einträge im Decision Log stehen auf `DECIDED`.
 
 **M2-Runtime — laufend.** Geliefert sind Memory CRUD (#71), HeartMoment mit
-Owner-only-Privacy (#80) und der Attachment-Lifecycle für Bilder (#79) samt
-Metadaten-Entfernung beim Ingest und Thumbnail. Als Nächstes werden Attachments
-an Memory und HeartMoment gebunden (#90); Video folgt nach M2-D23 als eigener
+Owner-only-Privacy (#80), der Attachment-Lifecycle für Bilder (#79) samt
+Metadaten-Entfernung beim Ingest und Thumbnail, die Attachment-Bindung an
+Memory und HeartMoment (#90), die Milestone-Domain (#94), Comments samt Outbox
+und Notification Hook (#97) sowie der S3-kompatible MediaStore-Adapter (#87).
+Als Nächstes folgt das Story Read Model; Video folgt nach M2-D23 als eigener
 Slice (#88). Die präzisierten Milestone-Grenzen und der aktuelle Arbeitsstand
 stehen in [docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
 

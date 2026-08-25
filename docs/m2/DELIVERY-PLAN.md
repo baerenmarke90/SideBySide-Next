@@ -184,9 +184,13 @@ Der Schnitt ist so gewählt, dass kein Zwischenstand `READY` erreicht, ohne dass
 
 - Query Service für Memory, Milestone und ausschließlich Shared HeartMoment,
 - Autor- und Attachment-Projektion,
-- Filter `type`, `year`, `q`, `order`, `cursor`, `limit`,
+- Filter `type`, `year`, `order`, `cursor`, `limit`,
 - stabile Cursor-Pagination und Monatsgruppen,
 - Query-/Indexanalyse mit realistischen Datenmengen.
+
+`q` ist hier bewusst nicht mehr aufgeführt. M2-D08 hat die globale Volltextsuche nach M4-A verschoben, und M2-D21 hält offen, ob sie direkt in Postgres oder über einen eigenen Index entsteht. Der frühere Eintrag stammte aus der Fassung vor #70 und hätte S7 eine Suche implementieren lassen, die der eingefrorene Vertrag nicht kennt.
+
+Der Owner-Bereich für private HeartMoments ist nach M2-D22 (#104) nicht Teil dieser Route: `/timeline` bleibt ein reines Shared-Read-Model ohne `visibility`-Parameter, und die Owner-Ansicht wird von der bestehenden HeartMoment-Collection bedient.
 
 **Akzeptanz**
 
