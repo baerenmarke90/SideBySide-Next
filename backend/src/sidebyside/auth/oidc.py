@@ -45,6 +45,8 @@ from sidebyside.core.clock import now
 from sidebyside.core.errors import ErrorCode, UnauthenticatedError, ValidationError
 from sidebyside.identity import service as accounts
 from sidebyside.identity.models import Account, OidcAuthRequest
+from sidebyside.relationship import invitations
+from sidebyside.relationship.invitations import InvitationErrorCode
 
 log = logging.getLogger(__name__)
 
@@ -120,8 +122,6 @@ def client() -> httpx.Client:
 def connection(connection_id: str) -> OidcConnection:
     verbindung = get_settings().oidc_connection(connection_id)
     if verbindung is None:
-        # Dieselbe Antwort wie fuer eine fehlgeformte Kennung: welche
-        # Verbindungen es gibt, ist Betriebswissen.
         raise ValidationError(
             "This sign-in method is not available.", OidcErrorCode.UNKNOWN_CONNECTION
         )
@@ -135,8 +135,6 @@ def _get_json(url: str, *, was: str) -> dict[str, Any]:
             antwort.raise_for_status()
             inhalt: dict[str, Any] = antwort.json()
     except (httpx.HTTPError, ValueError) as fehler:
-        # Ohne eigene Grenze stuende die Fehlermeldung des Anbieters - und
-        # damit moeglicherweise interne Adressen - in unserer Antwort.
         log.warning("oidc request failed", extra={"kind": was})
         raise ValidationError(
             "The sign-in provider is currently unavailable.",
@@ -146,12 +144,7 @@ def _get_json(url: str, *, was: str) -> dict[str, Any]:
 
 
 def discover(verbindung: OidcConnection) -> Discovery:
-    """Das Discovery-Dokument holen und auf sich selbst pruefen.
-
-    Der `issuer` im Dokument muss der konfigurierte sein. Ohne diese
-    Pruefung koennte ein Dokument unter der erwarteten Adresse auf die
-    Endpunkte eines fremden Anbieters zeigen.
-    """
+    """Das Discovery-Dokument holen und auf sich selbst pruefen."""
     dokument = _get_json(f"{verbindung.issuer}/.well-known/openid-configuration", was="discovery")
     gefunden = str(dokument.get("issuer", "")).rstrip("/")
     if gefunden != verbindung.issuer:
@@ -186,6 +179,7 @@ def start(
     connection_id: str,
     *,
     account_id: UUID | None = None,
+    invitation_token: str | None = None,
 ) -> StartedFlow:
     """Eine Anmeldung beginnen.
 
@@ -194,7 +188,10 @@ def start(
     mit dem Browser zurueckkommt.
 
     Ist `account_id` gesetzt, verknuepft der Rueckweg die externe
-    Identitaet mit genau diesem bereits angemeldeten Konto.
+    Identitaet mit genau diesem bereits angemeldeten Konto. Ein optionaler
+    Einladungstoken wird ausschliesslich gehasht an diesen kurzlebigen
+    Request gebunden; er erscheint weder in der Provider-URL noch im
+    Klartext in der Datenbank.
     """
     verbindung = connection(connection_id)
     rate_limit.check(session, ACTION_OIDC_START, verbindung.id, OIDC_START)
@@ -214,6 +211,7 @@ def start(
             code_verifier=verifier,
             redirect_uri=verbindung.redirect_uri,
             account_id=account_id,
+            invitation_token_hash=(hash_token(invitation_token) if invitation_token else None),
             expires_at=now() + AUTH_REQUEST_LIFETIME,
         )
     )
@@ -237,11 +235,7 @@ def start(
 
 
 def _open_request(session: Session, connection_id: str, state: str) -> OidcAuthRequest:
-    """Die begonnene Anmeldung zu einem State finden und verbrauchen.
-
-    Unbekannt, abgelaufen, bereits verbraucht und zu einer anderen
-    Verbindung gehoerend enden in derselben Antwort.
-    """
+    """Die begonnene Anmeldung zu einem State finden und verbrauchen."""
     ungueltig = ValidationError(
         "This sign-in attempt is no longer valid.", OidcErrorCode.INVALID_STATE
     )
@@ -287,8 +281,6 @@ def _exchange_code(
             antwort.raise_for_status()
             inhalt: dict[str, Any] = antwort.json()
     except (httpx.HTTPError, ValueError) as fehler:
-        # Der Fehlertext des Anbieters bleibt draussen: er kann das Client
-        # Secret oder interne Adressen enthalten.
         log.warning("oidc token exchange failed", extra={"connection": verbindung.id})
         raise ValidationError(
             "This sign-in attempt is no longer valid.", OidcErrorCode.INVALID_TOKEN
@@ -326,13 +318,10 @@ def _verified_claims(
         log.info("oidc id token rejected", extra={"connection": verbindung.id})
         raise ungueltig from fehler
 
-    # Die Nonce bindet dieses Token an genau die Anfrage, die es angestossen
-    # hat. Ohne sie liesse sich ein anderswo erbeutetes Token einspielen.
     if claims.get("nonce") != nonce:
         log.info("oidc nonce mismatch", extra={"connection": verbindung.id})
         raise ungueltig
 
-    # Bei mehreren Audiences benennt azp den eigentlichen Empfaenger.
     azp = claims.get("azp")
     if azp is not None and azp != verbindung.client_id:
         raise ungueltig
@@ -350,9 +339,69 @@ def _matching_key(schluesselsatz: jwt.PyJWKSet, kid: str | None) -> jwt.PyJWK:
                 return schluessel
         raise KeyError("kid unbekannt")
     if len(schluesselsatz.keys) != 1:
-        # Ohne kid und mit mehreren Schluesseln waere die Auswahl geraten.
         raise KeyError("kein kid und mehrere Schluessel")
     return schluesselsatz.keys[0]
+
+
+def _display_name(claims: dict[str, Any]) -> str:
+    """Einen Anzeigenamen aus Claims ableiten, ohne einen Pflichtclaim zu erfinden."""
+    for key in ("name", "preferred_username", "given_name"):
+        value = claims.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return str(claims["sub"]).strip()
+
+
+def _verified_email(claims: dict[str, Any]) -> str | None:
+    """Nur eine vom Provider ausdruecklich bestaetigte Adresse uebernehmen."""
+    value = claims.get("email")
+    if claims.get("email_verified") is True and isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _onboard_with_invitation(
+    session: Session,
+    *,
+    request: OidcAuthRequest,
+    claims: dict[str, Any],
+    issuer: str,
+    subject: str,
+    connection_id: str,
+) -> Account:
+    """Konto, OIDC-Identitaet und Mitgliedschaft atomar aus einer Einladung erzeugen."""
+    if request.invitation_token_hash is None:
+        raise UnauthenticatedError(
+            "This identity is not linked to an account.", OidcErrorCode.NO_ACCOUNT
+        )
+
+    def create_account() -> Account:
+        account = accounts.create_oidc_account(
+            session,
+            display_name=_display_name(claims),
+            verified_email=_verified_email(claims),
+        )
+        identity = accounts.add_oidc_identity(
+            session,
+            account,
+            issuer=issuer,
+            subject=subject,
+            connection_id=connection_id,
+        )
+        identity.last_used_at = now()
+        return account
+
+    try:
+        account, _ = invitations.accept_with_new_account(
+            session, request.invitation_token_hash, create_account
+        )
+    except ValidationError as error:
+        if error.code == InvitationErrorCode.INVALID:
+            raise UnauthenticatedError(
+                "This identity is not linked to an account.", OidcErrorCode.NO_ACCOUNT
+            ) from error
+        raise
+    return account
 
 
 def complete(
@@ -396,10 +445,16 @@ def complete(
                 subject=subject,
                 connection_id=verbindung.id,
             )
+    elif anfrage.invitation_token_hash is not None:
+        konto = _onboard_with_invitation(
+            session,
+            request=anfrage,
+            claims=claims,
+            issuer=dokument.issuer,
+            subject=subject,
+            connection_id=verbindung.id,
+        )
     else:
-        # Kein Konto, keine Verknuepfung: hier entsteht keines. Die
-        # Registrierung bleibt an Bootstrap und Einladung gebunden, und ein
-        # externer Anbieter darf diese Grenze nicht umgehen.
         konto = None
 
     if konto is None or not konto.is_active:
@@ -419,14 +474,8 @@ def complete(
 
 
 def prune_auth_requests(session: Session) -> int:
-    """Abgelaufene und verbrauchte Anmeldeversuche entfernen.
-
-    Fuer den Wartungsjob. Der Code Verifier ist ein kurzlebiges Geheimnis;
-    er soll nicht laenger stehen, als der Ablauf ihn braucht.
-    """
+    """Abgelaufene und verbrauchte Anmeldeversuche entfernen."""
     grenze = now()
-    # session.execute ist allgemein typisiert; ein DELETE liefert ein
-    # CursorResult mit rowcount.
     ergebnis = cast(
         "CursorResult[Any]",
         session.execute(
