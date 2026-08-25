@@ -1,129 +1,145 @@
 # Umsetzungsstand
 
 Stand: 25. August 2026  
-Aktueller G1-Prüfstand: `main` bei Commit `6bc2cc955da04933e0957be2f19ce14d29e59755`
+Aktueller `main`: `76f5f086e1228662c22147590d5e85eac70e6fb4`  
+Aktueller Gate-Status: **G1 bestanden; M2-S0 freigegeben und aktiv**
 
 ## Dokumentenrollen
 
 - **Verbindliche Quelle:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
-- **Unveränderlicher Ausgangsreview:** [2026-08-24-spec-gap-review.md](reviews/2026-08-24-spec-gap-review.md)
-- **Historischer G1-Snapshot:** [2026-08-24-g1-m1-security-review.md](reviews/2026-08-24-g1-m1-security-review.md)
-- **Aktueller G1-Follow-up-Review:** [2026-08-25-g1-m1-follow-up-review.md](reviews/2026-08-25-g1-m1-follow-up-review.md)
-- **Dieses Dokument:** laufende, kurze Arbeits- und Fortschrittsliste
+- **Aktuelle Gate-Entscheidung:** [2026-08-25-g1-gate-review-after-61.md](reviews/2026-08-25-g1-gate-review-after-61.md)
+- **Historische Reviews:** datierte Dateien unter `docs/reviews/`; sie werden nicht nachträglich geändert.
+- **Dieses Dokument:** laufende Arbeits- und Fortschrittsliste.
 
-Bei Widersprüchen gilt die Master-Spezifikation. Datierte Dateien unter
-`docs/reviews/` werden nicht nachträglich korrigiert; ein neuer Prüfstand
-bekommt eine neue Datei.
+Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung erhält immer einen neuen datierten Review.
 
-## Arbeitsregeln für die Weiterentwicklung
+## Arbeitsregeln
 
-1. Keine Vorgänger-Repositories öffnen, durchsuchen oder als Vorlage verwenden.
-2. Vor jeder Umsetzung die einschlägigen Abschnitte der Master-Spezifikation lesen.
-3. Sicherheits- und Tenant-Invarianten vor neuen Inhaltsdomänen stabilisieren.
-4. Nach jedem Block Tests, Lint, Typprüfung, `git diff --check` und `git status` prüfen.
-5. Nur dieses Statusdokument fortschreiben; historische Reviews unverändert lassen.
+1. Nur dieses Repository bearbeiten.
+2. Vor jeder Umsetzung einschlägige Spezifikation, Decision Log und aktuelle Issues lesen.
+3. Ein Issue = ein klarer Scope = eigener Branch/PR.
+4. Keine direkten Änderungen auf `main`, kein Rebase, kein Force Push.
+5. Vor Merge aktuellen `main`, PR-HEAD, vollständigen Diff, Mergeability und CI frisch prüfen.
+6. Findings außerhalb des Scopes als eigenes Issue erfassen.
+7. Historische Reviews nicht umschreiben.
 
-### Parallele Arbeit mit mehreren Implementierungsagenten
+## M0 — Foundation
 
-- GitHub Issues sind die verbindliche Einheit für Arbeitsumfang und Abnahme.
-- Ein Agent bearbeitet einen klar abgegrenzten Issue-Scope auf einer eigenen Branch/PR.
-- Zwei Agenten sollen nicht gleichzeitig denselben Issue oder dieselben Kern-Dateien verändern.
-- Vor Merge/Übergabe wird gegen den aktuellen `main` abgeglichen; Konflikte werden nicht durch Force Push aufgelöst.
-- Direkte Pushes auf `main` werden organisatorisch vermieden, solange GitHub sie für dieses private Repository tarifbedingt nicht technisch blockieren kann.
-- Neue Findings werden als eigenes Issue erfasst, statt den Scope eines laufenden Issues still zu erweitern.
+**Status: abgeschlossen.**
 
-## G1/M1 – aktueller Stand
-
-Der [G1/M1 Follow-up Security Review vom 25.08.2026](reviews/2026-08-25-g1-m1-follow-up-review.md) prüft `main` bei `6bc2cc955da04933e0957be2f19ce14d29e59755`. Die früheren Blocker #7, #11, #24 und #26 sind geschlossen. Auth-/Recovery-Flows, zentrale Owner-/Privacy-Autorisierung, M1-Profile und die PostgreSQL-/HTTP-Testmatrix sind vorhanden; die OIDC-Härtung aus PR #62 ist enthalten und CI-grün.
-
-**G1 ist noch nicht bestanden.** Der verbleibende Runtime-Gate-Blocker ist #61: Beim Löschen einer geteilten `RelatedPerson` kann der bestehende Datenbank-Cascade heute auch einen `OWNER_ONLY`-Termin des Partners löschen. Die beschlossene Produktregel verlangt stattdessen eine explizite serverseitige Auswahl zwischen `preserve` und `cascade`, keinen destruktiven Default und eine privacy-sichere Warn-/Bestätigungssemantik.
-
-Offene Punkte sind damit verbindlich eingeordnet:
-
-- [ ] **#61 – G1-Blocker:** RelatedPerson-Delete-Policy `preserve`/`cascade` serverseitig und atomar umsetzen; Cross-owner-/Privacy-/PostgreSQL-Tests sind Pflicht.
-- [ ] **#59 – Pre-Exposure:** anonymen Passkey-Authentication-Start gegen Challenge-Flooding absichern; PostgreSQL-Parallel-/Abuse-Test ist Pflicht. Kein Blocker für interne M2-Domainimplementierung, aber vor öffentlicher/Managed-Exposition zu schließen.
-- [ ] **#60 – Pre-Exposure:** Rate-Limit-Schwellen bei parallelen Requests atomar/serialisiert erzwingen. Kein Blocker für interne M2-Domainimplementierung, aber vor öffentlicher/Managed-Exposition zu schließen.
-- [ ] **#25 – Repository-Hardening:** Branch Protection/Ruleset für `main` bleibt tarifbedingt nicht technisch erzwungen; kein Runtime-G1-Blocker.
-
-Bis #61 geschlossen und in einem neuen datierten Gate-Review positiv bewertet ist, bleibt produktiver M2-Runtime-Code gesperrt.
-
-## Bereits geschlossene Foundation-/M1-Sicherheitsarbeit
-
-- [x] Rate-Limit-Ereignisse trotz erwarteter Auth-Fehler dauerhaft speichern.
-- [x] Refresh-Replay-Widerruf trotz 401 dauerhaft und atomar speichern.
-- [x] HTTP-Integrationstests mit dem echten produktiven Session-Lifecycle ergänzen (#7).
-- [x] Membership-Änderungen je Space serialisieren; Race mit zwei Einladungen testen.
-- [x] Refresh-Rotation atomar machen; parallelen Refresh testen.
-- [x] Bootstrap der ersten Self-Hosted-Registrierung absichern und serialisieren.
-- [x] Sicheren HTTPS-/Loopback-Standard für Self-Hosted festlegen.
-- [x] Refresh-Replay über die gesamte Token-Familie erkennen (#24).
-- [x] OIDC-, WebAuthn-/Passkey-, Magic-Link-, E-Mail-Verifikations- und Recovery-Flows implementieren (#26).
-- [x] Owner-/Private-Authorization, Profile und zugehörige Privacy-/Tenant-Matrix vervollständigen (#11/#7).
-- [x] OIDC-Discovery-Endpunkte auf HTTPS begrenzen und zusätzliche nicht vertrauenswürdige Audiences/inkonsistentes `azp` ablehnen (PR #62).
-- [x] Formale Einordnung der dokumentierten Clean-Room-Vorbefassung entschieden: keine Behauptung eines strikten/formalen Clean Rooms; Fortführung als eigenständige Neuimplementierung mit dokumentierter Vorbefassung gemäß [ADR 0001](decisions/0001-clean-room-classification.md).
-
-## M0 – Clean Foundation
-
-- [x] Separates Repository und eigener Quellbaum
-- [x] FastAPI, SQLAlchemy 2, PostgreSQL und Alembic
-- [x] REST API unter `/api/v1`, camelCase und einheitliches Fehlerformat
-- [x] UUIDv7 sowie TIMESTAMPTZ-/DATE-Konventionen
-- [x] Transactional-Outbox-Foundation
-- [x] PostgreSQL-Job-Queue mit Worker
-- [x] LocalMediaStore und MediaStore-Abstraktion
+- [x] FastAPI, SQLAlchemy 2, PostgreSQL, Alembic
+- [x] REST API v1, camelCase, Problem Details
+- [x] UUIDv7 und Zeit-/Datums-Konventionen
+- [x] Transactional Outbox und PostgreSQL-Job-Queue
+- [x] MediaStore-/Provider-Abstraktionen
 - [x] ProtectedPayload-Grundabstraktion
-- [x] Dokumentation, Provenienz und Dependency-Verzeichnis
-- [x] Backend-CI mit echten PostgreSQL-Integrationstests und Secret Scan
-- [x] Initiale Verzeichnisse `web/`, `android/` und `tools/` ergänzen
-- [x] Provider-Interfaces: Map, Places, Recipe, Entertainment
-- [x] Dependency-/Vulnerability-Scan
-- [x] Reproduzierbare Abhängigkeitsauflösung mit Lock/Constraints und Hashes
-- [x] Backend-/Container-Build in CI
-- [x] OpenAPI-Vertrag versioniert und Contract-Tests
-- [x] ProtectedPayload-Persistenztyp und Outbox-Payload-Allowlist technisch erzwungen
+- [x] reproduzierbare Dependencies und Lockfile
+- [x] OpenAPI-Contract + Contract-Check
+- [x] PostgreSQL-Integrationstests
+- [x] Dependency-/Vulnerability-Scan, Container-Build, Secret Scan, Provenance
 
-**M0 ist für den aktuellen Umfang abgeschlossen.** Weitere Security-Härtungen werden in den jeweils betroffenen Milestones und Issues verfolgt.
+## M1 — Identity & Relationship
 
-## M1 – Identity & Relationship
+**Status: Runtimeumfang abgeschlossen; G1 bestanden.**
 
-- [x] Account, AccountEmail und getrennte AuthIdentity
-- [x] Lokaler Passwortlogin mit Argon2
-- [x] Device Sessions und Bearer Tokens
-- [x] Space, Membership und zentraler Tenant Guard
-- [x] Invitations mit Hash, Ablauf, Widerruf, Einmaligkeit und Race-Schutz
-- [x] SpaceProfile-Modell sowie Lese-/Schreib-API mit ETag/If-Match und 409
-- [x] Beziehungsdauer in der Zeitzone des lesenden Accounts
-- [x] OIDC-Modell mit Issuer/Connection-ID und eindeutigem `(issuer, subject)`
-- [x] OIDC Authorization Code + PKCE, Discovery/JWKS, State, Nonce, Issuer, Audience und Signaturprüfung
-- [x] OIDC-Onboarding mit gültiger Einladung; Einladung nur gehasht, Account/Identität/Membership atomar, kein E-Mail-Merge
-- [x] Passkey/WebAuthn Registration und Authentication mit realer Signatur-/Origin-/RP-ID-/Counter-Prüfung
-- [x] Getrennte, gehashte Einmal-Tokenmodelle und API-Flows für E-Mail-Verifikation, Magic Link und Recovery
-- [x] Zentrale Owner-/Private-Authorization mit SQL-seitigem `SPACE_SHARED`-/`OWNER_ONLY`-Filter
-- [x] PartnerProfile und ProfilePreference inklusive `PRIVATE_PARTNER_NOTE`
-- [x] RelatedPerson und ImportantDate inklusive Privacy-/Owner-/Cross-Tenant-Regeln
-- [x] Rollen-/Owner-/Privacy-/Tenant-Matrix für die M1-Endpunkte
-- [ ] RelatedPerson-Delete-Policy aus #61: explizites `preserve`/`cascade` ohne destruktiven Default
+- [x] Account, AccountEmail, AuthIdentity
+- [x] lokaler Passwortlogin mit Argon2
+- [x] Device Sessions und rotierende Tokens
+- [x] Space, Membership, zentraler Tenant Guard
+- [x] race-sichere Invitations
+- [x] SpaceProfile mit ETag/If-Match und 409
+- [x] PartnerProfile und ProfilePreference
+- [x] RelatedPerson und ImportantDate
+- [x] zentrale SQL-seitige `SPACE_SHARED`-/`OWNER_ONLY`-Autorisierung
+- [x] OIDC Authorization Code + PKCE/State/Nonce/Discovery/JWKS
+- [x] OIDC-Invite-Onboarding ohne E-Mail-Merge
+- [x] Passkey/WebAuthn Registration und Authentication
+- [x] Magic Link, E-Mail-Verifikation und Recovery
+- [x] Refresh-Replay-Schutz
+- [x] #61: RelatedPerson-Löschung mit expliziter `preserve`-/`cascade`-Policy ohne destruktiven Default
+- [x] G1 Gate Review nach #61: **BESTANDEN**
 
-### Noch offene Produkt-/Betriebsgrenzen
+### Offene M1-/Betriebshärtungen ohne M2-Blockade
 
-`SBS_DEPLOYMENT` unterscheidet bereits `cloud` und `self_hosted`, wird aber noch nicht als vollständige serverseitige Auth-Routen-/Provider-Policy durchgesetzt. Ziel ist:
+- [ ] **#59 — Pre-Exposure:** Passkey-Authentication-Start gegen Challenge-Flooding absichern.
+- [ ] **#60 — Pre-Exposure:** Rate-Limit-Schwellen unter Parallelität atomar erzwingen.
+- [ ] **#25 — Repository-Hardening:** Branch Protection/Ruleset technisch erzwingen, sobald GitHub-Plan/Targeting dies ermöglicht.
 
-- **Managed/Cloud:** Passkey, Magic Link und später verwaltete Provider wie Google/Apple.
-- **Self-Hosted:** lokales Passwort, Passkey und frei konfigurierbares OIDC; Mail-basierte Wege nur bei bewusster Mailkonfiguration.
+#59 und #60 müssen vor öffentlicher/Managed-Exposition geschlossen sein. Sie blockieren interne M2-Domainarbeit nicht.
 
-Bis die Productization-Policy implementiert ist, darf das Verstecken eines Login-Buttons im Client nicht als Sicherheitsgrenze gelten. Die verbindliche Zielregel steht in [SECURITY.md](SECURITY.md). Die Roadmap ordnet diese Durchsetzung G5/Productization zu; öffentliche Managed-Exposition setzt zusätzlich die Schließung von #59 und #60 voraus.
+## M2-S0 — Readiness & Vertragsentscheidungen
 
-## Spätere Meilensteine
+**Status: aktiv. Runtime-Code noch gesperrt, bis die BLOCKING-Decisions geschlossen sind.**
 
-- [ ] M2 – Attachments, Memories, HeartMoments, Milestones, Comments, Story
-- [ ] M3 – Wishes, Plans, Places, Relations, Chapters, Collections, Private Area
-- [ ] M4 – Reminders, Activity, Notifications, Dashboard, Search, Rules
-- [ ] M5 – Export/Import, Web, Android, Read Cache und Client-Parität
-- [ ] M6–M8 – Rich Features, Integrationen und Context
-- [ ] M9 – Productization, Managed-/Self-Hosted-Policy und Security Hardening
-- [ ] MX – echte E2EE erst als eigener späterer Security-Milestone
+### Aktuelle Issue-Kette
+
+- [ ] **#67 — Planning:** G1-Status, Roadmap und Milestone-Grenzen synchronisieren.
+- [ ] **#68 — Domain/Privacy:** Memory-, Comment- und Privacy-Entscheidungen schließen.
+- [ ] **#69 — Media:** Attachment-Lifecycle, Limits, Validation und Retention entscheiden.
+- [ ] **#70 — API:** Routen, DTOs, Concurrency, Pagination und Story-Sortierung festlegen.
+- [ ] **#71 — erster Runtime-Slice:** Memory CRUD ohne Medien; blockiert durch #67/#68/#70.
+
+### Verbindliche M2/M5-Grenze
+
+M2 ist **Domain + API + minimale vertikale Web-/Android-Referenzflows**. Diese Referenzflows dienen dem technischen E2E-Nachweis des kritischen Memory/Media/Story-Kerns und bedeuten keine vollständige Client-Parität.
+
+M5 ist **Client Completion & Parity**: vollständige Clientintegration, Deep Links, Read Cache, Export/Import, systematische Web-/Android-Parität, Accessibility und Performance.
+
+### Privacy-Begriffe
+
+- `SHARED` / `PRIVATE`: öffentliche fachliche Domainwerte.
+- `SPACE_SHARED` / `OWNER_ONLY`: interne Authorization-/Privacy-Klassen.
+- Clients schreiben `privacyClass` nicht redundant.
+
+### M4-Abgrenzung
+
+M4 wird intern in drei Delivery-Slices geteilt:
+
+- M4-A Search + Dashboard Read Models
+- M4-B Activity + Notifications
+- M4-C Reminders + Rules
+
+Globale Volltextsuche ist nicht automatisch Teil von G2. Der Story-Mindestvertrag beginnt mit `type`, `year`, `order`, `cursor` und `limit`; `q` wird nur nach explizitem Privacy-/Index-Review in #70 in M2 aufgenommen, sonst M4-A.
+
+## Geplante M2-Runtime-Reihenfolge nach S0
+
+1. Memory CRUD ohne Medien (#71)
+2. Attachment Foundation / MediaStore Contract
+3. HeartMoment Privacy
+4. Memory + mehrere Medien
+5. Milestone
+6. Comments + Outbox/Notification Hook
+7. Story Read Model
+8. dünne Web-/Android-Referenzflows
+9. G2 Review
+
+Der Memory-Slice kommt bewusst vor Media, um zuerst M2-Migrationstil, ProtectedPayload, Tenant Guard, Autorregel und Concurrency auf einer kleineren Sicherheitsfläche zu validieren.
+
+## G2 — Story Alpha, Exit Criteria
+
+G2 kann erst bestanden werden, wenn:
+
+- Memory, Attachment/Media, HeartMoment, Milestone und Comment für M2 vollständig sind,
+- Story niemals `OWNER_ONLY` vor Suche/Gruppierung/Pagination passieren lässt,
+- Media-/Upload-Abuse, Parent-Autorisierung und relevante Races geprüft sind,
+- OpenAPI, Migrationen und PostgreSQL-Integrationstests grün sind,
+- mindestens ein kritischer Memory/Media/Story-Flow in Web und Android Ende-zu-Ende validiert ist,
+- diese Referenzflows Privacy-/Accessibility-Abnahme ohne hohe Befunde bestehen.
+
+Vollständige Client-Parität ist **kein** G2-Kriterium; sie gehört zu M5/G4.
+
+## Spätere Milestones
+
+- [ ] M3 — Wishes, Plans, Places, Chapters, Collections, Private Area
+- [ ] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules
+- [ ] M5 — Client Completion & Parity, Export/Import, Read Cache
+- [ ] M6 — Questions, Check-in, Monats-/Jahresrückblicke
+- [ ] M7 — Integrationen/Provider
+- [ ] M8 — Location/Context mit explizitem Opt-in
+- [ ] M9 — Productization, Managed-/Self-Hosted-Policy, Backup, Entitlements, Launch-Hardening
+- [ ] MX — echte E2EE als eigener späterer Security-Milestone
 
 ## Nächster Prüfpunkt
 
-#61 implementieren und über einen eigenen Branch/PR mit PostgreSQL-/HTTP-/Privacy-Tests verifizieren. Nach dessen Merge einen kurzen neuen datierten G1-Gate-Review gegen den dann aktuellen `main` und dessen erfolgreiche CI erstellen. Erst eine positive Entscheidung dieses Reviews setzt G1 auf „bestanden“ und gibt M2-S0 bzw. produktiven M2-Runtime-Code frei.
+#67 vollständig abschließen und mergen. Danach #68 und #69 als getrennte S0-Decision-Slices bearbeiten. #70 übernimmt anschließend die freigegebenen Entscheidungen in den API-Vertrag. Erst danach darf #71 als erster produktiver M2-Runtime-Slice starten.
