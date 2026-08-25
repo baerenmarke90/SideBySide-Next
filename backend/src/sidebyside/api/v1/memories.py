@@ -7,7 +7,7 @@ from typing import Annotated, Self
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response, status
-from pydantic import field_validator, model_validator
+from pydantic import ConfigDict, field_validator, model_validator
 
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
@@ -28,6 +28,8 @@ ETAG_HEADERS = {
 
 
 class MemoryCreate(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
     title: str
     body: str
     happened_on: date | None = None
@@ -42,6 +44,8 @@ class MemoryCreate(ApiModel):
 
 
 class MemoryUpdate(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
     title: str | None = None
     body: str | None = None
     happened_on: date | None = None
