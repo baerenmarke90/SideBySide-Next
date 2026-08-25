@@ -192,7 +192,8 @@ bleibt Repository-Hardening.
 Domain-, Privacy-, Media- und API-Entscheidungen geschlossen. Die aktuelle
 Reihenfolge ist #67 → #68/#69 → #70 → #71. Der erste Runtime-Slice ist
 Memory CRUD ohne Medien; Media wird anschließend über einen eigenen sicheren
-Attachment-Slice integriert.
+Attachment-Slice integriert. Die präzisierten Milestone-Grenzen stehen in
+[docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
 [docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten,
