@@ -45,12 +45,25 @@ class _ResponseReader(io.RawIOBase):
     The old adapter returned ``BytesIO(response.content)`` which necessarily
     buffered an entire untrusted object before the attachment limit could run.
     This reader keeps at most the requested bytes plus one provider chunk.
+
+    Test/custom transports may hand httpx an already-buffered response even
+    when the client requested ``stream=True``. In that case the bytes are
+    already resident before this adapter sees them, so reusing that existing
+    buffer does not weaken the real network path, which remains incremental.
     """
 
     def __init__(self, response: httpx.Response) -> None:
         super().__init__()
         self._response = response
-        self._chunks = response.iter_raw(_READ_CHUNK)
+        if response.is_stream_consumed:
+            try:
+                buffered = response.content
+            except httpx.ResponseNotRead as error:
+                response.close()
+                raise OSError("S3 response body is unavailable.") from error
+            self._chunks = iter((buffered,))
+        else:
+            self._chunks = response.iter_raw(_READ_CHUNK)
         self._buffer = bytearray()
 
     def readable(self) -> bool:
