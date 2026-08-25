@@ -170,6 +170,31 @@ def ensure_within_limits(attachments: list[Attachment]) -> None:
         )
 
 
+def attachments_of_memories(
+    session: Session, memory_ids: list[UUID]
+) -> dict[UUID, list[BoundAttachment]]:
+    """Dieselbe Galerie fuer mehrere Memories in einer Abfrage.
+
+    Die Story laedt bis zu hundert Items pro Seite. Einzeln geladen waeren
+    das hundert Abfragen fuer eine Liste - deshalb dieselbe Sortierregel
+    einmal batchweise, statt sie in der Story noch einmal zu formulieren.
+    """
+    if not memory_ids:
+        return {}
+    zeilen = session.execute(
+        select(MemoryAttachment, Attachment)
+        .join(Attachment, Attachment.id == MemoryAttachment.attachment_id)
+        .where(MemoryAttachment.memory_id.in_(memory_ids))
+        .order_by(MemoryAttachment.position, MemoryAttachment.attachment_id)
+    ).all()
+    galerien: dict[UUID, list[BoundAttachment]] = {memory_id: [] for memory_id in memory_ids}
+    for bindung, attachment in zeilen:
+        galerien[bindung.memory_id].append(
+            BoundAttachment(attachment=attachment, position=bindung.position)
+        )
+    return galerien
+
+
 def attachments_of_memory(session: Session, memory_id: UUID) -> list[BoundAttachment]:
     """Die Galerie einer Memory in stabiler Reihenfolge.
 
