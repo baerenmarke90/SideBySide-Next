@@ -2,7 +2,7 @@
 
 **Stand:** 25.08.2026  
 **Status:** M2-S0 abgeschlossen; M2-Runtime läuft  
-**Aktueller `main`:** `f6900ca` (Merge von #103)
+**Aktueller `main`:** `39cd132` (Merge von #114)
 
 ## Verbindlicher Gate-Stand
 
@@ -88,9 +88,11 @@ Diese Regel bleibt auch nach Abschluss von S0 in Kraft — sie gilt für jede ne
 - #88 — `[M2][Media] Video und Posterframes im Attachment-Lifecycle ergänzen` (S1-c)
 - #102 — `[P1][Tooling] OpenAPI Generator für Web- und Android-Clients einführen`
 
+Der Story-Vertrag ist mit seiner über `kind` diskriminierten Union der erste, bei dem handgepflegte Client-DTOs auf beiden Plattformen teuer würden. #102 wirkt deshalb am stärksten, solange die Clientflächen aus S8 noch nicht existieren.
+
 #88 muss vor seiner Umsetzung die ffmpeg-Frage klären, weil ein Systembinary Container-Image und Installationsanleitung betrifft und sich dem `uv audit`-Gate entzieht. Ein Branch mit Vorarbeit besteht, ein Pull Request steht noch aus.
 
-Noch nicht angelegt sind die Arbeitspakete für das Story Read Model (S7) und die dünnen Client-Referenzflows (S8). Mit S1 bis S6 stehen alle vier Story-Quelltypen und ihre Sichtbarkeitsregeln; S7 ist damit der verbleibende kritische Pfad zu G2 und nach der Entscheidung von M2-D22 (#104) startfähig.
+Noch nicht angelegt ist allein das Arbeitspaket für die dünnen Client-Referenzflows (S8). Mit S7 ist die M2-Domain vollständig; für G2 fehlt nur noch der End-to-End-Nachweis auf Web und Android.
 
 #102 ist kein M2-Slice, sondern eine Tooling-Vorarbeit. Sie wirkt am stärksten, solange die Clientflächen aus S8 noch nicht existieren.
 
@@ -107,6 +109,7 @@ Der in M2-D07 verlangte atomare Comment-Delete beim Wechsel `SHARED -> PRIVATE` 
 - #94 — Milestone-Domain und API (PR #95). Eigenes Modell statt Typflag auf Memory; M2-D25 hält die Autorregel aus M2-D01 auch hier.
 - #97 — Comments, Outbox und Notification Hook (PR #98). Create/List am Parent verschachtelt, Update/Delete space-scoped, enumerierte Targets, atomarer Outbox-Eintrag und idempotenter Retry. Schließt die Zusage aus #80.
 - #87 — S3-kompatibler MediaStore-Adapter (PR #100). Presigned Upload und Read-URL mit den TTLs aus M2-D13, gegen denselben Contract-Test wie der lokale Adapter.
+- #113 — Story Read Model und `/timeline` (PR #114). Abgeleitete Zeitleiste über Memory, Milestone und ausschließlich gemeinsame HeartMoments; Sortierschlüssel `(effectiveDate, createdAt, kindRank, id)` und Keyset-Cursor nach M2-D08. Private HeartMoments sind nie Story-Items, auch nicht für ihren Owner (M2-D22). Kein persistiertes Read Model.
 
 ## Aktive Statusquellen
 

@@ -1,7 +1,7 @@
 # Umsetzungsstand
 
 Stand: 25. August 2026  
-Aktueller `main`: `f6900ca` (Merge von #103)  
+Aktueller `main`: `39cd132` (Merge von #114)  
 Aktueller Gate-Status: **G1 bestanden; M2-S0 abgeschlossen; M2-Runtime läuft**
 
 ## Dokumentenrollen
@@ -9,6 +9,8 @@ Aktueller Gate-Status: **G1 bestanden; M2-S0 abgeschlossen; M2-Runtime läuft**
 - **Verbindliche Quelle:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
 - **Aktuelle Gate-Entscheidung:** [2026-08-25-g1-gate-review-after-61.md](reviews/2026-08-25-g1-gate-review-after-61.md)
+- **Verbindliche Entwicklungsregel:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) und [AGENTS.md](../AGENTS.md)
+- **Architektur-/Betriebsentscheidungen:** datierte ADRs unter [docs/decisions](decisions)
 - **M2-Steuerung:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
 - **Historische Reviews:** datierte Dateien unter `docs/reviews/`; sie werden nicht nachträglich geändert.
 - **Dieses Dokument:** laufende Arbeits- und Fortschrittsliste.
@@ -24,6 +26,7 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 5. Vor Merge aktuellen `main`, PR-HEAD, vollständigen Diff, Mergeability und CI frisch prüfen.
 6. Findings außerhalb des Scopes als eigenes Issue erfassen.
 7. Historische Reviews nicht umschreiben.
+8. Vor Eigenbau technischer Commodity-Funktionalität die Reuse-Prüfung nach [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) durchführen und im Issue oder PR dokumentieren. Ein relevanter PR ohne nachvollziehbare Prüfung ist nicht merge-ready; CI erzwingt die Entscheidung.
 
 ## M0 — Foundation
 
@@ -69,6 +72,15 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 
 #59 und #60 müssen vor öffentlicher/Managed-Exposition geschlossen sein. Sie blockieren interne M2-Domainarbeit nicht.
 
+### Betrieb: Self-Hosted-Startpfad
+
+- [x] **#110 — Startpfad und Migration entkoppelt** (PR #111): `alembic upgrade head` hängt nicht mehr an Cursor-Signing-Key, SMTP und öffentlicher Adresse; Compose trennt Migrations- von Runtime-Konfiguration; CI fährt den realen Startpfad statt ihn nur zu parsen.
+
+Zwei Betriebszusagen daraus sind verbindlich und stehen in [ADR 0002](decisions/0002-self-hosted-first-start-mode.md):
+
+- Der mitgelieferte Compose-Stack startet als **klar markierter lokaler Testbetrieb**. Echter Betrieb verlangt `SBS_ENVIRONMENT=production` in `.env`; die Anwendung meldet ihren Betriebsmodus bei jedem Start.
+- Ein SMTP-Zugang ist **keine Startvoraussetzung**. `SBS_MAIL_TRANSPORT=none` ist in Produktion zulässig; die mailabhängigen Anmeldewege antworten dann `503 MAIL_TRANSPORT_UNAVAILABLE`, Anmeldung läuft über Passwort, Passkey und OIDC. `log` bleibt in Produktion verboten.
+
 ## M2-S0 — Readiness & Vertragsentscheidungen
 
 **Status: abgeschlossen.** Alle `BLOCKING`-Entscheidungen im [Decision Log](m2/DECISION-LOG.md) sind `DECIDED`.
@@ -95,8 +107,10 @@ M2-D22 (Owner-Ansicht) gehört nicht mehr dazu: die Frage formt die Story-Route 
 - [x] **#97 — Comments, Outbox und Notification Hook** (PR #98): Create/List am Parent verschachtelt, Update/Delete space-scoped, enumerierte Targets `MEMORY`/`MILESTONE`/`HEART_MOMENT`, atomarer Outbox-Eintrag und idempotenter Retry.
 - [x] **#87 — S3-kompatibler MediaStore-Adapter** (PR #100): presigned Upload und Read-URL mit den TTLs aus M2-D13, geprüft gegen denselben Contract-Test wie der lokale Adapter.
 - [ ] **#88 — Video und Posterframes:** klärt vorher die ffmpeg-Frage. Ein Branch mit Vorarbeit existiert; ein Pull Request steht noch aus.
-- [ ] **S7 — Story Read Model:** verbleibender kritischer Pfad zu G2. Alle vier Quelltypen und ihre Sichtbarkeitsregeln stehen; M2-D22 ist mit #104 geschlossen. Arbeitspaket noch anzulegen.
+- [x] **#113 — Story Read Model und `/timeline`** (PR #114): abgeleitete Zeitleiste über Memory, Milestone und ausschließlich gemeinsame HeartMoments; Sortierschlüssel und Keyset-Cursor nach M2-D08, private HeartMoments nie im Ergebnis — auch nicht für ihren Owner (M2-D22). Keine Story-Tabelle.
 - [ ] **S8 — dünne Web-/Android-Referenzflows:** letzter M2-Baustein vor dem G2-Nachweis. Arbeitspaket noch anzulegen.
+
+Damit ist die M2-Domain vollständig. Für G2 fehlt allein der End-to-End-Nachweis auf Web und Android.
 
 Video bleibt bis #88 nach M2-D23 fail-closed: M2-D04 erlaubt MP4 und QuickTime, der Server weist sie mit `ATTACHMENT_TYPE_NOT_ALLOWED` ab. Clients dürfen Video in M2 solange nicht als verfügbar anbieten.
 
@@ -132,7 +146,7 @@ Globale Volltextsuche ist nicht Teil von G2. Der Story-Mindestvertrag umfasst `t
 4. ~~Memory + mehrere Medien (#90)~~ — geliefert
 5. ~~Milestone (#94)~~ — geliefert
 6. ~~Comments + Outbox/Notification Hook (#97)~~ — geliefert
-7. Story Read Model
+7. ~~Story Read Model (#113)~~ — geliefert
 8. dünne Web-/Android-Referenzflows
 9. G2 Review
 
