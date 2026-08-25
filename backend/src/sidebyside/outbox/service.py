@@ -24,6 +24,7 @@ def record(session: Session, event: DomainEvent) -> OutboxEvent:
         actor_id=event.actor_id,
         subject_type=event.subject_type,
         subject_id=event.subject_id,
+        resource_version=event.resource_version,
         payload=event.payload,
     )
     session.add(row)
