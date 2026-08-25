@@ -4,7 +4,7 @@ Jede Abhängigkeit wird mit Name, Version, Quelle und Lizenz geführt. Jedes
 Asset mit Ursprung, Lizenz und Ersteller. Was hier nicht steht, gehört
 nicht ins Projekt.
 
-Stand: 2026-08-24
+Stand: 2026-08-25
 
 ## Reproduzierbarkeit und Prüfung
 
@@ -19,6 +19,10 @@ Die CI führt `uv audit --preview --frozen` gegen OSV aus. Die Policy erlaubt
 keinen bekannten Sicherheitsfund und keinen nachteiligen Paketstatus. Eine
 Ausnahme dürfte nur mit Advisory-ID, Begründung, Ablaufdatum und verlinktem
 Issue unter `[tool.uv.audit]` eingetragen werden; derzeit gibt es keine.
+
+Systempakete liegen außerhalb dieses Python-Gates. Das mit #88 eingeführte
+Debian-Paket `ffmpeg` wird deshalb separat gepinnt und gegen den offiziellen
+Debian Security Tracker geprüft; Details stehen im eigenen Abschnitt unten.
 
 Der dokumentierte Stand wird nach der gesperrten Installation automatisch
 mit den tatsächlich installierten Versionen und den `License-Expression`-
@@ -72,16 +76,17 @@ groessten Angriffsflaeche des Produkts. `pillow-heif` bringt libheif und
 damit HEIC/HEIF, die in der M2-D04-Allowlist stehen; es registriert sich als
 Plugin in Pillow und wird nicht getrennt aufgerufen.
 
-Beide sind bewusst der einzige Zuwachs dieses Slices. Video und der dafuer
-noetige ffmpeg-Aufruf sind nach M2-D23 ein eigener spaeterer Schritt, weil
-ein Systembinary Container-Image und Installationsanleitung betrifft und
-sich dem `uv audit`-Gate entzieht.
+Mit #88 kommt fuer MP4/QuickTime bewusst das bestehende Debian-Systempaket
+`ffmpeg` hinzu, statt einen eigenen ISO-BMFF-/Codec-Parser zu bauen. `ffprobe`
+ermittelt Container, Streams, Dauer und Aufloesung; `ffmpeg` remuxt per
+Stream-Copy ohne Video-/Audio-Transcoding und erzeugt den Posterframe. Ein
+zusaetzlicher Python-Wrapper ist dafuer nicht erforderlich.
 
 Medienparser sind erklaerte Angriffsflaeche. Deshalb gilt fuer sie
-besonders, was ohnehin Policy ist: kein bekannter Sicherheitsfund im Lock,
-Dependabot-Updates werden nicht liegengelassen, und die Verarbeitung laeuft
-ausschliesslich im Hintergrundjob unter Ressourcengrenzen - nie im
-Requestpfad.
+besonders, was ohnehin Policy ist: bekannte Sicherheitsfunde werden nicht
+stillschweigend akzeptiert, Updates werden nicht liegengelassen, und die
+Verarbeitung laeuft ausschliesslich im Hintergrundjob unter Prozess- und
+Container-Ressourcengrenzen - nie im Requestpfad.
 
 ## Backend — Laufzeit
 
@@ -112,6 +117,33 @@ Requestpfad.
 | cbor2 | 6.1.4 | PyPI | MIT |
 | ruff | 0.16.4 | PyPI | MIT |
 | mypy | 2.3.1 | PyPI | MIT |
+
+## Systemabhängigkeit — ffmpeg
+
+| Paket | Version | Quelle | Lizenz |
+|---|---|---|---|
+| ffmpeg / ffprobe | `7:7.1.5-0+deb13u1` | Debian 13 (trixie) Paket `ffmpeg` | Debian-Paketmetadaten / FFmpeg-Komponenten je Upstream-Lizenz |
+
+Der Pin steht im `backend/Dockerfile` und wird beim Build mit `dpkg-query`
+verifiziert. Die Supply-Chain-CI liest die installierte Version zusätzlich aus
+dem frisch gebauten Produktionscontainer und vergleicht sie erneut mit dem
+Repository-Pin.
+
+`uv audit` kann dieses Systempaket nicht sehen. Deshalb wertet
+`backend/scripts/check_ffmpeg_security.py` den offiziellen Debian Security
+Tracker fuer Source-Package `ffmpeg` und Release `trixie` fail-closed aus:
+
+- eine neuere trixie-/Security-Version als der Pin blockiert,
+- `undetermined` blockiert,
+- ein offener Fund ohne Debian-Klassifikation `postponed` oder `unimportant`
+  blockiert,
+- `postponed` und `unimportant` bleiben sichtbar im CI-Log und werden als
+  explizite Debian-Risikoklassifikation akzeptiert,
+- Netzwerk-, JSON- oder unerwartete Schemafehler blockieren.
+
+Die Runtime-Binaries bleiben auch bei `SBS_FFMPEG_ENABLED=false` im Image.
+Der Schalter deaktiviert nur die Videoverarbeitung zur Laufzeit und erzeugt
+keinen zweiten, anders zusammengesetzten Build.
 
 ## Container-Basisimages
 
@@ -184,6 +216,10 @@ Eine neue direkte Abhängigkeit wird zusammen mit ihrem Eintrag hier
 hinzugefügt. Die CI prüft Vollständigkeit, genaue Version und Lizenz gegen
 die gesperrte, installierte Umgebung. Transitive Versionen stehen vollständig
 in `backend/uv.lock`.
+
+Neue Systempakete benötigen zusätzlich einen reproduzierbaren Container-Pin
+und einen expliziten Security-Update-/Advisory-Pfad, sofern sie außerhalb der
+Python-Auditkette liegen.
 
 Neue Assets werden in derselben Änderung hier dokumentiert. Bei unklarer
 Herkunft, Lizenz oder Erstellerschaft wird das Asset nicht aufgenommen, bis
