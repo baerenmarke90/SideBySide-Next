@@ -19,6 +19,7 @@ from sidebyside.attachments import binding as _binding  # noqa: F401
 
 # Modelle registrieren. Die Importe sehen ungenutzt aus, sind es aber nicht.
 from sidebyside.attachments import models as _attachments  # noqa: F401
+from sidebyside.comments import models as _comments  # noqa: F401
 from sidebyside.config import get_settings
 from sidebyside.db.base import Base
 from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
