@@ -52,7 +52,12 @@ Alle IDs werden zusätzlich mit zufälligen, existierenden fremden und formal un
 | MED-17 | Parent-Delete vs. Finalize/Bind parallel | keine Relation zu gelöschtem Parent; kein sichtbarer Orphan |
 | MED-18 | Providerdelete Timeout | Domaininhalt bleibt unsichtbar; `DELETE_FAILED`, Retry/Metrik |
 | MED-19 | Local-/S3-Adapter | identischer Lifecycle-/Autorisierungscontract |
-| MED-20 | EXIF/GPS vorhanden | bis D14 keine Projektion in API/Logs/Events/Index; Original privat |
+| MED-20 | EXIF/GPS vorhanden | nach `READY` standortfrei gespeichert; kein ungestripptes Original abrufbar |
+| MED-20a | herstellereigenes/unbekanntes Metadatensegment | überlebt den Ingest nicht; Allowlist ist fail-closed |
+| MED-20b | Medium nicht sicher bereinigbar | `FAILED`; niemals ungestrippt gespeichert |
+| MED-20c | extrahierter Aufnahmezeitpunkt | ProtectedPayload; in keiner Outbox-Zeile, keinem Log, keiner Metrik |
+| MED-20d | Variante ohne Leseberechtigung am Parent | nicht abrufbar; Privacy-Wechsel sperrt auch die Variante |
+| MED-20e | Variantenerzeugung schlägt fehl | Attachment bleibt nutzbar; kein `FAILED`, kein verwaistes Variantenobjekt |
 | MED-21 | unbekannter Typ/GIF/RAW/WebM/MKV/Dokument | fail-closed `FAILED` |
 | MED-22 | HEIC/HEIF/JPEG/PNG/WebP innerhalb Limits | Validierung kann READY erreichen |
 | MED-23 | MP4/QuickTime innerhalb Limits | Validierung kann READY erreichen |
