@@ -90,6 +90,10 @@ class PasskeyView(ApiModel):
     created_at: datetime
 
 
+class OidcStartRequest(ApiModel):
+    invitation_token: str | None = None
+
+
 class OidcCallbackRequest(ApiModel):
     code: str
     state: str
@@ -337,13 +341,19 @@ def consume_recovery(body: RecoveryConsumeRequest, session: DbSession) -> Sessio
 def start_oidc(
     session: DbSession,
     connection_id: Annotated[str, Path(alias="connectionId")],
+    body: OidcStartRequest | None = None,
 ) -> OidcStartView:
     """Eine Anmeldung ueber einen externen Anbieter beginnen.
 
     State, Nonce und PKCE-Verifier entstehen serverseitig. Der Client
-    bekommt nur die Adresse und den State.
+    bekommt nur die Adresse und den State. Eine Einladung bleibt dabei
+    serverseitig gebunden und wird nie an den Anbieter weitergegeben.
     """
-    begonnen = oidc.start(session, connection_id)
+    begonnen = oidc.start(
+        session,
+        connection_id,
+        invitation_token=body.invitation_token if body is not None else None,
+    )
     return OidcStartView(authorization_url=begonnen.authorization_url, state=begonnen.state)
 
 
@@ -358,12 +368,7 @@ def link_oidc(
     session: DbSession,
     connection_id: Annotated[str, Path(alias="connectionId")],
 ) -> OidcStartView:
-    """Eine externe Identitaet mit dem angemeldeten Konto verknuepfen.
-
-    Der einzige Weg, wie eine neue Identitaet zu einem Konto kommt: eine
-    Anmeldung allein legt kein Konto an, sonst umginge ein externer
-    Anbieter die Einladungsgrenze.
-    """
+    """Eine externe Identitaet mit dem angemeldeten Konto verknuepfen."""
     begonnen = oidc.start(session, connection_id, account_id=account.id)
     return OidcStartView(authorization_url=begonnen.authorization_url, state=begonnen.state)
 
@@ -372,7 +377,7 @@ def link_oidc(
     "/auth/oidc/{connectionId}/callback",
     response_model=SessionView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 422),
+    responses=problem_responses(401, 409, 422),
 )
 def complete_oidc(
     body: OidcCallbackRequest,
