@@ -2,7 +2,7 @@
 
 **Stand:** 25.08.2026  
 **Status:** M2-S0 abgeschlossen; M2-Runtime läuft  
-**Aktueller `main`:** `b0873ea` (Merge von #89)
+**Aktueller `main`:** `f6900ca` (Merge von #103)
 
 ## Verbindlicher Gate-Stand
 
@@ -68,12 +68,14 @@ M6 Rich Features, M7 Integrationen, M8 freiwilliger Context und M9 Productizatio
 5. **#78 Media-Metadaten** — M2-D14 (Strippen beim Ingest) und M2-D15 (eine abgeleitete Variante, kein Transcoding) entschieden. Beide waren als `BEFORE_CLIENTS` eingestuft, greifen aber in den Ingest-Pfad und wurden deshalb auf `BLOCKING` gehoben.
 6. **#85 Media-Reihenfolge** — M2-D23: Bilder zuerst mit Pillow und pillow-heif, Video mitsamt ffmpeg als eigener Slice.
 
-Offen bleiben nur `BEFORE_CLIENTS`-Punkte — M2-D10, D17, D18, D21 und D22 —, die erst vor stabiler Web-/Android-Integration fällig sind und keinen Backend-Slice blockieren.
+Offen bleiben nur `BEFORE_CLIENTS`-Punkte — M2-D10, D17, D18 und D21 —, die erst vor stabiler Web-/Android-Integration fällig sind und keinen Backend-Slice blockieren.
 
-Während der Umsetzung kamen zwei weitere `BLOCKING`-Entscheidungen dazu, die erst am Code sichtbar wurden. Beide wurden vor dem sie tragenden Code geschlossen, wie es die Runtime-Startregel verlangt:
+Während der Umsetzung kamen vier weitere `BLOCKING`-Entscheidungen dazu, die erst am Code oder am nächsten Slice sichtbar wurden. Alle wurden vor dem sie tragenden Code geschlossen, wie es die Runtime-Startregel verlangt:
 
 - **M2-D23** (#85) — Reihenfolge und Parser der Medienverarbeitung.
 - **M2-D24** (#79) — Lesezugriff auf noch ungebundene Attachments.
+- **M2-D25** (#94) — Schreibrechte für Milestone.
+- **M2-D22** (#104) — Owner-Ansicht für private HeartMoments. War als `BEFORE_CLIENTS` eingestuft, formt aber die Story-Route und wurde deshalb vor S7 auf `BLOCKING` gehoben — dieselbe Anhebung wie bei M2-D14 und M2-D15 in #78.
 
 ## Runtime-Startregel
 
@@ -83,23 +85,28 @@ Diese Regel bleibt auch nach Abschluss von S0 in Kraft — sie gilt für jede ne
 
 ## Aktuelle GitHub-Arbeitspakete
 
-- #90 — `[M2][Media] Attachments an Memory und HeartMoment binden` (S3, kritischer Pfad zu S7)
-- #87 — `[M2][Media] S3-kompatiblen MediaStore-Adapter implementieren` (S1-b)
 - #88 — `[M2][Media] Video und Posterframes im Attachment-Lifecycle ergänzen` (S1-c)
+- #102 — `[P1][Tooling] OpenAPI Generator für Web- und Android-Clients einführen`
 
-#90 ist der nächste kritische Pfad: Story (S7) setzt die Bindung voraus. #87 und #88 sind davon unabhängig; #88 muss vor seiner Umsetzung die ffmpeg-Frage klären, weil ein Systembinary Container-Image und Installationsanleitung betrifft und sich dem `uv audit`-Gate entzieht.
+#88 muss vor seiner Umsetzung die ffmpeg-Frage klären, weil ein Systembinary Container-Image und Installationsanleitung betrifft und sich dem `uv audit`-Gate entzieht. Ein Branch mit Vorarbeit besteht, ein Pull Request steht noch aus.
 
-Noch nicht angelegt sind die Arbeitspakete für Milestone (S5), Comments (S6), Story Read Model (S7) und die dünnen Client-Referenzflows (S8). Ihr Zuschnitt hängt an dem, was #90 tatsächlich ergibt.
+Noch nicht angelegt sind die Arbeitspakete für das Story Read Model (S7) und die dünnen Client-Referenzflows (S8). Mit S1 bis S6 stehen alle vier Story-Quelltypen und ihre Sichtbarkeitsregeln; S7 ist damit der verbleibende kritische Pfad zu G2 und nach der Entscheidung von M2-D22 (#104) startfähig.
 
-### Offene Zusage aus #80
+#102 ist kein M2-Slice, sondern eine Tooling-Vorarbeit. Sie wirkt am stärksten, solange die Clientflächen aus S8 noch nicht existieren.
 
-Der in M2-D07 verlangte atomare Comment-Delete beim Wechsel `SHARED -> PRIVATE` hängt an `_delete_dependent_comments` und tut heute nichts, weil es noch keine Comments gibt. Die Funktion liegt innerhalb der Transaktion des Wechsels. **Das gehört als Akzeptanzkriterium in das Comments-Arbeitspaket (S6)** — sonst ist die Invariante erfüllt, aber nie bewiesen.
+### Zusage aus #80 — erfüllt
+
+Der in M2-D07 verlangte atomare Comment-Delete beim Wechsel `SHARED -> PRIVATE` hing an `_delete_dependent_comments` und war ohne Comments nicht beweisbar. Mit #97 ist die Cascade verdrahtet — zusätzlich abgesichert durch die Mapper-Listener in `comments/cascades.py` — und in `test_shared_to_private_loescht_comments_und_resurrected_nichts` belegt. Der Merkposten ist damit geschlossen.
 
 ### Geliefert
 
 - #71 — Memory CRUD ohne Medien (PR #77). Validiert M2-Migrationstil, ProtectedPayload-Grenze, Tenant Guard, Autorregel, Optimistic Concurrency und signierten Keyset-Cursor auf einer medienfreien Fläche.
 - #80 — HeartMoment mit Owner-only-Privacy (PR #84). Erster Typ mit echter Nutzerentscheidung zur Sichtbarkeit; `SHARED -> PRIVATE` als eigene atomare Operation, Emotion als ProtectedPayload.
 - #79 — Attachment-Lifecycle für Bilder (PR #89). Statusautomat, LocalMediaStore, asynchrone Validierung mit Strippen nach M2-D14 und Thumbnail nach M2-D15, autorisiertes Lesen, Retention und Cleanup. Video bleibt nach M2-D23 fail-closed.
+- #90 — Attachments an Memory und HeartMoment binden (PR #93). `MemoryAttachment` mit stabiler `position`, HeartMoment mit höchstens einem Attachment, atomares Bind/Unbind im Bindungsfenster aus M2-D20, keine Cross-Space- und keine Mehrfachbindung nach M2-D03.
+- #94 — Milestone-Domain und API (PR #95). Eigenes Modell statt Typflag auf Memory; M2-D25 hält die Autorregel aus M2-D01 auch hier.
+- #97 — Comments, Outbox und Notification Hook (PR #98). Create/List am Parent verschachtelt, Update/Delete space-scoped, enumerierte Targets, atomarer Outbox-Eintrag und idempotenter Retry. Schließt die Zusage aus #80.
+- #87 — S3-kompatibler MediaStore-Adapter (PR #100). Presigned Upload und Read-URL mit den TTLs aus M2-D13, gegen denselben Contract-Test wie der lokale Adapter.
 
 ## Aktive Statusquellen
 
