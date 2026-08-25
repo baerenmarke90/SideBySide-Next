@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -17,8 +18,9 @@ from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from sidebyside.attachments import cleanup, service
+from sidebyside.attachments import cleanup, service, videos
 from sidebyside.attachments.models import Attachment, AttachmentStatus
+from sidebyside.config import Settings
 from sidebyside.core.clock import now
 from sidebyside.media import build_storage_key, get_media_store
 from sidebyside.relationship import service as relationship_service
@@ -47,6 +49,12 @@ def bild_mit_metadaten(*, groesse: tuple[int, int] = (64, 48), format: str = "JP
         img.save(puffer, format, exif=exif.tobytes())
     else:
         img.save(puffer, format)
+    return puffer.getvalue()
+
+
+def poster() -> bytes:
+    puffer = io.BytesIO()
+    Image.new("RGB", (24, 16), (10, 20, 30)).save(puffer, "JPEG")
     return puffer.getvalue()
 
 
@@ -139,6 +147,53 @@ class TestLebenszyklus:
         assert detail.json()["status"] == "READY"
         assert detail.json()["hasThumbnail"] is True
 
+    def test_video_wird_sanitized_ready_mit_poster(self, client, paar, session, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        original = b"untrusted-video-object"
+        sanitized = b"server-sanitized-video"
+        preview = poster()
+
+        def fake_process(source: Path, target: Path, rule) -> videos.ProcessedVideo:  # type: ignore[no-untyped-def]
+            assert source.read_bytes() == original
+            assert rule.mime_type == "video/mp4"
+            target.write_bytes(sanitized)
+            return videos.ProcessedVideo(
+                mime_type="video/mp4",
+                width=1920,
+                height=1080,
+                duration_seconds=12,
+                captured_at=None,
+                orientation=1,
+                size=len(sanitized),
+                poster=preview,
+            )
+
+        monkeypatch.setattr(service, "get_settings", lambda: Settings(ffmpeg_enabled=True))
+        monkeypatch.setattr(service.videos, "process", fake_process)
+
+        antwort, kennung = lade_hoch(
+            client,
+            paar,
+            daten=original,
+            mediaType="VIDEO",
+            originalName="clip.mp4",
+            expectedMimeType="video/mp4",
+        )
+        assert antwort.status_code == 202
+
+        attachment = verarbeite(session, kennung)
+        assert attachment.status == AttachmentStatus.READY.value
+        assert attachment.mime_type == "video/mp4"
+        assert attachment.width == 1920
+        assert attachment.height == 1080
+        assert attachment.duration_seconds == 12
+        assert attachment.has_thumbnail is True
+
+        store = get_media_store()
+        with store.open(build_storage_key(attachment.space_id, attachment.id, "original")) as file:
+            assert file.read() == sanitized
+        with store.open(build_storage_key(attachment.space_id, attachment.id, "thumbnail")) as file:
+            assert file.read() == preview
+
     def test_allowlist_aus_exif_bleibt_protected_payload(self, client, paar, session) -> None:  # type: ignore[no-untyped-def]
         _, kennung = lade_hoch(client, paar)
         attachment = verarbeite(session, kennung)
@@ -181,8 +236,18 @@ class TestLebenszyklus:
 
 
 class TestFailClosed:
-    def test_video_wird_bis_zum_video_slice_abgewiesen(self, client, paar) -> None:  # type: ignore[no-untyped-def]
-        """M2-D23: der Vertrag erlaubt es, dieser Lieferstand nicht."""
+    def test_video_upload_wird_bei_aktivem_ffmpeg_angenommen(self, client, paar, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.setattr(service, "get_settings", lambda: Settings(ffmpeg_enabled=True))
+        antwort = client.post(
+            path(paar["space"].id),
+            json=upload_body(mediaType="VIDEO", expectedMimeType="video/mp4"),
+            headers=auth(paar["token_a"]),
+        )
+        assert antwort.status_code == 201
+        assert antwort.json()["attachment"]["mediaType"] == "VIDEO"
+
+    def test_video_upload_wird_bei_deaktiviertem_ffmpeg_abgewiesen(self, client, paar, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+        monkeypatch.setattr(service, "get_settings", lambda: Settings(ffmpeg_enabled=False))
         antwort = client.post(
             path(paar["space"].id),
             json=upload_body(mediaType="VIDEO", expectedMimeType="video/mp4"),
@@ -190,6 +255,30 @@ class TestFailClosed:
         )
         assert antwort.status_code == 415
         assert antwort.json()["code"] == "ATTACHMENT_TYPE_NOT_ALLOWED"
+
+    def test_worker_startet_ffmpeg_nach_spaeterem_abschalten_nicht(
+        self, client, paar, session, monkeypatch  # type: ignore[no-untyped-def]
+    ) -> None:
+        monkeypatch.setattr(service, "get_settings", lambda: Settings(ffmpeg_enabled=True))
+        antwort, kennung = lade_hoch(
+            client,
+            paar,
+            daten=b"queued-video",
+            mediaType="VIDEO",
+            originalName="clip.mp4",
+            expectedMimeType="video/mp4",
+        )
+        assert antwort.status_code == 202
+
+        monkeypatch.setattr(service, "get_settings", lambda: Settings(ffmpeg_enabled=False))
+
+        def must_not_run(*_: object, **__: object) -> None:
+            raise AssertionError("videos.process must not run when ffmpeg is disabled")
+
+        monkeypatch.setattr(service.videos, "process", must_not_run)
+        attachment = verarbeite(session, kennung)
+        assert attachment.status == AttachmentStatus.FAILED.value
+        assert attachment.failure_code == "ATTACHMENT_TYPE_NOT_ALLOWED"
 
     def test_unbekannter_typ_wird_abgewiesen(self, client, paar) -> None:  # type: ignore[no-untyped-def]
         for mime in ("image/gif", "application/pdf", "image/svg+xml", "video/x-matroska"):
