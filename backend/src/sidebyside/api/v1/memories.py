@@ -95,7 +95,11 @@ class MemoryPage(ApiModel):
     has_more: bool
 
 
-def _memory_detail(session: DbSession, authorization: Authorization, memory: Memory) -> MemoryDetail:
+def _memory_detail(
+    session: DbSession,
+    authorization: Authorization,
+    memory: Memory,
+) -> MemoryDetail:
     author = session.get(Account, memory.owner_id)
     if author is None:
         raise RuntimeError("Memory author disappeared despite foreign key protection.")
