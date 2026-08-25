@@ -120,9 +120,33 @@ Requestpfad.
 | python | 3.13.7-slim@sha256:5f55cdf0c5d9dc1a415637a5ccc4a9e18663ad203673173b8cda8f8dcacef689 | Docker Hub | PSF-2.0 (Python), Debian-Pakete je eigene Lizenz |
 | postgres | 17-alpine | Docker Hub | PostgreSQL License |
 
+## Werkzeuge zur Bauzeit
+
+| Werkzeug | Version | Quelle | Lizenz |
+|---|---|---|---|
+| openapi-generator-cli | v7.16.0@sha256:e56372add5e038753fb91aa1bbb470724ef58382fdfc35082bf1b3e079ce353c | Docker Hub | Apache-2.0 |
+
+Der Generator erzeugt die Client-API-Schichten aus `backend/openapi.json`. Er
+läuft ausschließlich zur Bauzeit und wird nicht ausgeliefert; Apache-2.0
+stellt an den erzeugten Code keine Bedingungen. Version und Digest stehen in
+`tools/openapi/generator.env`, Details in
+[`tools/openapi/README.md`](../tools/openapi/README.md).
+
 ## Web und Android
 
-Noch keine Abhängigkeiten. Die Clients beginnen mit Milestone M5.
+Noch keine eigenen Abhängigkeiten — die Clientprojekte beginnen mit
+Milestone M5.
+
+Der bereits eingecheckte generierte Code bringt mit:
+
+| Ziel | Runtime-Abhängigkeit |
+|---|---|
+| `web/src/api/generated` | keine; `typescript-fetch` erzeugt gegen die Fetch-API des Browsers |
+| `android/api/generated` | `kotlinx.serialization` für `@Serializable`/`@SerialName`; **kein** HTTP-Stack |
+
+`kotlinx.serialization` ist die einzige der Optionen, die den Android-Client
+nicht zusätzlich auf Retrofit oder Ktor festlegt. Der Service-Layer und damit
+der HTTP-Stack bleiben eine Entscheidung am Android-Projekt.
 
 ## Zu prüfen: psycopg unter LGPL
 

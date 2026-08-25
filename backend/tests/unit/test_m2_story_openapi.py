@@ -61,11 +61,25 @@ def test_kein_q_parameter() -> None:
     assert "q" not in namen
 
 
+def test_union_heisst_story_item() -> None:
+    """`API-DESIGN.md` nennt den Typ so - der Vertrag muss ihn benennen.
+
+    Ohne eigenen Typ nennt OpenAPI die Union nach ihrem Fundort
+    (`StoryPageItemsInner`), und jeder erzeugte Client traegt diesen Namen
+    weiter in Web- und Android-Code.
+    """
+    schemas = _schema()["components"]["schemas"]  # type: ignore[index]
+    assert schemas["StoryPage"]["properties"]["items"]["items"] == {
+        "$ref": "#/components/schemas/StoryItem"
+    }
+    assert "StoryPageItemsInner" not in schemas
+
+
 def test_union_ist_ueber_kind_diskriminiert() -> None:
     schemas = _schema()["components"]["schemas"]  # type: ignore[index]
-    items = schemas["StoryPage"]["properties"]["items"]["items"]
-    assert items["discriminator"]["propertyName"] == "kind"
-    assert set(items["discriminator"]["mapping"]) == {"MEMORY", "HEART_MOMENT", "MILESTONE"}
+    diskriminator = schemas["StoryItem"]["discriminator"]
+    assert diskriminator["propertyName"] == "kind"
+    assert set(diskriminator["mapping"]) == {"MEMORY", "HEART_MOMENT", "MILESTONE"}
 
 
 def test_story_kennt_keine_private_variante() -> None:

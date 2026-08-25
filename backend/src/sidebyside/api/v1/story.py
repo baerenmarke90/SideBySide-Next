@@ -14,7 +14,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Query
-from pydantic import Field
+from pydantic import Field, RootModel
 from sqlalchemy import select
 
 from sidebyside.api.deps import Authorization, DbSession
@@ -30,7 +30,7 @@ from sidebyside.identity.models import Account
 from sidebyside.memories.models import Memory
 from sidebyside.milestones.models import Milestone
 from sidebyside.story import service
-from sidebyside.story.service import StoryItem, StoryKind, StoryOrder
+from sidebyside.story.service import StoryKind, StoryOrder, StoryRow
 
 router = APIRouter(tags=["story"])
 
@@ -92,7 +92,7 @@ class StoryMilestoneItem(ApiModel):
     milestone: MilestoneSummary
 
 
-StoryItemView = Annotated[
+StoryItemVariant = Annotated[
     StoryMemoryItem | StoryHeartMomentItem | StoryMilestoneItem,
     Field(discriminator="kind"),
 ]
@@ -102,8 +102,20 @@ Ein Client muss nicht raten, welches Feld gesetzt ist, und ein neuer Typ
 kann spaeter additiv dazukommen, ohne die bestehenden zu veraendern."""
 
 
+class StoryItem(RootModel[StoryItemVariant]):
+    """Ein Eintrag der Zeitleiste, diskriminiert ueber `kind`.
+
+    Ein eigener Typ und keine anonyme Union im Listenfeld: sonst benennt
+    der OpenAPI-Vertrag sie nach ihrem Fundort - `StoryPageItemsInner` -
+    und jeder erzeugte Client traegt diesen Namen weiter. `API-DESIGN.md`
+    nennt sie `StoryItem`, und das soll auch im Vertrag stehen.
+    """
+
+    root: StoryItemVariant
+
+
 class StoryPage(ApiModel):
-    items: list[StoryItemView]
+    items: list[StoryItem]
     next_cursor: str | None
     has_more: bool
 
@@ -173,8 +185,8 @@ def get_story_timeline(
 def _projizieren(
     session: DbSession,
     authorization: Authorization,
-    items: list[StoryItem],
-) -> list[StoryItemView]:
+    items: list[StoryRow],
+) -> list[StoryItem]:
     """Die Seite in DTOs uebersetzen - gebuendelt, nicht Zeile fuer Zeile.
 
     Die Abfrage hat nur Schluessel geliefert. Hier werden je Typ genau eine
@@ -204,7 +216,7 @@ def _projizieren(
         },
     )
 
-    ansicht: list[StoryItemView] = []
+    ansicht: list[StoryItemVariant] = []
     for item in items:
         if item.kind is StoryKind.MEMORY:
             memory = memories.get(item.id)
@@ -273,7 +285,9 @@ def _projizieren(
                     ),
                 )
             )
-    return ansicht
+    # Die Varianten entstehen einzeln und werden erst hier in den
+    # benannten Vertragstyp gehuellt.
+    return [StoryItem(root=eintrag) for eintrag in ansicht]
 
 
 def _laden[ResourceT: (Memory, HeartMoment, Milestone)](

@@ -70,8 +70,8 @@ _MODELS: dict[StoryKind, StoryModel] = {
 
 
 @dataclass(frozen=True)
-class StoryItem:
-    """Eine Zeile der Zeitleiste, noch ohne Projektion.
+class StoryRow:
+    """Eine Zeile der Abfrage - Schluessel und Identitaet, sonst nichts.
 
     Die Abfrage liefert absichtlich nur Schluessel und Identitaet. Die
     fachlichen Objekte werden danach gebuendelt geladen - sonst zoege eine
@@ -86,7 +86,7 @@ class StoryItem:
 
 @dataclass(frozen=True)
 class StoryPageResult:
-    items: list[StoryItem]
+    items: list[StoryRow]
     next_cursor: str | None
     has_more: bool
 
@@ -166,7 +166,7 @@ def _encode_cursor(
     kinds: tuple[StoryKind, ...],
     year: int | None,
     order: StoryOrder,
-    item: StoryItem,
+    item: StoryRow,
 ) -> str:
     return cursor_codec.encode(
         binding=_cursor_binding(context, kinds, year, order),
@@ -258,7 +258,7 @@ def read_timeline(
 
     has_more = len(zeilen) > limit
     items = [
-        StoryItem(
+        StoryRow(
             kind=_kind_of_rank(zeile.kind_rank),
             effective_date=zeile.effective_date,
             created_at=zeile.created_at,
