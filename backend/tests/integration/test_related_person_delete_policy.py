@@ -174,22 +174,34 @@ class TestPreserve:
             assert date_after.status_code == 200
             assert date_after.json()["relatedPersonId"] is None
 
-        assert shared["version"] + 1 == client.get(
-            f"{dates_path(paar['space'].id)}/{shared['id']}",
-            headers=auth(paar["token_a"]),
-        ).json()["version"]
-        assert own_private["version"] + 1 == client.get(
-            f"{dates_path(paar['space'].id)}/{own_private['id']}",
-            headers=auth(paar["token_a"]),
-        ).json()["version"]
-        assert partner_private["version"] + 1 == client.get(
-            f"{dates_path(paar['space'].id)}/{partner_private['id']}",
-            headers=auth(paar["token_b"]),
-        ).json()["version"]
-        assert unrelated["version"] == client.get(
-            f"{dates_path(paar['space'].id)}/{unrelated['id']}",
-            headers=auth(paar["token_a"]),
-        ).json()["version"]
+        assert (
+            shared["version"] + 1
+            == client.get(
+                f"{dates_path(paar['space'].id)}/{shared['id']}",
+                headers=auth(paar["token_a"]),
+            ).json()["version"]
+        )
+        assert (
+            own_private["version"] + 1
+            == client.get(
+                f"{dates_path(paar['space'].id)}/{own_private['id']}",
+                headers=auth(paar["token_a"]),
+            ).json()["version"]
+        )
+        assert (
+            partner_private["version"] + 1
+            == client.get(
+                f"{dates_path(paar['space'].id)}/{partner_private['id']}",
+                headers=auth(paar["token_b"]),
+            ).json()["version"]
+        )
+        assert (
+            unrelated["version"]
+            == client.get(
+                f"{dates_path(paar['space'].id)}/{unrelated['id']}",
+                headers=auth(paar["token_a"]),
+            ).json()["version"]
+        )
 
 
 class TestCascade:
@@ -226,18 +238,27 @@ class TestCascade:
         assert response.status_code == 204
         assert response.content == b""
 
-        assert client.get(
-            f"{dates_path(paar['space'].id)}/{own['id']}",
-            headers=auth(paar["token_a"]),
-        ).status_code == 404
-        assert client.get(
-            f"{dates_path(paar['space'].id)}/{partner_private['id']}",
-            headers=auth(paar["token_b"]),
-        ).status_code == 404
-        assert client.get(
-            f"{dates_path(paar['space'].id)}/{unrelated['id']}",
-            headers=auth(paar["token_a"]),
-        ).status_code == 200
+        assert (
+            client.get(
+                f"{dates_path(paar['space'].id)}/{own['id']}",
+                headers=auth(paar["token_a"]),
+            ).status_code
+            == 404
+        )
+        assert (
+            client.get(
+                f"{dates_path(paar['space'].id)}/{partner_private['id']}",
+                headers=auth(paar["token_b"]),
+            ).status_code
+            == 404
+        )
+        assert (
+            client.get(
+                f"{dates_path(paar['space'].id)}/{unrelated['id']}",
+                headers=auth(paar["token_a"]),
+            ).status_code
+            == 200
+        )
 
 
 class TestDeletePolicyValidation:
@@ -248,19 +269,20 @@ class TestDeletePolicyValidation:
             headers=if_match(paar["token_a"], person["version"]),
         )
         assert response.status_code == 422
-        assert client.get(
-            f"{persons_path(paar['space'].id)}/{person['id']}",
-            headers=auth(paar["token_a"]),
-        ).status_code == 200
+        assert (
+            client.get(
+                f"{persons_path(paar['space'].id)}/{person['id']}",
+                headers=auth(paar["token_a"]),
+            ).status_code
+            == 200
+        )
 
     def test_unbekannte_policy_wird_abgelehnt(self, client, paar) -> None:  # type: ignore[no-untyped-def]
         person = create_person(client, paar)
         response = delete_person(client, paar, person, "everything")
         assert response.status_code == 422
 
-    def test_partner_darf_geteilte_person_weiterhin_nicht_loeschen(
-        self, client, paar
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_partner_darf_geteilte_person_weiterhin_nicht_loeschen(self, client, paar) -> None:  # type: ignore[no-untyped-def]
         person = create_person(client, paar)
         response = delete_person(client, paar, person, "preserve", token_key="token_b")
         assert response.status_code == 403
