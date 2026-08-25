@@ -1,8 +1,8 @@
 # M2 Project Control
 
 **Stand:** 25.08.2026  
-**Status:** M2-S0 aktiv; M2-Runtime noch durch S0-Entscheidungen gesperrt  
-**Aktueller `main` bei Start:** `76f5f086e1228662c22147590d5e85eac70e6fb4`
+**Status:** M2-S0 abgeschlossen; M2-Runtime läuft  
+**Aktueller `main`:** `e461c7c` (Merge von #81)
 
 ## Verbindlicher Gate-Stand
 
@@ -59,29 +59,32 @@ M6 Rich Features, M7 Integrationen, M8 freiwilliger Context und M9 Productizatio
 - Clients schreiben `privacyClass` nicht redundant als zweite Wahrheitsquelle.
 - `PRIVATE` wird serverseitig als `OWNER_ONLY` durchgesetzt; Clientfilter sind keine Sicherheitsgrenze.
 
-## M2-S0 Arbeitsfolge
+## M2-S0 — abgeschlossen
 
-1. **#67 Planning:** aktive Projektsteuerung auf G1=bestanden und die hier definierten Milestone-Grenzen synchronisieren.
-2. **#68 Domain/Privacy:** Memory-, Comment-, HeartMoment- und Event-/Delete-Entscheidungen schließen.
-3. **#69 Media:** Attachment-Relation, Limits, Validation, Retention, Uploadtransport und Orphan-Regeln schließen.
-4. **#70 API:** Routen, DTOs, Error Codes, Concurrency, Pagination und Story-Sortierung in den versionierten Contract überführen.
-5. **#71 Memory Runtime:** erster medienfreier M2-Runtime-Slice nach Erfüllung seiner S0-Abhängigkeiten.
+1. **#67 Planning** — Projektsteuerung auf G1=bestanden und die hier definierten Milestone-Grenzen synchronisiert.
+2. **#68 Domain/Privacy** — Memory-, Comment-, HeartMoment- und Event-/Delete-Entscheidungen geschlossen.
+3. **#69 Media** — Attachment-Relation, Limits, Validation, Retention, Uploadtransport und Orphan-Regeln geschlossen.
+4. **#70 API** — Routen, DTOs, Error Codes, Concurrency, Pagination und Story-Sortierung in den versionierten Contract überführt.
+5. **#78 Media-Metadaten** — M2-D14 (Strippen beim Ingest) und M2-D15 (eine abgeleitete Variante, kein Transcoding) entschieden. Beide waren als `BEFORE_CLIENTS` eingestuft, greifen aber in den Ingest-Pfad und wurden deshalb auf `BLOCKING` gehoben.
 
-#68 und #69 dürfen nach Merge von #67 parallel bearbeitet werden. #70 konsumiert die freigegebenen Entscheidungen aus #68/#69. Runtime-Code entscheidet keine offene BLOCKING-Frage stillschweigend.
+Damit sind **alle `BLOCKING`-Decisions `DECIDED`**. Offen bleiben nur `BEFORE_CLIENTS`-Punkte — M2-D10, D17, D18, D21 und D22 —, die erst vor stabiler Web-/Android-Integration fällig sind und keinen Backend-Slice blockieren.
 
 ## Runtime-Startregel
 
-M2 ist freigegeben, aber S0 ist noch nicht abgeschlossen. Ein Runtime-Slice startet erst, wenn **alle für genau diesen Slice relevanten BLOCKING-Decisions** `DECIDED` sind und sein versionierter OpenAPI-Vertrag contract-testbar vorliegt. Dadurch kann Memory CRUD ohne Medien vor Abschluss nicht relevanter späterer Cliententscheidungen beginnen, ohne Media-/Privacy-Fragen vorwegzunehmen.
+Ein Runtime-Slice startet erst, wenn **alle für genau diesen Slice relevanten BLOCKING-Decisions** `DECIDED` sind und sein versionierter OpenAPI-Vertrag contract-testbar vorliegt. Runtime-Code entscheidet keine offene Frage stillschweigend: stößt ein Slice auf eine ungeklärte Frage, wird sie als Decision-Log-Eintrag geschlossen, nicht im Code beantwortet.
+
+Diese Regel bleibt auch nach Abschluss von S0 in Kraft — sie gilt für jede neu auftauchende Frage, nicht nur für die ursprüngliche S0-Liste.
 
 ## Aktuelle GitHub-Arbeitspakete
 
-- #67 — `[M2-S0][Planning] G1-Status und Roadmap für M2 synchronisieren`
-- #68 — `[M2-S0][Domain] Memory-, Comment- und Privacy-Entscheidungen schließen`
-- #69 — `[M2-S0][Media] Attachment-Lifecycle, Limits und Retention entscheiden`
-- #70 — `[M2-S0][API] M2-Routen, DTOs, Pagination und Story-Sortierung festlegen`
-- #71 — `[M2][Memory] Memory CRUD, ProtectedPayload und Concurrency implementieren`
+- #79 — `[M2][Media] Attachment-Lifecycle und MediaStore-Adapter implementieren`
+- #80 — `[M2][HeartMoment] HeartMoment mit Owner-only-Privacy implementieren`
 
-#71 bleibt bis zu seinen S0-Abhängigkeiten ausdrücklich blockiert.
+#79 ist der nächste kritische Pfad: S3 (Memory + Medien) und S7 (Story) hängen daran. #80 ist von den Media-Slices unabhängig und darf parallel laufen.
+
+### Geliefert
+
+- #71 — Memory CRUD ohne Medien (PR #77). Validiert M2-Migrationstil, ProtectedPayload-Grenze, Tenant Guard, Autorregel, Optimistic Concurrency und signierten Keyset-Cursor auf einer medienfreien Fläche.
 
 ## Aktive Statusquellen
 
