@@ -1,7 +1,7 @@
 # SideBySide Next Roadmap
 
 **Status:** Menschenlesbare Orientierungs- und Priorisierungsansicht  
-**Version:** 1.2  
+**Version:** 1.3  
 **Stand:** 25.08.2026  
 **Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
 
@@ -11,7 +11,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 
 ![Grafische Roadmap von M0 Foundation bis M9 Release und der strategischen E2EE-Spur](./assets/roadmap/roadmap-overview.svg)
 
-**Aktuell:** M0 ist abgeschlossen und der vorgesehene M1-Runtimeumfang ist umgesetzt. Vor produktivem M2-Runtime-Code folgt der finale, neu datierte Security Review für Gate G1.
+**Aktuell:** M0 ist abgeschlossen und der vorgesehene M1-Runtimeumfang ist weitgehend umgesetzt. Gate G1 bleibt wegen der fehlenden expliziten RelatedPerson-Delete-Policy aus #61 geschlossen.
 
 ## So ist die Roadmap zu lesen
 
@@ -19,6 +19,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 |---|---|
 | diese Roadmap | Wohin gehen wir, in welcher Reihenfolge und warum? |
 | [Implementation Status](./IMPLEMENTATION-STATUS.md) | Was ist auf `main` tatsächlich umgesetzt oder noch offen? |
+| [G1/M1 Follow-up Review vom 25.08.2026](./reviews/2026-08-25-g1-m1-follow-up-review.md) | Aktuelle Gate-Entscheidung und Einordnung der Restfindings |
 | [G1/M1 Security Review vom 24.08.2026](./reviews/2026-08-24-g1-m1-security-review.md) | Historischer Prüfstand vor Abschluss der damaligen M1-Blocker |
 | GitHub Issues/PRs | Welche konkreten Arbeitspakete werden bearbeitet? |
 | [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | Was ist fachlich und technisch verbindlich? |
@@ -30,7 +31,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 
 ## Aktueller Snapshot
 
-Der Snapshot fasst den [Implementation Status vom 25.08.2026](./IMPLEMENTATION-STATUS.md) zusammen. Datierte Reviews bleiben unveränderliche Prüfsnapshots; der Review vom 24.08.2026 beschreibt deshalb bewusst noch Lücken, die inzwischen geschlossen sind.
+Der Snapshot fasst den [Implementation Status vom 25.08.2026](./IMPLEMENTATION-STATUS.md) und den [G1/M1 Follow-up Review vom 25.08.2026](./reviews/2026-08-25-g1-m1-follow-up-review.md) zusammen. Datierte Reviews bleiben unveränderliche Prüfsnapshots.
 
 ### M0 — Clean Foundation: abgeschlossen
 
@@ -50,7 +51,7 @@ Für den aktuellen M0-Umfang sind unter anderem umgesetzt:
 
 M0 wird nicht erneut geöffnet, nur weil spätere Milestones zusätzliche Härtungen auf derselben Infrastruktur benötigen. Neue Findings werden im jeweils betroffenen Issue/Milestone verfolgt.
 
-### M1 — Identity & Relationship: Runtimeumfang umgesetzt, G1 finaler Review offen
+### M1 — Identity & Relationship: Runtimeumfang weitgehend umgesetzt, G1 durch #61 blockiert
 
 Umgesetzt sind unter anderem:
 
@@ -66,22 +67,22 @@ Umgesetzt sind unter anderem:
 - Refresh-Replay über die gesamte Token-Familie,
 - HTTP-/Owner-/Privacy-/Cross-Tenant-/Concurrency-Tests gegen PostgreSQL.
 
-Die früheren G1-Tracking-Issues #7, #11, #24 und #26 sind geschlossen. Der Audit vom 25.08.2026 hat keine neue bekannte Tenant-Isolation- oder Account-Takeover-Lücke ergeben, aber zusätzliche Härtungen und eine Produktentscheidung separat erfasst:
+Die früheren G1-Tracking-Issues #7, #11, #24 und #26 sind geschlossen. Der Follow-up-Review vom 25.08.2026 hat die verbleibenden Punkte verbindlich eingeordnet:
 
-- #59 — Passkey-Authentication-Start gegen Challenge-Flooding absichern,
-- #60 — Rate-Limit-Schwellen unter Parallelität atomar erzwingen,
-- #61 — beim Löschen einer RelatedPerson explizit zwischen „Termine erhalten“ und „Termine mit löschen“ wählen; Warnung privacy-sicher gestalten,
-- #25 — Repository-Ruleset/Branch-Protection bleibt tarifbedingt nicht erzwungen.
+- **#61 — G1-Blocker:** RelatedPerson-Löschen braucht eine explizite serverseitige `preserve`-/`cascade`-Policy ohne destruktiven Default. Der heutige Cascade kann auch private ImportantDates des Partners indirekt löschen.
+- **#59 — Pre-Exposure:** Passkey-Authentication-Start gegen Challenge-Flooding absichern; kein Blocker für interne M2-Domainimplementierung, aber vor öffentlicher/Managed-Exposition zu schließen.
+- **#60 — Pre-Exposure:** Rate-Limit-Schwellen unter Parallelität atomar erzwingen; ebenfalls vor öffentlicher/Managed-Exposition zu schließen.
+- **#25 — Repository-Hardening:** Ruleset/Branch Protection bleibt tarifbedingt nicht erzwungen; kein Runtime-G1-Blocker.
 
 ### Noch offene Bedingungen vor M2
 
-1. Den aktuellen G1-Audit-/OIDC-Hardening-PR vollständig durch CI prüfen und mergen.
-2. Einen **neuen datierten G1-Security-Review** gegen den danach aktuellen `main` erstellen.
-3. Im Review #59 und #60 ausdrücklich als G1-Blocker oder als verpflichtende Pre-Exposure-Härtung klassifizieren; nicht still offen lassen.
-4. #61 als bewusste Delete-/UX-Policy dokumentiert halten und die serverseitige Preserve/Cascade-Auswahl vor dem ersten betroffenen Clientflow umsetzen.
-5. Erst nach positiver G1-Entscheidung M2-S0 und danach M2-Runtime-Code freigeben.
+1. #61 serverseitig mit expliziter `preserve`-/`cascade`-Delete-Policy umsetzen.
+2. Kein destruktiver Default; privacy-sichere Warn-/Bestätigungssemantik ohne Existenzauskunft über unsichtbare Partnertermine.
+3. PostgreSQL-/HTTP-Tests für beide Policies und Cross-owner-/Tenant-Fälle grün bekommen.
+4. #61 über eigenen PR mit vollständiger CI mergen.
+5. Danach einen kurzen neuen datierten G1-Gate-Review gegen den aktuellen `main` erstellen und G1 ausdrücklich freigeben oder weiter blockieren.
 
-Repository-Hardening #25 bleibt separat offen. Ein nicht erzwungenes Ruleset ist kein Grund, Security-Anforderungen im Code oder die PR-/CI-Pflicht abzusenken.
+Repository-Hardening #25 bleibt separat offen. #59 und #60 blockieren interne M2-Implementierung nicht, müssen jedoch vor öffentlicher bzw. Managed-Exposition geschlossen sein.
 
 ## Meilensteine
 
@@ -107,15 +108,16 @@ Die Spuren laufen parallel, aber nicht unabhängig. Eine Clientoberfläche darf 
 
 ## Horizonte
 
-### Now — G1 final prüfen und M2 freigeben
+### Now — #61 schließen und G1 freigeben
 
-**Umfasst:** Audit-Härtung und formale Gate-Entscheidung nach abgeschlossenem M1-Runtimeumfang.
+**Umfasst:** letzter Runtime-Gate-Blocker nach abgeschlossenem M1-Hauptumfang.
 
-- OIDC-Discovery-/Audience-Härtung abschließen und CI prüfen,
-- neue Audit-Findings #59/#60 sauber klassifizieren und verfolgen,
-- RelatedPerson-Delete-Entscheidung #61 als Privacy-/UX-Vertrag festhalten,
-- laufende Status-/Security-Dokumentation auf den aktuellen Code ziehen,
-- neuen datierten G1-Security-Review gegen aktuellen `main` durchführen.
+- RelatedPerson-Delete-API um `preserve` und `cascade` erweitern,
+- destruktiven Default ausschließen,
+- private Partnertermine bei `preserve` erhalten, ohne ihre Existenz oder Inhalte zu leaken,
+- bestehenden Cascade als ausdrücklich gewählte Option erhalten,
+- PostgreSQL-/HTTP-/Privacy-Tests für beide Policies ergänzen,
+- nach grünem Merge einen neuen datierten G1-Gate-Review durchführen.
 
 **Verlassen, wenn:** Gate G1 formell erfüllt und M2 freigegeben ist.
 
@@ -154,7 +156,7 @@ Die Spuren laufen parallel, aber nicht unabhängig. Eine Clientoberfläche darf 
 - optionale Location-/Context-Funktionen,
 - serverseitige Managed-/Self-Hosted-Auth-Policy,
 - verwaltete Login-Provider wie Google/Apple,
-- Self-Hosted- und Cloud-Härtung,
+- Self-Hosted- und Cloud-Härtung einschließlich #59/#60,
 - Backup, Entitlements, Releasebetrieb und Supportfähigkeit.
 
 **Verlassen, wenn:** Gate G5 erfüllt ist.
@@ -218,7 +220,7 @@ Kritische Reihenfolge:
 - Profile/SpaceProfile mit Versionskonflikten,
 - Cross-Tenant-, Session- und Privacy-Tests grün.
 
-**Aktueller Stand:** die vorgesehenen Runtime-Kriterien sind implementiert; G1 ist **noch nicht formell freigegeben**, bis ein neuer datierter Review den aktuellen `main`, die aktuelle CI und die neuen Audit-Findings bewertet hat. Der Review vom 24.08.2026 bleibt historisch und ist nicht mehr der operative Soll-/Ist-Stand.
+**Aktueller Stand:** **nicht bestanden.** Der Follow-up-Review vom 25.08.2026 bestätigt die früheren Runtime-Kriterien als umgesetzt, identifiziert aber #61 als verbleibenden G1-Blocker: Eine geteilte `RelatedPerson` kann aktuell über den impliziten Cascade auch einen privaten Termin des Partners löschen. G1 wird erst nach expliziter `preserve`-/`cascade`-Policy, grünen Privacy-/PostgreSQL-Tests und erneutem datiertem Gate-Review freigegeben.
 
 ### G2 — Story Alpha
 
@@ -247,6 +249,7 @@ Kritische Reihenfolge:
 
 - Cloud und Self-Hosted dokumentiert, update- und backupfähig,
 - serverseitige Auth-/Provider-Policy je Betriebsform durchgesetzt,
+- #59 und #60 vor öffentlicher/Managed-Exposition geschlossen,
 - Retention, vollständige Löschung und Supportprozesse geklärt,
 - Entitlements/Billing-Adapter ohne Domainkopplung,
 - Monitoring ohne sensible Inhalte,
@@ -285,6 +288,7 @@ Kritische Reihenfolge:
 ## Verwandte Dokumente
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
+- [G1/M1 Follow-up Security Review vom 25.08.2026](./reviews/2026-08-25-g1-m1-follow-up-review.md)
 - [Historischer G1/M1 Security Review vom 24.08.2026](./reviews/2026-08-24-g1-m1-security-review.md)
 - [Produktspezifikation](../specification/PRODUCT-SPEC.md)
 - [Critical User Flows](./USER-FLOWS.md)
