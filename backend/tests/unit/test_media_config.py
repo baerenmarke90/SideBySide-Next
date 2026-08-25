@@ -14,6 +14,12 @@ def test_local_store_is_the_default() -> None:
     assert settings.media_store is MediaStoreBackend.LOCAL
 
 
+def test_ffmpeg_is_enabled_by_default_and_can_be_disabled(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    assert Settings().ffmpeg_enabled is True
+    monkeypatch.setenv("SBS_FFMPEG_ENABLED", "false")
+    assert Settings().ffmpeg_enabled is False
+
+
 def test_s3_store_requires_complete_configuration() -> None:
     with pytest.raises(ValidationError, match="SBS_S3_ENDPOINT"):
         Settings(media_store=MediaStoreBackend.S3)
