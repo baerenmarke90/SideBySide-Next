@@ -232,17 +232,18 @@ class TestOnboarding:
         )
         assert response.status_code == 201, response.text
         account_id = response.json()["account"]["id"]
-        assert session.execute(
-            select(AccountEmail).where(AccountEmail.account_id == account_id)
-        ).scalar_one_or_none() is None
+        assert (
+            session.execute(
+                select(AccountEmail).where(AccountEmail.account_id == account_id)
+            ).scalar_one_or_none()
+            is None
+        )
 
     def test_vergebene_email_fuehrt_nicht_zum_fremden_account(
         self, client, session, provider, schluessel
     ) -> None:  # type: ignore[no-untyped-def]
         existing = make_account(session, "Existing")
-        session.add(
-            AccountEmail(account_id=existing.id, email="used@example.org", is_primary=True)
-        )
+        session.add(AccountEmail(account_id=existing.id, email="used@example.org", is_primary=True))
         _, _, issued = invitation_setup(session)
         session.flush()
 
@@ -261,9 +262,12 @@ class TestOnboarding:
         assert response.status_code == 201, response.text
         created_id = response.json()["account"]["id"]
         assert created_id != str(existing.id)
-        assert session.execute(
-            select(AccountEmail).where(AccountEmail.account_id == created_id)
-        ).scalar_one_or_none() is None
+        assert (
+            session.execute(
+                select(AccountEmail).where(AccountEmail.account_id == created_id)
+            ).scalar_one_or_none()
+            is None
+        )
 
     @pytest.mark.parametrize("kind", ["expired", "revoked", "used"])
     def test_ungueltige_einladung_bleibt_401_und_erzeugt_keinen_account(
