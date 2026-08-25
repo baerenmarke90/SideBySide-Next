@@ -13,7 +13,11 @@ from typing import Any
 TRACKER_URL = "https://security-tracker.debian.org/tracker/data/json"
 PACKAGE = "ffmpeg"
 RELEASE = "trixie"
-MAX_TRACKER_BYTES = 64 * 1024 * 1024
+# The tracker export is a repository-wide JSON document, not an ffmpeg-only
+# response. GitHub-hosted runners receive it uncompressed and it currently
+# exceeds 64 MiB. Keep a hard upper bound, but leave enough headroom for the
+# complete official export so schema validation can still fail closed.
+MAX_TRACKER_BYTES = 256 * 1024 * 1024
 VALID_STATES = {"resolved", "open", "undetermined"}
 
 
