@@ -45,6 +45,13 @@ class LocalMediaStore(MediaStore):
     def exists(self, storage_key: str) -> bool:
         return self._path(storage_key).is_file()
 
+    def object_size(self, storage_key: str) -> int | None:
+        ziel = self._path(storage_key)
+        try:
+            return ziel.stat().st_size
+        except FileNotFoundError:
+            return None
+
     def create_read_url(self, storage_key: str, expires_in: timedelta) -> str | None:
         # Das Dateisystem kann keine signierten URLs. Die Anwendung liefert
         # den Inhalt über eine autorisierte Route aus.
