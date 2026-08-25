@@ -72,3 +72,13 @@ M6 Rich Features, M7 Integrationen, M8 freiwilliger Context und M9 Productizatio
 ## Runtime-Startregel
 
 M2 ist freigegeben, aber S0 ist noch nicht abgeschlossen. Ein Runtime-Slice startet erst, wenn **alle für genau diesen Slice relevanten BLOCKING-Decisions** `DECIDED` sind und sein versionierter OpenAPI-Vertrag contract-testbar vorliegt. Dadurch kann Memory CRUD ohne Medien vor Abschluss nicht relevanter späterer Cliententscheidungen beginnen, ohne Media-/Privacy-Fragen vorwegzunehmen.
+
+## Aktuelle GitHub-Arbeitspakete
+
+- #67 — `[M2-S0][Planning] G1-Status und Roadmap für M2 synchronisieren`
+- #68 — `[M2-S0][Domain] Memory-, Comment- und Privacy-Entscheidungen schließen`
+- #69 — `[M2-S0][Media] Attachment-Lifecycle, Limits und Retention entscheiden`
+- #70 — `[M2-S0][API] M2-Routen, DTOs, Pagination und Story-Sortierung festlegen`
+- #71 — `[M2][Memory] Memory CRUD, ProtectedPayload und Concurrency implementieren`
+
+#71 bleibt bis zu seinen S0-Abhängigkeiten ausdrücklich blockiert.
