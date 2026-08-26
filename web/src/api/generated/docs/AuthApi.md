@@ -1229,6 +1229,7 @@ No authorization required
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
 | **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
