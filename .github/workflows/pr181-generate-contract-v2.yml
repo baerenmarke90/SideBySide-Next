@@ -37,6 +37,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/openapi.json web/src/api/generated android/app/src/main/java/de/urcloud/sidebyside/api/generated
+          git add backend/openapi.json web/src/api/generated android/api/generated
           git commit -m "chore(api): regenerate contract for PR 181"
           git push origin HEAD:tooling/pr181-generate-contract-v2
