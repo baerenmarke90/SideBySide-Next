@@ -475,12 +475,13 @@ Allgemein:
 ```text
 RESOURCE_VERSION_CONFLICT       409
 INVALID_CURSOR                  400
-RELATION_TARGET_NOT_FOUND       404
+RELATION_TARGET_NOT_FOUND       404  # vereinheitlicht unbekannt/private/fremder Space
 RELATION_ALREADY_EXISTS         409
 RELATION_NOT_FOUND              404
-RELATION_CROSS_SPACE_FORBIDDEN  404  # nach außen ggf. auf NOT_FOUND vereinheitlichen
 STATUS_TRANSITION_INVALID       409
 ```
+
+Für Relation-Targets gibt es bewusst **keinen** separaten Cross-Space-Fehlercode. Fremder Space, `OWNER_ONLY`/nicht lesbar und unbekannte ID bleiben nach außen ununterscheidbar.
 
 Wish:
 
