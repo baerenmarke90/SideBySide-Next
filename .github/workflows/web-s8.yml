@@ -7,7 +7,7 @@ on:
       - ".github/workflows/web-s8.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: web-s8-${{ github.ref }}
@@ -24,40 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Refresh dependency lock for patched versions
-        run: npm install --ignore-scripts --no-audit --no-fund
-
-      - name: Commit refreshed dependency lock to PR branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_BRANCH: ${{ github.head_ref }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          node --input-type=module <<'EOF'
-          import { readFile } from 'node:fs/promises';
-          const path = 'web/package-lock.json';
-          const apiUrl = `https://api.github.com/repos/${process.env.REPOSITORY}/contents/${path}`;
-          const headers = {
-            Accept: 'application/vnd.github+json',
-            Authorization: `Bearer ${process.env.GH_TOKEN}`,
-            'X-GitHub-Api-Version': '2022-11-28',
-          };
-          const current = await fetch(`${apiUrl}?ref=${encodeURIComponent(process.env.HEAD_BRANCH)}`, { headers });
-          if (!current.ok) throw new Error(`Lock lookup failed: ${current.status} ${await current.text()}`);
-          const { sha } = await current.json();
-          const content = await readFile('package-lock.json', 'utf8');
-          const response = await fetch(apiUrl, {
-            method: 'PUT',
-            headers,
-            body: JSON.stringify({
-              message: 'Refresh S8 web dependency lock',
-              content: Buffer.from(content).toString('base64'),
-              sha,
-              branch: process.env.HEAD_BRANCH,
-            }),
-          });
-          if (!response.ok) throw new Error(`Lock update failed: ${response.status} ${await response.text()}`);
-          EOF
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Dependency audit
         run: npm audit --audit-level=high
