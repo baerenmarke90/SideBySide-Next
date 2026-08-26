@@ -19,8 +19,8 @@ function decodeBase64(value: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-const ONE_PIXEL_PNG =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z9iQAAAAASUVORK5CYII=';
+const PNG_FIXTURE =
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGOUs4liYGBgYmBgYGBgAAAIXgC4cKsbrQAAAABJRU5ErkJggg==';
 
 describe('G2 real Web client E2E', () => {
   e2eTest('runs Memory -> image -> timeline -> authorized read against the real stack', async () => {
@@ -32,7 +32,7 @@ describe('G2 real Web client E2E', () => {
     const session = await signIn(apiBaseUrl, email, password);
     const accessToken = session.tokens.accessToken;
     const apis = createReferenceApis(apiBaseUrl, accessToken);
-    const file = new File([decodeBase64(ONE_PIXEL_PNG)], 'g2-web.png', { type: 'image/png' });
+    const file = new File([decodeBase64(PNG_FIXTURE)], 'g2-web.png', { type: 'image/png' });
 
     let downloadedBlob: Blob | undefined;
     const originalCreateObjectURL = URL.createObjectURL;

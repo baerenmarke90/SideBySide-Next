@@ -28,7 +28,7 @@ class ReferenceFlowE2eTest {
         val session = api.signIn(email, password)
         val accessToken = session.tokens.accessToken
         val image = SelectedImage(
-            bytes = Base64.getDecoder().decode(ONE_PIXEL_PNG),
+            bytes = Base64.getDecoder().decode(PNG_FIXTURE),
             displayName = "g2-android.png",
             mimeType = "image/png",
         )
@@ -64,7 +64,7 @@ class ReferenceFlowE2eTest {
             ?: error("$name muss fuer den G2-E2E-Lauf gesetzt sein.")
 
     private companion object {
-        const val ONE_PIXEL_PNG =
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z9iQAAAAASUVORK5CYII="
+        const val PNG_FIXTURE =
+            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGOUs4liYGBgYmBgYGBgAAAIXgC4cKsbrQAAAABJRU5ErkJggg=="
     }
 }

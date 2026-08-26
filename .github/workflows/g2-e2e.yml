@@ -19,6 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  G2_E2E_ENABLED: "1"
   G2_E2E_API_BASE: http://127.0.0.1:8000
   G2_E2E_EMAIL: g2-e2e@example.invalid
   G2_E2E_PASSWORD: g2-e2e-password-only
@@ -67,7 +68,9 @@ jobs:
 
       - name: Web uses production S8/OpenAPI path against the real stack
         run: |
+          set -o pipefail
           docker run --rm --network host \
+            -e CI=true \
             -e VITE_G2_E2E_ENABLED=1 \
             -e VITE_G2_E2E_API_BASE="$G2_E2E_API_BASE" \
             -e VITE_G2_E2E_EMAIL="$G2_E2E_EMAIL" \
@@ -75,29 +78,20 @@ jobs:
             -e VITE_G2_E2E_SPACE_ID="$G2_E2E_SPACE_ID" \
             -v "$PWD/web:/work" -w /work \
             node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90 \
-            sh -c 'npm ci --ignore-scripts --no-audit --no-fund && npm test -- src/client/referenceFlow.e2e.test.ts --reporter=junit --outputFile=g2-web-e2e.xml'
+            sh -c 'npm ci --ignore-scripts --no-audit --no-fund && npm test -- src/client/referenceFlow.e2e.test.ts --reporter=default' \
+            | tee web/g2-web-e2e.log
 
       - name: Web E2E really ran and was not skipped
         run: |
-          python3 - <<'PY'
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
-
-          report = Path("web/g2-web-e2e.xml")
-          if not report.is_file():
-              raise SystemExit("Web-E2E-JUnit-Report fehlt.")
-          root = ET.parse(report).getroot()
-          cases = root.findall(".//testcase")
-          skipped = sum(case.find("skipped") is not None for case in cases)
-          failures = sum(
-              case.find("failure") is not None or case.find("error") is not None for case in cases
-          )
-          if not cases:
-              raise SystemExit("Kein Web-E2E-Test gelaufen.")
-          if skipped or failures:
-              raise SystemExit(f"Web-E2E: {skipped} skipped, {failures} failed.")
-          print(f"Web-E2E: {len(cases)} realer Test erfolgreich.")
-          PY
+          grep -Eq 'Tests[[:space:]]+1 passed' web/g2-web-e2e.log || {
+            echo "Web-E2E-Ausgabe belegt keinen erfolgreich ausgefuehrten Test."
+            cat web/g2-web-e2e.log
+            exit 1
+          }
+          if grep -Eqi 'Tests[[:space:]].*skipped' web/g2-web-e2e.log; then
+            echo "Web-E2E wurde uebersprungen."
+            exit 1
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
@@ -152,5 +146,5 @@ jobs:
       - name: Tear down the isolated gate stack
         if: always()
         run: |
-          rm -f web/g2-web-e2e.xml
+          rm -f web/g2-web-e2e.log
           docker compose down -v
