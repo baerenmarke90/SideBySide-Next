@@ -4,9 +4,13 @@ import de from './locales/de';
 
 export const DEFAULT_LOCALE = 'de';
 
-function syncDocumentLanguage(language: string | undefined): void {
+export function resolvedLocale(): string {
+  return i18n.resolvedLanguage || i18n.language || DEFAULT_LOCALE;
+}
+
+function syncDocumentLanguage(): void {
   if (typeof document === 'undefined') return;
-  document.documentElement.lang = (language || DEFAULT_LOCALE).split('-')[0];
+  document.documentElement.lang = resolvedLocale().split('-')[0];
 }
 
 if (!i18n.isInitialized) {
@@ -24,12 +28,8 @@ if (!i18n.isInitialized) {
   });
 }
 
-syncDocumentLanguage(i18n.resolvedLanguage || i18n.language);
+syncDocumentLanguage();
 i18n.on('languageChanged', syncDocumentLanguage);
-
-export function resolvedLocale(): string {
-  return i18n.resolvedLanguage || i18n.language || DEFAULT_LOCALE;
-}
 
 export { i18n };
 export { useTranslation } from 'react-i18next';
