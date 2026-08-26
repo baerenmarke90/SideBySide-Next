@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import tokens from '../../design/tokens.json';
+import baseCss from './styles.css?raw';
+import themeCss from './theme.css?raw';
 
 function channel(value: number): number {
   const normalized = value / 255;
@@ -24,32 +25,59 @@ function contrast(first: string, second: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-const light = tokens.color.semantic;
-const dark = tokens.color.scheme.dark;
-const white = tokens.color.base.white.$value;
+function cssBlock(css: string, selector: string): string {
+  const marker = `${selector} {`;
+  const start = css.indexOf(marker);
+  if (start < 0) throw new Error(`CSS-Block fehlt: ${selector}`);
+
+  const contentStart = start + marker.length;
+  const end = css.indexOf('\n}', contentStart);
+  if (end < 0) throw new Error(`CSS-Block ist nicht abgeschlossen: ${selector}`);
+  return css.slice(contentStart, end);
+}
+
+function cssVariable(block: string, name: string): string {
+  const match = block.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6,8});`));
+  if (!match) throw new Error(`CSS-Variable fehlt oder ist keine Hex-Farbe: --${name}`);
+  return match[1];
+}
+
+const light = cssBlock(baseCss, ':root');
+const dark = cssBlock(themeCss, ":root[data-theme='dark']");
+const white = '#ffffff';
 
 describe('theme token contrast', () => {
   it('keeps primary and secondary text at WCAG AA in both schemes', () => {
-    expect(contrast(light.textPrimary.$value, light.background.$value)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(light.textSecondary.$value, light.surface.$value)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(dark.textPrimary.$value, dark.background.$value)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(dark.textSecondary.$value, dark.surface.$value)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(cssVariable(light, 'color-text'), cssVariable(light, 'color-background')))
+      .toBeGreaterThanOrEqual(4.5);
+    expect(contrast(cssVariable(light, 'color-text-secondary'), cssVariable(light, 'color-surface')))
+      .toBeGreaterThanOrEqual(4.5);
+    expect(contrast(cssVariable(dark, 'color-text'), cssVariable(dark, 'color-background')))
+      .toBeGreaterThanOrEqual(4.5);
+    expect(contrast(cssVariable(dark, 'color-text-secondary'), cssVariable(dark, 'color-surface')))
+      .toBeGreaterThanOrEqual(4.5);
   });
 
   it('keeps primary actions readable in both schemes', () => {
-    expect(contrast(white, light.brandStrong.$value)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(white, dark.brandStrong.$value)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(white, cssVariable(light, 'color-brand-strong'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(white, cssVariable(dark, 'color-brand-strong'))).toBeGreaterThanOrEqual(4.5);
   });
 
   it('keeps status text readable on its semantic surface', () => {
-    expect(contrast(light.shared.$value, light.sharedSurface.$value)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(light.error.$value, light.errorSurface.$value)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(dark.shared.$value, dark.sharedSurface.$value)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(dark.error.$value, dark.errorSurface.$value)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(cssVariable(light, 'color-shared'), cssVariable(light, 'color-shared-surface')))
+      .toBeGreaterThanOrEqual(4.5);
+    expect(contrast(cssVariable(light, 'color-error'), cssVariable(light, 'color-error-surface')))
+      .toBeGreaterThanOrEqual(4.5);
+    expect(contrast(cssVariable(dark, 'color-shared'), cssVariable(dark, 'color-shared-surface')))
+      .toBeGreaterThanOrEqual(4.5);
+    expect(contrast(cssVariable(dark, 'color-error'), cssVariable(dark, 'color-error-surface')))
+      .toBeGreaterThanOrEqual(4.5);
   });
 
   it('keeps the focus indicator above the 3:1 UI contrast threshold', () => {
-    expect(contrast(light.focus.$value, light.background.$value)).toBeGreaterThanOrEqual(3);
-    expect(contrast(dark.focus.$value, dark.background.$value)).toBeGreaterThanOrEqual(3);
+    expect(contrast(cssVariable(light, 'color-focus'), cssVariable(light, 'color-background')))
+      .toBeGreaterThanOrEqual(3);
+    expect(contrast(cssVariable(dark, 'color-focus'), cssVariable(dark, 'color-background')))
+      .toBeGreaterThanOrEqual(3);
   });
 });
