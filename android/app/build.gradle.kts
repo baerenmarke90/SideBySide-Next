@@ -11,7 +11,8 @@ fun quotedBuildConfig(value: String): String = "\"${value.replace("\\", "\\\\").
 
 android {
     namespace = "de.sidebyside.next.reference"
-    compileSdk = 36
+    compileSdk = 37
+    compileSdkMinor = 1
 
     defaultConfig {
         applicationId = "de.sidebyside.next.reference"
