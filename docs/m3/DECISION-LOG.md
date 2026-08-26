@@ -20,11 +20,11 @@
 
 | ID | Priorität | Status | Thema | Frage / Grenze | Vorschlag / Quelle |
 |---|---|---|---|---|---|
-| M3-D01 | BLOCKING | OPEN | Shared Writes | Wer darf Wish, Plan, Place, Chapter und gemeinsame Collection ändern/löschen? | Konsistente Regel wählen; `SPACE_SHARED` entscheidet Sichtbarkeit, nicht automatisch Schreibrecht. |
-| M3-D02 | BLOCKING | OPEN | Wish -> Plan | Ist `sourceWishId` 1:1, wie werden Double-Submit/Races/idempotente Retries behandelt? | PROPOSED: höchstens ein originärer Plan je Wish, Row Lock + Unique Constraint. |
-| M3-D03 | BLOCKING | OPEN | Plan -> Wish | Was bedeutet die erlaubte Rückführung eines nicht abgeschlossenen Plans? | Ursprung reaktivieren vs. neuen Wish erzeugen; Plan-Historie/Delete explizit entscheiden. |
-| M3-D04 | BLOCKING | OPEN | Plan Lifecycle | Welche Statusübergänge und Datumsinvarianten gelten exakt? | IDEA/PLANNED/COMPLETED sind source-bound; erlaubte Kanten und Terminpflicht offen. |
-| M3-D05 | BLOCKING | OPEN | Delete | Was geschieht bei Wish-/Plan-Delete mit `sourceWishId` und Relationen? | Keine Cascade auf fachliche Originale ohne explizite Entscheidung. |
+| M3-D01 | BLOCKING | DECIDED | Shared Writes | Wer darf Wish, Plan, Place, Chapter und gemeinsame Collection ändern/löschen? | Collaborative write für beide aktiven Space-Mitglieder; `createdBy` ist Attribution, keine ACL. Domainzustände dürfen Aktionen zusätzlich begrenzen. Entscheidung #162. |
+| M3-D02 | BLOCKING | DECIDED | Wish -> Plan | Ist `sourceWishId` 1:1, wie werden Double-Submit/Races/idempotente Retries behandelt? | Höchstens ein originärer Plan je Wish; Wish-Row-Lock + `UNIQUE(sourceWishId)`; Retry auf PLANNED liefert denselben Plan. Entscheidung #162. |
+| M3-D03 | BLOCKING | DECIDED | Plan -> Wish | Was bedeutet die erlaubte Rückführung eines nicht abgeschlossenen Plans? | Nur source-bound IDEA/PLANNED: denselben Wish auf OPEN reaktivieren, Plan löschen, keine Payload zurückkopieren. Entscheidung #162. |
+| M3-D04 | BLOCKING | DECIDED | Plan Lifecycle | Welche Statusübergänge und Datumsinvarianten gelten exakt? | IDEA->PLANNED, PLANNED->IDEA, IDEA/PLANNED->COMPLETED; COMPLETED terminal; Schedule/Complete als Operationsrouten. Entscheidung #162. |
+| M3-D05 | BLOCKING | DECIDED | Delete | Was geschieht bei Wish-/Plan-Delete mit `sourceWishId` und Relationen? | State-basierte Delete-Matrix; keine Cascade auf fachliche Originale; nicht abgeschlossene source Plans nur via return-to-wish entfernen. Entscheidung #162. |
 | M3-D06 | BLOCKING | OPEN | Place Privacy | Wie werden Adresse/Beschreibung/Koordinaten in ProtectedPayload und API klassifiziert? | Präzise Location niemals Logs/Analytics/Events; Storage-Klassifizierung festlegen. |
 | M3-D07 | BLOCKING | PROPOSED | Place Identity | Werden Places implizit dedupliziert/zusammengeführt? | Nein: keine automatische Zusammenführung anhand Name/Adresse/Koordinaten. |
 | M3-D08 | BLOCKING | OPEN | Relation Contract | Welche Relationstypen liefert M3 und wie sieht die externe API aus? | DB immer typisierte FK-Tabellen; API Option A typisierte Routen oder kontrollierte Union. |
@@ -32,7 +32,7 @@
 | M3-D10 | BLOCKING | OPEN | Chapter Ordering | Sind Chapter-Inhalte chronologisch abgeleitet oder manuell positionierbar? | Nicht aus UI-Wunsch ableiten; DB-Modell vor Relationstabellen entscheiden. |
 | M3-D11 | BLOCKING | OPEN | Chapter Dates | Welche Regeln gelten für `startOn`/`endOn` und leere Grenzen? | PROPOSED: beide optional, falls beide gesetzt `endOn >= startOn`. |
 | M3-D12 | BLOCKING | DECIDED | Chapter Delete | Löscht Chapter seine Originalinhalte? | **Nein.** Master Spec: Relationen entfernen, Originale erhalten. |
-| M3-D13 | BLOCKING | OPEN | Collection Ownership | Hat Collection `createdBy`; wer darf Collection/Items ändern/löschen? | Globalen Shared-Write-Grundsatz mit M3-D01 konsistent halten. |
+| M3-D13 | BLOCKING | OPEN | Collection Ownership | Hat Collection `createdBy`; wer darf Collection/Items ändern/löschen? | M3-D01 setzt collaborative write als Grundregel; konkrete Root-/Item-Persistenz und Delete-Grenzen bleiben hier zu entscheiden. |
 | M3-D14 | BLOCKING | OPEN | Collection Concurrency | Wie werden Item-Version, Completion, Position und Reorder konfliktfrei? | PROPOSED: atomarer Reorder, keine N unabhängigen Positions-Patches. |
 | M3-D15 | BLOCKING | OPEN | Collection Delete | Löscht Collection ihre Items, und welche Relationen existieren? | PROPOSED: Items sind Parent-Children und werden mit Parent gelöscht; keine externen Originale. |
 | M3-D16 | BLOCKING | PROPOSED | Private Payload | Welche Private-Area-Felder liegen in ProtectedPayload? | PrivateNote title/body; GiftIdea inhaltliche Felder; private Collection-Titel/Items. |
@@ -49,7 +49,7 @@
 | M3-D27 | LATER | OPEN | Plan Richness | Gehören Checkliste/Medien/Notizen aus IA bereits zu M3 Plan? | Höhere Product/Master Spec nennt keine Plan-Checklist/Attachments. Nicht implementieren ohne Scope-Decision. |
 | M3-D28 | BLOCKING | OPEN | Location Leakage | Welche Genauigkeit/Retention/Redaction gilt für Koordinaten? | Keine Telemetrie/Events; Datenklassifizierung vor Schema entscheiden. |
 | M3-D29 | BEFORE_CLIENTS | OPEN | Collection Multi-select | Bedeutet „Mehrfachauswahl“ Domainzustand oder nur UI-Batchauswahl? | PROPOSED: UI-Interaktion, solange keine persistente Semantik spezifiziert ist. |
-| M3-D30 | BLOCKING | OPEN | Direct Plan Create | Darf ein Plan ohne Wish entstehen und mit welchem Startstatus? | Master Modell erlaubt optionales `sourceWishId`; Startstatus dennoch explizit festlegen. |
+| M3-D30 | BLOCKING | DECIDED | Direct Plan Create | Darf ein Plan ohne Wish entstehen und mit welchem Startstatus? | Ja; Direct Plan startet immer als IDEA ohne Plantermine/experiencedOn. Scheduling/Completion erfolgen über Operationsrouten. Entscheidung #162. |
 | M3-D31 | BLOCKING | OPEN | Chapter/Place Relation | Ist `Chapter.placeId` kanonisch oder zusätzlich `place_chapters`? | Doppelte Wahrheitsquelle vermeiden; genau ein Persistenzmodell entscheiden. |
 | M3-D32 | BLOCKING | OPEN | Private Item Auth | Tragen PrivateCollectionItems eigenen owner/space oder erben sie ausschließlich über Parent? | Beide Varianten müssen dieselbe zentrale owner-only Query-Grenze garantieren. |
 
@@ -80,92 +80,29 @@ Folgen:
 - keine privaten M3-Inhalte in einem neuen Index;
 - Search-Privacy wird später in M4-A explizit entworfen.
 
-## Decision Details
+## Projektentscheidungen
 
-### M3-D01 – Shared Write Ownership
+### M3-D01/D02/D03/D04/D05/D30 – Wish-/Plan-Vertrag
 
-**Problem:** Wish/Plan/Place/Chapter/Collection sind gemeinsam sichtbar. Die Spezifikation legt nicht konsistent fest, ob ausschließlich `createdBy` oder beide Partner schreiben dürfen.
+**Status:** DECIDED  
+**Datum:** 26.08.2026  
+**Projektentscheidung:** #162  
+**Vollständiger Vertrag:** [`decisions/WISH-PLAN-LIFECYCLE.md`](./decisions/WISH-PLAN-LIFECYCLE.md)
 
-**Option A – creator-write:**
+Verbindliche Kernaussagen:
 
-- Partner liest;
-- Ersteller update/delete;
-- analog zu Memory/Milestone;
-- klare Ownership und weniger überraschende Deletes.
-
-**Option B – collaborative-write:**
-
-- beide aktiven Partner dürfen gemeinsame Planungsressourcen ändern;
-- fachlich naheliegend für echte Paarplanung;
-- benötigt klare 409-/Audit-/Undo-UX und Delete-Regeln.
-
-**Wichtig:** `SPACE_SHARED` entscheidet diese Frage nicht. Die Entscheidung muss je Aggregate oder als begründete gemeinsame M3-Regel getroffen werden.
-
-### M3-D02 – Wish -> Plan Kardinalität und Idempotenz
-
-Zu entscheiden:
-
-- ein Wish -> maximal ein originärer Plan oder 1:n?
-- wird `Wish.status=PLANNED` ausschließlich von dieser Operation gesetzt?
-- was liefert ein identischer Retry nach erfolgreichem Commit?
-- welche Unique Constraints sichern die Entscheidung?
-
-**PROPOSED:** 1:1 Ursprung, `UNIQUE(source_wish_id)` innerhalb der Plans, Row Lock auf Wish und deterministischer Conflict/Idempotenzvertrag.
-
-### M3-D03 – Rückführung Plan -> Wish
-
-Source-bound: ein nicht abgeschlossener Plan kann grundsätzlich zurückgeführt werden.
-
-Offen:
-
-- nur wenn `sourceWishId` vorhanden?
-- ursprünglichen Wish reaktivieren oder neuen Wish erzeugen?
-- bleibt Plan als Historie erhalten?
-- werden Plan-Titel/Beschreibung zurückkopiert?
-- wie verhindert man Datenverlust, wenn Wish und Plan seit Konvertierung divergiert sind?
-
-**Sicherheits-/Datenprinzip:** keine automatische Überschreibung zweier divergierter ProtectedPayloads.
-
-### M3-D04 – Plan Lifecycle
-
-Source-bound States:
-
-```text
-IDEA
-PLANNED
-COMPLETED
-```
-
-Offene Transitionen:
-
-```text
-IDEA -> PLANNED
-PLANNED -> IDEA ?
-IDEA -> COMPLETED ?
-PLANNED -> COMPLETED
-COMPLETED -> ... ?
-```
-
-Außerdem:
-
-- Terminpflicht für `PLANNED`?
-- `experiencedOn` Pflicht für `COMPLETED`?
-- Completion darf in Zukunft liegende `experiencedOn` setzen?
-- dürfen planned dates nach Completion geändert werden?
-
-### M3-D05 – Wish/Plan Delete
-
-Diese Decision muss mindestens folgende Fälle tabellarisch festlegen:
-
-- Wish OPEN ohne Plan,
-- Wish PLANNED mit Plan,
-- Wish COMPLETED,
-- Plan mit sourceWish,
-- Plan ohne sourceWish,
-- Plan in Chapter/Place Relation,
-- konkurrierender Delete gegen Conversion/Completion.
-
-Kein Delete darf versehentlich andere fachliche Originale kaskadieren.
+- M3-Shared-Planning-/Listenressourcen verwenden collaborative write für beide aktiven Space-Mitglieder; `createdBy` ist Attribution, keine ACL.
+- ein Wish besitzt höchstens einen gleichzeitig existierenden originären Plan; `sourceWishId` ist eindeutig.
+- Wish->Plan ist atomar, Wish-row-locked und bei einem Retry im `PLANNED`-Zustand idempotent.
+- die Konvertierung erzeugt einen Plan im Status `IDEA`; `Wish.status=PLANNED` entsteht nur durch diese Operation.
+- return-to-wish ist nur für source-bound `IDEA`/`PLANNED` erlaubt, reaktiviert denselben Wish auf `OPEN` und löscht den Plan ohne automatische Payload-Rückkopplung.
+- Planstatus: `IDEA -> PLANNED`, `PLANNED -> IDEA`, `IDEA|PLANNED -> COMPLETED`; `COMPLETED` ist terminal.
+- `PLANNED` benötigt `plannedStart`; `COMPLETED` benötigt `experiencedOn`; ein spontanes `IDEA -> COMPLETED` bleibt erlaubt.
+- Direct Plans sind erlaubt und starten immer als `IDEA` ohne `sourceWishId` und ohne Plantermine.
+- Wish-/Plan-Delete folgt der dokumentierten State-Matrix und kaskadiert niemals auf fachliche Originale.
+- für Transaktionen, die source Wish + Plan gemeinsam sperren, gilt die Lock-Reihenfolge `Wish -> Plan`.
+- API nutzt explizite Operationsrouten für Convert, Schedule, Unschedule, Complete und Return; normales PATCH setzt keinen Status.
+- PostgreSQL-, HTTP-, Race-, Rollback-, Tenant- und Delete-Matrix-Tests sind verpflichtend.
 
 ### M3-D06 / D28 – Place und präzise Location
 
@@ -205,7 +142,7 @@ Vor Runtime als `DECIDED` dokumentieren, damit Relation-Service und Tests diesel
 Vor Migration gemeinsam entscheiden:
 
 - Root-Version und/oder Item-Version,
-- Ownership/Schreibrecht,
+- Ownership-/Persistenzfelder; die Write-Grundregel aus M3-D01 ist collaborative,
 - Positionstyp,
 - Reorder-Operation,
 - Item-Completion-Concurrency,
