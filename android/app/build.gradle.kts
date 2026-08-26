@@ -43,6 +43,14 @@ android {
 
 android.sourceSets.named("main") {
     kotlin.directories += "../api/generated"
+    // The generated passkey request models contain Map<String, Any>. They are
+    // outside this M2-S8 slice and cannot be lowered by kotlinx.serialization
+    // without a concrete Any serializer. Keep the generator-owned files intact
+    // and compile the contract surface S8 actually uses.
+    kotlin.exclude(
+        "sidebyside/api/models/PasskeyAuthenticationRequest.kt",
+        "sidebyside/api/models/PasskeyRegistrationRequest.kt",
+    )
 }
 
 dependencies {
