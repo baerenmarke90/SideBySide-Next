@@ -1,0 +1,34 @@
+name: OpenAPI Drift Artifact
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    name: Regenerate API Clients
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Generierte API-Clients erzeugen
+        run: tools/openapi/generate.sh
+
+      - name: Generator-Ausgabe sammeln
+        run: |
+          mkdir -p /tmp/openapi-generated
+          cp -R android/api/generated /tmp/openapi-generated/android
+          cp -R web/src/api/generated /tmp/openapi-generated/web
+          git diff --no-ext-diff --name-status -- \
+            android/api/generated web/src/api/generated \
+            > /tmp/openapi-generated/changed-files.txt || true
+
+      - name: Generator-Ausgabe hochladen
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: openapi-generated-${{ github.sha }}
+          path: /tmp/openapi-generated
+          if-no-files-found: error
+          retention-days: 1
