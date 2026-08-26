@@ -39,21 +39,52 @@ Für die gemeinsamen M3-Domänen **Wish, Plan, Place, Chapter und Collection** g
 - `createdBy` dient Attribution/Audit, **nicht** als ACL;
 - `createdBy`, `spaceId` und technische Ownership-Felder sind clientseitig nicht überschreibbar;
 - domain-spezifische State-, Delete- oder Relation-Regeln können eine konkrete Mutation trotz aktiver Membership blockieren;
-- Cross-Space oder fehlende Membership bleibt 404-/Tenant-denied gemäß bestehender Security-Konvention.
+- fehlende Membership, fremder Space oder fremde Resource-ID bleibt privacy-sicher gemäß bestehender Tenant-Konvention.
 
-Diese Regel ändert **nicht** die author-only-Regeln anderer Domänen wie Memory. Sie gilt nur für die hier benannten kollaborativen M3-Planungs-/Listenressourcen.
+Diese Regel ändert **nicht** author-only-Regeln anderer Domänen wie Memory. Sie gilt nur für die benannten kollaborativen M3-Planungs-/Listenressourcen.
 
-### API-Folge
+### Wish/Plan konkret
+
+- beide Partner dürfen den Wish-Titel ändern, unabhängig davon, wer den Wish erstellt hat;
+- beide Partner dürfen Plan-Titel, Beschreibung und Place-Zuordnung ändern;
+- Statusfelder werden niemals über normales PATCH gesetzt;
+- Wish und Plan bleiben nach der Konvertierung getrennte Domainobjekte: eine Änderung am Wish-Titel synchronisiert den Plan-Titel nicht automatisch und umgekehrt;
+- `createdBy` bleibt unverändert.
+
+### API-/Audit-Folge
 
 - kein creator-only-403 für Wish/Plan;
-- verbotene Lifecycle-Aktionen werden als fachlicher Konflikt (`409`) modelliert, nicht als Berechtigungsfehler;
-- Clients dürfen `capabilities` anzeigen, aber die Serverautorisierung bleibt allein verbindlich.
+- verbotene Lifecycle-Aktionen sind fachliche Konflikte (`409`), keine Berechtigungsfehler;
+- Clients dürfen `capabilities` anzeigen, aber nur der Server entscheidet über die Mutation;
+- Audit/Event hält Actor-ID, Resource-ID, Zeitpunkt, Aktion und Ergebnis fest, aber keine fachlichen Titel/Beschreibungen.
 
-### Audit/Event-Folge
+## 3. Wish-Lifecycle – verbindliche Ableitung aus D02/D03/D04
 
-Jede Mutation hält mindestens Actor-ID, Resource-ID, Zeitpunkt, Aktion und Ergebnis fest. Fachliche Titel/Beschreibungen werden nicht in Audit-/Event-Payloads kopiert. Der endgültige M3-Event-Envelope bleibt M3-D23.
+Wish besitzt exakt diesen Statusautomaten:
 
-## 3. M3-D02 – Wish -> Plan Kardinalität, Atomizität und Idempotenz
+```text
+OPEN
+  | convert-to-plan
+  v
+PLANNED
+  | plan complete
+  v
+COMPLETED
+
+PLANNED -- return-to-wish --> OPEN
+```
+
+Verbindlich:
+
+- `OPEN -> PLANNED` ausschließlich durch die atomare Wish->Plan-Operation;
+- `PLANNED -> OPEN` ausschließlich durch `return-to-wish` des originären Plans;
+- `PLANNED -> COMPLETED` ausschließlich durch Completion des originären Plans;
+- `COMPLETED` ist für den Statusautomaten terminal;
+- es gibt keine direkte Wish-Complete-Route;
+- es gibt keinen freien Wish-Status-PATCH;
+- normale Titelkorrekturen bleiben versionierte Inhaltsupdates und verändern den Status nicht.
+
+## 4. M3-D02 – Wish -> Plan Kardinalität, Atomizität und Idempotenz
 
 ### Entscheidung
 
@@ -65,8 +96,6 @@ Persistenz:
 - wenn gesetzt, referenziert es einen Wish desselben Space;
 - `sourceWishId` ist eindeutig;
 - ein zurückgeführter Plan wird gelöscht, dadurch kann derselbe Wish später erneut zu einem neuen Plan konvertiert werden.
-
-`Wish.status=PLANNED` darf ausschließlich durch die atomare Wish->Plan-Operation entstehen.
 
 ### Operation
 
@@ -106,7 +135,17 @@ WishToPlanResponse
 - plan
 ```
 
-Ein Retry nach bereits erfolgreicher Konvertierung ist idempotent, solange der Wish noch `PLANNED` ist und der originäre Plan existiert:
+Die Operation erzeugt:
+
+```text
+Wish.status      = PLANNED
+Plan.status      = IDEA
+Plan.sourceWishId = Wish.id
+```
+
+### Idempotenter Retry
+
+Wenn der Wish bereits `PLANNED` ist und genau der originäre Plan existiert, liefert ein erneuter Convert-Aufruf denselben Plan:
 
 ```text
 200 OK
@@ -115,9 +154,9 @@ WishToPlanResponse
 - derselbe plan
 ```
 
-Der Retry erzeugt **niemals** einen zweiten Plan.
+Der Retry erzeugt **niemals** einen zweiten Plan. Ein abweichender Request überschreibt dabei den bereits existierenden Plan nicht; weitere Änderungen erfolgen über den Plan selbst.
 
-Wenn der Wish bereits `COMPLETED` ist, ist eine erneute Konvertierung kein Retry mehr und liefert einen fachlichen Konflikt.
+Wenn der Wish bereits `COMPLETED` ist, ist eine erneute Konvertierung kein Retry und liefert einen fachlichen Konflikt.
 
 ### Transaktionsablauf
 
@@ -142,19 +181,10 @@ Zwei parallele Convert-Requests auf denselben OPEN-Wish ergeben deterministisch:
 
 - genau einen Plan in der Datenbank;
 - ein Request erzeugt den Plan;
-- der zweite wartet auf den Wish-Lock und erhält anschließend denselben originären Plan als idempotente Antwort;
-- DB-Unique ist zusätzliche letzte Integritätsgrenze.
+- der zweite wartet auf den Wish-Lock und erhält danach denselben originären Plan als idempotente Antwort;
+- DB-Unique ist die letzte Integritätsgrenze.
 
-### DB-Constraints
-
-Mindestens:
-
-- FK `plans.source_wish_id -> wishes.id`;
-- Same-Space-Enforcement für `(source_wish_id, space_id)` über passende zusammengesetzte Integritätsgrenze oder äquivalent belastbare DB-/Service-Absicherung;
-- `UNIQUE(source_wish_id)`; PostgreSQL erlaubt dabei mehrere `NULL` für Direct Plans;
-- kein clientseitiges Setzen von `sourceWishId`.
-
-## 4. M3-D03 – Plan -> Wish Rückführung
+## 5. M3-D03 – Plan -> Wish Rückführung
 
 ### Entscheidung
 
@@ -164,17 +194,18 @@ Mindestens:
 - Plan-Status `IDEA` oder `PLANNED`;
 - source Wish ist `PLANNED`.
 
-Ein Direct Plan ohne `sourceWishId` kann nicht „zurück“ in einen Wish geführt werden. Dafür müsste der Nutzer explizit einen neuen Wish erstellen.
+Ein Direct Plan ohne `sourceWishId` kann nicht „zurück“ in einen Wish geführt werden. Dafür muss der Nutzer explizit einen neuen Wish erstellen.
 
 ### Semantik
 
 Die Rückführung:
 
 1. reaktiviert **denselben ursprünglichen Wish** mit Status `OPEN`;
-2. löscht den nicht abgeschlossenen Plan;
-3. entfernt ausschließlich Plan-eigene Relation-/Join-Zeilen;
-4. löscht niemals Place, Chapter oder andere fachliche Originalressourcen;
-5. kopiert **keinen** Plan-Titel, keine Beschreibung und keine Plan-Termine automatisch in den Wish zurück.
+2. erhöht die Wish-Version;
+3. löscht den nicht abgeschlossenen Plan;
+4. entfernt ausschließlich Plan-eigene Relation-/Join-Zeilen;
+5. löscht niemals Place, Chapter oder andere fachliche Originalressourcen;
+6. kopiert **keinen** Plan-Titel, keine Beschreibung und keine Plan-Termine automatisch in den Wish zurück.
 
 Damit gibt es keine stille Überschreibung divergierter ProtectedPayloads. Plan-spezifische Daten werden bei der ausdrücklich gewählten Rückführung verworfen; die UI muss diese destruktive Folge vor Bestätigung verständlich machen.
 
@@ -196,29 +227,15 @@ PlanReturnToWishResponse
 
 Der Plan ist danach unter seiner ID nicht mehr lesbar.
 
-### Locking
-
-Wenn Wish und Plan gemeinsam betroffen sind, gilt die kanonische Lock-Reihenfolge:
-
-```text
-Wish -> Plan
-```
-
-Ein Plan-Service darf die Plan-ID zunächst ohne Lock auflösen, muss anschließend den source Wish sperren und danach den Plan unter derselben Transaktion erneut sperren/revalidieren. Diese Reihenfolge gilt auch für Completion und source-bound Deletes, damit Return/Complete/Delete nicht gegeneinander deadlocken.
-
-## 5. M3-D04 – Plan Lifecycle und Datumsinvarianten
+## 6. M3-D04 – Plan Lifecycle und Datumsinvarianten
 
 ### Verbindlicher Statusautomat
 
 ```text
-            schedule
-IDEA --------------------> PLANNED
-  |                           |
-  | complete                  | complete
-  v                           v
-COMPLETED <---------------- COMPLETED
-
+IDEA -- schedule --> PLANNED
+IDEA -- complete --> COMPLETED
 PLANNED -- unschedule --> IDEA
+PLANNED -- complete --> COMPLETED
 ```
 
 Erlaubt:
@@ -232,7 +249,7 @@ Verboten:
 
 - jede Transition aus `COMPLETED` in einen anderen Status;
 - freies Setzen von `status` über normales `PATCH`;
-- `IDEA -> IDEA` oder `PLANNED -> PLANNED` als Statusoperation; normale Inhalts-/Terminänderungen bleiben separate Updates.
+- Status-Self-Transitions als eigene Operation.
 
 `return-to-wish` ist **keine Plan-Statuskante**, sondern eine eigene Domainoperation nach M3-D03, die den Plan entfernt und den Wish reaktiviert.
 
@@ -272,7 +289,14 @@ Alle benötigen `If-Match`.
 - plannedEnd?    # optional
 ```
 
-`unschedule` setzt Status `IDEA` und löscht `plannedStart/plannedEnd`.
+- auf `IDEA`: Status wird `PLANNED`;
+- auf `PLANNED`: Termin wird versioniert aktualisiert, Status bleibt `PLANNED`.
+
+`unschedule`:
+
+- nur auf `PLANNED`;
+- setzt Status `IDEA`;
+- löscht `plannedStart/plannedEnd`.
 
 `complete`:
 
@@ -284,11 +308,15 @@ Bei einem source-bound Plan setzt Completion in derselben Transaktion zusätzlic
 
 ### Normales PATCH
 
-`PATCH Plan` darf kein `status` setzen. Es darf fachliche Nicht-Lifecycle-Felder ändern, insbesondere `title`, `description` und `placeId`, sofern die übrigen Invarianten eingehalten werden.
+`PATCH Plan` darf kein `status` setzen. Es darf fachliche Nicht-Lifecycle-Felder ändern, insbesondere:
 
-Terminänderungen eines bereits `PLANNED`en Plans dürfen über eine erneute Schedule-/Reschedule-Operation mit `If-Match` erfolgen. `experiencedOn` wird durch Completion gesetzt; eine spätere Korrektur eines Completed-Datums darf als versioniertes fachliches Update zugelassen werden, solange es nicht in der Zukunft liegt.
+- `title`
+- `description`
+- `placeId`
 
-## 6. M3-D05 – Delete-Semantik
+Auch ein `COMPLETED` Plan darf für fachliche Korrekturen versioniert bearbeitet werden; daraus entsteht **keine** Status-Rücköffnung. `experiencedOn` darf bei einem Completed Plan versioniert korrigiert werden, solange das Datum nicht in der Zukunft liegt.
+
+## 7. M3-D05 – Delete-Semantik
 
 ### Grundregel
 
@@ -299,9 +327,9 @@ Delete entfernt nur das gewählte Aggregate bzw. seine eigenen Join-/Child-Zeile
 | Wish-Zustand | Originärer Plan | DELETE Wish |
 |---|---|---|
 | `OPEN` | nein | erlaubt, `204` |
-| `OPEN` | ja | inkonsistenter Zustand -> `409` / keine Mutation |
+| `OPEN` | ja | inkonsistenter Zustand -> `409`, keine Mutation |
 | `PLANNED` | ja | blockiert; aktiven Plan verwenden bzw. `return-to-wish` |
-| `PLANNED` | nein | Integritätsverletzung -> `409` / keine Mutation |
+| `PLANNED` | nein | Integritätsverletzung -> `409`, keine Mutation |
 | `COMPLETED` | ja | blockiert, solange der originäre Plan existiert |
 | `COMPLETED` | nein | erlaubt, `204` |
 
@@ -324,15 +352,7 @@ Beim Löschen eines Plans:
 - referenzierte Places/Chapters/sonstige Originale bleiben bestehen;
 - ein completed source Wish bleibt bestehen und kann anschließend separat gelöscht werden.
 
-### Concurrency
-
-- `DELETE Wish`, `DELETE Plan`, Convert, Return und Complete sind versioniert und verwenden `If-Match`;
-- sobald Wish + source Plan gemeinsam betroffen sind, gilt Lock-Reihenfolge `Wish -> Plan`;
-- Delete vs Convert/Complete/Return wird durch Locks + FK/Unique + Revalidation deterministisch entschieden;
-- stale Mutation -> `409 RESOURCE_VERSION_CONFLICT`;
-- kein Race darf einen `PLANNED` Wish ohne originären Plan oder einen zweiten originären Plan hinterlassen.
-
-## 7. M3-D30 – Direct Plan Create
+## 8. M3-D30 – Direct Plan Create
 
 ### Entscheidung
 
@@ -341,11 +361,11 @@ Ein Plan darf ohne Wish entstehen, weil `sourceWishId` source-bound optional ist
 Direct Create erzeugt **immer** einen Plan mit:
 
 ```text
-sourceWishId = null
-status       = IDEA
-plannedStart = null
-plannedEnd   = null
-experiencedOn = null
+sourceWishId   = null
+status         = IDEA
+plannedStart   = null
+plannedEnd     = null
+experiencedOn  = null
 ```
 
 Request:
@@ -372,7 +392,7 @@ version
 
 Ein Direct Plan wird erst über `/schedule` terminiert oder über `/complete` spontan abgeschlossen.
 
-## 8. API-Vertrag – verbindliche Operationsform
+## 9. API-Vertrag – verbindliche Operationsform
 
 Wish:
 
@@ -401,7 +421,7 @@ POST   /api/v1/spaces/{spaceId}/plans/{planId}/return-to-wish
 
 Statusfelder sind bei normalen PATCH-Requests read-only.
 
-## 9. Stabile Fehlercodes
+## 10. Stabile Fehlercodes
 
 Mindestens:
 
@@ -426,27 +446,64 @@ PLAN_EXPERIENCED_ON_IN_FUTURE     422
 
 Nicht lesbare/fremde Ressourcen bleiben privacy-sicher 404. Ein separater Cross-Space-Fehlercode wird nicht eingeführt.
 
-## 10. Verpflichtende PostgreSQL-/HTTP-Tests
+## 11. DB-Constraints und Locking
+
+Mindestens:
+
+- FK `plans.source_wish_id -> wishes.id`;
+- Same-Space-Enforcement für `(source_wish_id, space_id)` über eine zusammengesetzte Integritätsgrenze oder äquivalent belastbare DB-Absicherung;
+- `UNIQUE(source_wish_id)`; PostgreSQL erlaubt mehrere `NULL` für Direct Plans;
+- Check: `plannedEnd IS NULL OR plannedStart IS NOT NULL`;
+- Check: `plannedEnd IS NULL OR plannedEnd >= plannedStart`;
+- Status-/Datumsinvarianten zusätzlich im Domainservice und – soweit sinnvoll – als DB-Checks.
+
+Wenn Wish und source Plan gemeinsam betroffen sind, gilt die kanonische Lock-Reihenfolge:
+
+```text
+Wish -> Plan
+```
+
+Ein Plan-Service darf die Plan-ID zunächst ohne Lock auflösen, muss anschließend den source Wish sperren und danach den Plan in derselben Transaktion erneut sperren/revalidieren. Diese Reihenfolge gilt für Completion, Return und source-bound Delete-Prüfungen.
+
+Concurrency-Grundsätze:
+
+- `DELETE Wish`, `DELETE Plan`, Convert, Return, Schedule, Unschedule und Complete verwenden `If-Match`;
+- stale Mutation -> `409 RESOURCE_VERSION_CONFLICT`;
+- Delete vs Convert/Complete/Return wird durch Locks + FK/Unique + Revalidation deterministisch entschieden;
+- kein Race darf einen `PLANNED` Wish ohne originären Plan oder einen zweiten originären Plan hinterlassen.
+
+## 12. Verpflichtende PostgreSQL-/HTTP-Tests
 
 ### Shared Writes / Tenant
 
 - beide aktiven Partner können Wish/Plan gemäß Domainzustand ändern/löschen;
 - `createdBy` bleibt unveränderlich;
+- Wish- und Plan-Titel dürfen unabhängig voneinander geändert werden;
 - Account ohne Membership / ID aus anderem Space -> keine Datenänderung, privacy-sicherer Fehler;
 - stale `If-Match` -> 409.
+
+### Wish Lifecycle
+
+- Create -> `OPEN`;
+- kein freier Status-PATCH;
+- OPEN -> PLANNED nur durch Convert;
+- PLANNED -> OPEN nur durch Return;
+- PLANNED -> COMPLETED nur durch source Plan Completion;
+- COMPLETED besitzt keine Status-Rückkante.
 
 ### Wish -> Plan
 
 - OPEN Wish -> 201 + genau ein Plan + Wish PLANNED;
 - Plan startet IDEA;
 - identischer Retry bei PLANNED -> 200 mit derselben Plan-ID;
+- abweichender Retry überschreibt existierenden Plan nicht;
 - zwei parallele Convert-Requests -> exakt ein Plan;
 - Fehler zwischen Plan-Insert und Wish-Update -> vollständiger Rollback;
 - stale OPEN-Wish -> 409 und kein Plan;
 - COMPLETED Wish -> 409;
 - fremdes `placeId` -> 404 und kein Plan.
 
-### Lifecycle
+### Plan Lifecycle
 
 Für jede erlaubte Kante Happy Path + stale Version testen.
 
@@ -458,7 +515,9 @@ Explizite Negativtests:
 - `plannedEnd < plannedStart` verboten;
 - zukünftiges `experiencedOn` verboten;
 - Completion aus IDEA erlaubt;
-- Completion aus PLANNED erlaubt und erhält Plantermine.
+- Completion aus PLANNED erlaubt und erhält Plantermine;
+- Reschedule PLANNED -> PLANNED ändert nur Termine + Version;
+- Unschedule löscht geplante Termine.
 
 ### Source Wish Completion
 
@@ -484,13 +543,13 @@ Jede Zeile der Wish-/Plan-Delete-Matrix erhält einen HTTP- und PostgreSQL-Test.
 - keine Originalresource-Cascade;
 - nach Delete completed source Plan bleibt Wish COMPLETED und separat löschbar.
 
-## 11. Privacy-/Telemetry-Folge
+## 13. Privacy-/Telemetry-Folge
 
 Wish- und Plan-Titel/Beschreibungen gehören nicht in Logs, Analytics, Error Context oder Domain-Event-Payloads. Zulässig sind technische IDs, Actor, Space, Version, Eventtyp und sichere Statuswerte gemäß später finalisiertem M3-D23.
 
-## 12. Folge für M3-S1/S2
+## 14. Folge für M3-S1/S2
 
-Nach bestandenem G2 und Status-Sync #146 dürfen Wish-/Plan-Runtime-Slices auf diesen Vertrag bauen. Dabei bleiben weiterhin außerhalb dieses Decision-Scopes:
+Nach der im Repository definierten M3-Runtime-Freigabe dürfen Wish-/Plan-Runtime-Slices auf diesen Vertrag bauen. Weiterhin außerhalb dieses Decision-Scopes bleiben:
 
 - Place-Feldklassifizierung und Relationdetails (#163),
 - Collections/Private Area (#164),
