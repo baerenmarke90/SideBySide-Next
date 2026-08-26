@@ -45,7 +45,7 @@ class ReferenceViewModelTest {
     }
 
     @Test
-    fun logoutIgnoresLateTimelineFailureFromPreviousSession() = runTest(dispatcher) {
+    fun logoutIgnoresLateTimelineAndPickerResultsFromPreviousSession() = runTest(dispatcher) {
         val releaseSecondTimeline = CompletableDeferred<Unit>()
         var timelineCalls = 0
         val api = object : ReferenceContract {
@@ -113,18 +113,26 @@ class ReferenceViewModelTest {
         viewModel.signIn("person@example.com", "secret")
         advanceUntilIdle()
         assertEquals(1, timelineCalls)
+        val selectionEpoch = checkNotNull(viewModel.beginImageSelection())
 
         viewModel.refreshStory()
         assertEquals(2, timelineCalls)
         viewModel.logout()
+        assertNull(viewModel.beginImageSelection())
 
         releaseSecondTimeline.complete(Unit)
         advanceUntilIdle()
+        viewModel.selectImage(
+            SelectedImage(byteArrayOf(1, 2, 3), "late.jpg", "image/jpeg"),
+            selectionEpoch,
+        )
+        viewModel.setImageError(IllegalStateException("late picker failure"), selectionEpoch)
 
         val state = viewModel.uiState.value
         assertFalse(state.loggedIn)
         assertEquals("Abgemeldet.", state.status)
         assertNull(state.error)
+        assertNull(state.selectedImageName)
         assertEquals(emptyList<Any>(), state.storyItems)
     }
 
