@@ -73,9 +73,7 @@ def test_delete_gegen_parallelen_delete_antwortet_404_statt_500(
     blocker.delete(person)
     blocker.flush()
 
-    path = (
-        f"/api/v1/spaces/{space_id}/related-persons/{person_id}?deletePolicy=preserve"
-    )
+    path = f"/api/v1/spaces/{space_id}/related-persons/{person_id}?deletePolicy=preserve"
     headers = {**auth(token_a), "If-Match": f'"{version}"'}
 
     started = Event()
