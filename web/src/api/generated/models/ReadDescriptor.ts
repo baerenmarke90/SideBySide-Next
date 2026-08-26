@@ -27,7 +27,7 @@ export interface ReadDescriptor {
     expiresAt?: Date | null;
     /**
      * 
-     * @type {string}
+     * @type {ReadDescriptorMethodEnum}
      * @memberof ReadDescriptor
      */
     method: ReadDescriptorMethodEnum;
@@ -69,7 +69,7 @@ export function ReadDescriptorFromJSONTyped(json: any, ignoreDiscriminator: bool
     }
     return {
         
-        'expiresAt': json['expiresAt'] == null ? undefined : (new Date(json['expiresAt'])),
+        'expiresAt': json['expiresAt'] === undefined ? undefined : json['expiresAt'] === null ? null : (new Date(json['expiresAt'])),
         'method': json['method'],
         'url': json['url'],
     };

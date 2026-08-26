@@ -31,7 +31,6 @@ import {
  * @interface HeartMomentUpdate
  */
 export interface HeartMomentUpdate {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -77,11 +76,10 @@ export function HeartMomentUpdateFromJSONTyped(json: any, ignoreDiscriminator: b
     }
     return {
         
-            ...json,
-        'attachmentId': json['attachmentId'] == null ? undefined : json['attachmentId'],
-        'emotion': json['emotion'] == null ? undefined : HeartEmotionFromJSON(json['emotion']),
-        'happenedOn': json['happenedOn'] == null ? undefined : (new Date(json['happenedOn'])),
-        'text': json['text'] == null ? undefined : json['text'],
+        'attachmentId': json['attachmentId'] === undefined ? undefined : json['attachmentId'] === null ? null : json['attachmentId'],
+        'emotion': json['emotion'] === undefined ? undefined : json['emotion'] === null ? null : HeartEmotionFromJSON(json['emotion']),
+        'happenedOn': json['happenedOn'] === undefined ? undefined : json['happenedOn'] === null ? null : (new Date(json['happenedOn'])),
+        'text': json['text'] === undefined ? undefined : json['text'] === null ? null : json['text'],
     };
 }
 
@@ -96,7 +94,6 @@ export function HeartMomentUpdateToJSONTyped(value?: HeartMomentUpdate | null, i
 
     return {
         
-            ...value,
         'attachmentId': value['attachmentId'],
         'emotion': HeartEmotionToJSON(value['emotion']),
         'happenedOn': value['happenedOn'] == null ? value['happenedOn'] : value['happenedOn'].toISOString().substring(0,10),

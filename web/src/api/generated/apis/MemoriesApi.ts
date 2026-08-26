@@ -12,30 +12,37 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  MemoryAttachmentSet,
-  MemoryCreate,
-  MemoryDetail,
-  MemoryPage,
-  MemoryUpdate,
-  ProblemDetails,
-} from '../models/index';
 import {
+    type MemoryAttachmentSet,
     MemoryAttachmentSetFromJSON,
     MemoryAttachmentSetToJSON,
+} from '../models/MemoryAttachmentSet';
+import {
+    type MemoryCreate,
     MemoryCreateFromJSON,
     MemoryCreateToJSON,
+} from '../models/MemoryCreate';
+import {
+    type MemoryDetail,
     MemoryDetailFromJSON,
     MemoryDetailToJSON,
+} from '../models/MemoryDetail';
+import {
+    type MemoryPage,
     MemoryPageFromJSON,
     MemoryPageToJSON,
+} from '../models/MemoryPage';
+import {
+    type MemoryUpdate,
     MemoryUpdateFromJSON,
     MemoryUpdateToJSON,
+} from '../models/MemoryUpdate';
+import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
-} from '../models/index';
+} from '../models/ProblemDetails';
 
 export interface CreateMemoryRequest {
     spaceId: string;
@@ -80,9 +87,9 @@ export interface UpdateMemoryRequest {
 export class MemoriesApi extends runtime.BaseAPI {
 
     /**
-     * Create Memory
+     * Creates request options for createMemory without sending the request
      */
-    async createMemoryRaw(requestParameters: CreateMemoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
+    async createMemoryRequestOpts(requestParameters: CreateMemoryRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -105,15 +112,23 @@ export class MemoriesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/memories`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: MemoryCreateToJSON(requestParameters['memoryCreate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Memory
+     */
+    async createMemoryRaw(requestParameters: CreateMemoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
+        const requestOptions = await this.createMemoryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MemoryDetailFromJSON(jsonValue));
     }
@@ -127,9 +142,9 @@ export class MemoriesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete Memory
+     * Creates request options for deleteMemory without sending the request
      */
-    async deleteMemoryRaw(requestParameters: DeleteMemoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteMemoryRequestOpts(requestParameters: DeleteMemoryRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['memoryId'] == null) {
             throw new runtime.RequiredError(
                 'memoryId',
@@ -161,15 +176,23 @@ export class MemoriesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/memories/{memoryId}`;
-        urlPath = urlPath.replace(`{${"memoryId"}}`, encodeURIComponent(String(requestParameters['memoryId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{memoryId}', encodeURIComponent(String(requestParameters['memoryId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete Memory
+     */
+    async deleteMemoryRaw(requestParameters: DeleteMemoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteMemoryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -182,9 +205,9 @@ export class MemoriesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Memory
+     * Creates request options for getMemory without sending the request
      */
-    async getMemoryRaw(requestParameters: GetMemoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
+    async getMemoryRequestOpts(requestParameters: GetMemoryRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['memoryId'] == null) {
             throw new runtime.RequiredError(
                 'memoryId',
@@ -205,15 +228,23 @@ export class MemoriesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/memories/{memoryId}`;
-        urlPath = urlPath.replace(`{${"memoryId"}}`, encodeURIComponent(String(requestParameters['memoryId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{memoryId}', encodeURIComponent(String(requestParameters['memoryId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Memory
+     */
+    async getMemoryRaw(requestParameters: GetMemoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
+        const requestOptions = await this.getMemoryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MemoryDetailFromJSON(jsonValue));
     }
@@ -227,9 +258,9 @@ export class MemoriesApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Memories
+     * Creates request options for listMemories without sending the request
      */
-    async listMemoriesRaw(requestParameters: ListMemoriesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryPage>> {
+    async listMemoriesRequestOpts(requestParameters: ListMemoriesRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -255,14 +286,22 @@ export class MemoriesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/memories`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Memories
+     */
+    async listMemoriesRaw(requestParameters: ListMemoriesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryPage>> {
+        const requestOptions = await this.listMemoriesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MemoryPageFromJSON(jsonValue));
     }
@@ -276,10 +315,9 @@ export class MemoriesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Menge und Reihenfolge in einem Zug setzen.  Ein PUT, kein Hinzufuegen und Entfernen: der Client schickt den Zustand, den er gesehen hat, und `If-Match` sorgt dafuer, dass er ihn noch hat.
-     * Replace Memory Attachments
+     * Creates request options for replaceMemoryAttachments without sending the request
      */
-    async replaceMemoryAttachmentsRaw(requestParameters: ReplaceMemoryAttachmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
+    async replaceMemoryAttachmentsRequestOpts(requestParameters: ReplaceMemoryAttachmentsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['memoryId'] == null) {
             throw new runtime.RequiredError(
                 'memoryId',
@@ -320,16 +358,25 @@ export class MemoriesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/memories/{memoryId}/attachments`;
-        urlPath = urlPath.replace(`{${"memoryId"}}`, encodeURIComponent(String(requestParameters['memoryId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{memoryId}', encodeURIComponent(String(requestParameters['memoryId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
             body: MemoryAttachmentSetToJSON(requestParameters['memoryAttachmentSet']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Menge und Reihenfolge in einem Zug setzen.  Ein PUT, kein Hinzufuegen und Entfernen: der Client schickt den Zustand, den er gesehen hat, und `If-Match` sorgt dafuer, dass er ihn noch hat.
+     * Replace Memory Attachments
+     */
+    async replaceMemoryAttachmentsRaw(requestParameters: ReplaceMemoryAttachmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
+        const requestOptions = await this.replaceMemoryAttachmentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MemoryDetailFromJSON(jsonValue));
     }
@@ -344,9 +391,9 @@ export class MemoriesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update Memory
+     * Creates request options for updateMemory without sending the request
      */
-    async updateMemoryRaw(requestParameters: UpdateMemoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
+    async updateMemoryRequestOpts(requestParameters: UpdateMemoryRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['memoryId'] == null) {
             throw new runtime.RequiredError(
                 'memoryId',
@@ -387,16 +434,24 @@ export class MemoriesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/memories/{memoryId}`;
-        urlPath = urlPath.replace(`{${"memoryId"}}`, encodeURIComponent(String(requestParameters['memoryId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{memoryId}', encodeURIComponent(String(requestParameters['memoryId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PATCH',
             headers: headerParameters,
             query: queryParameters,
             body: MemoryUpdateToJSON(requestParameters['memoryUpdate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Update Memory
+     */
+    async updateMemoryRaw(requestParameters: UpdateMemoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
+        const requestOptions = await this.updateMemoryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MemoryDetailFromJSON(jsonValue));
     }

@@ -8,9 +8,17 @@
 
 @file:Suppress(
     "ArrayInDataClass",
+    "DuplicatedCode",
     "EnumEntryName",
     "RemoveRedundantQualifierName",
-    "UnusedImport"
+    "RemoveRedundantCallsOfConversionMethods",
+    "REDUNDANT_CALL_OF_CONVERSION_METHOD",
+    "RedundantUnitReturnType",
+    "RemoveEmptyClassBody",
+    "UnnecessaryVariable",
+    "UnusedImport",
+    "UnnecessaryVariable",
+    "unused"
 )
 
 package sidebyside.api.models
@@ -25,21 +33,33 @@ import kotlinx.serialization.Contextual
  * 
  *
  * @param effectiveDate 
+ * @param kind 
  * @param milestone 
  */
 @Serializable
 
-@SerialName(value = "MILESTONE")
 data class StoryMilestoneItem (
 
     @Contextual @SerialName(value = "effectiveDate")
     val effectiveDate: java.time.LocalDate,
+
+    @SerialName(value = "kind")
+    val kind: StoryMilestoneItem.Kind,
 
     @SerialName(value = "milestone")
     val milestone: MilestoneSummary
 
 ) {
 
+    /**
+     * 
+     *
+     * Values: MILESTONE
+     */
+    @Serializable
+    enum class Kind(val value: kotlin.String) {
+        @SerialName(value = "MILESTONE") MILESTONE("MILESTONE");
+    }
 
 }
 

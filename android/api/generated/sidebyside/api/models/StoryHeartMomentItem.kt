@@ -8,9 +8,17 @@
 
 @file:Suppress(
     "ArrayInDataClass",
+    "DuplicatedCode",
     "EnumEntryName",
     "RemoveRedundantQualifierName",
-    "UnusedImport"
+    "RemoveRedundantCallsOfConversionMethods",
+    "REDUNDANT_CALL_OF_CONVERSION_METHOD",
+    "RedundantUnitReturnType",
+    "RemoveEmptyClassBody",
+    "UnnecessaryVariable",
+    "UnusedImport",
+    "UnnecessaryVariable",
+    "unused"
 )
 
 package sidebyside.api.models
@@ -26,20 +34,32 @@ import kotlinx.serialization.Contextual
  *
  * @param effectiveDate 
  * @param heartMoment 
+ * @param kind 
  */
 @Serializable
 
-@SerialName(value = "HEART_MOMENT")
 data class StoryHeartMomentItem (
 
     @Contextual @SerialName(value = "effectiveDate")
     val effectiveDate: java.time.LocalDate,
 
     @SerialName(value = "heartMoment")
-    val heartMoment: SharedHeartMomentSummary
+    val heartMoment: SharedHeartMomentSummary,
+
+    @SerialName(value = "kind")
+    val kind: StoryHeartMomentItem.Kind
 
 ) {
 
+    /**
+     * 
+     *
+     * Values: HEART_MOMENT
+     */
+    @Serializable
+    enum class Kind(val value: kotlin.String) {
+        @SerialName(value = "HEART_MOMENT") HEART_MOMENT("HEART_MOMENT");
+    }
 
 }
 

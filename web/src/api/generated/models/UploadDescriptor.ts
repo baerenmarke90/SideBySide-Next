@@ -41,7 +41,7 @@ export interface UploadDescriptor {
     expiresAt?: Date | null;
     /**
      * 
-     * @type {string}
+     * @type {UploadDescriptorMethodEnum}
      * @memberof UploadDescriptor
      */
     method: UploadDescriptorMethodEnum;
@@ -92,7 +92,7 @@ export function UploadDescriptorFromJSONTyped(json: any, ignoreDiscriminator: bo
     return {
         
         'attachment': AttachmentDetailFromJSON(json['attachment']),
-        'expiresAt': json['expiresAt'] == null ? undefined : (new Date(json['expiresAt'])),
+        'expiresAt': json['expiresAt'] === undefined ? undefined : json['expiresAt'] === null ? null : (new Date(json['expiresAt'])),
         'method': json['method'],
         'requiredHeaders': json['requiredHeaders'],
         'uploadUrl': json['uploadUrl'],

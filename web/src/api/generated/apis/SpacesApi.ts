@@ -12,24 +12,27 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  ProblemDetails,
-  SpaceProfileUpdate,
-  SpaceProfileView,
-  SpaceView,
-} from '../models/index';
 import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
+} from '../models/ProblemDetails';
+import {
+    type SpaceProfileUpdate,
     SpaceProfileUpdateFromJSON,
     SpaceProfileUpdateToJSON,
+} from '../models/SpaceProfileUpdate';
+import {
+    type SpaceProfileView,
     SpaceProfileViewFromJSON,
     SpaceProfileViewToJSON,
+} from '../models/SpaceProfileView';
+import {
+    type SpaceView,
     SpaceViewFromJSON,
     SpaceViewToJSON,
-} from '../models/index';
+} from '../models/SpaceView';
 
 export interface GetSpaceApiV1SpacesSpaceIdGetRequest {
     spaceId: string;
@@ -51,9 +54,9 @@ export interface UpdateSpaceProfileApiV1SpacesSpaceIdProfilePutRequest {
 export class SpacesApi extends runtime.BaseAPI {
 
     /**
-     * Get Space
+     * Creates request options for getSpaceApiV1SpacesSpaceIdGet without sending the request
      */
-    async getSpaceApiV1SpacesSpaceIdGetRaw(requestParameters: GetSpaceApiV1SpacesSpaceIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceView>> {
+    async getSpaceApiV1SpacesSpaceIdGetRequestOpts(requestParameters: GetSpaceApiV1SpacesSpaceIdGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -67,14 +70,22 @@ export class SpacesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Space
+     */
+    async getSpaceApiV1SpacesSpaceIdGetRaw(requestParameters: GetSpaceApiV1SpacesSpaceIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceView>> {
+        const requestOptions = await this.getSpaceApiV1SpacesSpaceIdGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => SpaceViewFromJSON(jsonValue));
     }
@@ -88,9 +99,9 @@ export class SpacesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Space Profile
+     * Creates request options for getSpaceProfileApiV1SpacesSpaceIdProfileGet without sending the request
      */
-    async getSpaceProfileApiV1SpacesSpaceIdProfileGetRaw(requestParameters: GetSpaceProfileApiV1SpacesSpaceIdProfileGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceProfileView>> {
+    async getSpaceProfileApiV1SpacesSpaceIdProfileGetRequestOpts(requestParameters: GetSpaceProfileApiV1SpacesSpaceIdProfileGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -104,14 +115,22 @@ export class SpacesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profile`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Space Profile
+     */
+    async getSpaceProfileApiV1SpacesSpaceIdProfileGetRaw(requestParameters: GetSpaceProfileApiV1SpacesSpaceIdProfileGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceProfileView>> {
+        const requestOptions = await this.getSpaceProfileApiV1SpacesSpaceIdProfileGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => SpaceProfileViewFromJSON(jsonValue));
     }
@@ -125,10 +144,9 @@ export class SpacesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Das Beziehungsprofil ersetzen.  Der Aufrufer legt mit `If-Match` die Version vor, die er gelesen hat. Hat der Partner inzwischen geschrieben, antwortet der Endpunkt mit 409 und aendert nichts - ein stilles Ueberschreiben gaebe es sonst genau dann, wenn beide gleichzeitig am selben Profil arbeiten.
-     * Update Space Profile
+     * Creates request options for updateSpaceProfileApiV1SpacesSpaceIdProfilePut without sending the request
      */
-    async updateSpaceProfileApiV1SpacesSpaceIdProfilePutRaw(requestParameters: UpdateSpaceProfileApiV1SpacesSpaceIdProfilePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceProfileView>> {
+    async updateSpaceProfileApiV1SpacesSpaceIdProfilePutRequestOpts(requestParameters: UpdateSpaceProfileApiV1SpacesSpaceIdProfilePutRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -162,15 +180,24 @@ export class SpacesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profile`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
             body: SpaceProfileUpdateToJSON(requestParameters['spaceProfileUpdate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Das Beziehungsprofil ersetzen.  Der Aufrufer legt mit `If-Match` die Version vor, die er gelesen hat. Hat der Partner inzwischen geschrieben, antwortet der Endpunkt mit 409 und aendert nichts - ein stilles Ueberschreiben gaebe es sonst genau dann, wenn beide gleichzeitig am selben Profil arbeiten.
+     * Update Space Profile
+     */
+    async updateSpaceProfileApiV1SpacesSpaceIdProfilePutRaw(requestParameters: UpdateSpaceProfileApiV1SpacesSpaceIdProfilePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceProfileView>> {
+        const requestOptions = await this.updateSpaceProfileApiV1SpacesSpaceIdProfilePutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => SpaceProfileViewFromJSON(jsonValue));
     }

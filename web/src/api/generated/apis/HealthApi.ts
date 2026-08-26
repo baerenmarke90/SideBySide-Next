@@ -12,18 +12,17 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  Health,
-  Readiness,
-} from '../models/index';
 import {
+    type Health,
     HealthFromJSON,
     HealthToJSON,
+} from '../models/Health';
+import {
+    type Readiness,
     ReadinessFromJSON,
     ReadinessToJSON,
-} from '../models/index';
+} from '../models/Readiness';
 
 /**
  * 
@@ -31,9 +30,9 @@ import {
 export class HealthApi extends runtime.BaseAPI {
 
     /**
-     * Health
+     * Creates request options for healthApiV1HealthGet without sending the request
      */
-    async healthApiV1HealthGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Health>> {
+    async healthApiV1HealthGetRequestOpts(): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -41,12 +40,20 @@ export class HealthApi extends runtime.BaseAPI {
 
         let urlPath = `/api/v1/health`;
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Health
+     */
+    async healthApiV1HealthGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Health>> {
+        const requestOptions = await this.healthApiV1HealthGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => HealthFromJSON(jsonValue));
     }
@@ -60,9 +67,9 @@ export class HealthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Readiness
+     * Creates request options for readinessApiV1HealthReadyGet without sending the request
      */
-    async readinessApiV1HealthReadyGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Readiness>> {
+    async readinessApiV1HealthReadyGetRequestOpts(): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -70,12 +77,20 @@ export class HealthApi extends runtime.BaseAPI {
 
         let urlPath = `/api/v1/health/ready`;
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Readiness
+     */
+    async readinessApiV1HealthReadyGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Readiness>> {
+        const requestOptions = await this.readinessApiV1HealthReadyGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => ReadinessFromJSON(jsonValue));
     }

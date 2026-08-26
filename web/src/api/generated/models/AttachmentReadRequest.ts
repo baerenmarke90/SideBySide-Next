@@ -19,7 +19,6 @@ import { mapValues } from '../runtime';
  * @interface AttachmentReadRequest
  */
 export interface AttachmentReadRequest {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -28,7 +27,7 @@ export interface AttachmentReadRequest {
     parentId?: string | null;
     /**
      * 
-     * @type {string}
+     * @type {AttachmentReadRequestParentTypeEnum}
      * @memberof AttachmentReadRequest
      */
     parentType?: AttachmentReadRequestParentTypeEnum;
@@ -63,8 +62,7 @@ export function AttachmentReadRequestFromJSONTyped(json: any, ignoreDiscriminato
     }
     return {
         
-            ...json,
-        'parentId': json['parentId'] == null ? undefined : json['parentId'],
+        'parentId': json['parentId'] === undefined ? undefined : json['parentId'] === null ? null : json['parentId'],
         'parentType': json['parentType'] == null ? undefined : json['parentType'],
     };
 }
@@ -80,7 +78,6 @@ export function AttachmentReadRequestToJSONTyped(value?: AttachmentReadRequest |
 
     return {
         
-            ...value,
         'parentId': value['parentId'],
         'parentType': value['parentType'],
     };

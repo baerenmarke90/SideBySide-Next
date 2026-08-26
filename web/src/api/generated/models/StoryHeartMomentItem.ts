@@ -41,7 +41,7 @@ export interface StoryHeartMomentItem {
     heartMoment: SharedHeartMomentSummary;
     /**
      * 
-     * @type {string}
+     * @type {StoryHeartMomentItemKindEnum}
      * @memberof StoryHeartMomentItem
      */
     kind: StoryHeartMomentItemKindEnum;
@@ -64,6 +64,8 @@ export function instanceOfStoryHeartMomentItem(value: object): value is StoryHea
     if (!('effectiveDate' in value) || value['effectiveDate'] === undefined) return false;
     if (!('heartMoment' in value) || value['heartMoment'] === undefined) return false;
     if (!('kind' in value) || value['kind'] === undefined) return false;
+    if (value['kind'] !== 'HEART_MOMENT') return false;
+    
     return true;
 }
 

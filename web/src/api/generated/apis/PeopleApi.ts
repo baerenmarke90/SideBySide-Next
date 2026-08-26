@@ -12,30 +12,37 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  ImportantDateFields,
-  ImportantDateView,
-  ProblemDetails,
-  RelatedPersonDeletePolicy,
-  RelatedPersonFields,
-  RelatedPersonView,
-} from '../models/index';
 import {
+    type ImportantDateFields,
     ImportantDateFieldsFromJSON,
     ImportantDateFieldsToJSON,
+} from '../models/ImportantDateFields';
+import {
+    type ImportantDateView,
     ImportantDateViewFromJSON,
     ImportantDateViewToJSON,
+} from '../models/ImportantDateView';
+import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
+} from '../models/ProblemDetails';
+import {
+    type RelatedPersonDeletePolicy,
     RelatedPersonDeletePolicyFromJSON,
     RelatedPersonDeletePolicyToJSON,
+} from '../models/RelatedPersonDeletePolicy';
+import {
+    type RelatedPersonFields,
     RelatedPersonFieldsFromJSON,
     RelatedPersonFieldsToJSON,
+} from '../models/RelatedPersonFields';
+import {
+    type RelatedPersonView,
     RelatedPersonViewFromJSON,
     RelatedPersonViewToJSON,
-} from '../models/index';
+} from '../models/RelatedPersonView';
 
 export interface CreateImportantDateApiV1SpacesSpaceIdImportantDatesPostRequest {
     spaceId: string;
@@ -99,9 +106,9 @@ export interface UpdateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPutR
 export class PeopleApi extends runtime.BaseAPI {
 
     /**
-     * Create Important Date
+     * Creates request options for createImportantDateApiV1SpacesSpaceIdImportantDatesPost without sending the request
      */
-    async createImportantDateApiV1SpacesSpaceIdImportantDatesPostRaw(requestParameters: CreateImportantDateApiV1SpacesSpaceIdImportantDatesPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportantDateView>> {
+    async createImportantDateApiV1SpacesSpaceIdImportantDatesPostRequestOpts(requestParameters: CreateImportantDateApiV1SpacesSpaceIdImportantDatesPostRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -124,15 +131,23 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/important-dates`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: ImportantDateFieldsToJSON(requestParameters['importantDateFields']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Important Date
+     */
+    async createImportantDateApiV1SpacesSpaceIdImportantDatesPostRaw(requestParameters: CreateImportantDateApiV1SpacesSpaceIdImportantDatesPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportantDateView>> {
+        const requestOptions = await this.createImportantDateApiV1SpacesSpaceIdImportantDatesPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => ImportantDateViewFromJSON(jsonValue));
     }
@@ -146,9 +161,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Create Related Person
+     * Creates request options for createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPost without sending the request
      */
-    async createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPostRaw(requestParameters: CreateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RelatedPersonView>> {
+    async createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPostRequestOpts(requestParameters: CreateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPostRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -171,15 +186,23 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/related-persons`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: RelatedPersonFieldsToJSON(requestParameters['relatedPersonFields']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Related Person
+     */
+    async createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPostRaw(requestParameters: CreateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RelatedPersonView>> {
+        const requestOptions = await this.createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => RelatedPersonViewFromJSON(jsonValue));
     }
@@ -193,9 +216,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete Important Date
+     * Creates request options for deleteImportantDateApiV1SpacesSpaceIdImportantDatesDateIdDelete without sending the request
      */
-    async deleteImportantDateApiV1SpacesSpaceIdImportantDatesDateIdDeleteRaw(requestParameters: DeleteImportantDateApiV1SpacesSpaceIdImportantDatesDateIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteImportantDateApiV1SpacesSpaceIdImportantDatesDateIdDeleteRequestOpts(requestParameters: DeleteImportantDateApiV1SpacesSpaceIdImportantDatesDateIdDeleteRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['dateId'] == null) {
             throw new runtime.RequiredError(
                 'dateId',
@@ -227,15 +250,23 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/important-dates/{dateId}`;
-        urlPath = urlPath.replace(`{${"dateId"}}`, encodeURIComponent(String(requestParameters['dateId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{dateId}', encodeURIComponent(String(requestParameters['dateId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete Important Date
+     */
+    async deleteImportantDateApiV1SpacesSpaceIdImportantDatesDateIdDeleteRaw(requestParameters: DeleteImportantDateApiV1SpacesSpaceIdImportantDatesDateIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteImportantDateApiV1SpacesSpaceIdImportantDatesDateIdDeleteRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -248,9 +279,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete Related Person
+     * Creates request options for deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDelete without sending the request
      */
-    async deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDeleteRaw(requestParameters: DeleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDeleteRequestOpts(requestParameters: DeleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDeleteRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['personId'] == null) {
             throw new runtime.RequiredError(
                 'personId',
@@ -293,15 +324,23 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/related-persons/{personId}`;
-        urlPath = urlPath.replace(`{${"personId"}}`, encodeURIComponent(String(requestParameters['personId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{personId}', encodeURIComponent(String(requestParameters['personId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete Related Person
+     */
+    async deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDeleteRaw(requestParameters: DeleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDeleteRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -314,9 +353,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Important Date
+     * Creates request options for getImportantDateApiV1SpacesSpaceIdImportantDatesDateIdGet without sending the request
      */
-    async getImportantDateApiV1SpacesSpaceIdImportantDatesDateIdGetRaw(requestParameters: GetImportantDateApiV1SpacesSpaceIdImportantDatesDateIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportantDateView>> {
+    async getImportantDateApiV1SpacesSpaceIdImportantDatesDateIdGetRequestOpts(requestParameters: GetImportantDateApiV1SpacesSpaceIdImportantDatesDateIdGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['dateId'] == null) {
             throw new runtime.RequiredError(
                 'dateId',
@@ -337,15 +376,23 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/important-dates/{dateId}`;
-        urlPath = urlPath.replace(`{${"dateId"}}`, encodeURIComponent(String(requestParameters['dateId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{dateId}', encodeURIComponent(String(requestParameters['dateId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Important Date
+     */
+    async getImportantDateApiV1SpacesSpaceIdImportantDatesDateIdGetRaw(requestParameters: GetImportantDateApiV1SpacesSpaceIdImportantDatesDateIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportantDateView>> {
+        const requestOptions = await this.getImportantDateApiV1SpacesSpaceIdImportantDatesDateIdGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => ImportantDateViewFromJSON(jsonValue));
     }
@@ -359,9 +406,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Related Person
+     * Creates request options for getRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdGet without sending the request
      */
-    async getRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdGetRaw(requestParameters: GetRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RelatedPersonView>> {
+    async getRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdGetRequestOpts(requestParameters: GetRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['personId'] == null) {
             throw new runtime.RequiredError(
                 'personId',
@@ -382,15 +429,23 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/related-persons/{personId}`;
-        urlPath = urlPath.replace(`{${"personId"}}`, encodeURIComponent(String(requestParameters['personId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{personId}', encodeURIComponent(String(requestParameters['personId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Related Person
+     */
+    async getRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdGetRaw(requestParameters: GetRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RelatedPersonView>> {
+        const requestOptions = await this.getRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => RelatedPersonViewFromJSON(jsonValue));
     }
@@ -404,9 +459,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Important Dates
+     * Creates request options for listImportantDatesApiV1SpacesSpaceIdImportantDatesGet without sending the request
      */
-    async listImportantDatesApiV1SpacesSpaceIdImportantDatesGetRaw(requestParameters: ListImportantDatesApiV1SpacesSpaceIdImportantDatesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ImportantDateView>>> {
+    async listImportantDatesApiV1SpacesSpaceIdImportantDatesGetRequestOpts(requestParameters: ListImportantDatesApiV1SpacesSpaceIdImportantDatesGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -424,14 +479,22 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/important-dates`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Important Dates
+     */
+    async listImportantDatesApiV1SpacesSpaceIdImportantDatesGetRaw(requestParameters: ListImportantDatesApiV1SpacesSpaceIdImportantDatesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ImportantDateView>>> {
+        const requestOptions = await this.listImportantDatesApiV1SpacesSpaceIdImportantDatesGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ImportantDateViewFromJSON));
     }
@@ -445,9 +508,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Related Persons
+     * Creates request options for listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGet without sending the request
      */
-    async listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGetRaw(requestParameters: ListRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RelatedPersonView>>> {
+    async listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGetRequestOpts(requestParameters: ListRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -461,14 +524,22 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/related-persons`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Related Persons
+     */
+    async listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGetRaw(requestParameters: ListRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<RelatedPersonView>>> {
+        const requestOptions = await this.listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(RelatedPersonViewFromJSON));
     }
@@ -482,9 +553,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update Important Date
+     * Creates request options for updateImportantDateApiV1SpacesSpaceIdImportantDatesDateIdPut without sending the request
      */
-    async updateImportantDateApiV1SpacesSpaceIdImportantDatesDateIdPutRaw(requestParameters: UpdateImportantDateApiV1SpacesSpaceIdImportantDatesDateIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportantDateView>> {
+    async updateImportantDateApiV1SpacesSpaceIdImportantDatesDateIdPutRequestOpts(requestParameters: UpdateImportantDateApiV1SpacesSpaceIdImportantDatesDateIdPutRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['dateId'] == null) {
             throw new runtime.RequiredError(
                 'dateId',
@@ -525,16 +596,24 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/important-dates/{dateId}`;
-        urlPath = urlPath.replace(`{${"dateId"}}`, encodeURIComponent(String(requestParameters['dateId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{dateId}', encodeURIComponent(String(requestParameters['dateId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
             body: ImportantDateFieldsToJSON(requestParameters['importantDateFields']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Update Important Date
+     */
+    async updateImportantDateApiV1SpacesSpaceIdImportantDatesDateIdPutRaw(requestParameters: UpdateImportantDateApiV1SpacesSpaceIdImportantDatesDateIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ImportantDateView>> {
+        const requestOptions = await this.updateImportantDateApiV1SpacesSpaceIdImportantDatesDateIdPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => ImportantDateViewFromJSON(jsonValue));
     }
@@ -548,9 +627,9 @@ export class PeopleApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update Related Person
+     * Creates request options for updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut without sending the request
      */
-    async updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPutRaw(requestParameters: UpdateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RelatedPersonView>> {
+    async updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPutRequestOpts(requestParameters: UpdateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPutRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['personId'] == null) {
             throw new runtime.RequiredError(
                 'personId',
@@ -591,16 +670,24 @@ export class PeopleApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/related-persons/{personId}`;
-        urlPath = urlPath.replace(`{${"personId"}}`, encodeURIComponent(String(requestParameters['personId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{personId}', encodeURIComponent(String(requestParameters['personId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
             body: RelatedPersonFieldsToJSON(requestParameters['relatedPersonFields']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Update Related Person
+     */
+    async updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPutRaw(requestParameters: UpdateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RelatedPersonView>> {
+        const requestOptions = await this.updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => RelatedPersonViewFromJSON(jsonValue));
     }

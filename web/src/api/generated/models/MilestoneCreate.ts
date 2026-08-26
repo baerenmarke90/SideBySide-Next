@@ -19,7 +19,6 @@ import { mapValues } from '../runtime';
  * @interface MilestoneCreate
  */
 export interface MilestoneCreate {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -59,7 +58,6 @@ export function MilestoneCreateFromJSONTyped(json: any, ignoreDiscriminator: boo
     }
     return {
         
-            ...json,
         'body': json['body'] == null ? undefined : json['body'],
         'happenedOn': (new Date(json['happenedOn'])),
         'title': json['title'],
@@ -77,7 +75,6 @@ export function MilestoneCreateToJSONTyped(value?: MilestoneCreate | null, ignor
 
     return {
         
-            ...value,
         'body': value['body'],
         'happenedOn': value['happenedOn'].toISOString().substring(0,10),
         'title': value['title'],

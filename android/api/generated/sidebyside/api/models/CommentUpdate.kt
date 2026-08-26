@@ -8,9 +8,17 @@
 
 @file:Suppress(
     "ArrayInDataClass",
+    "DuplicatedCode",
     "EnumEntryName",
     "RemoveRedundantQualifierName",
-    "UnusedImport"
+    "RemoveRedundantCallsOfConversionMethods",
+    "REDUNDANT_CALL_OF_CONVERSION_METHOD",
+    "RedundantUnitReturnType",
+    "RemoveEmptyClassBody",
+    "UnnecessaryVariable",
+    "UnusedImport",
+    "UnnecessaryVariable",
+    "unused"
 )
 
 package sidebyside.api.models
@@ -32,7 +40,7 @@ data class CommentUpdate (
     @SerialName(value = "body")
     val body: kotlin.String
 
-) : kotlin.collections.HashMap<String, kotlin.Any>()() {
+) {
 
 
 }

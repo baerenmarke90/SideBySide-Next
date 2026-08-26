@@ -12,27 +12,32 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  PartnerProfileView,
-  ProblemDetails,
-  ProfilePreferenceCreate,
-  ProfilePreferenceUpdate,
-  ProfilePreferenceView,
-} from '../models/index';
 import {
+    type PartnerProfileView,
     PartnerProfileViewFromJSON,
     PartnerProfileViewToJSON,
+} from '../models/PartnerProfileView';
+import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
+} from '../models/ProblemDetails';
+import {
+    type ProfilePreferenceCreate,
     ProfilePreferenceCreateFromJSON,
     ProfilePreferenceCreateToJSON,
+} from '../models/ProfilePreferenceCreate';
+import {
+    type ProfilePreferenceUpdate,
     ProfilePreferenceUpdateFromJSON,
     ProfilePreferenceUpdateToJSON,
+} from '../models/ProfilePreferenceUpdate';
+import {
+    type ProfilePreferenceView,
     ProfilePreferenceViewFromJSON,
     ProfilePreferenceViewToJSON,
-} from '../models/index';
+} from '../models/ProfilePreferenceView';
 
 export interface CreateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPostRequest {
     spaceId: string;
@@ -72,9 +77,9 @@ export interface UpdateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPref
 export class ProfilesApi extends runtime.BaseAPI {
 
     /**
-     * Create Profile Preference
+     * Creates request options for createProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPost without sending the request
      */
-    async createProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPostRaw(requestParameters: CreateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProfilePreferenceView>> {
+    async createProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPostRequestOpts(requestParameters: CreateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPostRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -97,15 +102,23 @@ export class ProfilesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profile-preferences`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: ProfilePreferenceCreateToJSON(requestParameters['profilePreferenceCreate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Profile Preference
+     */
+    async createProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPostRaw(requestParameters: CreateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProfilePreferenceView>> {
+        const requestOptions = await this.createProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => ProfilePreferenceViewFromJSON(jsonValue));
     }
@@ -119,9 +132,9 @@ export class ProfilesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete Profile Preference
+     * Creates request options for deleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDelete without sending the request
      */
-    async deleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDeleteRaw(requestParameters: DeleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDeleteRequestOpts(requestParameters: DeleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDeleteRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['preferenceId'] == null) {
             throw new runtime.RequiredError(
                 'preferenceId',
@@ -153,15 +166,23 @@ export class ProfilesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`;
-        urlPath = urlPath.replace(`{${"preferenceId"}}`, encodeURIComponent(String(requestParameters['preferenceId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{preferenceId}', encodeURIComponent(String(requestParameters['preferenceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete Profile Preference
+     */
+    async deleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDeleteRaw(requestParameters: DeleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDeleteRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -174,9 +195,9 @@ export class ProfilesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Partner Profile
+     * Creates request options for getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet without sending the request
      */
-    async getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGetRaw(requestParameters: GetPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PartnerProfileView>> {
+    async getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGetRequestOpts(requestParameters: GetPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['accountId'] == null) {
             throw new runtime.RequiredError(
                 'accountId',
@@ -197,15 +218,23 @@ export class ProfilesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profiles/{accountId}`;
-        urlPath = urlPath.replace(`{${"accountId"}}`, encodeURIComponent(String(requestParameters['accountId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{accountId}', encodeURIComponent(String(requestParameters['accountId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Partner Profile
+     */
+    async getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGetRaw(requestParameters: GetPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PartnerProfileView>> {
+        const requestOptions = await this.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => PartnerProfileViewFromJSON(jsonValue));
     }
@@ -219,9 +248,9 @@ export class ProfilesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Profile Preference
+     * Creates request options for getProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGet without sending the request
      */
-    async getProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGetRaw(requestParameters: GetProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProfilePreferenceView>> {
+    async getProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGetRequestOpts(requestParameters: GetProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['preferenceId'] == null) {
             throw new runtime.RequiredError(
                 'preferenceId',
@@ -242,15 +271,23 @@ export class ProfilesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`;
-        urlPath = urlPath.replace(`{${"preferenceId"}}`, encodeURIComponent(String(requestParameters['preferenceId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{preferenceId}', encodeURIComponent(String(requestParameters['preferenceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Profile Preference
+     */
+    async getProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGetRaw(requestParameters: GetProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProfilePreferenceView>> {
+        const requestOptions = await this.getProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => ProfilePreferenceViewFromJSON(jsonValue));
     }
@@ -264,9 +301,9 @@ export class ProfilesApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Profile Preferences
+     * Creates request options for listProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGet without sending the request
      */
-    async listProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGetRaw(requestParameters: ListProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ProfilePreferenceView>>> {
+    async listProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGetRequestOpts(requestParameters: ListProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -280,14 +317,22 @@ export class ProfilesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profile-preferences`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Profile Preferences
+     */
+    async listProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGetRaw(requestParameters: ListProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ProfilePreferenceView>>> {
+        const requestOptions = await this.listProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ProfilePreferenceViewFromJSON));
     }
@@ -301,9 +346,9 @@ export class ProfilesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update Profile Preference
+     * Creates request options for updateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPut without sending the request
      */
-    async updateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPutRaw(requestParameters: UpdateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProfilePreferenceView>> {
+    async updateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPutRequestOpts(requestParameters: UpdateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPutRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['preferenceId'] == null) {
             throw new runtime.RequiredError(
                 'preferenceId',
@@ -344,16 +389,24 @@ export class ProfilesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`;
-        urlPath = urlPath.replace(`{${"preferenceId"}}`, encodeURIComponent(String(requestParameters['preferenceId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{preferenceId}', encodeURIComponent(String(requestParameters['preferenceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
             body: ProfilePreferenceUpdateToJSON(requestParameters['profilePreferenceUpdate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Update Profile Preference
+     */
+    async updateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPutRaw(requestParameters: UpdateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProfilePreferenceView>> {
+        const requestOptions = await this.updateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => ProfilePreferenceViewFromJSON(jsonValue));
     }

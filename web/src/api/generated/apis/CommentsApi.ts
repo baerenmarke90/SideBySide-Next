@@ -12,27 +12,32 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  CommentCreate,
-  CommentDetail,
-  CommentPage,
-  CommentUpdate,
-  ProblemDetails,
-} from '../models/index';
 import {
+    type CommentCreate,
     CommentCreateFromJSON,
     CommentCreateToJSON,
+} from '../models/CommentCreate';
+import {
+    type CommentDetail,
     CommentDetailFromJSON,
     CommentDetailToJSON,
+} from '../models/CommentDetail';
+import {
+    type CommentPage,
     CommentPageFromJSON,
     CommentPageToJSON,
+} from '../models/CommentPage';
+import {
+    type CommentUpdate,
     CommentUpdateFromJSON,
     CommentUpdateToJSON,
+} from '../models/CommentUpdate';
+import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
-} from '../models/index';
+} from '../models/ProblemDetails';
 
 export interface CreateHeartMomentCommentRequest {
     heartMomentId: string;
@@ -92,9 +97,9 @@ export interface UpdateCommentRequest {
 export class CommentsApi extends runtime.BaseAPI {
 
     /**
-     * Create Heart Moment Comment
+     * Creates request options for createHeartMomentComment without sending the request
      */
-    async createHeartMomentCommentRaw(requestParameters: CreateHeartMomentCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentDetail>> {
+    async createHeartMomentCommentRequestOpts(requestParameters: CreateHeartMomentCommentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['heartMomentId'] == null) {
             throw new runtime.RequiredError(
                 'heartMomentId',
@@ -124,16 +129,24 @@ export class CommentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments`;
-        urlPath = urlPath.replace(`{${"heartMomentId"}}`, encodeURIComponent(String(requestParameters['heartMomentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{heartMomentId}', encodeURIComponent(String(requestParameters['heartMomentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: CommentCreateToJSON(requestParameters['commentCreate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Heart Moment Comment
+     */
+    async createHeartMomentCommentRaw(requestParameters: CreateHeartMomentCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentDetail>> {
+        const requestOptions = await this.createHeartMomentCommentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => CommentDetailFromJSON(jsonValue));
     }
@@ -147,9 +160,9 @@ export class CommentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Create Memory Comment
+     * Creates request options for createMemoryComment without sending the request
      */
-    async createMemoryCommentRaw(requestParameters: CreateMemoryCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentDetail>> {
+    async createMemoryCommentRequestOpts(requestParameters: CreateMemoryCommentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['memoryId'] == null) {
             throw new runtime.RequiredError(
                 'memoryId',
@@ -179,16 +192,24 @@ export class CommentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/memories/{memoryId}/comments`;
-        urlPath = urlPath.replace(`{${"memoryId"}}`, encodeURIComponent(String(requestParameters['memoryId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{memoryId}', encodeURIComponent(String(requestParameters['memoryId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: CommentCreateToJSON(requestParameters['commentCreate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Memory Comment
+     */
+    async createMemoryCommentRaw(requestParameters: CreateMemoryCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentDetail>> {
+        const requestOptions = await this.createMemoryCommentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => CommentDetailFromJSON(jsonValue));
     }
@@ -202,9 +223,9 @@ export class CommentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Create Milestone Comment
+     * Creates request options for createMilestoneComment without sending the request
      */
-    async createMilestoneCommentRaw(requestParameters: CreateMilestoneCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentDetail>> {
+    async createMilestoneCommentRequestOpts(requestParameters: CreateMilestoneCommentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['milestoneId'] == null) {
             throw new runtime.RequiredError(
                 'milestoneId',
@@ -234,16 +255,24 @@ export class CommentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments`;
-        urlPath = urlPath.replace(`{${"milestoneId"}}`, encodeURIComponent(String(requestParameters['milestoneId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{milestoneId}', encodeURIComponent(String(requestParameters['milestoneId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: CommentCreateToJSON(requestParameters['commentCreate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Milestone Comment
+     */
+    async createMilestoneCommentRaw(requestParameters: CreateMilestoneCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentDetail>> {
+        const requestOptions = await this.createMilestoneCommentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => CommentDetailFromJSON(jsonValue));
     }
@@ -257,9 +286,9 @@ export class CommentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete Comment
+     * Creates request options for deleteComment without sending the request
      */
-    async deleteCommentRaw(requestParameters: DeleteCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteCommentRequestOpts(requestParameters: DeleteCommentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['commentId'] == null) {
             throw new runtime.RequiredError(
                 'commentId',
@@ -291,15 +320,23 @@ export class CommentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/comments/{commentId}`;
-        urlPath = urlPath.replace(`{${"commentId"}}`, encodeURIComponent(String(requestParameters['commentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{commentId}', encodeURIComponent(String(requestParameters['commentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete Comment
+     */
+    async deleteCommentRaw(requestParameters: DeleteCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteCommentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -312,9 +349,9 @@ export class CommentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Heart Moment Comments
+     * Creates request options for listHeartMomentComments without sending the request
      */
-    async listHeartMomentCommentsRaw(requestParameters: ListHeartMomentCommentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentPage>> {
+    async listHeartMomentCommentsRequestOpts(requestParameters: ListHeartMomentCommentsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['heartMomentId'] == null) {
             throw new runtime.RequiredError(
                 'heartMomentId',
@@ -343,15 +380,23 @@ export class CommentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments`;
-        urlPath = urlPath.replace(`{${"heartMomentId"}}`, encodeURIComponent(String(requestParameters['heartMomentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{heartMomentId}', encodeURIComponent(String(requestParameters['heartMomentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Heart Moment Comments
+     */
+    async listHeartMomentCommentsRaw(requestParameters: ListHeartMomentCommentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentPage>> {
+        const requestOptions = await this.listHeartMomentCommentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => CommentPageFromJSON(jsonValue));
     }
@@ -365,9 +410,9 @@ export class CommentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Memory Comments
+     * Creates request options for listMemoryComments without sending the request
      */
-    async listMemoryCommentsRaw(requestParameters: ListMemoryCommentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentPage>> {
+    async listMemoryCommentsRequestOpts(requestParameters: ListMemoryCommentsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['memoryId'] == null) {
             throw new runtime.RequiredError(
                 'memoryId',
@@ -396,15 +441,23 @@ export class CommentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/memories/{memoryId}/comments`;
-        urlPath = urlPath.replace(`{${"memoryId"}}`, encodeURIComponent(String(requestParameters['memoryId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{memoryId}', encodeURIComponent(String(requestParameters['memoryId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Memory Comments
+     */
+    async listMemoryCommentsRaw(requestParameters: ListMemoryCommentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentPage>> {
+        const requestOptions = await this.listMemoryCommentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => CommentPageFromJSON(jsonValue));
     }
@@ -418,9 +471,9 @@ export class CommentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Milestone Comments
+     * Creates request options for listMilestoneComments without sending the request
      */
-    async listMilestoneCommentsRaw(requestParameters: ListMilestoneCommentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentPage>> {
+    async listMilestoneCommentsRequestOpts(requestParameters: ListMilestoneCommentsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['milestoneId'] == null) {
             throw new runtime.RequiredError(
                 'milestoneId',
@@ -449,15 +502,23 @@ export class CommentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments`;
-        urlPath = urlPath.replace(`{${"milestoneId"}}`, encodeURIComponent(String(requestParameters['milestoneId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{milestoneId}', encodeURIComponent(String(requestParameters['milestoneId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Milestone Comments
+     */
+    async listMilestoneCommentsRaw(requestParameters: ListMilestoneCommentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentPage>> {
+        const requestOptions = await this.listMilestoneCommentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => CommentPageFromJSON(jsonValue));
     }
@@ -471,9 +532,9 @@ export class CommentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update Comment
+     * Creates request options for updateComment without sending the request
      */
-    async updateCommentRaw(requestParameters: UpdateCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentDetail>> {
+    async updateCommentRequestOpts(requestParameters: UpdateCommentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['commentId'] == null) {
             throw new runtime.RequiredError(
                 'commentId',
@@ -514,16 +575,24 @@ export class CommentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/comments/{commentId}`;
-        urlPath = urlPath.replace(`{${"commentId"}}`, encodeURIComponent(String(requestParameters['commentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{commentId}', encodeURIComponent(String(requestParameters['commentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PATCH',
             headers: headerParameters,
             query: queryParameters,
             body: CommentUpdateToJSON(requestParameters['commentUpdate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Update Comment
+     */
+    async updateCommentRaw(requestParameters: UpdateCommentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommentDetail>> {
+        const requestOptions = await this.updateCommentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => CommentDetailFromJSON(jsonValue));
     }

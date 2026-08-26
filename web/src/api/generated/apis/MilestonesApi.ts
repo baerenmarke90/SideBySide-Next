@@ -12,27 +12,32 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  MilestoneCreate,
-  MilestoneDetail,
-  MilestonePage,
-  MilestoneUpdate,
-  ProblemDetails,
-} from '../models/index';
 import {
+    type MilestoneCreate,
     MilestoneCreateFromJSON,
     MilestoneCreateToJSON,
+} from '../models/MilestoneCreate';
+import {
+    type MilestoneDetail,
     MilestoneDetailFromJSON,
     MilestoneDetailToJSON,
+} from '../models/MilestoneDetail';
+import {
+    type MilestonePage,
     MilestonePageFromJSON,
     MilestonePageToJSON,
+} from '../models/MilestonePage';
+import {
+    type MilestoneUpdate,
     MilestoneUpdateFromJSON,
     MilestoneUpdateToJSON,
+} from '../models/MilestoneUpdate';
+import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
-} from '../models/index';
+} from '../models/ProblemDetails';
 
 export interface CreateMilestoneRequest {
     spaceId: string;
@@ -70,9 +75,9 @@ export interface UpdateMilestoneRequest {
 export class MilestonesApi extends runtime.BaseAPI {
 
     /**
-     * Create Milestone
+     * Creates request options for createMilestone without sending the request
      */
-    async createMilestoneRaw(requestParameters: CreateMilestoneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MilestoneDetail>> {
+    async createMilestoneRequestOpts(requestParameters: CreateMilestoneRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -95,15 +100,23 @@ export class MilestonesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/milestones`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: MilestoneCreateToJSON(requestParameters['milestoneCreate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Milestone
+     */
+    async createMilestoneRaw(requestParameters: CreateMilestoneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MilestoneDetail>> {
+        const requestOptions = await this.createMilestoneRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MilestoneDetailFromJSON(jsonValue));
     }
@@ -117,9 +130,9 @@ export class MilestonesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete Milestone
+     * Creates request options for deleteMilestone without sending the request
      */
-    async deleteMilestoneRaw(requestParameters: DeleteMilestoneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteMilestoneRequestOpts(requestParameters: DeleteMilestoneRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['milestoneId'] == null) {
             throw new runtime.RequiredError(
                 'milestoneId',
@@ -151,15 +164,23 @@ export class MilestonesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/milestones/{milestoneId}`;
-        urlPath = urlPath.replace(`{${"milestoneId"}}`, encodeURIComponent(String(requestParameters['milestoneId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{milestoneId}', encodeURIComponent(String(requestParameters['milestoneId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete Milestone
+     */
+    async deleteMilestoneRaw(requestParameters: DeleteMilestoneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteMilestoneRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -172,9 +193,9 @@ export class MilestonesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Milestone
+     * Creates request options for getMilestone without sending the request
      */
-    async getMilestoneRaw(requestParameters: GetMilestoneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MilestoneDetail>> {
+    async getMilestoneRequestOpts(requestParameters: GetMilestoneRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['milestoneId'] == null) {
             throw new runtime.RequiredError(
                 'milestoneId',
@@ -195,15 +216,23 @@ export class MilestonesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/milestones/{milestoneId}`;
-        urlPath = urlPath.replace(`{${"milestoneId"}}`, encodeURIComponent(String(requestParameters['milestoneId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{milestoneId}', encodeURIComponent(String(requestParameters['milestoneId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Milestone
+     */
+    async getMilestoneRaw(requestParameters: GetMilestoneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MilestoneDetail>> {
+        const requestOptions = await this.getMilestoneRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MilestoneDetailFromJSON(jsonValue));
     }
@@ -217,9 +246,9 @@ export class MilestonesApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Milestones
+     * Creates request options for listMilestones without sending the request
      */
-    async listMilestonesRaw(requestParameters: ListMilestonesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MilestonePage>> {
+    async listMilestonesRequestOpts(requestParameters: ListMilestonesRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -245,14 +274,22 @@ export class MilestonesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/milestones`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Milestones
+     */
+    async listMilestonesRaw(requestParameters: ListMilestonesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MilestonePage>> {
+        const requestOptions = await this.listMilestonesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MilestonePageFromJSON(jsonValue));
     }
@@ -266,9 +303,9 @@ export class MilestonesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update Milestone
+     * Creates request options for updateMilestone without sending the request
      */
-    async updateMilestoneRaw(requestParameters: UpdateMilestoneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MilestoneDetail>> {
+    async updateMilestoneRequestOpts(requestParameters: UpdateMilestoneRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['milestoneId'] == null) {
             throw new runtime.RequiredError(
                 'milestoneId',
@@ -309,16 +346,24 @@ export class MilestonesApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/milestones/{milestoneId}`;
-        urlPath = urlPath.replace(`{${"milestoneId"}}`, encodeURIComponent(String(requestParameters['milestoneId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{milestoneId}', encodeURIComponent(String(requestParameters['milestoneId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PATCH',
             headers: headerParameters,
             query: queryParameters,
             body: MilestoneUpdateToJSON(requestParameters['milestoneUpdate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Update Milestone
+     */
+    async updateMilestoneRaw(requestParameters: UpdateMilestoneRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MilestoneDetail>> {
+        const requestOptions = await this.updateMilestoneRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MilestoneDetailFromJSON(jsonValue));
     }

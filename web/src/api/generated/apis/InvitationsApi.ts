@@ -12,27 +12,32 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  AcceptRequest,
-  InvitationView,
-  IssuedInvitationView,
-  MembershipView,
-  ProblemDetails,
-} from '../models/index';
 import {
+    type AcceptRequest,
     AcceptRequestFromJSON,
     AcceptRequestToJSON,
+} from '../models/AcceptRequest';
+import {
+    type InvitationView,
     InvitationViewFromJSON,
     InvitationViewToJSON,
+} from '../models/InvitationView';
+import {
+    type IssuedInvitationView,
     IssuedInvitationViewFromJSON,
     IssuedInvitationViewToJSON,
+} from '../models/IssuedInvitationView';
+import {
+    type MembershipView,
     MembershipViewFromJSON,
     MembershipViewToJSON,
+} from '../models/MembershipView';
+import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
-} from '../models/index';
+} from '../models/ProblemDetails';
 
 export interface AcceptInvitationApiV1InvitationsAcceptPostRequest {
     acceptRequest: AcceptRequest;
@@ -57,10 +62,9 @@ export interface RevokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDelete
 export class InvitationsApi extends runtime.BaseAPI {
 
     /**
-     * Eine Einladung annehmen.  Ausserhalb von /spaces/..., weil der Aufrufer den Space noch nicht kennt - der Token bestimmt ihn.
-     * Accept Invitation
+     * Creates request options for acceptInvitationApiV1InvitationsAcceptPost without sending the request
      */
-    async acceptInvitationApiV1InvitationsAcceptPostRaw(requestParameters: AcceptInvitationApiV1InvitationsAcceptPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MembershipView>> {
+    async acceptInvitationApiV1InvitationsAcceptPostRequestOpts(requestParameters: AcceptInvitationApiV1InvitationsAcceptPostRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['acceptRequest'] == null) {
             throw new runtime.RequiredError(
                 'acceptRequest',
@@ -77,13 +81,22 @@ export class InvitationsApi extends runtime.BaseAPI {
 
         let urlPath = `/api/v1/invitations/accept`;
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: AcceptRequestToJSON(requestParameters['acceptRequest']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Eine Einladung annehmen.  Ausserhalb von /spaces/..., weil der Aufrufer den Space noch nicht kennt - der Token bestimmt ihn.
+     * Accept Invitation
+     */
+    async acceptInvitationApiV1InvitationsAcceptPostRaw(requestParameters: AcceptInvitationApiV1InvitationsAcceptPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MembershipView>> {
+        const requestOptions = await this.acceptInvitationApiV1InvitationsAcceptPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => MembershipViewFromJSON(jsonValue));
     }
@@ -98,9 +111,9 @@ export class InvitationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Create Invitation
+     * Creates request options for createInvitationApiV1SpacesSpaceIdInvitationsPost without sending the request
      */
-    async createInvitationApiV1SpacesSpaceIdInvitationsPostRaw(requestParameters: CreateInvitationApiV1SpacesSpaceIdInvitationsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IssuedInvitationView>> {
+    async createInvitationApiV1SpacesSpaceIdInvitationsPostRequestOpts(requestParameters: CreateInvitationApiV1SpacesSpaceIdInvitationsPostRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -114,14 +127,22 @@ export class InvitationsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/invitations`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Invitation
+     */
+    async createInvitationApiV1SpacesSpaceIdInvitationsPostRaw(requestParameters: CreateInvitationApiV1SpacesSpaceIdInvitationsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IssuedInvitationView>> {
+        const requestOptions = await this.createInvitationApiV1SpacesSpaceIdInvitationsPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => IssuedInvitationViewFromJSON(jsonValue));
     }
@@ -135,10 +156,9 @@ export class InvitationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die offenen Einladungen. Ohne Token - der ist einmalig gewesen.
-     * List Invitations
+     * Creates request options for listInvitationsApiV1SpacesSpaceIdInvitationsGet without sending the request
      */
-    async listInvitationsApiV1SpacesSpaceIdInvitationsGetRaw(requestParameters: ListInvitationsApiV1SpacesSpaceIdInvitationsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<InvitationView>>> {
+    async listInvitationsApiV1SpacesSpaceIdInvitationsGetRequestOpts(requestParameters: ListInvitationsApiV1SpacesSpaceIdInvitationsGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -152,14 +172,23 @@ export class InvitationsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/invitations`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Die offenen Einladungen. Ohne Token - der ist einmalig gewesen.
+     * List Invitations
+     */
+    async listInvitationsApiV1SpacesSpaceIdInvitationsGetRaw(requestParameters: ListInvitationsApiV1SpacesSpaceIdInvitationsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<InvitationView>>> {
+        const requestOptions = await this.listInvitationsApiV1SpacesSpaceIdInvitationsGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(InvitationViewFromJSON));
     }
@@ -174,9 +203,9 @@ export class InvitationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Revoke Invitation
+     * Creates request options for revokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDelete without sending the request
      */
-    async revokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDeleteRaw(requestParameters: RevokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async revokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDeleteRequestOpts(requestParameters: RevokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDeleteRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['invitationId'] == null) {
             throw new runtime.RequiredError(
                 'invitationId',
@@ -197,15 +226,23 @@ export class InvitationsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/invitations/{invitationId}`;
-        urlPath = urlPath.replace(`{${"invitationId"}}`, encodeURIComponent(String(requestParameters['invitationId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{invitationId}', encodeURIComponent(String(requestParameters['invitationId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Revoke Invitation
+     */
+    async revokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDeleteRaw(requestParameters: RevokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.revokeInvitationApiV1SpacesSpaceIdInvitationsInvitationIdDeleteRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }

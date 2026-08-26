@@ -19,7 +19,6 @@ import { mapValues } from '../runtime';
  * @interface CommentCreate
  */
 export interface CommentCreate {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -46,7 +45,6 @@ export function CommentCreateFromJSONTyped(json: any, ignoreDiscriminator: boole
     }
     return {
         
-            ...json,
         'body': json['body'],
     };
 }
@@ -62,7 +60,6 @@ export function CommentCreateToJSONTyped(value?: CommentCreate | null, ignoreDis
 
     return {
         
-            ...value,
         'body': value['body'],
     };
 }

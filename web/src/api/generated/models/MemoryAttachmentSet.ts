@@ -27,7 +27,6 @@ import {
  * @interface MemoryAttachmentSet
  */
 export interface MemoryAttachmentSet {
-    [key: string]: any | any;
     /**
      * 
      * @type {Array<MemoryAttachmentEntry>}
@@ -54,7 +53,6 @@ export function MemoryAttachmentSetFromJSONTyped(json: any, ignoreDiscriminator:
     }
     return {
         
-            ...json,
         'attachments': ((json['attachments'] as Array<any>).map(MemoryAttachmentEntryFromJSON)),
     };
 }
@@ -70,7 +68,6 @@ export function MemoryAttachmentSetToJSONTyped(value?: MemoryAttachmentSet | nul
 
     return {
         
-            ...value,
         'attachments': ((value['attachments'] as Array<any>).map(MemoryAttachmentEntryToJSON)),
     };
 }

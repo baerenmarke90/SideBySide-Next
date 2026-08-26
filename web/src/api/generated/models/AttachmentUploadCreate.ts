@@ -27,7 +27,6 @@ import {
  * @interface AttachmentUploadCreate
  */
 export interface AttachmentUploadCreate {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -77,7 +76,6 @@ export function AttachmentUploadCreateFromJSONTyped(json: any, ignoreDiscriminat
     }
     return {
         
-            ...json,
         'expectedMimeType': json['expectedMimeType'],
         'expectedSize': json['expectedSize'],
         'mediaType': MediaTypeFromJSON(json['mediaType']),
@@ -96,7 +94,6 @@ export function AttachmentUploadCreateToJSONTyped(value?: AttachmentUploadCreate
 
     return {
         
-            ...value,
         'expectedMimeType': value['expectedMimeType'],
         'expectedSize': value['expectedSize'],
         'mediaType': MediaTypeToJSON(value['mediaType']),

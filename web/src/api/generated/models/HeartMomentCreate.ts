@@ -34,7 +34,6 @@ import {
  * @interface HeartMomentCreate
  */
 export interface HeartMomentCreate {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -90,8 +89,7 @@ export function HeartMomentCreateFromJSONTyped(json: any, ignoreDiscriminator: b
     }
     return {
         
-            ...json,
-        'attachmentId': json['attachmentId'] == null ? undefined : json['attachmentId'],
+        'attachmentId': json['attachmentId'] === undefined ? undefined : json['attachmentId'] === null ? null : json['attachmentId'],
         'emotion': HeartEmotionFromJSON(json['emotion']),
         'happenedOn': (new Date(json['happenedOn'])),
         'text': json['text'],
@@ -110,7 +108,6 @@ export function HeartMomentCreateToJSONTyped(value?: HeartMomentCreate | null, i
 
     return {
         
-            ...value,
         'attachmentId': value['attachmentId'],
         'emotion': HeartEmotionToJSON(value['emotion']),
         'happenedOn': value['happenedOn'].toISOString().substring(0,10),

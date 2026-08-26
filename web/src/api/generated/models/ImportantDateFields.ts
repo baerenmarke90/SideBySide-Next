@@ -104,7 +104,7 @@ export function ImportantDateFieldsFromJSONTyped(json: any, ignoreDiscriminator:
         
         'date': (new Date(json['date'])),
         'label': json['label'],
-        'relatedPersonId': json['relatedPersonId'] == null ? undefined : json['relatedPersonId'],
+        'relatedPersonId': json['relatedPersonId'] === undefined ? undefined : json['relatedPersonId'] === null ? null : json['relatedPersonId'],
         'repeats': json['repeats'] == null ? undefined : DateRepeatFromJSON(json['repeats']),
         'type': ImportantDateTypeFromJSON(json['type']),
         'visibility': ContentVisibilityFromJSON(json['visibility']),

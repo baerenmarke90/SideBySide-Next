@@ -8,9 +8,17 @@
 
 @file:Suppress(
     "ArrayInDataClass",
+    "DuplicatedCode",
     "EnumEntryName",
     "RemoveRedundantQualifierName",
-    "UnusedImport"
+    "RemoveRedundantCallsOfConversionMethods",
+    "REDUNDANT_CALL_OF_CONVERSION_METHOD",
+    "RedundantUnitReturnType",
+    "RemoveEmptyClassBody",
+    "UnnecessaryVariable",
+    "UnusedImport",
+    "UnnecessaryVariable",
+    "unused"
 )
 
 package sidebyside.api.models
@@ -40,7 +48,7 @@ data class MilestoneUpdate (
     @SerialName(value = "title")
     val title: kotlin.String? = null
 
-) : kotlin.collections.HashMap<String, kotlin.Any>()() {
+) {
 
 
 }
