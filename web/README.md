@@ -46,7 +46,8 @@ Offline-/Read-Cache-Policy ein.
 ### Lokal
 
 ```bash
-npm install --package-lock=false
+npm ci
+npm audit --audit-level=high
 npm run lint
 npm test
 npm run build
