@@ -18,11 +18,11 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import delete, func, select
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
     from sqlalchemy import CursorResult
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
 from sidebyside.auth.tokens import hash_token
 from sidebyside.core.clock import now
