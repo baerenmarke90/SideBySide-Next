@@ -10,7 +10,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
@@ -31,12 +34,15 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
     val state by referenceViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var imageSelectionEpoch by remember { mutableStateOf<Long?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) {
+        val selectionEpoch = imageSelectionEpoch
+        imageSelectionEpoch = null
+        if (uri != null && selectionEpoch != null) {
             scope.launch {
                 runCatching { loadSelectedImage(context, uri) }
-                    .onSuccess(referenceViewModel::selectImage)
-                    .onFailure(referenceViewModel::setImageError)
+                    .onSuccess { image -> referenceViewModel.selectImage(image, selectionEpoch) }
+                    .onFailure { throwable -> referenceViewModel.setImageError(throwable, selectionEpoch) }
             }
         }
     }
@@ -44,11 +50,17 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
     ReferenceFlowScreen(
         state = state,
         onLogin = referenceViewModel::signIn,
-        onLogout = referenceViewModel::logout,
+        onLogout = {
+            imageSelectionEpoch = null
+            referenceViewModel.logout()
+        },
         onPickImage = {
-            imagePicker.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-            )
+            referenceViewModel.beginImageSelection()?.let { selectionEpoch ->
+                imageSelectionEpoch = selectionEpoch
+                imagePicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                )
+            }
         },
         onCreateMemory = referenceViewModel::createMemory,
         onRefreshStory = referenceViewModel::refreshStory,
