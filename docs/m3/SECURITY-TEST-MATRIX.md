@@ -209,7 +209,7 @@ Pflichtmatrix:
 | Actor | Operation | Erwartung |
 |---|---|---|
 | Owner | create/list/get/update/delete | erlaubt |
-| Partner im selben Space | list | eigene Notes בלבד; nie Owner-Notes des Partners |
+| Partner im selben Space | list | ausschließlich eigene Notes; nie Owner-Notes des Partners |
 | Partner mit fremder Note-ID | get/update/delete | identisches 404 |
 | Account ohne Space-Membership | alle | 404/tenant denial |
 | Owner anderer Space | get via falschen Space | 404 |
