@@ -4,16 +4,18 @@
 
 Please do not report security vulnerabilities through public GitHub Issues.
 
-Use GitHub's **Private Vulnerability Reporting** for this repository when available. This keeps vulnerability details private while the issue is triaged.
+Use GitHub's **Private Vulnerability Reporting** for this repository. This is the supported private reporting channel and keeps vulnerability details private while the report is triaged.
 
-If Private Vulnerability Reporting is not available for your account or the repository configuration, contact the maintainers through the private security contact configured for this project rather than publishing sensitive details.
+If GitHub does not show the **Report a vulnerability** action for this repository, Private Vulnerability Reporting is not currently available. In that case, do not publish sensitive details in a public issue or discussion. The repository maintainer must enable Private Vulnerability Reporting before a private report can be submitted through GitHub.
 
-Do not include:
+Do not include in public discussions:
 
 - passwords, tokens, API keys or secrets
 - private user data
 - production data
-- detailed exploit instructions in public discussions
+- exploit details that would materially enable abuse
+
+A useful private report should contain only the information needed to reproduce and assess the issue, for example the affected component, observed behavior, expected behavior, minimal reproduction steps and an impact assessment. Do not attach real user data or secrets when synthetic data is sufficient.
 
 ## Scope
 
@@ -43,6 +45,8 @@ The maintainers will:
 3. investigate impact and affected components;
 4. prepare a fix or mitigation where appropriate;
 5. coordinate disclosure timing with the reporter when practical.
+
+Reports are handled on a need-to-know basis. Security details should remain private until a fix or mitigation is available and coordinated disclosure has been agreed where practical.
 
 ## Coordinated disclosure
 
