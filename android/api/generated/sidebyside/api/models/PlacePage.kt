@@ -23,30 +23,31 @@
 
 package sidebyside.api.models
 
+import sidebyside.api.models.PlaceDetail
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Direct Plan Create nach M3-D30.  `status`, `sourceWishId` und alle Termine fehlen bewusst. Ein Plan beginnt als Idee; terminiert wird er ueber `/schedule`, abgeschlossen ueber `/complete`.
+ * 
  *
- * @param title 
- * @param description 
- * @param placeId 
+ * @param hasMore 
+ * @param items 
+ * @param nextCursor 
  */
 @Serializable
 
-data class PlanCreate (
+data class PlacePage (
 
-    @SerialName(value = "title")
-    val title: kotlin.String,
+    @SerialName(value = "hasMore")
+    val hasMore: kotlin.Boolean,
 
-    @SerialName(value = "description")
-    val description: kotlin.String? = null,
+    @SerialName(value = "items")
+    val items: kotlin.collections.List<PlaceDetail>,
 
-    @Contextual @SerialName(value = "placeId")
-    val placeId: java.util.UUID? = null
+    @SerialName(value = "nextCursor")
+    val nextCursor: kotlin.String?
 
 ) {
 

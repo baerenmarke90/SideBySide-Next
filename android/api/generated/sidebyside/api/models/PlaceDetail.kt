@@ -24,7 +24,6 @@
 package sidebyside.api.models
 
 import sidebyside.api.models.AuthorSummary
-import sidebyside.api.models.PlanStatus
 import sidebyside.api.models.ResourceCapabilities
 
 import kotlinx.serialization.Serializable
@@ -34,26 +33,26 @@ import kotlinx.serialization.Contextual
 /**
  * 
  *
+ * @param address 
  * @param capabilities 
  * @param createdAt 
  * @param createdBy 
  * @param creator 
  * @param description 
- * @param experiencedOn 
  * @param id 
- * @param placeId 
- * @param plannedEnd 
- * @param plannedStart 
- * @param sourceWishId 
+ * @param latitude 
+ * @param longitude 
+ * @param name 
  * @param spaceId 
- * @param status 
- * @param title 
  * @param updatedAt 
  * @param version 
  */
 @Serializable
 
-data class PlanDetail (
+data class PlaceDetail (
+
+    @SerialName(value = "address")
+    val address: kotlin.String?,
 
     @SerialName(value = "capabilities")
     val capabilities: ResourceCapabilities,
@@ -70,32 +69,20 @@ data class PlanDetail (
     @SerialName(value = "description")
     val description: kotlin.String?,
 
-    @Contextual @SerialName(value = "experiencedOn")
-    val experiencedOn: java.time.LocalDate?,
-
     @Contextual @SerialName(value = "id")
     val id: java.util.UUID,
 
-    @Contextual @SerialName(value = "placeId")
-    val placeId: java.util.UUID?,
+    @Contextual @SerialName(value = "latitude")
+    val latitude: java.math.BigDecimal?,
 
-    @Contextual @SerialName(value = "plannedEnd")
-    val plannedEnd: java.time.OffsetDateTime?,
+    @Contextual @SerialName(value = "longitude")
+    val longitude: java.math.BigDecimal?,
 
-    @Contextual @SerialName(value = "plannedStart")
-    val plannedStart: java.time.OffsetDateTime?,
-
-    @Contextual @SerialName(value = "sourceWishId")
-    val sourceWishId: java.util.UUID?,
+    @SerialName(value = "name")
+    val name: kotlin.String,
 
     @Contextual @SerialName(value = "spaceId")
     val spaceId: java.util.UUID,
-
-    @Contextual @SerialName(value = "status")
-    val status: PlanStatus,
-
-    @SerialName(value = "title")
-    val title: kotlin.String,
 
     @Contextual @SerialName(value = "updatedAt")
     val updatedAt: java.time.OffsetDateTime,

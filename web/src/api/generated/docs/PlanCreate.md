@@ -8,6 +8,7 @@ Direct Plan Create nach M3-D30.  `status`, `sourceWishId` und alle Termine fehle
 Name | Type
 ------------ | -------------
 `description` | string
+`placeId` | string
 `title` | string
 
 ## Example
@@ -18,6 +19,7 @@ import type { PlanCreate } from ''
 // TODO: Update the object below with actual values
 const example = {
   "description": null,
+  "placeId": null,
   "title": null,
 } satisfies PlanCreate
 

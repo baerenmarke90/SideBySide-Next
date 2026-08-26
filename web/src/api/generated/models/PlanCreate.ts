@@ -34,6 +34,12 @@ export interface PlanCreate {
      * @type {string}
      * @memberof PlanCreate
      */
+    placeId?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PlanCreate
+     */
     title: string;
 }
 
@@ -56,6 +62,7 @@ export function PlanCreateFromJSONTyped(json: any, ignoreDiscriminator: boolean)
     return {
         
         'description': json['description'] == null ? undefined : json['description'],
+        'placeId': json['placeId'] == null ? undefined : json['placeId'],
         'title': json['title'],
     };
 }
@@ -72,6 +79,7 @@ export function PlanCreateToJSONTyped(value?: PlanCreate | null, ignoreDiscrimin
     return {
         
         'description': value['description'],
+        'placeId': value['placeId'],
         'title': value['title'],
     };
 }

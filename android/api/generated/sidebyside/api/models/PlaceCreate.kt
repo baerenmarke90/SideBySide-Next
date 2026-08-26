@@ -29,24 +29,32 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Direct Plan Create nach M3-D30.  `status`, `sourceWishId` und alle Termine fehlen bewusst. Ein Plan beginnt als Idee; terminiert wird er ueber `/schedule`, abgeschlossen ueber `/complete`.
+ * 
  *
- * @param title 
+ * @param name 
+ * @param address 
  * @param description 
- * @param placeId 
+ * @param latitude 
+ * @param longitude 
  */
 @Serializable
 
-data class PlanCreate (
+data class PlaceCreate (
 
-    @SerialName(value = "title")
-    val title: kotlin.String,
+    @SerialName(value = "name")
+    val name: kotlin.String,
+
+    @SerialName(value = "address")
+    val address: kotlin.String? = null,
 
     @SerialName(value = "description")
     val description: kotlin.String? = null,
 
-    @Contextual @SerialName(value = "placeId")
-    val placeId: java.util.UUID? = null
+    @Contextual @SerialName(value = "latitude")
+    val latitude: java.math.BigDecimal? = null,
+
+    @Contextual @SerialName(value = "longitude")
+    val longitude: java.math.BigDecimal? = null
 
 ) {
 

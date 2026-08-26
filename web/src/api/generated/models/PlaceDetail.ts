@@ -27,197 +27,161 @@ import {
     AuthorSummaryToJSON,
     AuthorSummaryToJSONTyped,
 } from './AuthorSummary';
-import type { PlanStatus } from './PlanStatus';
-import {
-    PlanStatusFromJSON,
-    PlanStatusFromJSONTyped,
-    PlanStatusToJSON,
-    PlanStatusToJSONTyped,
-} from './PlanStatus';
 
 /**
  * 
  * @export
- * @interface PlanDetail
+ * @interface PlaceDetail
  */
-export interface PlanDetail {
+export interface PlaceDetail {
+    /**
+     * 
+     * @type {string}
+     * @memberof PlaceDetail
+     */
+    address: string | null;
     /**
      * 
      * @type {ResourceCapabilities}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     capabilities: ResourceCapabilities;
     /**
      * 
      * @type {Date}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     createdAt: Date;
     /**
      * 
      * @type {string}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     createdBy: string;
     /**
      * 
      * @type {AuthorSummary}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     creator: AuthorSummary;
     /**
      * 
      * @type {string}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     description: string | null;
     /**
      * 
-     * @type {Date}
-     * @memberof PlanDetail
-     */
-    experiencedOn: Date | null;
-    /**
-     * 
      * @type {string}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     id: string;
     /**
      * 
-     * @type {string}
-     * @memberof PlanDetail
+     * @type {number}
+     * @memberof PlaceDetail
      */
-    placeId: string | null;
+    latitude: number | null;
     /**
      * 
-     * @type {Date}
-     * @memberof PlanDetail
+     * @type {number}
+     * @memberof PlaceDetail
      */
-    plannedEnd: Date | null;
-    /**
-     * 
-     * @type {Date}
-     * @memberof PlanDetail
-     */
-    plannedStart: Date | null;
+    longitude: number | null;
     /**
      * 
      * @type {string}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
-    sourceWishId: string | null;
+    name: string;
     /**
      * 
      * @type {string}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     spaceId: string;
     /**
      * 
-     * @type {PlanStatus}
-     * @memberof PlanDetail
-     */
-    status: PlanStatus;
-    /**
-     * 
-     * @type {string}
-     * @memberof PlanDetail
-     */
-    title: string;
-    /**
-     * 
      * @type {Date}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     updatedAt: Date;
     /**
      * 
      * @type {number}
-     * @memberof PlanDetail
+     * @memberof PlaceDetail
      */
     version: number;
 }
 
-
-
 /**
- * Check if a given object implements the PlanDetail interface.
+ * Check if a given object implements the PlaceDetail interface.
  */
-export function instanceOfPlanDetail(value: object): value is PlanDetail {
+export function instanceOfPlaceDetail(value: object): value is PlaceDetail {
+    if (!('address' in value) || value['address'] === undefined) return false;
     if (!('capabilities' in value) || value['capabilities'] === undefined) return false;
     if (!('createdAt' in value) || value['createdAt'] === undefined) return false;
     if (!('createdBy' in value) || value['createdBy'] === undefined) return false;
     if (!('creator' in value) || value['creator'] === undefined) return false;
     if (!('description' in value) || value['description'] === undefined) return false;
-    if (!('experiencedOn' in value) || value['experiencedOn'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
-    if (!('placeId' in value) || value['placeId'] === undefined) return false;
-    if (!('plannedEnd' in value) || value['plannedEnd'] === undefined) return false;
-    if (!('plannedStart' in value) || value['plannedStart'] === undefined) return false;
-    if (!('sourceWishId' in value) || value['sourceWishId'] === undefined) return false;
+    if (!('latitude' in value) || value['latitude'] === undefined) return false;
+    if (!('longitude' in value) || value['longitude'] === undefined) return false;
+    if (!('name' in value) || value['name'] === undefined) return false;
     if (!('spaceId' in value) || value['spaceId'] === undefined) return false;
-    if (!('status' in value) || value['status'] === undefined) return false;
-    if (!('title' in value) || value['title'] === undefined) return false;
     if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
     if (!('version' in value) || value['version'] === undefined) return false;
     return true;
 }
 
-export function PlanDetailFromJSON(json: any): PlanDetail {
-    return PlanDetailFromJSONTyped(json, false);
+export function PlaceDetailFromJSON(json: any): PlaceDetail {
+    return PlaceDetailFromJSONTyped(json, false);
 }
 
-export function PlanDetailFromJSONTyped(json: any, ignoreDiscriminator: boolean): PlanDetail {
+export function PlaceDetailFromJSONTyped(json: any, ignoreDiscriminator: boolean): PlaceDetail {
     if (json == null) {
         return json;
     }
     return {
         
+        'address': json['address'],
         'capabilities': ResourceCapabilitiesFromJSON(json['capabilities']),
         'createdAt': (new Date(json['createdAt'])),
         'createdBy': json['createdBy'],
         'creator': AuthorSummaryFromJSON(json['creator']),
         'description': json['description'],
-        'experiencedOn': (json['experiencedOn'] == null ? null : new Date(json['experiencedOn'])),
         'id': json['id'],
-        'placeId': json['placeId'],
-        'plannedEnd': (json['plannedEnd'] == null ? null : new Date(json['plannedEnd'])),
-        'plannedStart': (json['plannedStart'] == null ? null : new Date(json['plannedStart'])),
-        'sourceWishId': json['sourceWishId'],
+        'latitude': json['latitude'],
+        'longitude': json['longitude'],
+        'name': json['name'],
         'spaceId': json['spaceId'],
-        'status': PlanStatusFromJSON(json['status']),
-        'title': json['title'],
         'updatedAt': (new Date(json['updatedAt'])),
         'version': json['version'],
     };
 }
 
-export function PlanDetailToJSON(json: any): PlanDetail {
-    return PlanDetailToJSONTyped(json, false);
+export function PlaceDetailToJSON(json: any): PlaceDetail {
+    return PlaceDetailToJSONTyped(json, false);
 }
 
-export function PlanDetailToJSONTyped(value?: PlanDetail | null, ignoreDiscriminator: boolean = false): any {
+export function PlaceDetailToJSONTyped(value?: PlaceDetail | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }
 
     return {
         
+        'address': value['address'],
         'capabilities': ResourceCapabilitiesToJSON(value['capabilities']),
         'createdAt': value['createdAt'].toISOString(),
         'createdBy': value['createdBy'],
         'creator': AuthorSummaryToJSON(value['creator']),
         'description': value['description'],
-        'experiencedOn': value['experiencedOn'] == null ? value['experiencedOn'] : value['experiencedOn'].toISOString().substring(0,10),
         'id': value['id'],
-        'placeId': value['placeId'],
-        'plannedEnd': value['plannedEnd'] == null ? value['plannedEnd'] : value['plannedEnd'].toISOString(),
-        'plannedStart': value['plannedStart'] == null ? value['plannedStart'] : value['plannedStart'].toISOString(),
-        'sourceWishId': value['sourceWishId'],
+        'latitude': value['latitude'],
+        'longitude': value['longitude'],
+        'name': value['name'],
         'spaceId': value['spaceId'],
-        'status': PlanStatusToJSON(value['status']),
-        'title': value['title'],
         'updatedAt': value['updatedAt'].toISOString(),
         'version': value['version'],
     };
