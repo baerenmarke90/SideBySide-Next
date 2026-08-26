@@ -11,6 +11,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.Density
 import org.junit.Rule
@@ -49,11 +50,13 @@ class ReferenceFlowScreenSemanticsTest {
 
         val storyList = composeRule.onNode(hasScrollToIndexAction())
         storyList.performScrollToIndex(2)
-        composeRule.onNodeWithText("Erinnerung festhalten").assertIsDisplayed()
+        composeRule.onNodeWithText("Erinnerung festhalten").performScrollTo().assertIsDisplayed()
         composeRule.onNode(hasText("Bild auswählen") and hasClickAction())
+            .performScrollTo()
             .assertIsDisplayed()
             .assertHasClickAction()
         composeRule.onNode(hasText("Erinnerung mit Bild speichern") and hasClickAction())
+            .performScrollTo()
             .assertIsDisplayed()
             .assertHasClickAction()
 
@@ -79,8 +82,10 @@ class ReferenceFlowScreenSemanticsTest {
         }
 
         composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
-        composeRule.onNodeWithText("E-Mail").assertIsDisplayed()
-        composeRule.onNodeWithText("Passwort").assertIsDisplayed()
-        composeRule.onNode(hasText("Anmelden") and hasClickAction()).assertHasClickAction()
+        composeRule.onNodeWithText("E-Mail").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Passwort").performScrollTo().assertIsDisplayed()
+        composeRule.onNode(hasText("Anmelden") and hasClickAction())
+            .performScrollTo()
+            .assertHasClickAction()
     }
 }
