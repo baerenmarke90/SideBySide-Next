@@ -1,4 +1,5 @@
 import type { StoryItem } from '../api/generated/models/StoryItem';
+import { MemoryPreview } from './MemoryPreview';
 import {
   formatStoryDate,
   groupStoryItems,
@@ -6,7 +7,13 @@ import {
   storyItemPresentation,
 } from './storyPresentation';
 
-export function StoryList({ items }: { items: StoryItem[] }) {
+export function StoryList({
+  items,
+  loadMemoryImage,
+}: {
+  items: StoryItem[];
+  loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
+}) {
   if (items.length === 0) {
     return (
       <div className="story-empty" role="status">
@@ -30,6 +37,7 @@ export function StoryList({ items }: { items: StoryItem[] }) {
           <ol className="story-list">
             {group.items.map((item) => {
               const presentation = storyItemPresentation(item);
+              const firstMemoryAttachment = item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
               return (
                 <li key={storyItemKey(item)}>
                   <article className={`story-card story-card-${item.kind.toLowerCase().replace('_', '-')}`}>
@@ -40,6 +48,13 @@ export function StoryList({ items }: { items: StoryItem[] }) {
                         {formatStoryDate(item.effectiveDate)}
                       </time>
                     </div>
+                    {item.kind === 'MEMORY' && firstMemoryAttachment && (
+                      <MemoryPreview
+                        memoryId={item.memory.id}
+                        attachmentId={firstMemoryAttachment.id}
+                        loadImage={loadMemoryImage}
+                      />
+                    )}
                     <h4>{presentation.title}</h4>
                     {presentation.preview && <p className="story-preview">{presentation.preview}</p>}
                     <div className="story-card-footer">
