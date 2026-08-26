@@ -17,7 +17,7 @@ describe('StoryCard', () => {
         attachments: [],
         author: { id: 'account-1', displayName: 'Alex' },
       },
-    } as StoryItem;
+    } as unknown as StoryItem;
 
     render(<StoryCard item={item} flow={inertFlow} spaceId="space-1" />);
 
