@@ -27,10 +27,8 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
       - name: Abhaengigkeiten installieren
-        run: npm ci
+        run: npm install --ignore-scripts --no-audit --no-fund
       - name: Typpruefung
         run: npm run typecheck
       - name: Tests
