@@ -5,8 +5,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import org.junit.Rule
 import org.junit.Test
@@ -42,11 +46,17 @@ class ReferenceFlowScreenSemanticsTest {
             }
         }
 
-        composeRule.onNodeWithText("Erinnerung festhalten").assertIsDisplayed()
-        composeRule.onNodeWithText("Bild auswählen").assertIsDisplayed().assertHasClickAction()
-        composeRule.onNodeWithText("Erinnerung mit Bild speichern").assertIsDisplayed().assertHasClickAction()
-        composeRule.onNodeWithText("Gemeinsame Story").assertIsDisplayed()
-        composeRule.onNodeWithText("Noch keine Einträge in eurer Story.").assertIsDisplayed()
+        composeRule.onNodeWithText("Erinnerung festhalten").performScrollTo().assertIsDisplayed()
+        composeRule.onNode(hasText("Bild auswählen") and hasClickAction())
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertHasClickAction()
+        composeRule.onNode(hasText("Erinnerung mit Bild speichern") and hasClickAction())
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertHasClickAction()
+        composeRule.onNodeWithText("Gemeinsame Story").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Noch keine Einträge in eurer Story.").performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -66,6 +76,6 @@ class ReferenceFlowScreenSemanticsTest {
 
         composeRule.onNodeWithText("E-Mail").assertIsDisplayed()
         composeRule.onNodeWithText("Passwort").assertIsDisplayed()
-        composeRule.onNodeWithText("Anmelden").assertHasClickAction()
+        composeRule.onNode(hasText("Anmelden") and hasClickAction()).assertHasClickAction()
     }
 }
