@@ -172,8 +172,8 @@ Die manuelle Accessibility-Abnahme wurde bewusst aus G2 in die finale Client-/Re
 Die Runtime-Reihenfolge folgt dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Ein konkreter Slice startet erst, wenn sein produktiver Request/Response-/OpenAPI-Vertrag eindeutig contract-testbar ist und Reuse-before-build sowie die normalen PR-/CI-Gates erfüllt sind.
 
 - [x] **M3-S1 — Wish Foundation:** Wish-Domain mit ProtectedPayload für den Titel, collaborative write nach M3-D01, `status` ausschließlich serverseitig, `If-Match`/409, Statusfilter über einen space- und filtergebundenen Cursor sowie redigierte `WISH_*`-Events. Die Wish->Plan-Operation und die planabhängigen Zeilen der Delete-Matrix folgen in S2.
-- [ ] **M3-S2 — Plan + Wish->Plan:** nächster Runtime-Slice.
-- [ ] M3-S3 — Place Foundation.
+- [x] **M3-S2 — Plan + Wish->Plan:** Plan-Domain mit Direct Create nach M3-D30, Statusautomat `IDEA | PLANNED | COMPLETED` mit Datumsinvarianten als Service- **und** DB-Constraints, `sourceWishId` mit `UNIQUE` und zusammengesetztem Same-Space-Fremdschlüssel, atomare und idempotente Wish->Plan-Konvertierung, `return-to-wish`, `schedule`/`unschedule`/`complete` sowie die kanonische Lock-Reihenfolge `Wish -> Plan` mit echten PostgreSQL-Race- und Rollback-Tests. Die Wish-Delete-Matrix aus M3-D05 ist damit vollständig.
+- [ ] **M3-S3 — Place Foundation:** nächster Runtime-Slice. Bringt auch `Plan.placeId` nach, das S2 mangels Place-Domain bewusst ausgelassen hat.
 - [ ] M3-S4 — typisierte Content Relations.
 - [ ] M3-S5 — Chapter.
 - [ ] M3-S6+ — Collections und Private Area gemäß Delivery Plan.
@@ -190,6 +190,6 @@ Die Runtime-Reihenfolge folgt dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Ein k
 
 ## Nächster Prüfpunkt
 
-M3-S2 **Plan + Wish->Plan** nach dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Der Slice bringt das Plan-Modell, `sourceWishId` mit `UNIQUE`/FK, die atomare und idempotente Wish->Plan-Konvertierung, `return-to-wish`, `schedule`/`unschedule`/`complete` sowie die Lock-Reihenfolge `Wish -> Plan`.
+M3-S3 **Place Foundation** nach dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Der Slice bringt das Place-Modell mit `name/description/address/latitude/longitude`, Lat/Lon als Paar mit höchstens sechs Nachkommastellen, CRUD/List, Redaction in Logs und Events sowie ein Delete, das `Plan.placeId` und `Chapter.placeId` auf `NULL` setzt.
 
-Damit werden auch die beiden Punkte nachgezogen, die S1 bewusst offen gelassen hat: `Wish.status` bekommt seine erste echte Transition, und die Delete-Matrix aus M3-D05 wird um die Zeilen ergänzt, die auf einen vorhandenen originären Plan zeigen. S1 blockiert heute nur den statusseitigen Teil (`PLANNED` -> `WISH_HAS_ACTIVE_PLAN`); eine Plan-Existenzprüfung gibt es ohne `plans`-Tabelle noch nicht.
+Dort wird auch `Plan.placeId` nachgezogen. M3-D02 und M3-D30 nennen das Feld bereits für Create, PATCH und Konvertierung; S2 hat es ausgelassen, weil es ohne Place-Domain auf nichts zeigen könnte.

@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import ClassVar
 
-from sqlalchemy import CheckConstraint, Index, SmallInteger, text
+from sqlalchemy import CheckConstraint, Index, SmallInteger, UniqueConstraint, text
 from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -106,6 +106,11 @@ class Wish(
     __table_args__ = (
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
+        # Traegt den zusammengesetzten Fremdschluessel von `plans`. Die ID
+        # allein wuerde einen Plan auch auf einen Wish aus einem fremden
+        # Space zeigen lassen - der Dienst verhindert das, aber die
+        # Datenbank soll es ebenfalls nicht zulassen (M3-D02).
+        UniqueConstraint("id", "space_id", name="uq_wishes_id_space_id"),
         Index("ix_wishes_owner_id", "owner_id"),
         Index("ix_wishes_space_id_created_at_id", "space_id", "created_at", "id"),
         Index("ix_wishes_space_id_status", "space_id", "status"),
