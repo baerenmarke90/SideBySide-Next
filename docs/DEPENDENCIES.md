@@ -191,10 +191,10 @@ Die praktische Lage:
   Treiber durch eine eigene Fassung ersetzen können und dass Lizenztext
   und Quellenhinweis beiliegen.
 
-Das ist bei einem separat installierten Python-Paket erfüllbar, aber es ist
-eine bewusste Auflage und keine Formalie. Vor dem kommerziellen Start gehört
-sie geprüft — gegebenenfalls durch Wechsel auf einen permissiv lizenzierten
-Treiber.
+Das ist bei einem separat installierten Python-Paket erfüllbar, aber es
+ist eine bewusste Auflage und keine Formalie. Vor dem kommerziellen Start
+gehört sie geprüft — gegebenenfalls durch Wechsel auf einen permissiv
+lizenzierten Treiber.
 
 Diese Einschätzung ist keine Rechtsberatung.
 
@@ -203,7 +203,8 @@ Diese Einschätzung ist keine Rechtsberatung.
 Das Repository enthält inzwischen projektspezifische Bild- und SVG-Assets.
 Sie wurden für SideBySide Next bzw. dessen Roadmap und M2-Handoff erstellt;
 Assets ungeklärter Drittanbieter- oder Vorgängerherkunft werden weiterhin
-nicht aufgenommen.
+nicht aufgenommen. Die Produktbilder sind ausdrücklich Mockups und keine
+Screenshots einer bereits fertigen App.
 
 Für die unten als **Projektasset** gekennzeichneten Dateien wird derzeit keine
 separate öffentliche Lizenz eingeräumt. Diese Einordnung ändert nichts an
@@ -232,9 +233,8 @@ Derzeit sind keine Schrift- oder Audio-Assets im Repository dokumentiert.
 
 Eine neue direkte Abhängigkeit wird zusammen mit ihrem Eintrag hier
 hinzugefügt. Die CI prüft Vollständigkeit, genaue Version und Lizenz gegen
-die gesperrte, installierte Umgebung. Transitive Python-Versionen stehen
-vollständig in `backend/uv.lock`; Web-Abhaengigkeiten werden im Web-Projekt
-verwaltet.
+die gesperrte, installierte Umgebung. Transitive Versionen stehen vollständig
+in `backend/uv.lock`. Web-Abhaengigkeiten werden im Web-Projekt verwaltet.
 
 Neue Assets werden in derselben Änderung hier dokumentiert. Bei unklarer
 Herkunft, Lizenz oder Erstellerschaft wird das Asset nicht aufgenommen, bis
