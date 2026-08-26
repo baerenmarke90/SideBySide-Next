@@ -25,8 +25,8 @@ suspend fun loadSelectedImage(context: Context, uri: Uri): SelectedImage = withC
         }
     }
 
-    require(declaredSize == null || declaredSize!! <= MAX_REFERENCE_IMAGE_BYTES) {
-        "Das Bild ist größer als 25 MiB."
+    declaredSize?.let { size ->
+        require(size <= MAX_REFERENCE_IMAGE_BYTES) { "Das Bild ist größer als 25 MiB." }
     }
 
     val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
