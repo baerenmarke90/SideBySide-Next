@@ -1,0 +1,46 @@
+name: I18n Lockfile One Shot
+
+on:
+  push:
+    branches:
+      - feat/i18n-foundation-180
+    paths:
+      - web/package.json
+      - .github/workflows/i18n-lock-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
+    steps:
+      - name: Git fuer Checkout und Push bereitstellen
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/i18n-foundation-180
+
+      - name: Lockfile mit gepinnten Abhaengigkeiten aktualisieren
+        working-directory: web
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Nur Lockfile darf durch npm veraendert werden
+        run: |
+          git diff --exit-code -- web/package.json
+          git diff --check
+
+      - name: Lockfile auf Feature-Branch committen
+        run: |
+          if git diff --quiet -- web/package-lock.json; then
+            echo "Lockfile ist bereits aktuell."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/package-lock.json
+          git commit -m "build(web): lock i18n dependencies"
+          git push origin HEAD:feat/i18n-foundation-180
