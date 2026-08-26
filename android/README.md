@@ -37,7 +37,8 @@ Der Slice führt genau einen kritischen Flow aus:
 
 Bei `STREAM` geht der Bearer-Token an die SideBySide-API. Bei
 `SIGNED_UPLOAD`/`SIGNED_URL` wird er bewusst **nicht** an den Storage-Endpunkt
-weitergereicht.
+weitergereicht. Das App-Manifest erlaubt keine Cleartext-Verbindungen; ein
+realer Remote-Betrieb verwendet daher HTTPS.
 
 ## Betreiberkonfiguration
 
