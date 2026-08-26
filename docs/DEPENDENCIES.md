@@ -129,7 +129,7 @@ Requestpfad.
 | @tanstack/react-query | 5.85.5 | npm | MIT |
 | react | 19.1.1 | npm | MIT |
 | react-dom | 19.1.1 | npm | MIT |
-| react-router-dom | 7.8.2 | npm | MIT |
+| react-router-dom | 7.18.2 | npm | MIT |
 
 ## Web — M2-S8 Entwicklung
 
@@ -138,8 +138,8 @@ Requestpfad.
 | @types/react | 19.1.12 | npm | MIT |
 | @types/react-dom | 19.1.9 | npm | MIT |
 | typescript | 5.9.2 | npm | Apache-2.0 |
-| vite | 7.1.3 | npm | MIT |
-| vitest | 3.2.4 | npm | MIT |
+| vite | 7.3.6 | npm | MIT |
+| vitest | 3.2.7 | npm | MIT |
 
 Diese Web-Abhängigkeiten dienen ausschließlich dem dünnen S8-Referenzflow.
 Sie ziehen keine M5-Funktionen wie persistente Offline-Caches, vollständige
