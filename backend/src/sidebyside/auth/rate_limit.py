@@ -11,6 +11,7 @@ Anmeldeversuch hatte, ist mehr Wissen, als diese Funktion braucht.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
@@ -20,6 +21,7 @@ from sqlalchemy import delete, func, select
 
 if TYPE_CHECKING:
     from sqlalchemy import CursorResult
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from sidebyside.auth.tokens import hash_token
@@ -52,51 +54,135 @@ INVITATION_ACCEPT = Limit(attempts=10, window=timedelta(minutes=15))
 # aussperren, eine Schleife aber schon.
 REFRESH = Limit(attempts=20, window=timedelta(minutes=15))
 
+_PERSISTED_ATTEMPTS_KEY = "sidebyside.rate_limit.persisted"
+
 
 def _record_hashed_attempt(session: Session, *, action: str, key_hash: str) -> None:
     session.add(RateLimitEvent(action=action, key_hash=key_hash, occurred_at=now()))
     session.flush()
 
 
-def record_attempt(session: Session, action: str, key: str) -> None:
-    """Einen Versuch vermerken. Zaehlt unabhaengig vom Ausgang."""
-    _record_hashed_attempt(session, action=action, key_hash=hash_token(key.lower()))
+def _advisory_lock_id(action: str, key_hash: str) -> int:
+    """Stabiler PostgreSQL-Lock-Key aus Action und bereits gehashtem Key.
 
-
-def preserve_attempt_after_rollback(session: Session, action: str, key: str) -> None:
-    """Den Versuch auch bei einer abgelehnten Anfrage dauerhaft erhalten.
-
-    Der Klartext-Schluessel wird nicht in der spaeteren Aktion gehalten.
+    PostgreSQL-Advisory-Locks akzeptieren ein signed 64-bit Integer. Die
+    Ableitung verwendet bewusst nur den ohnehin bereits gehashten
+    Rate-Limit-Schluessel; der Klartext landet weder in Tabelle noch Lock.
     """
-    schedule_after_rollback(
-        session,
-        partial(
-            _record_hashed_attempt,
-            action=action,
-            key_hash=hash_token(key.lower()),
-        ),
-    )
+    digest = hashlib.sha256(f"{action}\0{key_hash}".encode()).digest()
+    return int.from_bytes(digest[:8], byteorder="big", signed=True)
 
 
-def check(session: Session, action: str, key: str, limit: Limit) -> None:
-    """Wirft, wenn die Grenze erreicht ist.
+def _reserve_hashed_attempt(
+    session: Session,
+    *,
+    action: str,
+    key_hash: str,
+    limit: Limit,
+) -> None:
+    """Pruefung und Slot-Verbrauch unter einem DB-weiten per-Key Lock."""
+    session.execute(select(func.pg_advisory_xact_lock(_advisory_lock_id(action, key_hash))))
 
-    Wird VOR dem eigentlichen Versuch aufgerufen, damit ein Angreifer nicht
-    erst die teure Passwortpruefung ausloest.
-    """
     seit = now() - limit.window
     versuche = session.execute(
         select(func.count())
         .select_from(RateLimitEvent)
         .where(
             RateLimitEvent.action == action,
-            RateLimitEvent.key_hash == hash_token(key.lower()),
+            RateLimitEvent.key_hash == key_hash,
             RateLimitEvent.occurred_at >= seit,
         )
     ).scalar_one()
 
     if versuche >= limit.attempts:
-        raise RateLimitedError("Too many attempts. Please try again later.", ErrorCode.RATE_LIMITED)
+        raise RateLimitedError(
+            "Too many attempts. Please try again later.",
+            ErrorCode.RATE_LIMITED,
+        )
+
+    _record_hashed_attempt(session, action=action, key_hash=key_hash)
+
+
+def _persisted_attempts(session: Session) -> set[tuple[str, str]]:
+    return cast(
+        set[tuple[str, str]],
+        session.info.setdefault(_PERSISTED_ATTEMPTS_KEY, set()),
+    )
+
+
+def check(session: Session, action: str, key: str, limit: Limit) -> None:
+    """Atomar einen Rate-Limit-Slot pruefen und verbrauchen.
+
+    Produktive Request-Sessions sind an die Engine gebunden. Dort lebt die
+    Reservierung in einer kurzen eigenen Security-Transaktion: ihr Commit
+    geschieht, bevor die fachliche Anfrage weiterlaeuft. Scheitert die
+    Anfrage spaeter und wird zurueckgerollt, bleibt der Versuch dadurch
+    gezaehlt. Gleichzeitig serialisiert ein PostgreSQL-Advisory-Lock alle
+    API-Instanzen fuer genau `(action, key)`.
+
+    Tests, die eine Session absichtlich an eine bereits offene Connection
+    binden, bleiben dagegen in ihrer Testtransaktion; so wird keine
+    Testisolation durch einen separaten Commit durchbrochen.
+
+    Historische Aufrufer folgen unmittelbar mit `record_attempt()`. Diese
+    Methode markiert die bereits persistierte Reservierung, damit jener
+    Aufruf keinen zweiten Eintrag erzeugt.
+    """
+    key_hash = hash_token(key.lower())
+    bind = session.get_bind()
+
+    if isinstance(bind, Engine):
+        # Spaeter Import: Tests ersetzen get_sessionmaker fuer den echten
+        # produktiven UoW-Lifecycle. Der Ersatz muss auch hier greifen.
+        from sidebyside.db import session as db_session
+
+        security_session = db_session.get_sessionmaker()()
+        try:
+            _reserve_hashed_attempt(
+                security_session,
+                action=action,
+                key_hash=key_hash,
+                limit=limit,
+            )
+            security_session.commit()
+        except Exception:
+            security_session.rollback()
+            raise
+        finally:
+            security_session.close()
+    else:
+        _reserve_hashed_attempt(session, action=action, key_hash=key_hash, limit=limit)
+
+    _persisted_attempts(session).add((action, key_hash))
+
+
+def record_attempt(session: Session, action: str, key: str) -> None:
+    """Einen Versuch vermerken, sofern `check` ihn nicht bereits reserviert hat."""
+    key_hash = hash_token(key.lower())
+    if (action, key_hash) in _persisted_attempts(session):
+        return
+    _record_hashed_attempt(session, action=action, key_hash=key_hash)
+
+
+def preserve_attempt_after_rollback(session: Session, action: str, key: str) -> None:
+    """Den Versuch auch bei einer abgelehnten Anfrage dauerhaft erhalten.
+
+    `check()` persistiert produktive Reservierungen bereits in einer
+    separaten Security-Transaktion. Fuer Alt-/Direktaufrufe ohne vorherige
+    Reservierung bleibt der bisherige After-Rollback-Weg erhalten.
+    """
+    key_hash = hash_token(key.lower())
+    if (action, key_hash) in _persisted_attempts(session):
+        return
+
+    schedule_after_rollback(
+        session,
+        partial(
+            _record_hashed_attempt,
+            action=action,
+            key_hash=key_hash,
+        ),
+    )
 
 
 def clear(session: Session, action: str, key: str) -> None:
@@ -105,12 +191,14 @@ def clear(session: Session, action: str, key: str) -> None:
     Sonst zaehlten die Fehlversuche vor einer geglueckten Anmeldung weiter
     und sperrten den rechtmaessigen Nutzer aus.
     """
+    key_hash = hash_token(key.lower())
     session.execute(
         delete(RateLimitEvent).where(
             RateLimitEvent.action == action,
-            RateLimitEvent.key_hash == hash_token(key.lower()),
+            RateLimitEvent.key_hash == key_hash,
         )
     )
+    _persisted_attempts(session).discard((action, key_hash))
 
 
 def prune(session: Session, older_than: datetime | None = None) -> int:
