@@ -2,7 +2,7 @@ import { AttachmentsApi } from '../api/generated/apis/AttachmentsApi';
 import { AuthApi } from '../api/generated/apis/AuthApi';
 import { MemoriesApi } from '../api/generated/apis/MemoriesApi';
 import { StoryApi } from '../api/generated/apis/StoryApi';
-import { Configuration } from '../api/generated/runtime';
+import { Configuration, ResponseError } from '../api/generated/runtime';
 import type { MemoryCreate } from '../api/generated/models/MemoryCreate';
 import type { MemoryDetail } from '../api/generated/models/MemoryDetail';
 import type { SessionView } from '../api/generated/models/SessionView';
@@ -26,6 +26,12 @@ export interface ReferenceApis {
   story: StoryApi;
 }
 
+interface ApiProblem {
+  detail?: unknown;
+  title?: unknown;
+  code?: unknown;
+}
+
 export function createReferenceApis(apiBaseUrl: string, accessToken?: string): ReferenceApis {
   const configuration = new Configuration({
     basePath: apiBaseUrl,
@@ -43,6 +49,28 @@ export function createReferenceApis(apiBaseUrl: string, accessToken?: string): R
 function resolveTransportUrl(apiBaseUrl: string, target: string): string {
   if (/^https?:\/\//i.test(target)) return target;
   return `${apiBaseUrl.replace(/\/+$/, '')}/${target.replace(/^\/+/, '')}`;
+}
+
+async function rethrowWithProblemDetail(error: unknown, fallback: string): Promise<never> {
+  if (!(error instanceof ResponseError)) {
+    if (error instanceof Error) throw error;
+    throw new Error(fallback);
+  }
+
+  let message = fallback;
+  try {
+    const problem = (await error.response.clone().json()) as ApiProblem;
+    if (typeof problem.detail === 'string' && problem.detail.trim()) {
+      message = problem.detail.trim();
+    } else if (typeof problem.title === 'string' && problem.title.trim()) {
+      message = problem.title.trim();
+    }
+  } catch {
+    const statusText = `${error.response.status} ${error.response.statusText}`.trim();
+    if (statusText) message = `${fallback} (${statusText})`;
+  }
+
+  throw new Error(message);
 }
 
 async function assertOk(response: Response, action: string): Promise<void> {
@@ -123,14 +151,18 @@ export async function signIn(
   password: string,
 ): Promise<SessionView> {
   const { auth } = createReferenceApis(apiBaseUrl);
-  return auth.signInApiV1AuthSignInPost({
-    signInRequest: {
-      email,
-      password,
-      deviceName: 'SideBySide Web M2 Referenzflow',
-      platform: 'web',
-    },
-  });
+  try {
+    return await auth.signInApiV1AuthSignInPost({
+      signInRequest: {
+        email,
+        password,
+        deviceName: 'SideBySide Web M2 Referenzflow',
+        platform: 'web',
+      },
+    });
+  } catch (error) {
+    return rethrowWithProblemDetail(error, 'Anmeldung fehlgeschlagen.');
+  }
 }
 
 export async function runMemoryMediaStoryFlow(
@@ -144,44 +176,48 @@ export async function runMemoryMediaStoryFlow(
 ): Promise<FlowResult> {
   if (!file.type.startsWith('image/')) throw new Error('S8 akzeptiert ausschließlich Bilder.');
 
-  const memory = await apis.memories.createMemory({ spaceId, memoryCreate });
-  const upload = await apis.attachments.createAttachmentUpload({
-    spaceId,
-    attachmentUploadCreate: {
-      expectedMimeType: file.type,
-      expectedSize: file.size,
-      mediaType: MediaType.IMAGE,
-      originalName: file.name,
-    },
-  });
+  try {
+    const memory = await apis.memories.createMemory({ spaceId, memoryCreate });
+    const upload = await apis.attachments.createAttachmentUpload({
+      spaceId,
+      attachmentUploadCreate: {
+        expectedMimeType: file.type,
+        expectedSize: file.size,
+        mediaType: MediaType.IMAGE,
+        originalName: file.name,
+      },
+    });
 
-  await uploadAttachmentBytes(apiBaseUrl, accessToken, upload, file, fetchApi);
-  await apis.attachments.finalizeAttachmentUpload({
-    spaceId,
-    attachmentId: upload.attachment.id,
-    body: {},
-  });
-  await waitUntilReady(apis, spaceId, upload.attachment.id);
+    await uploadAttachmentBytes(apiBaseUrl, accessToken, upload, file, fetchApi);
+    await apis.attachments.finalizeAttachmentUpload({
+      spaceId,
+      attachmentId: upload.attachment.id,
+      body: {},
+    });
+    await waitUntilReady(apis, spaceId, upload.attachment.id);
 
-  const boundMemory = await apis.memories.replaceMemoryAttachments({
-    spaceId,
-    memoryId: memory.id,
-    ifMatch: String(memory.version),
-    memoryAttachmentSet: {
-      attachments: [{ attachmentId: upload.attachment.id, position: 0 }],
-    },
-  });
+    const boundMemory = await apis.memories.replaceMemoryAttachments({
+      spaceId,
+      memoryId: memory.id,
+      ifMatch: String(memory.version),
+      memoryAttachmentSet: {
+        attachments: [{ attachmentId: upload.attachment.id, position: 0 }],
+      },
+    });
 
-  const story = await apis.story.getStoryTimeline({ spaceId, limit: 25 });
-  const imageUrl = await loadAuthorizedImage(
-    apis,
-    apiBaseUrl,
-    accessToken,
-    spaceId,
-    boundMemory.id,
-    upload.attachment.id,
-    fetchApi,
-  );
+    const story = await apis.story.getStoryTimeline({ spaceId, limit: 25 });
+    const imageUrl = await loadAuthorizedImage(
+      apis,
+      apiBaseUrl,
+      accessToken,
+      spaceId,
+      boundMemory.id,
+      upload.attachment.id,
+      fetchApi,
+    );
 
-  return { memory: boundMemory, story, imageUrl };
+    return { memory: boundMemory, story, imageUrl };
+  } catch (error) {
+    return rethrowWithProblemDetail(error, 'Erinnerung konnte nicht gespeichert werden.');
+  }
 }
