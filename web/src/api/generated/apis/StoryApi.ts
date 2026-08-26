@@ -12,24 +12,27 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  ProblemDetails,
-  StoryKind,
-  StoryOrder,
-  StoryPage,
-} from '../models/index';
 import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
+} from '../models/ProblemDetails';
+import {
+    type StoryKind,
     StoryKindFromJSON,
     StoryKindToJSON,
+} from '../models/StoryKind';
+import {
+    type StoryOrder,
     StoryOrderFromJSON,
     StoryOrderToJSON,
+} from '../models/StoryOrder';
+import {
+    type StoryPage,
     StoryPageFromJSON,
     StoryPageToJSON,
-} from '../models/index';
+} from '../models/StoryPage';
 
 export interface GetStoryTimelineRequest {
     spaceId: string;
@@ -46,10 +49,9 @@ export interface GetStoryTimelineRequest {
 export class StoryApi extends runtime.BaseAPI {
 
     /**
-     * Die gemeinsame Zeitleiste aus Memories, Milestones und HeartMoments.  Private HeartMoments erscheinen hier nie - auch nicht fuer ihren Owner.
-     * Get Story Timeline
+     * Creates request options for getStoryTimeline without sending the request
      */
-    async getStoryTimelineRaw(requestParameters: GetStoryTimelineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StoryPage>> {
+    async getStoryTimelineRequestOpts(requestParameters: GetStoryTimelineRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -83,14 +85,23 @@ export class StoryApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/timeline`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Die gemeinsame Zeitleiste aus Memories, Milestones und HeartMoments.  Private HeartMoments erscheinen hier nie - auch nicht fuer ihren Owner.
+     * Get Story Timeline
+     */
+    async getStoryTimelineRaw(requestParameters: GetStoryTimelineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StoryPage>> {
+        const requestOptions = await this.getStoryTimelineRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => StoryPageFromJSON(jsonValue));
     }

@@ -19,7 +19,6 @@ import { mapValues } from '../runtime';
  * @interface MilestoneUpdate
  */
 export interface MilestoneUpdate {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -57,8 +56,7 @@ export function MilestoneUpdateFromJSONTyped(json: any, ignoreDiscriminator: boo
     }
     return {
         
-            ...json,
-        'body': json['body'] == null ? undefined : json['body'],
+        'body': json['body'] === undefined ? undefined : json['body'] === null ? null : json['body'],
         'happenedOn': json['happenedOn'] == null ? undefined : (new Date(json['happenedOn'])),
         'title': json['title'] == null ? undefined : json['title'],
     };
@@ -75,7 +73,6 @@ export function MilestoneUpdateToJSONTyped(value?: MilestoneUpdate | null, ignor
 
     return {
         
-            ...value,
         'body': value['body'],
         'happenedOn': value['happenedOn'] == null ? value['happenedOn'] : value['happenedOn'].toISOString().substring(0,10),
         'title': value['title'],

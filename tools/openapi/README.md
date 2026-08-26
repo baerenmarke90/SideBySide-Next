@@ -36,6 +36,22 @@ Geprüfte Alternativen und warum sie hier nicht passen:
 - **swagger-codegen** ist der Vorgänger von openapi-generator; die aktive
   Weiterentwicklung liegt bei letzterem.
 
+## Story-Union auf Kotlin
+
+Der frühere Generator-Stand erzeugte `StoryItem` als unbrauchbare
+`sealed class`: die Varianten erbten nicht von ihr und der Basistyp verlangte
+die Felder aller drei Varianten gleichzeitig. Das ist mit #119 behoben.
+
+OpenAPI Generator v7.24.0 erzeugt mit `generateOneOfAnyOfWrappers` und
+`kotlinx.serialization` jetzt eine discriminator-basierte `sealed interface`.
+Der generierte Serializer wertet `kind` aus und deserialisiert `MEMORY`,
+`HEART_MOMENT` und `MILESTONE` jeweils in den passenden Wrapper. Damit bleibt
+`StoryPage.items` eine `List<StoryItem>`, ohne dass eine Variante die Felder der
+anderen Varianten benötigt.
+
+Die Ursache lag nicht im OpenAPI-Vertrag. Der Vertrag mit
+`discriminator.propertyName = kind` bleibt unverändert die einzige Quelle.
+
 ## Warum der generierte Code eingecheckt ist
 
 Der Vertrag `backend/openapi.json` ist bereits eingecheckt und wird gegen die
@@ -68,32 +84,6 @@ Vorfestlegungen.
 Kein Service-Layer auf der Kotlin-Seite: Retrofit oder Ktor wären eine
 Entscheidung über den Android-Client, den es noch nicht gibt. Sie kommt
 additiv dazu, sobald das Projekt existiert.
-
-## Bekannte Einschränkung: die Story-Union auf Kotlin
-
-Der Kotlin-Generator erzeugt für `StoryItem` eine `sealed class`, deren
-Varianten **nicht** von ihr erben, und die abstrakte Felder aller drei
-Varianten gleichzeitig verlangt:
-
-```kotlin
-sealed class StoryItem {
-    abstract val effectiveDate: java.time.LocalDate
-    abstract val memory: MemorySummary          // nur bei MEMORY vorhanden
-    abstract val heartMoment: SharedHeartMomentSummary
-    abstract val milestone: MilestoneSummary
-}
-```
-
-Der Typ ist damit nicht instanziierbar; eine Deserialisierung von
-`StoryPage.items` würde zur Laufzeit fehlschlagen. Dieselbe Union erzeugt der
-TypeScript-Generator korrekt als diskriminierten Union-Typ — es ist eine
-Schwäche des Kotlin-Generators bei `oneOf` mit Discriminator, kein Fehler im
-Vertrag.
-
-Heute betrifft das niemanden: der Android-Client existiert noch nicht. Bevor
-er `/timeline` benutzt, muss die Union entweder von Hand adaptiert oder der
-Generator ersetzt/aktualisiert werden. Der Punkt ist als #119
-festgehalten und darf nicht in einem Android-PR beiläufig entdeckt werden.
 
 ## Lizenzen
 

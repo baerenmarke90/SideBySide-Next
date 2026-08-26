@@ -35,7 +35,7 @@ export interface StoryMemoryItem {
     effectiveDate: Date;
     /**
      * 
-     * @type {string}
+     * @type {StoryMemoryItemKindEnum}
      * @memberof StoryMemoryItem
      */
     kind: StoryMemoryItemKindEnum;
@@ -63,6 +63,8 @@ export type StoryMemoryItemKindEnum = typeof StoryMemoryItemKindEnum[keyof typeo
 export function instanceOfStoryMemoryItem(value: object): value is StoryMemoryItem {
     if (!('effectiveDate' in value) || value['effectiveDate'] === undefined) return false;
     if (!('kind' in value) || value['kind'] === undefined) return false;
+    if (value['kind'] !== 'MEMORY') return false;
+    
     if (!('memory' in value) || value['memory'] === undefined) return false;
     return true;
 }

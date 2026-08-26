@@ -8,9 +8,17 @@
 
 @file:Suppress(
     "ArrayInDataClass",
+    "DuplicatedCode",
     "EnumEntryName",
     "RemoveRedundantQualifierName",
-    "UnusedImport"
+    "RemoveRedundantCallsOfConversionMethods",
+    "REDUNDANT_CALL_OF_CONVERSION_METHOD",
+    "RedundantUnitReturnType",
+    "RemoveEmptyClassBody",
+    "UnnecessaryVariable",
+    "UnusedImport",
+    "UnnecessaryVariable",
+    "unused"
 )
 
 package sidebyside.api.models
@@ -25,32 +33,83 @@ import sidebyside.api.models.StoryMilestoneItem
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.json.JsonClassDiscriminator
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonEncoder
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Ein Eintrag der Zeitleiste, diskriminiert ueber `kind`.  Ein eigener Typ und keine anonyme Union im Listenfeld: sonst benennt der OpenAPI-Vertrag sie nach ihrem Fundort - `StoryPageItemsInner` - und jeder erzeugte Client traegt diesen Namen weiter. `API-DESIGN.md` nennt sie `StoryItem`, und das soll auch im Vertrag stehen.
  *
- * @param effectiveDate 
- * @param memory 
- * @param heartMoment 
- * @param milestone 
  */
-@Serializable
+@Serializable(with = StoryItemSerializer::class)
+sealed interface StoryItem {
+    @JvmInline
+     value class HeartMomentWrapper(val value: StoryHeartMomentItem) : StoryItem
 
+    @JvmInline
+     value class MemoryWrapper(val value: StoryMemoryItem) : StoryItem
 
-@OptIn(ExperimentalSerializationApi::class)
-@JsonClassDiscriminator(discriminator = "kind")
-sealed class StoryItem {
+    @JvmInline
+     value class MilestoneWrapper(val value: StoryMilestoneItem) : StoryItem
 
-    @Contextual @SerialName(value = "effectiveDate")
-    abstract val effectiveDate: java.time.LocalDate
-    @SerialName(value = "memory")
-    abstract val memory: MemorySummary
-    @SerialName(value = "heartMoment")
-    abstract val heartMoment: SharedHeartMomentSummary
-    @SerialName(value = "milestone")
-    abstract val milestone: MilestoneSummary
+}
 
+object StoryItemSerializer : KSerializer<StoryItem> {
+    override val descriptor: SerialDescriptor = buildClassSerialDescriptor("StoryItem")
+
+    override fun serialize(encoder: Encoder, value: StoryItem) {
+        require(encoder is JsonEncoder)
+        val jsonObject = when (value) {
+            is StoryItem.HeartMomentWrapper -> {
+                val jsonMap = encoder.json.encodeToJsonElement(StoryHeartMomentItem.serializer(), value.value).jsonObject.toMutableMap()
+                jsonMap["kind"] = JsonPrimitive("HEART_MOMENT")
+                JsonObject(jsonMap)
+            }
+            is StoryItem.MemoryWrapper -> {
+                val jsonMap = encoder.json.encodeToJsonElement(StoryMemoryItem.serializer(), value.value).jsonObject.toMutableMap()
+                jsonMap["kind"] = JsonPrimitive("MEMORY")
+                JsonObject(jsonMap)
+            }
+            is StoryItem.MilestoneWrapper -> {
+                val jsonMap = encoder.json.encodeToJsonElement(StoryMilestoneItem.serializer(), value.value).jsonObject.toMutableMap()
+                jsonMap["kind"] = JsonPrimitive("MILESTONE")
+                JsonObject(jsonMap)
+            }
+        }
+        encoder.encodeJsonElement(jsonObject)
+    }
+
+    override fun deserialize(decoder: Decoder): StoryItem {
+        require(decoder is JsonDecoder)
+        val element = decoder.decodeJsonElement().jsonObject
+
+        val discriminatorValue = element["kind"]?.jsonPrimitive?.content
+            ?: throw SerializationException("Missing kind field")
+
+        return when (discriminatorValue) {
+            "HEART_MOMENT" -> {
+                val decoded = decoder.json.decodeFromJsonElement(StoryHeartMomentItem.serializer(), element)
+                StoryItem.HeartMomentWrapper(decoded)
+            }
+            "MEMORY" -> {
+                val decoded = decoder.json.decodeFromJsonElement(StoryMemoryItem.serializer(), element)
+                StoryItem.MemoryWrapper(decoded)
+            }
+            "MILESTONE" -> {
+                val decoded = decoder.json.decodeFromJsonElement(StoryMilestoneItem.serializer(), element)
+                StoryItem.MilestoneWrapper(decoded)
+            }
+            else -> throw SerializationException("Unknown StoryItem kind: $discriminatorValue")
+        }
+    }
 }
 

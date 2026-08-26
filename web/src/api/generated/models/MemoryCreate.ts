@@ -19,7 +19,6 @@ import { mapValues } from '../runtime';
  * @interface MemoryCreate
  */
 export interface MemoryCreate {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -59,9 +58,8 @@ export function MemoryCreateFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
         
-            ...json,
         'body': json['body'],
-        'happenedOn': json['happenedOn'] == null ? undefined : (new Date(json['happenedOn'])),
+        'happenedOn': json['happenedOn'] === undefined ? undefined : json['happenedOn'] === null ? null : (new Date(json['happenedOn'])),
         'title': json['title'],
     };
 }
@@ -77,7 +75,6 @@ export function MemoryCreateToJSONTyped(value?: MemoryCreate | null, ignoreDiscr
 
     return {
         
-            ...value,
         'body': value['body'],
         'happenedOn': value['happenedOn'] == null ? value['happenedOn'] : value['happenedOn'].toISOString().substring(0,10),
         'title': value['title'],

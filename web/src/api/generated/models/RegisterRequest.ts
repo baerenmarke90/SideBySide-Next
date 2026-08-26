@@ -83,11 +83,11 @@ export function RegisterRequestFromJSONTyped(json: any, ignoreDiscriminator: boo
     }
     return {
         
-        'bootstrapToken': json['bootstrapToken'] == null ? undefined : json['bootstrapToken'],
+        'bootstrapToken': json['bootstrapToken'] === undefined ? undefined : json['bootstrapToken'] === null ? null : json['bootstrapToken'],
         'deviceName': json['deviceName'] == null ? undefined : json['deviceName'],
         'displayName': json['displayName'],
         'email': json['email'],
-        'invitationToken': json['invitationToken'] == null ? undefined : json['invitationToken'],
+        'invitationToken': json['invitationToken'] === undefined ? undefined : json['invitationToken'] === null ? null : json['invitationToken'],
         'password': json['password'],
         'platform': json['platform'] == null ? undefined : json['platform'],
     };

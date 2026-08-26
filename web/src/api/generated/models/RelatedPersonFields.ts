@@ -88,7 +88,7 @@ export function RelatedPersonFieldsFromJSONTyped(json: any, ignoreDiscriminator:
     }
     return {
         
-        'birthday': json['birthday'] == null ? undefined : (new Date(json['birthday'])),
+        'birthday': json['birthday'] === undefined ? undefined : json['birthday'] === null ? null : (new Date(json['birthday'])),
         'birthdayYearKnown': json['birthdayYearKnown'] == null ? undefined : json['birthdayYearKnown'],
         'displayName': json['displayName'],
         'relationship': PersonRelationshipFromJSON(json['relationship']),

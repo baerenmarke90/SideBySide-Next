@@ -19,7 +19,6 @@ import { mapValues } from '../runtime';
  * @interface MemoryUpdate
  */
 export interface MemoryUpdate {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -57,10 +56,9 @@ export function MemoryUpdateFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
         
-            ...json,
-        'body': json['body'] == null ? undefined : json['body'],
-        'happenedOn': json['happenedOn'] == null ? undefined : (new Date(json['happenedOn'])),
-        'title': json['title'] == null ? undefined : json['title'],
+        'body': json['body'] === undefined ? undefined : json['body'] === null ? null : json['body'],
+        'happenedOn': json['happenedOn'] === undefined ? undefined : json['happenedOn'] === null ? null : (new Date(json['happenedOn'])),
+        'title': json['title'] === undefined ? undefined : json['title'] === null ? null : json['title'],
     };
 }
 
@@ -75,7 +73,6 @@ export function MemoryUpdateToJSONTyped(value?: MemoryUpdate | null, ignoreDiscr
 
     return {
         
-            ...value,
         'body': value['body'],
         'happenedOn': value['happenedOn'] == null ? value['happenedOn'] : value['happenedOn'].toISOString().substring(0,10),
         'title': value['title'],

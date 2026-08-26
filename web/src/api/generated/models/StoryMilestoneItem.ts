@@ -35,7 +35,7 @@ export interface StoryMilestoneItem {
     effectiveDate: Date;
     /**
      * 
-     * @type {string}
+     * @type {StoryMilestoneItemKindEnum}
      * @memberof StoryMilestoneItem
      */
     kind: StoryMilestoneItemKindEnum;
@@ -63,6 +63,8 @@ export type StoryMilestoneItemKindEnum = typeof StoryMilestoneItemKindEnum[keyof
 export function instanceOfStoryMilestoneItem(value: object): value is StoryMilestoneItem {
     if (!('effectiveDate' in value) || value['effectiveDate'] === undefined) return false;
     if (!('kind' in value) || value['kind'] === undefined) return false;
+    if (value['kind'] !== 'MILESTONE') return false;
+    
     if (!('milestone' in value) || value['milestone'] === undefined) return false;
     return true;
 }

@@ -102,10 +102,10 @@ export function SpaceProfileViewFromJSONTyped(json: any, ignoreDiscriminator: bo
     return {
         
         'durationDisplayMode': json['durationDisplayMode'] == null ? undefined : DurationDisplayModeFromJSON(json['durationDisplayMode']),
-        'relationshipDays': json['relationshipDays'] == null ? undefined : json['relationshipDays'],
-        'relationshipMonths': json['relationshipMonths'] == null ? undefined : json['relationshipMonths'],
-        'relationshipStartedOn': json['relationshipStartedOn'] == null ? undefined : (new Date(json['relationshipStartedOn'])),
-        'relationshipYears': json['relationshipYears'] == null ? undefined : json['relationshipYears'],
+        'relationshipDays': json['relationshipDays'] === undefined ? undefined : json['relationshipDays'] === null ? null : json['relationshipDays'],
+        'relationshipMonths': json['relationshipMonths'] === undefined ? undefined : json['relationshipMonths'] === null ? null : json['relationshipMonths'],
+        'relationshipStartedOn': json['relationshipStartedOn'] === undefined ? undefined : json['relationshipStartedOn'] === null ? null : (new Date(json['relationshipStartedOn'])),
+        'relationshipYears': json['relationshipYears'] === undefined ? undefined : json['relationshipYears'] === null ? null : json['relationshipYears'],
         'showRelationshipDuration': json['showRelationshipDuration'] == null ? undefined : json['showRelationshipDuration'],
         'spaceId': json['spaceId'],
         'version': json['version'],

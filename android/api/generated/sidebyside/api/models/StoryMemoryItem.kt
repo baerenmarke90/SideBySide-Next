@@ -8,9 +8,17 @@
 
 @file:Suppress(
     "ArrayInDataClass",
+    "DuplicatedCode",
     "EnumEntryName",
     "RemoveRedundantQualifierName",
-    "UnusedImport"
+    "RemoveRedundantCallsOfConversionMethods",
+    "REDUNDANT_CALL_OF_CONVERSION_METHOD",
+    "RedundantUnitReturnType",
+    "RemoveEmptyClassBody",
+    "UnnecessaryVariable",
+    "UnusedImport",
+    "UnnecessaryVariable",
+    "unused"
 )
 
 package sidebyside.api.models
@@ -25,21 +33,33 @@ import kotlinx.serialization.Contextual
  * 
  *
  * @param effectiveDate 
+ * @param kind 
  * @param memory 
  */
 @Serializable
 
-@SerialName(value = "MEMORY")
 data class StoryMemoryItem (
 
     @Contextual @SerialName(value = "effectiveDate")
     val effectiveDate: java.time.LocalDate,
+
+    @SerialName(value = "kind")
+    val kind: StoryMemoryItem.Kind,
 
     @SerialName(value = "memory")
     val memory: MemorySummary
 
 ) {
 
+    /**
+     * 
+     *
+     * Values: MEMORY
+     */
+    @Serializable
+    enum class Kind(val value: kotlin.String) {
+        @SerialName(value = "MEMORY") MEMORY("MEMORY");
+    }
 
 }
 

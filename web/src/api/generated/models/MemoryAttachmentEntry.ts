@@ -19,7 +19,6 @@ import { mapValues } from '../runtime';
  * @interface MemoryAttachmentEntry
  */
 export interface MemoryAttachmentEntry {
-    [key: string]: any | any;
     /**
      * 
      * @type {string}
@@ -53,7 +52,6 @@ export function MemoryAttachmentEntryFromJSONTyped(json: any, ignoreDiscriminato
     }
     return {
         
-            ...json,
         'attachmentId': json['attachmentId'],
         'position': json['position'],
     };
@@ -70,7 +68,6 @@ export function MemoryAttachmentEntryToJSONTyped(value?: MemoryAttachmentEntry |
 
     return {
         
-            ...value,
         'attachmentId': value['attachmentId'],
         'position': value['position'],
     };

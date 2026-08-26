@@ -44,7 +44,7 @@ export function OidcStartRequestFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
         
-        'invitationToken': json['invitationToken'] == null ? undefined : json['invitationToken'],
+        'invitationToken': json['invitationToken'] === undefined ? undefined : json['invitationToken'] === null ? null : json['invitationToken'],
     };
 }
 

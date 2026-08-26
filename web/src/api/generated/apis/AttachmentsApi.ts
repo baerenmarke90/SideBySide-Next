@@ -12,30 +12,37 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  AttachmentDetail,
-  AttachmentReadRequest,
-  AttachmentUploadCreate,
-  ProblemDetails,
-  ReadDescriptor,
-  UploadDescriptor,
-} from '../models/index';
 import {
+    type AttachmentDetail,
     AttachmentDetailFromJSON,
     AttachmentDetailToJSON,
+} from '../models/AttachmentDetail';
+import {
+    type AttachmentReadRequest,
     AttachmentReadRequestFromJSON,
     AttachmentReadRequestToJSON,
+} from '../models/AttachmentReadRequest';
+import {
+    type AttachmentUploadCreate,
     AttachmentUploadCreateFromJSON,
     AttachmentUploadCreateToJSON,
+} from '../models/AttachmentUploadCreate';
+import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
+} from '../models/ProblemDetails';
+import {
+    type ReadDescriptor,
     ReadDescriptorFromJSON,
     ReadDescriptorToJSON,
+} from '../models/ReadDescriptor';
+import {
+    type UploadDescriptor,
     UploadDescriptorFromJSON,
     UploadDescriptorToJSON,
-} from '../models/index';
+} from '../models/UploadDescriptor';
 
 export interface CreateAttachmentReadAccessRequest {
     attachmentId: string;
@@ -57,7 +64,7 @@ export interface DeleteAttachmentRequest {
 export interface FinalizeAttachmentUploadRequest {
     attachmentId: string;
     spaceId: string;
-    requestBody: { [key: string]: any; };
+    body: object;
 }
 
 export interface GetAttachmentRequest {
@@ -82,9 +89,9 @@ export interface UploadAttachmentContentRequest {
 export class AttachmentsApi extends runtime.BaseAPI {
 
     /**
-     * Create Attachment Read Access
+     * Creates request options for createAttachmentReadAccess without sending the request
      */
-    async createAttachmentReadAccessRaw(requestParameters: CreateAttachmentReadAccessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReadDescriptor>> {
+    async createAttachmentReadAccessRequestOpts(requestParameters: CreateAttachmentReadAccessRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['attachmentId'] == null) {
             throw new runtime.RequiredError(
                 'attachmentId',
@@ -114,16 +121,24 @@ export class AttachmentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/attachments/{attachmentId}/read-access`;
-        urlPath = urlPath.replace(`{${"attachmentId"}}`, encodeURIComponent(String(requestParameters['attachmentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{attachmentId}', encodeURIComponent(String(requestParameters['attachmentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: AttachmentReadRequestToJSON(requestParameters['attachmentReadRequest']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Attachment Read Access
+     */
+    async createAttachmentReadAccessRaw(requestParameters: CreateAttachmentReadAccessRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ReadDescriptor>> {
+        const requestOptions = await this.createAttachmentReadAccessRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => ReadDescriptorFromJSON(jsonValue));
     }
@@ -137,9 +152,9 @@ export class AttachmentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Create Attachment Upload
+     * Creates request options for createAttachmentUpload without sending the request
      */
-    async createAttachmentUploadRaw(requestParameters: CreateAttachmentUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UploadDescriptor>> {
+    async createAttachmentUploadRequestOpts(requestParameters: CreateAttachmentUploadRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -162,15 +177,23 @@ export class AttachmentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/attachments`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: AttachmentUploadCreateToJSON(requestParameters['attachmentUploadCreate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Attachment Upload
+     */
+    async createAttachmentUploadRaw(requestParameters: CreateAttachmentUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UploadDescriptor>> {
+        const requestOptions = await this.createAttachmentUploadRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => UploadDescriptorFromJSON(jsonValue));
     }
@@ -184,9 +207,9 @@ export class AttachmentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete Attachment
+     * Creates request options for deleteAttachment without sending the request
      */
-    async deleteAttachmentRaw(requestParameters: DeleteAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteAttachmentRequestOpts(requestParameters: DeleteAttachmentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['attachmentId'] == null) {
             throw new runtime.RequiredError(
                 'attachmentId',
@@ -218,15 +241,23 @@ export class AttachmentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/attachments/{attachmentId}`;
-        urlPath = urlPath.replace(`{${"attachmentId"}}`, encodeURIComponent(String(requestParameters['attachmentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{attachmentId}', encodeURIComponent(String(requestParameters['attachmentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete Attachment
+     */
+    async deleteAttachmentRaw(requestParameters: DeleteAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteAttachmentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -239,9 +270,9 @@ export class AttachmentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Finalize Attachment Upload
+     * Creates request options for finalizeAttachmentUpload without sending the request
      */
-    async finalizeAttachmentUploadRaw(requestParameters: FinalizeAttachmentUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AttachmentDetail>> {
+    async finalizeAttachmentUploadRequestOpts(requestParameters: FinalizeAttachmentUploadRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['attachmentId'] == null) {
             throw new runtime.RequiredError(
                 'attachmentId',
@@ -256,10 +287,10 @@ export class AttachmentsApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['requestBody'] == null) {
+        if (requestParameters['body'] == null) {
             throw new runtime.RequiredError(
-                'requestBody',
-                'Required parameter "requestBody" was null or undefined when calling finalizeAttachmentUpload().'
+                'body',
+                'Required parameter "body" was null or undefined when calling finalizeAttachmentUpload().'
             );
         }
 
@@ -271,16 +302,24 @@ export class AttachmentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/attachments/{attachmentId}/finalize`;
-        urlPath = urlPath.replace(`{${"attachmentId"}}`, encodeURIComponent(String(requestParameters['attachmentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{attachmentId}', encodeURIComponent(String(requestParameters['attachmentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: requestParameters['requestBody'],
-        }, initOverrides);
+            body: requestParameters['body'] as any,
+        };
+    }
+
+    /**
+     * Finalize Attachment Upload
+     */
+    async finalizeAttachmentUploadRaw(requestParameters: FinalizeAttachmentUploadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AttachmentDetail>> {
+        const requestOptions = await this.finalizeAttachmentUploadRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => AttachmentDetailFromJSON(jsonValue));
     }
@@ -294,9 +333,9 @@ export class AttachmentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Attachment
+     * Creates request options for getAttachment without sending the request
      */
-    async getAttachmentRaw(requestParameters: GetAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AttachmentDetail>> {
+    async getAttachmentRequestOpts(requestParameters: GetAttachmentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['attachmentId'] == null) {
             throw new runtime.RequiredError(
                 'attachmentId',
@@ -317,15 +356,23 @@ export class AttachmentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/attachments/{attachmentId}`;
-        urlPath = urlPath.replace(`{${"attachmentId"}}`, encodeURIComponent(String(requestParameters['attachmentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{attachmentId}', encodeURIComponent(String(requestParameters['attachmentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Attachment
+     */
+    async getAttachmentRaw(requestParameters: GetAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AttachmentDetail>> {
+        const requestOptions = await this.getAttachmentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => AttachmentDetailFromJSON(jsonValue));
     }
@@ -339,10 +386,9 @@ export class AttachmentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die autorisierte Streamingroute (Media-Pipeline, Abschnitt 9).  Jeder Zugriff wird unmittelbar vor dem Oeffnen geprueft. Der zuvor ausgestellte ReadDescriptor ist kein Ausweis: er verkuerzt nichts und ersetzt diese Pruefung nicht.
-     * Get Attachment Content
+     * Creates request options for getAttachmentContent without sending the request
      */
-    async getAttachmentContentRaw(requestParameters: GetAttachmentContentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async getAttachmentContentRequestOpts(requestParameters: GetAttachmentContentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['attachmentId'] == null) {
             throw new runtime.RequiredError(
                 'attachmentId',
@@ -367,15 +413,24 @@ export class AttachmentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/attachments/{attachmentId}/content`;
-        urlPath = urlPath.replace(`{${"attachmentId"}}`, encodeURIComponent(String(requestParameters['attachmentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{attachmentId}', encodeURIComponent(String(requestParameters['attachmentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Die autorisierte Streamingroute (Media-Pipeline, Abschnitt 9).  Jeder Zugriff wird unmittelbar vor dem Oeffnen geprueft. Der zuvor ausgestellte ReadDescriptor ist kein Ausweis: er verkuerzt nichts und ersetzt diese Pruefung nicht.
+     * Get Attachment Content
+     */
+    async getAttachmentContentRaw(requestParameters: GetAttachmentContentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.getAttachmentContentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -389,10 +444,9 @@ export class AttachmentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die Bytes im Serverstream entgegennehmen (M2-D13, Local-Adapter).  Zwei Dinge stehen hier bewusst in dieser Reihenfolge.  Erst wird autorisiert, dann gelesen. Andernfalls entschiede ein beliebiger Absender darueber, wie viel der Server entgegennimmt, bevor feststeht, ob er ueberhaupt hochladen darf.  Und gelesen wird gegen eine Grenze. `await request.body()` wuerde den ganzen Koerper puffern, wie gross er auch ist - die Media-Pipeline verlangt ausdruecklich kein unbegrenztes Puffern im RAM. Der Strom bricht deshalb bei der ersten Ueberschreitung ab, statt erst danach zu messen.
-     * Upload Attachment Content
+     * Creates request options for uploadAttachmentContent without sending the request
      */
-    async uploadAttachmentContentRaw(requestParameters: UploadAttachmentContentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async uploadAttachmentContentRequestOpts(requestParameters: UploadAttachmentContentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['attachmentId'] == null) {
             throw new runtime.RequiredError(
                 'attachmentId',
@@ -413,15 +467,24 @@ export class AttachmentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/attachments/{attachmentId}/content`;
-        urlPath = urlPath.replace(`{${"attachmentId"}}`, encodeURIComponent(String(requestParameters['attachmentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{attachmentId}', encodeURIComponent(String(requestParameters['attachmentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Die Bytes im Serverstream entgegennehmen (M2-D13, Local-Adapter).  Zwei Dinge stehen hier bewusst in dieser Reihenfolge.  Erst wird autorisiert, dann gelesen. Andernfalls entschiede ein beliebiger Absender darueber, wie viel der Server entgegennimmt, bevor feststeht, ob er ueberhaupt hochladen darf.  Und gelesen wird gegen eine Grenze. `await request.body()` wuerde den ganzen Koerper puffern, wie gross er auch ist - die Media-Pipeline verlangt ausdruecklich kein unbegrenztes Puffern im RAM. Der Strom bricht deshalb bei der ersten Ueberschreitung ab, statt erst danach zu messen.
+     * Upload Attachment Content
+     */
+    async uploadAttachmentContentRaw(requestParameters: UploadAttachmentContentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.uploadAttachmentContentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }

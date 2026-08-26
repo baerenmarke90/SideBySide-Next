@@ -76,11 +76,11 @@ export function StoryItemToJSONTyped(value?: StoryItem | null, ignoreDiscriminat
     }
     switch (value['kind']) {
         case 'HEART_MOMENT':
-            return Object.assign({}, StoryHeartMomentItemToJSON(value), { kind: 'HEART_MOMENT' } as const);
+            return Object.assign({}, StoryHeartMomentItemToJSON(value), { 'kind': 'HEART_MOMENT' } as const);
         case 'MEMORY':
-            return Object.assign({}, StoryMemoryItemToJSON(value), { kind: 'MEMORY' } as const);
+            return Object.assign({}, StoryMemoryItemToJSON(value), { 'kind': 'MEMORY' } as const);
         case 'MILESTONE':
-            return Object.assign({}, StoryMilestoneItemToJSON(value), { kind: 'MILESTONE' } as const);
+            return Object.assign({}, StoryMilestoneItemToJSON(value), { 'kind': 'MILESTONE' } as const);
         default:
             return value;
     }

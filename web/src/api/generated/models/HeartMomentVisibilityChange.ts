@@ -27,7 +27,6 @@ import {
  * @interface HeartMomentVisibilityChange
  */
 export interface HeartMomentVisibilityChange {
-    [key: string]: any | any;
     /**
      * 
      * @type {ContentVisibility}
@@ -56,7 +55,6 @@ export function HeartMomentVisibilityChangeFromJSONTyped(json: any, ignoreDiscri
     }
     return {
         
-            ...json,
         'visibility': ContentVisibilityFromJSON(json['visibility']),
     };
 }
@@ -72,7 +70,6 @@ export function HeartMomentVisibilityChangeToJSONTyped(value?: HeartMomentVisibi
 
     return {
         
-            ...value,
         'visibility': ContentVisibilityToJSON(value['visibility']),
     };
 }

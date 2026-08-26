@@ -12,33 +12,42 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  ContentVisibility,
-  HeartMomentCreate,
-  HeartMomentDetail,
-  HeartMomentPage,
-  HeartMomentUpdate,
-  HeartMomentVisibilityChange,
-  ProblemDetails,
-} from '../models/index';
 import {
+    type ContentVisibility,
     ContentVisibilityFromJSON,
     ContentVisibilityToJSON,
+} from '../models/ContentVisibility';
+import {
+    type HeartMomentCreate,
     HeartMomentCreateFromJSON,
     HeartMomentCreateToJSON,
+} from '../models/HeartMomentCreate';
+import {
+    type HeartMomentDetail,
     HeartMomentDetailFromJSON,
     HeartMomentDetailToJSON,
+} from '../models/HeartMomentDetail';
+import {
+    type HeartMomentPage,
     HeartMomentPageFromJSON,
     HeartMomentPageToJSON,
+} from '../models/HeartMomentPage';
+import {
+    type HeartMomentUpdate,
     HeartMomentUpdateFromJSON,
     HeartMomentUpdateToJSON,
+} from '../models/HeartMomentUpdate';
+import {
+    type HeartMomentVisibilityChange,
     HeartMomentVisibilityChangeFromJSON,
     HeartMomentVisibilityChangeToJSON,
+} from '../models/HeartMomentVisibilityChange';
+import {
+    type ProblemDetails,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
-} from '../models/index';
+} from '../models/ProblemDetails';
 
 export interface ChangeHeartMomentVisibilityRequest {
     heartMomentId: string;
@@ -83,9 +92,9 @@ export interface UpdateHeartMomentRequest {
 export class HeartMomentsApi extends runtime.BaseAPI {
 
     /**
-     * Change Heart Moment Visibility
+     * Creates request options for changeHeartMomentVisibility without sending the request
      */
-    async changeHeartMomentVisibilityRaw(requestParameters: ChangeHeartMomentVisibilityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentDetail>> {
+    async changeHeartMomentVisibilityRequestOpts(requestParameters: ChangeHeartMomentVisibilityRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['heartMomentId'] == null) {
             throw new runtime.RequiredError(
                 'heartMomentId',
@@ -126,16 +135,24 @@ export class HeartMomentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/visibility`;
-        urlPath = urlPath.replace(`{${"heartMomentId"}}`, encodeURIComponent(String(requestParameters['heartMomentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{heartMomentId}', encodeURIComponent(String(requestParameters['heartMomentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PATCH',
             headers: headerParameters,
             query: queryParameters,
             body: HeartMomentVisibilityChangeToJSON(requestParameters['heartMomentVisibilityChange']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Change Heart Moment Visibility
+     */
+    async changeHeartMomentVisibilityRaw(requestParameters: ChangeHeartMomentVisibilityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentDetail>> {
+        const requestOptions = await this.changeHeartMomentVisibilityRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => HeartMomentDetailFromJSON(jsonValue));
     }
@@ -149,9 +166,9 @@ export class HeartMomentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Create Heart Moment
+     * Creates request options for createHeartMoment without sending the request
      */
-    async createHeartMomentRaw(requestParameters: CreateHeartMomentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentDetail>> {
+    async createHeartMomentRequestOpts(requestParameters: CreateHeartMomentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -174,15 +191,23 @@ export class HeartMomentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/heart-moments`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
             body: HeartMomentCreateToJSON(requestParameters['heartMomentCreate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Create Heart Moment
+     */
+    async createHeartMomentRaw(requestParameters: CreateHeartMomentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentDetail>> {
+        const requestOptions = await this.createHeartMomentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => HeartMomentDetailFromJSON(jsonValue));
     }
@@ -196,9 +221,9 @@ export class HeartMomentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete Heart Moment
+     * Creates request options for deleteHeartMoment without sending the request
      */
-    async deleteHeartMomentRaw(requestParameters: DeleteHeartMomentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteHeartMomentRequestOpts(requestParameters: DeleteHeartMomentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['heartMomentId'] == null) {
             throw new runtime.RequiredError(
                 'heartMomentId',
@@ -230,15 +255,23 @@ export class HeartMomentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}`;
-        urlPath = urlPath.replace(`{${"heartMomentId"}}`, encodeURIComponent(String(requestParameters['heartMomentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{heartMomentId}', encodeURIComponent(String(requestParameters['heartMomentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete Heart Moment
+     */
+    async deleteHeartMomentRaw(requestParameters: DeleteHeartMomentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteHeartMomentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -251,9 +284,9 @@ export class HeartMomentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get Heart Moment
+     * Creates request options for getHeartMoment without sending the request
      */
-    async getHeartMomentRaw(requestParameters: GetHeartMomentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentDetail>> {
+    async getHeartMomentRequestOpts(requestParameters: GetHeartMomentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['heartMomentId'] == null) {
             throw new runtime.RequiredError(
                 'heartMomentId',
@@ -274,15 +307,23 @@ export class HeartMomentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}`;
-        urlPath = urlPath.replace(`{${"heartMomentId"}}`, encodeURIComponent(String(requestParameters['heartMomentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{heartMomentId}', encodeURIComponent(String(requestParameters['heartMomentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Get Heart Moment
+     */
+    async getHeartMomentRaw(requestParameters: GetHeartMomentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentDetail>> {
+        const requestOptions = await this.getHeartMomentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => HeartMomentDetailFromJSON(jsonValue));
     }
@@ -296,9 +337,9 @@ export class HeartMomentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * List Heart Moments
+     * Creates request options for listHeartMoments without sending the request
      */
-    async listHeartMomentsRaw(requestParameters: ListHeartMomentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentPage>> {
+    async listHeartMomentsRequestOpts(requestParameters: ListHeartMomentsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['spaceId'] == null) {
             throw new runtime.RequiredError(
                 'spaceId',
@@ -324,14 +365,22 @@ export class HeartMomentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/heart-moments`;
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * List Heart Moments
+     */
+    async listHeartMomentsRaw(requestParameters: ListHeartMomentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentPage>> {
+        const requestOptions = await this.listHeartMomentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => HeartMomentPageFromJSON(jsonValue));
     }
@@ -345,9 +394,9 @@ export class HeartMomentsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Update Heart Moment
+     * Creates request options for updateHeartMoment without sending the request
      */
-    async updateHeartMomentRaw(requestParameters: UpdateHeartMomentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentDetail>> {
+    async updateHeartMomentRequestOpts(requestParameters: UpdateHeartMomentRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['heartMomentId'] == null) {
             throw new runtime.RequiredError(
                 'heartMomentId',
@@ -388,16 +437,24 @@ export class HeartMomentsApi extends runtime.BaseAPI {
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}`;
-        urlPath = urlPath.replace(`{${"heartMomentId"}}`, encodeURIComponent(String(requestParameters['heartMomentId'])));
-        urlPath = urlPath.replace(`{${"spaceId"}}`, encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{heartMomentId}', encodeURIComponent(String(requestParameters['heartMomentId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
 
-        const response = await this.request({
+        return {
             path: urlPath,
             method: 'PATCH',
             headers: headerParameters,
             query: queryParameters,
             body: HeartMomentUpdateToJSON(requestParameters['heartMomentUpdate']),
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Update Heart Moment
+     */
+    async updateHeartMomentRaw(requestParameters: UpdateHeartMomentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HeartMomentDetail>> {
+        const requestOptions = await this.updateHeartMomentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => HeartMomentDetailFromJSON(jsonValue));
     }
