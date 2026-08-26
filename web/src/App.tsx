@@ -1,10 +1,15 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';
 import type { TokenView } from './api/generated/models/TokenView';
 import { loadReferenceClientConfig } from './client/config';
-import { createReferenceApis, runMemoryMediaStoryFlow, signIn } from './client/referenceFlow';
+import {
+  createReferenceApis,
+  loadAuthorizedImage,
+  runMemoryMediaStoryFlow,
+  signIn,
+} from './client/referenceFlow';
 import { StoryList } from './components/StoryList';
 
 function readableError(error: unknown, fallback: string): string {
@@ -88,8 +93,12 @@ function LoginScreen({ onLogin, pending, error }: {
   );
 }
 
-function StoryPage({ storyQuery }: {
+function StoryPage({
+  storyQuery,
+  loadMemoryImage,
+}: {
   storyQuery: UseQueryResult<StoryPageData, Error>;
+  loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
 }) {
   const location = useLocation();
   const saved = Boolean((location.state as { saved?: boolean } | null)?.saved);
@@ -142,7 +151,9 @@ function StoryPage({ storyQuery }: {
             <button type="button" className="secondary" onClick={() => storyQuery.refetch()}>Erneut versuchen</button>
           </div>
         )}
-        {storyQuery.data && <StoryList items={storyQuery.data.items} />}
+        {storyQuery.data && (
+          <StoryList items={storyQuery.data.items} loadMemoryImage={loadMemoryImage} />
+        )}
       </section>
     </div>
   );
@@ -225,13 +236,6 @@ function MemoryCreatePage({
 
           <div className="field-group">
             <label htmlFor="image">Foto</label>
-            <label className="file-picker" htmlFor="image">
-              <span className="file-picker-icon" aria-hidden="true">＋</span>
-              <span>
-                <strong>{file ? 'Foto ausgewählt' : 'Foto auswählen'}</strong>
-                <small>{file ? file.name : 'JPG, PNG, WebP, HEIC oder HEIF'}</small>
-              </span>
-            </label>
             <input
               className="visually-hidden-input"
               id="image"
@@ -241,6 +245,13 @@ function MemoryCreatePage({
               required
               onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)}
             />
+            <label className="file-picker" htmlFor="image">
+              <span className="file-picker-icon" aria-hidden="true">＋</span>
+              <span>
+                <strong>{file ? 'Foto ausgewählt' : 'Foto auswählen'}</strong>
+                <small>{file ? file.name : 'JPG, PNG, WebP, HEIC oder HEIF'}</small>
+              </span>
+            </label>
           </div>
 
           <div className="sharing-note" aria-label="Sichtbarkeit">
@@ -291,6 +302,17 @@ function AuthenticatedApp({
     queryFn: () => apis.story.getStoryTimeline({ spaceId, limit: 25 }),
     retry: false,
   });
+  const loadMemoryImage = useCallback(
+    (memoryId: string, attachmentId: string) => loadAuthorizedImage(
+      apis,
+      apiBaseUrl,
+      tokens.accessToken,
+      spaceId,
+      memoryId,
+      attachmentId,
+    ),
+    [apiBaseUrl, apis, spaceId, tokens.accessToken],
+  );
 
   async function refreshStory() {
     await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
@@ -309,7 +331,10 @@ function AuthenticatedApp({
       <main className="app-main">
         <Routes>
           <Route path="/" element={<Navigate replace to="/story" />} />
-          <Route path="/story" element={<StoryPage storyQuery={storyQuery} />} />
+          <Route
+            path="/story"
+            element={<StoryPage storyQuery={storyQuery} loadMemoryImage={loadMemoryImage} />}
+          />
           <Route
             path="/memory/new"
             element={(
