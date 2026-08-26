@@ -36,6 +36,15 @@ updates:
       timezone: "Europe/Berlin"
     open-pull-requests-limit: 5
 
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:27"
+      timezone: "Europe/Berlin"
+    open-pull-requests-limit: 5
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
