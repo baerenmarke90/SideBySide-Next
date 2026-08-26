@@ -26,6 +26,7 @@ from sidebyside.authorization.guard import (
     readable,
     require_readable,
     require_writable,
+    require_writable_locked,
     writable,
 )
 from sidebyside.authorization.models import PrivateResource, PrivateResourceMixin
@@ -61,6 +62,7 @@ __all__ = [
     "readable",
     "require_readable",
     "require_writable",
+    "require_writable_locked",
     "visibility_of",
     "writable",
 ]

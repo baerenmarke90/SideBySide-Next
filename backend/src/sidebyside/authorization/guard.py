@@ -18,6 +18,7 @@ from typing import cast
 from uuid import UUID
 
 from sqlalchemy import Select, select
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Session
 
 from sidebyside.authorization.models import PrivateResource, PrivateResourceMixin
@@ -100,6 +101,33 @@ def require_readable[ResourceT: PrivateResourceMixin](
 
     if found is None:
         raise absence.error()
+    return found
+
+
+def require_writable_locked[ResourceT: PrivateResourceMixin](
+    session: Session,
+    model: type[ResourceT],
+    context: AuthorizationContext,
+    resource_id: UUID | str,
+) -> ResourceT:
+    """Aendern duerfen - und die Zeile danach exklusiv halten.
+
+    Fuer Operationen, die nach der Autorisierung noch etwas nachsehen und
+    erst dann schreiben. Ohne die Sperre kann sich zwischen dem Nachsehen
+    und dem Schreiben genau das aendern, wonach gesehen wurde.
+
+    Zwischen Autorisierung und Sperre kann eine parallele Transaktion die
+    Zeile geloescht haben. SQLAlchemy meldet das als `InvalidRequestError`,
+    was ungefiltert ein 500 waere. Fuer den Aufrufer ist es aber derselbe
+    Fall wie eine unbekannte ID - und er bekommt deshalb dieselbe Antwort
+    wie dort. Eine abweichende Antwort waere hier wieder eine
+    Existenzauskunft, diesmal ueber eine gerade geloeschte Zeile.
+    """
+    found = require_writable(session, model, context, resource_id)
+    try:
+        session.refresh(found, with_for_update=True)
+    except InvalidRequestError as error:
+        raise absence_of(model).error() from error
     return found
 
 

@@ -12,10 +12,14 @@ durch, ohne dass dieser Dienst eine eigene Ausnahme formuliert.
 Zweitens der Status. `Wish.status` ist kein Feld, das ein Client setzt:
 `OPEN -> PLANNED` entsteht ausschliesslich aus der Wish->Plan-Operation,
 `PLANNED -> OPEN` aus `return-to-wish`, `PLANNED -> COMPLETED` aus der
-Completion des originaeren Plans (M3-D02/D03/D04). In M3-S1 gibt es noch
-keinen Plan; ein Wish ist deshalb immer `OPEN`. Dieser Dienst bietet
-trotzdem keinen Weg an, den Status zu aendern - sonst entstuende genau die
-freie Statusmutation, die der spaetere Vertrag ausschliesst.
+Completion des originaeren Plans (M3-D02/D03/D04).
+
+Ausgeloest werden diese drei Kanten vom Plan-Dienst, denn nur er kennt den
+Plan. Formuliert sind sie trotzdem hier: `plan_created`, `plan_completed`
+und `plan_returned` sind die einzigen Funktionen, die `status` schreiben,
+und jede prueft ihren Ausgangszustand selbst. Ein `PATCH` kommt an ihnen
+nicht vorbei, und ein zweiter Aufrufer kann den Automaten nicht auf einem
+anderen Weg verschieben.
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -34,17 +38,23 @@ from sidebyside.authorization import (
     readable,
     require_readable,
     require_writable,
+    require_writable_locked,
 )
 from sidebyside.core import cursor as cursor_codec
 from sidebyside.core.errors import ConflictError, ErrorCode, ValidationError
 from sidebyside.domain.events import DomainEvent, EventType, PublicEventPayload
 from sidebyside.outbox import service as outbox_service
+from sidebyside.plans.models import Plan
 from sidebyside.wishes.models import Wish, WishPayload, WishStatus, shared_privacy
 
 _WISH_SUBJECT_TYPE = "wish"
 
 WISH_TITLE_REQUIRED = "WISH_TITLE_REQUIRED"
 WISH_HAS_ACTIVE_PLAN = "WISH_HAS_ACTIVE_PLAN"
+WISH_HAS_COMPLETED_PLAN = "WISH_HAS_COMPLETED_PLAN"
+WISH_ALREADY_COMPLETED = "WISH_ALREADY_COMPLETED"
+WISH_PLAN_STATE_CONFLICT = "WISH_PLAN_STATE_CONFLICT"
+WISH_STATUS_TRANSITION_INVALID = "WISH_STATUS_TRANSITION_INVALID"
 
 
 @dataclass(frozen=True)
@@ -79,7 +89,7 @@ def _ensure_expected_version(wish: Wish, expected_version: int) -> None:
         )
 
 
-def _record(session: Session, wish: Wish, actor_id: UUID, event_type: EventType) -> None:
+def record_event(session: Session, wish: Wish, actor_id: UUID, event_type: EventType) -> None:
     """Ein Ereignis ohne Wunschtitel.
 
     M3-D13: Titel gehoeren nicht in Outbox, Logs oder Analytics. Was hier
@@ -120,7 +130,7 @@ def create_wish(
     )
     session.add(wish)
     _flush(session)
-    _record(session, wish, context.account_id, EventType.WISH_CREATED)
+    record_event(session, wish, context.account_id, EventType.WISH_CREATED)
     _flush(session)
     return wish
 
@@ -154,29 +164,121 @@ def update_wish(
     wish.payload = WishPayload(title=_normalize_title(title))
 
     _flush(session)
-    _record(session, wish, context.account_id, EventType.WISH_UPDATED)
+    record_event(session, wish, context.account_id, EventType.WISH_UPDATED)
     _flush(session)
     return wish
 
 
-def _ensure_deletable(wish: Wish) -> None:
-    """Die Delete-Matrix aus M3-D05, soweit M3-S1 sie beantworten kann.
+def lock(session: Session, context: AuthorizationContext, wish_id: UUID | str) -> Wish:
+    """Den Wish fuer eine Lifecycle-Operation laden und sperren.
 
-    Ein `PLANNED` Wish hat einen aktiven originaeren Plan; geloescht wird
-    dann der Plan bzw. `return-to-wish` benutzt, nicht der Wish. `OPEN` und
-    `COMPLETED` sind loeschbar, solange kein originaerer Plan mehr
-    existiert.
+    Die kanonische Sperrreihenfolge ist `Wish -> Plan` (M3-D02). Wer beide
+    anfasst, sperrt hier zuerst; sonst warten zwei Requests in
+    umgekehrter Reihenfolge aufeinander.
 
-    Der zweite Halbsatz ist in diesem Slice noch nicht pruefbar: es gibt
-    keine `plans`-Tabelle, also auch keinen Plan, der einen Wish halten
-    koennte. M3-S2 ergaenzt die Plan-Existenzpruefung hier - und damit die
-    Zeilen der Matrix, die auf einen vorhandenen Plan zeigen.
+    Autorisiert wird vor dem Sperren, damit ein Fremder keine Zeile sperren
+    kann, die er nicht einmal sehen darf. Verschwindet sie in der Luecke
+    dazwischen, antwortet der Guard wie bei einer unbekannten ID.
     """
+    return require_writable_locked(session, Wish, context, wish_id)
+
+
+def plan_created(session: Session, wish: Wish, actor_id: UUID) -> None:
+    """`OPEN -> PLANNED`. Die einzige Kante, die ein Plan-Create ausloest."""
+    if wish.status != WishStatus.OPEN.value:
+        raise ConflictError(
+            "This wish is not open.",
+            WISH_STATUS_TRANSITION_INVALID,
+        )
+    wish.status = WishStatus.PLANNED.value
+    _flush(session)
+    record_event(session, wish, actor_id, EventType.WISH_PLANNED)
+    _flush(session)
+
+
+def plan_completed(session: Session, wish: Wish, actor_id: UUID) -> None:
+    """`PLANNED -> COMPLETED`. Nur aus der Completion des originaeren Plans."""
+    if wish.status != WishStatus.PLANNED.value:
+        raise ConflictError(
+            "This wish is not planned.",
+            WISH_STATUS_TRANSITION_INVALID,
+        )
+    wish.status = WishStatus.COMPLETED.value
+    _flush(session)
+    record_event(session, wish, actor_id, EventType.WISH_COMPLETED)
+    _flush(session)
+
+
+def plan_returned(session: Session, wish: Wish, actor_id: UUID) -> None:
+    """`PLANNED -> OPEN`. Nur aus `return-to-wish` des originaeren Plans.
+
+    Der Wish bekommt ausdruecklich nichts aus dem Plan zurueck (M3-D03).
+    Titel und Beschreibung des Plans koennen inzwischen abgewichen sein;
+    sie stillschweigend in den Wish zu kopieren waere eine Ueberschreibung,
+    die niemand angefordert hat.
+    """
+    if wish.status != WishStatus.PLANNED.value:
+        raise ConflictError(
+            "This wish is not planned.",
+            WISH_STATUS_TRANSITION_INVALID,
+        )
+    wish.status = WishStatus.OPEN.value
+    _flush(session)
+    record_event(session, wish, actor_id, EventType.WISH_REOPENED)
+    _flush(session)
+
+
+def _ensure_deletable(session: Session, wish: Wish) -> None:
+    """Die Wish-Zeilen der Delete-Matrix aus M3-D05.
+
+    | Wish        | originaerer Plan | Ergebnis                    |
+    |-------------|------------------|-----------------------------|
+    | `OPEN`      | nein             | erlaubt                     |
+    | `OPEN`      | ja               | `WISH_PLAN_STATE_CONFLICT`  |
+    | `PLANNED`   | ja               | `WISH_HAS_ACTIVE_PLAN`      |
+    | `PLANNED`   | nein             | `WISH_PLAN_STATE_CONFLICT`  |
+    | `COMPLETED` | ja               | `WISH_HAS_COMPLETED_PLAN`   |
+    | `COMPLETED` | nein             | erlaubt                     |
+
+    Die beiden `WISH_PLAN_STATE_CONFLICT`-Zeilen beschreiben Zustaende, die
+    es nicht geben duerfte. Sie enden trotzdem als fachlicher Konflikt und
+    nicht als 500: die Antwort soll den inkonsistenten Zustand benennen,
+    nicht ueber ihn stolpern.
+
+    Der Plan wird gesperrt gelesen. Ohne die Sperre koennte zwischen dieser
+    Pruefung und dem Delete ein `return-to-wish` oder ein Convert
+    dazwischenkommen - der Wish waere dann nach einer bestandenen Pruefung
+    geloescht worden. Die Reihenfolge stimmt: der Wish ist an dieser Stelle
+    bereits gesperrt.
+    """
+    plan = session.execute(
+        select(Plan).where(Plan.source_wish_id == wish.id).with_for_update()
+    ).scalar_one_or_none()
+
     if wish.status == WishStatus.PLANNED.value:
+        if plan is None:
+            raise ConflictError(
+                "This wish is planned but has no originating plan.",
+                WISH_PLAN_STATE_CONFLICT,
+            )
         raise ConflictError(
             "This wish has an active plan. Use the plan instead.",
             WISH_HAS_ACTIVE_PLAN,
         )
+
+    if plan is None:
+        return
+
+    if wish.status == WishStatus.COMPLETED.value:
+        raise ConflictError(
+            "This wish still has its completed plan. Delete the plan first.",
+            WISH_HAS_COMPLETED_PLAN,
+        )
+
+    raise ConflictError(
+        "This wish is open but still has an originating plan.",
+        WISH_PLAN_STATE_CONFLICT,
+    )
 
 
 def delete_wish(
@@ -186,13 +288,13 @@ def delete_wish(
     *,
     expected_version: int,
 ) -> None:
-    wish = require_writable(session, Wish, context, wish_id)
+    wish = lock(session, context, wish_id)
     _ensure_expected_version(wish, expected_version)
-    _ensure_deletable(wish)
+    _ensure_deletable(session, wish)
     actor_id = context.account_id
     session.delete(wish)
     _flush(session)
-    _record(session, wish, actor_id, EventType.WISH_DELETED)
+    record_event(session, wish, actor_id, EventType.WISH_DELETED)
     _flush(session)
 
 
