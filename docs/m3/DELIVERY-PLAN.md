@@ -1,6 +1,6 @@
 # M3 Delivery Plan
 
-**Status:** S0 abgeschlossen; Runtime freigegeben; S1 geliefert  
+**Status:** S0 abgeschlossen; Runtime freigegeben; S1 und S2 geliefert  
 **Stand:** 26.08.2026
 
 ## 1. Gate vor Runtime
@@ -107,12 +107,9 @@ Exit:
 - Wish ist belastbar als eigenstaendige Shared-Domain;
 - keine freie Statusmutation umgeht den Wish->Plan-Vertrag.
 
-Umgesetzt. Zwei Punkte bleiben ausdruecklich bei S2, weil ohne `plans`-Tabelle nichts sie ausloesen kann:
+Umgesetzt. Die beiden in S1 offen gelassenen Punkte - die erste echte Statustransition und die planabhaengigen Zeilen der Delete-Matrix - sind mit S2 nachgezogen.
 
-- `Wish.status` erreicht in S1 nur `OPEN`; `PLANNED` und `COMPLETED` stehen bereits im Schema, entstehen aber erst aus der Konvertierung bzw. der Plan-Completion;
-- die Delete-Matrix ist nur statusseitig durchgesetzt (`PLANNED` -> `WISH_HAS_ACTIVE_PLAN`). Die Zeilen, die auf einen vorhandenen originaeren Plan zeigen, brauchen die Plan-Existenzpruefung aus S2.
-
-## 5. S2 – Plan + Wish->Plan – naechster Slice
+## 5. S2 – Plan + Wish->Plan – geliefert
 
 Scope:
 
@@ -137,7 +134,11 @@ Wish Create
 -> Wish + Plan konsistent COMPLETED
 ```
 
-## 6. S3 – Place Foundation
+Umgesetzt, inklusive der Race- und Rollback-Pflichttests aus dem Decision-Dokument: paralleler Convert erzeugt genau einen Plan, ein Fehler zwischen Plan-Insert und Wish-Transition hinterlaesst nichts, und Delete gegen Convert bzw. Complete gegen Return endet deterministisch ohne halben Lifecycle.
+
+Nicht enthalten und ausdruecklich bei S3: `Plan.placeId`. M3-D02 und M3-D30 nennen das Feld fuer Create, PATCH und Konvertierung; ohne Place-Domaene koennte es auf nichts zeigen, und ein Vertrag mit einem unbenutzbaren Feld verspricht eine Zuordnung, die der Server nicht herstellen kann.
+
+## 6. S3 – Place Foundation – naechster Slice
 
 Scope:
 
@@ -148,7 +149,8 @@ Scope:
 - keine automatische Deduplizierung;
 - kein Maps-/Geocoding-Provider;
 - Redaction in Logs/Events;
-- Delete setzt Plan/Chapter-Place-FKs auf NULL und entfernt nur Join-Relations.
+- Delete setzt Plan/Chapter-Place-FKs auf NULL und entfernt nur Join-Relations;
+- `Plan.placeId` als Feld, Migration und Vertragsflaeche nachziehen (aus S2 verschoben).
 
 ## 7. S4 – Typisierte Content Relations
 
