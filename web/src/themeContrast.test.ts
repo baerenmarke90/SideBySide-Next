@@ -25,15 +25,14 @@ function contrast(first: string, second: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-function cssBlock(css: string, selector: string): string {
-  const marker = `${selector} {`;
-  const start = css.indexOf(marker);
-  if (start < 0) throw new Error(`CSS-Block fehlt: ${selector}`);
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-  const contentStart = start + marker.length;
-  const end = css.indexOf('\n}', contentStart);
-  if (end < 0) throw new Error(`CSS-Block ist nicht abgeschlossen: ${selector}`);
-  return css.slice(contentStart, end);
+function cssBlock(css: string, selector: string): string {
+  const match = css.match(new RegExp(`${escapeRegExp(selector)}\\s*\\{([^}]*)\\}`));
+  if (!match) throw new Error(`CSS-Block fehlt: ${selector}`);
+  return match[1];
 }
 
 function cssVariable(block: string, name: string): string {
