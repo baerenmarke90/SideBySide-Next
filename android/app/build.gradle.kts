@@ -6,6 +6,19 @@ plugins {
 
 val sbsApiBaseUrl = providers.gradleProperty("sbsApiBaseUrl").orElse("").get()
 val sbsSpaceId = providers.gradleProperty("sbsSpaceId").orElse("").get()
+val preparedGeneratedModels = layout.buildDirectory.dir("generated/s8ApiModels")
+val prepareS8GeneratedModels by tasks.registering(org.gradle.api.tasks.Sync::class) {
+    from(layout.projectDirectory.dir("../api/generated"))
+    into(preparedGeneratedModels)
+    // The generator-owned passkey request models use Map<String, Any>. They
+    // are outside this M2-S8 slice and kotlinx.serialization cannot generate
+    // a concrete Any serializer. Keep the source files untouched and compile
+    // the generated contract surface S8 actually consumes.
+    exclude(
+        "sidebyside/api/models/PasskeyAuthenticationRequest.kt",
+        "sidebyside/api/models/PasskeyRegistrationRequest.kt",
+    )
+}
 
 fun quotedBuildConfig(value: String): String = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
@@ -42,15 +55,11 @@ android {
 }
 
 android.sourceSets.named("main") {
-    kotlin.directories += "../api/generated"
-    // The generated passkey request models contain Map<String, Any>. They are
-    // outside this M2-S8 slice and cannot be lowered by kotlinx.serialization
-    // without a concrete Any serializer. Keep the generator-owned files intact
-    // and compile the contract surface S8 actually uses.
-    kotlin.exclude(
-        "sidebyside/api/models/PasskeyAuthenticationRequest.kt",
-        "sidebyside/api/models/PasskeyRegistrationRequest.kt",
-    )
+    kotlin.directories += preparedGeneratedModels.get().asFile.path
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(prepareS8GeneratedModels)
 }
 
 dependencies {
