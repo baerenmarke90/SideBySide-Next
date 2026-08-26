@@ -46,8 +46,8 @@ internal val SideBySideLightColorScheme = lightColorScheme(
 )
 
 internal val SideBySideDarkColorScheme = darkColorScheme(
-    primary = Color(0xFFBDA7FF),
-    onPrimary = Color(0xFF2E145D),
+    primary = Color(0xFF7C4DFF),
+    onPrimary = Color(0xFFFFFFFF),
     primaryContainer = Color(0xFF3D2E55),
     onPrimaryContainer = Color(0xFFF1EAFF),
     secondary = Color(0xFF8FE0CE),
