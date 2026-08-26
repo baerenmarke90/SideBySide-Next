@@ -21,7 +21,7 @@ if (!i18n.isInitialized) {
     lng: DEFAULT_LOCALE,
     fallbackLng: DEFAULT_LOCALE,
     supportedLngs: [DEFAULT_LOCALE],
-    initImmediate: false,
+    initAsync: false,
     interpolation: {
       escapeValue: false,
     },
