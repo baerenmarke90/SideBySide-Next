@@ -107,13 +107,16 @@ M2-D22 (Owner-Ansicht) gehört nicht mehr dazu: die Frage formt die Story-Route 
 - [x] **#94 — Milestone-Domain und API** (PR #95): eigenständiges Modell statt Typflag auf Memory, Autorregel nach M2-D25, `If-Match`/409 und Story-taugliche Felder.
 - [x] **#97 — Comments, Outbox und Notification Hook** (PR #98): Create/List am Parent verschachtelt, Update/Delete space-scoped, enumerierte Targets `MEMORY`/`MILESTONE`/`HEART_MOMENT`, atomarer Outbox-Eintrag und idempotenter Retry.
 - [x] **#87 — S3-kompatibler MediaStore-Adapter** (PR #100): presigned Upload und Read-URL mit den TTLs aus M2-D13, geprüft gegen denselben Contract-Test wie der lokale Adapter.
-- [ ] **#88 — Video und Posterframes:** klärt vorher die ffmpeg-Frage. Ein Branch mit Vorarbeit existiert; ein Pull Request steht noch aus.
 - [x] **#113 — Story Read Model und `/timeline`** (PR #114): abgeleitete Zeitleiste über Memory, Milestone und ausschließlich gemeinsame HeartMoments; Sortierschlüssel und Keyset-Cursor nach M2-D08, private HeartMoments nie im Ergebnis — auch nicht für ihren Owner (M2-D22). Keine Story-Tabelle.
 - [ ] **S8 — dünne Web-/Android-Referenzflows:** letzter M2-Baustein vor dem G2-Nachweis. Arbeitspaket noch anzulegen.
 
+### Future-Backlog außerhalb von M2/G2
+
+- [ ] **#88 — Video-Uploads und Posterframes:** zukünftige Entwicklung, nicht jetzt implementieren. Der Prototyp #109 wurde wegen eines Produktions-Images von rund 755 MiB sowie des zusätzlichen ffmpeg-Betriebs-, Supply-Chain- und Security-Aufwands bewusst ohne Merge geschlossen.
+
 Damit ist die M2-Domain vollständig. Für G2 fehlt allein der End-to-End-Nachweis auf Web und Android.
 
-Video bleibt bis #88 nach M2-D23 fail-closed: M2-D04 erlaubt MP4 und QuickTime, der Server weist sie mit `ATTACHMENT_TYPE_NOT_ALLOWED` ab. Clients dürfen Video in M2 solange nicht als verfügbar anbieten.
+Video bleibt bis zu einer neuen Produktentscheidung fail-closed: M2-D04 erlaubt MP4 und QuickTime im Zielvertrag, der aktuelle Server weist sie mit `ATTACHMENT_TYPE_NOT_ALLOWED` ab. Clients dürfen Video nicht als verfügbar anbieten.
 
 Die Details und verbindlichen Milestone-Grenzen stehen in [M2 Project Control](m2/PROJECT-CONTROL.md).
 
@@ -151,7 +154,7 @@ Globale Volltextsuche ist nicht Teil von G2. Der Story-Mindestvertrag umfasst `t
 8. dünne Web-/Android-Referenzflows
 9. G2 Review
 
-Der S3-Adapter (#87) und der Videoslice (#88) laufen daneben und sind nicht Teil dieser Kette; #87 ist geliefert, #88 offen.
+Der S3-Adapter (#87) lief daneben und ist geliefert. Video (#88) ist nicht Teil dieser Kette oder von M2/G2, sondern Future-Backlog.
 
 Der Memory-Slice kommt bewusst vor Media, um zuerst M2-Migrationstil, ProtectedPayload, Tenant Guard, Autorregel und Concurrency auf einer kleineren Sicherheitsfläche zu validieren.
 
@@ -159,7 +162,7 @@ Der Memory-Slice kommt bewusst vor Media, um zuerst M2-Migrationstil, ProtectedP
 
 G2 kann erst bestanden werden, wenn:
 
-- Memory, Attachment/Media, HeartMoment, Milestone und Comment für M2 vollständig sind,
+- Memory, Attachment/Media für Bilder, HeartMoment, Milestone und Comment für M2 vollständig sind,
 - Story niemals `OWNER_ONLY` vor Suche/Gruppierung/Pagination passieren lässt,
 - Media-/Upload-Abuse, Parent-Autorisierung und relevante Races geprüft sind,
 - OpenAPI, Migrationen und PostgreSQL-Integrationstests grün sind,
