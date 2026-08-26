@@ -1,27 +1,31 @@
 
-# WishToPlan
+# PlaceUpdate
 
-Der Konvertierungsrequest.  Alle Felder optional: ohne eigenen Titel uebernimmt der Plan den des Wishes. `sourceWishId`, `status` und die Termine kommen nicht vom Client - der Wish steht im Pfad, alles andere entsteht serverseitig.
+Eine Korrektur am Ort.  `latitude` und `longitude` duerfen hier ausdruecklich `null` sein - so laesst sich ein Ort wieder auf reinen Namen zuruecksetzen. Der Dienst behandelt sie als Paar: eine von beiden allein zu senden endet in `PLACE_COORDINATE_PAIR_REQUIRED`.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
+`address` | string
 `description` | string
-`placeId` | string
-`title` | string
+`latitude` | number
+`longitude` | number
+`name` | string
 
 ## Example
 
 ```typescript
-import type { WishToPlan } from ''
+import type { PlaceUpdate } from ''
 
 // TODO: Update the object below with actual values
 const example = {
+  "address": null,
   "description": null,
-  "placeId": null,
-  "title": null,
-} satisfies WishToPlan
+  "latitude": null,
+  "longitude": null,
+  "name": null,
+} satisfies PlaceUpdate
 
 console.log(example)
 
@@ -30,7 +34,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as WishToPlan
+const exampleParsed = JSON.parse(exampleJSON) as PlaceUpdate
 console.log(exampleParsed)
 ```
 

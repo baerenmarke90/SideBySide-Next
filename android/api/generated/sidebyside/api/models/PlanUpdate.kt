@@ -33,6 +33,7 @@ import kotlinx.serialization.Contextual
  *
  * @param description 
  * @param experiencedOn 
+ * @param placeId 
  * @param title 
  */
 @Serializable
@@ -44,6 +45,9 @@ data class PlanUpdate (
 
     @Contextual @SerialName(value = "experiencedOn")
     val experiencedOn: java.time.LocalDate? = null,
+
+    @Contextual @SerialName(value = "placeId")
+    val placeId: java.util.UUID? = null,
 
     @SerialName(value = "title")
     val title: kotlin.String? = null

@@ -29,24 +29,32 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Direct Plan Create nach M3-D30.  `status`, `sourceWishId` und alle Termine fehlen bewusst. Ein Plan beginnt als Idee; terminiert wird er ueber `/schedule`, abgeschlossen ueber `/complete`.
+ * Eine Korrektur am Ort.  `latitude` und `longitude` duerfen hier ausdruecklich `null` sein - so laesst sich ein Ort wieder auf reinen Namen zuruecksetzen. Der Dienst behandelt sie als Paar: eine von beiden allein zu senden endet in `PLACE_COORDINATE_PAIR_REQUIRED`.
  *
- * @param title 
+ * @param address 
  * @param description 
- * @param placeId 
+ * @param latitude 
+ * @param longitude 
+ * @param name 
  */
 @Serializable
 
-data class PlanCreate (
+data class PlaceUpdate (
 
-    @SerialName(value = "title")
-    val title: kotlin.String,
+    @SerialName(value = "address")
+    val address: kotlin.String? = null,
 
     @SerialName(value = "description")
     val description: kotlin.String? = null,
 
-    @Contextual @SerialName(value = "placeId")
-    val placeId: java.util.UUID? = null
+    @Contextual @SerialName(value = "latitude")
+    val latitude: java.math.BigDecimal? = null,
+
+    @Contextual @SerialName(value = "longitude")
+    val longitude: java.math.BigDecimal? = null,
+
+    @SerialName(value = "name")
+    val name: kotlin.String? = null
 
 ) {
 

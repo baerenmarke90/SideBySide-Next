@@ -1,52 +1,46 @@
 
-# PlanDetail
+# PlaceDetail
 
 
 ## Properties
 
 Name | Type
 ------------ | -------------
+`address` | string
 `capabilities` | [ResourceCapabilities](ResourceCapabilities.md)
 `createdAt` | Date
 `createdBy` | string
 `creator` | [AuthorSummary](AuthorSummary.md)
 `description` | string
-`experiencedOn` | Date
 `id` | string
-`placeId` | string
-`plannedEnd` | Date
-`plannedStart` | Date
-`sourceWishId` | string
+`latitude` | number
+`longitude` | number
+`name` | string
 `spaceId` | string
-`status` | [PlanStatus](PlanStatus.md)
-`title` | string
 `updatedAt` | Date
 `version` | number
 
 ## Example
 
 ```typescript
-import type { PlanDetail } from ''
+import type { PlaceDetail } from ''
 
 // TODO: Update the object below with actual values
 const example = {
+  "address": null,
   "capabilities": null,
   "createdAt": null,
   "createdBy": null,
   "creator": null,
   "description": null,
-  "experiencedOn": null,
   "id": null,
-  "placeId": null,
-  "plannedEnd": null,
-  "plannedStart": null,
-  "sourceWishId": null,
+  "latitude": null,
+  "longitude": null,
+  "name": null,
   "spaceId": null,
-  "status": null,
-  "title": null,
   "updatedAt": null,
   "version": null,
-} satisfies PlanDetail
+} satisfies PlaceDetail
 
 console.log(example)
 
@@ -55,7 +49,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as PlanDetail
+const exampleParsed = JSON.parse(exampleJSON) as PlaceDetail
 console.log(exampleParsed)
 ```
 

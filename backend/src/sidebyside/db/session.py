@@ -31,6 +31,17 @@ def get_engine() -> Engine:
         echo=settings.database_echo,
         pool_pre_ping=True,
         future=True,
+        # Ohne diese Zeile schreibt SQLAlchemy die gebundenen Parameter in
+        # jede Datenbank-Fehlermeldung - und damit ueber `log.exception`
+        # in das Anwendungslog. Betroffen waere genau das, was hinter der
+        # ProtectedPayload-Grenze liegen soll: Titel, Texte, Adressen und
+        # die Koordinaten eines Ortes. M3-D28 verbietet Ortsdaten in Logs
+        # ausdruecklich; fuer die uebrigen Inhalte gilt dasselbe seit M2.
+        #
+        # Preis ist die Fehlersuche: auch `echo` zeigt die Werte dann
+        # nicht mehr. Das ist die richtige Voreinstellung - wer sie lokal
+        # braucht, schaltet sie bewusst und zeitweise ab.
+        hide_parameters=True,
     )
 
 
