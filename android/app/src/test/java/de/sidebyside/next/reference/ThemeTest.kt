@@ -13,7 +13,7 @@ class ThemeTest {
         assertEquals(Color(0xFF1C1525), SideBySideDarkColorScheme.background)
         assertEquals(Color(0xFF2A2135), SideBySideDarkColorScheme.surface)
         assertEquals(Color(0xFFF7F2FA), SideBySideDarkColorScheme.onBackground)
-        assertEquals(Color(0xFFBDA7FF), SideBySideDarkColorScheme.primary)
+        assertEquals(Color(0xFF7C4DFF), SideBySideDarkColorScheme.primary)
         assertEquals(Color(0xFF8FE0CE), SideBySideDarkColorScheme.secondary)
     }
 
@@ -41,6 +41,22 @@ class ThemeTest {
             contrastRatio(
                 SideBySideDarkColorScheme.onSurface,
                 SideBySideDarkColorScheme.surface,
+            ) >= 4.5,
+        )
+    }
+
+    @Test
+    fun primaryActionContrastMeetsWcagAaInBothSchemes() {
+        assertTrue(
+            contrastRatio(
+                SideBySideLightColorScheme.onPrimary,
+                SideBySideLightColorScheme.primary,
+            ) >= 4.5,
+        )
+        assertTrue(
+            contrastRatio(
+                SideBySideDarkColorScheme.onPrimary,
+                SideBySideDarkColorScheme.primary,
             ) >= 4.5,
         )
     }
