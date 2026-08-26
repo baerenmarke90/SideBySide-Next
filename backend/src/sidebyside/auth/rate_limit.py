@@ -69,7 +69,7 @@ def _advisory_lock_id(action: str, key_hash: str) -> int:
     Ableitung verwendet bewusst nur den ohnehin bereits gehashten
     Rate-Limit-Schluessel; der Klartext landet weder in Tabelle noch Lock.
     """
-    digest = hashlib.sha256(f"{action}\0{key_hash}".encode("utf-8")).digest()
+    digest = hashlib.sha256(f"{action}\0{key_hash}".encode()).digest()
     return int.from_bytes(digest[:8], byteorder="big", signed=True)
 
 
