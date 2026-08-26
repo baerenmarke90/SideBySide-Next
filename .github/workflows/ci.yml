@@ -14,8 +14,48 @@ env:
   UV_VERSION: "0.12.5"
 
 jobs:
+  changes:
+    name: Change Detection
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.scope.outputs.backend }}
+      self_hosted: ${{ steps.scope.outputs.self_hosted }}
+      supply_chain: ${{ steps.scope.outputs.supply_chain }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Filterlogik testen
+        run: python3 tools/ci/test_change_scope.py
+
+      - name: Relevante Aenderungsflaechen bestimmen
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "self_hosted=true" >> "$GITHUB_OUTPUT"
+            echo "supply_chain=true" >> "$GITHUB_OUTPUT"
+            echo "Push auf main: alle teuren CI-Gates bleiben aktiv."
+            exit 0
+          fi
+
+          # Renames werden absichtlich als Delete+Add betrachtet. Dadurch
+          # aktiviert auch eine Verschiebung aus einem Runtime-Pfad heraus
+          # das urspruenglich betroffene Gate; Loeschungen sind ebenfalls drin.
+          git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-files.txt
+          echo "Geaenderte Dateien:"
+          cat /tmp/changed-files.txt
+          python3 tools/ci/change_scope.py /tmp/changed-files.txt >> "$GITHUB_OUTPUT"
+
   backend:
     name: Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     env:
       SBS_ENVIRONMENT: test
@@ -82,6 +122,8 @@ jobs:
 
   backend-integration:
     name: Backend Integration
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
 
     # Datenbanktests und Schema-/Migrationschecks laufen getrennt vom
@@ -168,6 +210,8 @@ jobs:
 
   self-hosted:
     name: Self-Hosted Start
+    needs: changes
+    if: needs.changes.outputs.self_hosted == 'true'
     runs-on: ubuntu-latest
     # Der Fehler aus #110 ist an allen Gates vorbeigekommen, weil CI die
     # Compose-Datei nur geparst und Alembic unter SBS_ENVIRONMENT=test
@@ -307,6 +351,8 @@ jobs:
 
   supply-chain:
     name: Supply Chain
+    needs: changes
+    if: needs.changes.outputs.supply_chain == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:

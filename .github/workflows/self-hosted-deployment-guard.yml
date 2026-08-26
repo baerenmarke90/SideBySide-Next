@@ -10,8 +10,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Change Detection
+    runs-on: ubuntu-latest
+    outputs:
+      deployment_guard: ${{ steps.scope.outputs.deployment_guard }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Filterlogik testen
+        run: python3 tools/ci/test_change_scope.py
+
+      - name: Relevante Aenderungsflaechen bestimmen
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "deployment_guard=true" >> "$GITHUB_OUTPUT"
+            echo "Push auf main: Deployment Guard bleibt aktiv."
+            exit 0
+          fi
+
+          # Renames werden absichtlich als Delete+Add betrachtet. Dadurch
+          # aktiviert auch eine Verschiebung aus einem Runtime-Pfad heraus
+          # das urspruenglich betroffene Gate; Loeschungen sind ebenfalls drin.
+          git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-files.txt
+          echo "Geaenderte Dateien:"
+          cat /tmp/changed-files.txt
+          python3 tools/ci/change_scope.py /tmp/changed-files.txt >> "$GITHUB_OUTPUT"
+
   deployment-guard:
     name: Network and Port Guard
+    needs: changes
+    if: needs.changes.outputs.deployment_guard == 'true'
     runs-on: ubuntu-latest
 
     steps:
