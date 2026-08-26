@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../i18n';
 
 export function MemoryPreview({
   memoryId,
@@ -9,6 +10,7 @@ export function MemoryPreview({
   attachmentId: string;
   loadImage: (memoryId: string, attachmentId: string) => Promise<string>;
 }) {
+  const { t } = useTranslation();
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -36,12 +38,12 @@ export function MemoryPreview({
   }, [attachmentId, loadImage, memoryId]);
 
   if (failed) {
-    return <div className="story-media-placeholder">Foto derzeit nicht verfügbar</div>;
+    return <div className="story-media-placeholder">{t('media.unavailable')}</div>;
   }
 
   if (!url) {
-    return <div className="story-media-skeleton" role="status" aria-label="Foto wird geladen" />;
+    return <div className="story-media-skeleton" role="status" aria-label={t('media.loading')} />;
   }
 
-  return <img className="story-media-preview" src={url} alt="Foto zu dieser Erinnerung" />;
+  return <img className="story-media-preview" src={url} alt={t('media.alt')} />;
 }

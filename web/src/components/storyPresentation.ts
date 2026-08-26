@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { StoryItem } from '../api/generated/models/StoryItem';
 
 export interface StoryPresentation {
@@ -21,15 +22,15 @@ function compactText(value: string, maxLength = 150): string {
   return `${text.slice(0, maxLength - 1).trimEnd()}…`;
 }
 
-function emotionLabel(emotion: string): string {
+function emotionLabel(emotion: string, t: TFunction): string {
   switch (emotion) {
-    case 'LOVED': return 'Geliebt';
-    case 'SEEN': return 'Gesehen';
-    case 'APPRECIATED': return 'Wertgeschätzt';
-    case 'SUPPORTED': return 'Unterstützt';
-    case 'GRATEFUL': return 'Dankbar';
-    case 'HAPPY': return 'Glücklich';
-    default: return 'Herzmoment';
+    case 'LOVED': return t('story.emotion.loved');
+    case 'SEEN': return t('story.emotion.seen');
+    case 'APPRECIATED': return t('story.emotion.appreciated');
+    case 'SUPPORTED': return t('story.emotion.supported');
+    case 'GRATEFUL': return t('story.emotion.grateful');
+    case 'HAPPY': return t('story.emotion.happy');
+    default: return t('story.emotion.fallback');
   }
 }
 
@@ -41,46 +42,51 @@ export function storyItemKey(item: StoryItem): string {
   }
 }
 
-export function storyItemPresentation(item: StoryItem): StoryPresentation {
+export function storyItemPresentation(item: StoryItem, t: TFunction): StoryPresentation {
   switch (item.kind) {
     case 'MEMORY': {
       const count = item.memory.attachments.length;
       return {
-        kindLabel: 'Erinnerung',
+        kindLabel: t('story.kind.memory'),
         title: item.memory.title,
         author: item.memory.author.displayName,
-        mediaLabel: count === 1 ? '1 Foto' : count > 1 ? `${count} Fotos` : undefined,
+        mediaLabel: count > 0 ? t('story.photos', { count }) : undefined,
       };
     }
     case 'HEART_MOMENT':
       return {
-        kindLabel: 'Herzmoment',
+        kindLabel: t('story.kind.heartMoment'),
         title: compactText(item.heartMoment.text),
-        preview: emotionLabel(item.heartMoment.emotion),
+        preview: emotionLabel(item.heartMoment.emotion, t),
         author: item.heartMoment.author.displayName,
-        mediaLabel: item.heartMoment.attachment ? '1 Foto' : undefined,
-        sharedLabel: 'Geteilt',
+        mediaLabel: item.heartMoment.attachment ? t('story.photos', { count: 1 }) : undefined,
+        sharedLabel: t('story.shared'),
       };
     case 'MILESTONE':
       return {
-        kindLabel: 'Meilenstein',
+        kindLabel: t('story.kind.milestone'),
         title: item.milestone.title,
         author: item.milestone.author.displayName,
       };
   }
 }
 
-export function formatStoryDate(date: Date): string {
-  return date.toLocaleDateString('de-DE', {
+export function formatStoryDate(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     timeZone: 'UTC',
-  });
+  }).format(date);
 }
 
-export function groupStoryItems(items: StoryItem[]): StoryGroup[] {
+export function groupStoryItems(items: StoryItem[], locale: string): StoryGroup[] {
   const groups = new Map<string, StoryGroup>();
+  const monthFormatter = new Intl.DateTimeFormat(locale, {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
   for (const item of items) {
     const year = item.effectiveDate.getUTCFullYear();
@@ -90,11 +96,7 @@ export function groupStoryItems(items: StoryItem[]): StoryGroup[] {
     if (!group) {
       group = {
         key,
-        label: item.effectiveDate.toLocaleDateString('de-DE', {
-          month: 'long',
-          year: 'numeric',
-          timeZone: 'UTC',
-        }),
+        label: monthFormatter.format(item.effectiveDate),
         items: [],
       };
       groups.set(key, group);

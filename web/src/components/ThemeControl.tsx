@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../i18n';
 import {
   applyResolvedTheme,
   DARK_MODE_QUERY,
@@ -9,6 +10,7 @@ import {
 } from '../theme';
 
 export function ThemeControl() {
+  const { t } = useTranslation();
   const [preference, setPreference] = useState<ThemePreference>(readThemePreference);
 
   useEffect(() => {
@@ -27,16 +29,16 @@ export function ThemeControl() {
 
   return (
     <div className="theme-control">
-      <label htmlFor="theme-preference">Darstellung</label>
+      <label htmlFor="theme-preference">{t('theme.label')}</label>
       <select
         id="theme-preference"
-        aria-label="Darstellung"
+        aria-label={t('theme.label')}
         value={preference}
         onChange={(event) => changePreference(event.currentTarget.value as ThemePreference)}
       >
-        <option value="system">System</option>
-        <option value="light">Hell</option>
-        <option value="dark">Dunkel</option>
+        <option value="system">{t('theme.system')}</option>
+        <option value="light">{t('theme.light')}</option>
+        <option value="dark">{t('theme.dark')}</option>
       </select>
     </div>
   );

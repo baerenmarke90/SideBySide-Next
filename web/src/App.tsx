@@ -11,6 +11,7 @@ import {
   signIn,
 } from './client/referenceFlow';
 import { StoryList } from './components/StoryList';
+import { useTranslation } from './i18n';
 
 function readableError(error: unknown, fallback: string): string {
   if (!(error instanceof Error)) return fallback;
@@ -19,8 +20,9 @@ function readableError(error: unknown, fallback: string): string {
 }
 
 function Brand() {
+  const { t } = useTranslation();
   return (
-    <Link className="brand" to="/story" aria-label="SideBySide – zur Story">
+    <Link className="brand" to="/story" aria-label={t('brand.storyAria')}>
       <span className="brand-mark" aria-hidden="true">S</span>
       <span>SideBySide</span>
     </Link>
@@ -28,6 +30,7 @@ function Brand() {
 }
 
 function SetupNotice() {
+  const { t } = useTranslation();
   return (
     <main className="setup-shell">
       <section className="setup-card" aria-labelledby="setup-heading">
@@ -35,12 +38,12 @@ function SetupNotice() {
           <span className="brand-mark" aria-hidden="true">S</span>
           <span>SideBySide</span>
         </div>
-        <p className="eyebrow">Fast bereit</p>
-        <h1 id="setup-heading">Diese Installation ist noch nicht vollständig eingerichtet.</h1>
-        <p>Bitte wende dich an die Person, die diese SideBySide-Instanz betreibt.</p>
+        <p className="eyebrow">{t('setup.eyebrow')}</p>
+        <h1 id="setup-heading">{t('setup.heading')}</h1>
+        <p>{t('setup.body')}</p>
         <details className="operator-note">
-          <summary>Hinweis für Betreiber</summary>
-          <p>Für den aktuellen Story-Flow muss beim Web-Build eine vorhandene Space-ID als <code>SBS_WEB_SPACE_ID</code> gesetzt sein.</p>
+          <summary>{t('setup.operatorSummary')}</summary>
+          <p>{t('setup.operatorPrefix')} <code>SBS_WEB_SPACE_ID</code> {t('setup.operatorSuffix')}</p>
         </details>
       </section>
     </main>
@@ -52,6 +55,8 @@ function LoginScreen({ onLogin, pending, error }: {
   pending: boolean;
   error: unknown;
 }) {
+  const { t } = useTranslation();
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -65,28 +70,28 @@ function LoginScreen({ onLogin, pending, error }: {
           <span className="brand-mark" aria-hidden="true">S</span>
           <span>SideBySide</span>
         </div>
-        <p className="eyebrow eyebrow-inverse">Euer gemeinsamer Ort</p>
-        <h1 id="welcome-heading">Erinnerungen, die euch gehören.</h1>
-        <p>Haltet gemeinsame Momente fest und findet eure Geschichte an einem ruhigen, privaten Ort wieder.</p>
+        <p className="eyebrow eyebrow-inverse">{t('login.introEyebrow')}</p>
+        <h1 id="welcome-heading">{t('login.introHeading')}</h1>
+        <p>{t('login.introBody')}</p>
       </section>
 
       <section className="login-card" aria-labelledby="login-heading">
         <div>
-          <p className="eyebrow">Willkommen zurück</p>
-          <h2 id="login-heading">Anmelden</h2>
-          <p className="muted">Melde dich mit deinem SideBySide-Konto an.</p>
+          <p className="eyebrow">{t('login.eyebrow')}</p>
+          <h2 id="login-heading">{t('login.heading')}</h2>
+          <p className="muted">{t('login.body')}</p>
         </div>
         <form onSubmit={submit} className="form-grid">
-          <label htmlFor="email">E-Mail</label>
+          <label htmlFor="email">{t('login.email')}</label>
           <input id="email" name="email" type="email" autoComplete="username" required />
-          <label htmlFor="password">Passwort</label>
+          <label htmlFor="password">{t('login.password')}</label>
           <input id="password" name="password" type="password" autoComplete="current-password" required />
           <button type="submit" disabled={pending}>
-            {pending ? 'Anmeldung läuft …' : 'Anmelden'}
+            {pending ? t('login.pending') : t('login.submit')}
           </button>
         </form>
         <p className="status status-error" role="alert" aria-live="polite">
-          {error ? readableError(error, 'Anmeldung fehlgeschlagen. Bitte prüfe deine Zugangsdaten und versuche es erneut.') : ''}
+          {error ? readableError(error, t('login.errorFallback')) : ''}
         </p>
       </section>
     </main>
@@ -100,6 +105,7 @@ function StoryPage({
   storyQuery: UseQueryResult<StoryPageData, Error>;
   loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
 }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const saved = Boolean((location.state as { saved?: boolean } | null)?.saved);
 
@@ -107,25 +113,25 @@ function StoryPage({
     <div className="page story-page">
       {saved && (
         <div className="inline-message inline-message-success" role="status">
-          <strong>Erinnerung gespeichert.</strong>
-          <span>Sie ist jetzt Teil eurer gemeinsamen Story.</span>
+          <strong>{t('story.savedTitle')}</strong>
+          <span>{t('story.savedBody')}</span>
         </div>
       )}
 
       <header className="page-heading story-heading">
         <div>
-          <p className="eyebrow">Gemeinsam erinnern</p>
-          <h1>Eure Story</h1>
-          <p>Erinnerungen, Herzmomente und Meilensteine – chronologisch an einem Ort.</p>
+          <p className="eyebrow">{t('story.eyebrow')}</p>
+          <h1>{t('story.title')}</h1>
+          <p>{t('story.intro')}</p>
         </div>
-        <Link className="button-link primary-action" to="/memory/new">Erinnerung hinzufügen</Link>
+        <Link className="button-link primary-action" to="/memory/new">{t('story.addMemory')}</Link>
       </header>
 
       <section className="story-surface" aria-labelledby="timeline-heading">
         <div className="section-head">
           <div>
-            <p className="section-kicker">Zeitleiste</p>
-            <h2 id="timeline-heading">Gemeinsame Geschichte</h2>
+            <p className="section-kicker">{t('story.timelineKicker')}</p>
+            <h2 id="timeline-heading">{t('story.timelineHeading')}</h2>
           </div>
           <button
             type="button"
@@ -133,12 +139,12 @@ function StoryPage({
             onClick={() => storyQuery.refetch()}
             disabled={storyQuery.isFetching}
           >
-            {storyQuery.isFetching ? 'Aktualisiert …' : 'Aktualisieren'}
+            {storyQuery.isFetching ? t('common.refreshing') : t('common.refresh')}
           </button>
         </div>
 
         {storyQuery.isLoading && (
-          <div className="story-loading" role="status" aria-label="Story wird geladen">
+          <div className="story-loading" role="status" aria-label={t('story.loadingAria')}>
             <span />
             <span />
             <span />
@@ -146,9 +152,9 @@ function StoryPage({
         )}
         {storyQuery.error instanceof Error && (
           <div className="inline-message inline-message-error" role="alert">
-            <strong>Die Story konnte nicht geladen werden.</strong>
-            <span>{readableError(storyQuery.error, 'Bitte versuche es erneut.')}</span>
-            <button type="button" className="secondary" onClick={() => storyQuery.refetch()}>Erneut versuchen</button>
+            <strong>{t('story.loadErrorTitle')}</strong>
+            <span>{readableError(storyQuery.error, t('story.loadErrorFallback'))}</span>
+            <button type="button" className="secondary" onClick={() => storyQuery.refetch()}>{t('common.retry')}</button>
           </div>
         )}
         {storyQuery.data && (
@@ -170,13 +176,14 @@ function MemoryCreatePage({
   spaceId: string;
   onSaved: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const apis = useMemo(() => createReferenceApis(apiBaseUrl, accessToken), [apiBaseUrl, accessToken]);
 
   const mutation = useMutation({
     mutationFn: ({ title, body, happenedOn }: { title: string; body: string; happenedOn?: Date }) => {
-      if (!file) throw new Error('Bitte wähle ein Bild aus.');
+      if (!file) throw new Error(t('memory.imageRequired'));
       return runMemoryMediaStoryFlow(
         apis,
         apiBaseUrl,
@@ -206,36 +213,36 @@ function MemoryCreatePage({
 
   return (
     <div className="page create-page">
-      <Link className="back-link" to="/story">← Zurück zur Story</Link>
+      <Link className="back-link" to="/story">{t('memory.backToStory')}</Link>
       <header className="page-heading create-heading">
         <div>
-          <p className="eyebrow">Moment festhalten</p>
-          <h1>Neue Erinnerung</h1>
-          <p>Ein Foto, ein paar Worte – und dieser Moment bleibt Teil eurer Geschichte.</p>
+          <p className="eyebrow">{t('memory.eyebrow')}</p>
+          <h1>{t('memory.heading')}</h1>
+          <p>{t('memory.intro')}</p>
         </div>
       </header>
 
       <section className="form-card" aria-labelledby="memory-form-heading">
-        <h2 id="memory-form-heading" className="sr-only">Erinnerung erstellen</h2>
+        <h2 id="memory-form-heading" className="sr-only">{t('memory.formAria')}</h2>
         <form onSubmit={submit} className="form-grid memory-form">
           <div className="field-group">
-            <label htmlFor="title">Titel</label>
-            <input id="title" name="title" required maxLength={200} placeholder="Zum Beispiel: Unser Tag am See" />
+            <label htmlFor="title">{t('memory.titleLabel')}</label>
+            <input id="title" name="title" required maxLength={200} placeholder={t('memory.titlePlaceholder')} />
           </div>
 
           <div className="field-group">
-            <label htmlFor="body">Erinnerung</label>
-            <textarea id="body" name="body" required rows={5} placeholder="Was möchtet ihr von diesem Moment behalten?" />
+            <label htmlFor="body">{t('memory.bodyLabel')}</label>
+            <textarea id="body" name="body" required rows={5} placeholder={t('memory.bodyPlaceholder')} />
           </div>
 
           <div className="field-group">
-            <label htmlFor="happenedOn">Datum</label>
+            <label htmlFor="happenedOn">{t('memory.dateLabel')}</label>
             <input id="happenedOn" name="happenedOn" type="date" />
-            <p className="field-help">Optional – wenn der Moment an einem bestimmten Tag war.</p>
+            <p className="field-help">{t('memory.dateHelp')}</p>
           </div>
 
           <div className="field-group">
-            <label htmlFor="image">Foto</label>
+            <label htmlFor="image">{t('memory.photoLabel')}</label>
             <input
               className="visually-hidden-input"
               id="image"
@@ -248,35 +255,35 @@ function MemoryCreatePage({
             <label className="file-picker" htmlFor="image">
               <span className="file-picker-icon" aria-hidden="true">＋</span>
               <span>
-                <strong>{file ? 'Foto ausgewählt' : 'Foto auswählen'}</strong>
-                <small>{file ? file.name : 'JPG, PNG, WebP, HEIC oder HEIF'}</small>
+                <strong>{file ? t('memory.photoSelected') : t('memory.photoSelect')}</strong>
+                <small>{file ? file.name : t('memory.photoFormats')}</small>
               </span>
             </label>
           </div>
 
-          <div className="sharing-note" aria-label="Sichtbarkeit">
+          <div className="sharing-note" aria-label={t('memory.visibilityAria')}>
             <span className="sharing-icon" aria-hidden="true">♥</span>
             <div>
-              <strong>Mit Partner geteilt</strong>
-              <p>Diese Erinnerung ist für beide Personen in eurem gemeinsamen Space sichtbar.</p>
+              <strong>{t('memory.sharedTitle')}</strong>
+              <p>{t('memory.sharedBody')}</p>
             </div>
           </div>
 
           <div className="form-actions">
-            <Link className="button-link secondary-link" to="/story">Abbrechen</Link>
+            <Link className="button-link secondary-link" to="/story">{t('common.cancel')}</Link>
             <button type="submit" disabled={mutation.isPending || !file}>
-              {mutation.isPending ? 'Wird gespeichert …' : 'Erinnerung speichern'}
+              {mutation.isPending ? t('memory.saving') : t('memory.save')}
             </button>
           </div>
         </form>
 
         {mutation.isPending && (
-          <p className="status" role="status" aria-live="polite">Foto wird verarbeitet und die Story aktualisiert …</p>
+          <p className="status" role="status" aria-live="polite">{t('memory.processing')}</p>
         )}
         {mutation.error && (
           <div className="inline-message inline-message-error form-error" role="alert">
-            <strong>Die Erinnerung konnte nicht gespeichert werden.</strong>
-            <span>{readableError(mutation.error, 'Bitte prüfe deine Verbindung und versuche es erneut.')}</span>
+            <strong>{t('memory.saveErrorTitle')}</strong>
+            <span>{readableError(mutation.error, t('memory.saveErrorFallback'))}</span>
           </div>
         )}
       </section>
@@ -295,6 +302,7 @@ function AuthenticatedApp({
   apiBaseUrl: string;
   spaceId: string;
 }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const apis = useMemo(() => createReferenceApis(apiBaseUrl, tokens.accessToken), [apiBaseUrl, tokens.accessToken]);
   const storyQuery = useQuery({
@@ -323,8 +331,8 @@ function AuthenticatedApp({
       <header className="app-header">
         <Brand />
         <div className="header-actions">
-          <span className="shared-context"><span aria-hidden="true">♥</span> Gemeinsamer Bereich</span>
-          <button type="button" className="tertiary" onClick={logout}>Abmelden</button>
+          <span className="shared-context"><span aria-hidden="true">♥</span> {t('header.sharedArea')}</span>
+          <button type="button" className="tertiary" onClick={logout}>{t('header.logout')}</button>
         </div>
       </header>
 
