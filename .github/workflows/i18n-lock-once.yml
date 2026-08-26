@@ -25,22 +25,47 @@ jobs:
           ref: feat/i18n-foundation-180
 
       - name: Lockfile mit gepinnten Abhaengigkeiten aktualisieren
-        working-directory: web
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-
-      - name: Nur Lockfile darf durch npm veraendert werden
         run: |
+          cd "$GITHUB_WORKSPACE/web"
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Dependency-Dokumentation synchronisieren
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'docs/DEPENDENCIES.md';
+          let text = fs.readFileSync(path, 'utf8');
+          const anchor = '| @tanstack/react-query | 5.85.5 | npm | MIT |\n';
+          const addition = '| i18next | 26.4.0 | npm | MIT |\n| react-i18next | 17.0.11 | npm | MIT |\n';
+          if (!text.includes('| i18next | 26.4.0 | npm | MIT |')) {
+            if (!text.includes(anchor)) throw new Error('Web dependency table anchor missing');
+            text = text.replace(anchor, anchor + addition);
+            fs.writeFileSync(path, text);
+          }
+          NODE
+
+      - name: Aenderungsumfang pruefen
+        run: |
+          cd "$GITHUB_WORKSPACE"
           git diff --exit-code -- web/package.json
+          unerwartet=$(git diff --name-only | grep -Ev '^(web/package-lock.json|docs/DEPENDENCIES.md)$' || true)
+          if [ -n "$unerwartet" ]; then
+            echo "Unerwartete Aenderungen:"
+            echo "$unerwartet"
+            exit 1
+          fi
           git diff --check
 
-      - name: Lockfile auf Feature-Branch committen
+      - name: Generierte Dateien auf Feature-Branch committen
         run: |
-          if git diff --quiet -- web/package-lock.json; then
-            echo "Lockfile ist bereits aktuell."
+          cd "$GITHUB_WORKSPACE"
+          if git diff --quiet -- web/package-lock.json docs/DEPENDENCIES.md; then
+            echo "Lockfile und Dependency-Dokumentation sind bereits aktuell."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/package-lock.json
-          git commit -m "build(web): lock i18n dependencies"
+          git add web/package-lock.json docs/DEPENDENCIES.md
+          git commit -m "build(web): lock and document i18n dependencies"
           git push origin HEAD:feat/i18n-foundation-180
