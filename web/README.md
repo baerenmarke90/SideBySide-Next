@@ -43,7 +43,7 @@ Access- und Refresh-Token bleiben ausschließlich im flüchtigen React-State.
 Logout leert State und TanStack-Query-Cache; S8 führt keine persistente
 Offline-/Read-Cache-Policy ein.
 
-### Lokal
+### Lokal am Quellcode
 
 ```bash
 npm ci
@@ -52,6 +52,30 @@ npm run lint
 npm test
 npm run build
 ```
+
+### Self-Hosted-PoC
+
+Der Produktionsbuild liegt in einem unprivilegierten Nginx-Container. Im
+lokalen Compose-Test liefert er die statischen Dateien auf
+`http://127.0.0.1:${WEB_PORT:-8080}` aus und leitet `/api/` intern an den
+API-Service weiter. Dadurch bleibt der Browser same-origin und es ist keine
+pauschale CORS-Freigabe nötig.
+
+Der Referenzflow benötigt noch eine bekannte Space-UUID:
+
+```dotenv
+SBS_WEB_SPACE_ID=00000000-0000-0000-0000-000000000000
+```
+
+Da Vite diesen Betreiberwert beim Build einbettet, ist nach einer Änderung
+`docker compose up -d --build web` erforderlich. Die UUID ist kein Secret;
+Access- und Refresh-Token bleiben weiterhin ausschließlich im flüchtigen
+Browser-State.
+
+Im öffentlichen Betrieb darf `/api/` nicht durch den Web-Container
+geschleift werden. Der TLS-Reverse-Proxy routet `/api/` direkt zum
+API-Host-Port und alle übrigen Pfade zum Web-Host-Port. Die vollständige
+Anleitung steht in `docs/SELF-HOSTING.md`.
 
 Video, vollständige Navigation, Offline Write Sync, Room/Paging-Äquivalente,
 Export/Import, Deep Links, globale Suche und M3+-Funktionen bleiben außerhalb

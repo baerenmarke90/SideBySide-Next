@@ -10,17 +10,17 @@
 # erreichbar.
 #
 # Fuer echten Betrieb wird SBS_ENVIRONMENT=production in .env gesetzt. Dann
-# verlangt die Anwendung Cursor-Signing-Key, SMTP-Versand und eine
+# verlangt die Anwendung Cursor-Signing-Key, einen sicheren Mailmodus und eine
 # https-Basisadresse und verweigert sonst den Start. Die Checkliste dafuer
 # steht in docs/SELF-HOSTING.md.
 #
-# Die Datei liegt im Wurzelverzeichnis, nicht in deploy/, damit der
-# Build-Kontext ./backend unterhalb des Verzeichnisses liegt, in dem die
-# Compose-Datei steht. Oberflaechen wie Arcane oder Portainer legen ein
-# Projekt in einem eigenen Verzeichnis ab und kopieren nur die
-# Compose-Datei dorthin; ein Pfad wie ../backend zeigt dann ins Leere.
+# Die Datei liegt im Wurzelverzeichnis, nicht in deploy/, damit die
+# Build-Kontexte ./backend und ./web unterhalb des Verzeichnisses liegen, in
+# dem die Compose-Datei steht. Oberflaechen wie Arcane oder Portainer, die nur
+# die Compose-Datei kopieren, muessen beide Kontexte als gepinnte Git-URL
+# setzen; die Variablen dafuer stehen in .env.example.
 #
-# Vier Bausteine: API, Worker, Migration, PostgreSQL. Medien liegen im
+# Fuenf Bausteine: Web, API, Worker, Migration, PostgreSQL. Medien liegen im
 # Volume oder, wenn konfiguriert, in einem S3-kompatiblen Speicher.
 
 # Die Migration braucht die Datenbank und sonst nichts. Sie bekommt deshalb
@@ -52,7 +52,7 @@ x-runtime-environment: &runtime-environment
   SBS_ALLOWED_HOSTS: '${SBS_ALLOWED_HOSTS:-["localhost","127.0.0.1"]}'
   # Anmelde- und Wiederherstellungslinks werden mit dieser Adresse
   # gebaut - nie aus dem Host-Header, den ein Angreifer setzen kann.
-  SBS_PUBLIC_BASE_URL: "${SBS_PUBLIC_BASE_URL:-http://localhost:8000}"
+  SBS_PUBLIC_BASE_URL: "${SBS_PUBLIC_BASE_URL:-http://localhost:8080}"
   SBS_OIDC_CONNECTIONS: '${SBS_OIDC_CONNECTIONS:-[]}'
   SBS_WEBAUTHN_RP_ID: "${SBS_WEBAUTHN_RP_ID:-}"
   SBS_WEBAUTHN_RP_NAME: "${SBS_WEBAUTHN_RP_NAME:-SideBySide}"
@@ -67,11 +67,21 @@ x-runtime-environment: &runtime-environment
 
 x-backend-build: &backend-build
   build:
-    context: ./backend
+    context: "${SBS_BACKEND_BUILD_CONTEXT:-./backend}"
   # Ohne image: gibt es keinen Namen, den eine Oberflaeche aus der
   # Registry zu ziehen versucht - Arcane hat genau das getan und ist an
   # "pull access denied" gescheitert. pull_policy sagt es zusaetzlich
   # ausdruecklich: dieses Image entsteht hier, es wird nicht geholt.
+  pull_policy: build
+
+x-web-build: &web-build
+  build:
+    context: "${SBS_WEB_BUILD_CONTEXT:-./web}"
+    args:
+      # Der technische G2-Flow kennt noch keine Space-Auswahl. Die ID ist
+      # deshalb Betreiberkonfiguration und wird beim Build eingebettet.
+      VITE_SBS_API_BASE_URL: ""
+      VITE_SBS_SPACE_ID: "${SBS_WEB_SPACE_ID:-}"
   pull_policy: build
 
 services:
@@ -170,7 +180,25 @@ services:
       migrate:
         condition: service_completed_successfully
 
-# Explizit statt implizitem default-Netz: alle vier Dienste muessen dieselbe
+  # Der Web-PoC liefert den vorhandenen technischen G2-Referenzflow aus.
+  # Sein /api-Proxy ist nur fuer den Loopback-Test gedacht. In Produktion
+  # routet der TLS-Reverse-Proxy /api/ direkt zur API und / zum Webdienst.
+  web:
+    <<: *web-build
+    restart: unless-stopped
+    networks:
+      - app
+    ports:
+      - name: web-loopback
+        target: 8080
+        published: "${WEB_PORT:-8080}"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    depends_on:
+      api:
+        condition: service_healthy
+
+# Explizit statt implizitem default-Netz: alle fuenf Dienste muessen dieselbe
 # Compose-DNS-Domaene teilen. Der Name bleibt projektbezogen, damit mehrere
 # SideBySide-Stacks auf demselben Docker-Host nicht kollidieren.
 networks:

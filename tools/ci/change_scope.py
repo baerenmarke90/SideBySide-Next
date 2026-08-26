@@ -68,7 +68,7 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
 
         if _matches(
             path,
-            prefixes=("backend/",),
+            prefixes=("backend/", "web/"),
             exact=(
                 ".github/workflows/ci.yml",
                 ".env.example",
@@ -82,14 +82,18 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
         if _matches(
             path,
             prefixes=("backend/",),
-            exact=(".github/workflows/ci.yml", "docs/DEPENDENCIES.md"),
+            exact=(
+                ".github/workflows/ci.yml",
+                "docs/DEPENDENCIES.md",
+                "web/Dockerfile",
+            ),
         ):
             result["supply_chain"] = True
             known = True
 
         if _matches(
             path,
-            prefixes=("backend/",),
+            prefixes=("backend/", "web/"),
             exact=(
                 ".github/workflows/self-hosted-deployment-guard.yml",
                 ".env.example",
