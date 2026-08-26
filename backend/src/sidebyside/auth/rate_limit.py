@@ -19,10 +19,10 @@ from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
     from sqlalchemy import CursorResult
-from sqlalchemy.orm import Session
 
 from sidebyside.auth.tokens import hash_token
 from sidebyside.core.clock import now
@@ -105,7 +105,7 @@ def _reserve_hashed_attempt(
 
 def _persisted_attempts(session: Session) -> set[tuple[str, str]]:
     return cast(
-        "set[tuple[str, str]]",
+        set[tuple[str, str]],
         session.info.setdefault(_PERSISTED_ATTEMPTS_KEY, set()),
     )
 
