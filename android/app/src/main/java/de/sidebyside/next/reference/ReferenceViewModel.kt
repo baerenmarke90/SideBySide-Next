@@ -30,6 +30,7 @@ class ReferenceViewModel(
     private val contract: ReferenceContract? = api ?: config.apiBaseUrl.takeIf(String::isNotBlank)?.let(::OkHttpReferenceApi)
     private var session: SessionView? = null
     private var selectedImage: SelectedImage? = null
+    private var sessionEpoch: Long = 0
 
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
     val uiState: StateFlow<ReferenceUiState> = _uiState.asStateFlow()
@@ -42,10 +43,14 @@ class ReferenceViewModel(
             return
         }
 
+        sessionEpoch += 1
+        val attemptEpoch = sessionEpoch
         viewModelScope.launch {
+            if (attemptEpoch != sessionEpoch) return@launch
             mutate { it.copy(busy = true, error = null, status = "Anmeldung läuft …") }
             runCatching { api.signIn(email.trim(), password) }
                 .onSuccess { signedIn ->
+                    if (attemptEpoch != sessionEpoch) return@onSuccess
                     session = signedIn
                     mutate {
                         it.copy(
@@ -58,7 +63,11 @@ class ReferenceViewModel(
                     }
                     refreshStory()
                 }
-                .onFailure { failure("Anmeldung fehlgeschlagen", it) }
+                .onFailure { throwable ->
+                    if (attemptEpoch == sessionEpoch) {
+                        failure("Anmeldung fehlgeschlagen", throwable)
+                    }
+                }
         }
     }
 
@@ -107,8 +116,10 @@ class ReferenceViewModel(
                 return
             }
         }
+        val operationEpoch = sessionEpoch
 
         viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
             mutate {
                 it.copy(
                     busy = true,
@@ -130,6 +141,7 @@ class ReferenceViewModel(
                     image = image,
                 )
             }.onSuccess { result ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
                 mutate {
                     it.copy(
                         busy = false,
@@ -141,7 +153,11 @@ class ReferenceViewModel(
                         storyItems = result.story.items,
                     )
                 }
-            }.onFailure { failure("Speichern fehlgeschlagen", it) }
+            }.onFailure { throwable ->
+                if (isCurrentSession(operationEpoch, currentSession)) {
+                    failure("Speichern fehlgeschlagen", throwable)
+                }
+            }
         }
     }
 
@@ -149,18 +165,32 @@ class ReferenceViewModel(
         val api = contract ?: return
         val currentSession = session ?: return
         val spaceId = config.spaceId ?: return
+        val operationEpoch = sessionEpoch
         viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
             runCatching { api.getTimeline(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { story -> mutate { it.copy(storyItems = story.items, error = null) } }
-                .onFailure { failure("Story konnte nicht geladen werden", it, clearBusy = false) }
+                .onSuccess { story ->
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate { it.copy(storyItems = story.items, error = null) }
+                    }
+                }
+                .onFailure { throwable ->
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        failure("Story konnte nicht geladen werden", throwable, clearBusy = false)
+                    }
+                }
         }
     }
 
     fun logout() {
+        sessionEpoch += 1
         session = null
         selectedImage = null
         _uiState.value = ReferenceUiState(configured = config.isConfigured, status = "Abgemeldet.")
     }
+
+    private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
+        sessionEpoch == epoch && session === currentSession
 
     private fun configurationError() {
         setError("Der M2-Referenzflow ist operatorseitig noch nicht konfiguriert.")
