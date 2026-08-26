@@ -1,10 +1,10 @@
 import { DEFAULT_LOCALE, i18n, resolvedLocale } from './index';
 
 describe('web i18n', () => {
-  it('starts with German as supported default and fallback locale', () => {
+  it('starts with German as the default locale', () => {
     expect(DEFAULT_LOCALE).toBe('de');
     expect(resolvedLocale()).toBe('de');
-    expect(i18n.options.fallbackLng).toEqual(['de']);
+    expect(i18n.t('story.kind.memory')).toBe('Erinnerung');
   });
 
   it('uses locale plural rules for photo counts', () => {
