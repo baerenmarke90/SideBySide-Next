@@ -85,3 +85,8 @@ export * from './StoryPage';
 export * from './TokenOnlyRequest';
 export * from './TokenView';
 export * from './UploadDescriptor';
+export * from './WishCreate';
+export * from './WishDetail';
+export * from './WishPage';
+export * from './WishStatus';
+export * from './WishUpdate';
