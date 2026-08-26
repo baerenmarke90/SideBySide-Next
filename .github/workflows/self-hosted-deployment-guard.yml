@@ -36,9 +36,6 @@ jobs:
             exit 0
           fi
 
-          # Renames werden absichtlich als Delete+Add betrachtet. Dadurch
-          # aktiviert auch eine Verschiebung aus einem Runtime-Pfad heraus
-          # das urspruenglich betroffene Gate; Loeschungen sind ebenfalls drin.
           git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-files.txt
           echo "Geaenderte Dateien:"
           cat /tmp/changed-files.txt
@@ -61,6 +58,27 @@ jobs:
           sed -i 's/^WEB_PORT=.*/WEB_PORT=18082/' .env
           sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=http://localhost:18082|' .env
           docker compose config --quiet
+          docker compose -f compose.arcane.yaml --env-file .env config --quiet
+
+      - name: Arcane-Variante bleibt semantisch gleichwertig
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env config --format json \
+            | jq -S 'del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" else . end)' \
+            > /tmp/compose-standard.json
+          docker compose -f compose.arcane.yaml --env-file .env config --format json \
+            | jq -S 'del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" else . end)' \
+            > /tmp/compose-arcane.json
+          diff -u /tmp/compose-standard.json /tmp/compose-arcane.json
+
+          docker compose -f compose.arcane.yaml --env-file .env config --format json > /tmp/compose-arcane-raw.json
+          jq -e '
+            (.services.migrate.build.context | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#")) and
+            (.services.api.build.context == .services.migrate.build.context) and
+            (.services.worker.build.context == .services.migrate.build.context) and
+            (.services.web.build.context | endswith(":web")) and
+            (.services.migrate.build.context | endswith(":backend"))
+          ' /tmp/compose-arcane-raw.json
 
       - name: Bind-Adresse ist sicher und gezielt konfigurierbar
         run: |
