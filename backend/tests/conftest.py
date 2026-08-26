@@ -89,6 +89,7 @@ def engine() -> Iterator[Engine]:
     from sidebyside.milestones import models as _milestones  # noqa: F401
     from sidebyside.outbox import models as _outbox  # noqa: F401
     from sidebyside.people import models as _people  # noqa: F401
+    from sidebyside.plans import models as _plans  # noqa: F401
     from sidebyside.profiles import models as _profiles  # noqa: F401
     from sidebyside.relationship import models as _relationship  # noqa: F401
     from sidebyside.wishes import models as _wishes  # noqa: F401

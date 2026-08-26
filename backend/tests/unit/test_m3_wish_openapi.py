@@ -37,15 +37,26 @@ def test_wish_routes_have_frozen_operation_ids() -> None:
 
 
 def test_the_contract_carries_exactly_the_decided_wish_surface() -> None:
-    """M3-D02 nennt sechs Wish-Operationen; fuenf davon gehoeren zu M3-S1.
+    """M3-D02 nennt sechs Wish-Operationen.
 
-    `POST .../wishes/{wishId}/plan` ist die sechste. Sie fehlt hier
-    absichtlich: ohne Plan-Domaene gaebe es nichts, was sie erzeugen
-    koennte, und ein Vertrag, der sie schon nennt, verspricht einen Flow,
-    den der Server nicht hat.
+    Fuenf davon kamen mit M3-S1; die sechste, `POST .../wishes/{wishId}/plan`,
+    mit M3-S2. Sie wird hier nur gezaehlt - ihre Form prueft
+    `test_m3_plan_openapi`, weil sie einen Plan erzeugt.
     """
     wish_paths = {pfad for pfad in _paths() if "/wishes" in pfad}
-    assert wish_paths == {COLLECTION, DETAIL}
+    assert wish_paths == {COLLECTION, DETAIL, f"{DETAIL}/plan"}
+
+
+def test_no_wish_operation_sets_the_status_directly() -> None:
+    """Der Wish-Status hat keine eigene Route - und soll keine bekommen.
+
+    Jede seiner Kanten haengt an einer Plan-Operation (M3-D02/D03/D04).
+    Eine Route wie `/wishes/{wishId}/complete` waere genau der direkte Weg,
+    den der Vertrag ausschliesst.
+    """
+    wish_paths = {pfad for pfad in _paths() if "/wishes" in pfad}
+    for verboten in ("complete", "plan-status", "status", "reopen"):
+        assert not any(pfad.endswith(f"/{verboten}") for pfad in wish_paths), verboten
 
 
 def test_mutations_require_if_match() -> None:
