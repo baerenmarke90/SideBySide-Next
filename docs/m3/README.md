@@ -1,6 +1,6 @@
 # M3 Technical Readiness Package
 
-**Status:** S0-Entscheidungen abgeschlossen; keine automatische Runtime-Freigabe  
+**Status:** S0-Entscheidungen abgeschlossen; Runtime seit #146 freigegeben, Vertragspflicht je Slice bleibt  
 **Stand:** 26.08.2026  
 **Tracking:** #159, #162, #163, #164, #165
 
@@ -15,6 +15,8 @@ Runtime-Arbeit beginnt nach der aktuell dokumentierten Projektregel erst, wenn:
 1. der finale G2-Review G2 ausdruecklich als `BESTANDEN` bewertet (#147),
 2. der anschliessende Status-Sync #146 M3 als freigegebenen Milestone fuehrt,
 3. der betroffene REST-/OpenAPI-Vertrag fuer den jeweiligen Runtime-Slice contract-testbar konkretisiert ist.
+
+Punkt 1 und 2 sind erfuellt: #147 endet mit `G2: BESTANDEN`, #146 fuehrt M3 als freigegeben. Punkt 3 bleibt eine Bedingung **je Slice** und wird im jeweiligen Runtime-PR eingeloest.
 
 Alle M3-D01 bis M3-D32 stehen inzwischen auf `DECIDED`; damit ist die fachliche S0-Readiness kein zusaetzlicher Blocker mehr.
 
@@ -135,7 +137,7 @@ Festgelegt sind u. a.:
 
 Ein Slice ist ready, wenn:
 
-- [ ] G2 formal bestanden und M3 ueber #146 freigegeben ist;
+- [x] G2 formal bestanden und M3 ueber #146 freigegeben ist;
 - [x] relevante BLOCKING-Decisions `DECIDED` sind;
 - [x] Modellfelder, Privacy-Klasse, Ersteller/Eigentuemer und Schreibrechte fachlich feststehen;
 - [x] Status-/Delete-/Relation-/Concurrency-Grenzen fuer den betroffenen M3-Kern feststehen;

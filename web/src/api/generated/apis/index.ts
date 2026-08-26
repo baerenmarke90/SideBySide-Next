@@ -12,3 +12,4 @@ export * from './PeopleApi';
 export * from './ProfilesApi';
 export * from './SpacesApi';
 export * from './StoryApi';
+export * from './WishesApi';
