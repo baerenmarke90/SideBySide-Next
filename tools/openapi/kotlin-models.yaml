@@ -8,6 +8,7 @@
 # faellt ohne generierte Modelle erst zur Laufzeit auf. Genau das ist hier
 # abgedeckt; Service-Interfaces koennen spaeter additiv dazukommen.
 serializationLibrary: kotlinx_serialization
+library: jvm-retrofit2
 enumPropertyNaming: original
 sourceFolder: .
 
@@ -18,6 +19,7 @@ sourceFolder: .
 packageName: sidebyside.api
 modelPackage: sidebyside.api.models
 
-# Erzeugt fuer oneOf/anyOf mit Discriminator echte Wrapper-/Subtyp-Modelle
-# statt einer unbrauchbaren abstrakten Sammelklasse.
+# Erzeugt fuer oneOf/anyOf mit Discriminator echte Wrapper-/Subtyp-Modelle.
+# Diese Generator-Option wird fuer Kotlin mit jvm-retrofit2 und
+# kotlinx_serialization unterstuetzt.
 generateOneOfAnyOfWrappers: true
