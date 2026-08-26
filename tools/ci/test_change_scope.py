@@ -9,7 +9,14 @@ from change_scope import classify_paths
 class ChangeScopeTest(unittest.TestCase):
     def test_normal_docs_do_not_enable_expensive_gates(self) -> None:
         self.assertEqual(
-            classify_paths(["README.md", "docs/ROADMAP.md", "docs/IMPLEMENTATION-STATUS.md"]),
+            classify_paths(
+                [
+                    "README.md",
+                    "docs/ROADMAP.md",
+                    "docs/IMPLEMENTATION-STATUS.md",
+                    "specification/PRODUCT-SPEC.md",
+                ]
+            ),
             {
                 "backend": False,
                 "self_hosted": False,
@@ -53,8 +60,15 @@ class ChangeScopeTest(unittest.TestCase):
     def test_filter_changes_fail_closed(self) -> None:
         self.assertTrue(all(classify_paths(["tools/ci/change_scope.py"]).values()))
 
+    def test_unknown_path_fails_closed(self) -> None:
+        self.assertTrue(all(classify_paths(["future-build-system/config.toml"]).values()))
+
     def test_mixed_pr_cannot_hide_backend_change_with_docs(self) -> None:
         result = classify_paths(["docs/ROADMAP.md", "backend/src/sidebyside/main.py"])
+        self.assertTrue(all(result.values()))
+
+    def test_mixed_pr_cannot_hide_unknown_change_with_docs(self) -> None:
+        result = classify_paths(["docs/ROADMAP.md", "future-build-system/config.toml"])
         self.assertTrue(all(result.values()))
 
 
