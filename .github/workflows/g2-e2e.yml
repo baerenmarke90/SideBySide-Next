@@ -116,12 +116,6 @@ jobs:
 
       - name: Android uses OkHttpReferenceApi against the same real stack
         working-directory: android
-        env:
-          G2_E2E_ENABLED: "1"
-          G2_E2E_API_BASE: ${{ env.G2_E2E_API_BASE }}
-          G2_E2E_EMAIL: ${{ env.G2_E2E_EMAIL }}
-          G2_E2E_PASSWORD: ${{ env.G2_E2E_PASSWORD }}
-          G2_E2E_SPACE_ID: ${{ env.G2_E2E_SPACE_ID }}
         run: >-
           gradle --no-daemon --stacktrace
           :app:testDebugUnitTest
