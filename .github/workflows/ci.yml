@@ -44,7 +44,10 @@ jobs:
             exit 0
           fi
 
-          git diff --name-only --diff-filter=ACMRTUXB "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-files.txt
+          # Renames werden absichtlich als Delete+Add betrachtet. Dadurch
+          # aktiviert auch eine Verschiebung aus einem Runtime-Pfad heraus
+          # das urspruenglich betroffene Gate; Loeschungen sind ebenfalls drin.
+          git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-files.txt
           echo "Geaenderte Dateien:"
           cat /tmp/changed-files.txt
           python3 tools/ci/change_scope.py /tmp/changed-files.txt >> "$GITHUB_OUTPUT"
