@@ -16,6 +16,8 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
+    env:
+      REPO_DIR: /__w/SideBySide-Next/SideBySide-Next
     steps:
       - name: Git fuer Checkout und Push bereitstellen
         run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -26,12 +28,12 @@ jobs:
 
       - name: Lockfile mit gepinnten Abhaengigkeiten aktualisieren
         run: |
-          cd "$GITHUB_WORKSPACE/web"
+          cd "$REPO_DIR/web"
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Dependency-Dokumentation synchronisieren
         run: |
-          cd "$GITHUB_WORKSPACE"
+          cd "$REPO_DIR"
           node <<'NODE'
           const fs = require('fs');
           const path = 'docs/DEPENDENCIES.md';
@@ -47,7 +49,7 @@ jobs:
 
       - name: Aenderungsumfang pruefen
         run: |
-          cd "$GITHUB_WORKSPACE"
+          cd "$REPO_DIR"
           git diff --exit-code -- web/package.json
           unerwartet=$(git diff --name-only | grep -Ev '^(web/package-lock.json|docs/DEPENDENCIES.md)$' || true)
           if [ -n "$unerwartet" ]; then
@@ -59,7 +61,7 @@ jobs:
 
       - name: Generierte Dateien auf Feature-Branch committen
         run: |
-          cd "$GITHUB_WORKSPACE"
+          cd "$REPO_DIR"
           if git diff --quiet -- web/package-lock.json docs/DEPENDENCIES.md; then
             echo "Lockfile und Dependency-Dokumentation sind bereits aktuell."
             exit 0
