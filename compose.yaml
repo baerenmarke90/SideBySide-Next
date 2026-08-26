@@ -14,8 +14,8 @@
 # https-Basisadresse und verweigert sonst den Start. Die Checkliste dafuer
 # steht in docs/SELF-HOSTING.md.
 #
-# Die Datei liegt im Wurzelverzeichnis, nicht in deploy/, damit der
-# die Build-Kontexte ./backend und ./web unterhalb des Verzeichnisses liegen, in
+# Die Datei liegt im Wurzelverzeichnis, nicht in deploy/, damit die
+# Build-Kontexte ./backend und ./web unterhalb des Verzeichnisses liegen, in
 # dem die Compose-Datei steht. Oberflaechen wie Arcane oder Portainer, die nur
 # die Compose-Datei kopieren, muessen beide Kontexte als gepinnte Git-URL
 # setzen; die Variablen dafuer stehen in .env.example.
