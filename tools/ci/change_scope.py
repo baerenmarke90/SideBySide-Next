@@ -28,6 +28,7 @@ SAFE_DOC_EXACT = (
     "TRADEMARKS.md",
     ".gitleaksignore",
 )
+SELF_HOSTED_COMPOSE_FILES = ("compose.yaml", "compose.arcane.yaml")
 
 
 def _matches(path: str, *, prefixes: tuple[str, ...] = (), exact: tuple[str, ...] = ()) -> bool:
@@ -50,9 +51,6 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
         if not path:
             continue
 
-        # Aenderungen an der Filterlogik selbst muessen konservativ alle
-        # betroffenen Gates ausloesen, damit sich der Filter nicht selbst
-        # aus der Validierung herausfiltern kann.
         if path.startswith("tools/ci/"):
             return _all_enabled()
 
@@ -61,7 +59,7 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
         if _matches(
             path,
             prefixes=("backend/", "web/", "android/"),
-            exact=(".github/workflows/ci.yml", ".env.example", "compose.yaml", ".gitignore"),
+            exact=(".github/workflows/ci.yml", ".env.example", *SELF_HOSTED_COMPOSE_FILES, ".gitignore"),
         ):
             result["backend"] = True
             known = True
@@ -72,8 +70,9 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             exact=(
                 ".github/workflows/ci.yml",
                 ".env.example",
-                "compose.yaml",
+                *SELF_HOSTED_COMPOSE_FILES,
                 "docs/SELF-HOSTING.md",
+                "docs/ARCANE.md",
             ),
         ):
             result["self_hosted"] = True
@@ -97,8 +96,9 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             exact=(
                 ".github/workflows/self-hosted-deployment-guard.yml",
                 ".env.example",
-                "compose.yaml",
+                *SELF_HOSTED_COMPOSE_FILES,
                 "docs/SELF-HOSTING.md",
+                "docs/ARCANE.md",
             ),
         ):
             result["deployment_guard"] = True
@@ -107,10 +107,6 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
         if _is_explicitly_safe_documentation(path):
             known = True
 
-        # Neue/ungekannte Pfade werden nicht still als "Doku" interpretiert.
-        # Damit kann eine spaeter hinzukommende Build-, Deploy- oder Runtime-
-        # Datei den Filter nicht umgehen, bevor die Klassifizierung angepasst
-        # wurde.
         if not known:
             return _all_enabled()
 
