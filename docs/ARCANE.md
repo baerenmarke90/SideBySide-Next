@@ -87,14 +87,30 @@ psql -U sidebyside -d sidebyside -c "SELECT id, created_at FROM spaces;"
 
 ## Pruefung nach dem Deploy
 
-Vom Reverse-Proxy-Host bzw. aus demselben privaten Netz:
+Vom Reverse-Proxy-Host bzw. aus demselben privaten Netz kann zuerst die Erreichbarkeit des Webdienstes geprueft werden:
 
 ```bash
 curl --fail http://<docker-host>:<WEB_PORT>/healthz
-curl --fail http://<docker-host>:<API_PORT>/api/v1/health/ready
 ```
 
-Ueber die oeffentliche Origin:
+Die produktive API sollte dagegen ueber den echten TLS-Pfad geprueft werden:
+
+```bash
+curl --fail https://sidebyside.example/api/v1/health/ready
+```
+
+Das ist absichtlich nicht dasselbe wie `curl http://<docker-host>:<API_PORT>/...`: ein direkter HTTP-Aufruf mit einer Nicht-Loopback-Adresse besitzt keinen vertrauenswuerdigen `X-Forwarded-Proto: https`-Hop und muss in Produktion mit `HTTPS_REQUIRED` scheitern.
+
+Soll der interne Proxy-Hop selbst diagnostiziert werden, kann die Anfrage **vom tatsaechlich als `TRUSTED_PROXY_IPS` eingetragenen Proxy-Host** mit denselben Forwarded-Informationen simuliert werden:
+
+```bash
+curl --fail \
+  -H 'Host: sidebyside.example' \
+  -H 'X-Forwarded-Proto: https' \
+  http://<docker-host>:<API_PORT>/api/v1/health/ready
+```
+
+Ueber die oeffentliche Origin sollten damit beide Ziele funktionieren:
 
 ```bash
 curl --fail https://sidebyside.example/
