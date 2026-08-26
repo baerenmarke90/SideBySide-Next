@@ -1,5 +1,6 @@
-# Canonical Self-Hosted stack for a complete repository checkout.
-# Setup and production guidance: docs/SELF-HOSTING.md
+# Arcane/remote-workspace Self-Hosted stack.
+# Uses remote Git build contexts and therefore does not require ./backend or
+# ./web in Arcane's project workspace. See docs/ARCANE.md.
 
 x-database-environment: &database-environment
   SBS_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sidebyside}
@@ -33,12 +34,12 @@ x-runtime-environment: &runtime-environment
 
 x-backend-build: &backend-build
   build:
-    context: ./backend
+    context: "${SBS_SOURCE_REPOSITORY:-https://github.com/baerenmarke90/SideBySide-Next.git}#${SBS_SOURCE_REF:-main}:backend"
   pull_policy: build
 
 x-web-build: &web-build
   build:
-    context: ./web
+    context: "${SBS_SOURCE_REPOSITORY:-https://github.com/baerenmarke90/SideBySide-Next.git}#${SBS_SOURCE_REF:-main}:web"
     args:
       VITE_SBS_API_BASE_URL: ""
       VITE_SBS_SPACE_ID: "${SBS_WEB_SPACE_ID:-}"

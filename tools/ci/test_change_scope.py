@@ -36,12 +36,14 @@ class ChangeScopeTest(unittest.TestCase):
             },
         )
 
-    def test_compose_change_enables_runtime_but_not_supply_chain(self) -> None:
-        result = classify_paths(["compose.yaml"])
-        self.assertTrue(result["backend"])
-        self.assertTrue(result["self_hosted"])
-        self.assertTrue(result["deployment_guard"])
-        self.assertFalse(result["supply_chain"])
+    def test_compose_changes_enable_runtime_but_not_supply_chain(self) -> None:
+        for path in ("compose.yaml", "compose.arcane.yaml"):
+            with self.subTest(path=path):
+                result = classify_paths([path])
+                self.assertTrue(result["backend"])
+                self.assertTrue(result["self_hosted"])
+                self.assertTrue(result["deployment_guard"])
+                self.assertFalse(result["supply_chain"])
 
     def test_web_source_change_enables_runtime_gates(self) -> None:
         self.assertEqual(
@@ -65,11 +67,13 @@ class ChangeScopeTest(unittest.TestCase):
         self.assertFalse(result["deployment_guard"])
 
     def test_self_hosting_contract_enables_both_self_hosted_gates(self) -> None:
-        result = classify_paths(["docs/SELF-HOSTING.md"])
-        self.assertFalse(result["backend"])
-        self.assertTrue(result["self_hosted"])
-        self.assertFalse(result["supply_chain"])
-        self.assertTrue(result["deployment_guard"])
+        for path in ("docs/SELF-HOSTING.md", "docs/ARCANE.md"):
+            with self.subTest(path=path):
+                result = classify_paths([path])
+                self.assertFalse(result["backend"])
+                self.assertTrue(result["self_hosted"])
+                self.assertFalse(result["supply_chain"])
+                self.assertTrue(result["deployment_guard"])
 
     def test_filter_changes_fail_closed(self) -> None:
         self.assertTrue(all(classify_paths(["tools/ci/change_scope.py"]).values()))
