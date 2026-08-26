@@ -16,10 +16,15 @@ und wird **nicht von Hand bearbeitet**. Erzeugen mit
 `tools/openapi/generate.sh`; CI prüft den eingecheckten Stand gegen den
 Vertrag.
 
-Der S8-Client bindet diese Modelle direkt als zusätzliche Kotlin-Source-Root
-ein. Insbesondere wird die mit #119 reparierte, generatorbasierte
-`StoryItem`-Union real deserialisiert. Es gibt keine zweite handgeschriebene
-DTO-Schicht.
+Für den S8-Build wird daraus unverändert eine temporäre Compile-Source-Root
+unter `app/build/generated/` vorbereitet. Die zwei generator-owned Passkey-
+Request-Modelle mit `Map<String, Any>` werden in diesem fachfremden Slice aus
+der Compile-Kopie ausgelassen, weil kotlinx.serialization dafür keinen
+konkreten `Any`-Serializer erzeugen kann. Der Generatorbefund ist separat in
+#138 dokumentiert; die Quelldateien selbst bleiben unverändert. Alle für S8
+benötigten DTOs und insbesondere die mit #119 reparierte `StoryItem`-Union
+kommen weiterhin direkt aus dem generierten Vertrag. Es gibt keine zweite
+handgeschriebene DTO-Schicht.
 
 ## M2-S8 Referenzflow
 
