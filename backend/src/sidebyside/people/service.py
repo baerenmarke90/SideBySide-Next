@@ -29,6 +29,7 @@ from sidebyside.authorization import (
     readable,
     require_readable,
     require_writable,
+    require_writable_locked,
 )
 from sidebyside.core.errors import ConflictError, ErrorCode, ValidationError
 from sidebyside.people.models import (
@@ -201,7 +202,9 @@ def delete_person(
 
     Die Person wird vor der Versionspruefung per ``FOR UPDATE`` gesperrt.
     Dadurch koennen parallele FK-Verknuepfungen nicht zwischen der Auswahl
-    der Termine und dem Loeschen der Person sichtbar werden.
+    der Termine und dem Loeschen der Person sichtbar werden. Die Sperre
+    kommt aus dem Guard, damit eine parallel geloeschte Person hier dieselbe
+    404-Antwort ergibt wie jede andere Abwesenheit.
 
     ``preserve`` loest alle verknuepften Termine - einschliesslich privater
     Partnertermine - von der Person. Die Termine werden absichtlich ohne
@@ -210,8 +213,7 @@ def delete_person(
 
     ``cascade`` behaelt die bestehende DB-Cascade bewusst bei.
     """
-    person = require_writable(session, RelatedPerson, context, person_id)
-    session.refresh(person, with_for_update=True)
+    person = require_writable_locked(session, RelatedPerson, context, person_id)
     _ensure_expected_version(person.version, expected_version, "related person")
 
     if delete_policy is RelatedPersonDeletePolicy.PRESERVE:
