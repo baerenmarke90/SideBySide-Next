@@ -22,12 +22,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Resolve dependency lock for S8
-        run: |
-          npm install --ignore-scripts --no-audit --no-fund
-          echo "S8_LOCK_BEGIN"
-          base64 -w 0 package-lock.json
-          echo
-          echo "S8_LOCK_END"
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Upload dependency lock for repository commit
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: s8-web-lock
+          path: web/package-lock.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Type check
         run: npm run lint
