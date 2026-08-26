@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import baseCss from './styles.css?raw';
-import themeCss from './theme.css?raw';
+import baseCss from './styles.css?inline';
+import themeCss from './theme.css?inline';
 
 function channel(value: number): number {
   const normalized = value / 255;
