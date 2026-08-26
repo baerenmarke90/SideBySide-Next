@@ -1,0 +1,45 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #211a2b;
+  background: #faf8fc;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, textarea { font: inherit; }
+button, input, textarea { min-height: 44px; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #005fcc; outline-offset: 2px; }
+
+.shell { width: min(760px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 72px; }
+.page-header, .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.eyebrow, .kind { color: #6638dc; font-size: .82rem; font-weight: 750; letter-spacing: .02em; }
+h1, h2 { line-height: 1.15; }
+.panel, .story-card, .notice { background: #fff; border: 1px solid #e6e0eb; border-radius: 18px; padding: 20px; margin-top: 20px; }
+form { display: grid; gap: 8px; }
+form label { margin-top: 8px; font-weight: 700; }
+input, textarea { width: 100%; border: 1px solid #cfc7d7; border-radius: 10px; padding: 10px 12px; background: #fff; color: inherit; }
+textarea { min-height: 110px; resize: vertical; }
+button { border: 0; border-radius: 10px; padding: 10px 16px; background: #6638dc; color: #fff; font-weight: 750; cursor: pointer; }
+button.secondary { background: #fff; color: #4d3c68; border: 1px solid #cfc7d7; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+.help, .meta, .media-status { color: #6f6579; font-size: .9rem; }
+.error, .media-error { color: #9f1239; }
+.story { margin-top: 32px; }
+.story-card { margin-top: 12px; }
+.story-card h2 { margin: 4px 0 8px; }
+.story-image { display: block; width: 100%; max-height: 420px; object-fit: cover; border-radius: 12px; margin-top: 14px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+code { background: #f2eef5; border-radius: 4px; padding: 2px 5px; }
+
+@media (prefers-color-scheme: dark) {
+  :root { color: #f4eff9; background: #17131d; }
+  .panel, .story-card, .notice, input, textarea, button.secondary { background: #211a2b; border-color: #51485c; color: #f4eff9; }
+  .help, .meta, .media-status { color: #c3b9cc; }
+  code { background: #32283d; }
+}
+
+@media (max-width: 560px) {
+  .shell { width: min(100% - 24px, 760px); padding-top: 20px; }
+  .page-header, .section-heading { align-items: flex-start; flex-direction: column; }
+}
