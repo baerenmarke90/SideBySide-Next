@@ -1,0 +1,42 @@
+name: PR 181 Contract Generator
+
+on:
+  push:
+    branches:
+      - tooling/pr181-generate-contract
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    env:
+      PYTHON_VERSION: "3.13.7"
+      UV_VERSION: "0.12.5"
+      SBS_ENVIRONMENT: test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: tooling/pr181-generate-contract
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Generate canonical OpenAPI and clients
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          cd backend
+          uv sync --frozen
+          uv run --frozen python scripts/openapi_contract.py write
+          cd ..
+          tools/openapi/generate.sh
+      - name: Commit generated output
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/openapi.json web/src/api/generated android/app/src/main/java/de/urcloud/sidebyside/api/generated
+          git commit -m "chore(api): regenerate contract for PR 181"
+          git push origin HEAD:tooling/pr181-generate-contract
