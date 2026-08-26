@@ -1,17 +1,18 @@
 # Umsetzungsstand
 
-Stand: 25. August 2026  
-Aktueller `main`: `f20b257` (Merge von #118)  
-Aktueller Gate-Status: **G1 bestanden; M2-S0 abgeschlossen; M2-Runtime läuft**
+Stand: 26. August 2026  
+Aktueller `main`: `3a7adc28643ef00de51db678ec77a82be652283d` (Merge von #170)  
+Aktueller Gate-Status: **G2 bestanden; M2 abgeschlossen; M3 freigegeben**
 
 ## Dokumentenrollen
 
 - **Verbindliche Quelle:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
-- **Aktuelle Gate-Entscheidung:** [2026-08-25-g1-gate-review-after-61.md](reviews/2026-08-25-g1-gate-review-after-61.md)
+- **Aktuelle Gate-Entscheidung:** [2026-08-26-g2-final-gate-review.md](reviews/2026-08-26-g2-final-gate-review.md)
 - **Verbindliche Entwicklungsregel:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) und [AGENTS.md](../AGENTS.md)
 - **Architektur-/Betriebsentscheidungen:** datierte ADRs unter [docs/decisions](decisions)
 - **M2-Steuerung:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
+- **M3-Readiness und Delivery:** [m3/README.md](m3/README.md) und [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md)
 - **Historische Reviews:** datierte Dateien unter `docs/reviews/`; sie werden nicht nachträglich geändert.
 - **Dieses Dokument:** laufende Arbeits- und Fortschrittsliste.
 
@@ -64,13 +65,13 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 - [x] #61: RelatedPerson-Löschung mit expliziter `preserve`-/`cascade`-Policy ohne destruktiven Default
 - [x] G1 Gate Review nach #61: **BESTANDEN**
 
-### Offene M1-/Betriebshärtungen ohne M2-Blockade
+### Offene M1-/Betriebshärtungen ohne M3-Blockade
 
 - [ ] **#59 — Pre-Exposure:** Passkey-Authentication-Start gegen Challenge-Flooding absichern.
 - [ ] **#60 — Pre-Exposure:** Rate-Limit-Schwellen unter Parallelität atomar erzwingen.
 - [ ] **#25 — Repository-Hardening:** Branch Protection/Ruleset technisch erzwingen, sobald GitHub-Plan/Targeting dies ermöglicht.
 
-#59 und #60 müssen vor öffentlicher/Managed-Exposition geschlossen sein. Sie blockieren interne M2-Domainarbeit nicht.
+#59 und #60 müssen vor öffentlicher/Managed-Exposition geschlossen sein. Sie blockieren interne M3-Domainarbeit nicht.
 
 ### Betrieb: Self-Hosted-Startpfad
 
@@ -92,13 +93,13 @@ Zwei Betriebszusagen daraus sind verbindlich und stehen in [ADR 0002](decisions/
 - [x] **#70 — API:** Routen, DTOs, Concurrency, Pagination und Story-Sortierung festgelegt.
 - [x] **#78 — Media-Metadaten:** EXIF-/GPS-Strippen beim Ingest und Variantenumfang entschieden (M2-D14/D15).
 
-Offen bleiben ausschließlich `BEFORE_CLIENTS`-Entscheidungen, die erst vor stabiler Web-/Android-Integration fällig sind: M2-D10 (Notification Preview), M2-D17 (Export/Backup), M2-D18 (Client-Cache) und M2-D21 (Suchindex). Sie blockieren keinen Backend-Slice.
+Offen bleiben ausschließlich `BEFORE_CLIENTS`-Entscheidungen, die vor stabiler Vollintegration relevant werden: M2-D10 (Notification Preview), M2-D17 (Export/Backup), M2-D18 (Client-Cache) und M2-D21 (Suchindex). Sie blockierten G2 nicht und werden in den zuständigen späteren Milestones behandelt.
 
 M2-D22 (Owner-Ansicht) gehört nicht mehr dazu: die Frage formt die Story-Route und wurde deshalb mit #104 auf `BLOCKING` gehoben und entschieden — genau wie zuvor M2-D14 und M2-D15 in #78.
 
-## M2 — Runtime
+## M2 — Runtime und G2
 
-**Status: laufend.**
+**Status: abgeschlossen; G2 bestanden.**
 
 - [x] **#71 — Memory CRUD ohne Medien** (PR #77): Memory-Domain mit ProtectedPayload für Titel/Body, author-only writes bei gemeinsamer Lesbarkeit, `If-Match`/409, signierter Keyset-Cursor und `resourceVersion` im Outbox-Envelope.
 - [x] **#80 — HeartMoment mit Owner-only-Privacy** (PR #84): erster Typ mit echter Nutzerentscheidung zur Sichtbarkeit; `SHARED -> PRIVATE` als eigene atomare Operation, Emotion als ProtectedPayload.
@@ -108,17 +109,17 @@ M2-D22 (Owner-Ansicht) gehört nicht mehr dazu: die Frage formt die Story-Route 
 - [x] **#97 — Comments, Outbox und Notification Hook** (PR #98): Create/List am Parent verschachtelt, Update/Delete space-scoped, enumerierte Targets `MEMORY`/`MILESTONE`/`HEART_MOMENT`, atomarer Outbox-Eintrag und idempotenter Retry.
 - [x] **#87 — S3-kompatibler MediaStore-Adapter** (PR #100): presigned Upload und Read-URL mit den TTLs aus M2-D13, geprüft gegen denselben Contract-Test wie der lokale Adapter.
 - [x] **#113 — Story Read Model und `/timeline`** (PR #114): abgeleitete Zeitleiste über Memory, Milestone und ausschließlich gemeinsame HeartMoments; Sortierschlüssel und Keyset-Cursor nach M2-D08, private HeartMoments nie im Ergebnis — auch nicht für ihren Owner (M2-D22). Keine Story-Tabelle.
-- [ ] **S8 — dünne Web-/Android-Referenzflows:** letzter M2-Baustein vor dem G2-Nachweis. Arbeitspaket noch anzulegen.
+- [x] **S8 — dünne Web-/Android-Referenzflows:** Web und Android liefern den kritischen Memory/Media/Story-Referenzpfad.
+- [x] **#144 — realer G2-Client-E2E-Nachweis:** Web und Android laufen gegen denselben realen SideBySide-Stack aus API, Worker, PostgreSQL und LocalMediaStore.
+- [x] **#147 / PR #170 — finaler G2 Gate Review:** **G2: BESTANDEN**.
 
 ### Future-Backlog außerhalb von M2/G2
 
 - [ ] **#88 — Video-Uploads und Posterframes:** zukünftige Entwicklung, nicht jetzt implementieren. Der Prototyp #109 wurde wegen eines Produktions-Images von rund 755 MiB sowie des zusätzlichen ffmpeg-Betriebs-, Supply-Chain- und Security-Aufwands bewusst ohne Merge geschlossen.
 
-Damit ist die M2-Domain vollständig. Für G2 fehlt allein der End-to-End-Nachweis auf Web und Android.
-
 Video bleibt bis zu einer neuen Produktentscheidung fail-closed: M2-D04 erlaubt MP4 und QuickTime im Zielvertrag, der aktuelle Server weist sie mit `ATTACHMENT_TYPE_NOT_ALLOWED` ab. Clients dürfen Video nicht als verfügbar anbieten.
 
-Die Details und verbindlichen Milestone-Grenzen stehen in [M2 Project Control](m2/PROJECT-CONTROL.md).
+Die historische M2-Steuerung und verbindlichen Milestone-Grenzen stehen in [M2 Project Control](m2/PROJECT-CONTROL.md). Die aktuelle Gate-Entscheidung steht im [finalen G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
 
 ### Verbindliche M2/M5-Grenze
 
@@ -140,7 +141,7 @@ M4 wird intern in drei Delivery-Slices geteilt:
 - M4-B Activity + Notifications
 - M4-C Reminders + Rules
 
-Globale Volltextsuche ist nicht Teil von G2. Der Story-Mindestvertrag umfasst `type`, `year`, `order`, `cursor` und `limit`. #70 hat `q` nicht aufgenommen (M2-D08); globale Volltextsuche liegt damit in M4-A.
+Globale Volltextsuche war nicht Teil von G2. Der Story-Mindestvertrag umfasst `type`, `year`, `order`, `cursor` und `limit`; globale Volltextsuche liegt in M4-A.
 
 ## M2-Runtime-Reihenfolge nach S0
 
@@ -151,31 +152,36 @@ Globale Volltextsuche ist nicht Teil von G2. Der Story-Mindestvertrag umfasst `t
 5. ~~Milestone (#94)~~ — geliefert
 6. ~~Comments + Outbox/Notification Hook (#97)~~ — geliefert
 7. ~~Story Read Model (#113)~~ — geliefert
-8. dünne Web-/Android-Referenzflows
-9. G2 Review
+8. ~~dünne Web-/Android-Referenzflows~~ — geliefert
+9. ~~G2 Review~~ — **BESTANDEN**
 
 Der S3-Adapter (#87) lief daneben und ist geliefert. Video (#88) ist nicht Teil dieser Kette oder von M2/G2, sondern Future-Backlog.
 
-Der Memory-Slice kommt bewusst vor Media, um zuerst M2-Migrationstil, ProtectedPayload, Tenant Guard, Autorregel und Concurrency auf einer kleineren Sicherheitsfläche zu validieren.
+## G2 — Story Alpha
 
-## G2 — Story Alpha, Exit Criteria
+**Status: BESTANDEN.** Verbindliche Entscheidungsquelle ist der [finale G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
 
-G2 kann erst bestanden werden, wenn:
+Nachgewiesen sind M2-Domain/API, Story-Privacy, Media-/Parent-Autorisierung, Cross-Tenant-/Race-/Datenintegrität, OpenAPI, Migrationen, PostgreSQL-Integration sowie ein realer kritischer Memory/Media/Story-Flow in Web und Android gegen denselben SideBySide-Stack.
 
-- Memory, Attachment/Media für Bilder, HeartMoment, Milestone und Comment für M2 vollständig sind,
-- Story niemals `OWNER_ONLY` vor Suche/Gruppierung/Pagination passieren lässt,
-- Media-/Upload-Abuse, Parent-Autorisierung und relevante Races geprüft sind,
-- OpenAPI, Migrationen und PostgreSQL-Integrationstests grün sind,
-- mindestens ein kritischer Memory/Media/Story-Flow in Web und Android Ende-zu-Ende validiert ist,
-- diese Referenzflows Privacy-/Accessibility-Abnahme ohne hohe Befunde bestehen.
+Die manuelle Accessibility-Abnahme wurde bewusst aus G2 in die finale Client-/Release-QA verschoben. Sie gilt **nicht** als bestanden und bleibt Bestandteil von M5/G4. Vollständige Client-Parität ist ebenfalls M5/G4.
 
-Vollständige Client-Parität ist **kein** G2-Kriterium; sie gehört zu M5/G4.
+## M3 — Planen & Private Area
+
+**Status: freigegeben.** Das [M3 Technical Readiness Package](m3/README.md) ist vorbereitet; alle M3-D01 bis M3-D32 stehen auf `DECIDED`.
+
+Die Runtime-Reihenfolge folgt dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Ein konkreter Slice startet erst, wenn sein produktiver Request/Response-/OpenAPI-Vertrag eindeutig contract-testbar ist und Reuse-before-build sowie die normalen PR-/CI-Gates erfüllt sind.
+
+- [ ] **M3-S1 — Wish Foundation:** nächster Runtime-Slice.
+- [ ] M3-S2 — Plan + Wish->Plan.
+- [ ] M3-S3 — Place Foundation.
+- [ ] M3-S4 — typisierte Content Relations.
+- [ ] M3-S5 — Chapter.
+- [ ] M3-S6+ — Collections und Private Area gemäß Delivery Plan.
 
 ## Spätere Milestones
 
-- [ ] M3 — Wishes, Plans, Places, Chapters, Collections, Private Area
 - [ ] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules
-- [ ] M5 — Client Completion & Parity, Export/Import, Read Cache
+- [ ] M5 — Client Completion & Parity, Export/Import, Read Cache, finale Accessibility-QA
 - [ ] M6 — Questions, Check-in, Monats-/Jahresrückblicke
 - [ ] M7 — Integrationen/Provider
 - [ ] M8 — Location/Context mit explizitem Opt-in
@@ -184,4 +190,4 @@ Vollständige Client-Parität ist **kein** G2-Kriterium; sie gehört zu M5/G4.
 
 ## Nächster Prüfpunkt
 
-#67 vollständig abschließen und mergen. Danach #68 und #69 als getrennte S0-Decision-Slices bearbeiten. #70 übernimmt anschließend die freigegebenen Entscheidungen in den API-Vertrag. Erst danach darf #71 als erster produktiver M2-Runtime-Slice starten.
+M3-S1 **Wish Foundation** als ersten Runtime-Slice nach dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md) vorbereiten. Vor dem ersten Runtime-Commit muss der produktive Wish-Request/Response-/OpenAPI-Vertrag contract-testbar konkretisiert sein; danach gelten die normalen Reuse-, Branch-, PR- und CI-Gates.
