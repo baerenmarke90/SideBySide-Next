@@ -21,8 +21,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install pinned direct dependencies
-        run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
+      - name: Resolve dependency lock for S8
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          echo "S8_LOCK_BEGIN"
+          base64 -w 0 package-lock.json
+          echo
+          echo "S8_LOCK_END"
 
       - name: Type check
         run: npm run lint
