@@ -52,12 +52,17 @@ class ReferenceViewModel(
                 .onSuccess { signedIn ->
                     if (attemptEpoch != sessionEpoch) return@onSuccess
                     session = signedIn
+                    selectedImage = null
                     mutate {
                         it.copy(
                             loggedIn = true,
                             busy = false,
                             status = "Angemeldet.",
                             error = null,
+                            selectedImageName = null,
+                            lastMemoryTitle = null,
+                            lastMemoryBody = null,
+                            lastImageBytes = null,
                             storyItems = emptyList(),
                         )
                     }
@@ -71,7 +76,10 @@ class ReferenceViewModel(
         }
     }
 
-    fun selectImage(image: SelectedImage) {
+    fun beginImageSelection(): Long? = session?.let { sessionEpoch }
+
+    fun selectImage(image: SelectedImage, selectionEpoch: Long) {
+        if (!isCurrentSessionEpoch(selectionEpoch)) return
         selectedImage = image
         mutate {
             it.copy(
@@ -82,7 +90,8 @@ class ReferenceViewModel(
         }
     }
 
-    fun setImageError(throwable: Throwable) {
+    fun setImageError(throwable: Throwable, selectionEpoch: Long) {
+        if (!isCurrentSessionEpoch(selectionEpoch)) return
         selectedImage = null
         mutate {
             it.copy(
@@ -188,6 +197,9 @@ class ReferenceViewModel(
         selectedImage = null
         _uiState.value = ReferenceUiState(configured = config.isConfigured, status = "Abgemeldet.")
     }
+
+    private fun isCurrentSessionEpoch(epoch: Long): Boolean =
+        session != null && sessionEpoch == epoch
 
     private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
         sessionEpoch == epoch && session === currentSession
