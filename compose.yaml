@@ -17,8 +17,9 @@
 # Die Datei liegt im Wurzelverzeichnis, nicht in deploy/, damit die
 # Build-Kontexte ./backend und ./web unterhalb des Verzeichnisses liegen, in
 # dem die Compose-Datei steht. Oberflaechen wie Arcane oder Portainer, die nur
-# die Compose-Datei kopieren, muessen beide Kontexte als gepinnte Git-URL
-# setzen; die Variablen dafuer stehen in .env.example.
+# die Compose-Datei kopieren, muessen beide Kontexte als Git-URL mit einem
+# fuer die jeweilige Oberflaeche unterstuetzten Ref setzen; die Variablen
+# dafuer stehen in .env.example.
 #
 # Fuenf Bausteine: Web, API, Worker, Migration, PostgreSQL. Medien liegen im
 # Volume oder, wenn konfiguriert, in einem S3-kompatiblen Speicher.
@@ -138,15 +139,14 @@ services:
     networks:
       - app
     ports:
-      # Der sichere Standard ist nur vom Host selbst erreichbar. LAN und
-      # Internet gehen ausschliesslich ueber einen HTTPS-Reverse-Proxy.
-      # API_PORT muss auf dem Host frei sein; bei einer Kollision bricht
-      # Docker den Start ab, statt einen zweiten Dienst auf denselben Port
-      # zu legen.
+      # Der sichere Standard bindet nur an Loopback. Steht der TLS-Proxy auf
+      # einem anderen Host, SBS_BIND_IP gezielt auf die private Adresse dieses
+      # Docker-Hosts setzen. 0.0.0.0 ist kein notwendiger Ersatz dafuer.
+      # API_PORT muss auf dieser Adresse frei sein.
       - name: api-loopback
         target: 8000
         published: "${API_PORT:-8000}"
-        host_ip: 127.0.0.1
+        host_ip: "${SBS_BIND_IP:-127.0.0.1}"
         protocol: tcp
     healthcheck:
       # Container-Health bedeutet Betriebsbereitschaft, nicht nur einen
@@ -192,7 +192,7 @@ services:
       - name: web-loopback
         target: 8080
         published: "${WEB_PORT:-8080}"
-        host_ip: 127.0.0.1
+        host_ip: "${SBS_BIND_IP:-127.0.0.1}"
         protocol: tcp
     depends_on:
       api:
