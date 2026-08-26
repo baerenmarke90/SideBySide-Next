@@ -123,14 +123,14 @@ def test_only_complete_and_patch_carry_the_experienced_day() -> None:
 
 def test_direct_create_needs_only_a_title() -> None:
     schema = _components()["PlanCreate"]
-    assert set(schema["properties"]) == {"title", "description"}
+    assert set(schema["properties"]) == {"title", "description", "placeId"}
     assert schema["required"] == ["title"]
 
 
 def test_conversion_carries_no_required_field() -> None:
     """Ohne eigenen Titel uebernimmt der Plan den des Wishes."""
     schema = _components()["WishToPlan"]
-    assert set(schema["properties"]) == {"title", "description"}
+    assert set(schema["properties"]) == {"title", "description", "placeId"}
     assert "required" not in schema
 
 
@@ -177,13 +177,16 @@ def test_list_filters_by_status_and_not_by_free_text() -> None:
     assert "q" not in parameter
 
 
-def test_no_place_surface_leaked_into_this_slice() -> None:
-    """`placeId` ist M3-S3.
+def test_the_place_is_a_single_canonical_field() -> None:
+    """`placeId` kam mit M3-S3 dazu (M3-D08/D31).
 
-    M3-D02 und M3-D30 nennen das Feld bereits. Es steht hier trotzdem
-    nicht im Vertrag: ohne Place-Domaene gaebe es nichts, worauf es zeigen
-    koennte, und ein Vertrag mit einem unbenutzbaren Feld verspricht eine
-    Zuordnung, die der Server nicht herstellen kann.
+    Einspaltig und kanonisch: ein Plan hat hoechstens einen primaeren Ort,
+    und es gibt keine `place_plans`-Flaeche daneben. Die Form des Feldes
+    prueft `test_m3_place_openapi`; hier zaehlt nur, dass es genau eines
+    ist und keine zweite Zuordnungsroute existiert.
     """
     for name in ("PlanCreate", "PlanUpdate", "WishToPlan", "PlanDetail"):
-        assert "placeId" not in _components()[name]["properties"], name
+        assert "placeId" in _components()[name]["properties"], name
+        assert "placeIds" not in _components()[name]["properties"], name
+
+    assert not any("/plans/{planId}/places" in pfad for pfad in _paths())

@@ -1,6 +1,6 @@
 # M3 Delivery Plan
 
-**Status:** S0 abgeschlossen; Runtime freigegeben; S1 und S2 geliefert  
+**Status:** S0 abgeschlossen; Runtime freigegeben; S1 bis S3 geliefert  
 **Stand:** 26.08.2026
 
 ## 1. Gate vor Runtime
@@ -138,7 +138,7 @@ Umgesetzt, inklusive der Race- und Rollback-Pflichttests aus dem Decision-Dokume
 
 Nicht enthalten und ausdruecklich bei S3: `Plan.placeId`. M3-D02 und M3-D30 nennen das Feld fuer Create, PATCH und Konvertierung; ohne Place-Domaene koennte es auf nichts zeigen, und ein Vertrag mit einem unbenutzbaren Feld verspricht eine Zuordnung, die der Server nicht herstellen kann.
 
-## 6. S3 – Place Foundation – naechster Slice
+## 6. S3 – Place Foundation – geliefert
 
 Scope:
 
@@ -152,7 +152,14 @@ Scope:
 - Delete setzt Plan/Chapter-Place-FKs auf NULL und entfernt nur Join-Relations;
 - `Plan.placeId` als Feld, Migration und Vertragsflaeche nachziehen (aus S2 verschoben).
 
-## 7. S4 – Typisierte Content Relations
+Umgesetzt. Zwei Punkte zur Ausfuehrung:
+
+- Place-Delete loest zugeordnete Plans **versioniert im Dienst** und nicht nur ueber `ON DELETE SET NULL`. Ein Plan, dessen Ort verschwindet, hat sich geaendert; ohne neue Version schriebe ein Partner mit einem Stand weiter, der einen Ort zeigt, den es nicht mehr gibt. Der Fremdschluessel bleibt als Grenze bestehen.
+- Die Log-Redaction ist mehr als eine Domaenenregel geworden: gebundene Parameter standen bisher in jeder Datenbank-Fehlermeldung und damit im Anwendungslog. Das betraf Koordinaten ebenso wie alle bestehenden ProtectedPayloads. Behoben an der Engine.
+
+`Chapter.placeId` bleibt bei S5 - ohne Chapter-Domaene gibt es die Spalte nicht.
+
+## 7. S4 – Typisierte Content Relations – naechster Slice
 
 M3 implementiert:
 

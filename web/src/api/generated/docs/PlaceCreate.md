@@ -1,27 +1,30 @@
 
-# WishToPlan
+# PlaceCreate
 
-Der Konvertierungsrequest.  Alle Felder optional: ohne eigenen Titel uebernimmt der Plan den des Wishes. `sourceWishId`, `status` und die Termine kommen nicht vom Client - der Wish steht im Pfad, alles andere entsteht serverseitig.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
+`address` | string
 `description` | string
-`placeId` | string
-`title` | string
+`latitude` | number
+`longitude` | number
+`name` | string
 
 ## Example
 
 ```typescript
-import type { WishToPlan } from ''
+import type { PlaceCreate } from ''
 
 // TODO: Update the object below with actual values
 const example = {
+  "address": null,
   "description": null,
-  "placeId": null,
-  "title": null,
-} satisfies WishToPlan
+  "latitude": null,
+  "longitude": null,
+  "name": null,
+} satisfies PlaceCreate
 
 console.log(example)
 
@@ -30,7 +33,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as WishToPlan
+const exampleParsed = JSON.parse(exampleJSON) as PlaceCreate
 console.log(exampleParsed)
 ```
 

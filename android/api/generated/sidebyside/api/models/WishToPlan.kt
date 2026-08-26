@@ -32,6 +32,7 @@ import kotlinx.serialization.Contextual
  * Der Konvertierungsrequest.  Alle Felder optional: ohne eigenen Titel uebernimmt der Plan den des Wishes. `sourceWishId`, `status` und die Termine kommen nicht vom Client - der Wish steht im Pfad, alles andere entsteht serverseitig.
  *
  * @param description 
+ * @param placeId 
  * @param title 
  */
 @Serializable
@@ -40,6 +41,9 @@ data class WishToPlan (
 
     @SerialName(value = "description")
     val description: kotlin.String? = null,
+
+    @Contextual @SerialName(value = "placeId")
+    val placeId: java.util.UUID? = null,
 
     @SerialName(value = "title")
     val title: kotlin.String? = null

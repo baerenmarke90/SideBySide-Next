@@ -104,6 +104,14 @@ class Plan(
         default=PlanStatus.IDEA.value,
         server_default=text("'IDEA'"),
     )
+    place_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
+    """Der eine primaere Ort dieses Plans - oder keiner.
+
+    Kanonisch und einspaltig (M3-D08/D31): es gibt bewusst keine Tabelle
+    `place_plans`. Ein Plan hat hoechstens einen Ort; mehrere waeren eine
+    Liste ohne Reihenfolge, und die braucht niemand.
+    """
+
     source_wish_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
     """Der Wish, aus dem dieser Plan entstanden ist - oder NULL.
 
@@ -172,7 +180,23 @@ class Plan(
             ["wishes.id", "wishes.space_id"],
             name="fk_plans_source_wish_id_wishes",
         ),
+        # Wie beim source Wish zusammengesetzt, damit ein Plan nicht auf
+        # einen Ort aus einem fremden Space zeigen kann. `SET NULL` nennt
+        # ausdruecklich die Spalte: ohne die Spaltenliste wuerde
+        # PostgreSQL auch `space_id` leeren, und die ist NOT NULL.
+        #
+        # Der Place-Dienst loest die Zuordnung schon vorher versioniert
+        # auf. Dieser Fremdschluessel ist die Grenze fuer den Fall, dass
+        # das einmal nicht passiert ist - ein Plan zeigt nie auf einen Ort,
+        # den es nicht mehr gibt.
+        ForeignKeyConstraint(
+            ["place_id", "space_id"],
+            ["places.id", "places.space_id"],
+            name="fk_plans_place_id_places",
+            ondelete="SET NULL (place_id)",
+        ),
         Index("ix_plans_owner_id", "owner_id"),
+        Index("ix_plans_place_id", "place_id"),
         Index("ix_plans_space_id_created_at_id", "space_id", "created_at", "id"),
         Index("ix_plans_space_id_status", "space_id", "status"),
         Index("ix_plans_space_id_planned_start", "space_id", "planned_start"),

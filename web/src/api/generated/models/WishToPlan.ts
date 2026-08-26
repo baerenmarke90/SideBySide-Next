@@ -34,6 +34,12 @@ export interface WishToPlan {
      * @type {string}
      * @memberof WishToPlan
      */
+    placeId?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof WishToPlan
+     */
     title?: string;
 }
 
@@ -55,6 +61,7 @@ export function WishToPlanFromJSONTyped(json: any, ignoreDiscriminator: boolean)
     return {
         
         'description': json['description'] == null ? undefined : json['description'],
+        'placeId': json['placeId'] == null ? undefined : json['placeId'],
         'title': json['title'] == null ? undefined : json['title'],
     };
 }
@@ -71,6 +78,7 @@ export function WishToPlanToJSONTyped(value?: WishToPlan | null, ignoreDiscrimin
     return {
         
         'description': value['description'],
+        'placeId': value['placeId'],
         'title': value['title'],
     };
 }

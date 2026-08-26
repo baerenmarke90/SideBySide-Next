@@ -9,6 +9,7 @@ Name | Type
 ------------ | -------------
 `description` | string
 `experiencedOn` | Date
+`placeId` | string
 `title` | string
 
 ## Example
@@ -20,6 +21,7 @@ import type { PlanUpdate } from ''
 const example = {
   "description": null,
   "experiencedOn": null,
+  "placeId": null,
   "title": null,
 } satisfies PlanUpdate
 

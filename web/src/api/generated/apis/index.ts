@@ -9,6 +9,7 @@ export * from './InvitationsApi';
 export * from './MemoriesApi';
 export * from './MilestonesApi';
 export * from './PeopleApi';
+export * from './PlacesApi';
 export * from './PlansApi';
 export * from './ProfilesApi';
 export * from './SpacesApi';

@@ -3,12 +3,18 @@
 Dieser Dienst traegt die Operationen, die zwei Aggregate gleichzeitig
 beruehren. Drei Dinge sind daran wichtig und stehen deshalb hier oben.
 
-**Sperrreihenfolge.** Wo Wish und Plan zusammen betroffen sind, gilt
-`Wish -> Plan` (M3-D02). Ein Plan-Einstieg darf die Plan-ID zunaechst
+**Sperrreihenfolge.** Im M3-Kern gilt `Place -> Wish -> Plan`. Der Plan
+wird immer zuletzt gesperrt; damit kann kein Paar von Operationen sich
+gegenseitig blockieren. Ein Plan-Einstieg darf die Plan-ID zunaechst
 ungesperrt aufloesen, muss dann den source Wish sperren und den Plan
 danach in derselben Transaktion erneut sperren und revalidieren. Zwischen
 dem ungesperrten Lesen und dem Sperren kann sich alles geaendert haben -
 deshalb wird nach dem Sperren nicht weitergerechnet, sondern nachgesehen.
+
+Ein `placeId` im Request wird aus demselben Grund *vor* dem Plan
+aufgeloest und mit `FOR SHARE` gehalten: der Ort darf zwischen der
+Pruefung und dem Schreiben des Verweises nicht geloescht werden. Ein
+Place-Delete braucht `FOR UPDATE` und wartet deshalb.
 
 **Wem der Status gehoert.** Der Plan-Automat steht hier, der Wish-Automat
 in `wishes.service`. Dieser Dienst ruft dort `plan_created`,
@@ -38,6 +44,7 @@ from sidebyside.authorization import (
     AuthorizationContext,
     readable,
     require_readable,
+    require_readable_shared,
     require_writable,
     require_writable_locked,
 )
@@ -47,6 +54,7 @@ from sidebyside.core.errors import ConflictError, ErrorCode, ValidationError
 from sidebyside.domain.events import DomainEvent, EventType, PublicEventPayload
 from sidebyside.identity.models import Account
 from sidebyside.outbox import service as outbox_service
+from sidebyside.places.models import Place
 from sidebyside.plans.models import Plan, PlanPayload, PlanStatus, shared_privacy
 from sidebyside.wishes import service as wish_service
 from sidebyside.wishes.models import Wish, WishStatus
@@ -173,12 +181,29 @@ def _validate_schedule(planned_start: datetime | None, planned_end: datetime | N
         )
 
 
+def _resolve_place(
+    session: Session,
+    context: AuthorizationContext,
+    place_id: UUID | str | None,
+) -> UUID | None:
+    """Den Ort space-scoped aufloesen und bis zum Commit halten.
+
+    Ein Ort aus einem fremden Space, eine unbekannte ID und eine
+    fehlgeformte ID enden identisch in `PLACE_NOT_FOUND` - der Verweis
+    darf keine Existenzauskunft ueber fremde Orte werden.
+    """
+    if place_id is None:
+        return None
+    return require_readable_shared(session, Place, context, place_id).id
+
+
 def create_plan(
     session: Session,
     context: AuthorizationContext,
     *,
     title: str,
     description: str | None,
+    place_id: UUID | str | None,
 ) -> Plan:
     """Direct Plan Create nach M3-D30.
 
@@ -192,6 +217,7 @@ def create_plan(
         privacy_class=shared_privacy(),
         status=PlanStatus.IDEA.value,
         source_wish_id=None,
+        place_id=_resolve_place(session, context, place_id),
         payload=PlanPayload(title=_normalize_title(title), description=description),
     )
     session.add(plan)
@@ -256,6 +282,7 @@ def update_plan(
     changed_fields: frozenset[str],
     title: str | None,
     description: str | None,
+    place_id: UUID | str | None,
     experienced_on: date | None,
 ) -> Plan:
     """Fachliche Korrektur ohne Statuswirkung (M3-D04).
@@ -265,8 +292,18 @@ def update_plan(
     ist deshalb nur dort korrigierbar - auf einem Plan ohne Abschluss waere
     es ein vorweggenommener Completion-Termin.
     """
+    # Der Ort steht vor dem Plan - sonst entstuende die umgekehrte
+    # Reihenfolge zum Place-Delete, und zwei Requests koennten sich
+    # gegenseitig blockieren.
+    next_place_id = (
+        _resolve_place(session, context, place_id) if "place_id" in changed_fields else None
+    )
+
     plan = _lock_plan(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
+
+    if "place_id" in changed_fields:
+        plan.place_id = next_place_id
 
     next_title = plan.payload.title
     next_description = plan.payload.description
@@ -474,6 +511,7 @@ def convert_wish_to_plan(
     expected_version: int,
     title: str | None,
     description: str | None,
+    place_id: UUID | str | None,
 ) -> WishToPlanResult:
     """Aus einem Wish genau einen Plan machen - atomar und idempotent (M3-D02).
 
@@ -487,6 +525,9 @@ def convert_wish_to_plan(
     Operation, die laengst erfolgreich war - und der einzige Ausweg waere
     ein zweiter Plan.
     """
+    # Erst der Ort, dann der Wish, dann der Plan.
+    resolved_place_id = _resolve_place(session, context, place_id)
+
     wish = wish_service.lock(session, context, wish_id)
     existing = session.execute(
         select(Plan).where(Plan.source_wish_id == wish.id).with_for_update()
@@ -523,6 +564,7 @@ def convert_wish_to_plan(
         privacy_class=shared_privacy(),
         status=PlanStatus.IDEA.value,
         source_wish_id=wish.id,
+        place_id=resolved_place_id,
         payload=PlanPayload(
             # Ohne eigenen Titel uebernimmt der Plan den des Wishes. Danach
             # laufen beide getrennt: eine spaetere Wish-Umbenennung
@@ -556,6 +598,37 @@ def _ensure_wish_version(wish: Wish, expected_version: int) -> None:
             "The resource was changed since it was loaded.",
             ErrorCode.RESOURCE_VERSION_CONFLICT,
         )
+
+
+def detach_place(session: Session, place: Place, actor_id: UUID) -> None:
+    """Alle Plans von einem Ort loesen, der gleich geloescht wird.
+
+    Aufgerufen vom Place-Dienst, der den Ort bereits gesperrt haelt. Die
+    Plans werden hier gesperrt - Reihenfolge `Place -> Plan`, wie ueberall.
+
+    Jeder betroffene Plan bekommt eine neue Version und ein Ereignis. Ein
+    stilles `ON DELETE SET NULL` waere bequemer, wuerde aber die
+    Zuordnung unter einem Client wegziehen, der weiter mit seiner alten
+    Version schreibt und nie einen Konflikt saehe.
+    """
+    betroffen = list(
+        session.execute(
+            select(Plan)
+            .where(Plan.space_id == place.space_id, Plan.place_id == place.id)
+            .order_by(Plan.id)
+            .with_for_update()
+        )
+        .scalars()
+        .all()
+    )
+    for plan in betroffen:
+        plan.place_id = None
+    if not betroffen:
+        return
+    _flush(session)
+    for plan in betroffen:
+        _record(session, plan, actor_id, EventType.PLAN_UPDATED)
+    _flush(session)
 
 
 def _cursor_binding(context: AuthorizationContext, status: PlanStatus | None) -> dict[str, Any]:

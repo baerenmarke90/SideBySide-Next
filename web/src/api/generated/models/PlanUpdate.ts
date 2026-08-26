@@ -41,6 +41,12 @@ export interface PlanUpdate {
      * @type {string}
      * @memberof PlanUpdate
      */
+    placeId?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof PlanUpdate
+     */
     title?: string;
 }
 
@@ -63,6 +69,7 @@ export function PlanUpdateFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'experiencedOn': json['experiencedOn'] == null ? undefined : (new Date(json['experiencedOn'])),
+        'placeId': json['placeId'] === undefined ? undefined : json['placeId'] === null ? null : json['placeId'],
         'title': json['title'] == null ? undefined : json['title'],
     };
 }
@@ -80,6 +87,7 @@ export function PlanUpdateToJSONTyped(value?: PlanUpdate | null, ignoreDiscrimin
         
         'description': value['description'],
         'experiencedOn': value['experiencedOn'] == null ? value['experiencedOn'] : value['experiencedOn'].toISOString().substring(0,10),
+        'placeId': value['placeId'],
         'title': value['title'],
     };
 }

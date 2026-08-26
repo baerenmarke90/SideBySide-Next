@@ -25,6 +25,7 @@ from __future__ import annotations
 from sidebyside.authorization.guard import (
     readable,
     require_readable,
+    require_readable_shared,
     require_writable,
     require_writable_locked,
     writable,
@@ -61,6 +62,7 @@ __all__ = [
     "privacy_for",
     "readable",
     "require_readable",
+    "require_readable_shared",
     "require_writable",
     "require_writable_locked",
     "visibility_of",
