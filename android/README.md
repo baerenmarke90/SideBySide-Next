@@ -56,7 +56,7 @@ Betreiberhinweis und startet keine API-Anfrage.
 
 ## Lokal prüfen
 
-Der CI-Stand verwendet JDK 17, Gradle 9.5.0, AGP 9.3.0 und compileSdk 37.
+Der CI-Stand verwendet JDK 17, Gradle 9.5.0, AGP 9.3.0 und compileSdk 36.
 Mit entsprechend installiertem Android SDK:
 
 ```bash
