@@ -42,6 +42,7 @@ class PlanCreate(ApiModel):
 
     title: str
     description: str | SkipJsonSchema[None] = None
+    place_id: UUID | SkipJsonSchema[None] = None
 
     @field_validator("title")
     @classmethod
@@ -72,6 +73,9 @@ class PlanUpdate(ApiModel):
 
     title: str | SkipJsonSchema[None] = None
     description: str | None = None
+    # Ausdruecklich nullable: so laesst sich die Ortszuordnung wieder
+    # loesen, ohne den Ort selbst anzufassen.
+    place_id: UUID | None = None
     experienced_on: date | SkipJsonSchema[None] = None
 
     @model_validator(mode="after")
@@ -119,6 +123,7 @@ class WishToPlan(ApiModel):
 
     title: str | SkipJsonSchema[None] = None
     description: str | SkipJsonSchema[None] = None
+    place_id: UUID | SkipJsonSchema[None] = None
 
     @field_validator("title")
     @classmethod
@@ -140,6 +145,7 @@ class PlanDetail(ApiModel):
     space_id: UUID
     created_by: UUID
     source_wish_id: UUID | None
+    place_id: UUID | None
     title: str
     description: str | None
     status: PlanStatus
@@ -190,6 +196,7 @@ def _plan_detail(
         space_id=plan.space_id,
         created_by=plan.owner_id,
         source_wish_id=plan.source_wish_id,
+        place_id=plan.place_id,
         title=plan.payload.title,
         description=plan.payload.description,
         status=PlanStatus(plan.status),
@@ -229,6 +236,7 @@ def create_plan(
         authorization,
         title=body.title,
         description=body.description,
+        place_id=body.place_id,
     )
     response.headers["ETag"] = etag_for(plan.version)
     return _plan_detail(session, authorization, plan)
@@ -300,6 +308,7 @@ def update_plan(
         changed_fields=frozenset(body.model_fields_set),
         title=body.title,
         description=body.description,
+        place_id=body.place_id,
         experienced_on=body.experienced_on,
     )
     response.headers["ETag"] = etag_for(plan.version)
@@ -462,6 +471,7 @@ def convert_wish_to_plan(
         expected_version=expected_version,
         title=body.title,
         description=body.description,
+        place_id=body.place_id,
     )
     if not result.created:
         response.status_code = http_status.HTTP_200_OK

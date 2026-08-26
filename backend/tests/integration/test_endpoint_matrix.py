@@ -100,6 +100,7 @@ MILESTONE = {
 COMMENT = {"body": "Matrix Comment"}
 WISH = {"title": "Matrix Wish"}
 PLAN = {"title": "Matrix Plan", "description": "Text"}
+PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 
 SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
@@ -330,6 +331,26 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="WISH_NOT_FOUND",
     ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/places"),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/places", body=PLACE),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/places/{placeId}",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/places/{placeId}",
+        body={"name": "Matrix Place aktualisiert"},
+        if_match=True,
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/places/{placeId}",
+        if_match=True,
+        resource_absence="PLACE_NOT_FOUND",
+    ),
     Endpunkt("GET", "/api/v1/spaces/{spaceId}/plans"),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/plans", body=PLAN),
     Endpunkt(
@@ -490,6 +511,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
         f"{basis}/memories/{memory['id']}/comments", json=COMMENT, headers=kopf
     ).json()
     wish = client.post(f"{basis}/wishes", json=WISH, headers=kopf).json()
+    place = client.post(f"{basis}/places", json=PLACE, headers=kopf).json()
     plan = client.post(f"{basis}/plans", json=PLAN, headers=kopf).json()
     attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=kopf).json()
 
@@ -511,6 +533,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "commentId": comment["id"],
             "wishId": wish["id"],
             "planId": plan["id"],
+            "placeId": place["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
@@ -620,6 +643,7 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "commentId",
             "wishId",
             "planId",
+            "placeId",
         )
         if "{" + name + "}" in endpunkt.template
     )

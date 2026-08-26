@@ -114,6 +114,7 @@ class TestParallelerConvert:
                     expected_version=1,
                     title=None,
                     description=None,
+                    place_id=None,
                 )
                 return "CREATED" if ergebnis.created else f"RETRY:{ergebnis.plan.id}"
 
@@ -171,6 +172,7 @@ class TestParallelerConvert:
                     expected_version=1,
                     title=None,
                     description=None,
+                    place_id=None,
                 )
                 return "CREATED" if ergebnis.created else str(ergebnis.plan.id)
 
@@ -232,6 +234,7 @@ class TestRollback:
                 expected_version=1,
                 title=None,
                 description=None,
+                place_id=None,
             )
             plan_id = ergebnis.plan.id
 
@@ -276,6 +279,7 @@ class TestDeleteGegenLifecycle:
                     expected_version=1,
                     title=None,
                     description=None,
+                    place_id=None,
                 )
                 return "CONVERTED"
 
@@ -315,6 +319,7 @@ class TestDeleteGegenLifecycle:
                 expected_version=1,
                 title=None,
                 description=None,
+                place_id=None,
             )
             plan_id = ergebnis.plan.id
 
