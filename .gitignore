@@ -45,3 +45,4 @@ android/**/build/
 .idea/
 .vscode/
 .DS_Store
+.openapi-check/

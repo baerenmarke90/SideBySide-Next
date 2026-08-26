@@ -1218,6 +1218,61 @@
         "title": "MemoryPage",
         "type": "object"
       },
+      "MemorySummary": {
+        "description": "Eine Memory als Karte der Zeitleiste.\n\nOhne `body`: die Karte braucht eine Ueberschrift und ihre Bilder, und\neine Seite mit hundert vollstaendigen Texten waere die Antwort, die\nniemand angefordert hat. Der Text steht in der Detailansicht.",
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryAttachmentSummary"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
+          "author": {
+            "$ref": "#/components/schemas/AuthorSummary"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/ResourceCapabilities"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "happenedOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Happenedon"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "happenedOn",
+          "createdAt",
+          "author",
+          "capabilities",
+          "attachments"
+        ],
+        "title": "MemorySummary",
+        "type": "object"
+      },
       "MemoryUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -1388,6 +1443,45 @@
           "hasMore"
         ],
         "title": "MilestonePage",
+        "type": "object"
+      },
+      "MilestoneSummary": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/AuthorSummary"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/ResourceCapabilities"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "happenedOn": {
+            "format": "date",
+            "title": "Happenedon",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "happenedOn",
+          "createdAt",
+          "author",
+          "capabilities"
+        ],
+        "title": "MilestoneSummary",
         "type": "object"
       },
       "MilestoneUpdate": {
@@ -2121,6 +2215,61 @@
         "title": "SessionView",
         "type": "object"
       },
+      "SharedHeartMomentSummary": {
+        "description": "Ein gemeinsamer HeartMoment. Eine private Variante gibt es nicht.",
+        "properties": {
+          "attachment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttachmentSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author": {
+            "$ref": "#/components/schemas/AuthorSummary"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/ResourceCapabilities"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "emotion": {
+            "$ref": "#/components/schemas/HeartEmotion"
+          },
+          "happenedOn": {
+            "format": "date",
+            "title": "Happenedon",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "emotion",
+          "happenedOn",
+          "createdAt",
+          "author",
+          "capabilities",
+          "attachment"
+        ],
+        "title": "SharedHeartMomentSummary",
+        "type": "object"
+      },
       "SignInRequest": {
         "properties": {
           "deviceName": {
@@ -2334,6 +2483,151 @@
           "partners"
         ],
         "title": "SpaceView",
+        "type": "object"
+      },
+      "StoryHeartMomentItem": {
+        "properties": {
+          "effectiveDate": {
+            "format": "date",
+            "title": "Effectivedate",
+            "type": "string"
+          },
+          "heartMoment": {
+            "$ref": "#/components/schemas/SharedHeartMomentSummary"
+          },
+          "kind": {
+            "const": "HEART_MOMENT",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "effectiveDate",
+          "heartMoment"
+        ],
+        "title": "StoryHeartMomentItem",
+        "type": "object"
+      },
+      "StoryItem": {
+        "description": "Ein Eintrag der Zeitleiste, diskriminiert ueber `kind`.\n\nEin eigener Typ und keine anonyme Union im Listenfeld: sonst benennt\nder OpenAPI-Vertrag sie nach ihrem Fundort - `StoryPageItemsInner` -\nund jeder erzeugte Client traegt diesen Namen weiter. `API-DESIGN.md`\nnennt sie `StoryItem`, und das soll auch im Vertrag stehen.",
+        "discriminator": {
+          "mapping": {
+            "HEART_MOMENT": "#/components/schemas/StoryHeartMomentItem",
+            "MEMORY": "#/components/schemas/StoryMemoryItem",
+            "MILESTONE": "#/components/schemas/StoryMilestoneItem"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StoryMemoryItem"
+          },
+          {
+            "$ref": "#/components/schemas/StoryHeartMomentItem"
+          },
+          {
+            "$ref": "#/components/schemas/StoryMilestoneItem"
+          }
+        ],
+        "title": "StoryItem"
+      },
+      "StoryKind": {
+        "enum": [
+          "MEMORY",
+          "HEART_MOMENT",
+          "MILESTONE"
+        ],
+        "title": "StoryKind",
+        "type": "string"
+      },
+      "StoryMemoryItem": {
+        "properties": {
+          "effectiveDate": {
+            "format": "date",
+            "title": "Effectivedate",
+            "type": "string"
+          },
+          "kind": {
+            "const": "MEMORY",
+            "title": "Kind",
+            "type": "string"
+          },
+          "memory": {
+            "$ref": "#/components/schemas/MemorySummary"
+          }
+        },
+        "required": [
+          "kind",
+          "effectiveDate",
+          "memory"
+        ],
+        "title": "StoryMemoryItem",
+        "type": "object"
+      },
+      "StoryMilestoneItem": {
+        "properties": {
+          "effectiveDate": {
+            "format": "date",
+            "title": "Effectivedate",
+            "type": "string"
+          },
+          "kind": {
+            "const": "MILESTONE",
+            "title": "Kind",
+            "type": "string"
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/MilestoneSummary"
+          }
+        },
+        "required": [
+          "kind",
+          "effectiveDate",
+          "milestone"
+        ],
+        "title": "StoryMilestoneItem",
+        "type": "object"
+      },
+      "StoryOrder": {
+        "enum": [
+          "ASC",
+          "DESC"
+        ],
+        "title": "StoryOrder",
+        "type": "string"
+      },
+      "StoryPage": {
+        "properties": {
+          "hasMore": {
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StoryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "title": "StoryPage",
         "type": "object"
       },
       "TokenOnlyRequest": {
@@ -8316,6 +8610,153 @@
         "summary": "Update Related Person",
         "tags": [
           "people"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/timeline": {
+      "get": {
+        "description": "Die gemeinsame Zeitleiste aus Memories, Milestones und HeartMoments.\n\nPrivate HeartMoments erscheinen hier nie - auch nicht fuer ihren Owner.",
+        "operationId": "getStoryTimeline",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/StoryKind"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 2100,
+                  "minimum": 1900,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/StoryOrder",
+              "default": "DESC"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Anfrage ist syntaktisch gueltig, kann aber so nicht verarbeitet werden."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Anfrageparameter oder fachliche Eingaben sind ungueltig."
+          }
+        },
+        "summary": "Get Story Timeline",
+        "tags": [
+          "story"
         ]
       }
     }

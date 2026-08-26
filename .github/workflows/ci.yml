@@ -239,6 +239,47 @@ jobs:
         if: always()
         run: docker compose down -v
 
+  api-clients:
+    name: API Clients
+    runs-on: ubuntu-latest
+    # Der Vertrag ist die einzige Quelle fuer Web- und Android-DTOs. Weicht
+    # der eingecheckte Client-Code von ihm ab, ist eine Vertragsaenderung
+    # ohne den dazugehoerigen Clientteil gemergt worden - und der Bruch
+    # faellt sonst erst im Clientprojekt auf.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Erzeugter Client-Code stimmt mit dem Vertrag ueberein
+        run: tools/openapi/generate.sh --check
+
+      - name: Der TypeScript-Client hat keine Runtime-Abhaengigkeit
+        # Der Generator ist auf `typescript-fetch` konfiguriert, damit kein
+        # HTTP-Paket in den Webclient wandert. Diese Pruefung haelt das fest:
+        # ein Konfigurationswechsel wuerde sonst still eine Abhaengigkeit
+        # einfuehren, die erst im Webprojekt auffaellt.
+        run: |
+          if find web/src/api/generated -name package.json | grep -q .; then
+            echo "Der generierte TypeScript-Client bringt eine package.json mit."
+            exit 1
+          fi
+          fremd=$(grep -rhoE "from '[^.][^']*'" web/src/api/generated || true)
+          if [ -n "$fremd" ]; then
+            echo "Der generierte TypeScript-Client importiert externe Pakete:"
+            echo "$fremd" | sort -u
+            exit 1
+          fi
+
+      - name: Der Kotlin-Client bringt keinen HTTP-Stack mit
+        # Nur Modelle, kein Service-Layer: der HTTP-Stack des Android-Clients
+        # ist eine Entscheidung am Android-Projekt und nicht an dieser Datei.
+        run: |
+          treffer=$(grep -rlE "retrofit2|io\.ktor|okhttp3" android/api/generated || true)
+          if [ -n "$treffer" ]; then
+            echo "Der generierte Kotlin-Code zieht einen HTTP-Stack herein:"
+            echo "$treffer"
+            exit 1
+          fi
+
   supply-chain:
     name: Supply Chain
     runs-on: ubuntu-latest

@@ -1,0 +1,14 @@
+# TypeScript-Client fuer den React-Webclient.
+#
+# `typescript-fetch` erzeugt Code gegen die Fetch-API des Browsers und
+# bringt damit *keine* Runtime-Abhaengigkeit mit. Das ist der Grund fuer
+# diese Wahl: ein Generator, der axios voraussetzt, entscheidet die
+# HTTP-Bibliothek des Webclients mit - und zwar hier, statt im Webprojekt.
+supportsES6: true
+withoutRuntimeChecks: false
+# Keine package.json, kein tsconfig, kein npmignore: dieser Ordner ist eine
+# Quellcodeschicht im Webprojekt und kein eigenes Paket. Sonst entstuende
+# ein zweiter Abhaengigkeitsbaum neben dem des Clients.
+withSeparateModelsAndApi: false
+enumPropertyNaming: original
+modelPropertyNaming: original

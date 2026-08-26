@@ -45,17 +45,17 @@ Die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen sind über #6
 
 1. #71 — Memory CRUD ohne Medien: **geliefert**.
 2. #80 — HeartMoment mit Owner-only-Privacy: **geliefert**.
-3. #79 — Attachment-Lifecycle für Bilder: **geliefert**. Video ist nicht Teil von M2/G2 und als zukünftige Entwicklung in #88 vorgemerkt.
+3. #79 — Attachment-Lifecycle für Bilder: **geliefert**. Video folgt nach M2-D23 als eigener Slice (#88).
 4. #90 — Attachments an Memory und HeartMoment binden: **geliefert**.
 5. #94 — Milestone-Domain und API: **geliefert**.
 6. #97 — Comments, Outbox und Notification Hook: **geliefert**.
 7. #87 — S3-kompatibler MediaStore-Adapter: **geliefert**.
-8. S7 — Story Read Model: verbleibender kritischer Pfad zu G2, Arbeitspaket noch anzulegen.
+8. #113 — Story Read Model und `/timeline`: **geliefert**.
 9. S8 — dünne Web-/Android-Referenzflows: letzter M2-Baustein vor dem G2-Nachweis.
 
-Offen daneben: #102 (OpenAPI-Generator als Tooling-Vorarbeit vor den Clientflächen).
+Die M2-Domain ist damit vollständig. Für G2 fehlt allein der End-to-End-Nachweis auf Web und Android.
 
-Future-Backlog: #88 hält Video-Uploads und Posterframes für eine spätere Neubewertung fest. Der Prototyp #109 wurde wegen eines Produktions-Images von rund 755 MiB und des zusätzlichen ffmpeg-Betriebs- und Security-Aufwands bewusst ohne Merge geschlossen; `main` bleibt für Video fail-closed.
+Offen daneben: #88 (Video, klärt vorher die ffmpeg-Frage) und #102 (OpenAPI-Generator als Tooling-Vorarbeit vor den Clientflächen).
 
 ## Milestones
 
