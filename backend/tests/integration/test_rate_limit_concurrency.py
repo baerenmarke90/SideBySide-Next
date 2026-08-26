@@ -59,7 +59,9 @@ def test_paralleler_burst_verbraucht_exakt_die_restlichen_slots(
         antworten = list(pool.map(fehlversuch, range(burst)))
 
     codes = sorted(antwort.status_code for antwort in antworten)
-    assert codes == [401] * restkapazitaet + [429] * (burst - restkapazitaet)
+    erwartete_codes = [401] * restkapazitaet
+    erwartete_codes.extend([429] * (burst - restkapazitaet))
+    assert codes == erwartete_codes
     for antwort in antworten:
         if antwort.status_code == 429:
             assert antwort.json()["code"] == "RATE_LIMITED"
