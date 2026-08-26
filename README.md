@@ -104,14 +104,15 @@ Clients schreiben `privacyClass` nicht redundant als zweite Wahrheitsquelle.
 ## Aufbau
 
 ```
-backend/        FastAPI, SQLAlchemy 2, Alembic, PostgreSQL
-web/            React, TypeScript, Vite
-android/        Kotlin, Jetpack Compose
-compose.yaml    Docker Compose für Self-Hosted
-deploy/         Docker Compose für die Entwicklungsdatenbank
-docs/           Architektur, Sicherheit, Datenschutzmodell, Abhängigkeiten
-specification/  Produktspezifikation als verbindliche Vorgabe
-tools/          Hilfsskripte
+backend/             FastAPI, SQLAlchemy 2, Alembic, PostgreSQL
+web/                 React, TypeScript, Vite
+android/             Kotlin, Jetpack Compose
+compose.yaml         Docker Compose für vollständige Self-Hosted-Checkouts
+compose.arcane.yaml  Remote-Git-Builds für Arcane/Remote-Workspaces
+deploy/              Docker Compose für die Entwicklungsdatenbank
+docs/                Architektur, Sicherheit, Datenschutzmodell, Abhängigkeiten
+specification/       Produktspezifikation als verbindliche Vorgabe
+tools/               Hilfsskripte
 ```
 
 ## Entwicklung
@@ -145,6 +146,9 @@ aktualisiert; die CI vergleicht ihn mit dem Schema der tatsächlichen App.
 
 ## Self-Hosted
 
+Für einen vollständigen Repository-Checkout bleibt `compose.yaml` der normale
+Einstieg:
+
 ```bash
 cp .env.example .env    # und ausfüllen
 docker compose up -d
@@ -155,11 +159,13 @@ Klartextzugang ist absichtlich auf den lokalen Rechner begrenzt. Fuer Zugriff
 aus LAN oder Internet muss ein HTTPS-Reverse-Proxy vorgeschaltet werden; die
 API darf dafuer nicht direkt auf allen Interfaces veroeffentlicht werden.
 
-`compose.yaml` liegt bewusst im Wurzelverzeichnis: der Build-Kontext
-`./backend` muss unterhalb des Verzeichnisses liegen, in dem die
-Compose-Datei steht. Oberflächen wie Arcane oder Portainer legen jedes
-Projekt in einem eigenen Verzeichnis ab — ein Pfad wie `../backend` zeigt
-dort ins Leere. Das ganze Repository ist deshalb das Projektverzeichnis.
+Verwaltungsoberflächen wie **Arcane**, deren Projekt-Workspace nicht den
+vollständigen Repository-Checkout enthält, verwenden stattdessen
+`compose.arcane.yaml`. Diese Variante baut `backend` und `web` direkt aus dem
+konfigurierten Git-Repository und benötigt deshalb keine lokalen
+`./backend`-/`./web`-Verzeichnisse im Workspace. Einrichtung, private
+Repositorys und Release-Refs sind in [docs/ARCANE.md](docs/ARCANE.md)
+dokumentiert.
 
 Der Dienst `migrate` zieht das Schema einmalig hoch, bevor `api` und
 `worker` starten. Die Anwendung migriert nicht selbst; zwei startende
