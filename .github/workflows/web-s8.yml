@@ -7,7 +7,7 @@ on:
       - ".github/workflows/web-s8.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: web-s8-${{ github.ref }}
@@ -17,42 +17,18 @@ jobs:
   web:
     name: Web Reference Flow
     runs-on: ubuntu-latest
-    container: node:22.19.0-bookworm-slim
+    container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
     defaults:
       run:
         working-directory: web
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Resolve dependency lock for S8
-        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Commit generated dependency lock to PR branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HEAD_BRANCH: ${{ github.head_ref }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          node --input-type=module <<'EOF'
-          import { readFile } from 'node:fs/promises';
-          const content = await readFile('package-lock.json', 'utf8');
-          const response = await fetch(`https://api.github.com/repos/${process.env.REPOSITORY}/contents/web/package-lock.json`, {
-            method: 'PUT',
-            headers: {
-              Accept: 'application/vnd.github+json',
-              Authorization: `Bearer ${process.env.GH_TOKEN}`,
-              'X-GitHub-Api-Version': '2022-11-28',
-            },
-            body: JSON.stringify({
-              message: 'Lock S8 web dependencies',
-              content: Buffer.from(content).toString('base64'),
-              branch: process.env.HEAD_BRANCH,
-            }),
-          });
-          if (!response.ok) {
-            throw new Error(`GitHub contents API failed: ${response.status} ${await response.text()}`);
-          }
-          EOF
+      - name: Dependency audit
+        run: npm audit --audit-level=high
 
       - name: Type check
         run: npm run lint
