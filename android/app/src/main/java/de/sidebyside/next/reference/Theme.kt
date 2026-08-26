@@ -5,14 +5,14 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import android.view.View
+import android.view.Window
 import android.view.WindowInsetsController
-import androidx.compose.material3.ColorScheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
@@ -88,7 +88,7 @@ fun SideBySideTheme(
                 window.statusBarColor = colorScheme.background.toArgb()
                 @Suppress("DEPRECATION")
                 window.navigationBarColor = colorScheme.background.toArgb()
-                updateSystemBarIconAppearance(window.decorView, window.insetsController, darkTheme)
+                updateSystemBarIconAppearance(window, darkTheme)
             }
         }
     }
@@ -105,11 +105,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
-private fun updateSystemBarIconAppearance(
-    decorView: View,
-    insetsController: WindowInsetsController?,
-    darkTheme: Boolean,
-) {
+private fun updateSystemBarIconAppearance(window: Window, darkTheme: Boolean) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         val lightAppearance = if (darkTheme) {
             0
@@ -119,16 +115,16 @@ private fun updateSystemBarIconAppearance(
         }
         val mask = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
             WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-        insetsController?.setSystemBarsAppearance(lightAppearance, mask)
+        window.insetsController?.setSystemBarsAppearance(lightAppearance, mask)
         return
     }
 
     @Suppress("DEPRECATION")
     val lightMask = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
     @Suppress("DEPRECATION")
-    decorView.systemUiVisibility = if (darkTheme) {
-        decorView.systemUiVisibility and lightMask.inv()
+    window.decorView.systemUiVisibility = if (darkTheme) {
+        window.decorView.systemUiVisibility and lightMask.inv()
     } else {
-        decorView.systemUiVisibility or lightMask
+        window.decorView.systemUiVisibility or lightMask
     }
 }
