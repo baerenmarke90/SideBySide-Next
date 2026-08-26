@@ -1,0 +1,40 @@
+name: Web S8
+
+on:
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web-s8.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-s8-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web Reference Flow
+    runs-on: ubuntu-latest
+    container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+      - name: Type check
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build

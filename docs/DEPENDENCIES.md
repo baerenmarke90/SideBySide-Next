@@ -4,7 +4,7 @@ Jede Abhängigkeit wird mit Name, Version, Quelle und Lizenz geführt. Jedes
 Asset mit Ursprung, Lizenz und Ersteller. Was hier nicht steht, gehört
 nicht ins Projekt.
 
-Stand: 2026-08-24
+Stand: 2026-08-26
 
 ## Reproduzierbarkeit und Prüfung
 
@@ -15,21 +15,30 @@ Python-Container-Image sind exakt gepinnt. Installationen in CI und Container
 laufen ausschließlich im Frozen-/Locked-Modus; `uv lock --check` verhindert
 eine veraltete Lockdatei.
 
-Die CI führt `uv audit --preview --frozen` gegen OSV aus. Die Policy erlaubt
-keinen bekannten Sicherheitsfund und keinen nachteiligen Paketstatus. Eine
-Ausnahme dürfte nur mit Advisory-ID, Begründung, Ablaufdatum und verlinktem
-Issue unter `[tool.uv.audit]` eingetragen werden; derzeit gibt es keine.
+`web/package-lock.json` ist die verbindliche npm-Auflösung für den dünnen
+M2-S8-Web-Referenzflow. Direkte Versionen sind in `web/package.json` exakt
+gepinnt, CI installiert ausschließlich mit `npm ci`, und `npm audit
+--audit-level=high` blockiert bekannte Schwachstellen ab hoher Kritikalität.
+Das Node-CI-Image ist zusätzlich per Digest gepinnt.
 
-Der dokumentierte Stand wird nach der gesperrten Installation automatisch
-mit den tatsächlich installierten Versionen und den `License-Expression`-
-beziehungsweise `License`-Metadaten der Pakete verglichen. Damit sind die
-Tabellen unten prüfbar und nicht nur eine manuell gepflegte Behauptung.
+Die Backend-CI führt `uv audit --preview --frozen` gegen OSV aus. Die Policy
+erlaubt keinen bekannten Sicherheitsfund und keinen nachteiligen Paketstatus.
+Eine Ausnahme dürfte nur mit Advisory-ID, Begründung, Ablaufdatum und
+verlinktem Issue unter `[tool.uv.audit]` eingetragen werden; derzeit gibt es
+keine.
 
-`.github/dependabot.yml` lässt uv-, Docker- und GitHub-Actions-Abhängigkeiten
-wöchentlich aktualisieren. Bei einem neuen Fork oder Repository müssen unter
-**Settings → Security and analysis** zusätzlich „Dependabot alerts“ und
-„Dependabot security updates“ aktiviert werden; die normalen Versionsupdates
-starten bereits durch die Konfigurationsdatei.
+Der dokumentierte Backend-Stand wird nach der gesperrten Installation
+automatisch mit den tatsächlich installierten Versionen und den
+`License-Expression`- beziehungsweise `License`-Metadaten der Pakete
+verglichen. Für Web stehen die direkten Abhängigkeiten unten; der vollständige
+transitive npm-Graph einschließlich Integritäts-Hashes steht in
+`web/package-lock.json`.
+
+`.github/dependabot.yml` lässt uv-, npm-, Docker- und GitHub-Actions-
+Abhängigkeiten wöchentlich aktualisieren. Bei einem neuen Fork oder Repository
+müssen unter **Settings → Security and analysis** zusätzlich „Dependabot
+alerts“ und „Dependabot security updates“ aktiviert werden; die normalen
+Versionsupdates starten bereits durch die Konfigurationsdatei.
 
 ### Dokumentierter Policy-Dry-Run
 
@@ -113,12 +122,37 @@ Requestpfad.
 | ruff | 0.16.4 | PyPI | MIT |
 | mypy | 2.3.1 | PyPI | MIT |
 
+## Web — M2-S8 Laufzeit
+
+| Paket | Version | Quelle | Lizenz |
+|---|---|---|---|
+| @tanstack/react-query | 5.85.5 | npm | MIT |
+| react | 19.1.1 | npm | MIT |
+| react-dom | 19.1.1 | npm | MIT |
+| react-router-dom | 7.18.2 | npm | MIT |
+
+## Web — M2-S8 Entwicklung
+
+| Paket | Version | Quelle | Lizenz |
+|---|---|---|---|
+| @types/react | 19.1.12 | npm | MIT |
+| @types/react-dom | 19.1.9 | npm | MIT |
+| typescript | 5.9.2 | npm | Apache-2.0 |
+| vite | 7.3.6 | npm | MIT |
+| vitest | 3.2.7 | npm | MIT |
+
+Diese Web-Abhängigkeiten dienen ausschließlich dem dünnen S8-Referenzflow.
+Sie ziehen keine M5-Funktionen wie persistente Offline-Caches, vollständige
+Navigation oder Client-Parität vor. Der generierte `typescript-fetch`-Code
+bleibt ohne zusätzliche Runtime-Abhängigkeit und nutzt die Browser-Fetch-API.
+
 ## Container-Basisimages
 
 | Image | Version | Quelle | Lizenz |
 |---|---|---|---|
 | python | 3.13.7-slim@sha256:5f55cdf0c5d9dc1a415637a5ccc4a9e18663ad203673173b8cda8f8dcacef689 | Docker Hub | PSF-2.0 (Python), Debian-Pakete je eigene Lizenz |
 | postgres | 17-alpine | Docker Hub | PostgreSQL License |
+| node | 22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90 | Docker Hub | MIT (Node.js), Debian-Pakete je eigene Lizenz |
 
 ## Werkzeuge zur Bauzeit
 
@@ -132,16 +166,12 @@ stellt an den erzeugten Code keine Bedingungen. Version und Digest stehen in
 `tools/openapi/generator.env`, Details in
 [`tools/openapi/README.md`](../tools/openapi/README.md).
 
-## Web und Android
-
-Noch keine eigenen Abhängigkeiten — die Clientprojekte beginnen mit
-Milestone M5.
+## Android
 
 Der bereits eingecheckte generierte Code bringt mit:
 
 | Ziel | Runtime-Abhängigkeit |
 |---|---|
-| `web/src/api/generated` | keine; `typescript-fetch` erzeugt gegen die Fetch-API des Browsers |
 | `android/api/generated` | `kotlinx.serialization` für `@Serializable`/`@SerialName`; **kein** HTTP-Stack |
 
 `kotlinx.serialization` ist die einzige der Optionen, die den Android-Client
@@ -205,9 +235,10 @@ Derzeit sind keine Schrift- oder Audio-Assets im Repository dokumentiert.
 ## Pflege
 
 Eine neue direkte Abhängigkeit wird zusammen mit ihrem Eintrag hier
-hinzugefügt. Die CI prüft Vollständigkeit, genaue Version und Lizenz gegen
-die gesperrte, installierte Umgebung. Transitive Versionen stehen vollständig
-in `backend/uv.lock`.
+hinzugefügt. Die CI prüft die Backend-Dokumentation gegen die gesperrte,
+installierte Umgebung. Transitive Python-Versionen stehen vollständig in
+`backend/uv.lock`; transitive Web-Versionen und Integritäts-Hashes vollständig
+in `web/package-lock.json`.
 
 Neue Assets werden in derselben Änderung hier dokumentiert. Bei unklarer
 Herkunft, Lizenz oder Erstellerschaft wird das Asset nicht aufgenommen, bis
