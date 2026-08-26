@@ -171,8 +171,8 @@ Die manuelle Accessibility-Abnahme wurde bewusst aus G2 in die finale Client-/Re
 
 Die Runtime-Reihenfolge folgt dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Ein konkreter Slice startet erst, wenn sein produktiver Request/Response-/OpenAPI-Vertrag eindeutig contract-testbar ist und Reuse-before-build sowie die normalen PR-/CI-Gates erfüllt sind.
 
-- [ ] **M3-S1 — Wish Foundation:** nächster Runtime-Slice.
-- [ ] M3-S2 — Plan + Wish->Plan.
+- [x] **M3-S1 — Wish Foundation:** Wish-Domain mit ProtectedPayload für den Titel, collaborative write nach M3-D01, `status` ausschließlich serverseitig, `If-Match`/409, Statusfilter über einen space- und filtergebundenen Cursor sowie redigierte `WISH_*`-Events. Die Wish->Plan-Operation und die planabhängigen Zeilen der Delete-Matrix folgen in S2.
+- [ ] **M3-S2 — Plan + Wish->Plan:** nächster Runtime-Slice.
 - [ ] M3-S3 — Place Foundation.
 - [ ] M3-S4 — typisierte Content Relations.
 - [ ] M3-S5 — Chapter.
@@ -190,4 +190,6 @@ Die Runtime-Reihenfolge folgt dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Ein k
 
 ## Nächster Prüfpunkt
 
-M3-S1 **Wish Foundation** als ersten Runtime-Slice nach dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md) vorbereiten. Vor dem ersten Runtime-Commit muss der produktive Wish-Request/Response-/OpenAPI-Vertrag contract-testbar konkretisiert sein; danach gelten die normalen Reuse-, Branch-, PR- und CI-Gates.
+M3-S2 **Plan + Wish->Plan** nach dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Der Slice bringt das Plan-Modell, `sourceWishId` mit `UNIQUE`/FK, die atomare und idempotente Wish->Plan-Konvertierung, `return-to-wish`, `schedule`/`unschedule`/`complete` sowie die Lock-Reihenfolge `Wish -> Plan`.
+
+Damit werden auch die beiden Punkte nachgezogen, die S1 bewusst offen gelassen hat: `Wish.status` bekommt seine erste echte Transition, und die Delete-Matrix aus M3-D05 wird um die Zeilen ergänzt, die auf einen vorhandenen originären Plan zeigen. S1 blockiert heute nur den statusseitigen Teil (`PLANNED` -> `WISH_HAS_ACTIVE_PLAN`); eine Plan-Existenzprüfung gibt es ohne `plans`-Tabelle noch nicht.

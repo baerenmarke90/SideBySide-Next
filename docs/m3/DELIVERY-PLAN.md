@@ -1,6 +1,6 @@
 # M3 Delivery Plan
 
-**Status:** S0 abgeschlossen; Runtime wartet weiter auf Projekt-Gate  
+**Status:** S0 abgeschlossen; Runtime freigegeben; S1 geliefert  
 **Stand:** 26.08.2026
 
 ## 1. Gate vor Runtime
@@ -12,6 +12,8 @@ Vor dem ersten M3-Runtime-Commit muessen nach aktueller Projektregel:
 1. der finale G2-Review auf aktuellem `main` `G2: BESTANDEN` feststellen (#147),
 2. #146 die Statusquellen synchronisieren und M3 freigeben,
 3. der konkrete Runtime-PR den produktiven OpenAPI-Vertrag und Reuse-before-build sauber behandeln.
+
+Punkt 1 und 2 sind erfuellt. Punkt 3 bleibt eine Bedingung **je Runtime-PR** und ist mit dem Gate nicht abgegolten.
 
 Die fachlichen S0-Entscheidungen sind abgeschlossen: M3-D01 bis M3-D32 stehen auf `DECIDED`.
 
@@ -86,7 +88,7 @@ PrivateNote / GiftIdea / PrivateCollection
   -> OWNER_ONLY, komplett getrennte Query-/API-Grenze
 ```
 
-## 4. S1 – Wish Foundation
+## 4. S1 – Wish Foundation – geliefert
 
 Scope:
 
@@ -105,7 +107,12 @@ Exit:
 - Wish ist belastbar als eigenstaendige Shared-Domain;
 - keine freie Statusmutation umgeht den Wish->Plan-Vertrag.
 
-## 5. S2 – Plan + Wish->Plan
+Umgesetzt. Zwei Punkte bleiben ausdruecklich bei S2, weil ohne `plans`-Tabelle nichts sie ausloesen kann:
+
+- `Wish.status` erreicht in S1 nur `OPEN`; `PLANNED` und `COMPLETED` stehen bereits im Schema, entstehen aber erst aus der Konvertierung bzw. der Plan-Completion;
+- die Delete-Matrix ist nur statusseitig durchgesetzt (`PLANNED` -> `WISH_HAS_ACTIVE_PLAN`). Die Zeilen, die auf einen vorhandenen originaeren Plan zeigen, brauchen die Plan-Existenzpruefung aus S2.
+
+## 5. S2 – Plan + Wish->Plan – naechster Slice
 
 Scope:
 
