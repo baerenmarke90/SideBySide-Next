@@ -91,6 +91,7 @@ def engine() -> Iterator[Engine]:
     from sidebyside.people import models as _people  # noqa: F401
     from sidebyside.profiles import models as _profiles  # noqa: F401
     from sidebyside.relationship import models as _relationship  # noqa: F401
+    from sidebyside.wishes import models as _wishes  # noqa: F401
 
     # Die Testsonde fuer die Owner-/Privacy-Autorisierung. Sie steht
     # bewusst nur hier: alembic/env.py kennt sie nicht, also erscheint

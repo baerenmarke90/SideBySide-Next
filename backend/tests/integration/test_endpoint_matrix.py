@@ -98,6 +98,7 @@ MILESTONE = {
     "happenedOn": "2025-06-13",
 }
 COMMENT = {"body": "Matrix Comment"}
+WISH = {"title": "Matrix Wish"}
 
 SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
@@ -301,6 +302,26 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/wishes"),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/wishes", body=WISH),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/wishes/{wishId}",
+        resource_absence="WISH_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/wishes/{wishId}",
+        body={"title": "Matrix Wish aktualisiert"},
+        if_match=True,
+        resource_absence="WISH_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/wishes/{wishId}",
+        if_match=True,
+        resource_absence="WISH_NOT_FOUND",
+    ),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
     Endpunkt(
         "GET",
@@ -412,6 +433,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
     comment = client.post(
         f"{basis}/memories/{memory['id']}/comments", json=COMMENT, headers=kopf
     ).json()
+    wish = client.post(f"{basis}/wishes", json=WISH, headers=kopf).json()
     attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=kopf).json()
 
     return {
@@ -430,6 +452,7 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "heartMomentId": heart_moment["id"],
             "milestoneId": milestone["id"],
             "commentId": comment["id"],
+            "wishId": wish["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
@@ -537,6 +560,7 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "attachmentId",
             "milestoneId",
             "commentId",
+            "wishId",
         )
         if "{" + name + "}" in endpunkt.template
     )

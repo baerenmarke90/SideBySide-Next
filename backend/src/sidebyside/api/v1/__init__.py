@@ -22,6 +22,7 @@ from sidebyside.api.v1 import (
     profiles,
     spaces,
     story,
+    wishes,
 )
 
 router = APIRouter()
@@ -37,3 +38,4 @@ router.include_router(comments.router)
 router.include_router(people.router)
 router.include_router(profiles.router)
 router.include_router(spaces.router)
+router.include_router(wishes.router)
