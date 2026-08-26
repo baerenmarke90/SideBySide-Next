@@ -20,6 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from sidebyside.authorization.privacy import (
     DEFAULT_ABSENCE,
     ResourceAbsence,
+    SharedWrite,
     privacy_class_type,
 )
 
@@ -39,6 +40,7 @@ class PrivateResource(Protocol):
     privacy_class: Mapped[str]
 
     privacy_absence: ClassVar[ResourceAbsence]
+    shared_write: ClassVar[SharedWrite]
 
 
 class PrivateResourceMixin:
@@ -60,6 +62,14 @@ class PrivateResourceMixin:
     Einmal je Domaene gesetzt statt bei jedem Aufruf uebergeben - sonst
     entstehen im Lauf der Zeit doch wieder unterschiedliche Antworten fuer
     dieselbe Ressource, und der Unterschied ist die Auskunft.
+    """
+
+    shared_write: ClassVar[SharedWrite] = SharedWrite.AUTHOR_ONLY
+    """Wer eine geteilte Zeile dieser Domaene aendern darf.
+
+    Der Standard ist die engere Form. Eine Domaene, die gemeinsames
+    Schreiben braucht, sagt das ausdruecklich an - ein vergessener Eintrag
+    macht Inhalte damit nicht versehentlich fuer den Partner schreibbar.
     """
 
     space_id: Mapped[UUID] = mapped_column(
