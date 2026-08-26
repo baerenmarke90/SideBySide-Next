@@ -95,7 +95,10 @@ def _reserve_hashed_attempt(
     ).scalar_one()
 
     if versuche >= limit.attempts:
-        raise RateLimitedError("Too many attempts. Please try again later.", ErrorCode.RATE_LIMITED)
+        raise RateLimitedError(
+            "Too many attempts. Please try again later.",
+            ErrorCode.RATE_LIMITED,
+        )
 
     _record_hashed_attempt(session, action=action, key_hash=key_hash)
 
