@@ -104,6 +104,34 @@ def require_readable[ResourceT: PrivateResourceMixin](
     return found
 
 
+def require_readable_shared[ResourceT: PrivateResourceMixin](
+    session: Session,
+    model: type[ResourceT],
+    context: AuthorizationContext,
+    resource_id: UUID | str,
+) -> ResourceT:
+    """Eine Ressource lesen und bis zum Commit gegen Loeschen halten.
+
+    Fuer den Fall, dass eine Operation auf eine *fremde* Zeile verweist -
+    ein Plan auf einen Place. Zwischen dem Nachsehen und dem Schreiben des
+    Verweises darf sie nicht verschwinden, sonst zeigt der Verweis auf
+    nichts.
+
+    Bewusst `FOR SHARE` und nicht `FOR UPDATE`: gehalten werden soll die
+    Existenz, nicht das Schreibrecht. Zwei Plans duerfen sich gleichzeitig
+    an denselben Ort haengen; nur ein Loeschen des Ortes muss warten.
+
+    Verschwindet die Zeile trotzdem in der Luecke davor, antwortet der
+    Guard wie bei einer unbekannten ID - siehe `require_writable_locked`.
+    """
+    found = require_readable(session, model, context, resource_id)
+    try:
+        session.refresh(found, with_for_update={"read": True})
+    except InvalidRequestError as error:
+        raise absence_of(model).error() from error
+    return found
+
+
 def require_writable_locked[ResourceT: PrivateResourceMixin](
     session: Session,
     model: type[ResourceT],
