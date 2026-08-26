@@ -43,6 +43,20 @@ class ChangeScopeTest(unittest.TestCase):
         self.assertTrue(result["deployment_guard"])
         self.assertFalse(result["supply_chain"])
 
+    def test_web_source_change_enables_runtime_gates(self) -> None:
+        self.assertEqual(
+            classify_paths(["web/src/App.tsx"]),
+            {
+                "backend": True,
+                "self_hosted": True,
+                "supply_chain": False,
+                "deployment_guard": True,
+            },
+        )
+
+    def test_web_dockerfile_also_enables_supply_chain(self) -> None:
+        self.assertTrue(all(classify_paths(["web/Dockerfile"]).values()))
+
     def test_dependency_inventory_only_enables_supply_chain(self) -> None:
         result = classify_paths(["docs/DEPENDENCIES.md"])
         self.assertFalse(result["backend"])

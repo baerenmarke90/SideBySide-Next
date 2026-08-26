@@ -19,7 +19,9 @@ eine veraltete Lockdatei.
 M2-S8-Web-Referenzflow. Direkte Versionen sind in `web/package.json` exakt
 gepinnt, CI installiert ausschließlich mit `npm ci`, und `npm audit
 --audit-level=high` blockiert bekannte Schwachstellen ab hoher Kritikalität.
-Das Node-CI-Image ist zusätzlich per Digest gepinnt.
+Das Node-CI- und Web-Build-Image ist zusätzlich per Digest gepinnt. Der
+statische Produktionsbuild läuft in einem ebenfalls per Digest gepinnten
+unprivilegierten Nginx-Image.
 
 Der dünne M2-S8-Android-Referenzflow verwendet ausschließlich exakt
 versionierte Gradle-/Maven-Koordinaten und die feste Compose-BOM
@@ -154,6 +156,21 @@ Diese Web-Abhängigkeiten dienen ausschließlich dem dünnen S8-Referenzflow.
 Sie ziehen keine M5-Funktionen wie persistente Offline-Caches, vollständige
 Navigation oder Client-Parität vor. Der generierte `typescript-fetch`-Code
 bleibt ohne zusätzliche Runtime-Abhängigkeit und nutzt die Browser-Fetch-API.
+
+## Web — Container-Werkzeugkette
+
+| Komponente | Version | Quelle | Lizenz |
+|---|---|---|---|
+| Node.js Build-Image | 22.19.0-bookworm-slim, `sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90` | Docker Hub / nodejs/docker-node | MIT (Node.js und Image-Definition) |
+| nginx-unprivileged | 1.31.4, `sha256:197f252f060ed357f2ab98d4256762d7d107c76f18ad8f0b9d5178854611566d` | GHCR / nginx/docker-nginx-unprivileged | BSD-2-Clause (NGINX), Apache-2.0 (Image-Definition) |
+
+Beide Images werden ausschließlich beim Build beziehungsweise als lokaler
+statischer Webserver verwendet. Es fließen keine SideBySide-Nutzerdaten an
+Node.js, NGINX oder deren Registries; Registries sehen nur den normalen
+Image-Abruf des Hosters. Es gibt keine laufenden Providerkosten, Accounts oder
+Rate-Limits. Fällt eine Registry aus, kann ein bereits gebautes lokales Image
+weiterlaufen; ein neuer Build wartet auf die Registry oder verwendet einen
+vom Hoster kontrollierten Spiegel.
 
 ## Android — M2-S8 Laufzeit
 

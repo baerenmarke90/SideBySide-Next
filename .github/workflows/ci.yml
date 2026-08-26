@@ -240,15 +240,18 @@ jobs:
             exit 1
           fi
 
-      - name: Healthcheck ueber den veroeffentlichten Port
-        run: curl --fail --silent --show-error http://127.0.0.1:8000/api/v1/health
+      - name: Healthchecks ueber die veroeffentlichten Ports
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:8000/api/v1/health
+          curl --fail --silent --show-error http://127.0.0.1:8080/healthz
+          curl --fail --silent --show-error http://127.0.0.1:8080/ | grep -Fq "<title>SideBySide Next"
 
       - name: Kein Runtime-Dienst ist an der Konfiguration gescheitert
         # Ein fehlender Settings-Wert beendet den Prozess sofort; unter
         # restart: unless-stopped sieht das nach kurzer Zeit wie ein
         # Neustartkarussell aus und nicht wie ein Fehler.
         run: |
-          for dienst in api worker; do
+          for dienst in api worker web; do
             status=$(docker compose ps --format json "$dienst" | jq -r '.State')
             if [ "$status" != "running" ]; then
               echo "$dienst laeuft nicht ($status):"
@@ -379,8 +382,10 @@ jobs:
           uv run --frozen python scripts/check_dependency_inventory.py ../docs/DEPENDENCIES.md
       - name: Backend-Wheel ohne Cache bauen
         run: uv build --no-cache --wheel --out-dir /tmp/sidebyside-dist
-      - name: Produktionscontainer frisch bauen
+      - name: Backend-Produktionscontainer frisch bauen
         run: docker build --pull --no-cache --tag sidebyside-next:ci .
+      - name: Web-Produktionscontainer frisch bauen
+        run: docker build --pull --no-cache --tag sidebyside-next-web:ci ../web
 
   secrets:
     name: Secret Scan
