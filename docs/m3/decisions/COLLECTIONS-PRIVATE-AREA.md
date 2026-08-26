@@ -23,7 +23,7 @@ Source-bound:
 - ShoppingList/ShoppingItem bleiben eigene spaetere Domains.
 - `PrivateNote`, `GiftIdea`, `PrivateCollection`, `PrivateCollectionItem` sind `OWNER_ONLY`.
 - Owner-only muss serverseitig gelten; Partnerzugriff darf keine Existenz leaken.
-- veränderbare Domainobjekte besitzen Optimistic Concurrency.
+- veraenderbare Domainobjekte besitzen Optimistic Concurrency.
 - `GiftIdea.status` existiert, seine Werte waren bisher nicht source-bound.
 
 ## 2. M3-D13 – Collection Ownership und Shared Writes
@@ -82,8 +82,10 @@ M3 trennt **Item-Inhalt** und **Aggregate-Reihenfolge**:
 - integer, nullfrei;
 - kanonisch contiguous `0..n-1` pro Collection;
 - Unique Constraint `(collection_id, position)`;
-- Create fuegt am Ende ein;
-- Delete verdichtet die Positionen transaktional.
+- Create fuegt am Ende ein und erhoeht `Collection.version`;
+- Delete verdichtet die Positionen transaktional und erhoeht `Collection.version`.
+
+Die Runtime darf die Unique-Grenze beim Umsortieren nicht durch naive sequentielle Positionsupdates verletzen. Der PostgreSQL-Slice muss deshalb entweder einen `DEFERRABLE` Unique Constraint bis zum Transaktionsende verwenden oder eine gleichwertige kollisionsfreie temporaere Renummerierung innerhalb derselben Transaktion. Sichtbar und nach Commit zulaessig ist ausschliesslich die kanonische Reihenfolge `0..n-1`.
 
 ### Atomarer Reorder
 
@@ -114,19 +116,19 @@ If-Match: "<item-version>"
 ```
 
 - Title/Completed aendern `CollectionItem.version`;
-- Completion allein aendert nicht automatisch die Collection-Reihenfolge.
+- Completion allein aendert nicht automatisch die Collection-Reihenfolge oder Root-Version.
 
 ### Item Delete
 
 Item-Delete veraendert die Itemmenge und damit das Order-Aggregat:
 
-- Collection + Item sperren;
-- `If-Match` fuer Collection und Item pruefen bzw. einen aequivalenten kombinierten Versionvertrag verwenden;
+- Collection `FOR UPDATE` sperren, danach Item sperren;
+- `If-Match` prueft die Item-Version;
 - Item loeschen;
 - Positionen verdichten;
-- Collection-Version erhoehen.
+- `Collection.version` erhoehen.
 
-Damit gewinnt ein paralleler Reorder oder Delete deterministisch ueber die Collection-Version.
+Eine separate Collection-Version im Delete-Request ist nicht erforderlich: Der Collection-Lock serialisiert Delete gegen Reorder/Add/Delete. Wenn Delete zuerst committet, scheitert ein bereits mit alter Root-Version gestarteter Reorder mit `409`; wenn Reorder zuerst committet, darf der anschliessende Delete bei weiterhin aktueller Item-Version erfolgreich sein und die neue Reihenfolge erneut konsistent verdichten.
 
 ## 4. M3-D15 – Collection Delete
 
@@ -291,7 +293,8 @@ PrivateCollection verwendet dasselbe Concurrency-Modell wie Shared Collection:
 - Root-Version schuetzt Reihenfolge/Itemmenge;
 - Item-Version schuetzt Title/Completed;
 - Position contiguous `0..n-1`;
-- atomarer Full-List-Reorder;
+- atomarer Full-List-Reorder mit derselben kollisionsfreien PostgreSQL-Strategie;
+- Item-Delete sperrt Root -> Item, prueft die Item-Version, verdichtet Positionen und erhoeht die Root-Version;
 - Owner-only.
 
 ### Delete
