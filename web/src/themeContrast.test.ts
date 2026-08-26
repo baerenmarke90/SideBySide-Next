@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import baseCss from './styles.css?inline';
-import themeCss from './theme.css?inline';
+
+type NodeFs = {
+  readFileSync(path: URL, encoding: 'utf8'): string;
+};
+
+type NodeProcess = {
+  getBuiltinModule(name: 'fs'): NodeFs;
+};
+
+function readSource(relativePath: string): string {
+  const processRef = (globalThis as typeof globalThis & { process?: NodeProcess }).process;
+  if (!processRef) throw new Error('Node process API fehlt im Testlauf.');
+  return processRef.getBuiltinModule('fs').readFileSync(new URL(relativePath, import.meta.url), 'utf8');
+}
 
 function channel(value: number): number {
   const normalized = value / 255;
@@ -41,8 +53,8 @@ function cssVariable(block: string, name: string): string {
   return match[1];
 }
 
-const light = cssBlock(baseCss, ':root');
-const dark = cssBlock(themeCss, ":root[data-theme='dark']");
+const light = cssBlock(readSource('./styles.css'), ':root');
+const dark = cssBlock(readSource('./theme.css'), ":root[data-theme='dark']");
 const white = '#ffffff';
 
 describe('theme token contrast', () => {
