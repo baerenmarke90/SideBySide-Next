@@ -21,6 +21,13 @@ gepinnt, CI installiert ausschließlich mit `npm ci`, und `npm audit
 --audit-level=high` blockiert bekannte Schwachstellen ab hoher Kritikalität.
 Das Node-CI-Image ist zusätzlich per Digest gepinnt.
 
+Der dünne M2-S8-Android-Referenzflow verwendet ausschließlich exakt
+versionierte Gradle-/Maven-Koordinaten und die feste Compose-BOM
+`2026.08.00`. Sein eigener CI-Nachweis pinnt JDK 17, Gradle 9.5.0,
+Android Gradle Plugin 9.3.0, compileSdk 37 und Build Tools 36.0.0. Damit sind
+Werkzeugkette und direkte Dependency-Auswahl nicht von lokalen Android-Studio-
+Defaults abhängig.
+
 Die Backend-CI führt `uv audit --preview --frozen` gegen OSV aus. Die Policy
 erlaubt keinen bekannten Sicherheitsfund und keinen nachteiligen Paketstatus.
 Eine Ausnahme dürfte nur mit Advisory-ID, Begründung, Ablaufdatum und
@@ -32,9 +39,11 @@ automatisch mit den tatsächlich installierten Versionen und den
 `License-Expression`- beziehungsweise `License`-Metadaten der Pakete
 verglichen. Für Web stehen die direkten Abhängigkeiten unten; der vollständige
 transitive npm-Graph einschließlich Integritäts-Hashes steht in
-`web/package-lock.json`.
+`web/package-lock.json`. Für Android stehen direkte Laufzeit-, Test- und
+Build-Abhängigkeiten unten; die CI löst sie ausschließlich aus Google Maven
+und Maven Central mit den dort fest angegebenen Versionen auf.
 
-`.github/dependabot.yml` lässt uv-, npm-, Docker- und GitHub-Actions-
+`.github/dependabot.yml` lässt uv-, npm-, Gradle-, Docker- und GitHub-Actions-
 Abhängigkeiten wöchentlich aktualisieren. Bei einem neuen Fork oder Repository
 müssen unter **Settings → Security and analysis** zusätzlich „Dependabot
 alerts“ und „Dependabot security updates“ aktiviert werden; die normalen
@@ -146,6 +155,50 @@ Sie ziehen keine M5-Funktionen wie persistente Offline-Caches, vollständige
 Navigation oder Client-Parität vor. Der generierte `typescript-fetch`-Code
 bleibt ohne zusätzliche Runtime-Abhängigkeit und nutzt die Browser-Fetch-API.
 
+## Android — M2-S8 Laufzeit
+
+| Paket / Plattformbaustein | Version | Quelle | Lizenz |
+|---|---|---|---|
+| Jetpack Compose BOM | 2026.08.00 | Google Maven | Apache-2.0 |
+| Compose UI / Material 3 | über BOM (Compose 1.12 / Material 3 1.4) | Google Maven | Apache-2.0 |
+| androidx.activity:activity-compose | 1.13.0 | Google Maven | Apache-2.0 |
+| androidx.lifecycle:lifecycle-viewmodel-compose | 2.11.0 | Google Maven | Apache-2.0 |
+| com.squareup.okhttp3:okhttp | 5.4.0 | Maven Central | Apache-2.0 |
+| org.jetbrains.kotlinx:kotlinx-coroutines-android | 1.11.0 | Maven Central | Apache-2.0 |
+| org.jetbrains.kotlinx:kotlinx-serialization-json | 1.11.0 | Maven Central | Apache-2.0 |
+| Android Photo Picker | Plattform / Activity Result Contract | Android | Plattform-API; kein zusätzliches Paket |
+
+`android/api/generated` bleibt generator-owned. Seine `@Serializable`-
+Modelle werden direkt als Source-Root eingebunden; insbesondere gibt es keine
+zweite DTO-/Union-Schicht. OkHttp ist ausschließlich die kleine Transportstufe
+für die veröffentlichten Endpunkte und die serverseitig ausgestellten
+Upload-/Read-Deskriptoren. `STREAM` erhält Bearer-Auth; Signed URLs erhalten
+sie absichtlich nicht.
+
+Der S8-Client führt bewusst **kein** Room, Paging, WorkManager, DataStore oder
+Bildcache-Framework ein. Tokens, Ergebnis und Bild leben nur im flüchtigen
+Prozess-/ViewModel-State. Damit wird die offene M2-D18-Cacheentscheidung nicht
+vorweggenommen.
+
+## Android — M2-S8 Test und Build
+
+| Paket / Werkzeug | Version | Quelle | Lizenz |
+|---|---|---|---|
+| Android Gradle Plugin | 9.3.0 | Google Maven | Apache-2.0 |
+| Gradle | 9.5.0 | gradle.org / CI setup-gradle | Apache-2.0 |
+| Compose Compiler Gradle Plugin | 2.3.21 | Gradle Plugin Portal / Maven Central | Apache-2.0 |
+| Kotlin Serialization Gradle Plugin | 2.3.21 | Gradle Plugin Portal / Maven Central | Apache-2.0 |
+| JUnit 4 | 4.13.2 | Maven Central | EPL-1.0 |
+| androidx.test:core | 1.7.0 | Google Maven | Apache-2.0 |
+| Compose UI Test JUnit4 | über BOM | Google Maven | Apache-2.0 |
+| kotlinx-coroutines-test | 1.11.0 | Maven Central | Apache-2.0 |
+| Robolectric | 4.16.1 | Maven Central | MIT |
+
+Der Android-S8-CI-Job nutzt JDK 17, installiert SDK Platform 37 sowie Build
+Tools 36.0.0 und führt JVM-/Robolectric-/Compose-Semantics-Tests, Android Lint
+und `assembleDebug` aus. Die GitHub Actions selbst sind auf Commit-SHAs
+gepinnt.
+
 ## Container-Basisimages
 
 | Image | Version | Quelle | Lizenz |
@@ -165,18 +218,6 @@ läuft ausschließlich zur Bauzeit und wird nicht ausgeliefert; Apache-2.0
 stellt an den erzeugten Code keine Bedingungen. Version und Digest stehen in
 `tools/openapi/generator.env`, Details in
 [`tools/openapi/README.md`](../tools/openapi/README.md).
-
-## Android
-
-Der bereits eingecheckte generierte Code bringt mit:
-
-| Ziel | Runtime-Abhängigkeit |
-|---|---|
-| `android/api/generated` | `kotlinx.serialization` für `@Serializable`/`@SerialName`; **kein** HTTP-Stack |
-
-`kotlinx.serialization` ist die einzige der Optionen, die den Android-Client
-nicht zusätzlich auf Retrofit oder Ktor festlegt. Der Service-Layer und damit
-der HTTP-Stack bleiben eine Entscheidung am Android-Projekt.
 
 ## Zu prüfen: psycopg unter LGPL
 
@@ -238,7 +279,9 @@ Eine neue direkte Abhängigkeit wird zusammen mit ihrem Eintrag hier
 hinzugefügt. Die CI prüft die Backend-Dokumentation gegen die gesperrte,
 installierte Umgebung. Transitive Python-Versionen stehen vollständig in
 `backend/uv.lock`; transitive Web-Versionen und Integritäts-Hashes vollständig
-in `web/package-lock.json`.
+in `web/package-lock.json`. Android hält alle direkten Koordinaten und die
+Compose-BOM im Gradle-Build exakt fest; Dependabot beobachtet den
+`/android`-Build separat.
 
 Neue Assets werden in derselben Änderung hier dokumentiert. Bei unklarer
 Herkunft, Lizenz oder Erstellerschaft wird das Asset nicht aufgenommen, bis
