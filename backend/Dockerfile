@@ -12,6 +12,8 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir "uv==0.12.5"
 
+# Zuerst nur die gesperrten Laufzeitabhaengigkeiten. So ist die teure Schicht
+# unabhaengig vom Anwendungscode und uv darf den Lockstand nicht veraendern.
 COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --frozen --no-install-project --no-editable
 
@@ -21,6 +23,8 @@ COPY alembic.ini ./
 
 RUN uv sync --locked --no-editable
 
+# Nicht als root laufen: ein Prozessausbruch soll nicht direkt den
+# Container besitzen.
 RUN useradd --system --uid 10001 sidebyside \
     && mkdir -p /var/lib/sidebyside/media \
     && chown -R sidebyside /var/lib/sidebyside
