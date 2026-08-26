@@ -199,9 +199,9 @@ Metadaten-Entfernung beim Ingest und Thumbnail, die Attachment-Bindung an
 Memory und HeartMoment (#90), die Milestone-Domain (#94), Comments samt Outbox
 und Notification Hook (#97), der S3-kompatible MediaStore-Adapter (#87) sowie
 die Story-Zeitleiste (#113). Damit ist die M2-Domain vollständig; als
-Nächstes folgen die dünnen Web-/Android-Referenzflows. Video folgt nach
-M2-D23 als eigener Slice (#88). Die präzisierten Milestone-Grenzen und der
-aktuelle Arbeitsstand stehen in
+Nächstes folgen die dünnen Web-/Android-Referenzflows. Video ist nicht Teil
+von M2/G2 und als zukünftige Entwicklung in #88 vorgemerkt. Die präzisierten
+Milestone-Grenzen und der aktuelle Arbeitsstand stehen in
 [docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
