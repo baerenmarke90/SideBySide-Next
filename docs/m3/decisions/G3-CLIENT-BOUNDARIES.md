@@ -116,6 +116,8 @@ Historische Gate-Reviews werden nicht umgeschrieben.
 
 ## 3. G3 vs. M5/G4
 
+G3 ist bewusst ein **Milestone-Gate**, nicht die abschliessende projektweite Definition of Done einer M3-Funktion. Die in der Produktspezifikation geforderten Web-/Android-Anteile, Export-Unterstuetzung und vollstaendige Client-Produktreife werden gemaess Roadmap in M5/G4 vervollstaendigt. `G3: BESTANDEN` bedeutet daher nicht „M3 ist bereits als vollstaendig produktreifes Client-Feature fertig“, sondern „M3-Domain, API, Persistenz, Autorisierung und Gate-Evidenz sind belastbar genug fuer den naechsten Milestone“. Die projektweite DoD ist fuer diese Funktionen erst mit den spaeteren Client-/Export-Anteilen vollstaendig erfuellt.
+
 ### In G3 verpflichtend
 
 - Domainmodell/Migration/API fuer M3;
