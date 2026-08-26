@@ -38,6 +38,14 @@ class EventType(StrEnum):
     WISH_CREATED = "WISH_CREATED"
     WISH_UPDATED = "WISH_UPDATED"
     WISH_DELETED = "WISH_DELETED"
+    # Die drei Wish-Statuskanten aus M3-D02/D03/D04. Eigene Typen statt
+    # `WISH_UPDATED`: fuer einen Consumer ist "eingeplant" eine andere
+    # Nachricht als "umbenannt".
+    WISH_PLANNED = "WISH_PLANNED"
+    WISH_REOPENED = "WISH_REOPENED"
+    PLAN_CREATED = "PLAN_CREATED"
+    PLAN_UPDATED = "PLAN_UPDATED"
+    PLAN_DELETED = "PLAN_DELETED"
     PLAN_COMPLETED = "PLAN_COMPLETED"
     WISH_COMPLETED = "WISH_COMPLETED"
     IMPORTANT_DATE_APPROACHING = "IMPORTANT_DATE_APPROACHING"

@@ -92,7 +92,7 @@ class WishPage(ApiModel):
     has_more: bool
 
 
-def _wish_detail(
+def wish_detail(
     session: DbSession,
     authorization: Authorization,
     wish: Wish,
@@ -139,7 +139,7 @@ def create_wish(
 ) -> WishDetail:
     wish = service.create_wish(session, authorization, title=body.title)
     response.headers["ETag"] = etag_for(wish.version)
-    return _wish_detail(session, authorization, wish)
+    return wish_detail(session, authorization, wish)
 
 
 @router.get(
@@ -163,7 +163,7 @@ def list_wishes(
         status=status,
     )
     return WishPage(
-        items=[_wish_detail(session, authorization, wish) for wish in page.items],
+        items=[wish_detail(session, authorization, wish) for wish in page.items],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )
@@ -183,7 +183,7 @@ def get_wish(
 ) -> WishDetail:
     wish = service.get_wish(session, authorization, wish_id)
     response.headers["ETag"] = etag_for(wish.version)
-    return _wish_detail(session, authorization, wish)
+    return wish_detail(session, authorization, wish)
 
 
 @router.patch(
@@ -212,7 +212,7 @@ def update_wish(
         title=body.title,
     )
     response.headers["ETag"] = etag_for(wish.version)
-    return _wish_detail(session, authorization, wish)
+    return wish_detail(session, authorization, wish)
 
 
 @router.delete(
