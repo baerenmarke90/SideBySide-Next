@@ -1,134 +1,157 @@
 # M3 Technical Readiness Package
 
-**Status:** Planung vor G3, keine Runtime-Freigabe  
+**Status:** S0-Entscheidungen abgeschlossen; keine automatische Runtime-Freigabe  
 **Stand:** 26.08.2026  
-**Tracking:** #159
+**Tracking:** #159, #162, #163, #164, #165
 
-Dieses Paket bereitet **M3 – Shared Life / Planen & Private Area** technisch und fachlich vor. Es enthält ausschließlich Planungs- und Entscheidungsgrundlagen. Runtime-Code, Migrationen, produktiver OpenAPI-Vertrag, Web-/Android-Produktflächen und CI bleiben in diesem Slice unberührt.
+Dieses Paket bereitet **M3 – Shared Life / Planen & Private Area** technisch und fachlich vor. Die M3-S0-Entscheidungen sind abgeschlossen. Runtime-Code, Migrationen und produktiver OpenAPI-Vertrag werden weiterhin erst in den jeweiligen Runtime-Slices umgesetzt.
 
 ## Gate-Regel
 
-Die Planung darf vor Abschluss von G2 erfolgen. **M3-Runtime darf daraus nicht vorzeitig abgeleitet werden.**
+Die Planung durfte vor Abschluss von G2 erfolgen. **Der Abschluss der M3-S0-Decisions gibt M3-Runtime nicht automatisch frei.**
 
-Runtime-Arbeit beginnt erst, wenn:
+Runtime-Arbeit beginnt nach der aktuell dokumentierten Projektregel erst, wenn:
 
-1. der finale G2-Review G2 ausdrücklich als `BESTANDEN` bewertet (#145 -> #147),
-2. der anschließende Status-Sync #146 M3 als freigegebenen Milestone führt,
-3. alle für den konkreten Runtime-Slice relevanten `BLOCKING`-Entscheidungen in [DECISION-LOG.md](./DECISION-LOG.md) auf `DECIDED` stehen,
-4. der betroffene REST-/OpenAPI-Vertrag vor Implementierung eindeutig und contract-testbar festgelegt ist.
+1. der finale G2-Review G2 ausdruecklich als `BESTANDEN` bewertet (#147),
+2. der anschliessende Status-Sync #146 M3 als freigegebenen Milestone fuehrt,
+3. der betroffene REST-/OpenAPI-Vertrag fuer den jeweiligen Runtime-Slice contract-testbar konkretisiert ist.
 
-Ein Planungs-PR darf deshalb gemergt werden, ohne M3 freizugeben. Er reduziert nur die Zahl der Fragen, die später während der Implementierung entstehen könnten.
+Alle M3-D01 bis M3-D32 stehen inzwischen auf `DECIDED`; damit ist die fachliche S0-Readiness kein zusaetzlicher Blocker mehr.
 
 ## Verbindliche Quellen und Vorrang
 
-Bei Widersprüchen gilt die bestehende Projekthierarchie:
+Bei Widerspruechen gilt:
 
 1. `specification/CLEAN-ROOM-MASTER-SPEC.md`
 2. `specification/PRODUCT-SPEC.md`
 3. `docs/SECURITY.md`
-4. veröffentlichter OpenAPI-Vertrag
+4. veroeffentlichter OpenAPI-Vertrag
 5. `docs/INFORMATION-ARCHITECTURE.md`, `docs/USER-FLOWS.md`, `docs/API-UI-CONTRACTS.md`
-6. dieses Readiness-Paket
+6. explizit `DECIDED`e M3-Decision-Dokumente
+7. uebrige Readiness-Entwuerfe in `docs/m3/`
 
-Dieses Paket **schließt keine fachliche Lücke stillschweigend**. Aussagen sind entweder:
-
-- **SOURCE-BOUND** – durch eine höher priorisierte Quelle vorgegeben,
-- **DECIDED** – durch eine dokumentierte M3-Entscheidung verbindlich,
-- **PROPOSED** – bevorzugter Ansatz, aber noch nicht bindend,
-- **OPEN** – bewusst ungelöst.
+**Wichtig:** Aeltere `OPEN`-/`PROPOSED`-Formulierungen in `DOMAIN-MODEL.md` oder `API-DESIGN.md` sind Readiness-Historie. Fuer inzwischen entschiedene Punkte gelten das aktuelle [Decision Log](./DECISION-LOG.md) und die Decision-Dokumente verbindlich.
 
 ## Scope M3
 
 | Bereich | M3-Inhalt | Privacy-Grundlage |
 |---|---|---|
-| Wish | gemeinsame Wünsche, Status `OPEN/PLANNED/COMPLETED`, Autor/Ersteller, Versionierung | `SPACE_SHARED` |
-| Plan | konkrete Planung, Status `IDEA/PLANNED/COMPLETED`, Zeitbezug, optionale Herkunft aus Wish | `SPACE_SHARED` |
-| Place | wiederverwendbarer gemeinsamer Ort, Koordinaten optional | `SPACE_SHARED`; genaue Ortsdaten sensibel behandeln |
-| Content Relations | typisierte Relationen mit referentieller Integrität | Zielressource bleibt autorisierungsbestimmend |
-| Chapter | Bündel bestehender Memories, geteilter HeartMoments und Milestones | gemeinsamer Space-Inhalt |
-| Collection | frei definierbare gemeinsame Listen und sortierte Items | `SPACE_SHARED` |
-| PrivateNote | private persönliche Notiz | `OWNER_ONLY` |
+| Wish | gemeinsame Wuensche und atomarer Wish->Plan-Lifecycle | `SPACE_SHARED` |
+| Plan | konkrete Planung, Termine, Completion, optionaler Ursprung aus Wish | `SPACE_SHARED` |
+| Place | gemeinsamer Ort, Koordinaten optional, keine Providerpflicht | `SPACE_SHARED`, Ortsdaten sensibel |
+| Content Relations | typisierte Relationen mit echten FKs | Target-Autorisierung bleibt verbindlich |
+| Chapter | Buendel bestehender Memories, SHARED HeartMoments und Milestones | `SPACE_SHARED` |
+| Collection | gemeinsame Liste mit Items, Completion und atomarem Reorder | `SPACE_SHARED` |
+| PrivateNote | private persoenliche Notiz | `OWNER_ONLY` |
 | GiftIdea | private Geschenkidee | `OWNER_ONLY` |
-| PrivateCollection | private Liste und private Items | `OWNER_ONLY` |
+| PrivateCollection | private Liste und Items | `OWNER_ONLY` |
 
-Die Master-/Produktspezifikation verbietet eine Universal-Tabelle für diese Fachbereiche. Shared Planning, gemeinsame Collections und Private Area bleiben deshalb eigenständige Domänenmodelle.
+Shared Planning, gemeinsame Collections und Private Area bleiben eigenstaendige Domänenmodelle. Es gibt keine Universal-Tabelle fuer alle Inhalte.
 
-## Bereits durch die Spezifikation festgelegt
+## S0-Entscheidungen
 
-Folgende Grenzen gelten nicht als offene Produktentscheidung:
+### #162 – Wish / Plan
 
-- Wish und Plan sind im aktuellen Core gemeinsame `SPACE_SHARED`-Inhalte.
-- Private Ablage ist **keine private Variante von Wish, Plan oder Collection**, sondern besitzt eigene `OWNER_ONLY`-Modelle.
-- Wish und Plan sind getrennte Domainobjekte.
-- Der fachliche Ablauf führt von Wish über Plan zu `COMPLETED` und optional zu einem Chapter.
-- Ein nicht abgeschlossener Plan kann grundsätzlich wieder in einen Wunschzustand zurückgeführt werden; die genaue Transaktionssemantik ist noch zu entscheiden.
-- Place darf ohne Koordinaten gespeichert werden.
-- Places können fachlich mit Memories, HeartMoments, Milestones, Plans und Chapters verbunden werden.
-- Content Relations sollen intern nach Möglichkeit echte Foreign Keys und typisierte Relationstabellen verwenden; eine unkontrollierte `(targetType, targetId)`-Universalrelation ohne Referential Integrity ist ausgeschlossen.
-- Chapter bündelt bestehende Inhalte. Das Löschen eines Chapters entfernt Relationen, **nicht** die Originalinhalte.
-- Collection/CollectionItem ist die generische gemeinsame Listen-Domain.
-- ShoppingList/ShoppingItem ist später eine eigene Domain und wird nicht als Collection vorgezogen.
-- PrivateNote, GiftIdea, PrivateCollection und PrivateCollectionItem sind `OWNER_ONLY`; der Partner darf ihre Existenz auch nicht indirekt über ID, Suche, Dashboard, Link oder API-Manipulation erfahren.
+[`decisions/WISH-PLAN-LIFECYCLE.md`](./decisions/WISH-PLAN-LIFECYCLE.md)
 
-## Inhalt des Pakets
+Festgelegt sind u. a.:
 
-- [Domain Model](./DOMAIN-MODEL.md) – Modelle, Lifecycle, Relationen, Ownership und Delete-Grenzen
-- [API Design](./API-DESIGN.md) – vorgeschlagene REST-Fläche, Transitions, Fehler und Concurrency
-- [Decision Log](./DECISION-LOG.md) – offene und bereits source-bound Entscheidungen
+- collaborative write;
+- Wish-/Plan-Statusautomaten;
+- atomare, idempotente Wish->Plan-Konvertierung;
+- Return-to-Wish;
+- Direct Plan Create;
+- Datumsinvarianten;
+- Delete-/Concurrency-Matrix.
+
+### #163 – Place / Relations / Chapters
+
+[`decisions/PLACE-RELATIONS-CHAPTERS.md`](./decisions/PLACE-RELATIONS-CHAPTERS.md)
+
+Festgelegt sind u. a.:
+
+- Schutz und Praezision von Ortsdaten;
+- keine automatische Place-Deduplizierung;
+- typisierte Relationstabellen;
+- `Plan.placeId` und `Chapter.placeId` als kanonische Single-Place-FKs;
+- keine Relations auf private Targets;
+- abgeleitete Chapter-Reihenfolge;
+- Relation-/Delete-/Privacy-Races.
+
+### #164 – Collections / Private Area
+
+[`decisions/COLLECTIONS-PRIVATE-AREA.md`](./decisions/COLLECTIONS-PRIVATE-AREA.md)
+
+Festgelegt sind u. a.:
+
+- Shared Collection Write-/Versionierungsmodell;
+- atomarer Reorder;
+- Parent-Child-Delete;
+- ProtectedPayload-Grenzen der Private Area;
+- GiftIdea `IDEA | BOUGHT | GIVEN`;
+- PrivateCollection Root-/Item-Schema;
+- owner-scoped `/private/...` API;
+- redigierter M3-Eventvertrag.
+
+### #165 – G3 / Clientgrenzen
+
+[`decisions/G3-CLIENT-BOUNDARIES.md`](./decisions/G3-CLIENT-BOUNDARIES.md)
+
+Festgelegt sind u. a.:
+
+- G3 als Domain/API/PostgreSQL-Gate;
+- fuenf reale HTTP-E2E-Pflichtflows;
+- vollstaendige Client-Paritaet/Accessibility erst M5/G4;
+- Export-/Cache-Privacy-Grenzen fuer spaetere Implementierung;
+- Private Area als sekundaerer `Mein Bereich`;
+- Plan-Checklist/Medien bewusst spaeter;
+- Multi-select nur als Clientzustand.
+
+## Weitere Readiness-Dokumente
+
+- [Domain Model](./DOMAIN-MODEL.md) – urspruenglicher Modell-/Risikoentwurf; bei entschiedenen Punkten gelten die Decision-Dokumente
+- [API Design](./API-DESIGN.md) – urspruengliche API-Zielflaeche; konkrete Operationssemantik wird durch Decisions gebunden und spaeter in OpenAPI ueberfuehrt
+- [Decision Log](./DECISION-LOG.md) – aktuelle kompakte Matrix aller M3-D01 bis D32
 - [Privacy Threat Model](./PRIVACY-THREAT-MODEL.md) – Tenant-, Owner-only-, Relation- und Location-Leaks
 - [Security Test Matrix](./SECURITY-TEST-MATRIX.md) – negative Pfade, Races und Privacy-Evidenz
-- [Delivery Plan](./DELIVERY-PLAN.md) – kleine vertikale Slices mit Abhängigkeiten und Gate-Regeln
+- [Delivery Plan](./DELIVERY-PLAN.md) – vertikale Runtime-Slices nach Gate-Freigabe
 
 ## Nicht in M3 vorziehen
 
-M3 darf nicht zum Sammelmilestone werden. Ausdrücklich außerhalb dieses Pakets bzw. der M3-Runtime liegen:
+- globale Volltextsuche / allgemeines Search Read Model – M4-A;
+- Dashboard, Activity, Notifications, Reminders und Rules – M4;
+- vollstaendige Web-/Android-Produktisierung, Paritaet, Read Cache, Export/Import, Deep Links, umfassende Accessibility/Performance – M5/G4;
+- Questions, Check-in und Recaps – M6;
+- Discovery-, Shopping-, Rezept-, Event- und andere Provider – M7;
+- Maps-/Geocoding-Provider, Geofencing, Presence und aktiver Standortkontext – M7/M8;
+- ShoppingList/ShoppingItem – eigene spaetere Domain;
+- echte E2EE – MX;
+- Video – Future-Backlog #88;
+- Plan-Checklist und Plan-Attachments – spaeterer expliziter Scope.
 
-- globale Volltextsuche und Search Read Model – M4-A,
-- Dashboard, Activity, Notifications, Reminders und Rules – M4,
-- vollständige Web-/Android-Produktisierung, systematische Parität, Read Cache, Export/Import und umfassende Deep-Link-/Offline-Härtung – M5,
-- Questions, Check-in und Recaps – M6,
-- Discovery-, Shopping-, Rezept-, Event- und andere externe Provider – M7,
-- Maps-/Geocoding-Provider, Geofencing, Presence und aktiver Standortkontext – M7/M8,
-- ShoppingList/ShoppingItem – spätere eigene Domain,
-- echte E2EE – MX,
-- Video – Future-Backlog #88.
+`Place` in M3 bedeutet Domain + gespeicherte Ortsdaten + Relationen, nicht Adresssuche, Kartenansicht oder Geocoding.
 
-`Place` in M3 bedeutet daher **Domain + gespeicherte Ortsdaten + Relationen**. Es bedeutet nicht, dass M3 bereits Adresssuche, Kartenansicht, Geocoding oder Standortprovider integrieren muss.
+## Definition of Ready fuer einen M3-Runtime-Slice
 
-## Definition of Ready für einen M3-Runtime-Slice
+Ein Slice ist ready, wenn:
 
-Ein Slice ist erst ready, wenn:
+- [ ] G2 formal bestanden und M3 ueber #146 freigegeben ist;
+- [x] relevante BLOCKING-Decisions `DECIDED` sind;
+- [x] Modellfelder, Privacy-Klasse, Ersteller/Eigentuemer und Schreibrechte fachlich feststehen;
+- [x] Status-/Delete-/Relation-/Concurrency-Grenzen fuer den betroffenen M3-Kern feststehen;
+- [ ] produktiver Request/Response-/OpenAPI-Vertrag fuer den konkreten Slice umgesetzt bzw. eindeutig contract-testbar ist;
+- [x] Cross-Tenant-/Privacy-/Race-Pflichttests vorab spezifiziert sind;
+- [x] Event-Payload keine sensiblen Klartexte benoetigt;
+- [ ] Reuse-before-build fuer technische Commodity-Funktionalitaet im konkreten Runtime-PR erfolgt, sofern relevant.
 
-- [ ] G2 formal bestanden und M3 über #146 freigegeben ist,
-- [ ] relevante `BLOCKING`-Decisions `DECIDED` sind,
-- [ ] Modellfelder, Privacy-Klasse, Ersteller/Eigentümer und Schreibrechte feststehen,
-- [ ] Statusübergänge und ungültige Übergänge feststehen,
-- [ ] Delete-/Cascade-/Relation-Auswirkungen feststehen,
-- [ ] Request/Response, Fehlercodes und `If-Match`-/409-Verhalten feststehen,
-- [ ] Cross-Tenant- und Privacy-negativtests spezifiziert sind,
-- [ ] relevante Races/Idempotenzfälle spezifiziert sind,
-- [ ] Event-Payload keine sensiblen Klartexte benötigt,
-- [ ] Reuse-before-build für technische Commodity-Funktionalität durchgeführt ist, sofern relevant,
-- [ ] keine spätere M4/M5/M7/M8-Funktion als versteckte Voraussetzung eingebaut wird.
+## G3-Ziel
 
-## Definition of Done für Runtime
+G3 verlangt nach M3-Runtime mindestens:
 
-Die projektweite DoD bleibt bestehen: Datenmodell, Migration, Domain Service, Autorisierung, API/OpenAPI, Validierung, Fehlercodes, Unit-/PostgreSQL-Integrationstests, Cross-Tenant-/Privacy-Tests, Concurrency, Dokumentation sowie die für den Milestone vereinbarte Client-/Gate-Evidenz gehören zusammen.
+- konsistente Wishes/Plans/Places/Chapters/Collections;
+- vollstaendige Private-Area-Isolation;
+- deterministische Delete-/409-/Race-Wirkungen;
+- fuenf reale HTTP/PostgreSQL-E2E-Flows gemaess `G3-CLIENT-BOUNDARIES.md`;
+- keine offenen High/Critical Security-/Privacy-Findings und keinen Tenant-/OWNER_ONLY-Leak.
 
-Ein Endpoint allein ist ebenso wenig fertig wie ein UI-Screen ohne serverseitige Privacy-Grenze.
-
-## Offene Kernfragen
-
-Die wichtigsten Risiken vor Codebeginn sind nicht CRUD, sondern Semantik:
-
-1. Wer darf gemeinsame Wish/Plan/Place/Chapter/Collection-Inhalte ändern oder löschen?
-2. Wie wird Wish -> Plan atomar, idempotent und race-sicher modelliert?
-3. Was bedeutet die Rückführung eines Plans zu Wish für Identitäten, Historie und Status?
-4. Welche Datums-/Statuskombinationen sind bei Plan gültig?
-5. Welche Relationstabellen werden in M3 tatsächlich ausgeliefert und wie reagieren sie auf Delete/Privacy-Wechsel?
-6. Welche Reihenfolge und Concurrency gilt für Chapter- und Collection-Items/Relationen?
-7. Wie werden genaue Ortsdaten klassifiziert, geloggt und später exportiert/gecached?
-8. Welche Statuswerte besitzt GiftIdea? Die Master-Spezifikation nennt ein Feld `status`, aber keinen Enum.
-9. Welche minimale Client-Evidenz verlangt G3, ohne M5 vorwegzunehmen?
-
-Diese Fragen sind im Decision Log explizit erfasst; kein Runtime-PR darf sie nebenbei beantworten.
+Der finale G3-Review ist ein neuer datierter Snapshot unter `docs/reviews/` und endet explizit mit `G3: BESTANDEN` oder `G3: NICHT BESTANDEN`.
