@@ -18,7 +18,9 @@ pytestmark = [pytest.mark.integration, requires_database]
 GUTES_PASSWORT = "ein-ausreichend-langes-passwort"
 
 
-def test_paralleler_burst_verbraucht_exakt_die_restlichen_slots(production_client) -> None:  # type: ignore[no-untyped-def]
+def test_paralleler_burst_verbraucht_exakt_die_restlichen_slots(
+    production_client,
+) -> None:  # type: ignore[no-untyped-def]
     """Mehr parallele Requests als Restbudget duerfen die Schwelle nicht ueberziehen."""
     client, maker = production_client
     email = "parallel-limit@example.org"
