@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';
 import type { TokenView } from './api/generated/models/TokenView';
 import { loadReferenceClientConfig } from './client/config';
 import { createReferenceApis, runMemoryMediaStoryFlow, signIn } from './client/referenceFlow';
@@ -88,7 +89,7 @@ function LoginScreen({ onLogin, pending, error }: {
 }
 
 function StoryPage({ storyQuery }: {
-  storyQuery: ReturnType<typeof useQuery>;
+  storyQuery: UseQueryResult<StoryPageData, Error>;
 }) {
   const location = useLocation();
   const saved = Boolean((location.state as { saved?: boolean } | null)?.saved);
