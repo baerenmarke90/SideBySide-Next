@@ -17,3 +17,7 @@ sourceFolder: .
 # Application ID des Android-Projekts ist eine eigene, spaetere Entscheidung.
 packageName: sidebyside.api
 modelPackage: sidebyside.api.models
+
+# Erzeugt fuer oneOf/anyOf mit Discriminator echte Wrapper-/Subtyp-Modelle
+# statt einer unbrauchbaren abstrakten Sammelklasse.
+generateOneOfAnyOfWrappers: true
