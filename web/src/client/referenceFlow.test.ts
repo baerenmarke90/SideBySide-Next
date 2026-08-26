@@ -1,10 +1,39 @@
+import { AuthApi } from '../api/generated/apis/AuthApi';
 import { ReadDescriptorMethodEnum } from '../api/generated/models/ReadDescriptor';
 import { UploadDescriptorMethodEnum } from '../api/generated/models/UploadDescriptor';
+import { ResponseError } from '../api/generated/runtime';
 import {
   runMemoryMediaStoryFlow,
+  signIn,
   uploadAttachmentBytes,
   type ReferenceApis,
 } from './referenceFlow';
+
+describe('signIn', () => {
+  it('surfaces the API problem detail instead of the generated generic message', async () => {
+    const response = new Response(
+      JSON.stringify({
+        type: 'bad_request',
+        title: 'Bad request',
+        status: 400,
+        detail: 'HTTPS is required for non-loopback access.',
+        code: 'HTTPS_REQUIRED',
+      }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+    const spy = vi
+      .spyOn(AuthApi.prototype, 'signInApiV1AuthSignInPost')
+      .mockRejectedValue(new ResponseError(response, 'Response returned an error code'));
+
+    try {
+      await expect(signIn('', 'g2-test@example.invalid', 'password')).rejects.toThrow(
+        'HTTPS is required for non-loopback access.',
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
 
 describe('uploadAttachmentBytes', () => {
   it('adds bearer authorization only for the authenticated STREAM transport', async () => {
