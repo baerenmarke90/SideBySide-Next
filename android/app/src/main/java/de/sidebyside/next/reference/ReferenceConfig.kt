@@ -10,11 +10,16 @@ data class ReferenceConfig(
         get() = apiBaseUrl.isNotBlank() && spaceId != null
 
     companion object {
-        fun fromBuildConfig(): ReferenceConfig = ReferenceConfig(
-            apiBaseUrl = BuildConfig.SBS_API_BASE_URL.trimEnd('/'),
-            spaceId = BuildConfig.SBS_SPACE_ID.takeIf(String::isNotBlank)?.let {
-                runCatching(UUID::fromString).getOrNull()
-            },
-        )
+        fun fromBuildConfig(): ReferenceConfig {
+            val spaceIdValue = BuildConfig.SBS_SPACE_ID.trim()
+            return ReferenceConfig(
+                apiBaseUrl = BuildConfig.SBS_API_BASE_URL.trimEnd('/'),
+                spaceId = if (spaceIdValue.isBlank()) {
+                    null
+                } else {
+                    runCatching { UUID.fromString(spaceIdValue) }.getOrNull()
+                },
+            )
+        }
     }
 }
