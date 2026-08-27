@@ -1,12 +1,12 @@
-"""Begrenzung wiederholter Versuche.
+"""Limit repeated attempts.
 
-In der Datenbank und nicht im Prozessspeicher: die Cloud-API ist
-zustandslos und laeuft mehrfach. Ein Zaehler im Speicher waere pro Instanz
-einer, und wer genug Anfragen schickt, verteilt sich einfach darauf.
+State lives in the database rather than process memory because the cloud API is
+stateless and horizontally replicated. An in-memory counter would exist once
+per instance, and enough requests could simply spread across them.
 
-Der Schluessel wird gehasht abgelegt. Er ist oft eine E-Mail-Adresse, und
-eine Tabelle voller Adressen, aus der sich ablesen laesst, wer wann einen
-Anmeldeversuch hatte, ist mehr Wissen, als diese Funktion braucht.
+The key is stored as a hash. It is often an email address, and a table full of
+addresses revealing who attempted to sign in and when would retain more
+information than this function needs.
 """
 
 from __future__ import annotations
@@ -37,21 +37,19 @@ class Limit:
     window: timedelta
 
 
-# Anmeldung: streng genug, um Durchprobieren unattraktiv zu machen, weit
-# genug, um jemanden mit Tippfehlern nicht auszusperren.
+# Sign-in: strict enough to make guessing unattractive, generous enough not to
+# lock out someone making ordinary typing mistakes.
 SIGN_IN = Limit(attempts=10, window=timedelta(minutes=15))
 MAGIC_LINK = Limit(attempts=5, window=timedelta(minutes=15))
 INVITATION_ACCEPT = Limit(attempts=10, window=timedelta(minutes=15))
 
-# Erneuern: der einzige Fall, in dem nicht Fehlversuche begrenzt werden,
-# sondern Erfolge. Jede Rotation schreibt eine Zeile Replay-Historie; ein
-# Client mit gueltigem Token koennte davon in einer engen Schleife beliebig
-# viele erzeugen.
+# Refresh is the only case that limits successful attempts rather than failed
+# ones. Every rotation writes one replay-history row; a client with a valid
+# token could otherwise generate arbitrarily many in a tight loop.
 #
-# Ein Access Token lebt 15 Minuten, ein regulaerer Client erneuert also
-# etwa einmal pro Fenster. Das Budget liegt bewusst um ein Vielfaches
-# darueber: Neustarts, Netzwechsel und Wiederholungen sollen niemanden
-# aussperren, eine Schleife aber schon.
+# An access token lives for 15 minutes, so a regular client refreshes roughly
+# once per window. The budget is deliberately many times higher so restarts,
+# network changes, and retries do not lock users out while loops still do.
 REFRESH = Limit(attempts=20, window=timedelta(minutes=15))
 
 _PERSISTED_ATTEMPTS_KEY = "sidebyside.rate_limit.persisted"
@@ -63,11 +61,11 @@ def _record_hashed_attempt(session: Session, *, action: str, key_hash: str) -> N
 
 
 def _advisory_lock_id(action: str, key_hash: str) -> int:
-    """Stabiler PostgreSQL-Lock-Key aus Action und bereits gehashtem Key.
+    """Derive a stable PostgreSQL lock key from action and hashed key.
 
-    PostgreSQL-Advisory-Locks akzeptieren ein signed 64-bit Integer. Die
-    Ableitung verwendet bewusst nur den ohnehin bereits gehashten
-    Rate-Limit-Schluessel; der Klartext landet weder in Tabelle noch Lock.
+    PostgreSQL advisory locks accept a signed 64-bit integer. The derivation
+    deliberately uses only the already-hashed rate-limit key; plaintext enters
+    neither the table nor the lock key.
     """
     digest = hashlib.sha256(f"{action}\0{key_hash}".encode()).digest()
     return int.from_bytes(digest[:8], byteorder="big", signed=True)
@@ -80,21 +78,21 @@ def _reserve_hashed_attempt(
     key_hash: str,
     limit: Limit,
 ) -> None:
-    """Pruefung und Slot-Verbrauch unter einem DB-weiten per-Key Lock."""
+    """Check and consume a slot under a database-wide per-key lock."""
     session.execute(select(func.pg_advisory_xact_lock(_advisory_lock_id(action, key_hash))))
 
-    seit = now() - limit.window
-    versuche = session.execute(
+    since = now() - limit.window
+    attempts = session.execute(
         select(func.count())
         .select_from(RateLimitEvent)
         .where(
             RateLimitEvent.action == action,
             RateLimitEvent.key_hash == key_hash,
-            RateLimitEvent.occurred_at >= seit,
+            RateLimitEvent.occurred_at >= since,
         )
     ).scalar_one()
 
-    if versuche >= limit.attempts:
+    if attempts >= limit.attempts:
         raise RateLimitedError(
             "Too many attempts. Please try again later.",
             ErrorCode.RATE_LIMITED,
@@ -111,29 +109,27 @@ def _persisted_attempts(session: Session) -> set[tuple[str, str]]:
 
 
 def check(session: Session, action: str, key: str, limit: Limit) -> None:
-    """Atomar einen Rate-Limit-Slot pruefen und verbrauchen.
+    """Atomically check and consume a rate-limit slot.
 
-    Produktive Request-Sessions sind an die Engine gebunden. Dort lebt die
-    Reservierung in einer kurzen eigenen Security-Transaktion: ihr Commit
-    geschieht, bevor die fachliche Anfrage weiterlaeuft. Scheitert die
-    Anfrage spaeter und wird zurueckgerollt, bleibt der Versuch dadurch
-    gezaehlt. Gleichzeitig serialisiert ein PostgreSQL-Advisory-Lock alle
-    API-Instanzen fuer genau `(action, key)`.
+    Production request sessions are bound to the engine. There the reservation
+    lives in a short, separate security transaction that commits before the
+    domain request continues. If the request later fails and rolls back, the
+    attempt remains counted. A PostgreSQL advisory lock simultaneously
+    serializes all API instances for the exact ``(action, key)`` pair.
 
-    Tests, die eine Session absichtlich an eine bereits offene Connection
-    binden, bleiben dagegen in ihrer Testtransaktion; so wird keine
-    Testisolation durch einen separaten Commit durchbrochen.
+    Tests that deliberately bind a session to an already-open connection stay
+    inside their test transaction so a separate commit cannot break isolation.
 
-    Historische Aufrufer folgen unmittelbar mit `record_attempt()`. Diese
-    Methode markiert die bereits persistierte Reservierung, damit jener
-    Aufruf keinen zweiten Eintrag erzeugt.
+    Historical callers immediately follow with ``record_attempt()``. This
+    method marks the already-persisted reservation so that call does not create
+    a duplicate entry.
     """
     key_hash = hash_token(key.lower())
     bind = session.get_bind()
 
     if isinstance(bind, Engine):
-        # Spaeter Import: Tests ersetzen get_sessionmaker fuer den echten
-        # produktiven UoW-Lifecycle. Der Ersatz muss auch hier greifen.
+        # Late import: tests replace get_sessionmaker for the real production
+        # unit-of-work lifecycle, and that replacement must apply here too.
         from sidebyside.db import session as db_session
 
         security_session = db_session.get_sessionmaker()()
@@ -157,7 +153,7 @@ def check(session: Session, action: str, key: str, limit: Limit) -> None:
 
 
 def record_attempt(session: Session, action: str, key: str) -> None:
-    """Einen Versuch vermerken, sofern `check` ihn nicht bereits reserviert hat."""
+    """Record an attempt unless ``check`` already reserved it."""
     key_hash = hash_token(key.lower())
     if (action, key_hash) in _persisted_attempts(session):
         return
@@ -165,11 +161,11 @@ def record_attempt(session: Session, action: str, key: str) -> None:
 
 
 def preserve_attempt_after_rollback(session: Session, action: str, key: str) -> None:
-    """Den Versuch auch bei einer abgelehnten Anfrage dauerhaft erhalten.
+    """Persist the attempt even when the request is rejected.
 
-    `check()` persistiert produktive Reservierungen bereits in einer
-    separaten Security-Transaktion. Fuer Alt-/Direktaufrufe ohne vorherige
-    Reservierung bleibt der bisherige After-Rollback-Weg erhalten.
+    ``check()`` already persists production reservations in a separate security
+    transaction. For legacy/direct calls without a prior reservation, keep the
+    existing after-rollback path.
     """
     key_hash = hash_token(key.lower())
     if (action, key_hash) in _persisted_attempts(session):
@@ -186,10 +182,10 @@ def preserve_attempt_after_rollback(session: Session, action: str, key: str) -> 
 
 
 def clear(session: Session, action: str, key: str) -> None:
-    """Nach erfolgreichem Versuch aufraeumen.
+    """Clear attempts after success.
 
-    Sonst zaehlten die Fehlversuche vor einer geglueckten Anmeldung weiter
-    und sperrten den rechtmaessigen Nutzer aus.
+    Otherwise failures before a successful sign-in would keep counting and
+    could lock out the legitimate user afterward.
     """
     key_hash = hash_token(key.lower())
     session.execute(
@@ -202,12 +198,12 @@ def clear(session: Session, action: str, key: str) -> None:
 
 
 def prune(session: Session, older_than: datetime | None = None) -> int:
-    """Alte Eintraege entfernen. Fuer einen Hintergrundjob gedacht."""
-    grenze = older_than or (now() - timedelta(days=1))
-    # session.execute ist allgemein typisiert; ein DELETE liefert ein
-    # CursorResult mit rowcount.
-    ergebnis = cast(
+    """Remove old entries. Intended for a background job."""
+    cutoff = older_than or (now() - timedelta(days=1))
+    # session.execute is typed generically; DELETE returns a CursorResult with
+    # rowcount.
+    result = cast(
         "CursorResult[Any]",
-        session.execute(delete(RateLimitEvent).where(RateLimitEvent.occurred_at < grenze)),
+        session.execute(delete(RateLimitEvent).where(RateLimitEvent.occurred_at < cutoff)),
     )
-    return int(ergebnis.rowcount or 0)
+    return int(result.rowcount or 0)
