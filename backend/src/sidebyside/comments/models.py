@@ -1,4 +1,4 @@
-"""Persistenz fuer M2-Kommentare."""
+"""Persistence for M2 comments."""
 
 from __future__ import annotations
 
