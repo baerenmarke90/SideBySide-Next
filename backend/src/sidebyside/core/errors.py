@@ -1,11 +1,11 @@
-"""Fachliche Fehler und ihr Weg nach außen.
+"""Domain errors and their path to HTTP responses.
 
-Jeder Fehler, der eine Anfrage beendet, trägt einen stabilen Code. Der Code
-ist Teil des API-Vertrags: Clients dürfen darauf verzweigen, während der
-Text sich ändern und übersetzt werden darf.
+Every error that terminates a request carries a stable code. The code is part
+of the API contract: clients may branch on it while the human-readable text
+may change and be localized.
 
-Die Abbildung auf HTTP steht hier und nicht in den Routen, damit dieselbe
-Bedingung überall dieselbe Antwort erzeugt.
+The HTTP mapping lives here rather than in routes so the same condition always
+produces the same response.
 """
 
 from __future__ import annotations
@@ -14,10 +14,10 @@ from http import HTTPStatus
 
 
 class DomainError(Exception):
-    """Basis aller fachlichen Fehler.
+    """Base class for domain errors.
 
-    `type` ist ein maschinenlesbarer Kurzname der Fehlerklasse, `code` die
-    genaue Ursache. Beide erscheinen in der Antwort.
+    `type` is a machine-readable short name for the error class; `code` is the
+    precise cause. Both appear in the response.
     """
 
     status: int = HTTPStatus.INTERNAL_SERVER_ERROR
@@ -55,12 +55,12 @@ class ForbiddenError(DomainError):
 
 
 class NotFoundError(DomainError):
-    """Nicht gefunden - oder nicht sichtbar.
+    """Not found, or deliberately not visible.
 
-    Bei privatsphäre-relevanten Ressourcen wird dieser Fehler bewusst auch
-    dort verwendet, wo fachlich ein 403 richtiger wäre. Ein 403 bestätigt
-    die Existenz; wer fremde IDs durchprobiert, soll nicht erfahren, welche
-    davon es gibt. Siehe docs/SECURITY.md.
+    For privacy-sensitive resources this error is intentionally also used in
+    cases where a 403 would otherwise be semantically appropriate. A 403 would
+    confirm existence; callers probing foreign IDs must not learn which ones
+    exist. See docs/SECURITY.md.
     """
 
     status = HTTPStatus.NOT_FOUND
@@ -69,9 +69,9 @@ class NotFoundError(DomainError):
 
 
 class ConflictError(DomainError):
-    """Der Zustand hat sich seit dem Lesen geändert.
+    """The state changed since it was read.
 
-    Antwort auf eine verletzte Versionsprüfung bei Optimistic Concurrency.
+    Returned for a failed version check under optimistic concurrency.
     """
 
     status = HTTPStatus.CONFLICT
@@ -98,10 +98,10 @@ class RateLimitedError(DomainError):
 
 
 class ErrorCode:
-    """Stabile Fehlercodes.
+    """Stable error codes.
 
-    Ein Code wird nicht umbenannt, sobald er ausgeliefert ist - Clients
-    verzweigen darauf. Neue Ursachen bekommen neue Codes.
+    A code is not renamed after release because clients branch on it. New
+    causes receive new codes.
     """
 
     INTERNAL = "INTERNAL_ERROR"
