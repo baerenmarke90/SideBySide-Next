@@ -73,13 +73,13 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git config --local user.name 'github-actions[bot]'
-          git config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add web/package-lock.json
-          if git diff --cached --quiet; then
+          REPO_DIR=/__w/SideBySide-Next/SideBySide-Next
+          git -C "$REPO_DIR" config --local user.name 'github-actions[bot]'
+          git -C "$REPO_DIR" config --local user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C "$REPO_DIR" add web/package-lock.json
+          if git -C "$REPO_DIR" diff --cached --quiet; then
             exit 0
           fi
-          git commit -m 'chore(web): refresh lockfile for Biome'
-          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
-          git push origin "HEAD:${HEAD_REF}"
+          git -C "$REPO_DIR" commit -m 'chore(web): refresh lockfile for Biome'
+          git -C "$REPO_DIR" remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+          git -C "$REPO_DIR" push origin "HEAD:${HEAD_REF}"
