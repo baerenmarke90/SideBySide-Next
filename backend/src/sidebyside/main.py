@@ -32,7 +32,8 @@ def _log_operating_mode(settings: Settings) -> None:
     """
     if settings.is_production:
         _log.info(
-            "Production mode: HTTPS enforcement, host validation, and closed schema discovery enabled."
+            "Production mode: HTTPS enforcement, host validation, and closed "
+            "schema discovery enabled."
         )
         return
     if settings.environment is Environment.TEST:

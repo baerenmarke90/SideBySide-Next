@@ -1,8 +1,8 @@
-"""Konfiguration aus der Umgebung.
+"""Load configuration from the environment.
 
-Kein Geheimnis steht im Quellcode oder in einer eingecheckten Datei. Die
-Vorgabewerte hier sind Entwicklungswerte; in Produktion müssen sie gesetzt
-werden, und wo das sicherheitsrelevant ist, verweigert der Start.
+No secret is stored in source code or a committed file. The defaults here are
+development values; production must override them, and startup fails closed
+where a missing value would be security-relevant.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Deployment(StrEnum):
-    """Betriebsform. Derselbe Core, unterschiedliche Adapter."""
+    """Deployment mode. The same core uses different adapters."""
 
     CLOUD = "cloud"
     SELF_HOSTED = "self_hosted"
@@ -30,24 +30,24 @@ class Environment(StrEnum):
 
 
 class MediaStoreBackend(StrEnum):
-    """Welcher Infrastrukturadapter Medien physisch ablegt."""
+    """Infrastructure adapter used to store media physically."""
 
     LOCAL = "local"
     S3 = "s3"
 
 
 class MailTransport(StrEnum):
-    """Wie ausgehende Post das Haus verlaesst.
+    """How outgoing mail leaves the application.
 
-    `LOG` ist der Entwicklungsweg und schreibt die Nachricht ins Log -
-    mitsamt Einmal-Token. In Produktion ist er deshalb nicht zulaessig.
+    ``LOG`` is the development path and writes the message to the log,
+    including its one-time token. It is therefore forbidden in production.
 
-    `NONE` ist der ausdrueckliche Verzicht: die Instanz versendet keine
-    E-Mail. Die mailabhaengigen Anmeldewege sind dann nicht verfuegbar und
-    sagen das auch, statt einen Link ins Leere zu schicken. Anmeldung laeuft
-    ueber Passwort, Passkey und OIDC weiter. Der Unterschied zu `LOG` ist
-    der entscheidende: hier verlaesst kein Token das System, waehrend `LOG`
-    gueltige Einmal-Token in jede Logablage schreibt.
+    ``NONE`` explicitly disables mail delivery. Mail-dependent authentication
+    flows are then unavailable and report that condition instead of issuing a
+    link that can never be delivered. Password, passkey, and OIDC sign-in remain
+    available. The distinction from ``LOG`` is critical: ``NONE`` never lets a
+    token leave the system, while ``LOG`` writes valid one-time tokens to every
+    configured log sink.
     """
 
     LOG = "log"
@@ -56,12 +56,11 @@ class MailTransport(StrEnum):
 
 
 class OidcConnection(BaseModel):
-    """Eine konfigurierte OIDC-Verbindung.
+    """A configured OIDC connection.
 
-    Der `id` waehlt sie im Pfad aus; er ist frei vergeben und hat keine
-    Bedeutung fuer das Protokoll. Ein Anbieter ist damit eine Zeile
-    Konfiguration und kein Sonderfall im Code - Pocket ID ebenso wie jeder
-    andere.
+    ``id`` selects the connection in the path; it is freely assigned and has no
+    protocol meaning. A provider is therefore configuration rather than a code
+    special case, including Pocket ID.
     """
 
     id: str = Field(min_length=1, max_length=64)
@@ -74,27 +73,27 @@ class OidcConnection(BaseModel):
     @field_validator("issuer")
     @classmethod
     def issuer_is_https(cls, value: str) -> str:
-        """Ohne TLS waere die gesamte Pruefkette wertlos.
+        """Without TLS the entire verification chain would be worthless.
 
-        Discovery-Dokument, JWKS und Token-Endpunkt kaemen dann von einem
-        Gegenueber, das jeder auf dem Weg ersetzen kann.
+        The discovery document, JWKS, and token endpoint would otherwise come
+        from a peer that anyone on the path could replace.
         """
-        adresse = value.rstrip("/")
-        if not adresse.startswith("https://"):
-            raise ValueError("Ein OIDC-Issuer muss mit https:// beginnen.")
-        return adresse
+        address = value.rstrip("/")
+        if not address.startswith("https://"):
+            raise ValueError("An OIDC issuer must start with https://.")
+        return address
 
 
-# Der Vorgabewert zeigt auf die Datenbank aus `deploy/docker-compose.dev.yml`.
-# Er steht hier einmal, weil ihn zwei Konfigurationen brauchen und ein
-# auseinanderlaufendes Paar davon niemandem auffiele.
+# The default points to the database from ``deploy/docker-compose.dev.yml``.
+# It lives here once because two configurations need it and divergence between
+# the two would otherwise be easy to miss.
 DEFAULT_DATABASE_URL = "postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside"
 
 
 def _database_url_is_usable(value: str) -> str:
-    """Ein leerer Umgebungswert ist kein Vorgabewert, sondern ein Fehler."""
+    """An empty environment value is an error, not a request for the default."""
     if not value.strip():
-        raise ValueError("SBS_DATABASE_URL ist leer.")
+        raise ValueError("SBS_DATABASE_URL is empty.")
     return value
 
 
@@ -102,15 +101,15 @@ _DatabaseUrl = Annotated[str, AfterValidator(_database_url_is_usable)]
 
 
 class DatabaseSettings(BaseSettings):
-    """Nur die Verbindung - fuer Pfade, die keine laufende Anwendung sind.
+    """Database connection only, for paths that do not run the application.
 
-    Eine Migration braucht die Datenbank und sonst nichts. Laedt sie die
-    vollstaendigen `Settings`, haengt `alembic upgrade head` an Cursor-Key-,
-    SMTP- und Public-URL-Pruefungen, die mit dem Schema nichts zu tun haben,
-    und bricht ab, bevor die erste Revision laeuft.
+    A migration needs the database and nothing else. Loading the full
+    ``Settings`` would make ``alembic upgrade head`` depend on cursor-key,
+    SMTP, and public-URL validation that has nothing to do with the schema,
+    potentially failing before the first revision runs.
 
-    Bewusst weder Basisklasse noch Subtyp von `Settings`: ueber Vererbung
-    waeren beide nach der naechsten Erweiterung wieder eine Konfiguration.
+    Deliberately neither a base class nor subtype of ``Settings``: inheritance
+    would make both configurations converge again after the next extension.
     """
 
     model_config = SettingsConfigDict(env_prefix="SBS_", env_file=".env", extra="ignore")
@@ -124,8 +123,8 @@ class Settings(BaseSettings):
     environment: Environment = Environment.DEVELOPMENT
     deployment: Deployment = Deployment.SELF_HOSTED
 
-    # Kein SQLite-Rückfall: das Datenmodell nutzt PostgreSQL-Eigenschaften,
-    # und ein zweiter Dialekt im Test prüft nicht, was in Produktion läuft.
+    # No SQLite fallback: the data model uses PostgreSQL properties, and a
+    # second test dialect would not verify what actually runs in production.
     database_url: _DatabaseUrl = Field(default=DEFAULT_DATABASE_URL)
     database_echo: bool = False
 
@@ -138,33 +137,33 @@ class Settings(BaseSettings):
     s3_secret_access_key: SecretStr | None = None
     s3_session_token: SecretStr | None = None
 
-    # Keyset-Cursor verlassen den Server als opake, HMAC-geschuetzte Tokens.
-    # Ein installationsspezifischer Schluessel verhindert Manipulation und
-    # darf nicht aus DB-Passwort, Bootstrap-Token oder anderen Secrets
-    # abgeleitet werden. Entwicklung/Test nutzen nur einen lokalen Fallback.
+    # Keyset cursors leave the server as opaque HMAC-protected tokens. An
+    # installation-specific key prevents manipulation and must not be derived
+    # from the database password, bootstrap token, or other secrets.
+    # Development and test use a local fallback only.
     cursor_signing_key: SecretStr | None = None
 
-    # In Produktion entscheidet der Host-Header mit darueber, fuer welche
-    # oeffentliche Adresse eine Antwort bestimmt ist. Ein offenes "*" wuerde
-    # DNS-Rebinding und versehentlich erreichbare Nebenadressen zulassen.
+    # In production the Host header helps determine the public address for a
+    # response. An open "*" would allow DNS rebinding and accidentally
+    # reachable alternate addresses.
     allowed_hosts: list[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1"])
 
-    # Nur fuer die einmalige Inbetriebnahme einer frischen Self-Hosted-
-    # Instanz. SecretStr verhindert, dass ein Settings-Repr den Wert zeigt.
+    # Used only for one-time initialization of a fresh self-hosted instance.
+    # SecretStr prevents a Settings repr from exposing the value.
     bootstrap_token: SecretStr | None = None
 
-    # Die oeffentliche Adresse dieser Instanz. Sie steht in jedem Magic
-    # Link; aus einem Request-Header darf sie nicht kommen, sonst baut ein
-    # gefaelschter Host-Header den Link auf einen fremden Server um.
+    # Public address of this instance. It appears in every magic link and must
+    # not come from a request header; otherwise a forged Host header could make
+    # the link point to an attacker-controlled server.
     public_base_url: str = "http://localhost:8000"
 
-    # Als JSON-Liste in einer Umgebungsvariablen, damit mehrere Anbieter
-    # ohne Codeaenderung nebeneinander stehen koennen.
+    # JSON list in an environment variable so multiple providers can coexist
+    # without code changes.
     oidc_connections: list[OidcConnection] = Field(default_factory=list)
 
-    # Die Relying Party ist die Anwendung, fuer die ein Passkey gilt. Ohne
-    # eigenen Wert wird sie aus der oeffentlichen Adresse abgeleitet - ein
-    # Passkey fuer "app.example" darf auf "boese.example" nicht gelten.
+    # The relying party is the application for which a passkey is valid. When
+    # unset it is derived from the public address; a passkey for "app.example"
+    # must not be valid for "evil.example".
     webauthn_rp_id: str = ""
     webauthn_rp_name: str = "SideBySide"
     webauthn_origins: list[str] = Field(default_factory=list)
@@ -203,22 +202,22 @@ class Settings(BaseSettings):
 
     @property
     def relying_party_id(self) -> str:
-        """Die RP ID: der Host der oeffentlichen Adresse, sofern nicht gesetzt."""
+        """RP ID, defaulting to the host of the public address."""
         if self.webauthn_rp_id:
             return self.webauthn_rp_id
         return urlsplit(self.public_base_url).hostname or "localhost"
 
     @property
     def relying_party_origins(self) -> list[str]:
-        """Die Herkuenfte, die eine Ceremony vorweisen darf."""
+        """Origins that may prove a ceremony."""
         if self.webauthn_origins:
             return self.webauthn_origins
         return [self.public_base_url.rstrip("/")]
 
     def oidc_connection(self, connection_id: str) -> OidcConnection | None:
-        for verbindung in self.oidc_connections:
-            if verbindung.id == connection_id:
-                return verbindung
+        for connection in self.oidc_connections:
+            if connection.id == connection_id:
+                return connection
         return None
 
     @model_validator(mode="after")
@@ -272,16 +271,15 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def production_sends_real_mail(self) -> Self:
-        """In Produktion kein Log-Versand und keine Klartext-Links im Log.
+        """Forbid log delivery and plaintext links in production logs.
 
-        Ein Fehlstart ist hier die freundlichere Antwort: der stille
-        Gegenentwurf waere eine Instanz, die Anmeldenachweise ins Log
-        schreibt, und das faellt niemandem auf.
+        Failing startup is safer than silently running an instance that writes
+        authentication proofs to logs.
 
-        Verboten ist ausschliesslich `LOG`. Eine Instanz ohne Mailweg ist
-        eine zulaessige Betriebsform - sie setzt `NONE` und verzichtet damit
-        ausdruecklich auf die mailabhaengigen Anmeldewege. Was Produktion
-        nicht darf, ist gueltige Einmal-Token in ein Log zu schreiben.
+        Only ``LOG`` is forbidden. An instance without mail delivery is a valid
+        deployment mode: it sets ``NONE`` and explicitly gives up the
+        mail-dependent sign-in paths. Production must not write valid one-time
+        tokens to a log.
         """
         if self.is_production and self.mail_transport is MailTransport.LOG:
             raise ValueError(

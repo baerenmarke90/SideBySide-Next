@@ -32,7 +32,10 @@ router = APIRouter(tags=["spaces"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Resource version. Send it unchanged in the next write request's `If-Match` header.",
+        "description": (
+            "Resource version. Send it unchanged in the next write request's "
+            "`If-Match` header."
+        ),
         "schema": {"type": "string"},
     }
 }
@@ -84,9 +87,9 @@ class SpaceProfileUpdate(ApiModel):
     """Complete replacement state for a relationship profile.
 
     All three fields are required. Otherwise an omitted field could not be
-distinguished from clearing it, and that distinction determines whether a
-relationship start date is preserved or removed. ``relationshipStartedOn``
-is explicitly removed by sending ``null``.
+    distinguished from clearing it, and that distinction determines whether a
+    relationship start date is preserved or removed. ``relationshipStartedOn``
+    is explicitly removed by sending ``null``.
     """
 
     relationship_started_on: date | None
