@@ -11,11 +11,13 @@ import {
 
 export function ThemeControl() {
   const { t } = useTranslation();
-  const [preference, setPreference] = useState<ThemePreference>(readThemePreference);
+  const [preference, setPreference] =
+    useState<ThemePreference>(readThemePreference);
 
   useEffect(() => {
     const media = window.matchMedia(DARK_MODE_QUERY);
-    const syncTheme = () => applyResolvedTheme(resolveTheme(preference, media.matches), preference);
+    const syncTheme = () =>
+      applyResolvedTheme(resolveTheme(preference, media.matches), preference);
 
     syncTheme();
     if (preference === 'system') media.addEventListener('change', syncTheme);
@@ -34,7 +36,9 @@ export function ThemeControl() {
         id="theme-preference"
         aria-label={t('theme.label')}
         value={preference}
-        onChange={(event) => changePreference(event.currentTarget.value as ThemePreference)}
+        onChange={(event) =>
+          changePreference(event.currentTarget.value as ThemePreference)
+        }
       >
         <option value="system">{t('theme.system')}</option>
         <option value="light">{t('theme.light')}</option>

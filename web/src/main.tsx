@@ -16,7 +16,12 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, retry: false } },
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root');
+if (!root) {
+  throw new Error('Root element not found');
+}
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
