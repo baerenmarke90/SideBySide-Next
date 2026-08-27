@@ -11,11 +11,15 @@ ARG VITE_SBS_API_BASE_URL=""
 ARG VITE_SBS_SPACE_ID=""
 ENV VITE_SBS_API_BASE_URL=${VITE_SBS_API_BASE_URL}
 ENV VITE_SBS_SPACE_ID=${VITE_SBS_SPACE_ID}
+RUN sh scripts/test_csp_config.sh
 RUN npm run build
 
 FROM ghcr.io/nginx/nginx-unprivileged:1.31.4@sha256:197f252f060ed357f2ab98d4256762d7d107c76f18ad8f0b9d5178854611566d
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV NGINX_ENVSUBST_FILTER="^SBS_WEB_CSP_CONNECT_ORIGINS$"
+
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+COPY --chmod=0555 docker-entrypoint.d/19-validate-csp-connect-src.envsh /docker-entrypoint.d/19-validate-csp-connect-src.envsh
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 8080
