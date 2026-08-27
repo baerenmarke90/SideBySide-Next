@@ -1,11 +1,10 @@
-"""Die Spalten, die eine Ressource autorisierbar machen.
+"""Columns that make a resource authorizable.
 
-Ein Mixin und keine gemeinsame Tabelle. Eine Universal-Content-Tabelle
-waere der bequeme Weg - und der falsche: sie zwingt fremde Domaenen in ein
-gemeinsames Schema, macht jede Fremdschluesselbeziehung generisch und legt
-den gesamten Bestand hinter genau eine Abfrage. Jede Domaene behaelt ihre
-eigene Tabelle; gemeinsam ist nur die Form der drei Spalten und die Regel,
-die darauf arbeitet.
+This is a mixin rather than a universal content table. A shared content table
+would force unrelated domains into one schema, make every foreign-key
+relationship generic, and place the entire data set behind one query surface.
+Each domain keeps its own table; only the shape of these columns and the rule
+that operates on them are shared.
 """
 
 from __future__ import annotations
@@ -26,12 +25,11 @@ from sidebyside.authorization.privacy import (
 
 
 class PrivateResource(Protocol):
-    """Was der Guard von einem Modell braucht.
+    """Structural interface required by the authorization guard.
 
-    Absichtlich strukturell: der Guard soll gegen die Form arbeiten, nicht
-    gegen eine Vererbungslinie. Ein Modell, das diese vier Spalten hat,
-    kann autorisiert werden - unabhaengig davon, aus welchen Mixins es
-    zusammengesetzt ist.
+    Deliberately structural: the guard operates on shape rather than an
+    inheritance hierarchy. Any model exposing these columns can be authorized
+    regardless of which declarative mixins compose it.
     """
 
     id: Mapped[UUID]
@@ -44,32 +42,31 @@ class PrivateResource(Protocol):
 
 
 class PrivateResourceMixin:
-    """Space, Eigentuemer und Privacy-Klasse an einer Domaenentabelle.
+    """Space, owner, and privacy class for a domain table.
 
-    `space_id` beantwortet die Mandantenfrage, `owner_id` die
-    Eigentuemerfrage, `privacy_class` sagt, welche der beiden entscheidet.
-    Alle drei sind Pflicht: eine Ressource ohne Klasse waere eine Ressource
-    mit stillschweigender Sichtbarkeit.
+    ``space_id`` answers the tenant question, ``owner_id`` the ownership
+    question, and ``privacy_class`` selects which authorization rule applies.
+    All three are mandatory: a resource without a class would have implicit
+    visibility.
 
-    Der Eigentuemer ist der Account, nicht die Mitgliedschaft. Eine
-    beendete und spaeter wiederbelebte Mitgliedschaft darf die Zuordnung
-    eines privaten Inhalts nicht verschieben.
+    Ownership belongs to the account rather than the membership. Ending and
+    later restoring a membership must not transfer ownership of private data.
     """
 
     privacy_absence: ClassVar[ResourceAbsence] = DEFAULT_ABSENCE
-    """Die Antwort dieser Domaene auf "gibt es nicht, jedenfalls nicht fuer dich".
+    """This domain's response for a resource absent to the caller.
 
-    Einmal je Domaene gesetzt statt bei jedem Aufruf uebergeben - sonst
-    entstehen im Lauf der Zeit doch wieder unterschiedliche Antworten fuer
-    dieselbe Ressource, und der Unterschied ist die Auskunft.
+    It is declared once per domain instead of passed at every call site so the
+    same resource cannot gradually acquire different absence responses whose
+    differences reveal information.
     """
 
     shared_write: ClassVar[SharedWrite] = SharedWrite.AUTHOR_ONLY
-    """Wer eine geteilte Zeile dieser Domaene aendern darf.
+    """Who may modify shared rows in this domain.
 
-    Der Standard ist die engere Form. Eine Domaene, die gemeinsames
-    Schreiben braucht, sagt das ausdruecklich an - ein vergessener Eintrag
-    macht Inhalte damit nicht versehentlich fuer den Partner schreibbar.
+    The default is the narrower author-only policy. A domain that needs
+    collaborative write access opts in explicitly, so forgetting a declaration
+    cannot accidentally make partner-owned content writable.
     """
 
     space_id: Mapped[UUID] = mapped_column(
