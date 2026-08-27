@@ -11,7 +11,10 @@ describe('StoryList', () => {
       effectiveDate: '2026-08-26',
       memory: {
         attachments: [],
-        author: { id: '00000000-0000-0000-0000-000000000001', displayName: 'A' },
+        author: {
+          id: '00000000-0000-0000-0000-000000000001',
+          displayName: 'A',
+        },
         capabilities: { canComment: true, canDelete: true, canEdit: true },
         createdAt: '2026-08-26T08:00:00Z',
         happenedOn: '2026-08-26',

@@ -38,11 +38,19 @@ export function MemoryPreview({
   }, [attachmentId, loadImage, memoryId]);
 
   if (failed) {
-    return <div className="story-media-placeholder">{t('media.unavailable')}</div>;
+    return (
+      <div className="story-media-placeholder">{t('media.unavailable')}</div>
+    );
   }
 
   if (!url) {
-    return <div className="story-media-skeleton" role="status" aria-label={t('media.loading')} />;
+    return (
+      <div
+        className="story-media-skeleton"
+        role="status"
+        aria-label={t('media.loading')}
+      />
+    );
   }
 
   return <img className="story-media-preview" src={url} alt={t('media.alt')} />;

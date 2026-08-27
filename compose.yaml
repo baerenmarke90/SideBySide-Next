@@ -122,6 +122,11 @@ services:
   web:
     <<: *web-build
     restart: unless-stopped
+    environment:
+      # Presigned S3-Transfers laufen im Browser ueber fetch(). Der vorhandene
+      # S3-Endpoint wird deshalb als exakt validierte connect-src-Origin in
+      # die CSP aufgenommen; beim lokalen MediaStore bleibt die Liste leer.
+      SBS_WEB_CSP_CONNECT_ORIGINS: "${SBS_S3_ENDPOINT:-}"
     networks:
       - app
     ports:

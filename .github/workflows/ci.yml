@@ -245,6 +245,27 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:8000/api/v1/health
           curl --fail --silent --show-error http://127.0.0.1:8080/healthz
           curl --fail --silent --show-error http://127.0.0.1:8080/ | grep -Fq "<title>SideBySide Next"
+          web/scripts/check_csp_header.sh http://127.0.0.1:8080/
+
+      - name: CSP-Origins sind eng und fail-closed konfigurierbar
+        run: |
+          gerendert=$(docker compose run --rm --no-deps \
+            -e SBS_WEB_CSP_CONNECT_ORIGINS="https://api.example.test https://s3.example.test:9443" \
+            web nginx -T 2>&1)
+          printf '%s\n' "$gerendert" \
+            | grep -Fq "connect-src 'self' https://api.example.test https://s3.example.test:9443;"
+
+          set +e
+          docker compose run --rm --no-deps \
+            -e SBS_WEB_CSP_CONNECT_ORIGINS="https://example.test; add_header X-Injected true" \
+            web nginx -t >/tmp/ungueltige-csp-origin.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "Der Web-Container hat eine injizierbare CSP-Origin akzeptiert."
+            exit 1
+          fi
+          grep -Fq "keine gueltige exakte HTTP(S)-Origin" /tmp/ungueltige-csp-origin.log
 
       - name: Kein Runtime-Dienst ist an der Konfiguration gescheitert
         # Ein fehlender Settings-Wert beendet den Prozess sofort; unter
