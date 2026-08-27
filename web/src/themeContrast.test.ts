@@ -55,6 +55,12 @@ function cssBlock(css: string, selector: string): string {
   return match[1];
 }
 
+function darkThemeBlock(css: string): string {
+  const match = css.match(/:root\[data-theme=(?:"dark"|'dark')\]\s*\{([^}]*)\}/);
+  if (!match) throw new Error('CSS-Block fehlt: :root[data-theme=dark]');
+  return match[1];
+}
+
 function cssVariable(block: string, name: string): string {
   const match = block.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6,8});`));
   if (!match)
@@ -63,7 +69,7 @@ function cssVariable(block: string, name: string): string {
 }
 
 const light = cssBlock(readSource('./styles.css'), ':root');
-const dark = cssBlock(readSource('./theme.css'), ":root[data-theme='dark']");
+const dark = darkThemeBlock(readSource('./theme.css'));
 const white = '#ffffff';
 
 describe('theme token contrast', () => {
