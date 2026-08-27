@@ -31,7 +31,7 @@ export function StoryList({
   const groups = groupStoryItems(items, locale);
 
   return (
-    <div className="story-timeline" role="region" aria-label={t('story.aria')}>
+    <section className="story-timeline" aria-label={t('story.aria')}>
       {groups.map((group) => (
         <section className="story-month" key={group.key} aria-labelledby={`month-${group.key}`}>
           <div className="month-heading">
@@ -72,6 +72,6 @@ export function StoryList({
           </ol>
         </section>
       ))}
-    </div>
+    </section>
   );
 }
