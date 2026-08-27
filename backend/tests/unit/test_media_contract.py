@@ -1,4 +1,4 @@
-"""Gemeinsamer MediaStore-Vertrag fuer Local und S3."""
+"""Shared MediaStore contract for Local and S3 backends."""
 
 from __future__ import annotations
 
