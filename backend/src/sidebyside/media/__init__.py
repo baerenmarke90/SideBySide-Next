@@ -1,7 +1,7 @@
-"""Medienablage.
+"""Media storage.
 
-Welcher Adapter laeuft, entscheidet die Konfiguration - nicht die Domaene.
-Sie sieht nur `MediaStore`.
+Configuration selects the active adapter, not the domain. The domain sees
+only `MediaStore`.
 """
 
 from __future__ import annotations
@@ -39,14 +39,14 @@ __all__ = [
 
 @lru_cache(maxsize=1)
 def get_media_store() -> MediaStore:
-    """Die konfigurierte Ablage ohne S3-Wissen im Domaincode."""
+    """Return configured storage without exposing S3 knowledge to domain code."""
     settings = get_settings()
     if settings.media_store is MediaStoreBackend.LOCAL:
         return LocalMediaStore(settings.media_root)
 
     if settings.s3_access_key_id is None or settings.s3_secret_access_key is None:
-        # Settings validiert das bereits. Die defensive Pruefung haelt die
-        # Factory trotzdem typ- und fehlersicher, falls sie isoliert benutzt wird.
+        # Settings already validates this. The defensive check keeps the
+        # factory type-safe and failure-safe when used in isolation.
         raise RuntimeError("S3 media credentials are missing.")
 
     return S3MediaStore(
