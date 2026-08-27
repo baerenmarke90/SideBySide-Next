@@ -6,6 +6,7 @@ on:
       - chore/214-backend-english-engineering
     paths:
       - tools/ci/pr219_quality_cleanup.py
+      - tools/ci/pr219_quality_audit.py
       - .github/workflows/pr219-quality-cleanup.yml
 
 permissions:
