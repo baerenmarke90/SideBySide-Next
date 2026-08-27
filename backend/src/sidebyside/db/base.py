@@ -1,8 +1,8 @@
-"""Basis der Persistenzschicht.
+"""Persistence-layer base.
 
-Die Namenskonvention für Constraints ist festgelegt, weil Alembic sonst
-generierte Namen erfindet, die sich zwischen Datenbanken unterscheiden -
-und eine Migration, die einen Constraint löschen will, ihn nicht findet.
+Constraint naming is fixed because otherwise Alembic invents generated names
+that differ between databases, and a migration trying to drop a constraint
+cannot find it reliably.
 """
 
 from __future__ import annotations
