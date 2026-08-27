@@ -50,6 +50,27 @@ jobs:
       - name: Verify Python syntax
         run: python3 -m compileall -q backend/tests
 
+      - name: Show concrete remaining prose markers
+        run: |
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+
+          spec = importlib.util.spec_from_file_location(
+              "language_audit", "tools/ci/engineering_language_audit.py"
+          )
+          audit = importlib.util.module_from_spec(spec)
+          assert spec.loader is not None
+          spec.loader.exec_module(audit)
+
+          for path in audit.backend_files():
+              if path.suffix != ".py":
+                  continue
+              for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                  if audit._contains_marker(line):
+                      print(f"{path}:{number}: {line.strip()}")
+          PY
+
       - name: Verify authoritative engineering-language audit
         run: python3 tools/ci/engineering_language_audit.py
 
