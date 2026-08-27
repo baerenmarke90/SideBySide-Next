@@ -1,6 +1,4 @@
 (function bootstrapTheme() {
-  'use strict';
-
   var storageKey = 'sidebyside.theme';
   var darkModeQuery = '(prefers-color-scheme: dark)';
   var themeColors = {
@@ -9,8 +7,9 @@
   };
 
   var preference = 'system';
+  var storedPreference;
   try {
-    var storedPreference = window.localStorage.getItem(storageKey);
+    storedPreference = window.localStorage.getItem(storageKey);
     if (
       storedPreference === 'system' ||
       storedPreference === 'light' ||
