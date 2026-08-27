@@ -1,8 +1,8 @@
-"""Der Story-Slice muss den in #70 freigegebenen Vertrag spiegeln.
+"""The Story slice must mirror the contract approved in #70.
 
-Story ist der einzige M2-Endpunkt, dessen Antwort eine Union ist. Wenn der
-Vertrag hier abweicht, merkt das kein Client zur Laufzeit - er bekommt
-einfach ein Feld nicht, das er erwartet hat.
+Story is the only M2 endpoint whose response is a union. If the contract
+diverges here, no client notices at runtime; it simply receives no field it
+expected.
 """
 
 from __future__ import annotations
@@ -24,49 +24,49 @@ def _operation() -> dict[str, object]:
     return _schema()["paths"][TIMELINE]["get"]  # type: ignore[index,return-value]
 
 
-def test_route_und_operation_id_sind_eingefroren() -> None:
+def test_route_and_operation_id_are_frozen() -> None:
     assert _operation()["operationId"] == "getStoryTimeline"
 
 
-def test_query_entspricht_dem_manifest() -> None:
+def test_query_matches_manifest() -> None:
     manifest = json.loads(CONTRACT.read_text(encoding="utf-8"))
-    eintrag = next(
+    entry = next(
         operation
         for operation in manifest["operations"]
         if operation["operationId"] == "getStoryTimeline"
     )
-    namen = {
+    names = {
         parameter["name"]
         for parameter in _operation()["parameters"]  # type: ignore[index]
         if parameter["in"] == "query"
     }
-    assert namen == set(eintrag["query"])
+    assert names == set(entry["query"])
 
 
-def test_kein_visibility_parameter() -> None:
-    """M2-D22: die Story hat keinen Owner-Modus, auch nicht als Filter."""
-    namen = {
+def test_no_visibility_parameter() -> None:
+    """M2-D22: Story has no owner mode, including as a filter."""
+    names = {
         parameter["name"]
         for parameter in _operation()["parameters"]  # type: ignore[index]
     }
-    assert "visibility" not in namen
+    assert "visibility" not in names
 
 
-def test_kein_q_parameter() -> None:
-    """M2-D08 hat die Volltextsuche nach M4-A verschoben."""
-    namen = {
+def test_no_q_parameter() -> None:
+    """M2-D08 moved full-text search to M4-A."""
+    names = {
         parameter["name"]
         for parameter in _operation()["parameters"]  # type: ignore[index]
     }
-    assert "q" not in namen
+    assert "q" not in names
 
 
-def test_union_heisst_story_item() -> None:
-    """`API-DESIGN.md` nennt den Typ so - der Vertrag muss ihn benennen.
+def test_union_is_named_story_item() -> None:
+    """`API-DESIGN.md` gives the type this name, so the contract must name it.
 
-    Ohne eigenen Typ nennt OpenAPI die Union nach ihrem Fundort
-    (`StoryPageItemsInner`), und jeder erzeugte Client traegt diesen Namen
-    weiter in Web- und Android-Code.
+    Without its own type, OpenAPI names the union after its location
+    (`StoryPageItemsInner`), and every generated client carries that name into
+    the Web and Android code.
     """
     schemas = _schema()["components"]["schemas"]  # type: ignore[index]
     assert schemas["StoryPage"]["properties"]["items"]["items"] == {
@@ -75,27 +75,27 @@ def test_union_heisst_story_item() -> None:
     assert "StoryPageItemsInner" not in schemas
 
 
-def test_union_ist_ueber_kind_diskriminiert() -> None:
+def test_union_is_discriminated_by_kind() -> None:
     schemas = _schema()["components"]["schemas"]  # type: ignore[index]
-    diskriminator = schemas["StoryItem"]["discriminator"]
-    assert diskriminator["propertyName"] == "kind"
-    assert set(diskriminator["mapping"]) == {"MEMORY", "HEART_MOMENT", "MILESTONE"}
+    discriminator = schemas["StoryItem"]["discriminator"]
+    assert discriminator["propertyName"] == "kind"
+    assert set(discriminator["mapping"]) == {"MEMORY", "HEART_MOMENT", "MILESTONE"}
 
 
-def test_story_kennt_keine_private_variante() -> None:
-    """Die Union hat drei Varianten - eine private HeartMoment-Form gibt es nicht."""
+def test_story_has_no_private_variant() -> None:
+    """The union has three variants; there is no private HeartMoment form."""
     schemas = _schema()["components"]["schemas"]  # type: ignore[index]
     assert "visibility" not in schemas["SharedHeartMomentSummary"]["properties"]
 
 
-def test_limit_und_year_tragen_die_vertraglichen_grenzen() -> None:
+def test_limit_and_year_have_contract_bounds() -> None:
     parameter = {
-        eintrag["name"]: eintrag
-        for eintrag in _operation()["parameters"]  # type: ignore[index]
+        entry["name"]: entry
+        for entry in _operation()["parameters"]  # type: ignore[index]
     }
     assert parameter["limit"]["schema"]["default"] == 50
     assert parameter["limit"]["schema"]["maximum"] == 100
-    jahr = parameter["year"]["schema"]
-    grenzen = jahr if "minimum" in jahr else next(o for o in jahr["anyOf"] if "minimum" in o)
-    assert grenzen["minimum"] == 1900
-    assert grenzen["maximum"] == 2100
+    year = parameter["year"]["schema"]
+    bounds = year if "minimum" in year else next(o for o in year["anyOf"] if "minimum" in o)
+    assert bounds["minimum"] == 1900
+    assert bounds["maximum"] == 2100
