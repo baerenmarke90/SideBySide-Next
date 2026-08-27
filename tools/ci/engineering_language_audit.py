@@ -46,7 +46,8 @@ BACKEND_FILENAMES = {"Dockerfile"}
 # identifiers that contain compounds rather than standalone words.
 ENGINEERING_PROSE_MARKERS = re.compile(
     r"(?:"
-    r"\b(?:der|die|das|den|dem|des|ein|eine|einen|einem|einer|ist|sind|wird|"
+    r"\b(?:Zusammenfassung|Begruendung|Begründung|Gepruefte|Geprüfte|Entscheidung|"
+    r"der|die|das|den|dem|des|ein|eine|einen|einem|einer|ist|sind|wird|"
     r"werden|wurde|wurden|und|oder|ohne|mit|nicht|kein|keine|keinen|nur|wenn|"
     r"damit|dass|sonst|auch|dieser|diese|dieses|hier|dort|als|bei|beim|vom|"
     r"von|zum|zur|im|ins|am|an|auf|aus|gegen|zwischen|bereits|immer|spaeter|"
@@ -88,7 +89,8 @@ def _format_finding(path: Path, line_number: int, text: str) -> str:
 
 
 def _contains_marker(text: str) -> bool:
-    return ENGINEERING_PROSE_MARKERS.search(text.replace(ALLOWED_LEGACY_INPUT, "")) is not None
+    sanitized = text.replace(ALLOWED_LEGACY_INPUT, "")
+    return ENGINEERING_PROSE_MARKERS.search(sanitized) is not None
 
 
 def _literal_strings(node: ast.AST | None) -> list[tuple[int, str]]:
@@ -154,7 +156,8 @@ def check_python_file(path: Path) -> list[str]:
             is_exception = bool(name and (name.endswith("Error") or name.endswith("Exception")))
             is_diagnostic = name in DIAGNOSTIC_CALLS or method in DIAGNOSTIC_METHODS or is_exception
             if is_diagnostic:
-                for argument in [*node.args, *(keyword.value for keyword in node.keywords)]:
+                arguments = [*node.args, *(keyword.value for keyword in node.keywords)]
+                for argument in arguments:
                     for line_number, value in _literal_strings(argument):
                         if _contains_marker(value):
                             findings.add((line_number, value))
@@ -166,7 +169,11 @@ def check_python_file(path: Path) -> list[str]:
                                 findings.add((line_number, value))
 
     return [
-        _format_finding(path, line_number, lines[line_number - 1] if 0 < line_number <= len(lines) else value)
+        _format_finding(
+            path,
+            line_number,
+            lines[line_number - 1] if 0 < line_number <= len(lines) else value,
+        )
         for line_number, value in sorted(findings)
     ]
 
@@ -190,7 +197,8 @@ def backend_files() -> list[Path]:
         if not root.is_dir():
             continue
         for path in root.rglob("*"):
-            if path.is_file() and (path.suffix in BACKEND_SUFFIXES or path.name in BACKEND_FILENAMES):
+            supported = path.suffix in BACKEND_SUFFIXES or path.name in BACKEND_FILENAMES
+            if path.is_file() and supported:
                 files.append(path)
     dockerfile = Path("backend/Dockerfile")
     if dockerfile.is_file():
@@ -210,7 +218,10 @@ def main() -> int:
         findings.extend(check_file(path))
 
     if findings:
-        print("Legacy engineering-language markers found in migrated developer surfaces:", file=sys.stderr)
+        print(
+            "Legacy engineering-language markers found in migrated developer surfaces:",
+            file=sys.stderr,
+        )
         for finding in findings:
             print(f"- {finding}", file=sys.stderr)
         return 1
