@@ -29,8 +29,9 @@ Die Checks sind bewusst getrennt:
 - `lint` führt Biome-Lintregeln für handgeschriebenen Web-Code aus;
 - `format:check` prüft die einheitliche Formatierung.
 
-Der generierte OpenAPI-Client unter `src/api/generated/` ist von Biome
-bewusst ausgeschlossen, weil er aus dem Backend-Vertrag erzeugt wird.
+`npm run format` schreibt die Biome-Formatierung lokal. Der generierte
+OpenAPI-Client unter `src/api/generated/` ist von Biome bewusst ausgeschlossen,
+weil er aus dem Backend-Vertrag erzeugt wird.
 
 ## Aktueller M2-Web-Slice
 

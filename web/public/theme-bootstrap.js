@@ -23,7 +23,12 @@
   }
 
   var systemPrefersDark = window.matchMedia(darkModeQuery).matches;
-  var theme = preference === 'system' ? (systemPrefersDark ? 'dark' : 'light') : preference;
+  var theme =
+    preference === 'system'
+      ? systemPrefersDark
+        ? 'dark'
+        : 'light'
+      : preference;
   var root = document.documentElement;
 
   root.dataset.theme = theme;

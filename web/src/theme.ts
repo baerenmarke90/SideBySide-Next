@@ -9,11 +9,18 @@ const THEME_COLOR: Record<ResolvedTheme, string> = {
   dark: '#1c1525',
 };
 
-export function parseThemePreference(value: string | null | undefined): ThemePreference {
-  return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+export function parseThemePreference(
+  value: string | null | undefined,
+): ThemePreference {
+  return value === 'light' || value === 'dark' || value === 'system'
+    ? value
+    : 'system';
 }
 
-export function resolveTheme(preference: ThemePreference, systemPrefersDark: boolean): ResolvedTheme {
+export function resolveTheme(
+  preference: ThemePreference,
+  systemPrefersDark: boolean,
+): ResolvedTheme {
   if (preference === 'system') return systemPrefersDark ? 'dark' : 'light';
   return preference;
 }
@@ -35,13 +42,18 @@ export function storeThemePreference(preference: ThemePreference): void {
   }
 }
 
-export function applyResolvedTheme(theme: ResolvedTheme, preference?: ThemePreference): void {
+export function applyResolvedTheme(
+  theme: ResolvedTheme,
+  preference?: ThemePreference,
+): void {
   const root = document.documentElement;
   root.dataset.theme = theme;
   if (preference) root.dataset.themePreference = preference;
   root.style.colorScheme = theme;
 
-  const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  const themeColor = document.querySelector<HTMLMetaElement>(
+    'meta[name="theme-color"]',
+  );
   if (themeColor) themeColor.content = THEME_COLOR[theme];
 }
 

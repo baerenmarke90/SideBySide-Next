@@ -1,7 +1,12 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
   "files": {
-    "includes": ["**", "!src/api/generated"]
+    "includes": [
+      "**",
+      "!src/api/generated",
+      "!vite.config.js",
+      "!vite.config.d.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
