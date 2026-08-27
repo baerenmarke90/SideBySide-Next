@@ -24,8 +24,9 @@ Issue #212 establishes English as the repository engineering language. This docu
 4. **Active technical documentation and specifications**
    - current architecture, security, operations, milestone, decision, and specification documents
    - preserve normative meaning while translating
-5. **Historical material**
+5. **Historical material and repository history**
    - dated reviews/audit snapshots remain immutable and may keep their original language under the policy's historical-snapshot exception
+   - pre-policy commit messages, merged pull requests, closed issues, and their historical discussions remain unchanged; new engineering history must be English
 
 ## Rules during migration
 
@@ -33,6 +34,7 @@ Issue #212 establishes English as the repository engineering language. This docu
 - Generated/vendor output is changed through its authoritative source or generator, never by manual bulk editing.
 - Localization resources are outside the engineering-language migration.
 - New or materially edited engineering content must be English immediately, even in files that still contain untouched legacy German text.
+- Never rewrite Git history solely to translate historical commit messages.
 - Clean-room, security, privacy, tenant-isolation, provenance, licensing, and existing CI gates remain unchanged.
 
 ## Audit evidence
