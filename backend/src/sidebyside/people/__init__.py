@@ -1,1 +1,1 @@
-"""Nahestehende Personen und wichtige Termine."""
+"""Related people and important dates."""
