@@ -68,8 +68,8 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
 
           const path = 'web/package-lock.json';
           const branch = process.env.HEAD_REF;
