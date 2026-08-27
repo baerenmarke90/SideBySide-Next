@@ -169,9 +169,7 @@ def _https_discovery_endpoint(value: object, *, connection_id: str, field: str) 
 
 def discover(configured: OidcConnection) -> Discovery:
     """Fetch discovery metadata and verify that the document identifies itself."""
-    document = _get_json(
-        f"{configured.issuer}/.well-known/openid-configuration", kind="discovery"
-    )
+    document = _get_json(f"{configured.issuer}/.well-known/openid-configuration", kind="discovery")
     discovered_issuer = str(document.get("issuer", "")).rstrip("/")
     if discovered_issuer != configured.issuer:
         log.warning("oidc discovery issuer mismatch", extra={"connection": configured.id})
@@ -270,9 +268,7 @@ def start(
     }
     separator = "&" if "?" in discovery.authorization_endpoint else "?"
     return StartedFlow(
-        authorization_url=(
-            f"{discovery.authorization_endpoint}{separator}{urlencode(parameters)}"
-        ),
+        authorization_url=(f"{discovery.authorization_endpoint}{separator}{urlencode(parameters)}"),
         state=state,
     )
 
@@ -535,9 +531,7 @@ def complete(
         identity.last_used_at = now()
 
     rate_limit.clear(session, ACTION_OIDC_START, configured.id)
-    _, issued = sessions.start_session(
-        session, account, device_name=device_name, platform=platform
-    )
+    _, issued = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
     return SignedIn(account=account, tokens=issued)
 

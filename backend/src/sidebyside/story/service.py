@@ -191,8 +191,7 @@ def _decode_cursor(
     kind_raw = position.get("kind")
     id_raw = position.get("id")
     if not all(
-        isinstance(value, str)
-        for value in (effective_date_raw, created_at_raw, kind_raw, id_raw)
+        isinstance(value, str) for value in (effective_date_raw, created_at_raw, kind_raw, id_raw)
     ):
         raise cursor_codec.invalid_cursor()
     try:

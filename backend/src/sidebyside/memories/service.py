@@ -301,9 +301,7 @@ def replace_attachments(
         attachments.append(attachment)
     binding.ensure_within_limits(attachments)
 
-    previous = {
-        bound.attachment.id for bound in binding.attachments_of_memory(session, memory.id)
-    }
+    previous = {bound.attachment.id for bound in binding.attachments_of_memory(session, memory.id)}
     session.execute(
         delete(binding.MemoryAttachment).where(binding.MemoryAttachment.memory_id == memory.id)
     )

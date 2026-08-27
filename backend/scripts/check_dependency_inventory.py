@@ -70,8 +70,7 @@ def check_inventory(pyproject_path: Path, documentation_path: Path) -> list[str]
             continue
         if documented_version != installed_version:
             errors.append(
-                f"{package_name}: documented {documented_version}, "
-                f"installed {installed_version}"
+                f"{package_name}: documented {documented_version}, installed {installed_version}"
             )
         if documented_license != installed_license:
             errors.append(
@@ -81,9 +80,7 @@ def check_inventory(pyproject_path: Path, documentation_path: Path) -> list[str]
 
     unexpected = sorted(set(documented) - required)
     for package_name in unexpected:
-        errors.append(
-            f"{package_name}: documented as a PyPI dependency but not declared directly"
-        )
+        errors.append(f"{package_name}: documented as a PyPI dependency but not declared directly")
     return errors
 
 

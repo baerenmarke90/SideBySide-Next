@@ -92,9 +92,7 @@ def register(
         invitations.accept(session, invitation_token, account)
         rate_limit.clear(session, ACTION_ACCEPT, invitation_token)
 
-    _, tokens = sessions.start_session(
-        session, account, device_name=device_name, platform=platform
-    )
+    _, tokens = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
     return SignedIn(account=account, tokens=tokens)
 
@@ -147,9 +145,7 @@ def sign_in(
 
     rate_limit.clear(session, ACTION_SIGN_IN, address)
 
-    _, tokens = sessions.start_session(
-        session, account, device_name=device_name, platform=platform
-    )
+    _, tokens = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
     return SignedIn(account=account, tokens=tokens)
 

@@ -155,9 +155,7 @@ def consume_magic_link(
         email_record.verified_at = now()
 
     rate_limit.clear(session, ACTION_MAGIC_LINK, email_record.email)
-    _, issued = sessions.start_session(
-        session, account, device_name=device_name, platform=platform
-    )
+    _, issued = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
     return SignedIn(account=account, tokens=issued)
 
@@ -177,9 +175,7 @@ def request_email_verification(session: Session, account: Account, *, mail: Mail
     if email_record is None or email_record.verified_at is not None:
         return
 
-    rate_limit.check(
-        session, ACTION_EMAIL_VERIFICATION, email_record.email, rate_limit.MAGIC_LINK
-    )
+    rate_limit.check(session, ACTION_EMAIL_VERIFICATION, email_record.email, rate_limit.MAGIC_LINK)
     rate_limit.record_attempt(session, ACTION_EMAIL_VERIFICATION, email_record.email)
 
     _, issued = action_tokens.issue_email_verification(session, email_record.id)
@@ -288,8 +284,6 @@ def consume_recovery(
     identity.secret_hash = passwords.hash_password(new_password)
     sessions.revoke_all(session, account)
 
-    _, issued = sessions.start_session(
-        session, account, device_name=device_name, platform=platform
-    )
+    _, issued = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
     return SignedIn(account=account, tokens=issued)

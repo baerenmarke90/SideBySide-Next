@@ -300,9 +300,7 @@ def _load[ResourceT: (Memory, HeartMoment, Milestone)](
 ) -> dict[UUID, ResourceT]:
     if not ids:
         return {}
-    rows = (
-        session.execute(readable(model, authorization).where(model.id.in_(ids))).scalars().all()
-    )
+    rows = session.execute(readable(model, authorization).where(model.id.in_(ids))).scalars().all()
     return {row.id: row for row in rows}
 
 

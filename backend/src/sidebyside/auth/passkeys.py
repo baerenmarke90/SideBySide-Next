@@ -155,8 +155,7 @@ def start_registration(session: Session, account: Account) -> dict[str, Any]:
         # An already registered authenticator must not create a second
         # credential for the same account.
         exclude_credentials=[
-            PublicKeyCredentialDescriptor(id=credential.credential_id)
-            for credential in existing
+            PublicKeyCredentialDescriptor(id=credential.credential_id) for credential in existing
         ],
         authenticator_selection=AuthenticatorSelectionCriteria(
             resident_key=ResidentKeyRequirement.PREFERRED,
@@ -300,13 +299,9 @@ def finish_authentication(
     # found the credential itself. That proves discoverability, which
     # registration could only request.
     passkey.is_discoverable = True
-    passkey.backup_state = bool(
-        getattr(verified, "credential_backed_up", passkey.backup_state)
-    )
+    passkey.backup_state = bool(getattr(verified, "credential_backed_up", passkey.backup_state))
 
-    _, issued = sessions.start_session(
-        session, account, device_name=device_name, platform=platform
-    )
+    _, issued = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
     return SignedIn(account=account, tokens=issued)
 

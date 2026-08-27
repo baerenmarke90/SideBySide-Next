@@ -188,18 +188,14 @@ def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
     required.
     """
     hashed = hash_token(refresh_token) if refresh_token else ""
-    failed = UnauthenticatedError(
-        "Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED
-    )
+    failed = UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
     if not hashed:
         raise failed
 
     current_time = now()
 
     device_session = session.execute(
-        select(DeviceSession)
-        .where(DeviceSession.refresh_token_hash == hashed)
-        .with_for_update()
+        select(DeviceSession).where(DeviceSession.refresh_token_hash == hashed).with_for_update()
     ).scalar_one_or_none()
 
     # No match for the current generation. This is where both an old token and

@@ -33,8 +33,7 @@ router = APIRouter(tags=["spaces"])
 ETAG_HEADERS = {
     "ETag": {
         "description": (
-            "Resource version. Send it unchanged in the next write request's "
-            "`If-Match` header."
+            "Resource version. Send it unchanged in the next write request's `If-Match` header."
         ),
         "schema": {"type": "string"},
     }
