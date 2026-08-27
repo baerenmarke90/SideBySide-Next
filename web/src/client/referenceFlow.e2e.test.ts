@@ -65,7 +65,8 @@ describe('G2 real Web client E2E', () => {
 
       expect(result.imageUrl).toBe('blob:g2-web-e2e');
       expect(downloadedBlob).toBeDefined();
-      const downloaded = new Uint8Array(await downloadedBlob!.arrayBuffer());
+      if (!downloadedBlob) throw new Error('Expected downloaded blob');
+      const downloaded = new Uint8Array(await downloadedBlob.arrayBuffer());
       expect(Array.from(downloaded.slice(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
     } finally {
       URL.createObjectURL = originalCreateObjectURL;
