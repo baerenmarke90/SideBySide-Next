@@ -1,13 +1,13 @@
-"""Der Attachment-Lebenszyklus.
+"""Attachment lifecycle.
 
-Ein erfolgreicher Providerupload ist nicht `READY`. Zwischen beiden liegt
-die serverseitige Validierung, und sie entscheidet allein - genau deshalb
-laeuft sie nicht im Requestpfad, sondern als Aufgabe in der vorhandenen
-Warteschlange.
+A successful provider upload is not ``READY``. Server-side validation sits
+between transfer and readiness and is the only authority that may advance the
+state; that is why validation runs as a background job rather than in the
+request path.
 
-Der Statusautomat aus M2-D05 ist hier die einzige Wahrheit. Jeder Uebergang
-prueft seinen Ausgangszustand; ein Aufruf zur falschen Zeit aendert nichts,
-statt einen halben Schritt zu tun.
+The M2-D05 state machine is authoritative here. Every transition validates its
+source state so a call made at the wrong time changes nothing instead of
+performing half a transition.
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ log = logging.getLogger(__name__)
 ATTACHMENT_VALIDATION = "attachment_validation"
 
 BINDING_WINDOW = timedelta(minutes=60)
-"""M2-D20: so lange darf ein READY Attachment ungebunden bleiben."""
+"""M2-D20: maximum time a READY attachment may remain unbound."""
 
 ORIGINAL_VARIANT = "original"
 THUMBNAIL_VARIANT = "thumbnail"
@@ -65,17 +65,15 @@ MAX_ORIGINAL_NAME = 255
 
 @dataclass(frozen=True)
 class ReadTarget:
-    """Was der Aufrufer ueber die Bindung behauptet - oder eben nichts.
+    """What the caller asserts about attachment binding, or no assertion.
 
-    Drei Faelle, die auseinandergehalten werden muessen. `NONE` aus dem
-    API-Vertrag ist eine *Behauptung* des Clients, das Attachment sei
-    ungebunden; sie ist nach M2-D24 bei einem gebundenen Attachment
-    unzulaessig. Die interne Streamingroute dagegen behauptet gar nichts
-    und laesst den Server die Bindung aufloesen.
+    Three cases must remain distinct. ``NONE`` in the API contract is a client
+    assertion that an attachment is unbound and is invalid for a bound
+    attachment under M2-D24. The internal streaming route makes no assertion
+    and lets the server resolve the actual parent.
 
-    Beides in einem `parent_type is None` zusammenzufassen war ein Fehler:
-    dann haette entweder die Behauptung nicht mehr gegolten oder die
-    Streamingroute kein gebundenes Attachment mehr ausliefern koennen.
+    Collapsing both cases into ``parent_type is None`` would either discard the
+    API assertion or prevent the streaming path from serving bound content.
     """
 
     parent_type: str | None = None
@@ -84,12 +82,12 @@ class ReadTarget:
 
     @classmethod
     def resolved_by_server(cls) -> ReadTarget:
-        """Keine Behauptung - der Server sieht nach, woran es haengt."""
+        """Make no assertion; let the server resolve the actual binding."""
         return cls()
 
     @classmethod
     def unbound(cls) -> ReadTarget:
-        """Der Aufrufer behauptet, es sei ungebunden."""
+        """Assert that the attachment is currently unbound."""
         return cls(asserts_unbound=True)
 
     @classmethod
@@ -126,9 +124,9 @@ def _require_rule(mime_type: str, media_type: MediaType) -> MediaRule:
             ErrorCode.ATTACHMENT_TYPE_NOT_ALLOWED,
         )
     if not rule.supported:
-        # M2-D23: der Vertrag erlaubt den Typ, dieser Lieferstand nicht.
-        # Fail-closed und mit demselben Code wie ein unbekannter Typ - der
-        # Unterschied geht den Client nichts an.
+        # M2-D23: the contract permits the type while this release does not
+        # implement it. Reject fail-closed using the same code as an unknown
+        # type because the distinction is not useful to the client.
         raise UnsupportedMediaTypeError(
             "This media type is not accepted.",
             ErrorCode.ATTACHMENT_TYPE_NOT_ALLOWED,
@@ -145,11 +143,11 @@ def create_upload(
     expected_mime_type: str,
     expected_size: int,
 ) -> Attachment:
-    """Einen Upload anmelden.
+    """Register an upload.
 
-    Die Pruefung hier ist eine Vorabpruefung auf Clientangaben und ersetzt
-    die spaetere Validierung am echten Objekt nicht. Sie erspart nur, eine
-    aussichtslose Datei erst hochzuladen.
+    This check validates client declarations only and never replaces later
+    validation of the actual object. It merely avoids transferring an upload
+    that is already known to be impossible.
     """
     rule = _require_rule(expected_mime_type, media_type)
 
@@ -184,15 +182,15 @@ def open_upload(
     context: AuthorizationContext,
     attachment_id: UUID | str,
 ) -> tuple[Attachment, MediaRule]:
-    """Autorisieren und den Uploadplatz oeffnen - vor dem ersten Byte.
+    """Authorize and open an upload target before accepting the first byte.
 
-    Erst diese Pruefung, dann der Koerper. Umgekehrt entschiede ein
-    beliebiger Absender darueber, wie viel der Server entgegennimmt, bevor
-    ueberhaupt feststeht, ob er das darf.
+    Authorization precedes reading the body. Reversing that order would let an
+    arbitrary sender decide how much data the server receives before permission
+    is established.
 
-    Ein erneuter Upload auf dasselbe PENDING/UPLOADING-Attachment ist
-    erlaubt und ueberschreibt: ein abgebrochener Transfer soll keinen neuen
-    Attachment-Datensatz erzwingen.
+    Re-uploading the same PENDING/UPLOADING attachment is allowed and
+    overwrites the object so an interrupted transfer does not require a new
+    attachment row.
     """
     attachment = require_writable(session, Attachment, context, attachment_id)
     if attachment.status not in (
@@ -220,10 +218,10 @@ def complete_upload(
     rule: MediaRule,
     data: bytes,
 ) -> Attachment:
-    """Die entgegengenommenen Bytes ablegen.
+    """Store accepted upload bytes.
 
-    Die Groessengrenze ist beim Lesen bereits gezogen worden; hier wird sie
-    noch einmal geprueft, damit kein anderer Aufrufer sie umgehen kann.
+    The size limit is already applied while reading; it is checked again here
+    so another caller cannot bypass the request-layer boundary.
     """
     if len(data) > rule.max_size:
         raise too_large()
@@ -239,47 +237,45 @@ def finalize_upload(
     context: AuthorizationContext,
     attachment_id: UUID | str,
 ) -> Attachment:
-    """Den Upload zur Validierung annehmen - idempotent.
+    """Accept an upload for validation idempotently.
 
-    Zwei gleichzeitige Aufrufe duerfen genau einen Validierungslauf
-    erzeugen. Die Zeile wird deshalb gesperrt, bevor ihr Zustand gelesen
-    wird; der zweite Aufruf sieht dann bereits VALIDATING und stellt keine
-    zweite Aufgabe ein.
+    Two concurrent calls must enqueue exactly one validation run. The row is
+    locked before state inspection so the second caller observes VALIDATING and
+    does not enqueue a duplicate job.
 
-    Beim presigned Transport sieht die API keinen Byte-Transfer. Dort wird
-    PENDING deshalb erst unter demselben Row Lock zu UPLOADING, nachdem der
-    Adapter das exakt gebundene Providerobjekt bestaetigt hat. Das ist nur
-    die Beobachtung des Transfers - die Validierungsentscheidung bleibt
-    unveraendert beim Worker.
+    With presigned transport the API does not observe byte transfer directly.
+    Under the same row lock, PENDING becomes UPLOADING only after the adapter
+    confirms the precisely bound provider object. This records transfer only;
+    the worker remains the sole authority for validation.
     """
     attachment = require_writable(session, Attachment, context, attachment_id)
-    gesperrt = session.execute(
+    locked = session.execute(
         select(Attachment).where(Attachment.id == attachment.id).with_for_update()
     ).scalar_one()
 
-    if gesperrt.status == AttachmentStatus.VALIDATING.value:
-        return gesperrt
+    if locked.status == AttachmentStatus.VALIDATING.value:
+        return locked
 
     store = get_media_store()
-    if gesperrt.status == AttachmentStatus.PENDING.value and supports_signed_upload(store):
-        if not store.exists(storage_key_for(gesperrt)):
+    if locked.status == AttachmentStatus.PENDING.value and supports_signed_upload(store):
+        if not store.exists(storage_key_for(locked)):
             raise ConflictError(
                 "The upload has not been transferred.",
                 ErrorCode.ATTACHMENT_NOT_READY,
             )
-        gesperrt.status = AttachmentStatus.UPLOADING.value
-        gesperrt.uploaded_at = now()
+        locked.status = AttachmentStatus.UPLOADING.value
+        locked.uploaded_at = now()
 
-    if gesperrt.status != AttachmentStatus.UPLOADING.value:
+    if locked.status != AttachmentStatus.UPLOADING.value:
         raise ConflictError(
             "The upload has not been transferred.",
             ErrorCode.ATTACHMENT_NOT_READY,
         )
 
-    gesperrt.status = AttachmentStatus.VALIDATING.value
-    queue.enqueue(session, ATTACHMENT_VALIDATION, {"attachmentId": str(gesperrt.id)})
+    locked.status = AttachmentStatus.VALIDATING.value
+    queue.enqueue(session, ATTACHMENT_VALIDATION, {"attachmentId": str(locked.id)})
     _flush(session)
-    return gesperrt
+    return locked
 
 
 def _load_in_space(
@@ -287,36 +283,35 @@ def _load_in_space(
     context: AuthorizationContext,
     attachment_id: UUID | str,
 ) -> Attachment:
-    """Die Zeile im eigenen Space finden - ohne ueber ihre Klasse zu urteilen.
+    """Find the row in the caller's space without applying attachment class.
 
-    Ein Attachment ist die einzige M2-Ressource, deren Lesbarkeit nicht aus
-    der eigenen Privacy-Klasse folgt: gebunden entscheidet der Parent
-    (Media-Pipeline, Abschnitt 8). Wuerde hier der Owner-only-Guard greifen,
-    saehe der Partner das Bild einer gemeinsamen Memory nicht.
+    Attachment is the one M2 resource whose readability does not follow only
+    from its own privacy class: after binding, the parent decides (Media
+    Pipeline, section 8). Applying the OWNER_ONLY guard here would prevent a
+    partner from seeing the image of a shared memory.
 
-    Das ist keine zweite Sichtbarkeitsregel: die Entscheidung wird nur
-    verschoben, nicht selbst getroffen - `authorize_read` fragt anschliessend
-    fuer den Parent wieder die zentrale Autorisierung.
+    This is not a second visibility rule. The decision is deferred rather than
+    duplicated; ``authorize_read`` applies central authorization to the parent.
     """
-    kennung = attachment_id if isinstance(attachment_id, UUID) else parse_id(attachment_id)
-    if kennung is None:
+    identifier = attachment_id if isinstance(attachment_id, UUID) else parse_id(attachment_id)
+    if identifier is None:
         raise Attachment.privacy_absence.error()
-    gefunden = session.execute(
+    found = session.execute(
         select(Attachment).where(
-            Attachment.id == kennung,
+            Attachment.id == identifier,
             Attachment.space_id == context.space_id,
         )
     ).scalar_one_or_none()
-    if gefunden is None:
+    if found is None:
         raise Attachment.privacy_absence.error()
-    if gefunden.status in (
+    if found.status in (
         AttachmentStatus.DELETING.value,
         AttachmentStatus.DELETE_FAILED.value,
     ):
-        # Fachlich sofort unsichtbar (M2-D11). Dass die Zeile technisch noch
-        # existiert, weil der Providercleanup laeuft, ist keine Auskunft.
+        # Domain-visible deletion is immediate under M2-D11. Physical provider
+        # cleanup still being in progress must not leak row existence.
         raise Attachment.privacy_absence.error()
-    return gefunden
+    return found
 
 
 def get_attachment(
@@ -324,22 +319,21 @@ def get_attachment(
     context: AuthorizationContext,
     attachment_id: UUID | str,
 ) -> Attachment:
-    """Die Metadaten - unter derselben zweistufigen Regel wie der Inhalt.
+    """Read metadata under the same two-stage rule as attachment content.
 
-    Ein gebundenes Attachment ist fuer jeden lesbar, der seinen Parent
-    lesen darf; ein ungebundenes nur fuer seinen Owner im Bindungsfenster.
-    Beides muss hier gelten, sonst waere die Metadatenroute der Weg an der
-    Regel vorbei.
+    A bound attachment is readable by anyone who may read its parent. An
+    unbound attachment is readable only by its owner during the binding window.
+    Applying a weaker rule here would make the metadata endpoint a bypass.
     """
     from sidebyside.attachments import binding
 
     attachment = _load_in_space(session, context, attachment_id)
-    tatsaechlich = binding.parent_of(session, attachment.id)
-    if tatsaechlich is None:
+    actual_parent = binding.parent_of(session, attachment.id)
+    if actual_parent is None:
         if attachment.owner_id != context.account_id:
             raise Attachment.privacy_absence.error()
         return attachment
-    _require_readable_parent(session, context, *tatsaechlich)
+    _require_readable_parent(session, context, *actual_parent)
     return attachment
 
 
@@ -349,15 +343,15 @@ def authorize_read(
     attachment_id: UUID | str,
     target: ReadTarget,
 ) -> Attachment:
-    """Pruefen, ob gelesen werden darf - und zwar jetzt.
+    """Authorize attachment content at the time it is read.
 
-    Nach der Bindung folgt die Lesbarkeit ausschliesslich dem Parent. Der
-    Attachment-Owner ist dann *kein* alternativer Lesepfad mehr: wer eine
-    Memory nicht mehr lesen darf oder einen HeartMoment privat gestellt
-    bekommen hat, kommt auch nicht ueber die Attachment-Route an ihr Bild.
+    After binding, readability follows only the parent. Attachment ownership is
+    not an alternate path: a caller who cannot read a memory anymore, or whose
+    partner made a heart moment private, cannot retrieve its image through the
+    attachment route.
 
-    Die Parentangabe des Clients ist kein Capability-Token. Sie wird nicht
-    geglaubt, sondern gegen die tatsaechliche Bindung geprueft.
+    A client-supplied parent is not a capability token. It is checked against
+    the actual relation rather than trusted.
     """
     from sidebyside.attachments import binding
 
@@ -365,10 +359,10 @@ def authorize_read(
     if attachment.status != AttachmentStatus.READY.value:
         raise _not_ready()
 
-    tatsaechlich = binding.parent_of(session, attachment.id)
+    actual_parent = binding.parent_of(session, attachment.id)
 
-    if tatsaechlich is None:
-        # Ungebunden: nur der Owner, nur im Bindungsfenster (M2-D20/D24).
+    if actual_parent is None:
+        # Unbound: owner only and only during the binding window (M2-D20/D24).
         if target.parent_type is not None:
             raise Attachment.privacy_absence.error()
         if attachment.owner_id != context.account_id:
@@ -378,16 +372,16 @@ def authorize_read(
         return attachment
 
     if target.asserts_unbound:
-        # M2-D24 gilt nur fuer ungebundene Uploads. Eine falsche Behauptung
-        # wird abgewiesen und nicht stillschweigend korrigiert.
+        # M2-D24 applies only to truly unbound uploads. Reject a false assertion
+        # instead of silently correcting it.
         raise Attachment.privacy_absence.error()
 
-    parent_type, parent_id = tatsaechlich
+    parent_type, parent_id = actual_parent
     if target.parent_type is not None and (
         target.parent_type != parent_type or target.parent_id != parent_id
     ):
-        # Eine falsche Parentangabe wird nicht korrigiert, sondern
-        # abgewiesen - sonst waere sie ein Rateversuch mit Rueckmeldung.
+        # Reject rather than correct a false parent assertion; otherwise this
+        # endpoint would become a guessing oracle with feedback.
         raise Attachment.privacy_absence.error()
 
     _require_readable_parent(session, context, parent_type, parent_id)
@@ -400,18 +394,17 @@ def _require_readable_parent(
     parent_type: str,
     parent_id: UUID,
 ) -> None:
-    """Der Parent entscheidet - ueber dieselbe zentrale Autorisierung.
+    """Let the parent decide through the same central authorization layer.
 
-    Kein eigener Sichtbarkeitsausdruck: waere hier eine zweite Regel
-    formuliert, koennte sie von der der Domaene abweichen, und die
-    Attachment-Route waere der Weg daran vorbei.
+    No visibility predicate is restated here. A second rule could diverge from
+    the domain rule and turn attachment reads into a bypass.
     """
     from sidebyside.heart_moments.models import HeartMoment
     from sidebyside.memories.models import Memory
 
-    modell = Memory if parent_type == "MEMORY" else HeartMoment
+    model = Memory if parent_type == "MEMORY" else HeartMoment
     try:
-        require_readable(session, modell, context, parent_id)
+        require_readable(session, model, context, parent_id)
     except NotFoundError as error:
         raise Attachment.privacy_absence.error() from error
 
@@ -419,10 +412,10 @@ def _require_readable_parent(
 def binding_window_expired(attachment: Attachment) -> bool:
     if attachment.ready_at is None:
         return True
-    bereit = attachment.ready_at
-    if bereit.tzinfo is None:
-        bereit = bereit.replace(tzinfo=UTC)
-    return now() - bereit > BINDING_WINDOW
+    ready_at = attachment.ready_at
+    if ready_at.tzinfo is None:
+        ready_at = ready_at.replace(tzinfo=UTC)
+    return now() - ready_at > BINDING_WINDOW
 
 
 def open_content(attachment: Attachment, *, variant: str = ORIGINAL_VARIANT) -> BinaryIO:
@@ -436,7 +429,7 @@ def delete_attachment(
     *,
     expected_version: int,
 ) -> None:
-    """Fachlich sofort unsichtbar, Providercleanup asynchron (M2-D11)."""
+    """Make the attachment immediately invisible and clean up provider data asynchronously."""
     attachment = require_writable(session, Attachment, context, attachment_id)
     if attachment.version != expected_version:
         raise ConflictError(
@@ -452,11 +445,10 @@ def mark_for_deletion(session: Session, attachment: Attachment) -> None:
 
 
 def purge(session: Session, attachment: Attachment) -> bool:
-    """Providerobjekte und Zeile entfernen. Gibt zurueck, ob es geklappt hat.
+    """Remove provider objects and row, returning whether cleanup succeeded.
 
-    Der Storagefehler darf die fachliche Unsichtbarkeit nicht zuruecknehmen:
-    scheitert das Loeschen, bleibt die Zeile als DELETE_FAILED liegen und
-    wird erneut versucht - sie wird nicht wieder sichtbar.
+    Storage failure must not reverse domain-visible deletion. On failure the row
+    remains DELETE_FAILED for retry and never becomes visible again.
     """
     store = get_media_store()
     try:
@@ -478,16 +470,16 @@ def _fail(attachment: Attachment, code: str) -> None:
 
 
 def validate(session: Session, attachment_id: UUID) -> None:
-    """Der Validierungslauf. Laeuft im Worker, nie im Requestpfad.
+    """Run attachment validation in the worker, never in a request path.
 
-    Reihenfolge nach Abschnitt 7 der Media-Pipeline: erst pruefen, dann
-    nach M2-D14 bereinigt speichern, dann `READY`. Die Variante nach
-    M2-D15 entsteht danach und ausserhalb dieser Kette - ihr Fehlschlag ist
-    ein Darstellungs- und kein Sicherheitsproblem.
+    Media Pipeline section 7 ordering is preserved: validate first, store the
+    M2-D14 sanitized form, and only then enter ``READY``. M2-D15 thumbnail
+    generation happens outside the security-critical chain; its failure affects
+    presentation only.
     """
     attachment = session.get(Attachment, attachment_id, with_for_update=True)
     if attachment is None or attachment.status != AttachmentStatus.VALIDATING.value:
-        # Abgebrochen, geloescht oder schon verarbeitet. Kein Fehler.
+        # Cancelled, deleted, or already processed. This is not an error.
         return
 
     rule = rule_for(attachment.declared_mime_type)
@@ -496,41 +488,41 @@ def validate(session: Session, attachment_id: UUID) -> None:
         return
 
     store = get_media_store()
-    schluessel = storage_key_for(attachment)
-    if not store.exists(schluessel):
+    storage_key = storage_key_for(attachment)
+    if not store.exists(storage_key):
         _fail(attachment, ErrorCode.ATTACHMENT_VALIDATION_FAILED)
         return
 
-    with store.open(schluessel) as quelle:
-        roh = quelle.read()
+    with store.open(storage_key) as source:
+        raw = source.read()
 
-    if len(roh) > rule.max_size:
+    if len(raw) > rule.max_size:
         _fail(attachment, ErrorCode.ATTACHMENT_TOO_LARGE)
         return
 
     try:
-        verarbeitet = images.process(roh, rule)
+        processed = images.process(raw, rule)
     except images.ImageRejectedError as error:
         _fail(attachment, error.code)
         return
 
-    store.put(schluessel, io.BytesIO(verarbeitet.content), verarbeitet.mime_type)
+    store.put(storage_key, io.BytesIO(processed.content), processed.mime_type)
 
-    attachment.mime_type = verarbeitet.mime_type
-    attachment.size = len(verarbeitet.content)
-    attachment.width = verarbeitet.width
-    attachment.height = verarbeitet.height
+    attachment.mime_type = processed.mime_type
+    attachment.size = len(processed.content)
+    attachment.width = processed.width
+    attachment.height = processed.height
     attachment.payload = AttachmentPayload(
         original_name=attachment.payload.original_name,
-        captured_at=verarbeitet.captured_at,
-        orientation=verarbeitet.orientation,
+        captured_at=processed.captured_at,
+        orientation=processed.orientation,
     )
 
-    if verarbeitet.thumbnail is not None:
+    if processed.thumbnail is not None:
         try:
             store.put(
                 storage_key_for(attachment, THUMBNAIL_VARIANT),
-                io.BytesIO(verarbeitet.thumbnail),
+                io.BytesIO(processed.thumbnail),
                 "image/jpeg",
             )
         except OSError:
@@ -546,5 +538,5 @@ def validate(session: Session, attachment_id: UUID) -> None:
 def expired(reference: datetime | None, retention: timedelta) -> bool:
     if reference is None:
         return False
-    zeitpunkt = reference if reference.tzinfo is not None else reference.replace(tzinfo=UTC)
-    return now() - zeitpunkt > retention
+    instant = reference if reference.tzinfo is not None else reference.replace(tzinfo=UTC)
+    return now() - instant > retention
