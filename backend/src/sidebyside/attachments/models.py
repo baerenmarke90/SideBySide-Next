@@ -1,4 +1,4 @@
-"""Persistenz und Wertebereiche fuer M2-Attachments."""
+"""Persistence and value ranges for M2 attachments."""
 
 from __future__ import annotations
 
@@ -18,10 +18,10 @@ from sidebyside.domain.payload import CRYPTO_VERSION_PLAINTEXT, ProtectedPayload
 
 
 class AttachmentStatus(StrEnum):
-    """Die verbindlichen internen Zustaende aus M2-D05.
+    """Authoritative internal states from M2-D05.
 
-    `PROCESSING`, wie Clients es sehen, steht hier nicht: die oeffentliche
-    Darstellung ist eine Projektion und kein zusaetzlicher Zustand.
+    ``PROCESSING``, as exposed to clients, is not an additional internal state;
+    it is a public projection of the state machine.
     """
 
     PENDING = "PENDING"
@@ -39,15 +39,15 @@ class MediaType(StrEnum):
 
 
 class AttachmentPayload(ProtectedPayload):
-    """Was der Server ueber die Datei behaelt, ohne es zu Metadaten zu machen.
+    """File information retained without promoting it to server metadata.
 
-    `original_name` ist reine Support-Information und wird nie fuer Pfad,
-    Autorisierung oder Content-Type herangezogen (Media-Pipeline, Abschnitt 5).
+    ``original_name`` exists only for support and is never used for paths,
+    authorization, or content type (Media Pipeline, section 5).
 
-    `captured_at` und `orientation` sind die Allowlist aus M2-D14: alles
-    Uebrige wird beim Ingest verworfen. Sie liegen hier und nicht in Spalten,
-    damit ein Aufnahmezeitpunkt nicht unversehens zu einem sortierbaren,
-    indizierbaren Metadatum wird.
+    ``captured_at`` and ``orientation`` form the M2-D14 allowlist. Everything
+    else is discarded during ingest. They remain inside the protected payload
+    rather than columns so capture time does not accidentally become sortable,
+    indexable server metadata.
     """
 
     original_name: str
@@ -62,12 +62,11 @@ class Attachment(
     PrivateResourceMixin,
     Base,
 ):
-    """Eine hochgeladene Datei mit ihrem Lebenszyklus.
+    """An uploaded file and its lifecycle state.
 
-    Der Storage Key steht bewusst nicht in einer Spalte. Er ergibt sich aus
-    Space und Attachment-ID (`media.build_storage_key`); eine Spalte waere
-    eine zweite Wahrheit, die von der ersten abweichen koennte - und der
-    Vertrag verbietet ohnehin, ihn nach aussen zu geben.
+    Storage key is deliberately not persisted. It is derived from space and
+    attachment ID by ``media.build_storage_key``; a column would create a
+    second source of truth that could drift, and the contract never exposes it.
     """
 
     __tablename__ = "attachments"
@@ -79,13 +78,13 @@ class Attachment(
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     media_type: Mapped[str] = mapped_column(String(16), nullable=False)
 
-    # Was der Client angekuendigt hat. Ausschliesslich fuer die
-    # Vorabpruefung; die Validierung entscheidet spaeter am echten Objekt.
+    # Values declared by the client. Used only for preliminary checks; later
+    # validation decides from the actual stored object.
     declared_mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
     declared_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
-    # Was der Server selbst festgestellt hat. Erst diese Werte gehen nach
-    # aussen und in die Limitpruefung.
+    # Values established by the server. Only these are exposed and used for
+    # final limit validation.
     mime_type: Mapped[str | None] = mapped_column(String(128))
     size: Mapped[int | None] = mapped_column(BigInteger)
     width: Mapped[int | None] = mapped_column(Integer)
@@ -96,14 +95,13 @@ class Attachment(
         nullable=False, default=False, server_default=sql_text("false")
     )
 
-    # Stabiler, nicht sensitiver Grund. Nie ein Parserfehlertext: der
-    # koennte Dateiinhalt enthalten.
+    # Stable non-sensitive reason. Never parser text, which could contain file
+    # content.
     failure_code: Mapped[str | None] = mapped_column(String(64))
 
     ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Letzte serverbekannte Aktivitaet am Upload - Grundlage der
-    # UPLOADING-Retention aus M2-D12.
+    # Last server-observed upload activity, used by M2-D12 UPLOADING retention.
     uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     crypto_version: Mapped[int] = mapped_column(
@@ -126,21 +124,20 @@ class Attachment(
             "media_type IN (" + ", ".join(f"'{kind.value}'" for kind in MediaType) + ")",
             name="media_type_is_known",
         ),
-        # Ein ungebundenes Attachment gehoert seinem Owner. Die Bindung an
-        # einen Parent kommt im Media-Integrationsslice; bis dahin gibt es
-        # keinen Weg, auf dem ein Attachment gemeinsam werden koennte.
+        # An unbound attachment belongs to its owner. Parent binding is handled
+        # by the media integration slice; until then it has no shared path.
         CheckConstraint("privacy_class = 'OWNER_ONLY'", name="privacy_is_owner_only"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
         CheckConstraint("declared_size >= 0", name="declared_size_is_non_negative"),
         CheckConstraint("size IS NULL OR size >= 0", name="size_is_non_negative"),
-        # READY ohne readyAt waere ein Attachment ohne Bindungsfenster - es
-        # wuerde vom Cleanup nie erfasst.
+        # READY without readyAt would have no binding window and would never be
+        # collected by cleanup.
         CheckConstraint(
             "status <> 'READY' OR ready_at IS NOT NULL",
             name="ready_has_ready_at",
         ),
         Index("ix_attachments_owner_id", "owner_id"),
-        # Der Cleanup sucht nach Zustand und Alter, nicht nach Space.
+        # Cleanup searches by state and age rather than by space.
         Index("ix_attachments_status_created_at", "status", "created_at"),
         Index("ix_attachments_status_ready_at", "status", "ready_at"),
     )

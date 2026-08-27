@@ -1,12 +1,12 @@
-"""Die Bindung zwischen Attachment und Domainressource.
+"""Binding between attachments and domain resources.
 
-M2-D03 verlangt exklusive Ownership: ein Attachment gehoert hoechstens
-einem Parent. Diese Regel steht bewusst an genau einer Stelle - hier - und
-nicht in jeder Domaene, die Attachments verwendet.
+M2-D03 requires exclusive ownership: an attachment belongs to at most one
+parent. That rule intentionally lives in exactly one place here rather than in
+every domain that uses attachments.
 
-Es gibt keine denormalisierte Parentspalte am Attachment. Sie waere eine
-zweite Wahrheit neben den Relationen und koennte von ihnen abweichen; die
-Frage "ist das gebunden?" wird stattdessen gegen die Relationen gestellt.
+There is no denormalized parent column on the attachment. Such a column would
+be a second source of truth beside relations and could drift from them; the
+question "is this bound?" is answered from the relations themselves.
 """
 
 from __future__ import annotations
@@ -26,15 +26,15 @@ from sidebyside.db.mixins import IdMixin
 
 MAX_MEMORY_ATTACHMENTS = 20
 MAX_MEMORY_TOTAL_SIZE = 500 * 1024 * 1024
-"""M2-D04: Kardinalitaet und Gesamtgroesse je Memory."""
+"""M2-D04 cardinality and aggregate size limits for one memory."""
 
 
 class MemoryAttachment(IdMixin, Base):
-    """Ein Attachment an seinem Platz in einer Memory.
+    """An attachment at a specific position within a memory.
 
-    `position` ist nullbasiert und je Memory eindeutig. Die Datenbank haelt
-    beides fest, damit eine Reihenfolge nicht davon abhaengt, dass die
-    Fachlogik korrekt zaehlt.
+    ``position`` is zero-based and unique within each memory. The database
+    enforces both properties so ordering does not depend on service code
+    counting correctly.
     """
 
     __tablename__ = "memory_attachments"
@@ -52,8 +52,8 @@ class MemoryAttachment(IdMixin, Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False)
 
     __table_args__ = (
-        # Exklusive Bindung, soweit die Datenbank sie allein tragen kann:
-        # dasselbe Attachment nicht zweimal und nicht in zwei Memories.
+        # Exclusive binding to the extent one table can enforce it: the same
+        # attachment cannot appear twice or in two memories.
         UniqueConstraint("attachment_id", name="uq_memory_attachments_attachment"),
         UniqueConstraint("memory_id", "position", name="uq_memory_attachments_position"),
         Index("ix_memory_attachments_memory_id", "memory_id"),
@@ -71,19 +71,18 @@ def _conflict(message: str, code: str) -> ConflictError:
 
 
 def lock_for_binding(session: Session, attachment_ids: list[UUID]) -> dict[UUID, Attachment]:
-    """Die Kandidaten sperren, bevor ihr Zustand gelesen wird.
+    """Lock candidate attachments before reading their state.
 
-    Ohne die Sperre koennte der Cleanup zwischen Pruefung und Bindung genau
-    das Attachment abraeumen, das gerade gebunden wird - und dann zeigte die
-    Relation auf eine geloeschte Datei. Die Sperre serialisiert beide:
-    entweder gewinnt Bind vollstaendig oder Cleanup.
+    Without the lock, cleanup could remove the attachment between validation
+    and binding, leaving a relation that points at deleted storage. The lock
+    serializes both paths so either binding or cleanup wins completely.
     """
     if not attachment_ids:
         return {}
-    zeilen = session.execute(
+    rows = session.execute(
         select(Attachment).where(Attachment.id.in_(attachment_ids)).with_for_update()
     ).scalars()
-    return {zeile.id: zeile for zeile in zeilen}
+    return {row.id: row for row in rows}
 
 
 def ensure_bindable(
@@ -92,14 +91,14 @@ def ensure_bindable(
     space_id: UUID,
     account_id: UUID,
 ) -> Attachment:
-    """Darf dieses Attachment jetzt gebunden werden?
+    """Validate whether this attachment may be bound now.
 
-    Alle Ablehnungen ausser der Kardinalitaet laufen hier zusammen, damit
-    keine Domaene eine eigene Teilmenge der Regeln formuliert.
+    All rejection conditions except parent cardinality are centralized here so
+    domains cannot implement differing subsets of the binding rules.
     """
     if attachment is None or attachment.space_id != space_id:
-        # Cross-Space und unbekannt enden gleich: die Existenz eines
-        # fremden Attachments ist selbst schon eine Auskunft.
+        # Cross-space and unknown attachments are indistinguishable because
+        # existence in another space is itself sensitive information.
         raise Attachment.privacy_absence.error()
     if attachment.owner_id != account_id:
         raise Attachment.privacy_absence.error()
@@ -111,11 +110,11 @@ def ensure_bindable(
 
 
 def parent_of(session: Session, attachment_id: UUID) -> tuple[str, UUID] | None:
-    """Woran das Attachment haengt - oder nichts.
+    """Return the resource this attachment belongs to, or none.
 
-    Fragt die Relationen und nicht eine gespiegelte Spalte. Eine zweite
-    Wahrheit koennte von der ersten abweichen, und dann entschiede die
-    falsche ueber die Sichtbarkeit.
+    Relations are queried directly rather than mirrored into an attachment
+    column. A second source of truth could drift and then incorrectly determine
+    visibility.
     """
     from sidebyside.heart_moments.models import HeartMoment
 
@@ -136,19 +135,19 @@ def parent_of(session: Session, attachment_id: UUID) -> tuple[str, UUID] | None:
 def ensure_unlinked(
     session: Session, attachment_id: UUID, *, allow: tuple[str, UUID] | None = None
 ) -> None:
-    """Exklusivitaet ueber beide Parenttypen hinweg (M2-D03).
+    """Enforce exclusivity across all parent types (M2-D03).
 
-    Die Unique Constraints halten je Tabelle fest, dass ein Attachment
-    nicht zweimal vorkommt. Dass es nicht *gleichzeitig* an einer Memory
-    und einem HeartMoment haengt, kann keine einzelne Tabelle wissen -
-    diese Pruefung laeuft deshalb unter der Sperre aus `lock_for_binding`.
+    Per-table unique constraints ensure an attachment does not appear twice in
+    the same relation type. No individual table can ensure it is not bound to a
+    memory and a heart moment simultaneously, so this cross-table check runs
+    under the lock acquired by ``lock_for_binding``.
 
-    `allow` nennt die Bindung, die erhalten bleiben darf: beim Neusetzen
-    einer Memory-Menge bleibt ein bereits dort gebundenes Attachment
-    gebunden und ist kein Konflikt.
+    ``allow`` names a binding that may remain in place. When replacing a
+    memory's attachment set, an attachment already bound to that same memory is
+    therefore not treated as a conflict.
     """
-    vorhanden = parent_of(session, attachment_id)
-    if vorhanden is None or vorhanden == allow:
+    existing = parent_of(session, attachment_id)
+    if existing is None or existing == allow:
         return
     raise _conflict(
         "The attachment already belongs to another resource.",
@@ -162,8 +161,8 @@ def ensure_within_limits(attachments: list[Attachment]) -> None:
             "The parent exceeds its attachment limit.",
             ErrorCode.ATTACHMENT_LIMIT_EXCEEDED,
         )
-    gesamt = sum(attachment.size or 0 for attachment in attachments)
-    if gesamt > MAX_MEMORY_TOTAL_SIZE:
+    total = sum(attachment.size or 0 for attachment in attachments)
+    if total > MAX_MEMORY_TOTAL_SIZE:
         raise _conflict(
             "The parent exceeds its attachment limit.",
             ErrorCode.ATTACHMENT_LIMIT_EXCEEDED,
@@ -173,39 +172,38 @@ def ensure_within_limits(attachments: list[Attachment]) -> None:
 def attachments_of_memories(
     session: Session, memory_ids: list[UUID]
 ) -> dict[UUID, list[BoundAttachment]]:
-    """Dieselbe Galerie fuer mehrere Memories in einer Abfrage.
+    """Load galleries for multiple memories in one query.
 
-    Die Story laedt bis zu hundert Items pro Seite. Einzeln geladen waeren
-    das hundert Abfragen fuer eine Liste - deshalb dieselbe Sortierregel
-    einmal batchweise, statt sie in der Story noch einmal zu formulieren.
+    Story pages may include up to one hundred items. Loading each gallery
+    separately would create one hundred list queries, so the same ordering rule
+    is applied once in batch rather than reimplemented in the story service.
     """
     if not memory_ids:
         return {}
-    zeilen = session.execute(
+    rows = session.execute(
         select(MemoryAttachment, Attachment)
         .join(Attachment, Attachment.id == MemoryAttachment.attachment_id)
         .where(MemoryAttachment.memory_id.in_(memory_ids))
         .order_by(MemoryAttachment.position, MemoryAttachment.attachment_id)
     ).all()
-    galerien: dict[UUID, list[BoundAttachment]] = {memory_id: [] for memory_id in memory_ids}
-    for bindung, attachment in zeilen:
-        galerien[bindung.memory_id].append(
-            BoundAttachment(attachment=attachment, position=bindung.position)
+    galleries: dict[UUID, list[BoundAttachment]] = {memory_id: [] for memory_id in memory_ids}
+    for binding, attachment in rows:
+        galleries[binding.memory_id].append(
+            BoundAttachment(attachment=attachment, position=binding.position)
         )
-    return galerien
+    return galleries
 
 
 def attachments_of_memory(session: Session, memory_id: UUID) -> list[BoundAttachment]:
-    """Die Galerie einer Memory in stabiler Reihenfolge.
+    """Return one memory gallery in stable order.
 
-    Sortiert nach `position`, danach nach Attachment-ID - der Tie-Breaker
-    macht die Reihenfolge auch dann deterministisch, wenn zwei Zeilen
-    dieselbe Position tragen sollten.
+    Rows are ordered by ``position`` and then attachment ID. The tie-breaker
+    keeps the result deterministic even if duplicate positions somehow exist.
     """
-    zeilen = session.execute(
+    rows = session.execute(
         select(MemoryAttachment, Attachment)
         .join(Attachment, Attachment.id == MemoryAttachment.attachment_id)
         .where(MemoryAttachment.memory_id == memory_id)
         .order_by(MemoryAttachment.position, MemoryAttachment.attachment_id)
     ).all()
-    return [BoundAttachment(attachment=zeile[1], position=zeile[0].position) for zeile in zeilen]
+    return [BoundAttachment(attachment=row[1], position=row[0].position) for row in rows]

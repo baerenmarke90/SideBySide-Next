@@ -1,17 +1,17 @@
-"""Bilder pruefen, bereinigen und verkleinern.
+"""Validate, sanitize, and resize images.
 
-Das ist die Stelle, an der fremde Bytes zum ersten Mal interpretiert
-werden. Sie laeuft ausschliesslich im Hintergrundjob, nie im Requestpfad,
-und sie geht davon aus, dass jede Datei boesartig sein kann.
+This is the first place untrusted bytes are interpreted. It runs exclusively in
+a background job, never in the request path, and assumes every file may be
+malicious.
 
-Drei Regeln:
+Three rules apply:
 
-- Es wird nichts geglaubt, was in der Datei steht. Format, Masse und Typ
-  stammen aus dem Dekoder, nicht aus Header- oder Clientangaben.
-- Es wird nur weitergereicht, was auf der Allowlist steht. Metadaten werden
-  nicht gefiltert, sondern verworfen und einzeln wieder aufgebaut.
-- Was sich nicht sicher verarbeiten laesst, scheitert - es wird nicht
-  "so gut wie moeglich" gespeichert.
+- Nothing declared by the file is trusted. Format, dimensions, and type come
+  from the decoder rather than request headers or client declarations.
+- Only allowlisted information leaves this boundary. Metadata is discarded and
+  explicitly reconstructed field by field rather than filtered in place.
+- Data that cannot be processed safely fails; it is never stored on a
+  best-effort basis.
 """
 
 from __future__ import annotations
@@ -28,15 +28,18 @@ from sidebyside.attachments.limits import MediaRule
 pillow_heif.register_heif_opener()
 
 ImageFile.LOAD_TRUNCATED_IMAGES = False
-"""Eine abgeschnittene Datei ist ein Fehler, kein halbes Bild.
+"""A truncated file is an error, not a partial image.
 
-Pillow wuerde sonst stillschweigend liefern, was es lesen konnte - und der
-gespeicherte Rest saehe wie ein gueltiges Bild aus."""
+Otherwise Pillow may silently return whatever bytes it could decode and the
+stored result would appear valid despite incomplete input.
+"""
 
 THUMBNAIL_EDGE = 512
-"""Laengste Kante des Thumbnails. Gross genug fuer eine Listendarstellung
-auf einem dichten Display, klein genug, dass eine Timeline nicht die
-Originalgroesse ueber die autorisierte Leseroute zieht."""
+"""Longest thumbnail edge.
+
+Large enough for dense-display list rendering and small enough that a timeline
+does not fetch original-size content through an authorized read path.
+"""
 
 _PILLOW_FORMAT_BY_MIME = {
     "image/jpeg": "JPEG",
@@ -58,10 +61,10 @@ _EXIF_ORIENTATION = 0x0112
 
 
 class ImageRejectedError(Exception):
-    """Das Bild ist nicht verarbeitbar.
+    """The image cannot be processed safely.
 
-    Traegt einen stabilen Code und nie den Text des Parsers: der koennte
-    Dateiinhalt enthalten und landete damit in Logs und Fehlerfeldern.
+    Carries a stable code and never parser text, which could contain file
+    content and subsequently reach logs or error fields.
     """
 
     def __init__(self, code: str) -> None:
@@ -81,25 +84,26 @@ class ProcessedImage:
 
 
 def _guard_decompression_bomb(rule: MediaRule) -> None:
-    """Pillows eigene Bombengrenze auf unsere Pixelgrenze setzen.
+    """Set Pillow's decompression-bomb threshold to our own pixel limit.
 
-    Ohne das entscheidet ein Bibliotheksstandard darueber, wie viel
-    Speicher eine fremde Datei belegen darf.
+    Otherwise a library default would decide how much memory untrusted input
+    may consume.
     """
     Image.MAX_IMAGE_PIXELS = rule.max_pixels
 
 
 def _extract_allowlist(image: Image.Image) -> tuple[datetime | None, int | None]:
-    """Genau die Felder aus M2-D14 - und sonst nichts.
+    """Extract exactly the fields allowed by M2-D14 and nothing else.
 
-    Es wird einzeln gelesen, nicht gefiltert: eine Filterliste muesste alle
-    unerwuenschten Felder kennen, diese Schleife kennt nur die erwuenschten.
+    Fields are read individually rather than filtered from a larger structure:
+    a denylist would have to know every unwanted field, while this code knows
+    only the values explicitly allowed.
     """
     captured_at: datetime | None = None
     orientation: int | None = None
     try:
         exif = image.getexif()
-    except Exception:  # ein kaputter EXIF-Block ist kein Grund, das Bild zu verwerfen
+    except Exception:  # A broken EXIF block does not make the image itself invalid.
         return None, None
 
     raw_datetime = exif.get(_EXIF_DATETIME_ORIGINAL)
@@ -117,50 +121,50 @@ def _extract_allowlist(image: Image.Image) -> tuple[datetime | None, int | None]
 
 
 def _rebuild_without_metadata(image: Image.Image, pillow_format: str) -> bytes:
-    """Neu schreiben statt Felder loeschen.
+    """Rewrite from pixels instead of deleting selected metadata fields.
 
-    Ein frisches Image-Objekt aus den reinen Pixeldaten traegt keinen
-    Herstellerblock, kein eingebettetes Vorschaubild und kein unbekanntes
-    Segment mehr - auch keines, das wir nicht kennen.
+    A fresh image object constructed from pixel data carries no manufacturer
+    block, embedded preview, or unknown segment, including fields the server
+    does not know about.
     """
-    sauber = Image.new(image.mode, image.size)
-    # paste und nicht putdata(list(...)): letzteres baute fuer ein 40-MP-Bild
-    # eine Python-Liste mit vierzig Millionen Tupeln auf, bevor irgendetwas
-    # geschrieben waere. paste kopiert die Pixel in C.
-    sauber.paste(image)
+    clean = Image.new(image.mode, image.size)
+    # Use paste rather than putdata(list(...)): the latter would build a Python
+    # list with forty million tuples for a 40 MP image before writing anything.
+    # paste performs the pixel copy in C.
+    clean.paste(image)
 
-    ziel = io.BytesIO()
-    optionen: dict[str, object] = {}
+    target = io.BytesIO()
+    options: dict[str, object] = {}
     if pillow_format == "JPEG":
-        optionen["quality"] = 92
-    sauber.save(ziel, format=pillow_format, **optionen)
-    return ziel.getvalue()
+        options["quality"] = 92
+    clean.save(target, format=pillow_format, **options)
+    return target.getvalue()
 
 
 def _thumbnail(image: Image.Image) -> bytes | None:
-    """Ein Thumbnail, oder nichts.
+    """Create a thumbnail, or return none.
 
-    Ein Fehlschlag ist ein Darstellungs- und kein Sicherheitsproblem
-    (M2-D15) und darf das Attachment nicht scheitern lassen.
+    Thumbnail failure is a presentation problem rather than a security failure
+    under M2-D15 and must not reject the attachment itself.
     """
     try:
-        klein = image.copy()
-        klein.thumbnail((THUMBNAIL_EDGE, THUMBNAIL_EDGE))
-        if klein.mode not in ("RGB", "L"):
-            klein = klein.convert("RGB")
-        ziel = io.BytesIO()
-        klein.save(ziel, format="JPEG", quality=82)
-        return ziel.getvalue()
-    except Exception:  # siehe Docstring
+        thumbnail = image.copy()
+        thumbnail.thumbnail((THUMBNAIL_EDGE, THUMBNAIL_EDGE))
+        if thumbnail.mode not in ("RGB", "L"):
+            thumbnail = thumbnail.convert("RGB")
+        target = io.BytesIO()
+        thumbnail.save(target, format="JPEG", quality=82)
+        return target.getvalue()
+    except Exception:  # See docstring: thumbnail generation is non-critical.
         return None
 
 
 def process(data: bytes, rule: MediaRule) -> ProcessedImage:
-    """Ein hochgeladenes Bild pruefen, bereinigen und verkleinern.
+    """Validate, sanitize, and resize an uploaded image.
 
-    Die Bytes liegen vollstaendig vor: dekodieren heisst ohnehin, das Bild
-    im Speicher aufzubauen, und die Groesse ist durch das Limit aus M2-D04
-    gedeckelt. Ein Streamingdekoder waere hier nur scheinbar sparsamer.
+    The bytes are already fully available. Decoding necessarily materializes
+    the image in memory, while the M2-D04 upload limit bounds input size. A
+    streaming decoder would not materially reduce the risk here.
     """
     _guard_decompression_bomb(rule)
 
@@ -172,38 +176,38 @@ def process(data: bytes, rule: MediaRule) -> ProcessedImage:
     except (UnidentifiedImageError, OSError, ValueError) as error:
         raise ImageRejectedError("IMAGE_UNREADABLE") from error
 
-    erkanntes_format = (image.format or "").upper()
-    erkannter_mime = _MIME_BY_PILLOW_FORMAT.get(erkanntes_format)
-    if erkannter_mime is None:
+    detected_format = (image.format or "").upper()
+    detected_mime = _MIME_BY_PILLOW_FORMAT.get(detected_format)
+    if detected_mime is None:
         raise ImageRejectedError("IMAGE_TYPE_NOT_ALLOWED")
 
-    # Der angekuendigte Typ muss zum erkannten passen. HEIC und HEIF sind
-    # dasselbe Containerformat und duerfen einander vertreten.
-    erwartetes_format = _PILLOW_FORMAT_BY_MIME.get(rule.mime_type)
-    if erwartetes_format != erkanntes_format:
+    # The declared type must match the decoded type. HEIC and HEIF are the same
+    # container format and may represent one another.
+    expected_format = _PILLOW_FORMAT_BY_MIME.get(rule.mime_type)
+    if expected_format != detected_format:
         raise ImageRejectedError("IMAGE_TYPE_MISMATCH")
 
-    breite, hoehe = image.size
-    if rule.max_edge is not None and max(breite, hoehe) > rule.max_edge:
+    width, height = image.size
+    if rule.max_edge is not None and max(width, height) > rule.max_edge:
         raise ImageRejectedError("IMAGE_TOO_LARGE")
-    if rule.max_pixels is not None and breite * hoehe > rule.max_pixels:
+    if rule.max_pixels is not None and width * height > rule.max_pixels:
         raise ImageRejectedError("IMAGE_TOO_LARGE")
 
     captured_at, orientation = _extract_allowlist(image)
 
     try:
-        inhalt = _rebuild_without_metadata(image, erkanntes_format)
+        content = _rebuild_without_metadata(image, detected_format)
     except (OSError, ValueError) as error:
-        # Nicht sicher bereinigbar heisst FAILED - niemals ungestrippt
-        # speichern (M2-D14).
+        # If the image cannot be sanitized safely, fail it rather than storing
+        # the original unsanitized data (M2-D14).
         raise ImageRejectedError("IMAGE_NOT_SANITIZABLE") from error
 
     return ProcessedImage(
-        mime_type=erkannter_mime,
-        width=breite,
-        height=hoehe,
+        mime_type=detected_mime,
+        width=width,
+        height=height,
         captured_at=captured_at,
         orientation=orientation,
-        content=inhalt,
+        content=content,
         thumbnail=_thumbnail(image),
     )
