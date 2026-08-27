@@ -1,0 +1,20 @@
+name: PR 219 strict language audit
+
+on:
+  push:
+    branches:
+      - chore/214-backend-english-engineering
+    paths:
+      - tools/ci/pr219_quality_audit.py
+      - .github/workflows/pr219-quality-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run strict hybrid-language audit
+        run: python3 tools/ci/pr219_quality_audit.py
