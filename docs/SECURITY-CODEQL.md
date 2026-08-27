@@ -33,9 +33,9 @@ No custom scanner logic is maintained.
 
 Query suite:
 
-- `security-queries` baseline
+- built-in CodeQL default query suite
 
-The initial gate intentionally uses the precise security query set. Additional query suites require a separate false-positive review.
+The initial gate intentionally uses the precise default security baseline. Additional query suites require a separate false-positive review.
 
 Build modes:
 
@@ -51,11 +51,11 @@ Android analysis uses the repository Gradle wrapper only:
 ./gradlew --dependency-verification strict :app:compileDebugKotlin
 ```
 
-The existing Gradle Dependency Verification and wrapper integrity checks remain active.
+The existing Gradle Dependency Verification, wrapper integrity checks and Android build gates remain active.
 
 ## Findings handling
 
-- Findings are reviewed based on severity and exploitability.
+- Findings are reviewed based on severity, exploitability and affected attack surface.
 - Security findings are fixed or explicitly risk-accepted with justification.
 - False positives require documented reasoning before dismissal.
 - Broad ignore rules are not used to make CI green.
