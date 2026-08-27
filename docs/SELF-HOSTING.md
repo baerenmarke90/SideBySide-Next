@@ -236,6 +236,15 @@ konkrete SideBySide-Origin. Fuer den Upload sind `PUT` und die Header
 Reads `GET`/`HEAD`. Keine CORS-Regel ersetzt die private Bucket-Policy oder die
 serverseitige Autorisierung.
 
+Der Web-Container erlaubt diese direkte Verbindung zusätzlich in seiner
+Content Security Policy. Compose leitet dafür ausschließlich die exakte
+`SBS_S3_ENDPOINT`-Origin an `connect-src` weiter. Wildcards, Scheme-Freigaben
+wie `https:`, Pfade, Zugangsdaten und freie CSP-Fragmente werden vor dem
+Nginx-Start abgewiesen. Normale Nutzer konfigurieren daran nichts. Eine
+abweichende Cloud-/Hoster-Topologie kann am Web-Container mehrere exakte
+Origins whitespace-getrennt über `SBS_WEB_CSP_CONNECT_ORIGINS` setzen; im
+kanonischen Compose-Pfad wird dieser technische Wert automatisch abgeleitet.
+
 ## Einmalige Erstregistrierung
 
 Eine leere Instanz nimmt den ersten Account nur mit dem in der lokalen `.env`
@@ -313,6 +322,7 @@ Nach der Proxy-Konfiguration muessen beide Pfade funktionieren:
 ```bash
 curl --fail https://sidebyside.example.com/
 curl --fail https://sidebyside.example.com/api/v1/health/ready
+web/scripts/check_csp_header.sh https://sidebyside.example.com/
 ```
 
 Antwortet die API-Readiness, aber die Startseite nicht, zeigt die allgemeine
@@ -361,6 +371,10 @@ curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
 # Der API-Container kann den Compose-Service postgres aufloesen.
 docker compose exec -T api python -c \
   'import socket; print(socket.gethostbyname("postgres"))'
+
+# Der Webserver liefert genau die dokumentierte restriktive CSP.
+web_port=$(docker compose port web 8080 | awk -F: '{print $NF}')
+web/scripts/check_csp_header.sh "http://127.0.0.1:${web_port}/"
 
 # Die oeffentliche Adresse muss HTTPS verwenden.
 curl --fail https://sidebyside.example.com/api/v1/health

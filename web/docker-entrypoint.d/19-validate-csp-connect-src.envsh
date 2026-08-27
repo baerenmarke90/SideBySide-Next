@@ -1,0 +1,47 @@
+#!/bin/sh
+
+# Diese Datei wird vom vorhandenen Nginx-Entrypoint vor dessen envsubst-Schritt
+# gesourct. Nur exakte HTTP(S)-Origins duerfen in den CSP-Header gelangen;
+# Wildcards, Pfade, Credentials und freie CSP-Ausdruecke bleiben verboten.
+
+sbs_csp_raw_origins=${SBS_WEB_CSP_CONNECT_ORIGINS:-}
+sbs_csp_normalized_origins=
+
+# Shell-Globbing darf einen administrativen Wert niemals gegen Dateinamen im
+# Container expandieren. Whitespace trennt mehrere explizite Origins.
+set -f
+for sbs_csp_origin in $sbs_csp_raw_origins; do
+    if ! printf '%s\n' "$sbs_csp_origin" \
+        | grep -Eq '^https?://([A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?|\[[0-9A-Fa-f:.]+\])(:[0-9]{1,5})?$'; then
+        echo "SBS_WEB_CSP_CONNECT_ORIGINS enthaelt keine gueltige exakte HTTP(S)-Origin." >&2
+        exit 1
+    fi
+
+    sbs_csp_port=
+    case "$sbs_csp_origin" in
+        *]:*) sbs_csp_port=${sbs_csp_origin##*:} ;;
+        *]) ;;
+        http://*:*|https://*:*) sbs_csp_port=${sbs_csp_origin##*:} ;;
+    esac
+    if [ -n "$sbs_csp_port" ] \
+        && { [ "$sbs_csp_port" -lt 1 ] || [ "$sbs_csp_port" -gt 65535 ]; }; then
+        echo "SBS_WEB_CSP_CONNECT_ORIGINS enthaelt einen ungueltigen Port." >&2
+        exit 1
+    fi
+
+    if [ -n "$sbs_csp_normalized_origins" ]; then
+        sbs_csp_normalized_origins="$sbs_csp_normalized_origins $sbs_csp_origin"
+    else
+        sbs_csp_normalized_origins=$sbs_csp_origin
+    fi
+done
+set +f
+
+# Das fuehrende Leerzeichen gehoert zur Template-Grenze. Ohne Zusatz-Origin
+# bleibt der Header exakt `connect-src 'self';`.
+if [ -n "$sbs_csp_normalized_origins" ]; then
+    SBS_WEB_CSP_CONNECT_ORIGINS=" $sbs_csp_normalized_origins"
+else
+    SBS_WEB_CSP_CONNECT_ORIGINS=
+fi
+export SBS_WEB_CSP_CONNECT_ORIGINS
