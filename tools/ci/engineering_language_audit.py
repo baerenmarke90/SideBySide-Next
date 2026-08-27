@@ -19,6 +19,7 @@ SCOPED_FILES = (
     Path("CONTRIBUTING.md"),
     Path("docs/ENGINEERING-LANGUAGE.md"),
     Path("docs/ENGINEERING-LANGUAGE-MIGRATION.md"),
+    Path("docs/ENGINEERING-LANGUAGE-FOLLOWUPS.md"),
     Path("docs/REUSE-BEFORE-BUILD.md"),
     Path(".github/pull_request_template.md"),
     Path(".github/workflows/reuse-review.yml"),
