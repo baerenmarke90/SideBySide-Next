@@ -43,14 +43,16 @@ BACKEND_FILENAMES = {"Dockerfile"}
 
 # Common German grammar is safe to use for comments/docstrings because those
 # are engineering prose. The additional stems catch transliterated legacy
-# identifiers that contain compounds rather than standalone words.
+# identifiers that contain compounds rather than standalone words. Avoid
+# ambiguous tokens that are also ordinary English engineering prose (for
+# example the article "an").
 ENGINEERING_PROSE_MARKERS = re.compile(
     r"(?:"
     r"\b(?:Zusammenfassung|Begruendung|Begründung|Gepruefte|Geprüfte|Entscheidung|"
     r"der|die|das|den|dem|des|ein|eine|einen|einem|einer|ist|sind|wird|"
     r"werden|wurde|wurden|und|oder|ohne|mit|nicht|kein|keine|keinen|nur|wenn|"
     r"damit|dass|sonst|auch|dieser|diese|dieses|hier|dort|als|bei|beim|vom|"
-    r"von|zum|zur|im|ins|am|an|auf|aus|gegen|zwischen|bereits|immer|spaeter|"
+    r"von|zum|zur|im|ins|am|auf|aus|gegen|zwischen|bereits|immer|spaeter|"
     r"später|fuer|für|ueber|über|wuerde|würde|koennte|könnte|koennen|können|"
     r"muessen|müssen|muesste|müsste|zurueck|zurück)\b|"
     r"(?:pruef|prüf|guelt|gült|unguelt|ungült|laesst|lässt|enthaelt|enthält|"
@@ -68,7 +70,7 @@ IDENTIFIER_MARKERS = re.compile(
     r"(?:^|_)(?:der|die|das|ein|eine|ist|sind|wird|ohne|mit|nicht|kein|keine|"
     r"fuer|ueber|zurueck|antwort|fehler|anbieter|gegenstelle|anmeldung|konto|"
     r"sitzung|verbindung|schluessel|pruefung|wurzel|vertrag|erzeugt|geaendert|"
-    r"unveraendert|welt|ort|plaene|erinnerung|moment|meldungen|geheimnis)(?:_|$)|"
+    r"unveraendert|welt|ort|plaene|erinnerung|meldungen|geheimnis)(?:_|$)|"
     r"(?:schluessel|pruefung|ueberschreib|oeffentlich|begonnen|identitaet|"
     r"verknuepf|abgelehnt|unbekannt|falsch|gueltig|ungueltig|zurueck|"
     r"vollstaendig|unveraendert|erzeugt|geaendert)"
