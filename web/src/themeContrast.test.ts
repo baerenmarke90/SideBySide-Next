@@ -56,7 +56,9 @@ function cssBlock(css: string, selector: string): string {
 }
 
 function darkThemeBlock(css: string): string {
-  const match = css.match(/:root\[data-theme=(?:"dark"|'dark')\]\s*\{([^}]*)\}/);
+  const match = css.match(
+    /:root\[data-theme=(?:"dark"|'dark')\]\s*\{([^}]*)\}/,
+  );
   if (!match) throw new Error('CSS-Block fehlt: :root[data-theme=dark]');
   return match[1];
 }
