@@ -45,20 +45,36 @@ jobs:
       - name: Production build
         run: npm run build
 
-  lockfile-artifact:
-    name: Temporary npm lockfile artifact
+  lockfile-update:
+    name: Temporary npm lockfile update
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
 
       - name: Generate lockfile with npm
         working-directory: web
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
-      - name: Upload generated lockfile
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: web-package-lock-186
-          path: web/package-lock.json
-          if-no-files-found: error
+      - name: Commit generated lockfile to PR branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add web/package-lock.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'chore(web): refresh lockfile for Biome'
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git"
+          git push origin "HEAD:${HEAD_REF}"
