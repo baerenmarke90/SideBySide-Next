@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { StoryItemFromJSON } from '../api/generated/models/StoryItem';
 import { StoryList } from './StoryList';
 
+const loadMemoryImage = async () => 'blob:test-image';
+
 describe('StoryList', () => {
   it('renders a generated MEMORY discriminator with semantic list markup', () => {
     const item = StoryItemFromJSON({
@@ -18,16 +20,21 @@ describe('StoryList', () => {
       },
     });
 
-    const html = renderToStaticMarkup(<StoryList items={[item]} />);
+    const html = renderToStaticMarkup(
+      <StoryList items={[item]} loadMemoryImage={loadMemoryImage} />,
+    );
     expect(html).toContain('<ol');
     expect(html).toContain('aria-label="Gemeinsame Story"');
-    expect(html).toContain('Erinnerung: Am See');
+    expect(html).toContain('Erinnerung');
+    expect(html).toContain('Am See');
     expect(html).toContain('<time');
   });
 
   it('announces an empty story as a status', () => {
-    const html = renderToStaticMarkup(<StoryList items={[]} />);
+    const html = renderToStaticMarkup(
+      <StoryList items={[]} loadMemoryImage={loadMemoryImage} />,
+    );
     expect(html).toContain('role="status"');
-    expect(html).toContain('Noch keine Einträge');
+    expect(html).toContain('Eure Story beginnt hier.');
   });
 });

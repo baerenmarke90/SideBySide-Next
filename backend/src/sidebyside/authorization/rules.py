@@ -19,7 +19,7 @@ from types import MappingProxyType
 from sqlalchemy import ColumnElement, and_, false, or_, true
 
 from sidebyside.authorization.models import PrivateResource
-from sidebyside.authorization.privacy import AuthorizationContext, PrivacyClass
+from sidebyside.authorization.privacy import AuthorizationContext, PrivacyClass, SharedWrite
 
 
 class Access(StrEnum):
@@ -54,14 +54,32 @@ _READ_RULES: Mapping[PrivacyClass, AccessRule] = MappingProxyType(
     }
 )
 
+
+def _shared_write(
+    model: type[PrivateResource], context: AuthorizationContext
+) -> ColumnElement[bool]:
+    """Die Schreibform, die die Domaene angesagt hat.
+
+    Der Standard bleibt author-only: "Der Autor darf persoenlichen Text
+    bearbeiten/loeschen. Partner darf gemeinsame Erinnerung lesen."
+    (Spezifikation, Abschnitt 14). Die gemeinsamen M3-Planungs- und
+    Listenressourcen sind nach M3-D01 ausdruecklich collaborative write -
+    ein Wunsch gehoert dem Paar und nicht dem, der ihn zuerst getippt hat.
+
+    Die Fallunterscheidung steht hier und nicht im Endpunkt. Sonst waere
+    gemeinsames Schreiben eine Ausnahme je Route, und eine vergessene
+    Ausnahme faellt niemandem auf.
+    """
+    if model.shared_write is SharedWrite.COLLABORATIVE:
+        return _the_whole_space(model, context)
+    return _only_the_owner(model, context)
+
+
 _WRITE_RULES: Mapping[PrivacyClass, AccessRule] = MappingProxyType(
     {
-        # Auch geteilte Inhalte aendert nur, wer sie geschrieben hat:
-        # "Der Autor darf persoenlichen Text bearbeiten/loeschen. Partner
-        # darf gemeinsame Erinnerung lesen." (Spezifikation, Abschnitt 14).
-        # Braucht eine spaetere Domaene gemeinsames Bearbeiten, bekommt sie
-        # hier eine eigene Regel - und nicht im Endpunkt eine Ausnahme.
-        PrivacyClass.SPACE_SHARED: _only_the_owner,
+        PrivacyClass.SPACE_SHARED: _shared_write,
+        # Fuer OWNER_ONLY gibt es die Wahl nicht: dort ist der Partner
+        # kein Mitautor, sondern ein Fremder.
         PrivacyClass.OWNER_ONLY: _only_the_owner,
     }
 )
