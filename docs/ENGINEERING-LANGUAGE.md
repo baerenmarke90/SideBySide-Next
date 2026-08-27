@@ -43,6 +43,7 @@ Exceptions must be narrow and explicit. The following are allowed:
 2. **Externally mandated literals** — protocol, standard, provider, compatibility, trademark, or quoted values that must keep their original spelling.
 3. **Frozen historical snapshots** — dated review/audit snapshots that repository governance explicitly treats as immutable may remain in their original language. New historical snapshots created after this policy takes effect must be written in English.
 4. **Generated/vendor content** — do not edit generated or vendored output manually. Change the source schema/generator/configuration instead; generated content should become English when its authoritative source is migrated.
+5. **Pre-policy repository history** — existing commit messages, merged pull requests, closed issues, and their historical discussions are not rewritten solely for language migration. New engineering history created after this policy takes effect must be English.
 
 An exception is not permission to add new German engineering prose to active source code or active technical documentation.
 
@@ -50,7 +51,7 @@ An exception is not permission to add new German engineering prose to active sou
 
 Existing non-English engineering content is technical debt tracked by issue #212 and its follow-up work. New or materially edited engineering content must follow this policy immediately, even while untouched legacy content is still being migrated.
 
-When modifying a legacy file for functional work, translate nearby engineering comments/messages when doing so is low risk and does not obscure the functional diff. Large unrelated translations should remain in the dedicated migration work.
+Never rewrite Git history solely to translate historical commit messages. When modifying a legacy file for functional work, translate nearby engineering comments/messages when doing so is low risk and does not obscure the functional diff. Large unrelated translations should remain in the dedicated migration work.
 
 ## Review rule
 
