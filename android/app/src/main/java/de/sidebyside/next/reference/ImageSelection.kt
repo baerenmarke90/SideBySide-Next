@@ -11,10 +11,10 @@ private const val MAX_REFERENCE_IMAGE_BYTES = 25 * 1024 * 1024
 suspend fun loadSelectedImage(context: Context, uri: Uri): SelectedImage = withContext(Dispatchers.IO) {
     val resolver = context.contentResolver
     val mimeType = resolver.getType(uri)?.lowercase()
-        ?: throw IllegalArgumentException("Der Bildtyp konnte nicht bestimmt werden.")
-    require(mimeType.startsWith("image/")) { "Bitte ein Bild auswählen." }
+        ?: throw IllegalArgumentException(context.getString(R.string.ref_image_type_unknown))
+    require(mimeType.startsWith("image/")) { context.getString(R.string.ref_image_required) }
 
-    var displayName = "bild"
+    var displayName = context.getString(R.string.ref_image_default_name)
     var declaredSize: Long? = null
     resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE), null, null, null)?.use { cursor ->
         if (cursor.moveToFirst()) {
@@ -26,13 +26,13 @@ suspend fun loadSelectedImage(context: Context, uri: Uri): SelectedImage = withC
     }
 
     declaredSize?.let { size ->
-        require(size <= MAX_REFERENCE_IMAGE_BYTES) { "Das Bild ist größer als 25 MiB." }
+        require(size <= MAX_REFERENCE_IMAGE_BYTES) { context.getString(R.string.ref_image_too_large) }
     }
 
     val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
-        ?: throw IllegalArgumentException("Das Bild konnte nicht geöffnet werden.")
-    require(bytes.isNotEmpty()) { "Das ausgewählte Bild ist leer." }
-    require(bytes.size <= MAX_REFERENCE_IMAGE_BYTES) { "Das Bild ist größer als 25 MiB." }
+        ?: throw IllegalArgumentException(context.getString(R.string.ref_image_open_failed))
+    require(bytes.isNotEmpty()) { context.getString(R.string.ref_image_empty) }
+    require(bytes.size <= MAX_REFERENCE_IMAGE_BYTES) { context.getString(R.string.ref_image_too_large) }
 
     SelectedImage(bytes = bytes, displayName = displayName, mimeType = mimeType)
 }

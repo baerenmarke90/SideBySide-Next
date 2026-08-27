@@ -1,19 +1,19 @@
 # SideBySide Next Roadmap
 
 **Status:** Menschenlesbare Orientierungs- und Priorisierungsansicht  
-**Version:** 1.6  
-**Stand:** 25.08.2026  
+**Version:** 1.7  
+**Stand:** 26.08.2026  
 **Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
 
-Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht im [Implementation Status](./IMPLEMENTATION-STATUS.md); die präzisierten M2-Grenzen stehen im [M2 Project Control](./m2/PROJECT-CONTROL.md).
+Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht im [Implementation Status](./IMPLEMENTATION-STATUS.md); die präzisierten M2-Grenzen stehen im [M2 Project Control](./m2/PROJECT-CONTROL.md), die M3-Readiness im [M3 Technical Readiness Package](./m3/README.md).
 
 ## Roadmap auf einen Blick
 
 ![Grafische Roadmap von M0 Foundation bis M9 Release und der strategischen E2EE-Spur](./assets/roadmap/roadmap-overview.svg)
 
-**Aktuell:** M0 und M1 sind für ihren vorgesehenen Runtimeumfang abgeschlossen. **G1 ist bestanden. M2-S0 ist abgeschlossen; die M2-Runtime läuft.** Der verbindliche Gate-Nachweis ist der [G1 Gate Review nach Abschluss von #61](./reviews/2026-08-25-g1-gate-review-after-61.md); der aktuelle Arbeitsstand steht im [M2 Project Control](./m2/PROJECT-CONTROL.md).
+**Aktuell:** M0, M1 und M2 sind für ihren vorgesehenen Umfang abgeschlossen. **G1 und G2 sind bestanden. M3 ist als nächster Milestone freigegeben; seine S0-Readiness und alle M3-D01 bis M3-D32 sind abgeschlossen.** Der verbindliche aktuelle Gate-Nachweis ist der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).
 
-#59 und #60 bleiben verpflichtende Pre-Exposure-Härtungen vor öffentlicher bzw. Managed-Exposition. #25 bleibt Repository-Hardening. Diese Punkte blockieren die interne M2-Entwicklung nicht.
+#59 und #60 bleiben verpflichtende Pre-Exposure-Härtungen vor öffentlicher bzw. Managed-Exposition. #25 bleibt Repository-Hardening. Diese Punkte blockieren die interne M3-Entwicklung nicht.
 
 ## Dokumentenrollen
 
@@ -21,8 +21,9 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 |---|---|
 | diese Roadmap | Wohin gehen wir, in welcher Reihenfolge und warum? |
 | [Implementation Status](./IMPLEMENTATION-STATUS.md) | Was ist auf `main` tatsächlich umgesetzt oder noch offen? |
-| [M2 Project Control](./m2/PROJECT-CONTROL.md) | Welche M2/M5-Grenzen, G2-Kriterien und S0-Reihenfolge gelten? |
-| [Finaler G1 Gate Review](./reviews/2026-08-25-g1-gate-review-after-61.md) | aktuelle Gate-Entscheidung |
+| [M2 Project Control](./m2/PROJECT-CONTROL.md) | Welche M2/M5-Grenzen und G2-Kriterien galten? |
+| [M3 Technical Readiness Package](./m3/README.md) | Welche M3-Entscheidungen, Gate-Regeln und Runtime-Voraussetzungen gelten? |
+| [Finaler G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) | aktuelle Gate-Entscheidung |
 | datierte ältere Reviews | historische Prüfsnapshots, die nicht umgeschrieben werden |
 | GitHub Issues/PRs | Welche konkreten Arbeitspakete werden bearbeitet? |
 | [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | Was ist fachlich und technisch verbindlich? |
@@ -37,11 +38,9 @@ API-/DB-Konventionen, Migrationen, Outbox, Jobs, MediaStore-Grundlage, Protected
 
 Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, E-Mail-Verifikation und Recovery sind implementiert. PR #64 hat #61 mit expliziter `preserve`-/`cascade`-Semantik ohne destruktiven Default geschlossen; der folgende Gate-Review hat G1 ausdrücklich bestanden erklärt.
 
-### M2-S0 — Readiness & Vertragsentscheidungen: abgeschlossen
+### M2 — Erinnern / Story Alpha: abgeschlossen, G2 bestanden
 
-Die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen sind über #67, #68, #69, #70 und #78 geschlossen. Alle `BLOCKING`-Einträge im [Decision Log](./m2/DECISION-LOG.md) stehen auf `DECIDED`; offen bleiben nur `BEFORE_CLIENTS`-Punkte, die erst vor stabiler Client-Integration fällig werden.
-
-### M2-Runtime: laufend
+Die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen sind geschlossen. Geliefert sind:
 
 1. #71 — Memory CRUD ohne Medien: **geliefert**.
 2. #80 — HeartMoment mit Owner-only-Privacy: **geliefert**.
@@ -51,13 +50,18 @@ Die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen sind über #6
 6. #97 — Comments, Outbox und Notification Hook: **geliefert**.
 7. #87 — S3-kompatibler MediaStore-Adapter: **geliefert**.
 8. #113 — Story Read Model und `/timeline`: **geliefert**.
-9. S8 — dünne Web-/Android-Referenzflows: letzter M2-Baustein vor dem G2-Nachweis.
+9. S8 — dünne Web-/Android-Referenzflows: **geliefert**.
+10. Realer Web-/Android-Memory/Media/Story-E2E gegen API, Worker, PostgreSQL und LocalMediaStore: **nachgewiesen**.
 
-Die M2-Domain ist damit vollständig. Für G2 fehlt allein der End-to-End-Nachweis auf Web und Android.
-
-Offen daneben: #102 (OpenAPI-Generator als Tooling-Vorarbeit vor den Clientflächen).
+Der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) bewertet den Stand ausdrücklich mit **G2: BESTANDEN**. Die manuelle Accessibility-Abnahme wurde dabei nicht als bestanden gewertet; sie bleibt Teil der finalen Client-/Release-QA in M5/G4.
 
 Future-Backlog: #88 hält Video-Uploads und Posterframes für eine spätere Neubewertung fest. Der Prototyp #109 wurde wegen eines Produktions-Images von rund 755 MiB und des zusätzlichen ffmpeg-Betriebs-, Supply-Chain- und Security-Aufwands bewusst ohne Merge geschlossen; `main` bleibt für Video fail-closed.
+
+### M3 — Planen & Private Area: freigegeben
+
+Das [M3 Technical Readiness Package](./m3/README.md) ist vorbereitet; M3-D01 bis M3-D32 stehen auf `DECIDED`. Damit ist die fachliche S0-Readiness abgeschlossen. Runtime-Slices dürfen gemäß [M3 Delivery Plan](./m3/DELIVERY-PLAN.md) beginnen, sobald der produktive REST-/OpenAPI-Vertrag des jeweiligen Slices contract-testbar konkretisiert ist und die normalen Reuse-/PR-/CI-Regeln erfüllt sind.
+
+Der erste geplante Runtime-Slice ist **M3-S1 — Wish Foundation**.
 
 ## Milestones
 
@@ -79,7 +83,7 @@ Future-Backlog: #88 hält Video-Uploads und Posterframes für eine spätere Neub
 
 ### M2 vs. M5
 
-M2 ist **nicht backend-only**. M2 darf dünne Web-/Android-Referenzflows enthalten, wenn sie notwendig sind, um den kritischen Memory/Media/Story-Flow Ende-zu-Ende zu beweisen. M2 verspricht aber keine vollständige Client-Parität.
+M2 ist **nicht backend-only**. M2 enthält dünne Web-/Android-Referenzflows, um den kritischen Memory/Media/Story-Flow Ende-zu-Ende zu beweisen. M2 verspricht aber keine vollständige Client-Parität.
 
 M5 ist die vollständige Client-Produktisierung: vollständige Screens und Navigation, Deep Links, Read Cache, Export/Import, systematische Web-/Android-Parität, Accessibility, Performance und Release-Hardening.
 
@@ -120,14 +124,14 @@ S0 Readiness
       Thin Web/Android E2E
               │
               ▼
-             G2
+             G2 ✓
 ```
 
-Der erste Runtime-Slice ist bewusst Memory CRUD ohne Medien. Damit werden M2-Migrationstil, ProtectedPayload, Tenant Guard, Autorregel und Concurrency validiert, bevor die komplexere Media-Sicherheitsfläche hinzukommt.
+Diese Lieferfolge ist abgeschlossen. Sie validierte zuerst M2-Migrationstil, ProtectedPayload, Tenant Guard, Autorregel und Concurrency auf einer kleineren Sicherheitsfläche und führte anschließend bis zum realen Client-E2E-Nachweis.
 
 ## Search-Abgrenzung
 
-Für G2 ist globale Volltextsuche nicht zwingend. Der Story-Mindestvertrag umfasst zunächst `type`, `year`, `order`, `cursor` und `limit`. Ein `q`-Filter wird nur dann Bestandteil von G2, wenn #70 ihn nach Privacy-/Index-Review ausdrücklich aufnimmt; ansonsten gehört globale Volltextsuche nach M4-A.
+Globale Volltextsuche war kein G2-Bestandteil. Der Story-Mindestvertrag umfasst `type`, `year`, `order`, `cursor` und `limit`; globale Volltextsuche liegt in M4-A.
 
 ## Abhängigkeiten
 
@@ -162,19 +166,22 @@ flowchart LR
 - Profile/SpaceProfile mit Versionskonflikten,
 - Cross-Tenant-, Session- und Privacy-Tests.
 
-**Aktueller Stand: BESTANDEN.** Der datierte [G1 Gate Review nach Abschluss von #61](./reviews/2026-08-25-g1-gate-review-after-61.md) ist die aktuelle Entscheidungsquelle.
+**Aktueller Stand: BESTANDEN.** Der datierte [G1 Gate Review nach Abschluss von #61](./reviews/2026-08-25-g1-gate-review-after-61.md) bleibt der historische G1-Nachweis.
 
 ### G2 — Story Alpha
 
-G2 ist bestanden, wenn:
+**Aktueller Stand: BESTANDEN.** Der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) ist die aktuelle Gate-Entscheidung.
 
-- Memory, Attachment/Media für Bilder, HeartMoment, Milestone und Comment für den M2-Scope vollständig sind,
-- Story `OWNER_ONLY` vor Suche, Gruppierung, Pagination und Projektion ausschließt,
-- Upload-/Media-Abuse, Parent-Autorisierung und Cross-Tenant-Races geprüft sind,
-- OpenAPI und PostgreSQL-Integrationstests vollständig grün sind,
-- mindestens ein kritischer Memory/Media/Story-Flow in **Web und Android** technisch Ende-zu-Ende validiert ist,
-- diese Referenzflows Accessibility-/Privacy-Abnahme ohne hohe Befunde bestehen,
-- vollständige Client-Parität ausdrücklich noch nicht vorausgesetzt wird.
+Nachgewiesen sind insbesondere:
+
+- vollständige M2-Domain/API für Memory, Bild-Attachments, HeartMoment, Milestone, Comments und Story,
+- serverseitiger Ausschluss von `OWNER_ONLY` vor Story-Projektion/Pagination,
+- Media-/Upload-Abuse, Parent-Autorisierung, Tenant- und Race-/Datenintegritätspfade,
+- OpenAPI, Migrationen und PostgreSQL-Integration,
+- realer kritischer Memory/Media/Story-Flow in Web und Android gegen denselben SideBySide-Stack,
+- aktuelle CI-, Secret-Scan-, Supply-Chain- und Deployment-Gates.
+
+Die manuelle Accessibility-Abnahme ist bewusst **kein G2-Blocker mehr** und wird in M5/G4 als finale Client-/Release-QA durchgeführt. Vollständige Client-Parität bleibt ebenfalls M5/G4.
 
 ### G3 — Gemeinsamer Alltag
 
@@ -215,7 +222,7 @@ G2 ist bestanden, wenn:
 
 | Risiko | Schutzmaßnahme |
 |---|---|
-| Runtime beginnt vor geklärtem Vertrag | M2-S0 BLOCKING-Decisions und #70 vor #71 |
+| Runtime beginnt vor geklärtem Vertrag | relevante M3-Decisions + contract-testbarer OpenAPI-Vertrag vor jedem Runtime-Slice |
 | Web und Android driften auseinander | gemeinsamer OpenAPI-Vertrag und M5-Paritätsgate |
 | Privacy-Klassen werden Client-Domain | klare Trennung `SHARED/PRIVATE` vs. `SPACE_SHARED/OWNER_ONLY` |
 | Media erzeugt indirekte Leaks | Parent-Autorisierung, Adapter-Contract und Abuse-/Race-Tests |
@@ -233,9 +240,9 @@ G2 ist bestanden, wenn:
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
 - [M2 Project Control](./m2/PROJECT-CONTROL.md)
-- [M2 Technical Readiness Package](./m2/README.md)
-- [M2 Decision Log](./m2/DECISION-LOG.md)
-- [M2 Delivery Plan](./m2/DELIVERY-PLAN.md)
-- [Finaler G1 Gate Review](./reviews/2026-08-25-g1-gate-review-after-61.md)
+- [M3 Technical Readiness Package](./m3/README.md)
+- [M3 Decision Log](./m3/DECISION-LOG.md)
+- [M3 Delivery Plan](./m3/DELIVERY-PLAN.md)
+- [Finaler G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md)
 - [Produktspezifikation](../specification/PRODUCT-SPEC.md)
 - [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)

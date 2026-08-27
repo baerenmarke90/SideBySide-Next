@@ -23,12 +23,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
 import sidebyside.api.models.StoryItem
 
 @Composable
@@ -54,22 +58,22 @@ fun ReferenceFlowScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "SideBySide Next",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineLarge,
                     modifier = Modifier.semantics { heading() },
                 )
                 Text(
-                    text = "M2 · technischer Android-Referenzflow",
+                    text = stringResource(R.string.ref_flow_subtitle),
                     style = MaterialTheme.typography.labelLarge,
                 )
-                Text("Eine Erinnerung mit Bild in eurer gemeinsamen Story.")
+                Text(stringResource(R.string.ref_flow_intro))
             }
         }
 
         if (!state.configured) {
             item {
                 Text(
-                    text = "Der M2-Referenzflow ist operatorseitig noch nicht konfiguriert.",
+                    text = stringResource(R.string.ref_not_configured),
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
                 )
@@ -78,21 +82,21 @@ fun ReferenceFlowScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Anmelden",
+                        text = stringResource(R.string.ref_login_heading),
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.semantics { heading() },
                     )
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text("E-Mail") },
+                        label = { Text(stringResource(R.string.ref_email)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it },
-                        label = { Text("Passwort") },
+                        label = { Text(stringResource(R.string.ref_password)) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
@@ -102,7 +106,7 @@ fun ReferenceFlowScreen(
                         enabled = !state.busy,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     ) {
-                        Text(if (state.busy) "Anmeldung läuft …" else "Anmelden")
+                        Text(stringResource(if (state.busy) R.string.ref_login_pending else R.string.ref_login))
                     }
                 }
             }
@@ -112,35 +116,37 @@ fun ReferenceFlowScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("Authentifiziert")
-                    TextButton(onClick = onLogout, enabled = !state.busy) { Text("Abmelden") }
+                    Text(stringResource(R.string.ref_authenticated))
+                    TextButton(onClick = onLogout, enabled = !state.busy) {
+                        Text(stringResource(R.string.ref_logout))
+                    }
                 }
             }
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "Erinnerung festhalten",
+                        text = stringResource(R.string.ref_memory_heading),
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.semantics { heading() },
                     )
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it.take(200) },
-                        label = { Text("Titel") },
+                        label = { Text(stringResource(R.string.ref_title)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = body,
                         onValueChange = { body = it },
-                        label = { Text("Erinnerung") },
+                        label = { Text(stringResource(R.string.ref_memory)) },
                         minLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
                         value = happenedOn,
                         onValueChange = { happenedOn = it },
-                        label = { Text("Datum (JJJJ-MM-TT, optional)") },
+                        label = { Text(stringResource(R.string.ref_date_optional)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -149,14 +155,22 @@ fun ReferenceFlowScreen(
                         enabled = !state.busy,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     ) {
-                        Text(state.selectedImageName?.let { "Bild ausgewählt: $it" } ?: "Bild auswählen")
+                        Text(
+                            state.selectedImageName?.let {
+                                stringResource(R.string.ref_image_selected, it)
+                            } ?: stringResource(R.string.ref_image_select),
+                        )
                     }
                     Button(
                         onClick = { onCreateMemory(title, body, happenedOn) },
                         enabled = !state.busy && state.selectedImageName != null,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     ) {
-                        Text(if (state.busy) "Wird gespeichert …" else "Erinnerung mit Bild speichern")
+                        Text(
+                            stringResource(
+                                if (state.busy) R.string.ref_memory_saving else R.string.ref_memory_save,
+                            ),
+                        )
                     }
                 }
             }
@@ -165,7 +179,7 @@ fun ReferenceFlowScreen(
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "Zuletzt gespeichert",
+                            text = stringResource(R.string.ref_last_saved),
                             style = MaterialTheme.typography.headlineSmall,
                             modifier = Modifier.semantics { heading() },
                         )
@@ -175,7 +189,7 @@ fun ReferenceFlowScreen(
                         if (bitmap != null) {
                             Image(
                                 bitmap = bitmap.asImageBitmap(),
-                                contentDescription = "Bild zur zuletzt gespeicherten Erinnerung",
+                                contentDescription = stringResource(R.string.ref_last_saved_image_description),
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
@@ -191,30 +205,32 @@ fun ReferenceFlowScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Gemeinsame Story",
+                        text = stringResource(R.string.ref_story_heading),
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.semantics { heading() },
                     )
-                    TextButton(onClick = onRefreshStory, enabled = !state.busy) { Text("Aktualisieren") }
+                    TextButton(onClick = onRefreshStory, enabled = !state.busy) {
+                        Text(stringResource(R.string.ref_refresh))
+                    }
                 }
             }
 
             if (state.storyItems.isEmpty()) {
-                item { Text("Noch keine Einträge in eurer Story.") }
+                item { Text(stringResource(R.string.ref_story_empty)) }
             } else {
                 itemsIndexed(state.storyItems) { _, storyItem ->
                     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text(storyItemLabel(storyItem), style = MaterialTheme.typography.titleSmall)
+                        Text(storyItemLabel(storyItem).resolve(), style = MaterialTheme.typography.titleSmall)
                         Text(storyItemDate(storyItem))
                     }
                 }
             }
         }
 
-        if (state.status.isNotBlank()) {
+        state.status?.let { message ->
             item {
                 Text(
-                    text = state.status,
+                    text = message.resolve(),
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
@@ -222,7 +238,7 @@ fun ReferenceFlowScreen(
         state.error?.let { message ->
             item {
                 Text(
-                    text = message,
+                    text = message.resolve(),
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
                 )
@@ -231,14 +247,20 @@ fun ReferenceFlowScreen(
     }
 }
 
-internal fun storyItemLabel(item: StoryItem): String = when (item) {
-    is StoryItem.MemoryWrapper -> "Erinnerung: ${item.value.memory.title}"
-    is StoryItem.HeartMomentWrapper -> "Herzmoment"
-    is StoryItem.MilestoneWrapper -> "Meilenstein: ${item.value.milestone.title}"
+@Composable
+private fun UiMessage.resolve(): String = stringResource(resourceId, *args.toTypedArray())
+
+internal fun storyItemLabel(item: StoryItem): UiMessage = when (item) {
+    is StoryItem.MemoryWrapper -> UiMessage(R.string.ref_story_memory, listOf(item.value.memory.title))
+    is StoryItem.HeartMomentWrapper -> UiMessage(R.string.ref_story_heart_moment)
+    is StoryItem.MilestoneWrapper -> UiMessage(R.string.ref_story_milestone, listOf(item.value.milestone.title))
 }
 
-private fun storyItemDate(item: StoryItem): String = when (item) {
-    is StoryItem.MemoryWrapper -> item.value.effectiveDate.toString()
-    is StoryItem.HeartMomentWrapper -> item.value.effectiveDate.toString()
-    is StoryItem.MilestoneWrapper -> item.value.effectiveDate.toString()
+internal fun storyItemDate(item: StoryItem, locale: Locale = Locale.getDefault()): String {
+    val date = when (item) {
+        is StoryItem.MemoryWrapper -> item.value.effectiveDate
+        is StoryItem.HeartMomentWrapper -> item.value.effectiveDate
+        is StoryItem.MilestoneWrapper -> item.value.effectiveDate
+    }
+    return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date)
 }

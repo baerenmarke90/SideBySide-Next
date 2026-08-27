@@ -9,6 +9,7 @@ PostgreSQL das Richtige tut, steht in den Integrationstests.
 from __future__ import annotations
 
 import re
+from typing import ClassVar
 from uuid import UUID
 
 import pytest
@@ -23,6 +24,7 @@ from sidebyside.authorization import (
     PrivacyClass,
     PrivateResourceMixin,
     ResourceAbsence,
+    SharedWrite,
     access_clause,
     privacy_clause,
     readable,
@@ -56,6 +58,17 @@ class ZweiteSonde(PrivateResourceMixin, Probenbasis):
 
     id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
     note: Mapped[str] = mapped_column(String(32))
+
+
+class GemeinsameSonde(PrivateResourceMixin, Probenbasis):
+    """Eine Domaene, die nach M3-D01 gemeinsam geschrieben wird."""
+
+    __tablename__ = "gemeinsame_sonden"
+
+    shared_write: ClassVar[SharedWrite] = SharedWrite.COLLABORATIVE
+
+    id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+    label: Mapped[str] = mapped_column(String(32))
 
 
 KONTEXT = AuthorizationContext(account_id=new_id(), space_id=new_id())
@@ -138,6 +151,57 @@ class TestBedingung:
         monkeypatch.setattr(rules, "_RULES", {Access.READ: {}})
         sql = str(privacy_clause(Sonde, KONTEXT, Access.READ).compile(dialect=postgresql.dialect()))
         assert sql.strip().lower() == "false"
+
+
+class TestSchreibform:
+    """`SPACE_SHARED` beantwortet die Lesefrage, nicht die Schreibfrage.
+
+    Beide Formen leben unter derselben Privacy-Klasse: Memory und
+    Milestone bleiben author-only (Spezifikation, Abschnitt 14), Wish,
+    Plan, Place, Chapter und Collection sind collaborative write (M3-D01).
+    Welche gilt, sagt das Modell - nicht der Endpunkt.
+    """
+
+    def _sql(self, modell: type, access: Access) -> str:
+        return str(
+            access_clause(modell, KONTEXT, access).compile(
+                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+            )
+        )
+
+    def test_der_standard_ist_die_engere_form(self) -> None:
+        """Ein vergessener Eintrag macht nichts versehentlich schreibbar."""
+        assert PrivateResourceMixin.shared_write is SharedWrite.AUTHOR_ONLY
+
+    def test_gemeinsames_schreiben_haengt_nicht_am_ersteller(self) -> None:
+        sql = self._sql(GemeinsameSonde, Access.WRITE)
+        geteilt = sql.split("SPACE_SHARED")[1].split("OR")[0]
+        assert "owner_id" not in geteilt
+
+    def test_der_space_steht_auch_dort_davor(self) -> None:
+        """Sonst duerfte ein Ex-Partner weiterschreiben."""
+        sql = self._sql(GemeinsameSonde, Access.WRITE)
+        assert f"gemeinsame_sonden.space_id = '{KONTEXT.space_id}'" in sql
+
+    def test_owner_only_bleibt_auch_bei_gemeinsamem_schreiben_beim_eigentuemer(self) -> None:
+        """Collaborative write ist eine Aussage ueber geteilte Zeilen.
+
+        Traegt dieselbe Domaene spaeter auch `OWNER_ONLY`-Zeilen, darf die
+        Ansage sie nicht mitreissen - dort ist der Partner kein Mitautor.
+        """
+        sql = self._sql(GemeinsameSonde, Access.WRITE)
+        privat = sql.split("OWNER_ONLY")[1]
+        assert f"gemeinsame_sonden.owner_id = '{KONTEXT.account_id}'" in privat
+
+    def test_die_ansage_gilt_nur_der_eigenen_domaene(self) -> None:
+        assert Sonde.shared_write is SharedWrite.AUTHOR_ONLY
+        assert "owner_id" in self._sql(Sonde, Access.WRITE).split("SPACE_SHARED")[1].split("OR")[0]
+
+    def test_lesen_bleibt_von_der_schreibform_unberuehrt(self) -> None:
+        """Die Ansage betrifft das Schreiben - gelesen wurde schon vorher geteilt."""
+        gemeinsam = self._sql(GemeinsameSonde, Access.READ)
+        author_only = self._sql(Sonde, Access.READ)
+        assert gemeinsam.replace("gemeinsame_sonden", "sonden") == author_only
 
 
 class TestAbwesenheit:

@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
-from typing import Self
+from typing import Annotated, Self
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -91,6 +91,16 @@ class OidcConnection(BaseModel):
 DEFAULT_DATABASE_URL = "postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside"
 
 
+def _database_url_is_usable(value: str) -> str:
+    """Ein leerer Umgebungswert ist kein Vorgabewert, sondern ein Fehler."""
+    if not value.strip():
+        raise ValueError("SBS_DATABASE_URL ist leer.")
+    return value
+
+
+_DatabaseUrl = Annotated[str, AfterValidator(_database_url_is_usable)]
+
+
 class DatabaseSettings(BaseSettings):
     """Nur die Verbindung - fuer Pfade, die keine laufende Anwendung sind.
 
@@ -105,21 +115,7 @@ class DatabaseSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="SBS_", env_file=".env", extra="ignore")
 
-    database_url: str = Field(default=DEFAULT_DATABASE_URL)
-
-    @field_validator("database_url")
-    @classmethod
-    def database_url_is_usable(cls, value: str) -> str:
-        """Ein leerer Wert ist kein Vorgabewert, sondern ein Fehler.
-
-        Setzt eine Umgebung die Variable auf den leeren String - eine
-        Interpolation ohne Ergebnis reicht dafuer -, greift der Default
-        nicht mehr. Ohne diese Pruefung liefe die Migration in einen
-        SQLAlchemy-Fehler ueber einen Dialekt ohne Namen.
-        """
-        if not value.strip():
-            raise ValueError("SBS_DATABASE_URL ist leer.")
-        return value
+    database_url: _DatabaseUrl = Field(default=DEFAULT_DATABASE_URL)
 
 
 class Settings(BaseSettings):
@@ -130,7 +126,7 @@ class Settings(BaseSettings):
 
     # Kein SQLite-Rückfall: das Datenmodell nutzt PostgreSQL-Eigenschaften,
     # und ein zweiter Dialekt im Test prüft nicht, was in Produktion läuft.
-    database_url: str = Field(default=DEFAULT_DATABASE_URL)
+    database_url: _DatabaseUrl = Field(default=DEFAULT_DATABASE_URL)
     database_echo: bool = False
 
     media_store: MediaStoreBackend = MediaStoreBackend.LOCAL

@@ -1,0 +1,15 @@
+name: SideBySide Next CodeQL
+
+# The built-in default query suite is intentionally used. It is CodeQL's
+# high-precision security baseline; security-extended is not enabled for the
+# blocking gate because it trades precision for additional lower-severity
+# findings and can create avoidable false positives.
+paths-ignore:
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - 'web/src/api/generated/**'
+
+# Generated web API clients and build output are not application-owned
+# security surfaces. Runtime backend, handwritten web application code and
+# the Android sources built by the manual CodeQL build remain in scope.
