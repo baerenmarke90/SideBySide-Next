@@ -1,50 +1,61 @@
-# SideBySide Next - Arbeitsregeln fuer Implementierungen
+# SideBySide Next - Implementation Rules
 
-Diese Regeln gelten fuer AI-gestuetzte und menschliche Implementierungsarbeit in diesem Repository.
+These rules apply to AI-assisted and human implementation work in this repository.
 
-## Verbindliche Quellen
+## Mandatory sources
 
-Vor relevanter Arbeit sind mindestens diese Dokumente zu beachten:
+Before relevant work, read at least these documents:
 
-1. `specification/CLEAN-ROOM-MASTER-SPEC.md`
-2. `docs/REUSE-BEFORE-BUILD.md`
-3. `docs/EXTERNAL-PROVIDER-CANDIDATES.md`, wenn Provider, Infrastruktur oder Plattformbausteine betroffen sind
-4. `docs/ROADMAP.md` und die jeweilige Milestone-/Project-Control-Dokumentation
+1. `docs/ENGINEERING-LANGUAGE.md`
+2. `specification/CLEAN-ROOM-MASTER-SPEC.md`
+3. `docs/REUSE-BEFORE-BUILD.md`
+4. `docs/EXTERNAL-PROVIDER-CANDIDATES.md` when providers, infrastructure, or platform components are affected
+5. `docs/ROADMAP.md` and the relevant milestone/project-control documentation
+
+## Engineering language
+
+English is the mandatory engineering language for this repository. Follow `docs/ENGINEERING-LANGUAGE.md`.
+
+Use English for source identifiers, comments/docstrings, tests, logs/internal diagnostics, scripts, CI/developer tooling, API/schema descriptions, active technical documentation, issues, pull requests, reviews, and commit messages.
+
+User-facing product text remains localization-driven. German and other languages belong in the appropriate i18n resources or intentionally locale-specific fixtures; do not replace localized product content with hardcoded English.
 
 ## Reuse before build
 
-Vor Eigenimplementierung technischer Commodity-Funktionalitaet muss eine aktuelle Reuse-Pruefung erfolgen.
+Before implementing technical commodity functionality from scratch, perform a current reuse review.
 
-Pruefe insbesondere:
+Check in particular:
 
-- offene Standards/Protokolle
-- OS-/Plattformfunktionen
-- Framework-/Runtime-Funktionen
-- etablierte Open-Source-Komponenten
-- externe Provider/APIs
+- open standards/protocols
+- OS/platform capabilities
+- framework/runtime capabilities
+- established open-source components
+- external providers/APIs
 
-Die konkrete Checkliste und Entscheidungsregeln stehen in `docs/REUSE-BEFORE-BUILD.md`.
+The concrete checklist and decision rules are defined in `docs/REUSE-BEFORE-BUILD.md`.
 
-### Pflicht vor Implementierungsbeginn
+### Required before implementation starts
 
-Wenn die Aenderung relevant ist, muss im Issue oder PR dokumentiert sein:
+When the change is relevant, the issue or pull request must document:
 
-- welche Alternativen geprueft wurden
-- welche Loesung gewaehlt wurde
-- warum sie passt
-- warum gegebenenfalls Eigenbau notwendig ist
-- bei Drittkomponenten: Lizenz/ToS, Cloud/Self-Hosted, Privacy, Kosten, Fallback und Nutzeraufwand
+- which alternatives were considered
+- which solution was selected
+- why it fits
+- why custom implementation is necessary, if applicable
+- for third-party components: license/ToS, Cloud/Self-Hosted support, privacy, cost, fallback, and user effort
 
-`docs/EXTERNAL-PROVIDER-CANDIDATES.md` ist eine Startliste, ersetzt aber keine aktuelle Suche nach besseren oder neueren Optionen.
+`docs/EXTERNAL-PROVIDER-CANDIDATES.md` is a starting list; it does not replace a current search for better or newer options.
 
-## Nutzerregel
+## User rule
 
-Normale Paare sollen keine technische Infrastruktur konfigurieren muessen. API-Keys, technische URLs, Providerwahl, Tokens und Serverdetails gehoeren in Backend oder Hoster-/Admin-Ebene.
+Normal couples must not need to configure technical infrastructure. API keys, technical URLs, provider selection, tokens, and server details belong in the backend or hoster/admin layer.
 
-## Keine Aufweichung bestehender Gates
+## Do not weaken existing gates
 
-Reuse darf niemals dazu fuehren, Clean-Room-, Security-, Privacy-, Tenant-Isolation-, Provenance- oder Lizenzregeln abzuschwaechen.
+Reuse must never weaken Clean-Room, security, privacy, tenant-isolation, provenance, or licensing rules.
 
-## Pull Requests
+## Pull requests
 
-Ein relevanter PR ohne nachvollziehbare Reuse-Pruefung ist nicht merge-ready. Rein fachliche Aenderungen koennen die Pruefung begruendet als `nicht relevant` markieren.
+A relevant pull request without a traceable reuse review is not merge-ready. Pure domain changes may mark the review as `not relevant` with a short rationale.
+
+A pull request that introduces non-English engineering content without an allowed exception from `docs/ENGINEERING-LANGUAGE.md` is not merge-ready.
