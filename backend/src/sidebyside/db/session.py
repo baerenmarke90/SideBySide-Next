@@ -1,10 +1,10 @@
-"""Datenbankverbindung und Transaktionsgrenze.
+"""Database connection and transaction boundary.
 
-Eine Anfrage ist eine Transaktion. Sie wird am Ende der Anfrage übergeben
-oder vollständig zurückgerollt - nicht stückweise während der Verarbeitung.
+One request is one transaction. It is committed at the end of the request or
+rolled back completely, never piecemeal during processing.
 
-Das ist die Voraussetzung für die Transactional Outbox: fachliche Änderung
-und Ereignis müssen gemeinsam wirksam werden oder gemeinsam ausbleiben.
+This is required by the transactional outbox: domain mutation and event must
+become effective together or not at all.
 """
 
 from __future__ import annotations
@@ -31,16 +31,16 @@ def get_engine() -> Engine:
         echo=settings.database_echo,
         pool_pre_ping=True,
         future=True,
-        # Ohne diese Zeile schreibt SQLAlchemy die gebundenen Parameter in
-        # jede Datenbank-Fehlermeldung - und damit ueber `log.exception`
-        # in das Anwendungslog. Betroffen waere genau das, was hinter der
-        # ProtectedPayload-Grenze liegen soll: Titel, Texte, Adressen und
-        # die Koordinaten eines Ortes. M3-D28 verbietet Ortsdaten in Logs
-        # ausdruecklich; fuer die uebrigen Inhalte gilt dasselbe seit M2.
+        # Without this option SQLAlchemy includes bound parameters in every
+        # database error message and therefore, through `log.exception`, in
+        # application logs. That would expose exactly what belongs behind the
+        # ProtectedPayload boundary: titles, text, addresses, and place
+        # coordinates. M3-D28 explicitly prohibits location data in logs; the
+        # same rule has applied to the remaining content since M2.
         #
-        # Preis ist die Fehlersuche: auch `echo` zeigt die Werte dann
-        # nicht mehr. Das ist die richtige Voreinstellung - wer sie lokal
-        # braucht, schaltet sie bewusst und zeitweise ab.
+        # The tradeoff is debugging: even `echo` then hides values. This is the
+        # correct default; a developer who needs them locally must opt out
+        # deliberately and temporarily.
         hide_parameters=True,
     )
 
@@ -51,11 +51,11 @@ def get_sessionmaker() -> sessionmaker[Session]:
 
 
 def schedule_after_rollback(session: Session, action: AfterRollbackAction) -> None:
-    """Eine Sicherheitsaenderung nach einem Request-Rollback dauerhaft ausfuehren.
+    """Persist a security mutation after the request transaction rolls back.
 
-    Die Aktion bekommt eine frische Session. So kann beispielsweise ein
-    fehlgeschlagener Anmeldeversuch gespeichert werden, ohne dass fachliche
-    Teilaenderungen aus der abgelehnten Anfrage mit uebernommen werden.
+    The action receives a fresh Session. This allows, for example, recording a
+    failed authentication attempt without also committing partial domain
+    mutations from the rejected request.
     """
     actions = cast(
         "list[AfterRollbackAction]",
@@ -90,12 +90,11 @@ def _run_after_rollback_actions(actions: tuple[AfterRollbackAction, ...]) -> Non
 
 @contextmanager
 def unit_of_work() -> Iterator[Session]:
-    """Eine Transaktion.
+    """Run one transaction.
 
-    Wird der Block ohne Ausnahme verlassen, folgt ein Commit. Andernfalls
-    ein Rollback - auch bei einer Ausnahme, die nichts mit der Datenbank zu
-    tun hat. Ein halb geschriebener Vorgang ist schlimmer als ein
-    fehlgeschlagener.
+    Leaving the block without an exception commits. Any exception rolls back,
+    including exceptions unrelated to the database. A partially written
+    operation is worse than a failed one.
     """
     session = get_sessionmaker()()
     try:
@@ -111,6 +110,6 @@ def unit_of_work() -> Iterator[Session]:
 
 
 def get_session() -> Iterator[Session]:
-    """Abhängigkeit für FastAPI-Routen."""
+    """FastAPI route dependency."""
     with unit_of_work() as session:
         yield session
