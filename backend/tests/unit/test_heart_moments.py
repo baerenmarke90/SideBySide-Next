@@ -1,4 +1,4 @@
-"""Unit-Invarianten fuer das M2-HeartMoment-Modell."""
+"""Unit invariants for the M2 HeartMoment model."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMome
 
 
 def test_text_and_emotion_live_only_in_protected_payload() -> None:
-    """M2-D06: Emotion ist Inhalt, kein Metadatum."""
+    """M2-D06: emotion is content, not metadata."""
     assert issubclass(HeartMomentPayload, ProtectedPayload)
     assert {"text", "emotion"} <= set(HeartMomentPayload.model_fields)
     assert "text" not in HeartMoment.__table__.c
@@ -47,7 +47,7 @@ def test_visibility_maps_to_privacy_class() -> None:
 
 
 def test_update_contract_cannot_change_visibility() -> None:
-    """Der Wechsel ist destruktiv und hat deshalb eine eigene Operation."""
+    """The destructive transition therefore has its own operation."""
     assert "visibility" not in HeartMomentUpdate.model_fields
     with pytest.raises(ValidationError):
         HeartMomentUpdate.model_validate({"visibility": "PRIVATE"})
@@ -123,7 +123,7 @@ def test_emotion_catalogue_matches_the_domain_contract() -> None:
 
 
 def test_event_payload_carries_visibility_but_no_content() -> None:
-    """Der Envelope traegt eine Kategorie, keinen Inhalt (M2-D16)."""
+    """The envelope carries a category, not content (M2-D16)."""
     assert "visibility" in PublicEventPayload.model_fields
     assert "emotion" not in PublicEventPayload.model_fields
     assert "text" not in PublicEventPayload.model_fields
