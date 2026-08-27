@@ -1,4 +1,4 @@
-"""Einmalige und atomare Inbetriebnahme einer Self-Hosted-Instanz."""
+"""One-time, atomic initialization of a self-hosted instance."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ from sidebyside.core.errors import ForbiddenError
 from sidebyside.identity import service as accounts
 from sidebyside.identity.models import Account, InstanceBootstrapState
 
-# Transaktionsweite PostgreSQL-Sperre fuer genau diese eine globale
-# Invariante. Sie funktioniert bereits, bevor die Singleton-Zeile existiert.
+# Transaction-scoped PostgreSQL lock for this single global invariant. It works
+# before the singleton row exists.
 _BOOTSTRAP_LOCK_KEY = 0x534253424F4F54
 _SINGLETON_KEY = 1
 
@@ -29,7 +29,7 @@ def claim(
     presented_token: str | None,
     configured_token: str | None,
 ) -> InstanceBootstrapState:
-    """Den einmaligen Bootstrap innerhalb der laufenden Transaktion greifen."""
+    """Claim the one-time bootstrap within the current transaction."""
     session.execute(select(func.pg_advisory_xact_lock(_BOOTSTRAP_LOCK_KEY))).scalar_one()
 
     state = session.get(InstanceBootstrapState, _SINGLETON_KEY)
@@ -38,8 +38,8 @@ def claim(
         session.add(state)
         session.flush()
 
-    # Fail closed fuer aktualisierte Installationen, deren Account schon vor
-    # Einfuehrung des Bootstrap-Zustands existierte.
+    # Fail closed for upgraded installations whose account predates the
+    # bootstrap-state row.
     if state.completed_at is not None or accounts.account_count(session) > 0:
         raise ForbiddenError(
             "Registration on this instance requires an invitation.",

@@ -1,11 +1,11 @@
-"""Passwort-Ableitung.
+"""Password derivation.
 
-Argon2id, der derzeitige Empfehlungsstandard. Anders als bei den Tokens ist
-hier ein absichtlich langsames Verfahren richtig: ein Passwort hat wenig
-Entropie und laesst sich sonst mit einem Woerterbuch durchprobieren.
+Argon2id is the current recommended standard. Unlike tokens, passwords should
+use an intentionally slow scheme: they have low entropy and would otherwise be
+cheap to test against a dictionary.
 
-Die einzige Stelle im Projekt, an der eine Kryptografie-Bibliothek noetig
-ist. Tokens kommen mit der Standardbibliothek aus.
+This is the only place in the project that needs a cryptography library. Token
+handling uses the standard library.
 """
 
 from __future__ import annotations
@@ -15,9 +15,9 @@ from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatc
 
 from sidebyside.core.errors import ValidationError
 
-# Untergrenze gegen offensichtlich Schwaches. Keine Obergrenze fuer
-# Zeichenklassen: Laenge schuetzt besser als erzwungene Sonderzeichen, die
-# vor allem dazu fuehren, dass Leute "Passwort1!" waehlen.
+# Lower bound against obviously weak passwords. No character-class rules:
+# length protects better than mandatory special characters that mostly cause
+# people to choose values such as "Password1!".
 MIN_PASSWORD_LENGTH = 12
 MAX_PASSWORD_LENGTH = 4096
 
@@ -35,9 +35,9 @@ def validate(password: str) -> None:
             f"The password must be at least {MIN_PASSWORD_LENGTH} characters.",
             PasswordErrorCode.TOO_SHORT,
         )
-    # Eine Obergrenze ist noetig: Argon2 arbeitet ueber die volle Eingabe,
-    # ein sehr langes Passwort waere sonst ein billiger Weg, den Server zu
-    # beschaeftigen.
+    # An upper bound is necessary because Argon2 processes the full input; an
+    # extremely long password would otherwise be a cheap way to consume server
+    # resources.
     if len(password) > MAX_PASSWORD_LENGTH:
         raise ValidationError("The password is too long.", PasswordErrorCode.TOO_LONG)
 
@@ -48,11 +48,11 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password_hash: str, password: str) -> bool:
-    """Prueft das Passwort. Gibt False zurueck statt zu werfen.
+    """Verify a password, returning False instead of raising on failure.
 
-    Ein fehlgeschlagener Anmeldeversuch ist ein erwarteter Fall, kein
-    Fehler - und der Aufrufer soll nicht zwischen "falsches Passwort" und
-    "kaputter Hash" unterscheiden muessen.
+    A failed sign-in is an expected case rather than an application error, and
+    the caller must not need to distinguish a wrong password from a malformed
+    stored hash.
     """
     try:
         return _hasher.verify(password_hash, password)
@@ -61,10 +61,10 @@ def verify_password(password_hash: str, password: str) -> bool:
 
 
 def needs_rehash(password_hash: str) -> bool:
-    """Ob der Hash mit veralteten Parametern erzeugt wurde.
+    """Return whether the hash was produced with outdated parameters.
 
-    Werden die Parameter spaeter angehoben, wandern bestehende Passwoerter
-    bei der naechsten erfolgreichen Anmeldung mit.
+    If parameters are strengthened later, existing passwords migrate on the
+    next successful sign-in.
     """
     try:
         return _hasher.check_needs_rehash(password_hash)
@@ -72,10 +72,9 @@ def needs_rehash(password_hash: str) -> bool:
         return False
 
 
-DUMMY_HASH = _hasher.hash("nicht-echt-nur-zum-zeitausgleich")
-"""Ein Hash zum Vergleichen, wenn es den Account gar nicht gibt.
+DUMMY_HASH = _hasher.hash("not-real-only-for-timing-equalization")
+"""Hash used for comparison when no account exists.
 
-Ohne ihn waere die Antwort bei unbekannter Adresse spuerbar schneller als
-bei falschem Passwort - daraus liesse sich ablesen, welche Adressen
-registriert sind.
+Without it, an unknown address would return measurably faster than a wrong
+password, revealing which addresses are registered.
 """

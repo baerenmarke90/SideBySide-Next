@@ -1,10 +1,9 @@
-"""Kurzlebige Einmal-Tokens fuer Cloud-Authentifizierungsablaeufe.
+"""Short-lived one-time tokens for cloud authentication flows.
 
-E-Mail-Verifikation, Magic Link und Account Recovery haben absichtlich
-getrennte Tabellen und getrennte Ausgabefunktionen. Ein Token kann dadurch
-nie versehentlich in einem anderen Ablauf akzeptiert werden. Persistiert
-wird ausschliesslich sein SHA-256-Hash; der Klartext existiert nur im
-Rueckgabewert der Ausgabefunktion.
+Email verification, magic links, and account recovery deliberately use
+separate tables and separate issuing functions. A token therefore cannot be
+accidentally accepted by a different flow. Only its SHA-256 hash is persisted;
+the plaintext exists only in the issuing function's return value.
 """
 
 from __future__ import annotations
@@ -39,7 +38,7 @@ class ActionTokenErrorCode:
 @dataclass(frozen=True)
 class IssuedActionToken:
     token: str
-    """Der Klartext. Er wird nicht am Modell und nicht in Logs abgelegt."""
+    """Plaintext token. It is stored neither on the model nor in logs."""
 
 
 def issue_email_verification(
@@ -118,7 +117,7 @@ def consume_account_recovery(session: Session, token: str) -> AccountRecoveryTok
 
 
 def revoke(session: Session, model: OneTimeTokenMixin) -> None:
-    """Einen noch offenen Token unbrauchbar machen."""
+    """Invalidate an open token."""
     if model.consumed_at is None and model.revoked_at is None:
         model.revoked_at = now()
         session.flush()
