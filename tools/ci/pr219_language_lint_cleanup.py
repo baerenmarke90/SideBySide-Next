@@ -51,6 +51,7 @@ def main() -> int:
         "without an entry makes the suite fail before it reaches production.\n"
         '"""',
     )
+    replace_required(matrix, 'wish = {"title": "Matrix Wish"}', 'WISH = {"title": "Matrix Wish"}')
     replace_required(
         matrix,
         'wish = client.post(f"{basis}/wishes", json=wish, headers=headers).json()',
