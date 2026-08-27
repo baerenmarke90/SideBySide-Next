@@ -80,6 +80,14 @@ prüft die Formatierung des handgeschriebenen Web-Codes; der generierte
 OpenAPI-Client unter `src/api/generated/` bleibt dabei ausgeschlossen.
 `npm run format` schreibt die Biome-Formatierung lokal.
 
+Gitignorierte Pfade sind ebenfalls ausgenommen: `vcs.useIgnoreFile` in
+`biome.json` liest die `.gitignore` des Repositories, deshalb zeigt `vcs.root`
+auf das übergeordnete Verzeichnis. Ohne das prüfte Biome nach einem lokalen
+`npm run build` auch `dist/` mit, und `lint` sowie `format:check` schlugen mit
+Befunden aus generiertem Bundle-Code fehl. In der CI fiel das nicht auf, weil
+dort ein frischer Checkout ohne `dist/` läuft und der Build erst nach den
+Gates kommt.
+
 ### Self-Hosted
 
 Der Produktionsbuild liegt in einem unprivilegierten Nginx-Container. Im
