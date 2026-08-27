@@ -1,0 +1,14 @@
+name: SideBySide Next CodeQL
+
+queries:
+  - uses: security-queries
+
+paths-ignore:
+  - '**/node_modules/**'
+  - '**/dist/**'
+  - '**/build/**'
+  - 'web/src/api/generated/**'
+
+# Generated clients and build output are not application-owned security
+# surfaces. Runtime backend, web application code and Android Kotlin/Java
+# sources remain in scope.
