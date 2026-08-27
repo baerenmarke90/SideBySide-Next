@@ -1,15 +1,14 @@
-"""Die Story-Abfrage.
+"""Story query.
 
-Drei Quelltypen, eine Sortierung, ein Cursor. Der Aufbau folgt M2-D08:
-`effectiveDate = happenedOn ?? UTC_DATE(createdAt)` und der vollstaendige
-Schluessel `(effectiveDate, createdAt, kindRank, id)`.
+Three source types, one ordering, one cursor. The structure follows M2-D08:
+`effectiveDate = happenedOn ?? UTC_DATE(createdAt)` and the complete key
+`(effectiveDate, createdAt, kindRank, id)`.
 
-Zwei Dinge sind hier bewusst nicht formuliert, weil sie schon existieren:
-die Sichtbarkeitsbedingung und die Cursor-Mechanik. Die Legs beginnen bei
-`readable()` und tauschen nur die Spalten aus, statt die Bedingung ein
-zweites Mal hinzuschreiben - der Ort, an dem sich ein Privacy-Filter sonst
-schleichend unterscheidet. Signatur und Bindung des Cursors kommen aus
-`core.cursor`, wie bei jeder anderen Collection auch.
+Two concepts are deliberately not redefined here because they already exist:
+visibility and cursor mechanics. Each leg starts from `readable()` and only
+changes projected columns instead of spelling the condition out a second
+time, which is where privacy filters otherwise start to drift. Cursor signing
+and binding come from `core.cursor`, just as for every other collection.
 """
 
 from __future__ import annotations
@@ -51,16 +50,16 @@ _KIND_RANK: dict[StoryKind, int] = {
     StoryKind.HEART_MOMENT: 2,
     StoryKind.MILESTONE: 3,
 }
-"""M2-D08. Der Rang gehoert zum Sortierschluessel und ist deshalb Vertrag,
-kein Implementierungsdetail: er entscheidet bei gleichem Datum und gleicher
-Erstellungszeit die Reihenfolge und damit den Cursor."""
+"""M2-D08. The rank is part of the sort key and therefore part of the
+contract rather than an implementation detail: for equal effective date and
+creation time it determines ordering and thus cursor position."""
 
 type StoryModel = type[Memory] | type[HeartMoment] | type[Milestone]
-"""Die drei Quelltypen namentlich statt als offene Basisklasse.
+"""The three source types explicitly rather than an open base class.
 
-`PrivateResourceMixin` waere die allgemeinere Angabe, verliert aber
-`happened_on`, `created_at` und `id` - und mit ihnen die Pruefung, dass
-jeder Zweig der Union tatsaechlich denselben Schluessel liefert."""
+`PrivateResourceMixin` would be more general but would lose `happened_on`,
+`created_at`, and `id`, and with them the type check that every union leg
+actually produces the same key."""
 
 _MODELS: dict[StoryKind, StoryModel] = {
     StoryKind.MEMORY: Memory,
@@ -71,11 +70,11 @@ _MODELS: dict[StoryKind, StoryModel] = {
 
 @dataclass(frozen=True)
 class StoryRow:
-    """Eine Zeile der Abfrage - Schluessel und Identitaet, sonst nichts.
+    """One query row containing only key and identity.
 
-    Die Abfrage liefert absichtlich nur Schluessel und Identitaet. Die
-    fachlichen Objekte werden danach gebuendelt geladen - sonst zoege eine
-    Seite mit hundert Eintraegen dreihundert Einzelabfragen nach sich.
+    The query deliberately returns only key and identity. Domain objects are
+    loaded in batches afterwards; otherwise a page of one hundred entries
+    could produce three hundred individual queries.
     """
 
     kind: StoryKind
@@ -92,11 +91,11 @@ class StoryPageResult:
 
 
 def _effective_date(model: StoryModel) -> Any:
-    """`happenedOn`, sonst der UTC-Kalendertag von `createdAt` (M2-D08).
+    """Use `happenedOn`, falling back to the UTC calendar date of `createdAt`.
 
-    Die Regel steht einmal fuer alle drei Typen. Bei HeartMoment und
-    Milestone ist `happened_on` nicht nullbar, dort ist das Coalesce ein
-    No-op - aber ein gemeinsamer Ausdruck kann nicht auseinanderlaufen.
+    The M2-D08 rule lives once for all three types. HeartMoment and Milestone
+    have non-null `happened_on`, so the coalesce is a no-op there, but using a
+    shared expression prevents the branches from drifting.
     """
     return func.coalesce(
         model.happened_on,
@@ -110,30 +109,29 @@ def _leg(
     *,
     year: int | None,
 ) -> Select[Any]:
-    """Ein Zweig der Union - autorisiert, bevor er Spalten waehlt.
+    """Build one authorized union leg before selecting projected columns.
 
-    `with_only_columns` behaelt die WHERE-Bedingung aus `readable()` und
-    tauscht nur die Projektion. Damit ist ausgeschlossen, dass die Story
-    ihre eigene Sichtbarkeitsbedingung bekommt.
+    `with_only_columns` retains the WHERE condition from `readable()` and
+    changes only the projection. Story therefore cannot acquire a separate
+    visibility condition.
     """
     model = _MODELS[kind]
-    datum = _effective_date(model)
+    effective_date = _effective_date(model)
     statement = readable(model, context).with_only_columns(
         literal(_KIND_RANK[kind]).label("kind_rank"),
-        datum.label("effective_date"),
+        effective_date.label("effective_date"),
         model.created_at.label("created_at"),
         model.id.label("id"),
     )
     if kind is StoryKind.HEART_MOMENT:
-        # M2-D22 und M2-D08: private HeartMoments sind niemals Story-Items,
-        # auch nicht fuer ihren Owner. Der Ausschluss steht in der Abfrage
-        # und nicht in der Projektion - sonst waeren sie gelesen, gezaehlt
-        # und im Cursor beruecksichtigt worden, bevor jemand sie entfernt.
+        # M2-D22 and M2-D08: private HeartMoments are never Story items, even
+        # for their owner. Exclude them in the query rather than the projection
+        # so they are never read, counted, or represented in cursor state.
         statement = statement.where(model.privacy_class == PrivacyClass.SPACE_SHARED.value)
     if year is not None:
         statement = statement.where(
-            datum >= date(year, 1, 1),
-            datum <= date(year, 12, 31),
+            effective_date >= date(year, 1, 1),
+            effective_date <= date(year, 12, 31),
         )
     return statement
 
@@ -144,12 +142,12 @@ def _cursor_binding(
     year: int | None,
     order: StoryOrder,
 ) -> dict[str, Any]:
-    """Woran ein Story-Cursor gebunden ist.
+    """Return the parameters to which a Story cursor is bound.
 
-    `limit` fehlt hier bewusst: eine kleinere oder groessere Seite setzt an
-    derselben Stelle fort. Alles, was die *Menge* oder ihre *Reihenfolge*
-    veraendert, gehoert dagegen hinein - sonst waere der Cursor ein Zeiger
-    in eine Liste, die es nicht mehr gibt.
+    `limit` is deliberately absent: a smaller or larger page continues from
+    the same point. Anything changing the result set or its ordering belongs
+    in the binding because otherwise the cursor would point into a list that
+    no longer exists.
     """
     return {
         "collection": "story",
@@ -188,22 +186,25 @@ def _decode_cursor(
     order: StoryOrder,
 ) -> tuple[date, datetime, int, UUID]:
     position = cursor_codec.decode(token, binding=_cursor_binding(context, kinds, year, order))
-    datum_roh = position.get("effectiveDate")
-    erstellt_roh = position.get("createdAt")
-    kind_roh = position.get("kind")
-    id_roh = position.get("id")
-    if not all(isinstance(wert, str) for wert in (datum_roh, erstellt_roh, kind_roh, id_roh)):
+    effective_date_raw = position.get("effectiveDate")
+    created_at_raw = position.get("createdAt")
+    kind_raw = position.get("kind")
+    id_raw = position.get("id")
+    if not all(
+        isinstance(value, str)
+        for value in (effective_date_raw, created_at_raw, kind_raw, id_raw)
+    ):
         raise cursor_codec.invalid_cursor()
     try:
-        datum = date.fromisoformat(str(datum_roh))
-        erstellt = datetime.fromisoformat(str(erstellt_roh).replace("Z", "+00:00"))
-        kind = StoryKind(str(kind_roh))
-        eintrag_id = UUID(str(id_roh))
-    except ValueError as fehler:
-        raise cursor_codec.invalid_cursor() from fehler
-    if erstellt.tzinfo is None:
+        effective_date = date.fromisoformat(str(effective_date_raw))
+        created_at = datetime.fromisoformat(str(created_at_raw).replace("Z", "+00:00"))
+        kind = StoryKind(str(kind_raw))
+        item_id = UUID(str(id_raw))
+    except ValueError as error:
+        raise cursor_codec.invalid_cursor() from error
+    if created_at.tzinfo is None:
         raise cursor_codec.invalid_cursor()
-    return datum, erstellt.astimezone(UTC), _KIND_RANK[kind], eintrag_id
+    return effective_date, created_at.astimezone(UTC), _KIND_RANK[kind], item_id
 
 
 def read_timeline(
@@ -216,66 +217,65 @@ def read_timeline(
     cursor: str | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> StoryPageResult:
-    """Eine Seite der Zeitleiste.
+    """Return one page of the timeline.
 
-    Ohne `kinds` sind alle drei Typen gemeint. Der Filter verengt die
-    bereits autorisierte Menge und erweitert sie nie.
+    An empty `kinds` means all three types. The filter narrows the already
+    authorized set and never expands it.
     """
-    gewaehlt = kinds or tuple(StoryKind)
-    zweige = [_leg(kind, context, year=year) for kind in gewaehlt]
-    vereinigt = union_all(*zweige).subquery("story")
+    selected = kinds or tuple(StoryKind)
+    legs = [_leg(kind, context, year=year) for kind in selected]
+    combined = union_all(*legs).subquery("story")
 
-    schluessel = (
-        vereinigt.c.effective_date,
-        vereinigt.c.created_at,
-        vereinigt.c.kind_rank,
-        vereinigt.c.id,
+    key = (
+        combined.c.effective_date,
+        combined.c.created_at,
+        combined.c.kind_rank,
+        combined.c.id,
     )
-    statement = select(*schluessel)
+    statement = select(*key)
 
     if cursor is not None:
-        position = _decode_cursor(cursor, context=context, kinds=gewaehlt, year=year, order=order)
-        # Zeilenvergleich statt verschachtelter ODER-Kaskade: PostgreSQL
-        # vergleicht das Tupel lexikografisch und trifft damit genau die
-        # Semantik aus M2-D08 - strikt hinter dem vollstaendigen Schluessel,
-        # nie ein Offset.
-        vergleich = tuple_(*schluessel)
-        # Die Cursorwerte tragen den Typ ihrer Spalte, damit der Vergleich
-        # in der Datenbank derselbe ist wie die Sortierung darueber.
-        gegenstueck = tuple_(
-            *(literal(wert, spalte.type) for wert, spalte in zip(position, schluessel, strict=True))
+        position = _decode_cursor(cursor, context=context, kinds=selected, year=year, order=order)
+        # Row comparison instead of a nested OR cascade: PostgreSQL compares
+        # the tuple lexicographically and therefore implements M2-D08 exactly,
+        # strictly after the complete key and never as an offset.
+        comparison = tuple_(*key)
+        # Cursor values carry their column types so the database comparison is
+        # the same operation as the ordering above it.
+        counterpart = tuple_(
+            *(literal(value, column.type) for value, column in zip(position, key, strict=True))
         )
         statement = statement.where(
-            vergleich < gegenstueck if order is StoryOrder.DESC else vergleich > gegenstueck
+            comparison < counterpart if order is StoryOrder.DESC else comparison > counterpart
         )
 
-    richtung = (
-        [spalte.desc() for spalte in schluessel]
+    direction = (
+        [column.desc() for column in key]
         if order is StoryOrder.DESC
-        else [spalte.asc() for spalte in schluessel]
+        else [column.asc() for column in key]
     )
-    zeilen = session.execute(statement.order_by(*richtung).limit(limit + 1)).all()
+    rows = session.execute(statement.order_by(*direction).limit(limit + 1)).all()
 
-    has_more = len(zeilen) > limit
+    has_more = len(rows) > limit
     items = [
         StoryRow(
-            kind=_kind_of_rank(zeile.kind_rank),
-            effective_date=zeile.effective_date,
-            created_at=zeile.created_at,
-            id=zeile.id,
+            kind=_kind_of_rank(row.kind_rank),
+            effective_date=row.effective_date,
+            created_at=row.created_at,
+            id=row.id,
         )
-        for zeile in zeilen[:limit]
+        for row in rows[:limit]
     ]
     next_cursor = None
     if has_more and items:
         next_cursor = _encode_cursor(
-            context=context, kinds=gewaehlt, year=year, order=order, item=items[-1]
+            context=context, kinds=selected, year=year, order=order, item=items[-1]
         )
     return StoryPageResult(items=items, next_cursor=next_cursor, has_more=has_more)
 
 
 def _kind_of_rank(rank: int) -> StoryKind:
-    for kind, wert in _KIND_RANK.items():
-        if wert == rank:
+    for kind, value in _KIND_RANK.items():
+        if value == rank:
             return kind
     raise RuntimeError(f"Unknown story kind rank: {rank}")
