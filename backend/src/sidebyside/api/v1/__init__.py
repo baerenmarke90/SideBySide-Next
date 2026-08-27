@@ -19,6 +19,7 @@ from sidebyside.api.v1 import (
     memories,
     milestones,
     people,
+    place_relations,
     places,
     plans,
     profiles,
@@ -42,4 +43,5 @@ router.include_router(profiles.router)
 router.include_router(spaces.router)
 router.include_router(wishes.router)
 router.include_router(places.router)
+router.include_router(place_relations.router)
 router.include_router(plans.router)

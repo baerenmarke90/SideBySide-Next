@@ -46,6 +46,16 @@ class EventType(StrEnum):
     PLACE_CREATED = "PLACE_CREATED"
     PLACE_UPDATED = "PLACE_UPDATED"
     PLACE_DELETED = "PLACE_DELETED"
+    # Die typisierten Content-Relations aus M3-D08. Eigene Typen statt
+    # `PLACE_UPDATED`: eine Verknuepfung aendert den Ort nicht, sie stellt
+    # eine Beziehung her - und ein Consumer, der Orte spiegelt, muss davon
+    # nichts neu laden.
+    PLACE_MEMORY_LINKED = "PLACE_MEMORY_LINKED"
+    PLACE_MEMORY_UNLINKED = "PLACE_MEMORY_UNLINKED"
+    PLACE_HEART_MOMENT_LINKED = "PLACE_HEART_MOMENT_LINKED"
+    PLACE_HEART_MOMENT_UNLINKED = "PLACE_HEART_MOMENT_UNLINKED"
+    PLACE_MILESTONE_LINKED = "PLACE_MILESTONE_LINKED"
+    PLACE_MILESTONE_UNLINKED = "PLACE_MILESTONE_UNLINKED"
     PLAN_CREATED = "PLAN_CREATED"
     PLAN_UPDATED = "PLAN_UPDATED"
     PLAN_DELETED = "PLAN_DELETED"

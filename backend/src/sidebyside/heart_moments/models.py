@@ -110,6 +110,17 @@ class HeartMoment(
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
         # Dasselbe Attachment nicht an zwei HeartMoments.
         UniqueConstraint("attachment_id", name="uq_heart_moments_attachment"),
+        # Ziel des Fremdschluessels von `place_heart_moments`. Die
+        # Privacy-Klasse gehoert bewusst mit hinein: nur so kann die
+        # Join-Zeile den gemeinsamen Zustand ihres Ziels mitfuehren, und
+        # nur so bricht ein Wechsel auf OWNER_ONLY eine vergessene
+        # Relation auf, statt sie stehen zu lassen (M3-D09).
+        UniqueConstraint(
+            "id",
+            "space_id",
+            "privacy_class",
+            name="uq_heart_moments_id_space_id_privacy",
+        ),
         Index("ix_heart_moments_owner_id", "owner_id"),
         Index("ix_heart_moments_space_id_created_at_id", "space_id", "created_at", "id"),
         Index(
