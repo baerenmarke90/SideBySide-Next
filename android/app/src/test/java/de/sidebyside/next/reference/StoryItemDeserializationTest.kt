@@ -1,6 +1,8 @@
 package de.sidebyside.next.reference
 
+import java.util.Locale
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import sidebyside.api.models.StoryItem
@@ -44,6 +46,7 @@ class StoryItemDeserializationTest {
         val item = story.items.single()
         assertTrue(item is StoryItem.MemoryWrapper)
         assertEquals("Am See", (item as StoryItem.MemoryWrapper).value.memory.title)
-        assertEquals("Erinnerung: Am See", storyItemLabel(item))
+        assertEquals(UiMessage(R.string.ref_story_memory, listOf("Am See")), storyItemLabel(item))
+        assertNotEquals(storyItemDate(item, Locale.GERMAN), storyItemDate(item, Locale.ENGLISH))
     }
 }

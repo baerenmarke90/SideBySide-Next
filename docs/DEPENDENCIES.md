@@ -138,6 +138,8 @@ Requestpfad.
 | Paket | Version | Quelle | Lizenz |
 |---|---|---|---|
 | @tanstack/react-query | 5.85.5 | npm | MIT |
+| i18next | 26.4.0 | npm | MIT |
+| react-i18next | 17.0.11 | npm | MIT |
 | react | 19.1.1 | npm | MIT |
 | react-dom | 19.1.1 | npm | MIT |
 | react-router-dom | 7.18.2 | npm | MIT |

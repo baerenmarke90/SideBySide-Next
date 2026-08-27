@@ -130,7 +130,7 @@ class ReferenceViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.loggedIn)
-        assertEquals("Abgemeldet.", state.status)
+        assertEquals(UiMessage(R.string.ref_status_logged_out), state.status)
         assertNull(state.error)
         assertNull(state.selectedImageName)
         assertEquals(emptyList<Any>(), state.storyItems)
