@@ -1,8 +1,8 @@
-"""Transactional Outbox.
+"""Transactional outbox tests.
 
-Der Punkt der Outbox ist eine Garantie: fachliche Aenderung und Ereignis
-werden gemeinsam wirksam oder gar nicht. Genau das wird hier geprueft -
-nicht nur, dass sich eine Zeile schreiben laesst.
+The outbox guarantees that a business change and its event become effective
+together or not at all. These tests verify that guarantee rather than merely
+checking that a row can be written.
 """
 
 from __future__ import annotations
@@ -33,94 +33,90 @@ def _event() -> DomainEvent:
     )
 
 
-class TestSchreiben:
-    def test_ereignis_wird_vorgemerkt(self, session: Session) -> None:
-        zeile = service.record(session, _event())
+class TestWriting:
+    def test_event_is_staged(self, session: Session) -> None:
+        row = service.record(session, _event())
         session.flush()
 
-        assert zeile.id is not None
-        assert zeile.processed_at is None
-        assert zeile.attempts == 0
+        assert row.id is not None
+        assert row.processed_at is None
+        assert row.attempts == 0
 
-    def test_ohne_commit_der_fachlichen_transaktion_bleibt_nichts(self, engine: Engine) -> None:
-        """Die Garantie in ihrer wichtigsten Richtung: wird die Transaktion
-        zurueckgerollt, entsteht auch kein Ereignis. Sonst benachrichtigte
-        die Anwendung ueber etwas, das nie geschehen ist."""
-        macher = sessionmaker(bind=engine, expire_on_commit=False)
-        ereignis = _event()
+    def test_rollback_removes_business_change_and_event(self, engine: Engine) -> None:
+        """Rolling back the transaction must also remove the staged event."""
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+        event = _event()
 
-        sitzung = macher()
-        service.record(sitzung, ereignis)
-        sitzung.flush()
-        sitzung.rollback()
-        sitzung.close()
+        session = factory()
+        service.record(session, event)
+        session.flush()
+        session.rollback()
+        session.close()
 
-        pruefer = macher()
+        verifier = factory()
         try:
-            treffer = (
-                pruefer.execute(
-                    select(OutboxEvent).where(OutboxEvent.subject_id == ereignis.subject_id)
+            matches = (
+                verifier.execute(
+                    select(OutboxEvent).where(OutboxEvent.subject_id == event.subject_id)
                 )
                 .scalars()
                 .all()
             )
-            assert treffer == []
+            assert matches == []
         finally:
-            pruefer.close()
+            verifier.close()
 
 
-class TestAbholen:
-    def test_liefert_nur_unverarbeitete(self, session: Session) -> None:
-        offen = service.record(session, _event())
-        erledigt = service.record(session, _event())
-        service.mark_processed(erledigt)
+class TestClaiming:
+    def test_returns_only_unprocessed(self, session: Session) -> None:
+        pending = service.record(session, _event())
+        processed = service.record(session, _event())
+        service.mark_processed(processed)
         session.flush()
 
-        ids = {zeile.id for zeile in service.claim_unprocessed(session)}
-        assert offen.id in ids
-        assert erledigt.id not in ids
+        ids = {row.id for row in service.claim_unprocessed(session)}
+        assert pending.id in ids
+        assert processed.id not in ids
 
-    def test_reihenfolge_ist_die_entstehung(self, session: Session) -> None:
-        erst = service.record(session, _event())
-        dann = service.record(session, _event())
+    def test_order_matches_creation_order(self, session: Session) -> None:
+        first = service.record(session, _event())
+        second = service.record(session, _event())
         session.flush()
 
-        geholt = list(service.claim_unprocessed(session))
-        positionen = {zeile.id: i for i, zeile in enumerate(geholt)}
-        assert positionen[erst.id] < positionen[dann.id]
+        claimed = list(service.claim_unprocessed(session))
+        positions = {row.id: index for index, row in enumerate(claimed)}
+        assert positions[first.id] < positions[second.id]
 
 
-class TestFehlschlag:
-    def test_fehlschlag_schliesst_die_zeile_nicht_ab(self, session: Session) -> None:
-        """Ein fehlgeschlagenes Ereignis muss erneut versucht werden."""
-        zeile = service.record(session, _event())
+class TestFailure:
+    def test_failure_does_not_complete_row(self, session: Session) -> None:
+        """A failed event must remain available for another attempt."""
+        row = service.record(session, _event())
         session.flush()
 
-        service.mark_failed(zeile, "Empfaenger nicht erreichbar")
+        service.mark_failed(row, "Empfaenger nicht erreichbar")
         session.flush()
 
-        assert zeile.processed_at is None
-        assert zeile.attempts == 1
-        assert zeile.id in {z.id for z in service.claim_unprocessed(session)}
+        assert row.processed_at is None
+        assert row.attempts == 1
+        assert row.id in {candidate.id for candidate in service.claim_unprocessed(session)}
 
-    def test_lange_fehlermeldung_wird_gekuerzt(self, session: Session) -> None:
-        zeile = service.record(session, _event())
+    def test_long_error_message_is_truncated(self, session: Session) -> None:
+        row = service.record(session, _event())
         session.flush()
-        service.mark_failed(zeile, "x" * 5000)
-        assert zeile.last_error is not None
-        assert len(zeile.last_error) == 2000
+        service.mark_failed(row, "x" * 5000)
+        assert row.last_error is not None
+        assert len(row.last_error) == 2000
 
 
-class TestNutzlast:
-    def test_traegt_keine_inhalte(self, session: Session) -> None:
-        """Die Nutzlast ueberlebt in der Outbox und in Logs, und nach der
-        Umstellung auf Ende-zu-Ende-Verschluesselung stuende ein Text
-        ohnehin nicht mehr zur Verfuegung."""
-        zeile = service.record(session, _event())
+class TestPayload:
+    def test_carries_no_contents(self, session: Session) -> None:
+        """Outbox payloads survive in storage and logs, so content must stay out."""
+        row = service.record(session, _event())
         session.flush()
-        assert set(zeile.payload.model_dump(exclude_none=True)) <= {"has_attachment"}
+        assert set(row.payload.model_dump(exclude_none=True)) <= {"has_attachment"}
 
-    def test_sensible_klartextnutzlast_wird_vor_persistenz_abgewiesen(self) -> None:
+    def test_sensitive_plaintext_payload_is_rejected_before_persistence(self) -> None:
         with pytest.raises(ValidationError):
             DomainEvent.model_validate(
                 {
@@ -132,7 +128,7 @@ class TestNutzlast:
                 }
             )
 
-    def test_rohes_dictionary_kann_orm_grenze_nicht_umgehen(self, session: Session) -> None:
+    def test_raw_dictionary_cannot_bypass_orm_boundary(self, session: Session) -> None:
         event = _event()
         row = OutboxEvent(
             event_type=event.type.value,
@@ -144,5 +140,8 @@ class TestNutzlast:
         )
         session.add(row)
 
-        with pytest.raises(StatementError, match="PublicEventPayload erforderlich"):
+        with pytest.raises(
+            StatementError,
+            match="PublicEventPayload required; raw outbox payload rejected",
+        ):
             session.flush()
