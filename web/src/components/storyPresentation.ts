@@ -24,25 +24,38 @@ function compactText(value: string, maxLength = 150): string {
 
 function emotionLabel(emotion: string, t: TFunction): string {
   switch (emotion) {
-    case 'LOVED': return t('story.emotion.loved');
-    case 'SEEN': return t('story.emotion.seen');
-    case 'APPRECIATED': return t('story.emotion.appreciated');
-    case 'SUPPORTED': return t('story.emotion.supported');
-    case 'GRATEFUL': return t('story.emotion.grateful');
-    case 'HAPPY': return t('story.emotion.happy');
-    default: return t('story.emotion.fallback');
+    case 'LOVED':
+      return t('story.emotion.loved');
+    case 'SEEN':
+      return t('story.emotion.seen');
+    case 'APPRECIATED':
+      return t('story.emotion.appreciated');
+    case 'SUPPORTED':
+      return t('story.emotion.supported');
+    case 'GRATEFUL':
+      return t('story.emotion.grateful');
+    case 'HAPPY':
+      return t('story.emotion.happy');
+    default:
+      return t('story.emotion.fallback');
   }
 }
 
 export function storyItemKey(item: StoryItem): string {
   switch (item.kind) {
-    case 'MEMORY': return `memory-${item.memory.id}`;
-    case 'HEART_MOMENT': return `heart-${item.heartMoment.id}`;
-    case 'MILESTONE': return `milestone-${item.milestone.id}`;
+    case 'MEMORY':
+      return `memory-${item.memory.id}`;
+    case 'HEART_MOMENT':
+      return `heart-${item.heartMoment.id}`;
+    case 'MILESTONE':
+      return `milestone-${item.milestone.id}`;
   }
 }
 
-export function storyItemPresentation(item: StoryItem, t: TFunction): StoryPresentation {
+export function storyItemPresentation(
+  item: StoryItem,
+  t: TFunction,
+): StoryPresentation {
   switch (item.kind) {
     case 'MEMORY': {
       const count = item.memory.attachments.length;
@@ -59,7 +72,9 @@ export function storyItemPresentation(item: StoryItem, t: TFunction): StoryPrese
         title: compactText(item.heartMoment.text),
         preview: emotionLabel(item.heartMoment.emotion, t),
         author: item.heartMoment.author.displayName,
-        mediaLabel: item.heartMoment.attachment ? t('story.photos', { count: 1 }) : undefined,
+        mediaLabel: item.heartMoment.attachment
+          ? t('story.photos', { count: 1 })
+          : undefined,
         sharedLabel: t('story.shared'),
       };
     case 'MILESTONE':
@@ -80,7 +95,10 @@ export function formatStoryDate(date: Date, locale: string): string {
   }).format(date);
 }
 
-export function groupStoryItems(items: StoryItem[], locale: string): StoryGroup[] {
+export function groupStoryItems(
+  items: StoryItem[],
+  locale: string,
+): StoryGroup[] {
   const groups = new Map<string, StoryGroup>();
   const monthFormatter = new Intl.DateTimeFormat(locale, {
     month: 'long',

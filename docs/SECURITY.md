@@ -432,6 +432,61 @@ Beim Upload werden tatsächlicher MIME-Type, Größe, erlaubter Medientyp,
 Bilddimensionen und Space-Zuordnung geprüft — der vom Client behauptete
 Content-Type genügt nicht.
 
+## Content Security Policy des Web-Frontends
+
+Der Produktions-Webserver liefert die CSP als HTTP-Header mit `always` aus.
+Die Policy startet fail-closed mit `default-src 'none'` und gibt nur die vom
+aktuellen Vite-Build benoetigten Quellen frei:
+
+| Direktive | Freigabe | Begruendung |
+|---|---|---|
+| `script-src` / `style-src` | `'self'` | Vite-Bundle, Theme-Bootstrap und CSS sind externe Dateien derselben Origin |
+| `script-src-attr` / `style-src-attr` | `'none'` | keine Inline-Handler oder in HTML eingebettete Styles; CSSOM-Property-Zuweisungen benötigen keine Quellfreigabe |
+| `img-src` | `'self' blob:` | lokale Assets und autorisierte Bild-Bytes als kurzlebige Object-URL |
+| `connect-src` | `'self'` plus explizite Hoster-Origins | API sowie direkte presigned Uploads/Reads per `fetch()` |
+| `font-src` | `'self'` | keine externen Font-CDNs |
+| `object-src`, `frame-src`, `media-src`, `manifest-src`, `worker-src` | `'none'` | aktuell kein fachlich freigegebener Bedarf; Video bleibt fail-closed |
+| `base-uri` / `frame-ancestors` | `'none'` | keine Base-URL-Umschreibung und kein Framing |
+| `form-action` | `'self'` | Formulare duerfen nur zur eigenen Origin navigieren |
+
+`unsafe-inline`, `unsafe-eval`, Wildcards und pauschale Scheme-Quellen wie
+`https:` sind nicht erlaubt. `blob:` gilt ausschließlich für `img-src`; die
+eigentlichen Medienbytes werden zuerst autorisiert per `fetch()` geladen und
+fallen daher unter `connect-src`.
+
+Im normalen Self-Hosted-/Reverse-Proxy-Pfad liegen Web und API auf derselben
+öffentlichen Origin. Bei `SBS_MEDIA_STORE=s3` übernimmt Compose den bereits
+konfigurierten `SBS_S3_ENDPOINT` automatisch in
+`SBS_WEB_CSP_CONNECT_ORIGINS`. Andere Betriebsplattformen dürfen dort eine
+whitespace-getrennte Liste exakter HTTP(S)-Origins setzen. Der Web-Entrypoint
+normalisiert diese Liste und verweigert den Start bei Wildcards, Pfaden,
+Credentials, freien CSP-Ausdrücken oder ungültigen Ports. Dieser Wert ist
+Hoster-/Admin-Konfiguration und kein Nutzerfeld.
+
+Auch eine vom Web-Frontend abweichende `VITE_SBS_API_BASE_URL` muss mit ihrer
+exakten Origin in `SBS_WEB_CSP_CONNECT_ORIGINS` enthalten sein.
+
+Ein vorgeschalteter Reverse-Proxy muss genau diesen Header unverändert
+weiterreichen und darf ihn weder ersetzen noch doppeln. Mehrere CSP-Policies
+werden gemeinsam einschränkend ausgewertet; eine zweite Policy kann daher
+keine Origins ergänzen und leicht Funktionalität blockieren. Abweichende
+notwendige Origins werden deshalb am Web-Container konfiguriert und nicht durch
+eine pauschal breitere Proxy-Policy ersetzt.
+
+### Reuse-Entscheidung
+
+Geprüft wurden der W3C-CSP-Standard als HTTP-Header, ein CSP-`meta`-Element,
+Anwendungs-Middleware, externe CSP-Produkte und Eigenbau. Gewählt sind der
+Browserstandard, das vorhandene Nginx-`add_header` und die bereits im
+unprivilegierten Nginx-Image enthaltene Template-/`envsubst`-Funktion. Der
+Header ist für den statischen Webserver die vollständige Auslieferungsgrenze
+und unterstützt auch `frame-ancestors`; ein `meta`-Element ist dafür nicht
+gleichwertig. Backend-Middleware läge am falschen Hop, ein externer Dienst
+brächte für eine statische Policy keinen Privacy-, Betriebs- oder
+Wartungsvorteil. Es entsteht keine neue Dependency, kein externer Datenfluss,
+keine Lizenz-/ToS-Bindung und kein zusätzlicher Nutzeraufwand. Fallback ist
+eine vollständig statische Same-Origin-Policy ohne zusätzliche Connect-Origin.
+
 ## Verpflichtende Testfälle
 
 - Cross-Tenant / IDOR
@@ -468,6 +523,7 @@ Anlegen eines Tests.
 | Zwei gleichzeitige Einladungsannahmen füllen den Space nicht über zwei Partner | `test_invitations.py::TestWettlauf` |
 | Paralleler Bootstrap erzeugt genau einen initialen Owner | `test_auth_flows.py::test_paralleler_bootstrap_hat_genau_einen_owner` |
 | Sicherheitsrelevante Tests laufen in CI wirklich und werden nicht still übersprungen | CI-Schritt „Integrationstests sind wirklich gelaufen" |
+| Der Produktions-Webserver liefert exakt die restriktive CSP; freie Origins scheitern vor dem Start | `web/scripts/check_csp_header.sh`, `web/scripts/test_csp_config.sh`, CI-Schritt „CSP-Origins sind eng und fail-closed konfigurierbar“ |
 
 Die Zeilen zu Uploads, signierten URLs, Backups und Suche bleiben offen —
 die zugehörigen Funktionen gibt es noch nicht. Sie werden mit ihrer Domäne
