@@ -60,8 +60,7 @@ DATABASE_AVAILABLE = _database_reachable(INTEGRATION_DATABASE_URL)
 requires_database = pytest.mark.skipif(
     not DATABASE_AVAILABLE,
     reason=(
-        "No PostgreSQL instance is reachable. "
-        "Set SBS_TEST_DATABASE_URL to run integration tests."
+        "No PostgreSQL instance is reachable. Set SBS_TEST_DATABASE_URL to run integration tests."
     ),
 )
 

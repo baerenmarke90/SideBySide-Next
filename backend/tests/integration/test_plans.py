@@ -851,9 +851,7 @@ class TestEvents:
         )
 
         rows = list(
-            session.execute(
-                select(OutboxEvent).where(OutboxEvent.subject_type == "plan")
-            ).scalars()
+            session.execute(select(OutboxEvent).where(OutboxEvent.subject_type == "plan")).scalars()
         )
         assert [row.event_type for row in rows] == [
             "PLAN_CREATED",
@@ -884,8 +882,6 @@ class TestEvents:
         )
 
         rows = list(
-            session.execute(
-                select(OutboxEvent).where(OutboxEvent.subject_type == "plan")
-            ).scalars()
+            session.execute(select(OutboxEvent).where(OutboxEvent.subject_type == "plan")).scalars()
         )
         assert [row.event_type for row in rows] == ["PLAN_CREATED"]

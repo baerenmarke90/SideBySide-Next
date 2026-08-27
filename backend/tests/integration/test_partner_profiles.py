@@ -110,9 +110,7 @@ class TestPartnerProfile:
             headers=auth(couple["token_b"]),
         )
         assert response.status_code == 200
-        assert [item["value"] for item in response.json()["preferences"]] == [
-            "Coca Cola Zero"
-        ]
+        assert [item["value"] for item in response.json()["preferences"]] == ["Coca Cola Zero"]
 
     def test_private_partner_note_never_appears_in_partner_profile(
         self,

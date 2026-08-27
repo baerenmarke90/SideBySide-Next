@@ -68,9 +68,7 @@ def authenticate_with_passkey(
 
 
 class TestRegistration:
-    def test_passkey_is_created(
-        self, client, session, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_passkey_is_created(self, client, session, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         response = register_passkey(client, anna, authenticator)
         assert response.status_code == 201, response.text
         assert response.json()["name"] == "Mein Telefon"
@@ -92,17 +90,13 @@ class TestRegistration:
     def test_registration_start_requires_authentication(self, client) -> None:  # type: ignore[no-untyped-def]
         assert client.post(REGISTRATION_START).status_code == 401
 
-    def test_options_list_known_credentials(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_options_list_known_credentials(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         """Prevent registering the same authenticator twice."""
         register_passkey(client, anna, authenticator)
         options = client.post(REGISTRATION_START, headers=anna["headers"]).json()
         assert len(options["excludeCredentials"]) == 1
 
-    def test_wrong_origin_is_rejected(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_wrong_origin_is_rejected(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         response = register_passkey(
             client,
             anna,
@@ -112,15 +106,11 @@ class TestRegistration:
         assert response.status_code == 422
         assert response.json()["code"] == "PASSKEY_CEREMONY_INVALID"
 
-    def test_wrong_rp_id_is_rejected(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_wrong_rp_id_is_rejected(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         response = register_passkey(client, anna, authenticator, rp_id="boese.example")
         assert response.status_code == 422
 
-    def test_unstarted_ceremony_cannot_be_reused(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unstarted_ceremony_cannot_be_reused(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         options = client.post(REGISTRATION_START, headers=anna["headers"]).json()
         credential_response = authenticator.register(options)
         assert (
@@ -153,9 +143,7 @@ class TestRegistration:
 
 
 class TestAuthentication:
-    def test_sign_in_with_passkey(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_sign_in_with_passkey(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         register_passkey(client, anna, authenticator)
         response = authenticate_with_passkey(client, authenticator)
         assert response.status_code == 201, response.text
@@ -171,18 +159,14 @@ class TestAuthentication:
         authenticate_with_passkey(client, authenticator)
         assert len(session.execute(select(DeviceSession)).scalars().all()) == before + 1
 
-    def test_unknown_credential_is_rejected(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unknown_credential_is_rejected(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         register_passkey(client, anna, authenticator)
         foreign_authenticator = VirtualAuthenticator()
         response = authenticate_with_passkey(client, foreign_authenticator)
         assert response.status_code == 422
         assert response.json()["code"] == "PASSKEY_CEREMONY_INVALID"
 
-    def test_foreign_signature_is_rejected(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_foreign_signature_is_rejected(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         register_passkey(client, anna, authenticator)
         foreign_private_key = ec.generate_private_key(ec.SECP256R1())
         response = authenticate_with_passkey(
@@ -192,9 +176,7 @@ class TestAuthentication:
         )
         assert response.status_code == 422
 
-    def test_wrong_origin_is_rejected(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_wrong_origin_is_rejected(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         register_passkey(client, anna, authenticator)
         response = authenticate_with_passkey(
             client,
@@ -203,16 +185,12 @@ class TestAuthentication:
         )
         assert response.status_code == 422
 
-    def test_wrong_rp_id_is_rejected(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_wrong_rp_id_is_rejected(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         register_passkey(client, anna, authenticator)
         response = authenticate_with_passkey(client, authenticator, rp_id="boese.example")
         assert response.status_code == 422
 
-    def test_foreign_challenge_is_rejected(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_foreign_challenge_is_rejected(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         """An assertion belongs to exactly the ceremony that requested it."""
         register_passkey(client, anna, authenticator)
         client.post(AUTHENTICATION_START)
@@ -220,9 +198,7 @@ class TestAuthentication:
         response = client.post(AUTHENTICATION_FINISH, json={"credential": fabricated})
         assert response.status_code == 422
 
-    def test_assertion_is_valid_exactly_once(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_assertion_is_valid_exactly_once(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         register_passkey(client, anna, authenticator)
         options = client.post(AUTHENTICATION_START).json()
         assertion = authenticator.authenticate(options)
@@ -233,9 +209,7 @@ class TestAuthentication:
 
 
 class TestSignatureCounter:
-    def test_counter_is_persisted(
-        self, client, session, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_counter_is_persisted(self, client, session, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         register_passkey(client, anna, authenticator)
         authenticate_with_passkey(client, authenticator)
 
@@ -244,9 +218,7 @@ class TestSignatureCounter:
         assert stored.sign_count == authenticator.sign_count
         assert stored.last_used_at is not None
 
-    def test_stalled_counter_indicates_a_copy(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_stalled_counter_indicates_a_copy(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         register_passkey(client, anna, authenticator)
         authenticate_with_passkey(client, authenticator)
         authenticate_with_passkey(client, authenticator)
@@ -286,9 +258,7 @@ class TestSignatureCounter:
 
 
 class TestCeremonyState:
-    def test_start_discloses_no_accounts(
-        self, client, anna, authenticator
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_start_discloses_no_accounts(self, client, anna, authenticator) -> None:  # type: ignore[no-untyped-def]
         """Authentication starts without an account reference or candidate list."""
         register_passkey(client, anna, authenticator)
         options = client.post(AUTHENTICATION_START).json()

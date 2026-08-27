@@ -85,9 +85,7 @@ def stored_profile(session: Session, space_id: object) -> SpaceProfile:
 
 
 class TestRead:
-    def test_new_space_has_profile_with_defaults(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_new_space_has_profile_with_defaults(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         response = client.get(profile_path(pair["space"].id), headers=auth(pair["token_a"]))
         assert response.status_code == 200
         assert response.json() == {
@@ -101,25 +99,19 @@ class TestRead:
             "relationshipMonths": None,
         }
 
-    def test_version_is_also_exposed_as_etag(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_version_is_also_exposed_as_etag(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         """The ETag lets a client write without extracting the body version."""
         response = client.get(profile_path(pair["space"].id), headers=auth(pair["token_a"]))
         assert response.headers["ETag"] == '"1"'
 
-    def test_both_partners_see_same_profile(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_both_partners_see_same_profile(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         from_a = client.get(profile_path(pair["space"].id), headers=auth(pair["token_a"]))
         from_b = client.get(profile_path(pair["space"].id), headers=auth(pair["token_b"]))
         assert from_a.json() == from_b.json()
 
 
 class TestWrite:
-    def test_successful_update(
-        self, client, session, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_successful_update(self, client, session, pair) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(started_on="2022-05-17", show=True, mode="DAYS"),
@@ -139,17 +131,13 @@ class TestWrite:
         assert stored.duration_display_mode == "DAYS"
         assert stored.version == 2
 
-    def test_next_read_shows_new_state(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_next_read_shows_new_state(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         client.put(
             profile_path(pair["space"].id),
             json=body(started_on="2022-05-17"),
             headers={**auth(pair["token_a"]), **if_match(1)},
         )
-        retrieved = client.get(
-            profile_path(pair["space"].id), headers=auth(pair["token_a"])
-        )
+        retrieved = client.get(profile_path(pair["space"].id), headers=auth(pair["token_a"]))
         assert retrieved.json()["relationshipStartedOn"] == "2022-05-17"
         assert retrieved.json()["version"] == 2
 
@@ -162,9 +150,7 @@ class TestWrite:
         )
         assert response.status_code == 200
 
-    def test_sequential_updates_use_latest_version(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_sequential_updates_use_latest_version(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         first = client.put(
             profile_path(pair["space"].id),
             json=body(started_on="2022-05-17"),
@@ -179,9 +165,7 @@ class TestWrite:
         assert second.json()["version"] == 3
         assert second.json()["relationshipStartedOn"] == "2021-04-16"
 
-    def test_null_clears_relationship_start(
-        self, client, session, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_null_clears_relationship_start(self, client, session, pair) -> None:  # type: ignore[no-untyped-def]
         client.put(
             profile_path(pair["space"].id),
             json=body(started_on="2022-05-17"),
@@ -196,9 +180,7 @@ class TestWrite:
         assert cleared.json()["relationshipStartedOn"] is None
         assert stored_profile(session, pair["space"].id).relationship_started_on is None
 
-    def test_disabled_display_omits_duration(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_disabled_display_omits_duration(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         """Duration values hidden by the client should not be transmitted."""
         response = client.put(
             profile_path(pair["space"].id),
@@ -211,9 +193,7 @@ class TestWrite:
         assert response_body["relationshipYears"] is None
         assert response_body["relationshipMonths"] is None
 
-    def test_unchanged_write_does_not_increment_version(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unchanged_write_does_not_increment_version(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         """Without a change there is no update and therefore no new version."""
         first = client.put(
             profile_path(pair["space"].id),
@@ -229,9 +209,7 @@ class TestWrite:
 
 
 class TestVersionConflict:
-    def test_stale_version_returns_409(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_stale_version_returns_409(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         client.put(
             profile_path(pair["space"].id),
             json=body(started_on="2022-05-17"),
@@ -253,9 +231,7 @@ class TestVersionConflict:
             "code": "VERSION_CONFLICT",
         }
 
-    def test_conflict_changes_nothing(
-        self, client, session, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_conflict_changes_nothing(self, client, session, pair) -> None:  # type: ignore[no-untyped-def]
         client.put(
             profile_path(pair["space"].id),
             json=body(started_on="2022-05-17"),
@@ -272,9 +248,7 @@ class TestVersionConflict:
         assert stored.duration_display_mode == "YEARS_MONTHS"
         assert stored.version == 2
 
-    def test_too_high_version_also_returns_409(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_too_high_version_also_returns_409(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(),
@@ -282,9 +256,7 @@ class TestVersionConflict:
         )
         assert response.status_code == 409
 
-    def test_write_without_if_match_is_rejected(
-        self, client, session, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_write_without_if_match_is_rejected(self, client, session, pair) -> None:  # type: ignore[no-untyped-def]
         """The header is mandatory in both the contract and behavior.
 
         Without it, a client could accidentally disable conflict protection.
@@ -303,9 +275,7 @@ class TestVersionConflict:
         "value",
         ["*", 'W/"1"', "abc", "1.0", "-1", '"1", "2"', '""', " ", "1 2"],
     )
-    def test_unusable_if_match_is_rejected(
-        self, client, pair, value: str
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unusable_if_match_is_rejected(self, client, pair, value: str) -> None:  # type: ignore[no-untyped-def]
         """`*` and weak validators would disable conflict protection."""
         response = client.put(
             profile_path(pair["space"].id),
@@ -315,9 +285,7 @@ class TestVersionConflict:
         assert response.status_code == 422
         assert response.json()["code"] == "IF_MATCH_MALFORMED"
 
-    def test_unquoted_if_match_is_accepted(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unquoted_if_match_is_accepted(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         """Both quoted and unquoted forms occur in real clients."""
         response = client.put(
             profile_path(pair["space"].id),
@@ -328,9 +296,7 @@ class TestVersionConflict:
 
 
 class TestRace:
-    def test_concurrent_updates_do_not_overwrite_each_other(
-        self, production_client
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_concurrent_updates_do_not_overwrite_each_other(self, production_client) -> None:  # type: ignore[no-untyped-def]
         """No lost update: exactly one wins and the other receives 409."""
         client, maker = production_client
         with maker() as setup:
@@ -355,9 +321,7 @@ class TestRace:
             )
 
         with ThreadPoolExecutor(max_workers=2) as pool:
-            responses = list(
-                pool.map(write, [(token_a, "2022-05-17"), (token_b, "2019-09-08")])
-            )
+            responses = list(pool.map(write, [(token_a, "2022-05-17"), (token_b, "2019-09-08")]))
 
         assert sorted(response.status_code for response in responses) == [200, 409]
 
@@ -374,15 +338,12 @@ class TestRace:
             assert stored.version == 2
             assert stored.relationship_started_on is not None
             assert (
-                stored.relationship_started_on.isoformat()
-                == winner.json()["relationshipStartedOn"]
+                stored.relationship_started_on.isoformat() == winner.json()["relationshipStartedOn"]
             )
 
 
 class TestValidation:
-    def test_future_start_is_rejected(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_future_start_is_rejected(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(started_on="2099-01-01"),
@@ -391,9 +352,7 @@ class TestValidation:
         assert response.status_code == 422
         assert response.json()["code"] == "RELATIONSHIP_START_IN_FUTURE"
 
-    def test_mistyped_year_is_rejected(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_mistyped_year_is_rejected(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(started_on="0202-05-17"),
@@ -410,9 +369,7 @@ class TestValidation:
             {"showRelationshipDuration": True, "durationDisplayMode": "DAYS"},
         ],
     )
-    def test_incomplete_body_is_rejected(
-        self, client, pair, request_body
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_incomplete_body_is_rejected(self, client, pair, request_body) -> None:  # type: ignore[no-untyped-def]
         """PUT replaces fully; an omitted field cannot mean clear the field."""
         response = client.put(
             profile_path(pair["space"].id),
@@ -422,9 +379,7 @@ class TestValidation:
         assert response.status_code == 422
 
     @pytest.mark.parametrize("mode", ["MONTHS", "years_months", "", "DAYS "])
-    def test_unknown_display_mode_is_rejected(
-        self, client, pair, mode: str
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unknown_display_mode_is_rejected(self, client, pair, mode: str) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(mode=mode),
@@ -436,9 +391,7 @@ class TestValidation:
     @pytest.mark.parametrize(
         "started_on", ["2022-13-40", "17.05.2022", "2022-05-17T10:00:00Z", "heute"]
     )
-    def test_unusable_date_is_rejected(
-        self, client, pair, started_on: str
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unusable_date_is_rejected(self, client, pair, started_on: str) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(started_on=started_on),
@@ -448,18 +401,12 @@ class TestValidation:
 
 
 class TestForeignAccess:
-    def test_outsider_cannot_read_profile(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
-        response = client.get(
-            profile_path(pair["space"].id), headers=auth(pair["outsider_token"])
-        )
+    def test_outsider_cannot_read_profile(self, client, pair) -> None:  # type: ignore[no-untyped-def]
+        response = client.get(profile_path(pair["space"].id), headers=auth(pair["outsider_token"]))
         assert response.status_code == 404
         assert response.json()["code"] == "SPACE_NOT_FOUND"
 
-    def test_outsider_cannot_write_profile(
-        self, client, session, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_outsider_cannot_write_profile(self, client, session, pair) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(started_on="1999-01-01"),
@@ -469,9 +416,7 @@ class TestForeignAccess:
         assert response.json()["code"] == "SPACE_NOT_FOUND"
         assert stored_profile(session, pair["space"].id).relationship_started_on is None
 
-    def test_membership_guard_precedes_every_other_check(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_membership_guard_precedes_every_other_check(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         """A 422 for missing If-Match would reveal that the Space exists."""
         response = client.put(
             profile_path(pair["space"].id),
@@ -480,21 +425,13 @@ class TestForeignAccess:
         )
         assert response.status_code == 404
 
-    def test_foreign_space_is_indistinguishable_from_nonexistent_one(
-        self, client, pair
-    ) -> None:  # type: ignore[no-untyped-def]
-        existing = client.get(
-            profile_path(pair["space"].id), headers=auth(pair["outsider_token"])
-        )
-        nonexistent = client.get(
-            profile_path(new_id()), headers=auth(pair["outsider_token"])
-        )
+    def test_foreign_space_is_indistinguishable_from_nonexistent_one(self, client, pair) -> None:  # type: ignore[no-untyped-def]
+        existing = client.get(profile_path(pair["space"].id), headers=auth(pair["outsider_token"]))
+        nonexistent = client.get(profile_path(new_id()), headers=auth(pair["outsider_token"]))
         assert existing.status_code == nonexistent.status_code == 404
         assert existing.json() == nonexistent.json()
 
-    def test_departed_member_can_no_longer_write(
-        self, client, session, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_departed_member_can_no_longer_write(self, client, session, pair) -> None:  # type: ignore[no-untyped-def]
         membership = service.require_membership(session, pair["ben"], pair["space"].id)
         service.end_membership(membership)
         session.flush()
@@ -506,12 +443,8 @@ class TestForeignAccess:
         )
         assert response.status_code == 404
 
-    @pytest.mark.parametrize(
-        "bad_id", ["nicht-echt", "12345", "' OR 1=1 --", "../../etc/passwd"]
-    )
-    def test_malformed_id_returns_404(
-        self, client, pair, bad_id: str
-    ) -> None:  # type: ignore[no-untyped-def]
+    @pytest.mark.parametrize("bad_id", ["nicht-echt", "12345", "' OR 1=1 --", "../../etc/passwd"])
+    def test_malformed_id_returns_404(self, client, pair, bad_id: str) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(bad_id),
             json=body(),
@@ -524,9 +457,7 @@ class TestAnonymousAccess:
     def test_read_without_token(self, client, pair) -> None:  # type: ignore[no-untyped-def]
         assert client.get(profile_path(pair["space"].id)).status_code == 401
 
-    def test_write_without_token(
-        self, client, session, pair
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_write_without_token(self, client, session, pair) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(started_on="1999-01-01"),
@@ -539,9 +470,7 @@ class TestAnonymousAccess:
         "headers",
         [{"Authorization": "Bearer nicht-echt"}, {"Authorization": "Basic abc"}, {}],
     )
-    def test_unusable_authorization_header(
-        self, client, pair, headers
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unusable_authorization_header(self, client, pair, headers) -> None:  # type: ignore[no-untyped-def]
         response = client.put(
             profile_path(pair["space"].id),
             json=body(),
@@ -646,9 +575,7 @@ class TestTimezone:
         after = client.get(path, headers=auth(pair["token_a"])).json()
         assert (after["relationshipYears"], after["relationshipMonths"]) == (4, 0)
 
-    def test_space_view_also_uses_local_time(
-        self, client, session, pair, monkeypatch
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_space_view_also_uses_local_time(self, client, session, pair, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         """The same value must not depend on which endpoint serves it."""
         pair["anna"].timezone = "Pacific/Auckland"
         with_start(session, pair["space"].id, date(2025, 8, 25))
@@ -668,15 +595,11 @@ class TestTimezone:
         with_start(session, pair["space"].id, date(2025, 8, 25))
         freeze(monkeypatch, datetime(2026, 8, 24, 12, 30, tzinfo=UTC))
 
-        response = client.get(
-            profile_path(pair["space"].id), headers=auth(pair["token_a"])
-        )
+        response = client.get(profile_path(pair["space"].id), headers=auth(pair["token_a"]))
         assert response.status_code == 200
         assert response.json()["relationshipDays"] == 364
 
-    def test_today_at_local_location_is_not_future_date(
-        self, client, pair, monkeypatch
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_today_at_local_location_is_not_future_date(self, client, pair, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         """In Auckland 25 August has begun while UTC is still on 24 August."""
         pair["anna"].timezone = "Pacific/Auckland"
         freeze(monkeypatch, datetime(2026, 8, 24, 12, 30, tzinfo=UTC))
@@ -690,9 +613,7 @@ class TestTimezone:
         assert response.json()["relationshipStartedOn"] == "2026-08-25"
         assert response.json()["relationshipDays"] == 0
 
-    def test_tomorrow_at_local_location_remains_future(
-        self, client, pair, monkeypatch
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_tomorrow_at_local_location_remains_future(self, client, pair, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         """In Los Angeles it is still 24 August even though UTC is ahead."""
         pair["anna"].timezone = "America/Los_Angeles"
         freeze(monkeypatch, datetime(2026, 8, 25, 5, 0, tzinfo=UTC))

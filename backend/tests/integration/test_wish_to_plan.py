@@ -207,9 +207,7 @@ class TestConversion:
         assert response.json()["plan"]["createdBy"] == str(pair["ben"].id)
         assert response.json()["wish"]["createdBy"] == str(pair["anna"].id)
 
-    @pytest.mark.parametrize(
-        "field", ["sourceWishId", "status", "plannedStart", "experiencedOn"]
-    )
+    @pytest.mark.parametrize("field", ["sourceWishId", "status", "plannedStart", "experiencedOn"])
     def test_server_owned_fields_are_rejected_from_request(  # type: ignore[no-untyped-def]
         self,
         client,

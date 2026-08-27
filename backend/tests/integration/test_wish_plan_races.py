@@ -99,9 +99,7 @@ def _concurrently(first, second):  # type: ignore[no-untyped-def]
 
 
 class TestConcurrentConvert:
-    def test_two_concurrent_conversions_create_exactly_one_plan(
-        self, production_client
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_two_concurrent_conversions_create_exactly_one_plan(self, production_client) -> None:  # type: ignore[no-untyped-def]
         world = _setup(production_client)
         maker = world["maker"]
 
@@ -191,9 +189,7 @@ class TestConcurrentConvert:
 
 
 class TestRollback:
-    def test_error_after_plan_insert_leaves_no_plan(
-        self, production_client, monkeypatch
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_error_after_plan_insert_leaves_no_plan(self, production_client, monkeypatch) -> None:  # type: ignore[no-untyped-def]
         """Fail exactly between the two mutations.
 
         The Plan has been inserted but the Wish transition has not run yet. If
@@ -306,9 +302,7 @@ class TestDeleteAgainstLifecycle:
             assert len(plans) == 1
             assert results == {"CONVERTED", "RESOURCE_VERSION_CONFLICT"}
 
-    def test_complete_against_return_leaves_no_partial_lifecycle(
-        self, production_client
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_complete_against_return_leaves_no_partial_lifecycle(self, production_client) -> None:  # type: ignore[no-untyped-def]
         world = _setup(production_client)
         maker = world["maker"]
 
@@ -337,9 +331,7 @@ class TestDeleteAgainstLifecycle:
 
         def return_to_wish():  # type: ignore[no-untyped-def]
             with maker.begin() as session:
-                plan_service.return_to_wish(
-                    session, world["ben"], plan_id, expected_version=1
-                )
+                plan_service.return_to_wish(session, world["ben"], plan_id, expected_version=1)
                 return "RETURNED"
 
         results = set(_concurrently(complete, return_to_wish))

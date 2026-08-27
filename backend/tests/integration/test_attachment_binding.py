@@ -323,11 +323,7 @@ class TestBindingEligibility:
         created_memory = memory(client, couple)
         response = client.put(
             f"{base_path(couple['space'].id)}/memories/{created_memory['id']}/attachments",
-            json={
-                "attachments": [
-                    {"attachmentId": created["attachment"]["id"], "position": 0}
-                ]
-            },
+            json={"attachments": [{"attachmentId": created["attachment"]["id"], "position": 0}]},
             headers=if_match(couple["token_a"], created_memory["version"]),
         )
         assert response.status_code == 409

@@ -286,11 +286,7 @@ class TestPagination:
         # Its partial bits have multiple equivalent encodings, so changing it
         # would not reliably alter the signature.
         payload_part, signature_part = cursor.split(".", 1)
-        tampered = (
-            f"{payload_part[:-1]}"
-            f"{'A' if payload_part[-1] != 'A' else 'B'}."
-            f"{signature_part}"
-        )
+        tampered = f"{payload_part[:-1]}{'A' if payload_part[-1] != 'A' else 'B'}.{signature_part}"
         invalid = client.get(
             memories_path(couple["space"].id),
             params={"cursor": tampered},
@@ -347,9 +343,7 @@ class TestPagination:
             params={"year": current_year},
             headers=auth(couple["token_a"]),
         )
-        assert current["id"] in {
-            item["id"] for item in current_response.json()["items"]
-        }
+        assert current["id"] in {item["id"] for item in current_response.json()["items"]}
 
 
 class TestProtectedPayloadAndOutbox:

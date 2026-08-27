@@ -32,27 +32,17 @@ def anna_with_space(session: Session):  # type: ignore[no-untyped-def]
 
 
 class TestCreate:
-    def test_token_is_returned_exactly_once(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+    def test_token_is_returned_exactly_once(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         assert result.token
         # Only the hash is stored in the database.
         assert result.token not in str(result.invitation.__dict__)
 
-    def test_is_initially_open(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+    def test_is_initially_open(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         assert result.invitation.is_open(now())
 
-    def test_list_does_not_expose_token(
-        self, client, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_list_does_not_expose_token(self, client, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         client.post(
             f"/api/v1/spaces/{anna_with_space['space'].id}/invitations",
             headers=auth(anna_with_space["token"]),
@@ -67,22 +57,16 @@ class TestCreate:
 
 
 class TestAccept:
-    def test_partner_becomes_member(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_partner_becomes_member(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         ben = make_account(session, "Ben")
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
 
         membership = invitations.accept(session, result.token, ben)
         assert membership.space_id == anna_with_space["space"].id
         assert membership.is_active
         assert result.invitation.accepted_by == ben.id
 
-    def test_over_http(
-        self, client, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_over_http(self, client, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         ben = make_account(session, "Ben")
         ben_token = sign_in(session, ben)
         session.flush()
@@ -112,51 +96,35 @@ class TestAccept:
 
 
 class TestAbuse:
-    def test_invalid_token(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_invalid_token(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         ben = make_account(session, "Ben")
         for invalid_value in ["", "nicht-echt", "a" * 100]:
             with pytest.raises(ValidationError):
                 invitations.accept(session, invalid_value, ben)
 
-    def test_expired_token(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_expired_token(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         ben = make_account(session, "Ben")
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         result.invitation.expires_at = now() - timedelta(seconds=1)
         session.flush()
 
         with pytest.raises(ValidationError):
             invitations.accept(session, result.token, ben)
 
-    def test_revoked_token(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_revoked_token(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         ben = make_account(session, "Ben")
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
-        invitations.revoke(
-            session, anna_with_space["space"].id, result.invitation.id
-        )
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
+        invitations.revoke(session, anna_with_space["space"].id, result.invitation.id)
         session.flush()
 
         with pytest.raises(ValidationError):
             invitations.accept(session, result.token, ben)
 
-    def test_reused_token(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_reused_token(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         """An invitation is valid exactly once."""
         ben = make_account(session, "Ben")
         third_person = make_account(session, "Dritte Person")
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
 
         invitations.accept(session, result.token, ben)
         session.flush()
@@ -164,27 +132,19 @@ class TestAbuse:
         with pytest.raises(ValidationError):
             invitations.accept(session, result.token, third_person)
 
-    def test_full_space_does_not_create_invitation(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_full_space_does_not_create_invitation(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         """Do not send a link that can only disappoint when opened."""
         ben = make_account(session, "Ben")
         service.add_member(session, anna_with_space["space"].id, ben)
         session.flush()
 
         with pytest.raises(ConflictError) as error:
-            invitations.create(
-                session, anna_with_space["space"].id, anna_with_space["anna"]
-            )
+            invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         assert error.value.code == "SPACE_FULL"
 
-    def test_full_space_rejects_existing_invitation(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_full_space_rejects_existing_invitation(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         """The invitation may already be in transit when the space becomes full."""
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         ben = make_account(session, "Ben")
         service.add_member(session, anna_with_space["space"].id, ben)
         session.flush()
@@ -197,29 +157,19 @@ class TestAbuse:
         # The invitation remains open because it did not cause the failure.
         assert result.invitation.accepted_at is None
 
-    def test_creator_cannot_accept_own_invitation(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+    def test_creator_cannot_accept_own_invitation(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         with pytest.raises(ValidationError) as error:
             invitations.accept(session, result.token, anna_with_space["anna"])
         assert error.value.code == "CANNOT_ACCEPT_OWN_INVITATION"
 
-    def test_every_failure_reports_the_same_diagnostic(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_every_failure_reports_the_same_diagnostic(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         """Different diagnostics could reveal which tokens exist."""
         ben = make_account(session, "Ben")
 
-        expired = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+        expired = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         expired.invitation.expires_at = now() - timedelta(seconds=1)
-        revoked = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+        revoked = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         revoked.invitation.revoked_at = now()
         session.flush()
 
@@ -232,9 +182,7 @@ class TestAbuse:
 
 
 class TestRace:
-    def test_two_invitations_compete_for_last_slot(
-        self, production_client
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_two_invitations_compete_for_last_slot(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         with maker() as setup:
             anna = make_account(setup, "Anna Wettlauf")
@@ -284,25 +232,18 @@ class TestRace:
                 .scalars()
                 .all()
             )
-            assert sum(
-                invitation.accepted_at is not None
-                for invitation in invitations_for_space
-            ) == 1
-            assert sum(
-                invitation.is_open(now()) for invitation in invitations_for_space
-            ) == 1
+            assert (
+                sum(invitation.accepted_at is not None for invitation in invitations_for_space) == 1
+            )
+            assert sum(invitation.is_open(now()) for invitation in invitations_for_space) == 1
 
 
 class TestRevoke:
-    def test_foreign_space_cannot_revoke(
-        self, session, anna_with_space
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_foreign_space_cannot_revoke(self, session, anna_with_space) -> None:  # type: ignore[no-untyped-def]
         """An invitation ID alone must not grant access."""
         foreign_account = make_account(session, "Fremde Person")
         foreign_space = make_space(session, foreign_account)
-        result = invitations.create(
-            session, anna_with_space["space"].id, anna_with_space["anna"]
-        )
+        result = invitations.create(session, anna_with_space["space"].id, anna_with_space["anna"])
         session.flush()
 
         with pytest.raises(NotFoundError):

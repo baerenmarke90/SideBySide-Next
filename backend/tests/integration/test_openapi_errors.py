@@ -32,9 +32,7 @@ def _assert_problem_contract(
 
     schema: dict[str, Any] = client.get("/openapi.json").json()
     documented = schema["paths"][path_template][method]["responses"][str(response.status_code)]
-    assert documented["content"]["application/json"]["schema"] == {
-        "$ref": PROBLEM_DETAILS_REF
-    }
+    assert documented["content"]["application/json"]["schema"] == {"$ref": PROBLEM_DETAILS_REF}
 
 
 def test_401_authentication_runtime_matches_contract(client: TestClient) -> None:

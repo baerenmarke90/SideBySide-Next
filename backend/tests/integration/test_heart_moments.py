@@ -165,10 +165,7 @@ class TestCrudAndOwnership:
     ) -> None:  # type: ignore[no-untyped-def]
         heart_moment = create_heart_moment(client, couple).json()
 
-        assert (
-            client.get(f"{path(couple['space'].id)}/{heart_moment['id']}").status_code
-            == 401
-        )
+        assert client.get(f"{path(couple['space'].id)}/{heart_moment['id']}").status_code == 401
         assert (
             client.get(
                 f"{path(couple['outsider_space'].id)}/{heart_moment['id']}",

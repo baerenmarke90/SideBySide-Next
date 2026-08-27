@@ -287,8 +287,7 @@ class TestPaginationAndFilter:
         couple,
     ) -> None:  # type: ignore[no-untyped-def]
         expected = [
-            create_milestone(client, couple, title=f"M {index}").json()["id"]
-            for index in range(5)
+            create_milestone(client, couple, title=f"M {index}").json()["id"] for index in range(5)
         ]
 
         seen: list[str] = []

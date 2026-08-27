@@ -234,9 +234,7 @@ def test_shared_to_private_removes_comments_and_resurrects_nothing(
         headers=auth(couple["token_b"]),
     )
 
-    privacy_path = (
-        f"{base_path(couple['space'].id)}/heart-moments/{heart_moment['id']}/visibility"
-    )
+    privacy_path = f"{base_path(couple['space'].id)}/heart-moments/{heart_moment['id']}/visibility"
     private = client.patch(
         privacy_path,
         json={"visibility": "PRIVATE"},
