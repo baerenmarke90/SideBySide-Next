@@ -8,6 +8,7 @@ on:
       - tools/ci/pr219_language_codemod.py
       - tools/ci/pr219_language_cleanup.py
       - tools/ci/pr219_language_final_cleanup.py
+      - tools/ci/pr219_language_lint_cleanup.py
       - .github/workflows/pr219-language-migration.yml
 
 permissions:
@@ -44,6 +45,7 @@ jobs:
           python3 tools/ci/pr219_language_codemod.py
           python3 tools/ci/pr219_language_cleanup.py
           python3 tools/ci/pr219_language_final_cleanup.py
+          python3 tools/ci/pr219_language_lint_cleanup.py
 
       - name: Format migrated backend surfaces
         working-directory: backend
@@ -64,13 +66,14 @@ jobs:
           rm tools/ci/pr219_language_codemod.py
           rm tools/ci/pr219_language_cleanup.py
           rm tools/ci/pr219_language_final_cleanup.py
+          rm tools/ci/pr219_language_lint_cleanup.py
           rm .github/workflows/pr219-language-migration.yml
 
       - name: Commit migrated tests
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/tests tools/ci/pr219_language_codemod.py tools/ci/pr219_language_cleanup.py tools/ci/pr219_language_final_cleanup.py .github/workflows/pr219-language-migration.yml
+          git add backend/tests tools/ci/pr219_language_codemod.py tools/ci/pr219_language_cleanup.py tools/ci/pr219_language_final_cleanup.py tools/ci/pr219_language_lint_cleanup.py .github/workflows/pr219-language-migration.yml
           git diff --cached --check
           git diff --cached --quiet && exit 0
           git commit -m "chore(tests): finish backend engineering language migration"
