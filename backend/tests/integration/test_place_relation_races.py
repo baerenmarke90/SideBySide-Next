@@ -1,15 +1,15 @@
-"""Nebenlaeufigkeit rund um typisierte Content-Relations.
+"""Concurrency around typed content relations.
 
-M3-D26 legt die Sperrreihenfolge fest: erst der Parent, dann das Target.
-Jeder Test hier prueft beides - dass zwei gleichzeitige Requests zu einem
-fachlichen Ergebnis kommen statt zu einem Deadlock oder 500, und dass der
-Endzustand keine der Zusicherungen aus M3-D09 verletzt.
+M3-D26 defines the lock order: parent first, target second. Every test here
+verifies both that two concurrent requests reach a domain outcome instead of a
+deadlock or 500, and that the final state violates none of the guarantees from
+M3-D09.
 
-Der wichtigste Fall ist der letzte: Relation-Create gegen den
-Privacy-Wechsel eines HeartMoments. Es gibt genau zwei zulaessige
-Endzustaende - gemeinsam mit Relation oder privat ohne Relation. Der
-dritte, privat mit Relation, waere ein Beweis der Existenz eines privaten
-Inhalts fuer den Partner, und er darf in keiner Verschraenkung entstehen.
+The most important case is the last one: Relation creation against a
+HeartMoment privacy transition. Exactly two final states are allowed: shared
+with a relation, or private without a relation. The third state, private with a
+relation, would prove the existence of private content to the partner and must
+not occur under any transaction interleaving.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from tests.conftest import auth, make_account, make_space, requires_database, si
 
 pytestmark = [pytest.mark.integration, requires_database]
 
-HEUTE = date(2026, 8, 27)
+TODAY = date(2026, 8, 27)
 
 
 def _setup(production_client):  # type: ignore[no-untyped-def]
@@ -51,305 +51,319 @@ def _setup(production_client):  # type: ignore[no-untyped-def]
         anna_id = anna.id
         ben_id = ben.id
 
-    kopf = auth(token)
-    ort = client.post(
-        f"/api/v1/spaces/{space_id}/places", json={"name": "Unser Cafe"}, headers=kopf
+    headers = auth(token)
+    place = client.post(
+        f"/api/v1/spaces/{space_id}/places",
+        json={"name": "Unser Cafe"},
+        headers=headers,
     )
-    assert ort.status_code == 201
-    erinnerung = client.post(
+    assert place.status_code == 201
+    memory = client.post(
         f"/api/v1/spaces/{space_id}/memories",
         json={"title": "Erster Abend", "body": "Es regnete."},
-        headers=kopf,
+        headers=headers,
     )
-    assert erinnerung.status_code == 201
-    moment = client.post(
+    assert memory.status_code == 201
+    heart_moment = client.post(
         f"/api/v1/spaces/{space_id}/heart-moments",
         json={
             "text": "Danke fuer heute.",
             "emotion": "LOVED",
             "visibility": "SHARED",
-            "happenedOn": HEUTE.isoformat(),
+            "happenedOn": TODAY.isoformat(),
         },
-        headers=kopf,
+        headers=headers,
     )
-    assert moment.status_code == 201
+    assert heart_moment.status_code == 201
 
     return {
         "maker": maker,
         "space_id": space_id,
         "anna": AuthorizationContext(account_id=anna_id, space_id=space_id),
         "ben": AuthorizationContext(account_id=ben_id, space_id=space_id),
-        "place_id": UUID(ort.json()["id"]),
-        "memory_id": UUID(erinnerung.json()["id"]),
-        "heart_moment_id": UUID(moment.json()["id"]),
+        "place_id": UUID(place.json()["id"]),
+        "memory_id": UUID(memory.json()["id"]),
+        "heart_moment_id": UUID(heart_moment.json()["id"]),
     }
 
 
-def _ergebnis(fn):  # type: ignore[no-untyped-def]
+def _result(fn):  # type: ignore[no-untyped-def]
     try:
         return fn()
     except DomainError as error:
         return error.code
 
 
-def _gleichzeitig(erste, zweite):  # type: ignore[no-untyped-def]
-    tor = Barrier(2, timeout=10)
+def _concurrently(first, second):  # type: ignore[no-untyped-def]
+    gate = Barrier(2, timeout=10)
 
-    def lauf(fn):  # type: ignore[no-untyped-def]
-        tor.wait()
-        return _ergebnis(fn)
+    def run(fn):  # type: ignore[no-untyped-def]
+        gate.wait()
+        return _result(fn)
 
     with ThreadPoolExecutor(max_workers=2) as pool:
-        a = pool.submit(lauf, erste)
-        b = pool.submit(lauf, zweite)
+        a = pool.submit(run, first)
+        b = pool.submit(run, second)
         return a.result(timeout=20), b.result(timeout=20)
 
 
-def _zaehle(maker, modell) -> int:  # type: ignore[no-untyped-def]
+def _count(maker, model) -> int:  # type: ignore[no-untyped-def]
     with maker() as session:
-        return session.execute(select(func.count()).select_from(modell)).scalar_one()
+        return session.execute(select(func.count()).select_from(model)).scalar_one()
 
 
-def test_parent_delete_gegen_relation_create(production_client) -> None:  # type: ignore[no-untyped-def]
-    """Der Ort verschwindet, waehrend jemand daran verknuepft.
+def test_parent_delete_against_relation_create(production_client) -> None:  # type: ignore[no-untyped-def]
+    """The Place disappears while another request links content to it.
 
-    Beide Seiten sperren den Ort zuerst. Einer wartet also, statt dass
-    beide aufeinander warten. Danach revalidiert der Wartende - und findet
-    entweder den Ort nicht mehr oder verknuepft an einem Ort, der noch da
-    ist. Eine verwaiste Join-Zeile entsteht in keiner Reihenfolge.
+    Both operations lock the Place first. One therefore waits instead of both
+    waiting for each other. The waiting operation then revalidates and either
+    finds the Place gone or links to a Place that still exists. No transaction
+    order may create an orphaned join row.
     """
-    welt = _setup(production_client)
-    maker = welt["maker"]
+    world = _setup(production_client)
+    maker = world["maker"]
 
-    def loeschen():  # type: ignore[no-untyped-def]
+    def delete():  # type: ignore[no-untyped-def]
         with maker.begin() as session:
-            place_service.delete_place(session, welt["anna"], welt["place_id"], expected_version=1)
+            place_service.delete_place(
+                session,
+                world["anna"],
+                world["place_id"],
+                expected_version=1,
+            )
             return "DELETED"
 
-    def verknuepfen():  # type: ignore[no-untyped-def]
+    def link():  # type: ignore[no-untyped-def]
         with maker.begin() as session:
             relation_service.link(
                 session,
-                welt["ben"],
-                welt["place_id"],
-                welt["memory_id"],
+                world["ben"],
+                world["place_id"],
+                world["memory_id"],
                 relation_service.PLACE_MEMORIES,
             )
             return "LINKED"
 
-    ergebnisse = set(_gleichzeitig(loeschen, verknuepfen))
-    assert ergebnisse <= {"DELETED", "LINKED", "PLACE_NOT_FOUND", "RESOURCE_VERSION_CONFLICT"}
+    results = set(_concurrently(delete, link))
+    assert results <= {
+        "DELETED",
+        "LINKED",
+        "PLACE_NOT_FOUND",
+        "RESOURCE_VERSION_CONFLICT",
+    }
 
-    with maker() as pruefung:
-        ort = pruefung.get(Place, welt["place_id"])
-        erinnerung = pruefung.get(Memory, welt["memory_id"])
+    with maker() as verification:
+        place = verification.get(Place, world["place_id"])
+        memory = verification.get(Memory, world["memory_id"])
 
-    # Die Erinnerung ueberlebt in jedem Fall - sie ist ein Original.
-    assert erinnerung is not None
+    # The Memory survives in every case because it is an original resource.
+    assert memory is not None
 
-    if ort is None:
-        assert _zaehle(maker, PlaceMemory) == 0
+    if place is None:
+        assert _count(maker, PlaceMemory) == 0
     else:
-        assert "LINKED" in ergebnisse
-        assert _zaehle(maker, PlaceMemory) == 1
+        assert "LINKED" in results
+        assert _count(maker, PlaceMemory) == 1
 
 
-def test_target_delete_gegen_relation_create(production_client) -> None:  # type: ignore[no-untyped-def]
-    """Das Ziel verschwindet, waehrend jemand darauf verweist.
+def test_target_delete_against_relation_create(production_client) -> None:  # type: ignore[no-untyped-def]
+    """The target disappears while another request creates a reference.
 
-    Der Create haelt das Ziel mit `FOR SHARE`; das Loeschen braucht die
-    exklusive Sperre und wartet. Kommt es zuerst durch, findet der Create
-    danach nichts mehr und antwortet 404 - nicht mit einem
-    Fremdschluesselfehler aus der Datenbank.
+    Creation holds the target with `FOR SHARE`; deletion requires the exclusive
+    lock and waits. If deletion wins first, creation subsequently finds no
+    target and returns 404 rather than leaking a database foreign-key error.
     """
-    welt = _setup(production_client)
-    maker = welt["maker"]
+    world = _setup(production_client)
+    maker = world["maker"]
 
-    def loeschen():  # type: ignore[no-untyped-def]
+    def delete():  # type: ignore[no-untyped-def]
         with maker.begin() as session:
             from sidebyside.memories import service as memory_service
 
             memory_service.delete_memory(
-                session, welt["anna"], welt["memory_id"], expected_version=1
+                session,
+                world["anna"],
+                world["memory_id"],
+                expected_version=1,
             )
             return "DELETED"
 
-    def verknuepfen():  # type: ignore[no-untyped-def]
+    def link():  # type: ignore[no-untyped-def]
         with maker.begin() as session:
             relation_service.link(
                 session,
-                welt["ben"],
-                welt["place_id"],
-                welt["memory_id"],
+                world["ben"],
+                world["place_id"],
+                world["memory_id"],
                 relation_service.PLACE_MEMORIES,
             )
             return "LINKED"
 
-    ergebnisse = set(_gleichzeitig(loeschen, verknuepfen))
-    assert ergebnisse <= {
+    results = set(_concurrently(delete, link))
+    assert results <= {
         "DELETED",
         "LINKED",
         "RELATION_TARGET_NOT_FOUND",
         "RESOURCE_VERSION_CONFLICT",
     }
 
-    with maker() as pruefung:
-        erinnerung = pruefung.get(Memory, welt["memory_id"])
+    with maker() as verification:
+        memory = verification.get(Memory, world["memory_id"])
 
-    if erinnerung is None:
-        assert _zaehle(maker, PlaceMemory) == 0
+    if memory is None:
+        assert _count(maker, PlaceMemory) == 0
     else:
-        assert _zaehle(maker, PlaceMemory) == 1
+        assert _count(maker, PlaceMemory) == 1
 
 
-def test_zwei_gleiche_creates_erzeugen_eine_zeile(production_client) -> None:  # type: ignore[no-untyped-def]
-    """Beide Partner tippen gleichzeitig auf denselben Knopf.
+def test_two_identical_creates_produce_one_row(production_client) -> None:  # type: ignore[no-untyped-def]
+    """Both partners tap the same button concurrently.
 
-    Kein Konflikt, kein Fehler, eine Zeile. Das leistet der
-    Primaerschluessel zusammen mit `ON CONFLICT DO NOTHING` - ein
-    vorheriges `SELECT` haette genau hier die Luecke.
+    There is no conflict, no error, and exactly one row. The primary key plus
+    `ON CONFLICT DO NOTHING` provides this guarantee; a preceding `SELECT`
+    would create exactly the race window exercised here.
     """
-    welt = _setup(production_client)
-    maker = welt["maker"]
+    world = _setup(production_client)
+    maker = world["maker"]
 
-    def verknuepfen(kontext):  # type: ignore[no-untyped-def]
-        def lauf():  # type: ignore[no-untyped-def]
+    def link(context):  # type: ignore[no-untyped-def]
+        def run():  # type: ignore[no-untyped-def]
             with maker.begin() as session:
                 relation_service.link(
                     session,
-                    kontext,
-                    welt["place_id"],
-                    welt["memory_id"],
+                    context,
+                    world["place_id"],
+                    world["memory_id"],
                     relation_service.PLACE_MEMORIES,
                 )
                 return "LINKED"
 
-        return lauf
+        return run
 
-    ergebnisse = set(_gleichzeitig(verknuepfen(welt["anna"]), verknuepfen(welt["ben"])))
-    assert ergebnisse == {"LINKED"}
-    assert _zaehle(maker, PlaceMemory) == 1
+    results = set(_concurrently(link(world["anna"]), link(world["ben"])))
+    assert results == {"LINKED"}
+    assert _count(maker, PlaceMemory) == 1
 
 
-def test_privacy_wechsel_gegen_relation_create_laesst_keinen_leak(  # type: ignore[no-untyped-def]
+def test_privacy_transition_against_relation_create_never_leaks(  # type: ignore[no-untyped-def]
     production_client,
 ) -> None:
-    """Der Fall, um den es in diesem Slice geht (M3-D09, M3-D26).
+    """The central race for this slice (M3-D09, M3-D26).
 
-    Zwei zulaessige Endzustaende, und nur zwei:
+    Exactly two final states are valid:
 
-    - der Moment ist gemeinsam und die Relation existiert;
-    - der Moment ist privat und die Relation existiert nicht.
+    - the HeartMoment is shared and the relation exists;
+    - the HeartMoment is private and the relation does not exist.
 
-    Der dritte - privat mit Relation - waere fuer den Partner ein Beweis,
-    dass es den Moment gibt, obwohl er ihn nicht lesen darf. Er darf in
-    keiner Verschraenkung der beiden Transaktionen entstehen.
+    The third state, private with a relation, would prove to the partner that
+    the HeartMoment exists even though it is unreadable. No interleaving of the
+    two transactions may produce that state.
     """
-    welt = _setup(production_client)
-    maker = welt["maker"]
+    world = _setup(production_client)
+    maker = world["maker"]
 
-    def privat_schalten():  # type: ignore[no-untyped-def]
+    def make_private():  # type: ignore[no-untyped-def]
         with maker.begin() as session:
             heart_moment_service.change_visibility(
                 session,
-                welt["anna"],
-                welt["heart_moment_id"],
+                world["anna"],
+                world["heart_moment_id"],
                 expected_version=1,
                 visibility=ContentVisibility.PRIVATE,
             )
             return "PRIVATE"
 
-    def verknuepfen():  # type: ignore[no-untyped-def]
+    def link():  # type: ignore[no-untyped-def]
         with maker.begin() as session:
             relation_service.link(
                 session,
-                welt["ben"],
-                welt["place_id"],
-                welt["heart_moment_id"],
+                world["ben"],
+                world["place_id"],
+                world["heart_moment_id"],
                 relation_service.PLACE_HEART_MOMENTS,
             )
             return "LINKED"
 
-    ergebnisse = set(_gleichzeitig(privat_schalten, verknuepfen))
+    results = set(_concurrently(make_private, link))
 
-    # Kein Deadlock, kein Constraintfehler nach aussen: beide Seiten
-    # melden ein fachliches Ergebnis.
-    assert ergebnisse <= {
+    # No deadlock and no constraint error escapes: both sides report a domain
+    # result.
+    assert results <= {
         "PRIVATE",
         "LINKED",
         "RELATION_TARGET_NOT_FOUND",
         "RESOURCE_VERSION_CONFLICT",
     }
 
-    with maker() as pruefung:
-        moment = pruefung.get(HeartMoment, welt["heart_moment_id"])
-        assert moment is not None
-        privat = moment.privacy_class == "OWNER_ONLY"
+    with maker() as verification:
+        heart_moment = verification.get(HeartMoment, world["heart_moment_id"])
+        assert heart_moment is not None
+        is_private = heart_moment.privacy_class == "OWNER_ONLY"
 
-    relationen = _zaehle(maker, PlaceHeartMoment)
+    relations = _count(maker, PlaceHeartMoment)
 
-    if privat:
-        assert relationen == 0, "privater Moment mit gemeinsamer Relation - genau der Leak"
+    if is_private:
+        assert relations == 0, "private HeartMoment retained a shared relation"
     else:
-        assert relationen == 1
+        assert relations == 1
 
 
-def test_privacy_wechsel_gegen_create_in_umgekehrter_reihenfolge(  # type: ignore[no-untyped-def]
+def test_privacy_transition_against_create_in_reverse_order(  # type: ignore[no-untyped-def]
     production_client,
 ) -> None:
-    """Dieselbe Zusicherung, wenn die Relation schon existiert.
+    """The same guarantee when the relation already exists.
 
-    Hier ist die Join-Zeile vor dem Rennen da. Der Wechsel muss sie
-    entfernen, waehrend ein zweiter Create sie gleichzeitig wiederherzu-
-    stellen versucht. Auch das darf nicht in "privat mit Relation" enden.
+    The join row exists before the race. The transition must remove it while a
+    second create concurrently tries to restore it. This still may not end in
+    the invalid state "private with relation".
     """
-    welt = _setup(production_client)
-    maker = welt["maker"]
+    world = _setup(production_client)
+    maker = world["maker"]
 
     with maker.begin() as session:
         relation_service.link(
             session,
-            welt["anna"],
-            welt["place_id"],
-            welt["heart_moment_id"],
+            world["anna"],
+            world["place_id"],
+            world["heart_moment_id"],
             relation_service.PLACE_HEART_MOMENTS,
         )
-    assert _zaehle(maker, PlaceHeartMoment) == 1
+    assert _count(maker, PlaceHeartMoment) == 1
 
-    def privat_schalten():  # type: ignore[no-untyped-def]
+    def make_private():  # type: ignore[no-untyped-def]
         with maker.begin() as session:
             heart_moment_service.change_visibility(
                 session,
-                welt["anna"],
-                welt["heart_moment_id"],
+                world["anna"],
+                world["heart_moment_id"],
                 expected_version=1,
                 visibility=ContentVisibility.PRIVATE,
             )
             return "PRIVATE"
 
-    def erneut_verknuepfen():  # type: ignore[no-untyped-def]
+    def relink():  # type: ignore[no-untyped-def]
         with maker.begin() as session:
             relation_service.link(
                 session,
-                welt["ben"],
-                welt["place_id"],
-                welt["heart_moment_id"],
+                world["ben"],
+                world["place_id"],
+                world["heart_moment_id"],
                 relation_service.PLACE_HEART_MOMENTS,
             )
             return "LINKED"
 
-    ergebnisse = set(_gleichzeitig(privat_schalten, erneut_verknuepfen))
-    assert ergebnisse <= {
+    results = set(_concurrently(make_private, relink))
+    assert results <= {
         "PRIVATE",
         "LINKED",
         "RELATION_TARGET_NOT_FOUND",
         "RESOURCE_VERSION_CONFLICT",
     }
 
-    with maker() as pruefung:
-        moment = pruefung.get(HeartMoment, welt["heart_moment_id"])
-        assert moment is not None
-        privat = moment.privacy_class == "OWNER_ONLY"
+    with maker() as verification:
+        heart_moment = verification.get(HeartMoment, world["heart_moment_id"])
+        assert heart_moment is not None
+        is_private = heart_moment.privacy_class == "OWNER_ONLY"
 
-    if privat:
-        assert _zaehle(maker, PlaceHeartMoment) == 0
+    if is_private:
+        assert _count(maker, PlaceHeartMoment) == 0
