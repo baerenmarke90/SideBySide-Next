@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Prueft laufende Statusdokumente auf objektiv erkennbare Drift.
+"""Check living status documents for objectively detectable drift.
 
-Historische Reviews sind absichtlich ausserhalb dieses Checks. Living-Status-Dateien
-duerfen keinen angeblich "aktuellen" main-SHA konservieren, weil dieser nach dem
-naechsten Merge sofort veraltet. Offene GitHub-Issues werden nur dort live
-verifiziert, wo das Dokument sie explizit als offene Markdown-Task fuehrt.
+Historical reviews are intentionally outside this check. Living-status files must
+not preserve a supposedly "current" main SHA because it becomes stale after the
+next merge. Open GitHub issues are verified live only where a document explicitly
+lists them as open Markdown tasks.
 """
 
 from __future__ import annotations
@@ -24,8 +24,10 @@ LIVING_STATUS_FILES = (
     Path("docs/ROADMAP.md"),
 )
 
-CURRENT_MAIN_SHA = re.compile(
-    r"(?im)^.*Aktueller\s+`?main`?\s*:\s*`?[0-9a-f]{7,40}`?.*$"
+# Keep the legacy German marker while the active documentation migration tracked
+# by #212 is in progress. It is matching input, not engineering prose.
+STATIC_CURRENT_MAIN_SHA = re.compile(
+    r"(?im)^.*(?:Current\s+`?main`?|Aktueller\s+`?main`?)\s*:\s*`?[0-9a-f]{7,40}`?.*$"
 )
 OPEN_ISSUE_TASK = re.compile(r"(?m)^\s*-\s*\[ \].*?#(?P<number>\d+)\b")
 
@@ -35,10 +37,10 @@ IssueStateFetcher = Callable[[int], str]
 def validate_text(path: Path, text: str, issue_state: IssueStateFetcher | None = None) -> list[str]:
     errors: list[str] = []
 
-    if CURRENT_MAIN_SHA.search(text):
+    if STATIC_CURRENT_MAIN_SHA.search(text):
         errors.append(
-            f"{path}: Living-Status darf keinen statischen 'Aktueller main'-SHA enthalten. "
-            "GitHub main ist die kanonische SHA-Quelle."
+            f"{path}: living status must not contain a static 'Current main' SHA. "
+            "GitHub main is the canonical SHA source."
         )
 
     if issue_state is not None:
@@ -47,7 +49,7 @@ def validate_text(path: Path, text: str, issue_state: IssueStateFetcher | None =
             state = issue_state(number)
             if state != "open":
                 errors.append(
-                    f"{path}: Issue #{number} ist als offen markiert, GitHub meldet aber '{state}'."
+                    f"{path}: issue #{number} is marked open, but GitHub reports '{state}'."
                 )
 
     return errors
@@ -73,13 +75,17 @@ def github_issue_state_fetcher(repository: str, token: str) -> IssueStateFetcher
             with urllib.request.urlopen(request, timeout=15) as response:
                 payload = json.load(response)
         except urllib.error.HTTPError as exc:
-            raise RuntimeError(f"GitHub-Issue #{number} konnte nicht geprueft werden: HTTP {exc.code}") from exc
+            raise RuntimeError(
+                f"GitHub issue #{number} could not be checked: HTTP {exc.code}"
+            ) from exc
         except urllib.error.URLError as exc:
-            raise RuntimeError(f"GitHub-Issue #{number} konnte nicht geprueft werden: {exc.reason}") from exc
+            raise RuntimeError(
+                f"GitHub issue #{number} could not be checked: {exc.reason}"
+            ) from exc
 
         state = payload.get("state")
         if state not in {"open", "closed"}:
-            raise RuntimeError(f"GitHub-Issue #{number} liefert ungueltigen Status: {state!r}")
+            raise RuntimeError(f"GitHub issue #{number} returned invalid state: {state!r}")
         cache[number] = state
         return state
 
@@ -91,7 +97,7 @@ def check_repository(root: Path, issue_state: IssueStateFetcher | None = None) -
     for relative_path in LIVING_STATUS_FILES:
         path = root / relative_path
         if not path.is_file():
-            errors.append(f"{relative_path}: Living-Status-Datei fehlt.")
+            errors.append(f"{relative_path}: living-status file is missing.")
             continue
         errors.extend(validate_text(relative_path, path.read_text(encoding="utf-8"), issue_state))
     return errors
@@ -103,7 +109,7 @@ def main() -> int:
     parser.add_argument(
         "--online",
         action="store_true",
-        help="Explizit als offen gefuehrte Issues gegen GitHub verifizieren.",
+        help="Verify issues explicitly listed as open against GitHub.",
     )
     args = parser.parse_args()
 
@@ -112,7 +118,7 @@ def main() -> int:
         repository = os.environ.get("GITHUB_REPOSITORY", "")
         token = os.environ.get("GITHUB_TOKEN", "")
         if not repository or not token:
-            print("--online verlangt GITHUB_REPOSITORY und GITHUB_TOKEN.", file=sys.stderr)
+            print("--online requires GITHUB_REPOSITORY and GITHUB_TOKEN.", file=sys.stderr)
             return 2
         fetcher = github_issue_state_fetcher(repository, token)
 
@@ -123,12 +129,12 @@ def main() -> int:
         return 2
 
     if errors:
-        print("Status-Drift erkannt:", file=sys.stderr)
+        print("Status drift detected:", file=sys.stderr)
         for error in errors:
             print(f"- {error}", file=sys.stderr)
         return 1
 
-    print("Living-Status ist widerspruchsfrei pruefbar.")
+    print("Living status is internally consistent and checkable.")
     return 0
 
 
