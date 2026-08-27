@@ -98,6 +98,9 @@ MILESTONE = {
     "happenedOn": "2025-06-13",
 }
 COMMENT = {"body": "Matrix Comment"}
+WISH = {"title": "Matrix Wish"}
+PLAN = {"title": "Matrix Plan", "description": "Text"}
+PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 
 SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
@@ -301,6 +304,101 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/wishes"),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/wishes", body=WISH),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/wishes/{wishId}",
+        resource_absence="WISH_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/wishes/{wishId}",
+        body={"title": "Matrix Wish aktualisiert"},
+        if_match=True,
+        resource_absence="WISH_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/wishes/{wishId}",
+        if_match=True,
+        resource_absence="WISH_NOT_FOUND",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/wishes/{wishId}/plan",
+        body={},
+        if_match=True,
+        resource_absence="WISH_NOT_FOUND",
+    ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/places"),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/places", body=PLACE),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/places/{placeId}",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/places/{placeId}",
+        body={"name": "Matrix Place aktualisiert"},
+        if_match=True,
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/places/{placeId}",
+        if_match=True,
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt("GET", "/api/v1/spaces/{spaceId}/plans"),
+    Endpunkt("POST", "/api/v1/spaces/{spaceId}/plans", body=PLAN),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/plans/{planId}",
+        resource_absence="PLAN_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/plans/{planId}",
+        body={"title": "Matrix Plan aktualisiert"},
+        if_match=True,
+        resource_absence="PLAN_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/plans/{planId}",
+        if_match=True,
+        resource_absence="PLAN_NOT_FOUND",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/plans/{planId}/schedule",
+        body={"plannedStart": "2026-09-01T18:00:00Z"},
+        if_match=True,
+        resource_absence="PLAN_NOT_FOUND",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/plans/{planId}/unschedule",
+        body={},
+        if_match=True,
+        resource_absence="PLAN_NOT_FOUND",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/plans/{planId}/complete",
+        body={"experiencedOn": "2026-08-20"},
+        if_match=True,
+        resource_absence="PLAN_NOT_FOUND",
+    ),
+    Endpunkt(
+        "POST",
+        "/api/v1/spaces/{spaceId}/plans/{planId}/return-to-wish",
+        body={},
+        if_match=True,
+        resource_absence="PLAN_NOT_FOUND",
+    ),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
     Endpunkt(
         "GET",
@@ -412,6 +510,9 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
     comment = client.post(
         f"{basis}/memories/{memory['id']}/comments", json=COMMENT, headers=kopf
     ).json()
+    wish = client.post(f"{basis}/wishes", json=WISH, headers=kopf).json()
+    place = client.post(f"{basis}/places", json=PLACE, headers=kopf).json()
+    plan = client.post(f"{basis}/plans", json=PLAN, headers=kopf).json()
     attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=kopf).json()
 
     return {
@@ -430,6 +531,9 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "heartMomentId": heart_moment["id"],
             "milestoneId": milestone["id"],
             "commentId": comment["id"],
+            "wishId": wish["id"],
+            "planId": plan["id"],
+            "placeId": place["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
@@ -537,6 +641,9 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "attachmentId",
             "milestoneId",
             "commentId",
+            "wishId",
+            "planId",
+            "placeId",
         )
         if "{" + name + "}" in endpunkt.template
     )

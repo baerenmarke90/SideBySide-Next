@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "schemaVersion": 1,
-  "updated": "2026-08-24",
+  "updated": "2026-08-26",
   "statusValues": ["planned", "in_progress", "implemented", "verified", "deprecated"],
   "platforms": ["web", "android"],
   "components": [
@@ -9,7 +9,7 @@
       "id": "button",
       "tier": "P0",
       "contract": "docs/COMPONENT-CONTRACTS.md#31-button",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {
@@ -23,7 +23,7 @@
       "id": "text-field",
       "tier": "P0",
       "contract": "docs/COMPONENT-CONTRACTS.md#41-text-field-und-text-area",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {
@@ -58,7 +58,7 @@
       "id": "content-card",
       "tier": "P0",
       "contract": "docs/COMPONENT-CONTRACTS.md#62-content-card",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {
@@ -72,7 +72,7 @@
       "id": "status-badge",
       "tier": "P0",
       "contract": "docs/COMPONENT-CONTRACTS.md#72-status-badge",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {
@@ -107,7 +107,7 @@
       "id": "inline-message",
       "tier": "P0",
       "contract": "docs/COMPONENT-CONTRACTS.md#91-inline-message",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {
@@ -121,7 +121,7 @@
       "id": "system-states",
       "tier": "P0",
       "contract": "docs/COMPONENT-CONTRACTS.md#93-skeleton-empty-state-und-error-state",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {
@@ -137,7 +137,7 @@
       "id": "app-shell",
       "tier": "P1",
       "contract": "docs/UX-PATTERNS.md#2-app-shell-und-navigation",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {
@@ -151,14 +151,14 @@
       "id": "form-page",
       "tier": "P1",
       "contract": "docs/UX-PATTERNS.md#32-erstellen-und-bearbeiten",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {
       "id": "story-timeline",
       "tier": "P1",
       "contract": "docs/SCREEN-TEMPLATES.md#4-template-story-timeline",
-      "web": "planned",
+      "web": "in_progress",
       "android": "planned"
     },
     {

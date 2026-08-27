@@ -10,15 +10,16 @@ ist kein Detail:
 | `SBS_ENVIRONMENT` | `development` (Standard) | `production` |
 | Cursor-Signing-Key | lokaler Rueckfallwert | Pflicht, mindestens 32 Zeichen |
 | Ausgehende Post | landet im Log | `smtp` oder `none`, kein `log` |
-| `SBS_PUBLIC_BASE_URL` | `http://localhost:8000` | muss `https://` sein |
+| `SBS_PUBLIC_BASE_URL` | `http://localhost:8080` | muss `https://` sein |
 | HTTPS-Zwang, Host-Pruefung | aus | an |
 | Schema-Auskunft `/docs` | offen | geschlossen |
 
 Der Standard ist der Testbetrieb. Das ist eine bewusste Entscheidung
 ([ADR 0002](decisions/0002-self-hosted-first-start-mode.md)): Ein Erststart
-soll ohne SMTP-Zugang und ohne HTTPS-Domain moeglich sein. Die API ist dabei
-ausschliesslich an `127.0.0.1` gebunden und damit auch dann nicht aus LAN oder
-Internet erreichbar, wenn die Firewall des Hosts zu offen konfiguriert ist.
+soll ohne SMTP-Zugang und ohne HTTPS-Domain moeglich sein. Web-PoC und API
+sind dabei ausschliesslich an `127.0.0.1` gebunden und damit auch dann nicht
+aus LAN oder Internet erreichbar, wenn die Firewall des Hosts zu offen
+konfiguriert ist.
 
 Die Anwendung sagt bei jedem Start, in welcher Betriebsart sie laeuft. Im
 Testbetrieb ist das eine Warnung in `docker compose logs api`.
@@ -34,25 +35,29 @@ docker compose config --quiet
 docker compose up -d --wait --wait-timeout 300
 ```
 
-`API_PORT=8000` ist nur der Vorgabewert. Der Port muss auf dem Docker-Host frei
-sein. Ist er bereits durch einen anderen Dienst belegt, vor dem Start in `.env`
-einen freien Port waehlen, zum Beispiel:
+`API_PORT=8000` und `WEB_PORT=8080` sind nur Vorgabewerte. Beide Ports
+muessen auf dem Docker-Host frei sein. Ist einer bereits belegt, vor dem Start
+in `.env` einen freien Port waehlen, zum Beispiel:
 
 ```dotenv
 API_PORT=8010
+WEB_PORT=8081
+SBS_PUBLIC_BASE_URL=http://localhost:8081
 ```
 
-Das aendert nur den Host-Port. Die API lauscht im Container weiterhin auf
-Port 8000. Ein belegter Host-Port darf nicht durch einen zweiten Dienst geteilt
-werden; `docker compose up` muss in diesem Fall eindeutig fehlschlagen.
+Das aendert nur die Host-Ports. API und Webdienst lauschen in den Containern
+weiterhin auf 8000 beziehungsweise 8080. Ein belegter Host-Port darf nicht
+durch einen zweiten Dienst geteilt werden; `docker compose up` muss in
+diesem Fall eindeutig fehlschlagen.
 
 Den tatsaechlich veroeffentlichten Port zeigt Compose an:
 
 ```bash
 docker compose port api 8000
+docker compose port web 8080
 ```
 
-Die Ausgabe muss an `127.0.0.1` gebunden sein. Eine Ausgabe mit `0.0.0.0`, `::`
+Beide Ausgaben muessen an `127.0.0.1` gebunden sein. Eine Ausgabe mit `0.0.0.0`, `::`
 oder einer unerwarteten externen Adresse ist fuer den Standardbetrieb nicht
 zulaessig.
 
@@ -61,7 +66,10 @@ HTTP-Prozess:
 
 ```bash
 api_port=$(docker compose port api 8000 | awk -F: '{print $NF}')
+web_port=$(docker compose port web 8080 | awk -F: '{print $NF}')
 curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
+curl --fail "http://127.0.0.1:${web_port}/healthz"
+curl --fail "http://127.0.0.1:${web_port}/"
 ```
 
 Erwartet wird:
@@ -69,6 +77,11 @@ Erwartet wird:
 ```json
 {"status":"ok","database":"ok"}
 ```
+
+Die Web-Startseite ist bereits ohne Space-Konfiguration sichtbar. Der
+technische Login-/Memory-/Bild-/Story-Flow wird erst aktiv, wenn
+`SBS_WEB_SPACE_ID` in `.env` auf eine vorhandene Space-UUID gesetzt und das
+Image mit `docker compose up -d --build web` neu gebaut wurde.
 
 Dieser Stand ist zum Ausprobieren gedacht und nicht zum Veroeffentlichen. Wer
 die Instanz erreichbar machen will, arbeitet vorher die Checkliste unten ab.
@@ -80,7 +93,7 @@ erreichbaren produktiven Dienst.
 
 ## Compose-Netzwerk und Readiness
 
-`postgres`, `migrate`, `api` und `worker` sind in `compose.yaml` explizit an
+`postgres`, `migrate`, `api`, `worker` und `web` sind in `compose.yaml` explizit an
 dasselbe projektbezogene Bridge-Netzwerk `app` angeschlossen. Der konkrete
 Docker-Netzwerkname enthaelt zusaetzlich den Compose-Projektnamen, damit mehrere
 SideBySide-Stacks auf demselben Host nicht kollidieren.
@@ -112,8 +125,11 @@ SideBySide trennt zwei Gesundheitsfragen:
 - `/api/v1/health` ist reine **Liveness**: der API-Prozess antwortet.
 - `/api/v1/health/ready` ist **Readiness**: die API kann auch PostgreSQL
   erreichen und einen echten `SELECT 1` ausfuehren.
+- `/healthz` am Webdienst bestaetigt nur, dass der statische Server antwortet.
+  Die Abhaengigkeit von der API wird separat durch Compose und deren Readiness
+  abgebildet.
 
-Der Docker-Healthcheck verwendet bewusst die Readiness-Route. Dadurch meldet
+Der API-Docker-Healthcheck verwendet bewusst die Readiness-Route. Dadurch meldet
 `docker compose up -d --wait` einen fehlenden Datenbank-/Netzwerkpfad als
 Deploymentfehler, auch wenn Uvicorn selbst noch laeuft. Docker Compose startet
 einen Prozess nicht allein wegen des Status `unhealthy` neu; ein kurzfristiger
@@ -129,6 +145,7 @@ SBS_CURSOR_SIGNING_KEY=...        # openssl rand -base64 48
 SBS_PUBLIC_BASE_URL=https://deine-domain.example
 SBS_ALLOWED_HOSTS=["deine-domain.example"]
 TRUSTED_PROXY_IPS=...             # kleinster IP-Bereich des Reverse-Proxys
+SBS_WEB_SPACE_ID=...              # vorhandene Space-UUID des G2-Referenzflows
 
 # Mit Mailserver:
 SBS_MAIL_TRANSPORT=smtp
@@ -161,8 +178,10 @@ stuenden gueltige Einmal-Token im Log der API und damit in jeder
 Log-Aggregation und jedem Backup davon. Der Unterschied zu `none` ist nicht
 formal: dort verlaesst kein Token das System.
 
-Danach `docker compose up -d --force-recreate --wait --wait-timeout 300` und
-pruefen, dass `docker compose logs api` den Produktionsbetrieb meldet.
+Danach `docker compose up -d --build --force-recreate --wait --wait-timeout
+300` und pruefen, dass `docker compose logs api` den Produktionsbetrieb
+meldet. `--build` ist fuer den PoC erforderlich, weil die Betreiber-Space-ID
+beim Vite-Build eingebettet wird.
 
 ## Medienablage
 
@@ -246,14 +265,29 @@ Repository-Dateien gelangen. `.env` ist deshalb in `.gitignore` ausgeschlossen.
 
 Externer Zugriff erfolgt ausschliesslich ueber einen TLS-Reverse-Proxy auf
 demselben Host oder in einem kontrollierten privaten Netz. Der sichere
-Standard bindet die API in `compose.yaml` nur an Loopback. Ein Reverse-Proxy auf
-demselben Host kann daher an `http://127.0.0.1:<API_PORT>` weiterleiten.
+Standard bindet Web und API in `compose.yaml` nur an Loopback.
 
-Steht der Reverse-Proxy auf einem **anderen** Host, ist Loopback dort nicht
-erreichbar. Dann braucht das Deployment eine bewusst konfigurierte, auf das
-private Netz begrenzte Weiterleitung statt einer pauschalen Freigabe auf
-`0.0.0.0`. Diese Freigabe gehoert zur Hoster-Konfiguration und darf nicht
-versehentlich durch den Standard-Compose-Stack entstehen.
+Auf demselben Host braucht der Proxy zwei Ziele auf derselben oeffentlichen
+HTTPS-Origin:
+
+| Pfad | internes Ziel |
+|---|---|
+| `/api/` | `http://127.0.0.1:<API_PORT>` |
+| alle anderen Pfade | `http://127.0.0.1:<WEB_PORT>` |
+
+Die spezifischere `/api/`-Route muss vor der allgemeinen Web-Route greifen.
+Sie geht in Produktion **direkt** zur API, nicht durch den Web-Container.
+Nur der lokale Loopback-Test verwendet dessen internen `/api/`-Proxy. So
+bleibt der TLS-Reverse-Proxy der eine vertrauenswuerdige Hop fuer
+`X-Forwarded-*`, und `TRUSTED_PROXY_IPS` muss weder um das Compose-Netz
+noch um `*` erweitert werden.
+
+Steht der Reverse-Proxy auf einem **anderen** Host, sind beide Loopback-Ziele
+dort nicht erreichbar. Dann braucht das Deployment eine bewusst konfigurierte,
+auf das private Netz begrenzte Weiterleitung fuer Web und API statt einer
+pauschalen Freigabe auf `0.0.0.0`. Diese Freigabe gehoert zur
+Hoster-Konfiguration und darf nicht versehentlich durch den
+Standard-Compose-Stack entstehen.
 
 In `.env` werden zusaetzlich gesetzt:
 
@@ -273,6 +307,16 @@ TRUSTED_PROXY_IPS=192.0.2.10
 Die Anwendung lehnt einen erlaubten externen Host trotzdem ab, solange das von
 Uvicorn bereinigte Request-Scheme nicht `https` ist. Ein normaler Client kann
 diese Pruefung nicht allein durch einen gefaelschten Forwarded Header umgehen.
+
+Nach der Proxy-Konfiguration muessen beide Pfade funktionieren:
+
+```bash
+curl --fail https://sidebyside.example.com/
+curl --fail https://sidebyside.example.com/api/v1/health/ready
+```
+
+Antwortet die API-Readiness, aber die Startseite nicht, zeigt die allgemeine
+Route noch auf den API-Port statt auf den Web-Port.
 
 ## Ausgehende E-Mail
 

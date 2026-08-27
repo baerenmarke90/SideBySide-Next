@@ -25,7 +25,9 @@ from __future__ import annotations
 from sidebyside.authorization.guard import (
     readable,
     require_readable,
+    require_readable_shared,
     require_writable,
+    require_writable_locked,
     writable,
 )
 from sidebyside.authorization.models import PrivateResource, PrivateResourceMixin
@@ -36,6 +38,7 @@ from sidebyside.authorization.privacy import (
     ContentVisibility,
     PrivacyClass,
     ResourceAbsence,
+    SharedWrite,
     privacy_class_type,
     privacy_for,
     visibility_of,
@@ -52,13 +55,16 @@ __all__ = [
     "PrivateResource",
     "PrivateResourceMixin",
     "ResourceAbsence",
+    "SharedWrite",
     "access_clause",
     "privacy_class_type",
     "privacy_clause",
     "privacy_for",
     "readable",
     "require_readable",
+    "require_readable_shared",
     "require_writable",
+    "require_writable_locked",
     "visibility_of",
     "writable",
 ]

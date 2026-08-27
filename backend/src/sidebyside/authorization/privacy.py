@@ -37,6 +37,27 @@ class PrivacyClass(StrEnum):
     SYSTEM_METADATA = "SYSTEM_METADATA"
 
 
+class SharedWrite(StrEnum):
+    """Wer eine `SPACE_SHARED`-Zeile aendern darf.
+
+    `SPACE_SHARED` beantwortet die Lesefrage eindeutig - beide Partner -,
+    die Schreibfrage aber nicht. Memory und Milestone bleiben author-only
+    (Spezifikation, Abschnitt 14); die gemeinsamen M3-Planungs- und
+    Listenressourcen Wish, Plan, Place, Chapter und Collection sind
+    ausdruecklich `collaborative write` (M3-D01).
+
+    Das ist eine Eigenschaft der Domaene, nicht der Klasse: dieselbe
+    Privacy-Klasse traegt beide Formen. Deshalb sagt das Modell sie einmal
+    an, statt dass ein Endpunkt eine Ausnahme formuliert.
+
+    Fuer `OWNER_ONLY` gibt es die Wahl nicht - dort schreibt ausschliesslich
+    der Eigentuemer, und der Partner steht Fremden gleich.
+    """
+
+    AUTHOR_ONLY = "AUTHOR_ONLY"
+    COLLABORATIVE = "COLLABORATIVE"
+
+
 class ContentVisibility(StrEnum):
     """Die fachliche Sichtbarkeit aus Abschnitt 15 der Spezifikation.
 

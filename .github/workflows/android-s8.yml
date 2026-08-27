@@ -26,10 +26,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle 9.5.0
+      - name: Set up Gradle cache and validate wrapper
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-        with:
-          gradle-version: "9.5.0"
+
+      - name: Verify pinned Gradle wrapper JAR
+        working-directory: android
+        shell: bash
+        run: |
+          printf '%s  %s\n' \
+            '497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7' \
+            'gradle/wrapper/gradle-wrapper.jar' \
+            | sha256sum --check --strict -
 
       - name: Install Android SDK 37.1
         run: |
@@ -37,12 +44,61 @@ jobs:
 
       - name: Unit, semantics and contract tests
         working-directory: android
-        run: gradle --no-daemon --stacktrace :app:testDebugUnitTest
+        run: ./gradlew --no-daemon --stacktrace --dependency-verification strict :app:testDebugUnitTest
 
       - name: Android lint
         working-directory: android
-        run: gradle --no-daemon --stacktrace :app:lintDebug
+        run: ./gradlew --no-daemon --stacktrace --dependency-verification strict :app:lintDebug
 
       - name: Reproducible debug build
         working-directory: android
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
+        run: ./gradlew --no-daemon --stacktrace --dependency-verification strict :app:assembleDebug
+
+      - name: Dependency verification rejects tampered metadata
+        working-directory: android
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata='gradle/verification-metadata.xml'
+          backup="$RUNNER_TEMP/verification-metadata.xml"
+          log="$RUNNER_TEMP/dependency-verification-negative.log"
+          cp "$metadata" "$backup"
+          trap 'cp "$backup" "$metadata"' EXIT
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("gradle/verification-metadata.xml")
+          text = path.read_text(encoding="utf-8")
+          tampered, count = re.subn(
+              r'(<sha256 value=")[0-9a-f]{64}(")',
+              lambda match: match.group(1) + ("0" * 64) + match.group(2),
+              text,
+          )
+          if count == 0:
+              raise SystemExit("Keine SHA-256-Eintraege zum Negativtest gefunden.")
+          path.write_text(tampered, encoding="utf-8")
+          print(f"Negativtest manipuliert {count} SHA-256-Eintraege temporaer.")
+          PY
+
+          set +e
+          ./gradlew --no-daemon --stacktrace --refresh-dependencies \
+            --dependency-verification strict help >"$log" 2>&1
+          status=$?
+          set -e
+
+          cp "$backup" "$metadata"
+          trap - EXIT
+
+          if [[ "$status" -eq 0 ]]; then
+            cat "$log"
+            echo "Dependency Verification hat manipulierte Checksums unerwartet akzeptiert."
+            exit 1
+          fi
+          if ! grep -q "Dependency verification failed" "$log"; then
+            cat "$log"
+            echo "Gradle scheiterte nicht eindeutig an Dependency Verification."
+            exit 1
+          fi
+          echo "Manipulierte Dependency-Checksums wurden erwartungsgemaess abgewiesen."
