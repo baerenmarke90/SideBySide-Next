@@ -10,12 +10,17 @@ import kotlinx.coroutines.launch
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
 
+data class UiMessage(
+    val resourceId: Int,
+    val args: List<Any> = emptyList(),
+)
+
 data class ReferenceUiState(
     val configured: Boolean = false,
     val loggedIn: Boolean = false,
     val busy: Boolean = false,
-    val status: String = "",
-    val error: String? = null,
+    val status: UiMessage? = null,
+    val error: UiMessage? = null,
     val selectedImageName: String? = null,
     val lastMemoryTitle: String? = null,
     val lastMemoryBody: String? = null,
@@ -39,7 +44,7 @@ class ReferenceViewModel(
         val api = contract ?: return configurationError()
         if (!config.isConfigured) return configurationError()
         if (email.isBlank() || password.isBlank()) {
-            setError("E-Mail und Passwort werden benötigt.")
+            setError(message(R.string.ref_error_credentials_required))
             return
         }
 
@@ -47,7 +52,7 @@ class ReferenceViewModel(
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
-            mutate { it.copy(busy = true, error = null, status = "Anmeldung läuft …") }
+            mutate { it.copy(busy = true, error = null, status = message(R.string.ref_login_pending)) }
             runCatching { api.signIn(email.trim(), password) }
                 .onSuccess { signedIn ->
                     if (attemptEpoch != sessionEpoch) return@onSuccess
@@ -57,7 +62,7 @@ class ReferenceViewModel(
                         it.copy(
                             loggedIn = true,
                             busy = false,
-                            status = "Angemeldet.",
+                            status = message(R.string.ref_status_logged_in),
                             error = null,
                             selectedImageName = null,
                             lastMemoryTitle = null,
@@ -68,9 +73,9 @@ class ReferenceViewModel(
                     }
                     refreshStory()
                 }
-                .onFailure { throwable ->
+                .onFailure {
                     if (attemptEpoch == sessionEpoch) {
-                        failure("Anmeldung fehlgeschlagen", throwable)
+                        failure(R.string.ref_error_login_failed)
                     }
                 }
         }
@@ -85,7 +90,7 @@ class ReferenceViewModel(
             it.copy(
                 selectedImageName = image.displayName,
                 error = null,
-                status = "Bild ausgewählt: ${image.displayName}",
+                status = message(R.string.ref_image_selected, image.displayName),
             )
         }
     }
@@ -93,11 +98,14 @@ class ReferenceViewModel(
     fun setImageError(throwable: Throwable, selectionEpoch: Long) {
         if (!isCurrentSessionEpoch(selectionEpoch)) return
         selectedImage = null
+        val error = throwable.message?.takeIf(String::isNotBlank)?.let {
+            message(R.string.ref_error_image_selection_detail, it)
+        } ?: message(R.string.ref_error_image_selection_failed)
         mutate {
             it.copy(
                 selectedImageName = null,
-                error = throwable.message ?: "Das Bild konnte nicht ausgewählt werden.",
-                status = "",
+                error = error,
+                status = null,
             )
         }
     }
@@ -105,23 +113,23 @@ class ReferenceViewModel(
     fun createMemory(title: String, body: String, happenedOnText: String) {
         val api = contract ?: return configurationError()
         val currentSession = session ?: run {
-            setError("Bitte zuerst anmelden.")
+            setError(message(R.string.ref_error_login_required))
             return
         }
         val image = selectedImage ?: run {
-            setError("Bitte zuerst ein Bild auswählen.")
+            setError(message(R.string.ref_error_image_required))
             return
         }
         val spaceId = config.spaceId ?: return configurationError()
         if (title.isBlank() || body.isBlank()) {
-            setError("Titel und Erinnerung werden benötigt.")
+            setError(message(R.string.ref_error_memory_fields_required))
             return
         }
         val happenedOn = if (happenedOnText.isBlank()) {
             null
         } else {
             runCatching { LocalDate.parse(happenedOnText.trim()) }.getOrElse {
-                setError("Datum bitte als JJJJ-MM-TT eingeben.")
+                setError(message(R.string.ref_error_date_format))
                 return
             }
         }
@@ -133,7 +141,7 @@ class ReferenceViewModel(
                 it.copy(
                     busy = true,
                     error = null,
-                    status = "Erinnerung und Bild werden gespeichert …",
+                    status = message(R.string.ref_status_save_pending),
                     lastMemoryTitle = null,
                     lastMemoryBody = null,
                     lastImageBytes = null,
@@ -154,7 +162,7 @@ class ReferenceViewModel(
                 mutate {
                     it.copy(
                         busy = false,
-                        status = "Erinnerung und Bild wurden über den M2-Vertrag gespeichert.",
+                        status = message(R.string.ref_status_save_success),
                         error = null,
                         lastMemoryTitle = result.memory.title,
                         lastMemoryBody = result.memory.body,
@@ -162,9 +170,9 @@ class ReferenceViewModel(
                         storyItems = result.story.items,
                     )
                 }
-            }.onFailure { throwable ->
+            }.onFailure {
                 if (isCurrentSession(operationEpoch, currentSession)) {
-                    failure("Speichern fehlgeschlagen", throwable)
+                    failure(R.string.ref_error_save_failed)
                 }
             }
         }
@@ -183,9 +191,9 @@ class ReferenceViewModel(
                         mutate { it.copy(storyItems = story.items, error = null) }
                     }
                 }
-                .onFailure { throwable ->
+                .onFailure {
                     if (isCurrentSession(operationEpoch, currentSession)) {
-                        failure("Story konnte nicht geladen werden", throwable, clearBusy = false)
+                        failure(R.string.ref_error_story_load_failed, clearBusy = false)
                     }
                 }
         }
@@ -195,7 +203,10 @@ class ReferenceViewModel(
         sessionEpoch += 1
         session = null
         selectedImage = null
-        _uiState.value = ReferenceUiState(configured = config.isConfigured, status = "Abgemeldet.")
+        _uiState.value = ReferenceUiState(
+            configured = config.isConfigured,
+            status = message(R.string.ref_status_logged_out),
+        )
     }
 
     private fun isCurrentSessionEpoch(epoch: Long): Boolean =
@@ -205,20 +216,19 @@ class ReferenceViewModel(
         sessionEpoch == epoch && session === currentSession
 
     private fun configurationError() {
-        setError("Der M2-Referenzflow ist operatorseitig noch nicht konfiguriert.")
+        setError(message(R.string.ref_not_configured))
     }
 
-    private fun setError(message: String) {
-        mutate { it.copy(busy = false, error = message, status = "") }
+    private fun setError(message: UiMessage) {
+        mutate { it.copy(busy = false, error = message, status = null) }
     }
 
-    private fun failure(prefix: String, throwable: Throwable, clearBusy: Boolean = true) {
-        val detail = throwable.message?.takeIf(String::isNotBlank) ?: "Unbekannter Fehler."
+    private fun failure(resourceId: Int, clearBusy: Boolean = true) {
         mutate {
             it.copy(
                 busy = if (clearBusy) false else it.busy,
-                error = "$prefix: $detail",
-                status = "",
+                error = message(resourceId),
+                status = null,
             )
         }
     }
@@ -226,4 +236,7 @@ class ReferenceViewModel(
     private inline fun mutate(update: (ReferenceUiState) -> ReferenceUiState) {
         _uiState.value = update(_uiState.value)
     }
+
+    private fun message(resourceId: Int, vararg args: Any): UiMessage =
+        UiMessage(resourceId = resourceId, args = args.toList())
 }

@@ -14,33 +14,51 @@ env:
   UV_VERSION: "0.12.5"
 
 jobs:
+  changes:
+    name: Change Detection
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.scope.outputs.backend }}
+      self_hosted: ${{ steps.scope.outputs.self_hosted }}
+      supply_chain: ${{ steps.scope.outputs.supply_chain }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Filterlogik testen
+        run: python3 tools/ci/test_change_scope.py
+
+      - name: Relevante Aenderungsflaechen bestimmen
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "self_hosted=true" >> "$GITHUB_OUTPUT"
+            echo "supply_chain=true" >> "$GITHUB_OUTPUT"
+            echo "Push auf main: alle teuren CI-Gates bleiben aktiv."
+            exit 0
+          fi
+
+          # Renames werden absichtlich als Delete+Add betrachtet. Dadurch
+          # aktiviert auch eine Verschiebung aus einem Runtime-Pfad heraus
+          # das urspruenglich betroffene Gate; Loeschungen sind ebenfalls drin.
+          git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-files.txt
+          echo "Geaenderte Dateien:"
+          cat /tmp/changed-files.txt
+          python3 tools/ci/change_scope.py /tmp/changed-files.txt >> "$GITHUB_OUTPUT"
+
   backend:
     name: Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
-
-    # Die Integrationstests laufen hier gegen echtes PostgreSQL. Auf
-    # Entwicklungsrechnern ohne Datenbank werden sie uebersprungen - die CI
-    # ist der Ort, an dem sie verbindlich laufen.
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: sidebyside
-          POSTGRES_PASSWORD: sidebyside
-          POSTGRES_DB: sidebyside_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U sidebyside -d sidebyside_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
     env:
       SBS_ENVIRONMENT: test
-      SBS_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
-      SBS_TEST_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
-
     defaults:
       run:
         working-directory: backend
@@ -99,6 +117,58 @@ jobs:
       - name: OpenAPI-Vertrag
         run: uv run --frozen python scripts/openapi_contract.py check
 
+      - name: Tests ohne Integration
+        run: uv run --frozen pytest -m "not integration" -q
+
+  backend-integration:
+    name: Backend Integration
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+
+    # Datenbanktests und Schema-/Migrationschecks laufen getrennt vom
+    # statischen/Unit-Gate. Dadurch werden die teuren Integrationstests pro
+    # Commit genau einmal ausgefuehrt und beide Backend-Gates koennen parallel
+    # laufen.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sidebyside
+          POSTGRES_PASSWORD: sidebyside
+          POSTGRES_DB: sidebyside_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sidebyside -d sidebyside_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      SBS_ENVIRONMENT: test
+      SBS_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+      SBS_TEST_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Gesperrte Abhaengigkeiten
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv lock --check
+          uv sync --frozen
+
       - name: Migrationen
         run: uv run --frozen alembic upgrade head
 
@@ -113,9 +183,6 @@ jobs:
             exit 1
           fi
           rm alembic/versions/drift_check_*.py
-
-      - name: Tests
-        run: uv run --frozen pytest -q
 
       - name: Integrationstests sind wirklich gelaufen
         # Ein uebersprungener Sicherheitstest darf nicht wie ein bestandener
@@ -143,6 +210,8 @@ jobs:
 
   self-hosted:
     name: Self-Hosted Start
+    needs: changes
+    if: needs.changes.outputs.self_hosted == 'true'
     runs-on: ubuntu-latest
     # Der Fehler aus #110 ist an allen Gates vorbeigekommen, weil CI die
     # Compose-Datei nur geparst und Alembic unter SBS_ENVIRONMENT=test
@@ -171,15 +240,18 @@ jobs:
             exit 1
           fi
 
-      - name: Healthcheck ueber den veroeffentlichten Port
-        run: curl --fail --silent --show-error http://127.0.0.1:8000/api/v1/health
+      - name: Healthchecks ueber die veroeffentlichten Ports
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:8000/api/v1/health
+          curl --fail --silent --show-error http://127.0.0.1:8080/healthz
+          curl --fail --silent --show-error http://127.0.0.1:8080/ | grep -Fq "<title>SideBySide Next"
 
       - name: Kein Runtime-Dienst ist an der Konfiguration gescheitert
         # Ein fehlender Settings-Wert beendet den Prozess sofort; unter
         # restart: unless-stopped sieht das nach kurzer Zeit wie ein
         # Neustartkarussell aus und nicht wie ein Fehler.
         run: |
-          for dienst in api worker; do
+          for dienst in api worker web; do
             status=$(docker compose ps --format json "$dienst" | jq -r '.State')
             if [ "$status" != "running" ]; then
               echo "$dienst laeuft nicht ($status):"
@@ -282,6 +354,8 @@ jobs:
 
   supply-chain:
     name: Supply Chain
+    needs: changes
+    if: needs.changes.outputs.supply_chain == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -308,8 +382,10 @@ jobs:
           uv run --frozen python scripts/check_dependency_inventory.py ../docs/DEPENDENCIES.md
       - name: Backend-Wheel ohne Cache bauen
         run: uv build --no-cache --wheel --out-dir /tmp/sidebyside-dist
-      - name: Produktionscontainer frisch bauen
+      - name: Backend-Produktionscontainer frisch bauen
         run: docker build --pull --no-cache --tag sidebyside-next:ci .
+      - name: Web-Produktionscontainer frisch bauen
+        run: docker build --pull --no-cache --tag sidebyside-next-web:ci ../web
 
   secrets:
     name: Secret Scan

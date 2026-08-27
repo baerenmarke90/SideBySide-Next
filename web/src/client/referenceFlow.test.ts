@@ -1,10 +1,41 @@
+import { AuthApi } from '../api/generated/apis/AuthApi';
 import { ReadDescriptorMethodEnum } from '../api/generated/models/ReadDescriptor';
 import { UploadDescriptorMethodEnum } from '../api/generated/models/UploadDescriptor';
+import { ResponseError } from '../api/generated/runtime';
 import {
+  ReferenceFlowError,
   runMemoryMediaStoryFlow,
+  signIn,
   uploadAttachmentBytes,
   type ReferenceApis,
 } from './referenceFlow';
+
+describe('signIn', () => {
+  it('keeps the machine-readable API code while presenting the localized client fallback', async () => {
+    const response = new Response(
+      JSON.stringify({
+        type: 'bad_request',
+        title: 'Bad request',
+        status: 400,
+        detail: 'HTTPS is required for non-loopback access.',
+        code: 'HTTPS_REQUIRED',
+      }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+    const spy = vi
+      .spyOn(AuthApi.prototype, 'signInApiV1AuthSignInPost')
+      .mockRejectedValue(new ResponseError(response, 'Response returned an error code'));
+
+    try {
+      const error = await signIn('', 'g2-test@example.invalid', 'password').catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(ReferenceFlowError);
+      expect((error as ReferenceFlowError).message).toBe('Anmeldung fehlgeschlagen.');
+      expect((error as ReferenceFlowError).code).toBe('HTTPS_REQUIRED');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
 
 describe('uploadAttachmentBytes', () => {
   it('adds bearer authorization only for the authenticated STREAM transport', async () => {

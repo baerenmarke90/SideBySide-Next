@@ -26,6 +26,9 @@ The current candidate list is maintained in `docs/EXTERNAL-PROVIDER-CANDIDATES.m
 
 A relevant Pull Request without a documented reuse review is not merge-ready. Pure domain changes may mark the review as `not relevant` with a short justification.
 
+Automated version bumps of already adopted dependencies are exempt; the
+automated gate skips pull requests opened by `dependabot[bot]`.
+
 ## Contributor License Agreement
 
 By submitting a contribution, you agree to the terms in `CLA.md`.

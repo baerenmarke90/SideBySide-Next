@@ -13,8 +13,29 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PR_BODY: ${{ github.event.pull_request.body }}
+      PR_AUTHOR: ${{ github.event.pull_request.user.login }}
     steps:
+      # Automatisierte Versionsanhebungen treffen keine Reuse-Entscheidung. Die
+      # Komponente ist bereits gewaehlt; docs/REUSE-BEFORE-BUILD.md verlangt die
+      # Pruefung fuer neue umfangreiche Abhaengigkeiten, nicht fuer deren
+      # Pflege. Dependabot kann den Beschreibungstext ausserdem nicht setzen,
+      # der Gate wuerde dort dauerhaft und ohne fachlichen Gehalt rot bleiben.
+      - name: Automatisierte Dependency-Updates sind ausgenommen
+        id: exemption
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${PR_AUTHOR:-}" = "dependabot[bot]" ]; then
+            echo "Automatisiertes Dependency-Update von ${PR_AUTHOR}."
+            echo "Reuse-before-build wird nicht erneut geprueft."
+            echo "exempt=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exempt=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Reuse-Entscheidung ist dokumentiert
+        if: steps.exemption.outputs.exempt != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -46,6 +67,7 @@ jobs:
           echo "Reuse-before-build-Entscheidung ist vorhanden."
 
       - name: Begruendungsabschnitte sind vorhanden
+        if: steps.exemption.outputs.exempt != 'true'
         shell: bash
         run: |
           set -euo pipefail

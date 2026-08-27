@@ -1,0 +1,41 @@
+.story-media-preview,
+.story-media-skeleton,
+.story-media-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  margin-bottom: 0.9rem;
+  border-radius: 0.85rem;
+}
+
+.story-media-preview {
+  object-fit: cover;
+  background: var(--color-surface-subtle);
+}
+
+.story-media-skeleton {
+  background: linear-gradient(
+    100deg,
+    var(--color-shimmer-base, #f2eef5) 25%,
+    var(--color-shimmer-highlight, #faf8fc) 45%,
+    var(--color-shimmer-base, #f2eef5) 65%
+  );
+  background-size: 200% 100%;
+  animation: story-shimmer 1.6s linear infinite;
+}
+
+.story-media-placeholder {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--color-border);
+  padding: 1rem;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.visually-hidden-input:focus-visible + .file-picker {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}

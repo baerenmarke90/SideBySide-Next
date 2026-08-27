@@ -11,12 +11,12 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Response, status
+from fastapi import APIRouter, Depends, Path, Request, Response, status
 
 from sidebyside.api.deps import CurrentAccount, CurrentSession, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.auth import cloud, local, oidc, passkeys, sessions
+from sidebyside.auth import cloud, local, oidc, passkey_abuse, passkeys, sessions
 from sidebyside.auth.local import SignedIn
 from sidebyside.config import get_settings
 from sidebyside.mail import MailSender, sender
@@ -435,15 +435,17 @@ def finish_passkey_registration(
 @router.post(
     "/auth/passkeys/authentication/start",
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(422),
+    responses=problem_responses(422, 429),
 )
-def start_passkey_authentication(session: DbSession) -> dict[str, Any]:
+def start_passkey_authentication(request: Request, session: DbSession) -> dict[str, Any]:
     """Eine Anmeldung mit Passkey beginnen.
 
     Ohne Kontobezug: der Authenticator waehlt selbst, welches auffindbare
     Credential er anbietet. Ein Endpunkt, der zu einer Adresse die
     passenden Credentials nennt, waere ein Verzeichnis der Konten.
     """
+    client_host = request.client.host if request.client is not None else None
+    passkey_abuse.reserve_authentication_start(session, client_host)
     return passkeys.start_authentication(session)
 
 
