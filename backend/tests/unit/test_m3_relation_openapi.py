@@ -1,15 +1,15 @@
-"""Der Relations-Slice muss den in M3-D08/D09 entschiedenen Vertrag spiegeln.
+"""The Relations slice must mirror the contract decided in M3-D08/D09.
 
-Zwei Zusicherungen leben ausschliesslich in der Form des Vertrags.
+Two guarantees exist exclusively in the shape of the contract.
 
-Der Zieltyp steht im Pfad, nicht im Body. Es gibt keine Operation, die
-einen `targetType` entgegennimmt, und keine Union in den Komponenten -
-genau das trennt Option A aus `docs/m3/API-DESIGN.md` von der
-`(targetType,targetId)`-Polymorphie, die M3-D08 ausschliesst.
+The target type is encoded in the path, not the body. No operation accepts a
+`targetType`, and no component union exists. That is exactly what separates
+Option A in `docs/m3/API-DESIGN.md` from the `(targetType,targetId)`
+polymorphism excluded by M3-D08.
 
-Und: keine dieser Operationen hat einen Request Body. Eine Relation
-besteht ausschliesslich aus den beiden IDs im Pfad; ein Body waere Platz
-fuer ein Feld, das eine der beiden Seiten noch einmal anders benennt.
+None of these operations has a request body. A relation consists exclusively
+of the two IDs in the path; a body would create room for a field that names one
+of the sides differently again.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ SLUGS = ("memories", "heart-moments", "milestones")
 
 PLACE_DETAIL = "/api/v1/spaces/{spaceId}/places/{placeId}"
 
-OPERATIONEN = {
+OPERATIONS = {
     "memories": ("listPlaceMemories", "linkPlaceMemory", "unlinkPlaceMemory"),
     "heart-moments": ("listPlaceHeartMoments", "linkPlaceHeartMoment", "unlinkPlaceHeartMoment"),
     "milestones": ("listPlaceMilestones", "linkPlaceMilestone", "unlinkPlaceMilestone"),
@@ -38,9 +38,8 @@ def _paths() -> dict[str, dict[str, dict]]:
 
 
 def _collection(slug: str) -> str:
-    # Zusammengesetzt statt formatiert: die Vorlage traegt selbst
-    # geschweifte Klammern fuer spaceId und placeId, die hier stehen
-    # bleiben muessen.
+    # Concatenate rather than format: the template itself contains braces for
+    # spaceId and placeId, and they must remain in the resulting path.
     return f"{PLACE_DETAIL}/{slug}"
 
 
@@ -51,64 +50,64 @@ def _item(slug: str) -> str:
 @pytest.mark.parametrize("slug", SLUGS)
 def test_relation_routes_have_frozen_operation_ids(slug: str) -> None:
     paths = _paths()
-    liste, verknuepfen, loesen = OPERATIONEN[slug]
-    assert paths[_collection(slug)]["get"]["operationId"] == liste
-    assert paths[_item(slug)]["put"]["operationId"] == verknuepfen
-    assert paths[_item(slug)]["delete"]["operationId"] == loesen
+    list_operation, link_operation, unlink_operation = OPERATIONS[slug]
+    assert paths[_collection(slug)]["get"]["operationId"] == list_operation
+    assert paths[_item(slug)]["put"]["operationId"] == link_operation
+    assert paths[_item(slug)]["delete"]["operationId"] == unlink_operation
 
 
 @pytest.mark.parametrize("slug", SLUGS)
 def test_relation_writes_have_no_request_body(slug: str) -> None:
     item = _paths()[_item(slug)]
-    for methode in ("put", "delete"):
-        assert "requestBody" not in item[methode], methode
+    for method in ("put", "delete"):
+        assert "requestBody" not in item[method], method
 
 
 @pytest.mark.parametrize("slug", SLUGS)
 def test_relation_writes_answer_204(slug: str) -> None:
-    """`PUT` ist idempotent und unterscheidet nicht nach Vorzustand.
+    """`PUT` is idempotent and does not distinguish the previous state.
 
-    Kein `201` gegen `200`: der Unterschied waere eine Auskunft darueber,
-    was ein anderes Geraet kurz zuvor getan hat.
+    There is no `201` versus `200` distinction: that difference would disclose
+    what another device had done shortly before.
     """
     item = _paths()[_item(slug)]
-    for methode in ("put", "delete"):
-        assert "204" in item[methode]["responses"], methode
-        assert "200" not in item[methode]["responses"], methode
-        assert "201" not in item[methode]["responses"], methode
+    for method in ("put", "delete"):
+        assert "204" in item[method]["responses"], method
+        assert "200" not in item[method]["responses"], method
+        assert "201" not in item[method]["responses"], method
 
 
 def test_no_operation_takes_a_target_type_discriminator() -> None:
-    """Der Gegentest zu Option B aus `docs/m3/API-DESIGN.md`.
+    """Counter-check for Option B in `docs/m3/API-DESIGN.md`.
 
-    Kein Pfad, kein Parameter und kein Schemafeld benennt einen Zieltyp.
-    Waere hier je ein `targetType` erlaubt, waere die Allowlist nicht mehr
-    der Vertrag, sondern eine Laufzeitpruefung dahinter.
+    No path, parameter, or schema field names a target type. If a `targetType`
+    were allowed here, the allowlist would no longer be the contract but merely
+    a runtime check behind it.
     """
     schema = _schema()
-    relationspfade = {
-        pfad: operationen
-        for pfad, operationen in schema["paths"].items()  # type: ignore[union-attr]
-        if "/places/{placeId}/" in pfad
+    relation_paths = {
+        path: operations
+        for path, operations in schema["paths"].items()  # type: ignore[union-attr]
+        if "/places/{placeId}/" in path
     }
-    assert relationspfade, "keine Relationsrouten im Vertrag"
+    assert relation_paths, "no relation routes in contract"
 
-    for pfad, operationen in relationspfade.items():
-        for methode, operation in operationen.items():
-            namen = {p["name"] for p in operation.get("parameters", [])}
-            assert "targetType" not in namen, f"{methode} {pfad}"
-            assert "relation" not in namen, f"{methode} {pfad}"
+    for path, operations in relation_paths.items():
+        for method, operation in operations.items():
+            names = {parameter["name"] for parameter in operation.get("parameters", [])}
+            assert "targetType" not in names, f"{method} {path}"
+            assert "relation" not in names, f"{method} {path}"
 
     assert "targetType" not in str(schema["components"])
 
 
 def test_relation_reads_return_ids_only() -> None:
-    """Die Liste liefert IDs und keine Inhalte.
+    """The list returns IDs and no content.
 
-    Eine Relationsliste, die Titel oder Text mitliefert, waere ein zweiter
-    Leseweg mit eigener Autorisierung - und zwei Lesewege driften.
+    A relation list that also returned titles or text would be a second read
+    path with separate authorization, and two read paths can drift.
     """
-    komponenten = _schema()["components"]["schemas"]  # type: ignore[index]
-    ziele = komponenten["RelationTargets"]
-    assert set(ziele["properties"]) == {"items"}
-    assert ziele["properties"]["items"]["items"]["format"] == "uuid"
+    components = _schema()["components"]["schemas"]  # type: ignore[index]
+    targets = components["RelationTargets"]
+    assert set(targets["properties"]) == {"items"}
+    assert targets["properties"]["items"]["items"]["format"] == "uuid"
