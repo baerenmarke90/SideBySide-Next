@@ -1,4 +1,4 @@
-"""Persistenz fuer gemeinsame M3-Places."""
+"""Persistence for shared M3 places."""
 
 from __future__ import annotations
 
@@ -20,11 +20,11 @@ from sidebyside.db.protected_payload import ProtectedPayloadJSON
 from sidebyside.domain.payload import CRYPTO_VERSION_PLAINTEXT, ProtectedPayload
 
 COORDINATE_PLACES = 6
-"""Nachkommastellen, die persistiert werden (M3-D06).
+"""Number of persisted decimal places (M3-D06).
 
-Sechs Stellen sind rund elf Zentimeter. Mehr waere keine Genauigkeit,
-sondern nur eine praezisere Aussage darueber, wo zwei Menschen waren -
-und genau die soll nicht ungefragt entstehen.
+Six decimal places are roughly eleven centimeters. More would not add real
+accuracy; it would only make a more precise statement about where two people
+were, which must not be created without intent.
 """
 
 LATITUDE_LIMIT = Decimal(90)
@@ -32,13 +32,13 @@ LONGITUDE_LIMIT = Decimal(180)
 
 
 class PlacePayload(ProtectedPayload):
-    """Der schuetzenswerte Textinhalt eines Places.
+    """Protected text content of a place.
 
-    Name, Beschreibung und Adresse liegen hinter der Grenze. Die
-    Koordinaten liegen nach M3-D06 ausdruecklich daneben als typisierte
-    Spalten - fuer Validierung und spaetere Kartenfunktionen. Ihre
-    Klassifizierung aendert das nicht: sie bleiben sensibler Inhalt und
-    gehoeren in kein Log, kein Event und kein Metriklabel.
+    Name, description, and address live behind the protected-payload
+    boundary. Coordinates deliberately remain outside it as typed columns
+    under M3-D06, for validation and later map features. This does not change
+    their classification: they remain sensitive content and must appear in no
+    log, event, or metric label.
     """
 
     name: str
@@ -53,13 +53,12 @@ class Place(
     PrivateResourceMixin,
     Base,
 ):
-    """Ein gemeinsamer Ort.
+    """A shared place.
 
-    Ein Place darf ohne Koordinaten existieren - viele Orte eines Paares
-    sind ein Name und sonst nichts. Es gibt keine Deduplizierung: zwei
-    Orte mit demselben Namen sind zwei Orte, und sie ungefragt
-    zusammenzufuehren waere eine Datenaenderung, die niemand angefordert
-    hat (M3-D07).
+    A place may exist without coordinates - many places meaningful to a
+    couple are just a name. There is no deduplication: two places with the
+    same name are two places. Merging them without an explicit request would
+    be an unsolicited data mutation (M3-D07).
     """
 
     __tablename__ = "places"
@@ -69,9 +68,9 @@ class Place(
     )
     shared_write: ClassVar[SharedWrite] = SharedWrite.COLLABORATIVE
 
-    # 90.000000 braucht acht Stellen, 180.000000 neun. Numeric und nicht
-    # Float: eine Koordinate ist eine Dezimalzahl mit fester Genauigkeit,
-    # und binaere Rundung wuerde sie bei jedem Schreiben leicht verschieben.
+    # 90.000000 needs eight digits, 180.000000 nine. Use Numeric rather than
+    # Float: a coordinate is a decimal number with fixed precision, and binary
+    # rounding would shift it slightly on every write.
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(8, COORDINATE_PLACES))
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, COORDINATE_PLACES))
 
@@ -89,8 +88,8 @@ class Place(
     __table_args__ = (
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
-        # Beide oder keine (M3-D06). Eine halbe Koordinate ist kein Ort,
-        # sondern ein Breitengrad - und die Karte spraenge irgendwohin.
+        # Both or neither (M3-D06). Half a coordinate is not a place but a
+        # latitude, and would make a map jump somewhere unintended.
         CheckConstraint(
             "(latitude IS NULL) = (longitude IS NULL)",
             name="coordinates_are_a_pair",
@@ -103,8 +102,8 @@ class Place(
             "longitude IS NULL OR (longitude >= -180 AND longitude <= 180)",
             name="longitude_within_range",
         ),
-        # Traegt den zusammengesetzten Fremdschluessel von `plans`, wie
-        # `wishes` ihn fuer `source_wish_id` traegt.
+        # Supports the composite foreign key from `plans`, just as `wishes`
+        # supports the one for `source_wish_id`.
         UniqueConstraint("id", "space_id", name="uq_places_id_space_id"),
         Index("ix_places_owner_id", "owner_id"),
         Index("ix_places_space_id_created_at_id", "space_id", "created_at", "id"),
@@ -112,5 +111,5 @@ class Place(
 
 
 def shared_privacy() -> PrivacyClass:
-    """Ein Place ist immer gemeinsamer Space-Inhalt (M3-D06)."""
+    """A place is always shared space content (M3-D06)."""
     return PrivacyClass.SPACE_SHARED
