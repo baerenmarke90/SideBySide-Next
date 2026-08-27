@@ -1,4 +1,4 @@
-"""Ereignisse in die Outbox schreiben und wieder herausholen."""
+"""Write events to the outbox and claim them for delivery."""
 
 from __future__ import annotations
 
@@ -13,10 +13,10 @@ from sidebyside.outbox.models import OutboxEvent
 
 
 def record(session: Session, event: DomainEvent) -> OutboxEvent:
-    """Ein Ereignis vormerken.
+    """Record an event for the current transaction.
 
-    Bewusst ohne Commit: das Ereignis gehört in dieselbe Transaktion wie die
-    fachliche Änderung. Wer hier committet, hebt die Garantie auf.
+    Deliberately does not commit: the event belongs in the same transaction as
+    the domain mutation. Committing here would break that guarantee.
     """
     row = OutboxEvent(
         event_type=event.type.value,
@@ -32,11 +32,11 @@ def record(session: Session, event: DomainEvent) -> OutboxEvent:
 
 
 def claim_unprocessed(session: Session, limit: int = 50) -> Sequence[OutboxEvent]:
-    """Unverarbeitete Ereignisse zur Zustellung greifen.
+    """Claim unprocessed events for delivery.
 
-    `FOR UPDATE SKIP LOCKED`: zwei Worker greifen nie dieselbe Zeile, und
-    keiner wartet auf den anderen. Ohne das würde entweder doppelt
-    zugestellt oder der zweite Worker blockiert.
+    `FOR UPDATE SKIP LOCKED` ensures two workers never claim the same row and
+    neither waits for the other. Without it, delivery would either duplicate
+    or the second worker would block.
     """
     stmt = (
         select(OutboxEvent)
@@ -54,11 +54,10 @@ def mark_processed(event: OutboxEvent) -> None:
 
 
 def mark_failed(event: OutboxEvent, error: str) -> None:
-    """Fehlschlag vermerken, ohne die Zeile abzuschließen.
+    """Record a failed delivery without completing the row.
 
-    `processed_at` bleibt leer, das Ereignis wird erneut versucht. Die
-    Meldung wird gekürzt, damit ein ausufernder Fehlertext die Zeile nicht
-    sprengt.
+    `processed_at` remains empty so the event is retried. The message is
+    truncated so an excessively long error cannot make the row unbounded.
     """
     event.attempts += 1
     event.last_error = error[:2000]
