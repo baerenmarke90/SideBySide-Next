@@ -1,4 +1,4 @@
-"""S3-spezifische Signatur-, TTL- und Privacy-Eigenschaften."""
+"""S3-specific signature, TTL, and privacy properties."""
 
 from __future__ import annotations
 
