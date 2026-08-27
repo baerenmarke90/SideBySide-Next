@@ -54,6 +54,11 @@ def main() -> int:
     replace_required(matrix, 'wish = {"title": "Matrix Wish"}', 'WISH = {"title": "Matrix Wish"}')
     replace_required(
         matrix,
+        'Endpoint("POST", "/api/v1/spaces/{spaceId}/wishes", body=wish)',
+        'Endpoint("POST", "/api/v1/spaces/{spaceId}/wishes", body=WISH)',
+    )
+    replace_required(
+        matrix,
         'wish = client.post(f"{basis}/wishes", json=wish, headers=headers).json()',
         'wish = client.post(f"{basis}/wishes", json=WISH, headers=headers).json()',
     )
