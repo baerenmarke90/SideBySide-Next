@@ -1,19 +1,19 @@
 # SideBySide Next Roadmap
 
 **Status:** Menschenlesbare Orientierungs- und Priorisierungsansicht  
-**Version:** 1.7  
-**Stand:** 26.08.2026  
+**Version:** 1.8  
+**Stand:** 27.08.2026  
 **Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
 
-Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht im [Implementation Status](./IMPLEMENTATION-STATUS.md); die präzisierten M2-Grenzen stehen im [M2 Project Control](./m2/PROJECT-CONTROL.md), die M3-Readiness im [M3 Technical Readiness Package](./m3/README.md).
+Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht im [Implementation Status](./IMPLEMENTATION-STATUS.md); die Regeln für laufende Statusquellen stehen in [Statusquellen und Drift-Regeln](./STATUS-SOURCES.md); die präzisierten M2-Grenzen stehen im [M2 Project Control](./m2/PROJECT-CONTROL.md), die M3-Readiness im [M3 Technical Readiness Package](./m3/README.md).
 
 ## Roadmap auf einen Blick
 
 ![Grafische Roadmap von M0 Foundation bis M9 Release und der strategischen E2EE-Spur](./assets/roadmap/roadmap-overview.svg)
 
-**Aktuell:** M0, M1 und M2 sind für ihren vorgesehenen Umfang abgeschlossen. **G1 und G2 sind bestanden. M3 ist als nächster Milestone freigegeben; seine S0-Readiness und alle M3-D01 bis M3-D32 sind abgeschlossen.** Der verbindliche aktuelle Gate-Nachweis ist der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).
+**Aktuell:** M0, M1 und M2 sind für ihren vorgesehenen Umfang abgeschlossen. **G1 und G2 sind bestanden. M3 ist freigegeben; S1 bis S4 sind geliefert. Der nächste Runtime-Slice ist M3-S5 — Chapter.** Der verbindliche aktuelle Gate-Nachweis ist der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).
 
-#59 und #60 bleiben verpflichtende Pre-Exposure-Härtungen vor öffentlicher bzw. Managed-Exposition. #25 bleibt Repository-Hardening. Diese Punkte blockieren die interne M3-Entwicklung nicht.
+Die früheren Pre-Exposure-Härtungen #59 und #60 sowie das Repository-Hardening #25 sind abgeschlossen. Der aktive `main`-Ruleset erzwingt Pull Request, Merge Commit und die definierten Pflichtchecks.
 
 ## Dokumentenrollen
 
@@ -21,6 +21,7 @@ Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständ
 |---|---|
 | diese Roadmap | Wohin gehen wir, in welcher Reihenfolge und warum? |
 | [Implementation Status](./IMPLEMENTATION-STATUS.md) | Was ist auf `main` tatsächlich umgesetzt oder noch offen? |
+| [Statusquellen und Drift-Regeln](./STATUS-SOURCES.md) | Welche Statusdateien sind living und welche historische Snapshots? |
 | [M2 Project Control](./m2/PROJECT-CONTROL.md) | Welche M2/M5-Grenzen und G2-Kriterien galten? |
 | [M3 Technical Readiness Package](./m3/README.md) | Welche M3-Entscheidungen, Gate-Regeln und Runtime-Voraussetzungen gelten? |
 | [Finaler G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) | aktuelle Gate-Entscheidung |
@@ -36,7 +37,7 @@ API-/DB-Konventionen, Migrationen, Outbox, Jobs, MediaStore-Grundlage, Protected
 
 ### M1 — Identity & Relationship: abgeschlossen, G1 bestanden
 
-Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, E-Mail-Verifikation und Recovery sind implementiert. PR #64 hat #61 mit expliziter `preserve`-/`cascade`-Semantik ohne destruktiven Default geschlossen; der folgende Gate-Review hat G1 ausdrücklich bestanden erklärt.
+Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, E-Mail-Verifikation und Recovery sind implementiert. PR #64 hat #61 mit expliziter `preserve`-/`cascade`-Semantik ohne destruktiven Default geschlossen; der folgende Gate-Review hat G1 ausdrücklich bestanden erklärt. Die nachgelagerten Härtungen #59 und #60 sowie Repository-Hardening #25 sind ebenfalls abgeschlossen.
 
 ### M2 — Erinnern / Story Alpha: abgeschlossen, G2 bestanden
 
@@ -57,11 +58,11 @@ Der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) bewert
 
 Future-Backlog: #88 hält Video-Uploads und Posterframes für eine spätere Neubewertung fest. Der Prototyp #109 wurde wegen eines Produktions-Images von rund 755 MiB und des zusätzlichen ffmpeg-Betriebs-, Supply-Chain- und Security-Aufwands bewusst ohne Merge geschlossen; `main` bleibt für Video fail-closed.
 
-### M3 — Planen & Private Area: freigegeben
+### M3 — Planen & Private Area: freigegeben, S1 bis S4 geliefert
 
-Das [M3 Technical Readiness Package](./m3/README.md) ist vorbereitet; M3-D01 bis M3-D32 stehen auf `DECIDED`. Damit ist die fachliche S0-Readiness abgeschlossen. Runtime-Slices dürfen gemäß [M3 Delivery Plan](./m3/DELIVERY-PLAN.md) beginnen, sobald der produktive REST-/OpenAPI-Vertrag des jeweiligen Slices contract-testbar konkretisiert ist und die normalen Reuse-/PR-/CI-Regeln erfüllt sind.
+Das [M3 Technical Readiness Package](./m3/README.md) ist vorbereitet; M3-D01 bis M3-D32 stehen auf `DECIDED`. Damit ist die fachliche S0-Readiness abgeschlossen. Runtime-Slices werden gemäß [M3 Delivery Plan](./m3/DELIVERY-PLAN.md) umgesetzt, sobald der produktive REST-/OpenAPI-Vertrag des jeweiligen Slices contract-testbar konkretisiert ist und die normalen Reuse-/PR-/CI-Regeln erfüllt sind.
 
-Der erste geplante Runtime-Slice ist **M3-S1 — Wish Foundation**.
+Geliefert sind **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation** und **M3-S4 typisierte Content Relations**. Nächster Runtime-Slice ist **M3-S5 — Chapter**.
 
 ## Milestones
 
@@ -202,7 +203,7 @@ Die manuelle Accessibility-Abnahme ist bewusst **kein G2-Blocker mehr** und wird
 
 - Cloud und Self-Hosted dokumentiert, update- und backupfähig,
 - serverseitige Auth-/Provider-Policy je Betriebsform durchgesetzt,
-- #59 und #60 vor öffentlicher/Managed-Exposition geschlossen,
+- die Pre-Exposure-Härtungen #59 und #60 sind abgeschlossen,
 - Retention, vollständige Löschung und Supportprozesse geklärt,
 - Entitlements/Billing ohne Domainkopplung,
 - Monitoring ohne sensible Inhalte,
@@ -226,19 +227,20 @@ Die manuelle Accessibility-Abnahme ist bewusst **kein G2-Blocker mehr** und wird
 | Web und Android driften auseinander | gemeinsamer OpenAPI-Vertrag und M5-Paritätsgate |
 | Privacy-Klassen werden Client-Domain | klare Trennung `SHARED/PRIVATE` vs. `SPACE_SHARED/OWNER_ONLY` |
 | Media erzeugt indirekte Leaks | Parent-Autorisierung, Adapter-Contract und Abuse-/Race-Tests |
-| Repository-Gates können umgangen werden | PR-/CI-Pflicht als Projektregel bis #25 technisch erzwingbar ist |
-| öffentlicher Betrieb erfolgt zu früh | #59/#60 und G5 bleiben Pre-Exposure-Pflicht |
+| Repository-Gates werden umgangen | aktives `main`-Ruleset erzwingt Pull Request, Merge Commit und Pflichtchecks |
+| öffentlicher Betrieb erfolgt zu früh | G5 bleibt Pre-Exposure-/Launch-Pflicht |
 
 ## Pflege
 
 - Datierte Reviews werden nie nachträglich umgeschrieben.
-- Der Current-Marker wird nach jedem abgeschlossenen Gate aktualisiert.
-- Offene Aufgaben stehen im Implementation Status und in GitHub Issues.
+- Fachliche Current-Marker werden nach abgeschlossenen Gate-/Milestone-/Slice-Änderungen aktualisiert; statische angeblich aktuelle `main`-SHAs werden in Living-Status-Dateien nicht geführt.
+- Offene Aufgaben stehen im Implementation Status und in GitHub Issues; explizit offene Issue-Tasks werden automatisiert gegen GitHub geprüft.
 - Roadmap-Updates nennen Grund und Auswirkung, nicht nur eine neue Reihenfolge.
 
 ## Verwandte Dokumente
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
+- [Statusquellen und Drift-Regeln](./STATUS-SOURCES.md)
 - [M2 Project Control](./m2/PROJECT-CONTROL.md)
 - [M3 Technical Readiness Package](./m3/README.md)
 - [M3 Decision Log](./m3/DECISION-LOG.md)
