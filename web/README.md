@@ -68,10 +68,17 @@ Offline-/Read-Cache-Policy ein.
 ```bash
 npm ci
 npm audit --audit-level=high
+npm run typecheck
 npm run lint
+npm run format:check
 npm test
 npm run build
 ```
+
+`typecheck`, `lint` und `format:check` sind getrennte Gates. Biome lintet und
+prüft die Formatierung des handgeschriebenen Web-Codes; der generierte
+OpenAPI-Client unter `src/api/generated/` bleibt dabei ausgeschlossen.
+`npm run format` schreibt die Biome-Formatierung lokal.
 
 ### Self-Hosted
 

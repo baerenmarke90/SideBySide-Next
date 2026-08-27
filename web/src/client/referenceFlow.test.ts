@@ -24,12 +24,20 @@ describe('signIn', () => {
     );
     const spy = vi
       .spyOn(AuthApi.prototype, 'signInApiV1AuthSignInPost')
-      .mockRejectedValue(new ResponseError(response, 'Response returned an error code'));
+      .mockRejectedValue(
+        new ResponseError(response, 'Response returned an error code'),
+      );
 
     try {
-      const error = await signIn('', 'g2-test@example.invalid', 'password').catch((caught: unknown) => caught);
+      const error = await signIn(
+        '',
+        'g2-test@example.invalid',
+        'password',
+      ).catch((caught: unknown) => caught);
       expect(error).toBeInstanceOf(ReferenceFlowError);
-      expect((error as ReferenceFlowError).message).toBe('Anmeldung fehlgeschlagen.');
+      expect((error as ReferenceFlowError).message).toBe(
+        'Anmeldung fehlgeschlagen.',
+      );
       expect((error as ReferenceFlowError).code).toBe('HTTPS_REQUIRED');
     } finally {
       spy.mockRestore();
@@ -39,17 +47,33 @@ describe('signIn', () => {
 
 describe('uploadAttachmentBytes', () => {
   it('adds bearer authorization only for the authenticated STREAM transport', async () => {
-    const fetchApi = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
-      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer token');
-      expect(init?.body).toBeInstanceOf(File);
-      return new Response(null, { status: 204 });
-    }) as unknown as typeof fetch;
+    const fetchApi = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        expect(new Headers(init?.headers).get('Authorization')).toBe(
+          'Bearer token',
+        );
+        expect(init?.body).toBeInstanceOf(File);
+        return new Response(null, { status: 204 });
+      },
+    ) as unknown as typeof fetch;
 
     await uploadAttachmentBytes(
       'https://example.invalid',
       'token',
       {
-        attachment: { id: 'a', createdAt: new Date(), durationSeconds: null, hasThumbnail: false, height: null, mediaType: 'IMAGE', mimeType: null, size: null, status: 'UPLOADING', version: 1, width: null },
+        attachment: {
+          id: 'a',
+          createdAt: new Date(),
+          durationSeconds: null,
+          hasThumbnail: false,
+          height: null,
+          mediaType: 'IMAGE',
+          mimeType: null,
+          size: null,
+          status: 'UPLOADING',
+          version: 1,
+          width: null,
+        },
         method: UploadDescriptorMethodEnum.STREAM,
         requiredHeaders: { 'Content-Type': 'image/jpeg' },
         uploadUrl: '/api/v1/spaces/s/attachments/a/content',
@@ -62,16 +86,30 @@ describe('uploadAttachmentBytes', () => {
   });
 
   it('does not leak the bearer token to a signed upload URL', async () => {
-    const fetchApi = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
-      expect(new Headers(init?.headers).has('Authorization')).toBe(false);
-      return new Response(null, { status: 200 });
-    }) as unknown as typeof fetch;
+    const fetchApi = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        expect(new Headers(init?.headers).has('Authorization')).toBe(false);
+        return new Response(null, { status: 200 });
+      },
+    ) as unknown as typeof fetch;
 
     await uploadAttachmentBytes(
       'https://api.example.invalid',
       'secret-token',
       {
-        attachment: { id: 'a', createdAt: new Date(), durationSeconds: null, hasThumbnail: false, height: null, mediaType: 'IMAGE', mimeType: null, size: null, status: 'UPLOADING', version: 1, width: null },
+        attachment: {
+          id: 'a',
+          createdAt: new Date(),
+          durationSeconds: null,
+          hasThumbnail: false,
+          height: null,
+          mediaType: 'IMAGE',
+          mimeType: null,
+          size: null,
+          status: 'UPLOADING',
+          version: 1,
+          width: null,
+        },
         method: UploadDescriptorMethodEnum.SIGNED_UPLOAD,
         requiredHeaders: {},
         uploadUrl: 'https://storage.example.invalid/signed',
@@ -98,7 +136,12 @@ describe('runMemoryMediaStoryFlow', () => {
       version: 1,
       width: null,
     };
-    const memory = { id: 'memory-1', version: 1, title: 'Am See', body: 'Zusammen unterwegs.' };
+    const memory = {
+      id: 'memory-1',
+      version: 1,
+      title: 'Am See',
+      body: 'Zusammen unterwegs.',
+    };
     const boundMemory = { ...memory, version: 2 };
     const story = { items: [] };
 
@@ -121,7 +164,8 @@ describe('runMemoryMediaStoryFlow', () => {
             attachment,
             method: UploadDescriptorMethodEnum.STREAM,
             requiredHeaders: { 'Content-Type': 'image/jpeg' },
-            uploadUrl: '/api/v1/spaces/space-1/attachments/attachment-1/content',
+            uploadUrl:
+              '/api/v1/spaces/space-1/attachments/attachment-1/content',
           };
         }),
         finalizeAttachmentUpload: vi.fn(async () => {
@@ -148,18 +192,26 @@ describe('runMemoryMediaStoryFlow', () => {
       },
     } as unknown as ReferenceApis;
 
-    const fetchApi = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
-      if (String(url).includes('/read')) {
-        calls.push('read-bytes');
-        expect(new Headers(init?.headers).has('Authorization')).toBe(false);
-        return new Response(new Blob(['image'], { type: 'image/jpeg' }), { status: 200 });
-      }
-      calls.push('upload-bytes');
-      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer token');
-      return new Response(null, { status: 204 });
-    }) as unknown as typeof fetch;
+    const fetchApi = vi.fn(
+      async (url: RequestInfo | URL, init?: RequestInit) => {
+        if (String(url).includes('/read')) {
+          calls.push('read-bytes');
+          expect(new Headers(init?.headers).has('Authorization')).toBe(false);
+          return new Response(new Blob(['image'], { type: 'image/jpeg' }), {
+            status: 200,
+          });
+        }
+        calls.push('upload-bytes');
+        expect(new Headers(init?.headers).get('Authorization')).toBe(
+          'Bearer token',
+        );
+        return new Response(null, { status: 204 });
+      },
+    ) as unknown as typeof fetch;
 
-    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:reference-flow');
+    const createObjectUrl = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValue('blob:reference-flow');
     try {
       const result = await runMemoryMediaStoryFlow(
         apis,

@@ -19,13 +19,15 @@ const de = {
     heading: 'Diese Installation ist noch nicht vollständig eingerichtet.',
     body: 'Bitte wende dich an die Person, die diese SideBySide-Instanz betreibt.',
     operatorSummary: 'Hinweis für Betreiber',
-    operatorPrefix: 'Für den aktuellen Story-Flow muss beim Web-Build eine vorhandene Space-ID als',
+    operatorPrefix:
+      'Für den aktuellen Story-Flow muss beim Web-Build eine vorhandene Space-ID als',
     operatorSuffix: 'gesetzt sein.',
   },
   login: {
     introEyebrow: 'Euer gemeinsamer Ort',
     introHeading: 'Erinnerungen, die euch gehören.',
-    introBody: 'Haltet gemeinsame Momente fest und findet eure Geschichte an einem ruhigen, privaten Ort wieder.',
+    introBody:
+      'Haltet gemeinsame Momente fest und findet eure Geschichte an einem ruhigen, privaten Ort wieder.',
     eyebrow: 'Willkommen zurück',
     heading: 'Anmelden',
     body: 'Melde dich mit deinem SideBySide-Konto an.',
@@ -33,14 +35,16 @@ const de = {
     password: 'Passwort',
     submit: 'Anmelden',
     pending: 'Anmeldung läuft …',
-    errorFallback: 'Anmeldung fehlgeschlagen. Bitte prüfe deine Zugangsdaten und versuche es erneut.',
+    errorFallback:
+      'Anmeldung fehlgeschlagen. Bitte prüfe deine Zugangsdaten und versuche es erneut.',
   },
   story: {
     savedTitle: 'Erinnerung gespeichert.',
     savedBody: 'Sie ist jetzt Teil eurer gemeinsamen Story.',
     eyebrow: 'Gemeinsam erinnern',
     title: 'Eure Story',
-    intro: 'Erinnerungen, Herzmomente und Meilensteine – chronologisch an einem Ort.',
+    intro:
+      'Erinnerungen, Herzmomente und Meilensteine – chronologisch an einem Ort.',
     addMemory: 'Erinnerung hinzufügen',
     timelineKicker: 'Zeitleiste',
     timelineHeading: 'Gemeinsame Geschichte',
@@ -73,7 +77,8 @@ const de = {
     backToStory: '← Zurück zur Story',
     eyebrow: 'Moment festhalten',
     heading: 'Neue Erinnerung',
-    intro: 'Ein Foto, ein paar Worte – und dieser Moment bleibt Teil eurer Geschichte.',
+    intro:
+      'Ein Foto, ein paar Worte – und dieser Moment bleibt Teil eurer Geschichte.',
     formAria: 'Erinnerung erstellen',
     titleLabel: 'Titel',
     titlePlaceholder: 'Zum Beispiel: Unser Tag am See',
@@ -87,7 +92,8 @@ const de = {
     photoFormats: 'JPG, PNG, WebP, HEIC oder HEIF',
     visibilityAria: 'Sichtbarkeit',
     sharedTitle: 'Mit Partner geteilt',
-    sharedBody: 'Diese Erinnerung ist für beide Personen in eurem gemeinsamen Space sichtbar.',
+    sharedBody:
+      'Diese Erinnerung ist für beide Personen in eurem gemeinsamen Space sichtbar.',
     save: 'Erinnerung speichern',
     saving: 'Wird gespeichert …',
     processing: 'Foto wird verarbeitet und die Story aktualisiert …',
@@ -107,7 +113,8 @@ const de = {
   flow: {
     uploadFailed: 'Bild-Upload fehlgeschlagen',
     processingStatus: 'Medienverarbeitung beendet mit Status {{status}}.',
-    processingTimeout: 'Medienverarbeitung hat das READY-Fenster nicht rechtzeitig erreicht.',
+    processingTimeout:
+      'Medienverarbeitung hat das READY-Fenster nicht rechtzeitig erreicht.',
     imageLoadFailed: 'Bild konnte nicht geladen werden',
     signInFailed: 'Anmeldung fehlgeschlagen.',
     imageOnly: 'S8 akzeptiert ausschließlich Bilder.',
