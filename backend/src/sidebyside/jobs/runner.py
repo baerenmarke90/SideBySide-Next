@@ -1,10 +1,10 @@
-"""Worker-Prozess.
+"""Worker process.
 
-Bewusst eine Schleife und kein Framework: die Warteschlange liegt in der
-Datenbank, und mehr als regelmaessiges Nachsehen braucht es dafuer nicht.
+Deliberately a loop rather than a framework: the queue lives in the database
+and needs nothing more than periodic polling.
 
-Mehrere Instanzen duerfen parallel laufen - `FOR UPDATE SKIP LOCKED` sorgt
-dafuer, dass sie einander nicht in die Quere kommen.
+Multiple instances may run concurrently; `FOR UPDATE SKIP LOCKED` prevents
+them from interfering with one another.
 """
 
 from __future__ import annotations
@@ -26,21 +26,20 @@ log = logging.getLogger(__name__)
 IDLE_SLEEP_SECONDS = 2.0
 
 MAINTENANCE_CHECK_SECONDS = 300.0
-"""Wie oft nachgesehen wird, ob die Wartung ueberhaupt noch ansteht.
+"""How often to check that maintenance is still scheduled.
 
-Die Kette plant sich selbst fort; dieser Blick ist die Rueckfallebene fuer
-den Fall, dass eine Aufgabe endgueltig aufgibt. Ohne ihn bliebe der
-Cleanup danach still aus - und genau das soll er nicht.
+The chain schedules itself; this check is the recovery layer for a job that
+gives up permanently. Without it, cleanup would silently stop afterwards.
 """
 
 _shutdown = False
 
 
 def _request_shutdown(signum: int, frame: FrameType | None) -> None:
-    """Auf SIGTERM aufhoeren, aber die laufende Runde zu Ende bringen.
+    """Stop on SIGTERM after allowing the current round to finish.
 
-    Ein Abbruch mitten in einer Aufgabe hinterliesse sie als RUNNING mit
-    laufender Sperre - sie waere erst nach Ablauf der Sperre wieder frei.
+    Interrupting a job mid-run would leave it RUNNING with an active lease;
+    it would not become available again until that lease expired.
     """
     global _shutdown
     _shutdown = True
@@ -48,7 +47,7 @@ def _request_shutdown(signum: int, frame: FrameType | None) -> None:
 
 
 def _ensure_maintenance() -> None:
-    """Fehlt die Wartung, wird sie eingeplant. Fehler beenden den Worker nicht."""
+    """Schedule missing maintenance without terminating the worker on failure."""
     try:
         with unit_of_work() as session:
             maintenance.ensure_scheduled(session)
@@ -72,23 +71,23 @@ def main() -> None:
     maintenance.register_handlers()
     media_cleanup.register_handlers()
     _ensure_maintenance()
-    zuletzt_geprueft = time.monotonic()
+    last_checked = time.monotonic()
 
     while not _shutdown:
-        if time.monotonic() - zuletzt_geprueft >= MAINTENANCE_CHECK_SECONDS:
+        if time.monotonic() - last_checked >= MAINTENANCE_CHECK_SECONDS:
             _ensure_maintenance()
-            zuletzt_geprueft = time.monotonic()
+            last_checked = time.monotonic()
 
         try:
-            erledigt = run_once(name)
+            completed = run_once(name)
         except Exception:
-            # Ein Fehler beim Abholen darf den Prozess nicht beenden -
-            # sonst kippt der Worker bei jeder kurzen Stoerung der
-            # Datenbankverbindung um.
+            # A failure while polling must not terminate the process; otherwise
+            # any brief database connection disruption would take down the
+            # worker.
             log.exception("worker round failed")
-            erledigt = 0
+            completed = 0
 
-        if erledigt == 0:
+        if completed == 0:
             time.sleep(IDLE_SLEEP_SECONDS)
 
     log.info("worker stopped", extra={"worker": name})
