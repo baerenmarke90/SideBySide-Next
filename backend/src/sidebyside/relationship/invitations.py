@@ -1,14 +1,14 @@
-"""Einladungen.
+"""Invitations.
 
-    Account A legt einen Space an
-    → Einladung erzeugen
-    → einmaliger Token
-    → Partner oeffnet den Link
-    → Anmeldung oder Registrierung
-    → Annehmen
-    → Mitgliedschaft
+    Account A creates a Space
+    → issue invitation
+    → one-time token
+    → partner opens the link
+    → sign in or register
+    → accept
+    → membership
 
-Der Token wird nur einmal ausgegeben und nur gehasht abgelegt.
+The token is returned only once and only its hash is persisted.
 """
 
 from __future__ import annotations
@@ -48,33 +48,33 @@ class InvitationErrorCode:
 class IssuedInvitation:
     invitation: Invitation
     token: str
-    """Der Klartext. Existiert nur hier und in der Antwort an den Ersteller."""
+    """Plaintext token. It exists only here and in the creator response."""
 
 
 def create(session: Session, space_id: UUID, created_by: Account) -> IssuedInvitation:
-    """Eine Einladung erzeugen.
+    """Create an invitation.
 
-    Ist der Space schon voll, entsteht gar keine Einladung. Andernfalls
-    verschickte jemand einen Link, der beim Oeffnen nur enttaeuscht.
+    If the Space is already full, no invitation is created. Otherwise somebody
+    could send a link that only disappoints when opened.
     """
     if len(service.active_memberships(session, space_id)) >= MAX_ACTIVE_PARTNERS:
         raise ConflictError("This space already has two partners.", InvitationErrorCode.SPACE_FULL)
 
     token = generate_token(INVITATION_TOKEN_BYTES)
-    einladung = Invitation(
+    invitation = Invitation(
         space_id=space_id,
         created_by=created_by.id,
         token_hash=hash_token(token),
         expires_at=now() + INVITATION_LIFETIME,
     )
-    session.add(einladung)
+    session.add(invitation)
     session.flush()
-    return IssuedInvitation(invitation=einladung, token=token)
+    return IssuedInvitation(invitation=invitation, token=token)
 
 
 def list_open(session: Session, space_id: UUID) -> Sequence[Invitation]:
-    jetzt = now()
-    alle = (
+    current_time = now()
+    invitations = (
         session.execute(
             select(Invitation)
             .where(Invitation.space_id == space_id)
@@ -83,29 +83,29 @@ def list_open(session: Session, space_id: UUID) -> Sequence[Invitation]:
         .scalars()
         .all()
     )
-    return [e for e in alle if e.is_open(jetzt)]
+    return [invitation for invitation in invitations if invitation.is_open(current_time)]
 
 
 def revoke(session: Session, space_id: UUID, invitation_id: UUID) -> Invitation:
-    """Eine Einladung zurueckziehen.
+    """Revoke an invitation.
 
-    Die Suche ist auf den Space eingeschraenkt: eine Einladungs-ID allein
-    darf keinen Zugriff geben, auch nicht zum Widerrufen.
+    Lookup is scoped to the Space: an invitation ID alone must never grant
+    access, including access to revoke it.
     """
-    einladung = session.execute(
+    invitation = session.execute(
         select(Invitation).where(
             Invitation.id == invitation_id,
             Invitation.space_id == space_id,
         )
     ).scalar_one_or_none()
 
-    if einladung is None:
+    if invitation is None:
         raise NotFoundError("Invitation not found.", InvitationErrorCode.NOT_FOUND)
 
-    if einladung.revoked_at is None and einladung.accepted_at is None:
-        einladung.revoked_at = now()
+    if invitation.revoked_at is None and invitation.accepted_at is None:
+        invitation.revoked_at = now()
         session.flush()
-    return einladung
+    return invitation
 
 
 def _invalid() -> ValidationError:
@@ -113,62 +113,59 @@ def _invalid() -> ValidationError:
 
 
 def _open_for_update(session: Session, token_hash: str) -> Invitation:
-    """Eine noch offene Einladung unter Zeilensperre laden.
+    """Load an open invitation under a row lock.
 
-    Auch interne Aufrufer arbeiten nur mit dem Hash. Damit muss ein
-    Klartext-Token nicht durch weitere Schichten gereicht oder gespeichert
-    werden.
+    Internal callers also work only with the hash. This avoids carrying or
+    storing a plaintext token through additional layers.
     """
     if not token_hash:
         raise _invalid()
 
-    einladung = session.execute(
+    invitation = session.execute(
         select(Invitation).where(Invitation.token_hash == token_hash).with_for_update()
     ).scalar_one_or_none()
 
-    if einladung is None or not einladung.is_open(now()):
+    if invitation is None or not invitation.is_open(now()):
         raise _invalid()
-    return einladung
+    return invitation
 
 
-def _accept_open(session: Session, einladung: Invitation, account: Account) -> Membership:
-    """Eine bereits gesperrte, offene Einladung fachlich annehmen."""
-    if not einladung.is_open(now()):
+def _accept_open(session: Session, invitation: Invitation, account: Account) -> Membership:
+    """Accept an already locked, open invitation at the domain layer."""
+    if not invitation.is_open(now()):
         raise _invalid()
 
-    # Der Ersteller kann seine eigene Einladung nicht annehmen. Sonst
-    # verbraucht ein Fehlgriff die Einladung, und der Partner steht vor
-    # einem toten Link.
-    if einladung.created_by == account.id:
+    # The creator cannot accept their own invitation. Otherwise a mistaken
+    # click consumes the invitation and leaves the partner with a dead link.
+    if invitation.created_by == account.id:
         raise ValidationError(
             "You cannot accept your own invitation.", InvitationErrorCode.SELF_INVITE
         )
 
-    # add_member prueft Obergrenze und bestehende Mitgliedschaft. Schlaegt es
-    # fehl, bleibt die Einladung offen - der Fehler liegt nicht an ihr.
-    mitgliedschaft = service.add_member(session, einladung.space_id, account)
+    # add_member checks the upper bound and existing membership. If it fails,
+    # the invitation remains open because the failure is not caused by it.
+    membership = service.add_member(session, invitation.space_id, account)
 
-    einladung.accepted_at = now()
-    einladung.accepted_by = account.id
+    invitation.accepted_at = now()
+    invitation.accepted_by = account.id
     session.flush()
-    return mitgliedschaft
+    return membership
 
 
 def accept(session: Session, token: str, account: Account) -> Membership:
-    """Eine Einladung annehmen.
+    """Accept an invitation.
 
-    Jeder Fehlschlag - unbekannt, abgelaufen, widerrufen, bereits benutzt -
-    ergibt dieselbe Meldung. Ein Unterschied waere eine Auskunft darueber,
-    welche Token existieren.
+    Every failure - unknown, expired, revoked, already used - yields the same
+    message. Distinguishing them would disclose which tokens exist.
 
-    Die Zeile wird gesperrt geladen. Nehmen zwei Versuche gleichzeitig
-    dieselbe Einladung an, wartet der zweite auf den ersten und sieht dann
-    `accepted_at` gesetzt - statt dass beide durchgehen.
+    The row is loaded under lock. If two attempts accept the same invitation
+    concurrently, the second waits for the first and then observes
+    `accepted_at` instead of both succeeding.
     """
     if not token:
         raise _invalid()
-    einladung = _open_for_update(session, hash_token(token))
-    return _accept_open(session, einladung, account)
+    invitation = _open_for_update(session, hash_token(token))
+    return _accept_open(session, invitation, account)
 
 
 def accept_with_new_account(
@@ -176,14 +173,13 @@ def accept_with_new_account(
     token_hash: str,
     account_factory: Callable[[], Account],
 ) -> tuple[Account, Membership]:
-    """Eine Einladung annehmen und das neue Konto erst unter der Sperre anlegen.
+    """Accept an invitation and create the account only while holding the lock.
 
-    Dieser Weg ist fuer Onboarding-Verfahren gedacht, bei denen das Konto
-    noch nicht existiert. Entscheidend ist die Reihenfolge: zuerst wird die
-    Einladung gesperrt und erneut auf Gueltigkeit geprueft, erst danach darf
-    der Aufrufer das Konto erzeugen. Zwei parallele Rueckwege mit derselben
-    Einladung koennen so niemals zwei Konten anlegen.
+    This path is intended for onboarding flows where the account does not yet
+    exist. The order matters: first lock and revalidate the invitation, only
+    then may the caller create the account. Two concurrent callbacks for the
+    same invitation therefore cannot create two accounts.
     """
-    einladung = _open_for_update(session, token_hash)
+    invitation = _open_for_update(session, token_hash)
     account = account_factory()
-    return account, _accept_open(session, einladung, account)
+    return account, _accept_open(session, invitation, account)
