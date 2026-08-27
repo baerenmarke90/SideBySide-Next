@@ -49,6 +49,7 @@ BACKEND_FILENAMES = {"Dockerfile"}
 ENGINEERING_PROSE_MARKERS = re.compile(
     r"(?:"
     r"\b(?:Zusammenfassung|Begruendung|Begründung|Gepruefte|Geprüfte|Entscheidung|"
+    r"Schwerpunkte|Statusautomat|Strippen|Clientpfad|Lieferstand|Metadatum|Interna|"
     r"der|die|das|den|dem|des|ein|eine|einen|einem|einer|ist|sind|wird|"
     r"werden|wurde|wurden|und|oder|ohne|mit|nicht|kein|keine|keinen|nur|wenn|"
     r"damit|dass|sonst|auch|dieser|diese|dieses|hier|dort|als|bei|beim|vom|"
@@ -58,19 +59,32 @@ ENGINEERING_PROSE_MARKERS = re.compile(
     r"(?:pruef|prüf|guelt|gült|unguelt|ungült|laesst|lässt|enthaelt|enthält|"
     r"abhaeng|abhäng|zulaess|zuläss|benoet|benöt|verschluessel|verschlüssel|"
     r"schluessel|schlüssel|eigentuemer|eigentümer|domaene|domäne|bedingung|"
-    r"durchsetz|speicherbar|vollstaendig|vollständig|unveraendert|unverändert|"
+    r"durchsetz|speicherbar|sortierbar|vollstaendig|vollständig|unveraendert|unverändert|"
     r"fehler|antwort|anbieter|gegenstelle|anmeldung|konto|sitzung|verbindung|"
-    r"erzeugt|geaendert|geändert|pruefung|prüfung|wurzel|vertrag|abweichung)"
+    r"erzeugt|geaendert|geändert|pruefung|prüfung|wurzel|vertrag|abweichung|"
+    r"verleiht|erlaubt|geworden)"
     r")",
     re.IGNORECASE,
 )
 
+# Identifier matching intentionally includes exact underscore-separated German
+# words in addition to compound stems. The exact words below are regression
+# markers from #214: they caught hybrid names such as ``upload_hoch``,
+# ``test_png_als_jpeg_angekuendigt_scheitert`` and ``CANARY_FREMD`` that the
+# original narrower audit missed.
 IDENTIFIER_MARKERS = re.compile(
     r"(?:"
     r"(?:^|_)(?:der|die|das|ein|eine|ist|sind|wird|ohne|mit|nicht|kein|keine|"
     r"fuer|ueber|zurueck|antwort|fehler|anbieter|gegenstelle|anmeldung|konto|"
     r"sitzung|verbindung|schluessel|pruefung|wurzel|vertrag|erzeugt|geaendert|"
-    r"unveraendert|welt|ort|plaene|erinnerung|meldungen|geheimnis)(?:_|$)|"
+    r"unveraendert|welt|ort|plaene|erinnerung|meldungen|geheimnis|hoch|verarbeite|"
+    r"validiert|projiziert|als|angekuendigt|scheitert|verleiht|ungebunden|"
+    r"ungebundenen|sperrt|macht|sofort|unsichtbar|verlangt|aktuelle|entfernt|"
+    r"ermittelt|bleibt|bekommt|braucht|liefert|traegt|zeigt|trifft|abgewiesen|"
+    r"angelegt|geloescht|erstelle|fremd|unbekannt|gueltig|ungueltig|abgelaufen|"
+    r"widerrufen|erneuern|schleife|grenze|familie|zeile|geraet|adresse|kopf|pfad|"
+    r"sende|wunsch|loeschen|aendern|statuspruefung|versionspruefung|ressourcen)"
+    r"(?:_|$)|"
     r"(?:schluessel|pruefung|ueberschreib|oeffentlich|begonnen|identitaet|"
     r"verknuepf|abgelehnt|unbekannt|falsch|gueltig|ungueltig|zurueck|"
     r"vollstaendig|unveraendert|erzeugt|geaendert)"
