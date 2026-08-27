@@ -1,7 +1,7 @@
 # Umsetzungsstand
 
-Stand: 26. August 2026  
-Aktueller `main`: `3a7adc28643ef00de51db678ec77a82be652283d` (Merge von #170)  
+Stand: 27. August 2026  
+Aktueller Repository-Stand: GitHub `main` ist die kanonische SHA-Quelle; dieses Living-Status-Dokument speichert bewusst keinen statischen Current-SHA.  
 Aktueller Gate-Status: **G2 bestanden; M2 abgeschlossen; M3 freigegeben**
 
 ## Dokumentenrollen
@@ -9,6 +9,7 @@ Aktueller Gate-Status: **G2 bestanden; M2 abgeschlossen; M3 freigegeben**
 - **Verbindliche Quelle:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
 - **Aktuelle Gate-Entscheidung:** [2026-08-26-g2-final-gate-review.md](reviews/2026-08-26-g2-final-gate-review.md)
+- **Statusquellen und Drift-Regeln:** [STATUS-SOURCES.md](STATUS-SOURCES.md)
 - **Verbindliche Entwicklungsregel:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) und [AGENTS.md](../AGENTS.md)
 - **Architektur-/Betriebsentscheidungen:** datierte ADRs unter [docs/decisions](decisions)
 - **M2-Steuerung:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
@@ -65,13 +66,13 @@ Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung er
 - [x] #61: RelatedPerson-Löschung mit expliziter `preserve`-/`cascade`-Policy ohne destruktiven Default
 - [x] G1 Gate Review nach #61: **BESTANDEN**
 
-### Offene M1-/Betriebshärtungen ohne M3-Blockade
+### Abgeschlossene M1-/Repository-Härtungen
 
-- [ ] **#59 — Pre-Exposure:** Passkey-Authentication-Start gegen Challenge-Flooding absichern.
-- [ ] **#60 — Pre-Exposure:** Rate-Limit-Schwellen unter Parallelität atomar erzwingen.
-- [ ] **#25 — Repository-Hardening:** Branch Protection/Ruleset technisch erzwingen, sobald GitHub-Plan/Targeting dies ermöglicht.
+- [x] **#59 — Pre-Exposure:** Passkey-Authentication-Start gegen Challenge-Flooding abgesichert.
+- [x] **#60 — Pre-Exposure:** Rate-Limit-Schwellen werden unter Parallelität atomar erzwungen.
+- [x] **#25 — Repository-Hardening:** aktives Ruleset für `main` erzwingt Pull Request, Merge Commit, aktuelle Pflichtchecks, keine Force Pushes und keine Branch-Löschung.
 
-#59 und #60 müssen vor öffentlicher/Managed-Exposition geschlossen sein. Sie blockieren interne M3-Domainarbeit nicht.
+Damit sind die zuvor im Living Status als offen geführten Pre-Exposure-/Repository-Härtungen abgeschlossen. GitHub bleibt für den jeweiligen Issue-Zustand die operative Quelle.
 
 ### Betrieb: Self-Hosted-Startpfad
 
