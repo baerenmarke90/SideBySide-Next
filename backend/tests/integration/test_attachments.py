@@ -1,8 +1,7 @@
 """PostgreSQL/HTTP acceptance tests for the first media slice.
 
-Schwerpunkte: the Statusautomat, the Strippen after M2-D14, the
-Owner boundary and fail-closed behavior for everything that is not on the
-Allowlist is stored.
+Focus: the attachment status machine, metadata stripping after M2-D14, and
+the owner boundary with fail-closed handling for data outside the allowlist.
 """
 
 from __future__ import annotations
@@ -76,17 +75,17 @@ def couple(session: Session):  # type: ignore[no-untyped-def]
     }
 
 
-def upload_hoch(client, couple, *, data: bytes | None = None, **overrides):  # type: ignore[no-untyped-def]
-    "Sign in, uebertragen, finalisieren; the volle Clientpfad."
+def upload_and_finalize(client, couple, *, data: bytes | None = None, **overrides):  # type: ignore[no-untyped-def]
+    "Sign in, upload, and finalize through the full client path."
     content = image_with_metadata() if data is None else data
-    angelegt = client.post(
+    created = client.post(
         path(couple["space"].id),
         json=upload_body(expectedSize=len(content), **overrides),
         headers=auth(couple["token_a"]),
     )
-    if angelegt.status_code != 201:
-        return angelegt, None
-    attachment_id = angelegt.json()["attachment"]["id"]
+    if created.status_code != 201:
+        return created, None
+    attachment_id = created.json()["attachment"]["id"]
     upload_response = client.put(
         f"{path(couple['space'].id)}/{attachment_id}/content",
         content=content,
@@ -101,7 +100,7 @@ def upload_hoch(client, couple, *, data: bytes | None = None, **overrides):  # t
     return finalized, attachment_id
 
 
-def verarbeite(session: Session, attachment_id: str) -> Attachment:
+def process_attachment(session: Session, attachment_id: str) -> Attachment:
     service.validate(session, __import__("uuid").UUID(attachment_id))
     session.flush()
     return session.execute(
@@ -110,12 +109,12 @@ def verarbeite(session: Session, attachment_id: str) -> Attachment:
 
 
 class TestLifecycle:
-    def test_upload_is_validiert_stripped_and_ready(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        response, attachment_id = upload_hoch(client, couple)
+    def test_upload_is_validated_stripped_and_ready(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        response, attachment_id = upload_and_finalize(client, couple)
         assert response.status_code == 202
         assert response.json()["status"] == "PROCESSING"
 
-        attachment = verarbeite(session, attachment_id)
+        attachment = process_attachment(session, attachment_id)
         assert attachment.status == AttachmentStatus.READY.value
         assert attachment.mime_type == "image/jpeg"
         assert attachment.width == 64
@@ -139,30 +138,30 @@ class TestLifecycle:
         assert detail.json()["status"] == "READY"
         assert detail.json()["hasThumbnail"] is True
 
-    def test_allowlist_aus_exif_remains_protected_payload(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple)
-        attachment = verarbeite(session, attachment_id)
+    def test_exif_allowlist_remains_protected_payload(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        _, attachment_id = upload_and_finalize(client, couple)
+        attachment = process_attachment(session, attachment_id)
 
         assert attachment.payload.captured_at is not None
         assert attachment.payload.orientation == 6
-        # No Plaintext field in the Table; the Capture timestamp is no
-        # sortierbares Metadatum geworden.
+        # No plaintext field exists in the table; the capture timestamp did not
+        # become sortable metadata.
         assert "captured_at" not in Attachment.__table__.c
         assert "original_name" not in Attachment.__table__.c
 
-    def test_status_is_public_projiziert(self, client, couple) -> None:  # type: ignore[no-untyped-def]
-        angelegt = client.post(
+    def test_status_is_publicly_projected(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+        created = client.post(
             path(couple["space"].id), json=upload_body(), headers=auth(couple["token_a"])
         )
-        assert angelegt.status_code == 201
-        assert angelegt.json()["attachment"]["status"] == "PENDING"
-        assert angelegt.json()["method"] == "STREAM"
-        # No Storage-Interna after outside.
+        assert created.status_code == 201
+        assert created.json()["attachment"]["status"] == "PENDING"
+        assert created.json()["method"] == "STREAM"
+        # No storage internals are exposed.
         for forbidden in ("storageKey", "bucket", "provider", "filesystemPath", "privacyClass"):
-            assert forbidden not in angelegt.text
+            assert forbidden not in created.text
 
     def test_finalize_is_idempotent(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple)
+        _, attachment_id = upload_and_finalize(client, couple)
         second_time = client.post(
             f"{path(couple['space'].id)}/{attachment_id}/finalize",
             json={},
@@ -181,8 +180,8 @@ class TestLifecycle:
 
 
 class TestFailClosed:
-    def test_video_is_until_zum_video_slice_rejected(self, client, couple) -> None:  # type: ignore[no-untyped-def]
-        "M2-D23: the Contract erlaubt it, this Lieferstand not."
+    def test_video_is_rejected_until_video_slice(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+        "M2-D23: the contract allows video, but this delivery slice does not."
         response = client.post(
             path(couple["space"].id),
             json=upload_body(mediaType="VIDEO", expectedMimeType="video/mp4"),
@@ -210,29 +209,29 @@ class TestFailClosed:
         assert response.json()["code"] == "ATTACHMENT_TOO_LARGE"
 
     def test_disguised_content_reaches_no_ready(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        "The declared Typ counts not; the magic bytes decide."
-        _, attachment_id = upload_hoch(client, couple, data=b"GIF89a" + b"\x00" * 64)
-        attachment = verarbeite(session, attachment_id)
+        "The declared type is not trusted; the magic bytes decide."
+        _, attachment_id = upload_and_finalize(client, couple, data=b"GIF89a" + b"\x00" * 64)
+        attachment = process_attachment(session, attachment_id)
         assert attachment.status == AttachmentStatus.FAILED.value
         assert attachment.failure_code is not None
         assert attachment.ready_at is None
 
-    def test_png_als_jpeg_angekuendigt_scheitert(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+    def test_png_declared_as_jpeg_fails(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
         buffer = io.BytesIO()
         Image.new("RGB", (16, 16)).save(buffer, "PNG")
-        _, attachment_id = upload_hoch(client, couple, data=buffer.getvalue())
-        attachment = verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple, data=buffer.getvalue())
+        attachment = process_attachment(session, attachment_id)
         assert attachment.status == AttachmentStatus.FAILED.value
 
-    def test_truncated_file_scheitert(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+    def test_truncated_file_fails(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
         full = image_with_metadata()
-        _, attachment_id = upload_hoch(client, couple, data=full[: len(full) // 2])
-        attachment = verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple, data=full[: len(full) // 2])
+        attachment = process_attachment(session, attachment_id)
         assert attachment.status == AttachmentStatus.FAILED.value
 
     def test_a_failed_attachment_is_not_readable(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple, data=b"nicht wirklich ein bild")
-        verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple, data=b"nicht wirklich ein bild")
+        process_attachment(session, attachment_id)
         response = client.get(
             f"{path(couple['space'].id)}/{attachment_id}/content",
             headers=auth(couple["token_a"]),
@@ -243,8 +242,8 @@ class TestFailClosed:
 
 class TestOwnerBoundary:
     def test_partner_sees_foreign_attachment_not(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple)
-        verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple)
+        process_attachment(session, attachment_id)
 
         for response in (
             client.get(
@@ -263,22 +262,22 @@ class TestOwnerBoundary:
             assert response.status_code == 404
 
     def test_anonymous_access_is_rejected(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple)
-        verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple)
+        process_attachment(session, attachment_id)
         assert client.get(f"{path(couple['space'].id)}/{attachment_id}/content").status_code == 401
 
     def test_guessed_storage_key_helps_not(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
         "no route accepts a storage key."
-        _, attachment_id = upload_hoch(client, couple)
-        attachment = verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple)
+        attachment = process_attachment(session, attachment_id)
         key = build_storage_key(attachment.space_id, attachment.id, "original")
         response = client.get(f"/api/v1/{key}", headers=auth(couple["token_a"]))
         assert response.status_code == 404
 
-    def test_owner_reads_own_ungebundenen_upload(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+    def test_owner_reads_own_unbound_upload(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
         """M2-D24."""
-        _, attachment_id = upload_hoch(client, couple)
-        verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple)
+        process_attachment(session, attachment_id)
 
         descriptor = client.post(
             f"{path(couple['space'].id)}/{attachment_id}/read-access",
@@ -299,10 +298,10 @@ class TestOwnerBoundary:
         )
         assert thumbnail.status_code == 200
 
-    def test_parent_reference_verleiht_no_access(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+    def test_parent_reference_grants_no_access(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
         "while nothing is bound, there is no parent that grants access."
-        _, attachment_id = upload_hoch(client, couple)
-        verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple)
+        process_attachment(session, attachment_id)
         response = client.post(
             f"{path(couple['space'].id)}/{attachment_id}/read-access",
             json={"parentType": "MEMORY", "parentId": str(uuid4())},
@@ -310,9 +309,9 @@ class TestOwnerBoundary:
         )
         assert response.status_code == 404
 
-    def test_expired_binding_window_sperrt_the_access(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple)
-        attachment = verarbeite(session, attachment_id)
+    def test_expired_binding_window_blocks_access(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        _, attachment_id = upload_and_finalize(client, couple)
+        attachment = process_attachment(session, attachment_id)
         attachment.ready_at = now() - service.BINDING_WINDOW - timedelta(minutes=1)
         session.flush()
 
@@ -324,9 +323,9 @@ class TestOwnerBoundary:
 
 
 class TestDeletionAndCleanup:
-    def test_delete_macht_sofort_unsichtbar(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple)
-        attachment = verarbeite(session, attachment_id)
+    def test_delete_makes_immediately_invisible(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        _, attachment_id = upload_and_finalize(client, couple)
+        attachment = process_attachment(session, attachment_id)
 
         deleted = client.delete(
             f"{path(couple['space'].id)}/{attachment_id}",
@@ -341,18 +340,18 @@ class TestDeletionAndCleanup:
             == 404
         )
 
-    def test_delete_verlangt_aktuelle_version(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple)
-        attachment = verarbeite(session, attachment_id)
+    def test_delete_requires_current_version(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        _, attachment_id = upload_and_finalize(client, couple)
+        attachment = process_attachment(session, attachment_id)
         response = client.delete(
             f"{path(couple['space'].id)}/{attachment_id}",
             headers={**auth(couple["token_a"]), "If-Match": f'"{attachment.version + 5}"'},
         )
         assert response.status_code == 409
 
-    def test_cleanup_entfernt_original_and_thumbnail(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        _, attachment_id = upload_hoch(client, couple)
-        attachment = verarbeite(session, attachment_id)
+    def test_cleanup_removes_original_and_thumbnail(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        _, attachment_id = upload_and_finalize(client, couple)
+        attachment = process_attachment(session, attachment_id)
         original = build_storage_key(attachment.space_id, attachment.id, "original")
         thumb = build_storage_key(attachment.space_id, attachment.id, "thumbnail")
         store = get_media_store()
@@ -370,8 +369,8 @@ class TestDeletionAndCleanup:
         self, client, couple, session
     ) -> None:  # type: ignore[no-untyped-def]
         """M2-D20."""
-        _, attachment_id = upload_hoch(client, couple)
-        attachment = verarbeite(session, attachment_id)
+        _, attachment_id = upload_and_finalize(client, couple)
+        attachment = process_attachment(session, attachment_id)
         attachment.ready_at = now() - service.BINDING_WINDOW - timedelta(minutes=1)
         session.flush()
 
@@ -387,10 +386,10 @@ class TestDeletionAndCleanup:
 
     def test_angefangener_upload_continues_after_24h_ab(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
         """M2-D12."""
-        angelegt = client.post(
+        created = client.post(
             path(couple["space"].id), json=upload_body(), headers=auth(couple["token_a"])
         )
-        attachment_id = angelegt.json()["attachment"]["id"]
+        attachment_id = created.json()["attachment"]["id"]
         row = session.execute(
             select(Attachment).where(Attachment.id == __import__("uuid").UUID(attachment_id))
         ).scalar_one()
@@ -408,10 +407,10 @@ class TestDeletionAndCleanup:
         )
 
     def test_fresh_upload_is_not_cleaned_up(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        angelegt = client.post(
+        created = client.post(
             path(couple["space"].id), json=upload_body(), headers=auth(couple["token_a"])
         )
-        attachment_id = angelegt.json()["attachment"]["id"]
+        attachment_id = created.json()["attachment"]["id"]
         cleanup.run_media_cleanup(session, {})
         session.flush()
         assert (

@@ -3,13 +3,13 @@
 The matrix from docs/SECURITY.md, extended with the ownership question:
 
     Owner on own OWNER_ONLY row                 allowed, including mutation
-    Partner in the selben Space on OWNER_ONLY        niemals, on keinem Path
-    Partner on SPACE_SHARED                      lesend erlaubt
-    foreign Space                                 niemals
-    anonymous                                        niemals
+    Partner in the same space on OWNER_ONLY     never, on every path
+    Partner on SPACE_SHARED                     read access allowed
+    Foreign space                               never
+    Anonymous                                   never
 
-Tested is through HTTP with real Token. A Direktaufruf the Guards
-ueberspringt exactly the Path, on the a Check vergessen are can.
+The tests exercise real HTTP requests with real tokens. Calling the guards
+directly would bypass exactly the request path on which a check can be omitted.
 
 The probe from `tests.support.privacy_probe` is not a product domain, but
 the thinnest resource that can exercise the underlying rule itself; see
@@ -32,7 +32,7 @@ pytestmark = [pytest.mark.integration, requires_database]
 
 CANARY_ANNA = "CANARY-PRIVATE-ANNA-7421"
 CANARY_BEN = "CANARY-PRIVATE-BEN-7422"
-CANARY_FREMD = "CANARY-PRIVATE-CAROL-7423"
+CANARY_FOREIGN = "CANARY-PRIVATE-CAROL-7423"
 
 
 def _sonde(
@@ -110,7 +110,7 @@ def szenario(session: Session):  # type: ignore[no-untyped-def]
             space_id=beta.id,
             owner_id=carol.id,
             privacy_class=PrivacyClass.OWNER_ONLY,
-            label=CANARY_FREMD,
+            label=CANARY_FOREIGN,
         ),
     }
 
@@ -290,7 +290,7 @@ class TestFremderSpace:
         zahl = probe_client.get(
             f"/api/v1/spaces/{szenario['alpha'].id}/privacy-probes/count", headers=headers
         )
-        assert CANARY_FREMD not in list.text
+        assert CANARY_FOREIGN not in list.text
         assert CANARY_BEN not in list.text
         assert zahl.json()["total"] == 2
 
