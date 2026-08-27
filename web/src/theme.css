@@ -20,7 +20,7 @@
   --color-discovery-surface-soft: #fff2d566;
 }
 
-:root[data-theme='dark'] {
+:root[data-theme="dark"] {
   color-scheme: dark;
   --color-background: #1c1525;
   --color-surface: #2a2135;
@@ -101,7 +101,11 @@
 body {
   color: var(--color-text);
   background:
-    radial-gradient(circle at 10% 0%, var(--color-brand-glow) 0, transparent 28rem),
+    radial-gradient(
+      circle at 10% 0%,
+      var(--color-brand-glow) 0,
+      transparent 28rem
+    ),
     var(--color-background);
 }
 
@@ -171,11 +175,19 @@ button.secondary,
 }
 
 .story-card-heart-moment {
-  background: linear-gradient(135deg, var(--color-surface) 60%, var(--color-private-surface-soft));
+  background: linear-gradient(
+    135deg,
+    var(--color-surface) 60%,
+    var(--color-private-surface-soft)
+  );
 }
 
 .story-card-milestone {
-  background: linear-gradient(135deg, var(--color-surface) 60%, var(--color-discovery-surface-soft));
+  background: linear-gradient(
+    135deg,
+    var(--color-surface) 60%,
+    var(--color-discovery-surface-soft)
+  );
 }
 
 .sharing-icon {
