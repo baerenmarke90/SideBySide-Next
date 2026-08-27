@@ -1,25 +1,25 @@
-"""Fachlogik fuer M3-Wishes.
+"""Domain logic for M3 wishes.
 
-Die Form ist bewusst dieselbe wie in `milestones.service`: derselbe
-signierte Cursor, dieselbe Versionspruefung, dieselbe Outbox. Zwei Dinge
-sind fachlich anders und deshalb ausdruecklich benannt.
+The structure deliberately mirrors ``milestones.service``: the same signed
+cursor, version check, and outbox. Two domain rules differ and are therefore
+made explicit here.
 
-Erstens das Schreibrecht. Ein Wish gehoert dem Paar, nicht dem, der ihn
-zuerst getippt hat (M3-D01). Das steht nicht hier, sondern als
-`shared_write` am Modell - `require_writable` laesst deshalb beide Partner
-durch, ohne dass dieser Dienst eine eigene Ausnahme formuliert.
+First, write ownership. A wish belongs to the couple rather than the person who
+first typed it (M3-D01). That policy lives on the model as ``shared_write``;
+``require_writable`` therefore permits both partners without a service-specific
+exception.
 
-Zweitens der Status. `Wish.status` ist kein Feld, das ein Client setzt:
-`OPEN -> PLANNED` entsteht ausschliesslich aus der Wish->Plan-Operation,
-`PLANNED -> OPEN` aus `return-to-wish`, `PLANNED -> COMPLETED` aus der
-Completion des originaeren Plans (M3-D02/D03/D04).
+Second, status. ``Wish.status`` is not a client-settable field:
+``OPEN -> PLANNED`` happens only through wish-to-plan conversion,
+``PLANNED -> OPEN`` through ``return-to-wish``, and
+``PLANNED -> COMPLETED`` through completion of the originating plan
+(M3-D02/D03/D04).
 
-Ausgeloest werden diese drei Kanten vom Plan-Dienst, denn nur er kennt den
-Plan. Formuliert sind sie trotzdem hier: `plan_created`, `plan_completed`
-und `plan_returned` sind die einzigen Funktionen, die `status` schreiben,
-und jede prueft ihren Ausgangszustand selbst. Ein `PATCH` kommt an ihnen
-nicht vorbei, und ein zweiter Aufrufer kann den Automaten nicht auf einem
-anderen Weg verschieben.
+The plan service triggers those three edges because only it knows the plan. The
+transitions themselves still live here: ``plan_created``, ``plan_completed``,
+and ``plan_returned`` are the only functions that write ``status``, and each
+validates its own source state. PATCH cannot bypass them, and another caller
+cannot move the state machine along an alternate path.
 """
 
 from __future__ import annotations
@@ -90,10 +90,10 @@ def _ensure_expected_version(wish: Wish, expected_version: int) -> None:
 
 
 def record_event(session: Session, wish: Wish, actor_id: UUID, event_type: EventType) -> None:
-    """Ein Ereignis ohne Wunschtitel.
+    """Record an event without the wish title.
 
-    M3-D13: Titel gehoeren nicht in Outbox, Logs oder Analytics. Was hier
-    hinausgeht, sind IDs, Actor, Version und der Eventtyp.
+    M3-D13: titles do not belong in the outbox, logs, or analytics. Only IDs,
+    actor, version, and event type leave this boundary.
     """
     outbox_service.record(
         session,
@@ -115,11 +115,11 @@ def create_wish(
     *,
     title: str,
 ) -> Wish:
-    """Ein neuer Wish beginnt immer `OPEN`.
+    """Create a wish in the ``OPEN`` state.
 
-    Der Status kommt nicht aus dem Request. Ein Client, der ihn mitschickt,
-    wird an der API-Grenze abgewiesen; hier gibt es gar keinen Parameter,
-    ueber den er ankommen koennte.
+    Status never comes from the request. A client that includes it is rejected
+    at the API boundary; this service has no parameter through which it could
+    enter.
     """
     wish = Wish(
         space_id=context.space_id,
@@ -151,12 +151,11 @@ def update_wish(
     expected_version: int,
     title: str,
 ) -> Wish:
-    """Eine Titelkorrektur - und ausdruecklich nichts weiter.
+    """Correct the title and nothing else.
 
-    Sie ist ein versioniertes Inhaltsupdate und veraendert den Status
-    nicht (M3-D02). `createdBy`, `spaceId` und `status` sind keine
-    Parameter dieser Funktion; es gibt damit keinen Pfad, ueber den ein
-    Request sie umsetzen koennte.
+    This is a versioned content update and does not change status (M3-D02).
+    ``createdBy``, ``spaceId``, and ``status`` are not function parameters, so
+    a request has no path to rewrite them.
     """
     wish = require_writable(session, Wish, context, wish_id)
     _ensure_expected_version(wish, expected_version)
@@ -170,21 +169,21 @@ def update_wish(
 
 
 def lock(session: Session, context: AuthorizationContext, wish_id: UUID | str) -> Wish:
-    """Den Wish fuer eine Lifecycle-Operation laden und sperren.
+    """Load and lock a wish for a lifecycle operation.
 
-    Die kanonische Sperrreihenfolge ist `Wish -> Plan` (M3-D02). Wer beide
-    anfasst, sperrt hier zuerst; sonst warten zwei Requests in
-    umgekehrter Reihenfolge aufeinander.
+    The canonical lock order is ``Wish -> Plan`` (M3-D02). Any operation that
+    touches both locks here first, preventing two requests from waiting on each
+    other in opposite order.
 
-    Autorisiert wird vor dem Sperren, damit ein Fremder keine Zeile sperren
-    kann, die er nicht einmal sehen darf. Verschwindet sie in der Luecke
-    dazwischen, antwortet der Guard wie bei einer unbekannten ID.
+    Authorization happens before locking so an outsider cannot lock a row they
+    are not allowed to see. If it disappears in the gap, the guard responds as
+    it would for an unknown ID.
     """
     return require_writable_locked(session, Wish, context, wish_id)
 
 
 def plan_created(session: Session, wish: Wish, actor_id: UUID) -> None:
-    """`OPEN -> PLANNED`. Die einzige Kante, die ein Plan-Create ausloest."""
+    """Apply ``OPEN -> PLANNED``, the only edge triggered by plan creation."""
     if wish.status != WishStatus.OPEN.value:
         raise ConflictError(
             "This wish is not open.",
@@ -197,7 +196,7 @@ def plan_created(session: Session, wish: Wish, actor_id: UUID) -> None:
 
 
 def plan_completed(session: Session, wish: Wish, actor_id: UUID) -> None:
-    """`PLANNED -> COMPLETED`. Nur aus der Completion des originaeren Plans."""
+    """Apply ``PLANNED -> COMPLETED`` only from originating-plan completion."""
     if wish.status != WishStatus.PLANNED.value:
         raise ConflictError(
             "This wish is not planned.",
@@ -210,12 +209,11 @@ def plan_completed(session: Session, wish: Wish, actor_id: UUID) -> None:
 
 
 def plan_returned(session: Session, wish: Wish, actor_id: UUID) -> None:
-    """`PLANNED -> OPEN`. Nur aus `return-to-wish` des originaeren Plans.
+    """Apply ``PLANNED -> OPEN`` only from originating-plan return-to-wish.
 
-    Der Wish bekommt ausdruecklich nichts aus dem Plan zurueck (M3-D03).
-    Titel und Beschreibung des Plans koennen inzwischen abgewichen sein;
-    sie stillschweigend in den Wish zu kopieren waere eine Ueberschreibung,
-    die niemand angefordert hat.
+    The wish deliberately receives no content back from the plan (M3-D03).
+    Plan title and description may have diverged; copying either silently into
+    the wish would overwrite data nobody asked to replace.
     """
     if wish.status != WishStatus.PLANNED.value:
         raise ConflictError(
@@ -229,27 +227,25 @@ def plan_returned(session: Session, wish: Wish, actor_id: UUID) -> None:
 
 
 def _ensure_deletable(session: Session, wish: Wish) -> None:
-    """Die Wish-Zeilen der Delete-Matrix aus M3-D05.
+    """Enforce the M3-D05 wish deletion matrix.
 
-    | Wish        | originaerer Plan | Ergebnis                    |
-    |-------------|------------------|-----------------------------|
-    | `OPEN`      | nein             | erlaubt                     |
-    | `OPEN`      | ja               | `WISH_PLAN_STATE_CONFLICT`  |
-    | `PLANNED`   | ja               | `WISH_HAS_ACTIVE_PLAN`      |
-    | `PLANNED`   | nein             | `WISH_PLAN_STATE_CONFLICT`  |
-    | `COMPLETED` | ja               | `WISH_HAS_COMPLETED_PLAN`   |
-    | `COMPLETED` | nein             | erlaubt                     |
+    | Wish        | originating Plan | Result                       |
+    |-------------|------------------|------------------------------|
+    | ``OPEN``      | no               | allowed                      |
+    | ``OPEN``      | yes              | ``WISH_PLAN_STATE_CONFLICT`` |
+    | ``PLANNED``   | yes              | ``WISH_HAS_ACTIVE_PLAN``     |
+    | ``PLANNED``   | no               | ``WISH_PLAN_STATE_CONFLICT`` |
+    | ``COMPLETED`` | yes              | ``WISH_HAS_COMPLETED_PLAN``  |
+    | ``COMPLETED`` | no               | allowed                      |
 
-    Die beiden `WISH_PLAN_STATE_CONFLICT`-Zeilen beschreiben Zustaende, die
-    es nicht geben duerfte. Sie enden trotzdem als fachlicher Konflikt und
-    nicht als 500: die Antwort soll den inkonsistenten Zustand benennen,
-    nicht ueber ihn stolpern.
+    The two ``WISH_PLAN_STATE_CONFLICT`` rows describe states that should never
+    occur. They still become a domain conflict rather than a 500 so the
+    response names the inconsistent state instead of crashing over it.
 
-    Der Plan wird gesperrt gelesen. Ohne die Sperre koennte zwischen dieser
-    Pruefung und dem Delete ein `return-to-wish` oder ein Convert
-    dazwischenkommen - der Wish waere dann nach einer bestandenen Pruefung
-    geloescht worden. Die Reihenfolge stimmt: der Wish ist an dieser Stelle
-    bereits gesperrt.
+    The plan is read under lock. Otherwise ``return-to-wish`` or conversion
+    could interleave between this check and deletion, allowing the wish to be
+    removed after a check that was valid only momentarily. Lock ordering remains
+    correct because the wish is already locked at this point.
     """
     plan = session.execute(
         select(Plan).where(Plan.source_wish_id == wish.id).with_for_update()
@@ -351,11 +347,10 @@ def list_wishes(
     limit: int,
     status: WishStatus | None,
 ) -> WishPageResult:
-    """Neueste zuerst, wie bei Memory und Milestone.
+    """List newest wishes first, matching memory and milestone ordering.
 
-    Sortiert wird ueber `createdAt` und ID, nicht ueber den Titel: eine
-    Reihenfolge, die den Klartext braucht, waere nach der spaeteren
-    Umstellung auf clientseitige Verschluesselung nicht mehr herstellbar.
+    Ordering uses ``createdAt`` and ID rather than title. A sort requiring
+    plaintext could not survive a later move to client-side encryption.
     """
     statement = readable(Wish, context)
     if status is not None:
