@@ -1,0 +1,13 @@
+-- Die Testdatenbank fuer die Integrationstests, angelegt beim ersten Start
+-- des Containers. Ohne sie muesste jeder Entwickler denselben Handgriff
+-- wiederholen, und wer ihn vergisst, bekommt einen gruenen Lauf, in dem
+-- alle Integrationstests uebersprungen wurden.
+--
+-- Bewusst getrennt von "sidebyside": die Testvorrichtung legt das Schema
+-- selbst an und raeumt es am Ende wieder ab. Gegen die Entwicklungs-
+-- datenbank waere das kein Testlauf, sondern ein Datenverlust.
+--
+-- Dieses Verzeichnis wird vom Postgres-Image nur ausgefuehrt, wenn das
+-- Datenverzeichnis noch leer ist. Bei einem bereits bestehenden Volume
+-- legt der in der README dokumentierte createdb-Aufruf die Datenbank nach.
+CREATE DATABASE sidebyside_test OWNER sidebyside;

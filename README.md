@@ -117,9 +117,17 @@ tools/               Hilfsskripte
 
 ## Entwicklung
 
+### Voraussetzungen
+
+- **Docker** für die Entwicklungsdatenbank
+- **Python 3.13** und `uv` für Backend und Tests
+- **Node 22 und npm** für den Web-Client
+
 PostgreSQL ist Voraussetzung. Einen SQLite-Notbehelf gibt es bewusst nicht —
 das Datenmodell nutzt PostgreSQL-Eigenschaften, und ein zweiter Dialekt im
 Test würde eine Sicherheit vortäuschen, die er nicht gibt.
+
+### Backend
 
 ```bash
 docker compose -f deploy/docker-compose.dev.yml up -d
@@ -129,15 +137,44 @@ uv run alembic upgrade head
 uv run uvicorn sidebyside.main:app --reload
 ```
 
-Tests:
+### Web
 
 ```bash
+cd web && npm ci
+npm run dev
+```
+
+### Tests
+
+Integrationstests laufen gegen eine eigene Datenbank `sidebyside_test`, die
+`deploy/docker-compose.dev.yml` beim ersten Start mit anlegt. Die
+Testvorrichtung legt dort ihr Schema selbst an und räumt es am Ende wieder
+ab — gegen die Entwicklungsdatenbank wäre das kein Testlauf, sondern ein
+Datenverlust.
+
+```bash
+export SBS_TEST_DATABASE_URL=postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
 cd backend && uv run pytest                    # alles
 cd backend && uv run pytest -m "not integration"   # ohne Datenbank
 ```
 
-Integrationstests brauchen eine erreichbare PostgreSQL-Instanz. Ohne sie
-werden sie übersprungen, nicht stillschweigend als bestanden gewertet.
+**Ohne `SBS_TEST_DATABASE_URL` werden alle Integrationstests übersprungen** —
+auch dann, wenn die Entwicklungsdatenbank läuft und erreichbar ist. `pytest`
+meldet den Lauf trotzdem grün, etwa als `353 passed, 1141 skipped`. Ein
+vollständiger Lauf ist das nicht. Übersprungen heißt übersprungen und wird
+nicht stillschweigend als bestanden gewertet; wer die Variable nicht setzt,
+prüft nur die Unit-Ebene.
+
+Stammt das Datenbank-Volume noch aus der Zeit vor dem Init-Skript, fehlt
+`sidebyside_test`. Das Postgres-Image führt `deploy/postgres-init/` nur bei
+einem leeren Datenverzeichnis aus. Einmalig nachlegen:
+
+```bash
+docker compose -f deploy/docker-compose.dev.yml exec postgres \
+  createdb -U sidebyside sidebyside_test
+```
+
+Der Web-Client wird mit `cd web && npm test` geprüft.
 
 `backend/uv.lock` ist der verbindliche, plattformübergreifende
 Abhängigkeitsstand. Nach einer beabsichtigten API-Änderung wird der
