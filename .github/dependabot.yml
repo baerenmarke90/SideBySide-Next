@@ -44,6 +44,17 @@ updates:
       time: "04:25"
       timezone: "Europe/Berlin"
     open-pull-requests-limit: 5
+    # react und react-dom pruefen zur Laufzeit auf exakte Versionsgleichheit.
+    # Einzeln angehobene Pull Requests sind deshalb beide rot, solange der
+    # jeweils andere nicht gemergt ist. Die Typpakete gehoeren an denselben
+    # Stand.
+    groups:
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
 
   - package-ecosystem: "gradle"
     directory: "/android"
