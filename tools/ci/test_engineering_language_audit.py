@@ -23,6 +23,26 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             path.write_text("## Summary\n", encoding="utf-8")
             self.assertEqual(check_file(path), [])
 
+    def test_common_english_article_is_not_a_german_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.md"
+            path.write_text(
+                "An existing component is not selected merely because it exists.\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(check_file(path), [])
+
+    def test_english_domain_moment_identifier_is_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            path.write_text(
+                "def load_heart_moment(heart_moment_id: str):\n"
+                "    moment = heart_moment_id\n"
+                "    return moment\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(check_file(path), [])
+
     def test_english_status_drift_term_is_valid(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.md"
