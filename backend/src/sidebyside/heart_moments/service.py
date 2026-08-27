@@ -1,15 +1,14 @@
-"""Fachlogik fuer M2-HeartMoments.
+"""Domain logic for M2 HeartMoments.
 
-Der Unterschied zu Memory ist die Sichtbarkeit. Ein HeartMoment kann
-gemeinsam oder owner-only sein, und diese Wahl ist eine Domainoperation mit
-eigener Route - kein Feld, das ein normales Update nebenbei mitaendert.
+The difference from Memory is visibility. A HeartMoment can be shared or
+owner-only, and that choice is a domain operation with its own route - not a
+field that a normal update may change incidentally.
 
-Die Sichtbarkeitsgrenze wird nirgends in dieser Datei formuliert. Lesen und
-Schreiben gehen durch dieselbe zentrale Autorisierung wie jede andere
-private Ressource; `readable` traegt die Bedingung bereits im Statement,
-bevor hier ein Filter oder eine Sortierung angehaengt wird. Ein privater
-HeartMoment ist fuer den Partner deshalb nicht "gefiltert", sondern nie
-geladen.
+The visibility boundary is not redefined anywhere in this file. Reads and
+writes go through the same central authorization as every other private
+resource; `readable` already carries the condition in the statement before a
+filter or ordering is added here. A private HeartMoment is therefore never
+loaded for the partner rather than merely being filtered afterwards.
 """
 
 from __future__ import annotations
@@ -84,11 +83,11 @@ def _record(
     *,
     visibility: ContentVisibility,
 ) -> None:
-    """Ein Ereignis ohne Text und ohne Emotion.
+    """Record an event without text or emotion.
 
-    `visibility` ist die einzige fachliche Angabe im Envelope. Ein Consumer
-    braucht sie, um ein owner-only Ereignis nicht in eine Partnerprojektion
-    zu schreiben; Inhalt braucht er dafuer nicht (M2-D06, M2-D16).
+    `visibility` is the only domain value in the envelope. Consumers need it
+    to avoid writing an owner-only event into a partner projection; they do
+    not need content for that decision (M2-D06, M2-D16).
     """
     outbox_service.record(
         session,
@@ -156,11 +155,11 @@ def update_heart_moment(
     happened_on: date | None,
     attachment_id: UUID | None = None,
 ) -> HeartMoment:
-    """Inhalt aendern - Sichtbarkeit ausdruecklich nicht.
+    """Change content but explicitly not visibility.
 
-    Der Wechsel `SHARED -> PRIVATE` loescht Kommentare und ist damit
-    destruktiv. Er bleibt deshalb eine eigene Operation und kann nicht als
-    Nebenwirkung eines Textupdates passieren.
+    The `SHARED -> PRIVATE` transition deletes comments and is therefore
+    destructive. It remains a separate operation and cannot happen as a side
+    effect of a text update.
     """
     heart_moment = require_writable(session, HeartMoment, context, heart_moment_id)
     _ensure_expected_version(heart_moment, expected_version)
@@ -196,12 +195,12 @@ def update_heart_moment(
 
 
 def _delete_dependent_comments(session: Session, heart_moment: HeartMoment) -> None:
-    """Kommentare beim Privacy-Wechsel in derselben Transaktion loeschen.
+    """Delete comments in the same transaction as a privacy transition.
 
-    Der Mapper-Cascade in ``comments.cascades`` wiederholt diese Loeschung
-    nach dem eigentlichen Privacy-UPDATE. Das ist absichtlich redundant:
-    dieser Domain-Hook bildet M2-D07 sichtbar ab; der Listener schliesst
-    gleichzeitig das Race-Fenster fuer einen parallel gestarteten Comment.
+    The mapper cascade in ``comments.cascades`` repeats this deletion after
+    the actual privacy UPDATE. This is intentionally redundant: the domain
+    hook makes M2-D07 explicit, while the listener also closes the race window
+    for a concurrently started comment.
     """
     from sidebyside.comments import service as comment_service
     from sidebyside.comments.models import CommentTarget
@@ -215,17 +214,16 @@ def _delete_dependent_comments(session: Session, heart_moment: HeartMoment) -> N
 
 
 def _drop_shared_relations(session: Session, heart_moment: HeartMoment) -> None:
-    """Gemeinsame Relationen beim Privacy-Wechsel entfernen (M3-D09).
+    """Remove shared relations during a privacy transition (M3-D09).
 
-    Dieselbe Begruendung wie bei den Kommentaren, eine Stufe schaerfer: ein
-    Kommentar an einem privaten Moment waere ein verwaister Inhalt, eine
-    gemeinsame Relation darauf ist ein Beweis seiner Existenz. Der Partner
-    sieht die Verknuepfung am Ort, auch wenn er den Moment selbst nicht
-    lesen kann.
+    The reasoning is the same as for comments, but stricter: a comment on a
+    private moment would be orphaned content, while a shared relation to that
+    moment proves its existence. The partner can see the link at the place
+    even if they cannot read the moment itself.
 
-    Laeuft vor dem Klassenwechsel und in derselben Transaktion. Der
-    Fremdschluessel in `place_heart_moments` fienge ein Vergessen ab - er
-    zoege die neue Klasse in die Join-Zeile und liefe gegen deren CHECK.
+    This runs before the class transition and in the same transaction. The
+    foreign key in `place_heart_moments` would catch an omitted call by
+    carrying the new class into the join row and colliding with its CHECK.
     """
     from sidebyside.relations import service as relation_service
 
@@ -240,30 +238,29 @@ def change_visibility(
     expected_version: int,
     visibility: ContentVisibility,
 ) -> HeartMoment:
-    """Die Sichtbarkeit wechseln - atomar, mit allen Folgen.
+    """Change visibility atomically together with all consequences.
 
-    Der Wechsel und das Loeschen abhaengiger Kommentare laufen in derselben
-    Request-Transaktion. Bricht irgendetwas ab, bleibt der alte Zustand
-    vollstaendig erhalten; es gibt keinen Zwischenstand, in dem die Klasse
-    schon privat ist und Kommentare noch stehen.
+    The transition and deletion of dependent comments run in the same request
+    transaction. If anything fails, the previous state remains fully intact;
+    there is no intermediate state where the class is already private while
+    comments still exist.
 
-    `PRIVATE -> SHARED` stellt geloeschte Kommentare nicht wieder her - und
-    ebenso wenig frueher entfernte Relationen (M3-D09).
+    `PRIVATE -> SHARED` does not restore deleted comments, nor previously
+    removed relations (M3-D09).
 
-    Die Zeile wird exklusiv gesperrt, bevor irgendetwas geprueft wird
-    (M3-D26). Ohne die Sperre laege zwischen dem Entfernen der Relationen
-    und dem Klassenwechsel ein Fenster, in dem ein gleichzeitiger
-    Relation-Create seine Zeile noch als gemeinsam einfuegen darf. Die
-    Sperre kommt vor dem Ziel-`FOR SHARE` des Creates zum Zug oder danach -
-    in beiden Reihenfolgen bleibt genau ein zulaessiger Endzustand.
+    The row is locked exclusively before anything is checked (M3-D26). Without
+    the lock, a concurrent relation create could insert a shared relation in
+    the window between removing relations and changing the class. The lock is
+    acquired either before or after the create path's target `FOR SHARE`; in
+    both orders exactly one valid final state remains.
     """
     heart_moment = require_writable_locked(session, HeartMoment, context, heart_moment_id)
     _ensure_expected_version(heart_moment, expected_version)
 
     target = privacy_for(visibility)
     if heart_moment.privacy_class == target.value:
-        # Kein Zustandswechsel: keine Version, kein Ereignis. Ein Ereignis
-        # ohne Aenderung waere fuer jeden Consumer ein falsches Signal.
+        # No state transition means no version change and no event. Emitting an
+        # event without a change would be a false signal for every consumer.
         return heart_moment
 
     if target is PrivacyClass.OWNER_ONLY:
@@ -361,12 +358,12 @@ def list_heart_moments(
     limit: int,
     visibility: ContentVisibility | None,
 ) -> HeartMomentPageResult:
-    """Eine Seite sichtbarer HeartMoments.
+    """Return one page of visible HeartMoments.
 
-    Der `visibility`-Filter verengt die bereits autorisierte Menge; er
-    erweitert sie nie. `visibility=PRIVATE` liefert dem Partner deshalb
-    eine leere Seite und nicht etwa fremde private Zeilen - die Bedingung
-    aus `readable` steht davor.
+    The `visibility` filter narrows the already authorized set; it never
+    expands it. `visibility=PRIVATE` therefore returns an empty page to the
+    partner rather than somebody else's private rows, because the condition
+    from `readable` is already part of the statement.
     """
     statement = readable(HeartMoment, context)
     if visibility is not None:
@@ -404,17 +401,17 @@ def _bind(
     heart_moment: HeartMoment,
     attachment_id: UUID,
 ) -> None:
-    """Ein Attachment an diesen HeartMoment haengen (M2-D03).
+    """Attach an attachment to this HeartMoment (M2-D03).
 
-    Die Regeln liegen im Bindungsmodul und nicht hier: sonst haette jede
-    Domaene ihre eigene Teilmenge davon, und die Unterschiede faenden sich
-    erst, wenn eine Sichtbarkeit falsch entschieden wurde.
+    The rules live in the binding module rather than here. Otherwise every
+    domain would carry its own subset and differences would only become
+    visible once a visibility decision had already gone wrong.
     """
     from sidebyside.attachments import binding
 
-    gesperrt = binding.lock_for_binding(session, [attachment_id])
+    locked = binding.lock_for_binding(session, [attachment_id])
     binding.ensure_bindable(
-        gesperrt.get(attachment_id),
+        locked.get(attachment_id),
         space_id=context.space_id,
         account_id=context.account_id,
     )
@@ -428,15 +425,16 @@ def _rebind(
     heart_moment: HeartMoment,
     attachment_id: UUID | None,
 ) -> None:
-    """Attachment tauschen oder loesen.
+    """Replace or detach an attachment.
 
-    Das abgeloeste Attachment verliert seine letzte Referenz und wird nach
-    M2-D11 sofort fachlich unsichtbar; der Providercleanup folgt asynchron.
+    A detached attachment loses its final reference and becomes immediately
+    invisible at the domain level under M2-D11; provider cleanup follows
+    asynchronously.
     """
     from sidebyside.attachments.models import Attachment
 
-    vorher = heart_moment.attachment_id
-    if vorher == attachment_id:
+    previous_id = heart_moment.attachment_id
+    if previous_id == attachment_id:
         return
 
     if attachment_id is None:
@@ -444,7 +442,7 @@ def _rebind(
     else:
         _bind(session, context, heart_moment, attachment_id)
 
-    if vorher is not None:
-        abgeloest = session.get(Attachment, vorher)
-        if abgeloest is not None:
-            attachment_service.mark_for_deletion(session, abgeloest)
+    if previous_id is not None:
+        detached = session.get(Attachment, previous_id)
+        if detached is not None:
+            attachment_service.mark_for_deletion(session, detached)
