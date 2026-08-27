@@ -1,14 +1,12 @@
-"""Ausgehende E-Mail.
+"""Outgoing email.
 
-Ein Magic Link, der nur im Log landet, ist kein Anmeldeweg. Deshalb gibt
-es hier eine echte Grenze mit drei Adaptern: einer schreibt ins Log und ist
-fuer die Entwicklung gedacht, einer spricht SMTP, und einer versendet
-ausdruecklich nichts.
+A magic link that only reaches a log is not a real sign-in path. This package
+therefore exposes a boundary with three adapters: development logging, SMTP,
+and an explicit no-mail mode.
 
-Welcher gilt, entscheidet die Konfiguration - und in Produktion verweigert
-die Anwendung den Start, wenn dort der Entwicklungsadapter stehen bleibt.
-Der Verzicht dagegen ist erlaubt: eine Instanz ohne Mailserver ist eine
-zulaessige Betriebsform, solange sie das offen sagt statt Token zu verlieren.
+Configuration selects the adapter. Production refuses to start with the
+development adapter, while deliberately disabling mail is valid as long as the
+instance reports that capability instead of silently losing tokens.
 """
 
 from __future__ import annotations
@@ -34,11 +32,11 @@ __all__ = [
 
 
 def sender() -> MailSender:
-    """Den konfigurierten Adapter bauen.
+    """Build the configured adapter.
 
-    Bewusst kein zwischengespeichertes Modul-Singleton: der Adapter ist
-    billig zu bauen, und ein Test soll die Konfiguration wechseln koennen,
-    ohne einen Zustand zurueckdrehen zu muessen.
+    Deliberately not a cached module singleton: adapters are cheap to create,
+    and tests must be able to switch configuration without resetting hidden
+    process state.
     """
     from sidebyside.config import MailTransport, get_settings
 
