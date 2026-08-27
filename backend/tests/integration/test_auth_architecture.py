@@ -1,4 +1,4 @@
-"""Persistenzinvarianten fuer OIDC, Passkeys und Cloud-Auth-Tokens."""
+"""Persistence invariants for OIDC, passkeys, and cloud authentication tokens."""
 
 from __future__ import annotations
 
