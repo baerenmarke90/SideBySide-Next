@@ -12,19 +12,27 @@ class StatusDriftTest(unittest.TestCase):
     def test_static_current_main_sha_is_rejected(self) -> None:
         errors = validate_text(
             Path("docs/IMPLEMENTATION-STATUS.md"),
+            "Current `main`: `a07830ce3c8963a54207765e841f9c3f87b0576e`\n",
+        )
+        self.assertEqual(len(errors), 1)
+        self.assertIn("static 'Current main' SHA", errors[0])
+
+    def test_legacy_german_current_main_sha_is_rejected_during_migration(self) -> None:
+        errors = validate_text(
+            Path("docs/IMPLEMENTATION-STATUS.md"),
             "Aktueller `main`: `a07830ce3c8963a54207765e841f9c3f87b0576e`\n",
         )
         self.assertEqual(len(errors), 1)
-        self.assertIn("statischen 'Aktueller main'-SHA", errors[0])
+        self.assertIn("static 'Current main' SHA", errors[0])
 
     def test_closed_issue_marked_open_is_rejected(self) -> None:
         errors = validate_text(
             Path("docs/IMPLEMENTATION-STATUS.md"),
-            "- [ ] **#59 — Security:** noch offen\n",
+            "- [ ] **#59 — Security:** still open\n",
             lambda number: "closed" if number == 59 else "open",
         )
         self.assertEqual(len(errors), 1)
-        self.assertIn("Issue #59", errors[0])
+        self.assertIn("issue #59", errors[0])
 
     def test_open_issue_marked_open_is_valid(self) -> None:
         errors = validate_text(
@@ -44,7 +52,7 @@ class StatusDriftTest(unittest.TestCase):
 
         errors = validate_text(
             Path("docs/IMPLEMENTATION-STATUS.md"),
-            "- [x] **#59 — Security:** geliefert\n",
+            "- [x] **#59 — Security:** delivered\n",
             fetch,
         )
         self.assertEqual(errors, [])
@@ -56,12 +64,12 @@ class StatusDriftTest(unittest.TestCase):
             for relative_path in LIVING_STATUS_FILES:
                 path = root / relative_path
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text("Status ohne statischen SHA.\n", encoding="utf-8")
+                path.write_text("Status without a static SHA.\n", encoding="utf-8")
 
             review = root / "docs/reviews/2026-08-26-g2-final-gate-review.md"
             review.parent.mkdir(parents=True, exist_ok=True)
             review.write_text(
-                "Aktueller `main`: `0000000000000000000000000000000000000000`\n",
+                "Current `main`: `0000000000000000000000000000000000000000`\n",
                 encoding="utf-8",
             )
 

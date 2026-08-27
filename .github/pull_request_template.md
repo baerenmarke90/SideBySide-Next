@@ -1,54 +1,54 @@
-## Zusammenfassung
+## Summary
 
-<!-- Was aendert dieser PR und warum? -->
+<!-- What does this PR change and why? -->
 
 ## Scope
 
-<!-- Was gehoert bewusst in diesen PR, was nicht? -->
+<!-- What is intentionally in scope, and what is not? -->
 
 ## Reuse-before-build
 
-Mindestens eine der folgenden Optionen muss angekreuzt werden. Details: `docs/REUSE-BEFORE-BUILD.md`.
+Exactly one of the following options must be checked. Details: `docs/REUSE-BEFORE-BUILD.md`.
 
 - [ ] Reuse review relevant
 - [ ] Reuse review not relevant
 
-### Falls relevant
+### If relevant
 
-**Gepruefte Alternativen**
+**Alternatives considered**
 
-<!-- Konkrete Standards, Plattform-/Framework-Funktionen, Open-Source-Komponenten und/oder Provider nennen. Eine pauschale Aussage wie "nichts gefunden" reicht nicht. -->
+<!-- Name concrete standards, platform/framework capabilities, open-source components, and/or providers. A generic statement such as "nothing found" is insufficient. -->
 
-- 
+-
 
-**Entscheidung und Begruendung**
+**Decision and rationale**
 
-<!-- Warum wurde diese Loesung gewaehlt? Falls Eigenbau: warum ist er trotz vorhandener Alternativen sinnvoll/notwendig? -->
+<!-- Why was this solution selected? If custom-built: why is that appropriate/necessary despite available alternatives? -->
 
-- 
+-
 
-**Drittkomponenten/Provider**
+**Third-party components/providers**
 
-<!-- Falls keine Drittkomponente betroffen ist: "nicht zutreffend". Sonst mindestens Lizenz/ToS, Cloud/Self-Hosted, Privacy/Datenfluss, Kosten/Rate-Limits, Fallback und Nutzer-/Hoster-Aufwand dokumentieren oder auf ein Issue/Dokument verweisen. -->
+<!-- If no third party is involved: "not applicable". Otherwise document at least license/ToS, Cloud/Self-Hosted support, privacy/data flow, cost/rate limits, fallback, and user/hoster effort, or link to an issue/document that does. -->
 
-- 
+-
 
-### Falls nicht relevant
+### If not relevant
 
-**Begruendung**
+**Rationale**
 
-<!-- Zum Beispiel: reine Domainlogik ohne neue Commodity-Infrastruktur, Provider, Plattformintegration oder wesentliche Dependency. -->
+<!-- For example: pure domain logic without new commodity infrastructure, provider, platform integration, or substantial dependency. -->
 
-- 
+-
 
-## Validierung
+## Validation
 
-<!-- Tests, Lint, Typecheck, manuelle Checks etc. -->
+<!-- Tests, lint, typecheck, manual checks, etc. -->
 
-- [ ] relevante Tests ausgefuehrt
-- [ ] CI muss vor Merge gruen sein
-- [ ] keine Clean-Room-, Security-, Privacy- oder Tenant-Isolation-Regel abgeschwaecht
+- [ ] relevant tests executed
+- [ ] CI must be green before merge
+- [ ] no Clean-Room, security, privacy, tenant-isolation, provenance, licensing, or engineering-language rule weakened
 
-## Hinweise / Risiken
+## Notes / risks
 
 <!-- Optional -->
