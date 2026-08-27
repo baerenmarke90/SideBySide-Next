@@ -1,19 +1,19 @@
-"""Zeitzone und Locale eines Accounts - die Schreibgrenze.
+"""Account timezone and locale write boundary.
 
-Beide Werte steuern sichtbares Verhalten: `timezone` entscheidet, welcher
-Kalendertag fuer eine Person gerade gilt, `locale` ueber Sprache und
-Formate. Als freier Text waeren sie eine stille Fehlerquelle - ein Tippfehler
-faellt erst auf, wenn ein Jahrestag am falschen Tag erscheint.
+Both values control visible behavior: `timezone` determines which calendar
+day currently applies to a person, while `locale` controls language and
+formats. As free text they would be a silent source of errors because a typo
+might surface only when an anniversary appears on the wrong day.
 
-Hier steht deshalb genau eine Stelle, die diese Felder schreibt. Jeder
-kuenftige Schreibpfad - Account-Einstellungen, Import, Migration von
-Altdaten - geht durch `set_preferences`. Die Alternative waere, die
-Pruefung an jedem neuen Endpunkt zu wiederholen; die Erfahrung dazu steht
-in `authorization.guard`.
+This module therefore defines exactly one write path for these fields. Every
+future write path - account settings, imports, or legacy-data migration - goes
+through `set_preferences`. The alternative would be to duplicate validation
+at every new endpoint; the rationale for avoiding that is captured in
+`authorization.guard`.
 
-Lesen bleibt davon unberuehrt: `clock.resolve_zone` faellt fuer bereits
-vorhandene unbrauchbare Werte weiterhin protokolliert auf UTC zurueck. Eine
-Anzeige darf an einem Altbestand nicht zerbrechen.
+Reads remain unaffected: `clock.resolve_zone` still falls back to UTC, with
+logging, for already persisted unusable values. Legacy data must not break a
+view.
 """
 
 from __future__ import annotations
@@ -45,26 +45,24 @@ _LOCALE = re.compile(
     """,
     re.VERBOSE,
 )
-"""Die Teilmenge von BCP 47, die dieses Produkt fuehrt.
+"""The subset of BCP 47 represented by this product.
 
-Sprache, optional Schrift, optional Region. Keine Varianten, Erweiterungen
-oder privaten Kennzeichnungen: sie kommen in der Oberflaeche nicht vor, und
-was nicht vorkommt, wird nicht gespeichert.
+Language, optional script, optional region. Variants, extensions, and private
+use subtags are excluded because the UI does not expose them, and values the
+product does not expose are not persisted.
 """
 
 
 def validate_timezone(value: str) -> str:
-    """Einen IANA-Zonennamen pruefen.
+    """Validate an IANA timezone name.
 
-    Geprueft wird gegen die tatsaechlich vorhandene Zonendatenbank, nicht
-    gegen ein Muster: "Europe/Berlinn" sieht aus wie ein Zonenname und ist
-    keiner.
+    Validation uses the actually available timezone database rather than a
+    pattern: "Europe/Berlinn" looks like a timezone name but is not one.
 
-    Nur der aussenliegende Leerraum wird entfernt. Die Schreibweise selbst
-    bleibt unangetastet - "europe/berlin" wird abgewiesen und nicht still
-    zurechtgerueckt. Ein Client, der den Namen aus dem Betriebssystem
-    nimmt, liefert ihn ohnehin kanonisch; wer ihn selbst zusammensetzt,
-    soll das merken.
+    Only surrounding whitespace is removed. Casing itself is left untouched:
+    "europe/berlin" is rejected rather than silently repaired. A client taking
+    the name from the operating system already receives its canonical form;
+    manually constructed values should surface mistakes.
     """
     zone = (value or "").strip()
     if not zone or len(zone) > MAX_TIMEZONE or zone not in available_timezones():
@@ -76,33 +74,33 @@ def validate_timezone(value: str) -> str:
 
 
 def normalize_locale(value: str) -> str:
-    """Eine Locale in die kanonische Schreibweise bringen.
+    """Normalize a locale into canonical spelling.
 
-    Die Regel steht hier vollstaendig und gilt fuer jeden Schreibpfad:
+    The complete rule lives here and applies to every write path:
 
-    - `_` wird zu `-`; Android und die JVM liefern `de_DE`.
-    - Sprache klein, Schrift mit grossem Anfangsbuchstaben, Region gross.
-      Das ist die uebliche BCP-47-Schreibweise; sie ist ausdruecklich nur
-      eine Schreibweise und keine Bedeutungsaenderung.
-    - Alles, was danach nicht dem Muster entspricht, wird abgewiesen.
+    - `_` becomes `-`; Android and the JVM may provide `de_DE`.
+    - Language is lowercase, script title-cased, and region uppercase. This is
+      conventional BCP-47 spelling and only changes representation, not
+      meaning.
+    - Anything that still does not match the accepted subset is rejected.
 
-    Gespeicherter und ausgelieferter Wert sind damit derselbe: zweimal
-    normalisieren aendert nichts mehr.
+    The persisted and returned value are therefore identical: normalizing
+    twice does not change it again.
     """
-    roh = (value or "").strip().replace("_", "-")
-    treffer = _LOCALE.match(roh) if roh and len(roh) <= MAX_LOCALE else None
-    if treffer is None:
+    raw = (value or "").strip().replace("_", "-")
+    match = _LOCALE.match(raw) if raw and len(raw) <= MAX_LOCALE else None
+    if match is None:
         raise ValidationError(
             "Enter a valid locale, for example de-DE.",
             PreferenceErrorCode.LOCALE_INVALID,
         )
 
-    teile = [treffer.group("language").lower()]
-    if treffer.group("script"):
-        teile.append(treffer.group("script").capitalize())
-    if treffer.group("region"):
-        teile.append(treffer.group("region").upper())
-    return "-".join(teile)
+    parts = [match.group("language").lower()]
+    if match.group("script"):
+        parts.append(match.group("script").capitalize())
+    if match.group("region"):
+        parts.append(match.group("region").upper())
+    return "-".join(parts)
 
 
 def set_preferences(
@@ -112,19 +110,18 @@ def set_preferences(
     timezone: str | None = None,
     locale: str | None = None,
 ) -> Account:
-    """Zeitzone und/oder Locale setzen - die einzige Stelle, die das tut.
+    """Set timezone and/or locale through the single supported write path.
 
-    Beide Werte werden zuerst vollstaendig geprueft und erst danach
-    zugewiesen. Ein ungueltiger zweiter Wert darf keinen halb geaenderten
-    Account hinterlassen.
+    Both values are fully validated before either is assigned. An invalid
+    second value must not leave a partially changed account behind.
     """
-    geprueft_zone = validate_timezone(timezone) if timezone is not None else None
-    geprueft_locale = normalize_locale(locale) if locale is not None else None
+    validated_zone = validate_timezone(timezone) if timezone is not None else None
+    validated_locale = normalize_locale(locale) if locale is not None else None
 
-    if geprueft_zone is not None:
-        account.timezone = geprueft_zone
-    if geprueft_locale is not None:
-        account.locale = geprueft_locale
+    if validated_zone is not None:
+        account.timezone = validated_zone
+    if validated_locale is not None:
+        account.locale = validated_locale
 
     session.flush()
     return account
