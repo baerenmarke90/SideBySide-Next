@@ -1,22 +1,21 @@
-"""Fachlogik fuer typisierte M3-Content-Relations.
+"""Domain logic for typed M3 content relations.
 
-Drei Dinge tragen diesen Dienst.
+Three properties define this service.
 
-**Die Sperrreihenfolge ist Parent, dann Target.** Immer, ohne Ausnahme
-(M3-D26). Der Place wird exklusiv gesperrt, das Ziel danach mit `FOR
-SHARE`. Die umgekehrte Reihenfolge waere an einer einzigen Stelle bequem -
-beim Privacy-Wechsel des HeartMoments - und genau dort entstuende der
-Deadlock. Der Privacy-Wechsel sperrt deshalb ausdruecklich *keine* Parents
-nach.
+**The lock order is parent, then target.** Always, without exception
+(M3-D26). The Place is locked exclusively, then the target with `FOR SHARE`.
+The reverse order would be convenient in exactly one location - a HeartMoment
+privacy transition - and would create the deadlock there. The privacy
+transition therefore explicitly does *not* acquire parent locks afterwards.
 
-**Ein Ziel wird nach der Sperre erneut geprueft, nicht davor.** Zwischen
-Nachsehen und Schreiben kann es geloescht oder privat geworden sein. Erst
-die Sperre macht die Pruefung haltbar.
+**A target is checked again after locking, not before.** Between lookup and
+write it could be deleted or become private. Only the lock makes the check
+stable.
 
-**Die Antwort auf ein unzulaessiges Ziel ist immer dieselbe.** Unbekannt,
-geloescht, fremder Space, `OWNER_ONLY` - vier verschiedene Sachverhalte,
-eine Antwort (`RELATION_TARGET_NOT_FOUND`, 404). Ein Unterschied waere die
-Auskunft, die M3-D09 gerade verhindert.
+**Every invalid target receives the same response.** Unknown, deleted,
+foreign space, `OWNER_ONLY`: four different facts, one response
+(`RELATION_TARGET_NOT_FOUND`, 404). Distinguishing them would reveal exactly
+the information M3-D09 is intended to protect.
 """
 
 from __future__ import annotations
@@ -46,17 +45,17 @@ from sidebyside.outbox import service as outbox_service
 from sidebyside.places.models import Place
 from sidebyside.relations.models import PlaceHeartMoment, PlaceMemory, PlaceMilestone
 
-if TYPE_CHECKING:  # pragma: no cover - nur fuer die Typpruefung
+if TYPE_CHECKING:  # pragma: no cover - typing only
     from collections.abc import Sequence
 
 
 class RelatableTarget(Protocol):
-    """Was dieser Dienst von einem Ziel braucht - und mehr nicht.
+    """The surface this service needs from a target, and nothing more.
 
-    Die drei Zielmodelle erben `IdMixin` und `PrivateResourceMixin`
-    getrennt; es gibt keinen gemeinsamen Obertyp, der beides fuehrt. Statt
-    einen einzufuehren, nur damit eine Typpruefung durchgeht, steht hier
-    die tatsaechlich benutzte Flaeche: eine ID und eine Privacy-Klasse.
+    The three target models inherit `IdMixin` and `PrivateResourceMixin`
+    separately; there is no common superclass combining both. Rather than
+    introducing one only to satisfy type checking, this protocol describes
+    the surface actually used here: an ID and a privacy class.
     """
 
     id: UUID
@@ -70,49 +69,48 @@ _RELATION_SUBJECT_TYPE = "place_relation"
 
 
 def target_not_found() -> NotFoundError:
-    """Die eine Antwort auf jedes unzulaessige Ziel.
+    """Return the single response used for every invalid target.
 
-    Als Funktion und nicht als Konstante, damit nicht versehentlich
-    dieselbe Exception-Instanz zweimal geworfen wird - ein Traceback aus
-    einem frueheren Request haengt sonst an einer spaeteren Antwort.
+    This is a function rather than a constant so the same exception instance
+    is not accidentally raised twice; otherwise a traceback from an earlier
+    request could remain attached to a later response.
     """
     return NotFoundError("Relation target not found.", RELATION_TARGET_NOT_FOUND)
 
 
 @dataclass(frozen=True)
 class RelationKind:
-    """Eine freigegebene Relationsart.
+    """An allowed relation kind.
 
-    Die Menge dieser Objekte *ist* die Allowlist. Es gibt keinen Pfad, auf
-    dem ein Client einen Zieltyp benennt, den der Server nicht schon kennt
-    - genau das trennt typisierte Relationen von der
-    `(targetType,targetId)`-Polymorphie, die M3-D08 ausschliesst.
+    The set of these objects *is* the allowlist. There is no path on which a
+    client can name a target type the server does not already know. This is
+    what separates typed relations from the `(targetType,targetId)`
+    polymorphism excluded by M3-D08.
     """
 
     slug: str
-    """Das Wegstueck in der Route: `/places/{placeId}/{slug}/{targetId}`."""
+    """Route segment: `/places/{placeId}/{slug}/{targetId}`."""
 
     relation: type[Base]
     target: type[PrivateResourceMixin]
     target_column: str
     event_target_type: Literal["MEMORY", "HEART_MOMENT", "MILESTONE"]
-    """Die Zielkategorie im Ereignis.
+    """Target category written to the event.
 
-    Dieselbe geschlossene Menge, die `PublicEventPayload` fuer Comments
-    schon fuehrt. Sie wird bewusst wiederverwendet statt erweitert: die
-    Allowlist ist die Grenze, an der entschieden wird, was dauerhaft
-    gespeichert werden darf, und eine zweite Fassung derselben Kategorie
-    haette eine zweite Entscheidung bedeutet.
+    This deliberately reuses the same closed set already used by
+    `PublicEventPayload` for comments instead of extending it. The allowlist
+    is the boundary where long-lived event data is approved, and a second
+    representation of the same category would create a second decision point.
     """
 
     linked_event: EventType
     unlinked_event: EventType
     shared_target_only: bool = False
-    """Ob das Ziel zwingend gemeinsamer Inhalt sein muss (M3-D09).
+    """Whether the target must be shared content (M3-D09).
 
-    Nur beim HeartMoment wahr. Memory und Milestone sind immer
-    `SPACE_SHARED`; fuer sie waere die Pruefung eine Tautologie, die
-    spaeter jemand fuer eine echte Bedingung haelt.
+    True only for HeartMoment. Memory and Milestone are always `SPACE_SHARED`;
+    checking them would be a tautology that could later be mistaken for a
+    meaningful condition.
     """
 
 
@@ -157,11 +155,11 @@ _BY_SLUG = {kind.slug: kind for kind in PLACE_RELATION_KINDS}
 
 
 def kind_for(slug: str) -> RelationKind:
-    """Die Relationsart zu einem Routenstueck - oder 404.
+    """Resolve the relation kind for a route segment, or return 404.
 
-    Ein unbekannter Slug ist keine Validierungsfrage. Er beschreibt eine
-    Relation, die es nicht gibt, und bekommt deshalb dieselbe Antwort wie
-    ein Ziel, das es nicht gibt.
+    An unknown slug is not a validation problem. It describes a relation that
+    does not exist and therefore receives the same response as a target that
+    does not exist.
     """
     found = _BY_SLUG.get(slug)
     if found is None:
@@ -181,11 +179,11 @@ def _record(
     actor_id: UUID,
     event_type: EventType,
 ) -> None:
-    """Das Ereignis zu einer Relationsaenderung.
+    """Record an event for a relation mutation.
 
-    Die Nutzlast traegt IDs und sonst nichts. Weder der Name des Ortes noch
-    irgendein Inhalt des Ziels gehoert in ein Event - ein Ereignisstrom ist
-    kein privilegierter Leseweg (M3-D06, Abschnitt Redaction).
+    The payload carries IDs and nothing else. Neither the place name nor any
+    target content belongs in an event; an event stream is not a privileged
+    read path (M3-D06, redaction section).
     """
     outbox_service.record(
         session,
@@ -210,16 +208,16 @@ def _require_relatable_target(
     kind: RelationKind,
     target_id: UUID | str,
 ) -> RelatableTarget:
-    """Das Ziel sperren und danach beurteilen.
+    """Lock the target and evaluate it afterwards.
 
-    `require_readable_shared` haelt die Zeile mit `FOR SHARE` gegen das
-    Loeschen. Erst danach wird die Privacy-Klasse gelesen: davor waere sie
-    eine Momentaufnahme, die bis zum Insert veralten kann.
+    `require_readable_shared` holds the row against deletion with `FOR SHARE`.
+    Only then is its privacy class read; before the lock it would merely be a
+    snapshot that could become stale before the insert.
 
-    Jede Ablehnung des Guards - fehlgeformte ID, unbekannt, fremder Space,
-    fremde private Zeile - wird auf dieselbe Antwort gezogen. Der Guard
-    wuerde sonst den Fehlercode der Zieldomaene durchreichen und damit
-    unterscheiden, welche Art von Ziel gemeint war.
+    Every guard rejection - malformed ID, unknown target, foreign space, or
+    another owner's private row - is normalized to the same response. The
+    guard would otherwise expose the target domain's error code and reveal
+    which kind of target was referenced.
     """
     try:
         found = require_readable_shared(session, kind.target, context, target_id)
@@ -227,10 +225,9 @@ def _require_relatable_target(
         raise target_not_found() from error
 
     if kind.shared_target_only and found.privacy_class != PrivacyClass.SPACE_SHARED.value:
-        # Ein eigener OWNER_ONLY-HeartMoment ist fuer seinen Eigentuemer
-        # lesbar - der Guard laesst ihn deshalb durch. Relationierbar ist
-        # er trotzdem nicht: eine gemeinsame Relation auf privaten Inhalt
-        # waere fuer den Partner ein Beweis seiner Existenz (M3-D09).
+        # An owner's OWNER_ONLY HeartMoment is readable by that owner, so the
+        # guard allows it through. It is still not relatable: a shared link to
+        # private content would prove its existence to the partner (M3-D09).
         raise target_not_found()
 
     return cast("RelatableTarget", found)
@@ -243,14 +240,13 @@ def link(
     target_id: UUID | str,
     kind: RelationKind,
 ) -> None:
-    """Parent und Ziel verknuepfen - idempotent.
+    """Link parent and target idempotently.
 
-    Reihenfolge nach M3-D26: Place exklusiv sperren, danach das Ziel. Der
-    Insert laeuft als `ON CONFLICT DO NOTHING`, weil ein vorheriges
-    `SELECT` genau die Luecke oeffnete, die der Primaerschluessel bereits
-    schliesst. Ein zweites `PUT` derselben Relation ist deshalb kein
-    Konflikt, sondern derselbe Endzustand - und erzeugt dann auch kein
-    zweites Ereignis.
+    M3-D26 order: lock the Place exclusively, then the target. The insert uses
+    `ON CONFLICT DO NOTHING` because a preceding `SELECT` would open exactly
+    the race already closed by the primary key. A second `PUT` for the same
+    relation is therefore not a conflict but the same final state, and emits
+    no second event.
     """
     place = require_writable_locked(session, Place, context, place_id)
     target = _require_relatable_target(session, context, kind, target_id)
@@ -262,9 +258,8 @@ def link(
         "created_by": context.account_id,
     }
     if kind.shared_target_only:
-        # Die Klasse wandert in die Join-Zeile und wird dort vom CHECK
-        # festgehalten. Sie stammt aus der bereits gesperrten Zeile, nicht
-        # aus einer zweiten Abfrage.
+        # Carry the class into the join row where the CHECK pins it. The value
+        # comes from the already locked row, not from a second query.
         values["target_privacy_class"] = target.privacy_class
 
     statement = (
@@ -290,23 +285,22 @@ def unlink(
     target_id: UUID | str,
     kind: RelationKind,
 ) -> None:
-    """Die Verknuepfung entfernen - und nur sie.
+    """Remove the link and only the link.
 
-    Beide Originale bleiben unveraendert bestehen; das ist der ganze Sinn
-    einer Join-Tabelle gegenueber einem Fremdschluessel im Inhalt
-    (M3-D12, source-bound).
+    Both original resources remain unchanged. That is the purpose of a join
+    table compared with a foreign key embedded in content (M3-D12,
+    source-bound).
 
-    Eine Relation, die es nicht gibt, ist ein 404 und kein stiller Erfolg.
-    Anders als beim Anlegen gibt es hier nichts zu vereinheitlichen: wer
-    bis hierher kommt, darf den Place schreiben und kennt damit bereits
-    seine Existenz.
+    A relation that does not exist is a 404 rather than silent success. Unlike
+    creation, there is no final state to normalize here: a caller reaching
+    this point may write the Place and therefore already knows it exists.
     """
     place = require_writable_locked(session, Place, context, place_id)
     target = _require_relatable_target(session, context, kind, target_id)
 
     table = kind.relation.__table__
-    # `RETURNING` statt `rowcount`: dieselbe Auskunft, aber als Ergebnis
-    # der Abfrage und nicht als Eigenschaft des Cursors.
+    # Use `RETURNING` rather than `rowcount`: same information, but obtained as
+    # a query result rather than a cursor property.
     removed = session.execute(
         delete(kind.relation)
         .where(
@@ -330,14 +324,14 @@ def list_targets(
     place_id: UUID | str,
     kind: RelationKind,
 ) -> Sequence[UUID]:
-    """Die verknuepften Ziel-IDs eines Ortes, aelteste Verknuepfung zuerst.
+    """Return linked target IDs for a place, oldest link first.
 
-    Bewusst nur IDs. Wer Inhalte will, liest sie ueber die Route der
-    jeweiligen Domaene und damit durch deren eigenen Guard - eine
-    Relationsliste, die Inhalte mitliefert, waere ein zweiter Leseweg mit
-    eigener Autorisierung, und zwei Lesewege driften.
+    Deliberately return only IDs. Callers wanting content read it through the
+    corresponding domain route and therefore through that domain's own guard.
+    A relation list returning content would create a second read path with its
+    own authorization, and two read paths drift.
 
-    Der Place wird nur gelesen, nicht gesperrt: eine Liste haelt nichts.
+    The Place is read but not locked because a list operation holds nothing.
     """
     from sidebyside.authorization import require_readable
 
@@ -352,22 +346,21 @@ def list_targets(
 
 
 def drop_shared_relations_of_heart_moment(session: Session, heart_moment: HeartMoment) -> None:
-    """Alle gemeinsamen Relationen eines HeartMoments entfernen (M3-D09).
+    """Remove all shared relations of a HeartMoment (M3-D09).
 
-    Aufgerufen vom HeartMoment-Dienst *vor* dem Wechsel auf `OWNER_ONLY`,
-    in derselben Transaktion. Nach dem Commit darf es keinen Zeitpunkt
-    geben, an dem der Moment privat und die Relation noch vorhanden ist -
-    sonst waere seine Existenz fuer den Partner weiter beweisbar.
+    Called by the HeartMoment service *before* transition to `OWNER_ONLY` and
+    in the same transaction. After commit there must be no point at which the
+    moment is private while a relation still exists, because that relation
+    would continue proving its existence to the partner.
 
-    Es wird ausdruecklich *kein* Parent nachgesperrt. Der Place waere hier
-    das zweite Schloss in umgekehrter Reihenfolge, und damit der Deadlock
-    gegen einen gleichzeitigen Relation-Create. Die Join-Zeilen allein
-    genuegen: der Create haelt den Place, wartet aber ohnehin auf den
-    `FOR SHARE` dieses Moments.
+    Deliberately acquire *no* parent lock afterwards. The Place would be the
+    second lock in reverse order and therefore create a deadlock with a
+    concurrent relation create. The join rows are sufficient: the create path
+    holds the Place but must still wait for this moment's `FOR SHARE` lock.
 
-    Der Fremdschluessel in `place_heart_moments` faenge einen vergessenen
-    Aufruf ab - er zoege die neue Klasse in die Join-Zeile und liefe gegen
-    deren CHECK. Diese Funktion ist der Weg, der nicht dagegen laeuft.
+    The foreign key in `place_heart_moments` catches a missed call by carrying
+    the new class into the join row and colliding with its CHECK. This function
+    is the intended path that avoids that collision.
     """
     table = PlaceHeartMoment.__table__
     session.execute(delete(PlaceHeartMoment).where(table.c.heart_moment_id == heart_moment.id))
