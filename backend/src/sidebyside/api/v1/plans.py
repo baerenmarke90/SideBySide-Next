@@ -1,10 +1,10 @@
-"""HTTP-Vertrag fuer M3-Plans und den Wish->Plan-Lifecycle.
+"""HTTP contract for M3 plans and the Wish-to-Plan lifecycle.
 
-Die Konvertierung haengt im Pfad unter `/wishes/{wishId}/plan`, steht aber
-hier: sie erzeugt einen Plan, und ihre Antwort traegt beide Ressourcen.
-Umgekehrt waere `api.v1.wishes` auf dieses Modul angewiesen - und damit
-haetten sich beide gegenseitig importiert. Die Richtung folgt der
-Fachlichkeit: Plan kennt Wish, Wish kennt Plan nicht.
+Conversion is nested under ``/wishes/{wishId}/plan`` in the path but lives in
+this module because it creates a plan and returns both resources. The reverse
+placement would make ``api.v1.wishes`` depend on this module while this module
+already depends on wishes. The dependency direction follows the domain: Plan
+knows Wish; Wish does not know Plan.
 """
 
 from __future__ import annotations
@@ -31,11 +31,11 @@ router = APIRouter(tags=["plans"])
 
 
 class PlanCreate(ApiModel):
-    """Direct Plan Create nach M3-D30.
+    """Direct plan creation defined by M3-D30.
 
-    `status`, `sourceWishId` und alle Termine fehlen bewusst. Ein Plan
-    beginnt als Idee; terminiert wird er ueber `/schedule`, abgeschlossen
-    ueber `/complete`.
+    ``status``, ``sourceWishId``, and all schedule fields are intentionally
+    absent. A plan starts as an idea; ``/schedule`` schedules it and
+    ``/complete`` completes it.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -61,20 +61,20 @@ class PlanCreate(ApiModel):
 
 
 class PlanUpdate(ApiModel):
-    """Fachliche Korrektur ohne Statuswirkung.
+    """Domain correction without changing lifecycle status.
 
-    `status`, `plannedStart` und `plannedEnd` sind hier nicht vorgesehen -
-    sie gehoeren den Lifecycle-Operationen. `experiencedOn` ist die eine
-    Ausnahme: es darf auf einem abgeschlossenen Plan korrigiert werden,
-    ohne dass daraus eine Rueckoeffnung wird (M3-D04).
+    ``status``, ``plannedStart``, and ``plannedEnd`` are intentionally absent
+    because lifecycle operations own them. ``experiencedOn`` is the one
+    exception: it may be corrected on a completed plan without reopening it
+    (M3-D04).
     """
 
     model_config = ConfigDict(extra="forbid")
 
     title: str | SkipJsonSchema[None] = None
     description: str | None = None
-    # Ausdruecklich nullable: so laesst sich die Ortszuordnung wieder
-    # loesen, ohne den Ort selbst anzufassen.
+    # Explicitly nullable so the place association can be removed without
+    # modifying the place itself.
     place_id: UUID | None = None
     experienced_on: date | SkipJsonSchema[None] = None
 
@@ -112,11 +112,12 @@ class PlanComplete(ApiModel):
 
 
 class WishToPlan(ApiModel):
-    """Der Konvertierungsrequest.
+    """Wish-to-Plan conversion request.
 
-    Alle Felder optional: ohne eigenen Titel uebernimmt der Plan den des
-    Wishes. `sourceWishId`, `status` und die Termine kommen nicht vom
-    Client - der Wish steht im Pfad, alles andere entsteht serverseitig.
+    Every field is optional: without an explicit title the plan inherits the
+    wish title. ``sourceWishId``, ``status``, and schedule fields are not
+    supplied by the client; the wish is identified by the path and everything
+    else is established server-side.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -166,11 +167,11 @@ class PlanPage(ApiModel):
 
 
 class WishToPlanResponse(ApiModel):
-    """Beide Ressourcen in einer Antwort.
+    """Both resources returned from a conversion.
 
-    Die Konvertierung veraendert den Wish und erzeugt den Plan. Ein Client,
-    der nur eines von beidem zurueckbekaeme, muesste das andere sofort
-    nachladen - und haette bis dahin einen veralteten Stand angezeigt.
+    Conversion modifies the wish and creates the plan. Returning only one
+    would force the client to immediately reload the other and display stale
+    state in the meantime.
     """
 
     wish: WishDetail
@@ -208,10 +209,10 @@ def _plan_detail(
         updated_at=plan.updated_at,
         creator=AuthorSummary(id=creator.id, display_name=creator.display_name),
         capabilities=ResourceCapabilities(
-            # M3-D01: beide Partner, unabhaengig von `createdBy`.
+            # M3-D01: both partners, independent of ``createdBy``.
             can_edit=True,
-            # M3-D05: ein nicht abgeschlossener source Plan wird
-            # zurueckgefuehrt, nicht geloescht.
+            # M3-D05: a non-completed source plan is returned to a wish rather
+            # than deleted.
             can_delete=plan.source_wish_id is None or is_completed,
             can_comment=False,
         ),
@@ -430,8 +431,8 @@ def return_plan_to_wish(
         plan_id,
         expected_version=expected_version,
     )
-    # Das ETag gehoert zum Wish: der Plan existiert nicht mehr, und der
-    # naechste Schreibzugriff des Clients kann sich nur auf ihn beziehen.
+    # The ETag belongs to the wish: the plan no longer exists, so the client's
+    # next write can only target the wish.
     response.headers["ETag"] = etag_for(result.wish.version)
     return PlanReturnToWishResponse(
         wish=wish_detail(session, authorization, result.wish),
@@ -447,8 +448,8 @@ def return_plan_to_wish(
     responses={
         200: {
             "description": (
-                "Der Wish war bereits konvertiert. Die Antwort traegt denselben "
-                "originaeren Plan; ein zweiter Plan entsteht nicht."
+                "The wish was already converted. The response returns the same original "
+                "plan; no second plan is created."
             ),
             "headers": ETAG_HEADERS,
         },

@@ -1,4 +1,4 @@
-"""Endpunkte fuer nahestehende Personen und wichtige Termine."""
+"""Endpoints for related people and important dates."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ router = APIRouter(tags=["people"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Version der Ressource fuer den naechsten If-Match-Schreibzugriff.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }
@@ -55,9 +55,9 @@ class RelatedPersonView(ApiModel):
     relationship: PersonRelationship
     birthday: date | None
     birthday_year_known: bool
-    """Ist das Jahr unbekannt, traegt `birthday` ein Platzhalterjahr.
+    """When the year is unknown, ``birthday`` contains a placeholder year.
 
-    Clients zeigen dann ausschliesslich Tag und Monat an.
+    Clients then display only the day and month.
     """
     visibility: ContentVisibility
     version: int
@@ -230,8 +230,8 @@ def delete_related_person(
         Query(
             alias="deletePolicy",
             description=(
-                "Explizite Behandlung verknuepfter Termine: preserve entfernt nur die "
-                "Personenverknuepfung; cascade loescht alle verknuepften Termine."
+                "Explicit handling of linked dates: preserve removes only the person "
+                "link; cascade deletes all linked dates."
             ),
         ),
     ],

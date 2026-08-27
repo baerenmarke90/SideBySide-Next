@@ -1,4 +1,4 @@
-"""HTTP-Vertrag fuer M2-HeartMoments."""
+"""HTTP contract for M2 heart moments."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ router = APIRouter(tags=["heart-moments"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Version der Ressource fuer den naechsten If-Match-Schreibzugriff.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }
@@ -49,11 +49,11 @@ class HeartMomentCreate(ApiModel):
 
 
 class HeartMomentUpdate(ApiModel):
-    """Inhaltliche Aenderung.
+    """Content update payload.
 
-    `visibility` fehlt hier bewusst: der Wechsel ist eine eigene Operation
-    mit destruktiver Folge und darf nicht als Nebenwirkung eines
-    Textupdates passieren.
+    ``visibility`` is intentionally absent: changing visibility is a separate
+    operation with destructive consequences and must not happen as a side
+    effect of a text update.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -116,7 +116,7 @@ def _heart_moment_detail(
         raise RuntimeError("Heart moment author disappeared despite foreign key protection.")
     is_author = heart_moment.owner_id == authorization.account_id
     visibility = visibility_of(heart_moment.privacy_class)
-    angehaengt = (
+    attachment = (
         session.get(Attachment, heart_moment.attachment_id)
         if heart_moment.attachment_id is not None
         else None
@@ -136,23 +136,23 @@ def _heart_moment_detail(
         capabilities=ResourceCapabilities(
             can_edit=is_author,
             can_delete=is_author,
-            # Ein privater HeartMoment ist kein gemeinsamer Ort. Kommentare
-            # gaebe es dort nur vom Owner an sich selbst - und ein spaeteres
-            # Oeffnen wuerde sie sichtbar machen.
+            # A private heart moment is not a shared discussion surface.
+            # Comments there would only be the owner talking to themselves,
+            # and making it shared later would expose those comments.
             can_comment=visibility is ContentVisibility.SHARED,
         ),
         attachment=(
             AttachmentSummary(
-                id=angehaengt.id,
+                id=attachment.id,
                 status="READY",
-                media_type=MediaType(angehaengt.media_type),
-                mime_type=angehaengt.mime_type,
-                size=angehaengt.size,
-                width=angehaengt.width,
-                height=angehaengt.height,
-                has_thumbnail=angehaengt.has_thumbnail,
+                media_type=MediaType(attachment.media_type),
+                mime_type=attachment.mime_type,
+                size=attachment.size,
+                width=attachment.width,
+                height=attachment.height,
+                has_thumbnail=attachment.has_thumbnail,
             )
-            if angehaengt is not None
+            if attachment is not None
             else None
         ),
     )

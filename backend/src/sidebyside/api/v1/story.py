@@ -1,9 +1,9 @@
-"""HTTP-Vertrag fuer die Story-Zeitleiste.
+"""HTTP contract for the shared story timeline.
 
-Die Route liefert ausschliesslich gemeinsamen Inhalt. Nach M2-D22 gibt es
-hier keine `PRIVATE`-Variante, keinen `visibility`-Parameter und keinen
-Owner-Modus: der Owner-Bereich fuer private HeartMoments ist eine eigene
-Ansicht ueber die HeartMoment-Collection.
+The route returns shared content exclusively. M2-D22 intentionally defines no
+``PRIVATE`` variant, no ``visibility`` parameter, and no owner mode here: the
+owner view for private heart moments is a separate projection through the
+HeartMoment collection.
 """
 
 from __future__ import annotations
@@ -36,11 +36,11 @@ router = APIRouter(tags=["story"])
 
 
 class MemorySummary(ApiModel):
-    """Eine Memory als Karte der Zeitleiste.
+    """Memory projection used as a timeline card.
 
-    Ohne `body`: die Karte braucht eine Ueberschrift und ihre Bilder, und
-    eine Seite mit hundert vollstaendigen Texten waere die Antwort, die
-    niemand angefordert hat. Der Text steht in der Detailansicht.
+    The body is intentionally omitted: the card needs a heading and images,
+    while returning one hundred full texts would produce data nobody requested.
+    The body remains available on the detail route.
     """
 
     id: UUID
@@ -53,7 +53,7 @@ class MemorySummary(ApiModel):
 
 
 class SharedHeartMomentSummary(ApiModel):
-    """Ein gemeinsamer HeartMoment. Eine private Variante gibt es nicht."""
+    """A shared heart moment. There is deliberately no private variant."""
 
     id: UUID
     text: str
@@ -96,19 +96,20 @@ StoryItemVariant = Annotated[
     StoryMemoryItem | StoryHeartMomentItem | StoryMilestoneItem,
     Field(discriminator="kind"),
 ]
-"""`kind` unterscheidet die Varianten im Vertrag selbst.
+"""``kind`` discriminates variants in the contract itself.
 
-Ein Client muss nicht raten, welches Feld gesetzt ist, und ein neuer Typ
-kann spaeter additiv dazukommen, ohne die bestehenden zu veraendern."""
+Clients do not need to infer which field is set, and a new type can be added
+later without changing existing variants."""
 
 
 class StoryItem(RootModel[StoryItemVariant]):
-    """Ein Eintrag der Zeitleiste, diskriminiert ueber `kind`.
+    """A timeline item discriminated by ``kind``.
 
-    Ein eigener Typ und keine anonyme Union im Listenfeld: sonst benennt
-    der OpenAPI-Vertrag sie nach ihrem Fundort - `StoryPageItemsInner` -
-    und jeder erzeugte Client traegt diesen Namen weiter. `API-DESIGN.md`
-    nennt sie `StoryItem`, und das soll auch im Vertrag stehen.
+    This is a named type rather than an anonymous union in the list field.
+    Otherwise OpenAPI names it after its location (``StoryPageItemsInner``)
+    and every generated client propagates that accidental name.
+    ``API-DESIGN.md`` calls the contract type ``StoryItem`` and the schema
+    should do the same.
     """
 
     root: StoryItemVariant
@@ -120,18 +121,18 @@ class StoryPage(ApiModel):
     has_more: bool
 
 
-def _autoren(session: DbSession, owner_ids: set[UUID]) -> dict[UUID, Account]:
+def _authors(session: DbSession, owner_ids: set[UUID]) -> dict[UUID, Account]:
     if not owner_ids:
         return {}
-    zeilen = session.execute(select(Account).where(Account.id.in_(owner_ids))).scalars().all()
-    return {konto.id: konto for konto in zeilen}
+    rows = session.execute(select(Account).where(Account.id.in_(owner_ids))).scalars().all()
+    return {account.id: account for account in rows}
 
 
 def _capabilities(
     owner_id: UUID, authorization: Authorization, *, can_comment: bool = True
 ) -> ResourceCapabilities:
-    ist_autor = owner_id == authorization.account_id
-    return ResourceCapabilities(can_edit=ist_autor, can_delete=ist_autor, can_comment=can_comment)
+    is_author = owner_id == authorization.account_id
+    return ResourceCapabilities(can_edit=is_author, can_delete=is_author, can_comment=can_comment)
 
 
 def _attachment_summary(attachment: Attachment) -> AttachmentSummary:
@@ -162,11 +163,11 @@ def get_story_timeline(
     cursor: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=service.MAX_LIMIT)] = service.DEFAULT_LIMIT,
 ) -> StoryPage:
-    """Die gemeinsame Zeitleiste aus Memories, Milestones und HeartMoments.
+    """Return the shared timeline of memories, milestones, and heart moments.
 
-    Private HeartMoments erscheinen hier nie - auch nicht fuer ihren Owner.
+    Private heart moments never appear here, including for their owner.
     """
-    seite = service.read_timeline(
+    page = service.read_timeline(
         session,
         authorization,
         kinds=tuple(type or ()),
@@ -176,53 +177,54 @@ def get_story_timeline(
         limit=limit,
     )
     return StoryPage(
-        items=_projizieren(session, authorization, seite.items),
-        next_cursor=seite.next_cursor,
-        has_more=seite.has_more,
+        items=_project(session, authorization, page.items),
+        next_cursor=page.next_cursor,
+        has_more=page.has_more,
     )
 
 
-def _projizieren(
+def _project(
     session: DbSession,
     authorization: Authorization,
     items: list[StoryRow],
 ) -> list[StoryItem]:
-    """Die Seite in DTOs uebersetzen - gebuendelt, nicht Zeile fuer Zeile.
+    """Project one page into DTOs in batches rather than row by row.
 
-    Die Abfrage hat nur Schluessel geliefert. Hier werden je Typ genau eine
-    Abfrage fuer die Objekte, eine fuer die Autoren und eine fuer die
-    Galerien abgesetzt. Einzeln waeren es bei hundert Items mehrere hundert.
+    The timeline query returns only keys. This function performs one query per
+    resource type, one for authors, and one for galleries. Loading each item
+    individually would turn a page of one hundred items into several hundred
+    queries.
 
-    Geladen wird wieder ueber `readable()`. Das ist keine doppelte Pruefung
-    aus Misstrauen gegen die eigene Abfrage, sondern die Regel, dass keine
-    Zeile dieses Systems ohne Sichtbarkeitsbedingung gelesen wird.
+    Resource loading again uses ``readable()``. This is not distrust of the
+    timeline query but the invariant that no row in this system is read without
+    an explicit visibility predicate.
     """
-    ids_je_kind: dict[StoryKind, list[UUID]] = {kind: [] for kind in StoryKind}
+    ids_by_kind: dict[StoryKind, list[UUID]] = {kind: [] for kind in StoryKind}
     for item in items:
-        ids_je_kind[item.kind].append(item.id)
+        ids_by_kind[item.kind].append(item.id)
 
-    memories = _laden(session, authorization, Memory, ids_je_kind[StoryKind.MEMORY])
-    heart_moments = _laden(session, authorization, HeartMoment, ids_je_kind[StoryKind.HEART_MOMENT])
-    milestones = _laden(session, authorization, Milestone, ids_je_kind[StoryKind.MILESTONE])
+    memories = _load(session, authorization, Memory, ids_by_kind[StoryKind.MEMORY])
+    heart_moments = _load(session, authorization, HeartMoment, ids_by_kind[StoryKind.HEART_MOMENT])
+    milestones = _load(session, authorization, Milestone, ids_by_kind[StoryKind.MILESTONE])
 
-    galerien = binding.attachments_of_memories(session, list(memories))
-    anhaenge = _anhaenge(session, heart_moments.values())
-    autoren = _autoren(
+    galleries = binding.attachments_of_memories(session, list(memories))
+    attachments = _heart_attachments(session, heart_moments.values())
+    authors = _authors(
         session,
         {
-            eintrag.owner_id
-            for quelle in (memories, heart_moments, milestones)
-            for eintrag in quelle.values()
+            entry.owner_id
+            for source in (memories, heart_moments, milestones)
+            for entry in source.values()
         },
     )
 
-    ansicht: list[StoryItemVariant] = []
+    view: list[StoryItemVariant] = []
     for item in items:
         if item.kind is StoryKind.MEMORY:
             memory = memories.get(item.id)
             if memory is None:
                 continue
-            ansicht.append(
+            view.append(
                 StoryMemoryItem(
                     kind=StoryKind.MEMORY,
                     effective_date=item.effective_date,
@@ -231,14 +233,14 @@ def _projizieren(
                         title=memory.payload.title,
                         happened_on=memory.happened_on,
                         created_at=memory.created_at,
-                        author=_autor(autoren, memory.owner_id),
+                        author=_author(authors, memory.owner_id),
                         capabilities=_capabilities(memory.owner_id, authorization),
                         attachments=[
                             MemoryAttachmentSummary(
-                                **_attachment_summary(gebunden.attachment).model_dump(),
-                                position=gebunden.position,
+                                **_attachment_summary(bound.attachment).model_dump(),
+                                position=bound.position,
                             )
-                            for gebunden in galerien.get(memory.id, [])
+                            for bound in galleries.get(memory.id, [])
                         ],
                     ),
                 )
@@ -247,7 +249,7 @@ def _projizieren(
             heart_moment = heart_moments.get(item.id)
             if heart_moment is None:
                 continue
-            ansicht.append(
+            view.append(
                 StoryHeartMomentItem(
                     kind=StoryKind.HEART_MOMENT,
                     effective_date=item.effective_date,
@@ -257,11 +259,11 @@ def _projizieren(
                         emotion=heart_moment.payload.emotion,
                         happened_on=heart_moment.happened_on,
                         created_at=heart_moment.created_at,
-                        author=_autor(autoren, heart_moment.owner_id),
+                        author=_author(authors, heart_moment.owner_id),
                         capabilities=_capabilities(heart_moment.owner_id, authorization),
                         attachment=(
-                            _attachment_summary(anhaenge[heart_moment.attachment_id])
-                            if heart_moment.attachment_id in anhaenge
+                            _attachment_summary(attachments[heart_moment.attachment_id])
+                            if heart_moment.attachment_id in attachments
                             else None
                         ),
                     ),
@@ -271,7 +273,7 @@ def _projizieren(
             milestone = milestones.get(item.id)
             if milestone is None:
                 continue
-            ansicht.append(
+            view.append(
                 StoryMilestoneItem(
                     kind=StoryKind.MILESTONE,
                     effective_date=item.effective_date,
@@ -280,17 +282,17 @@ def _projizieren(
                         title=milestone.payload.title,
                         happened_on=milestone.happened_on,
                         created_at=milestone.created_at,
-                        author=_autor(autoren, milestone.owner_id),
+                        author=_author(authors, milestone.owner_id),
                         capabilities=_capabilities(milestone.owner_id, authorization),
                     ),
                 )
             )
-    # Die Varianten entstehen einzeln und werden erst hier in den
-    # benannten Vertragstyp gehuellt.
-    return [StoryItem(root=eintrag) for eintrag in ansicht]
+    # Variants are built individually and wrapped in the named contract type
+    # only at this boundary.
+    return [StoryItem(root=entry) for entry in view]
 
 
-def _laden[ResourceT: (Memory, HeartMoment, Milestone)](
+def _load[ResourceT: (Memory, HeartMoment, Milestone)](
     session: DbSession,
     authorization: Authorization,
     model: type[ResourceT],
@@ -298,13 +300,15 @@ def _laden[ResourceT: (Memory, HeartMoment, Milestone)](
 ) -> dict[UUID, ResourceT]:
     if not ids:
         return {}
-    zeilen = (
+    rows = (
         session.execute(readable(model, authorization).where(model.id.in_(ids))).scalars().all()
     )
-    return {zeile.id: zeile for zeile in zeilen}
+    return {row.id: row for row in rows}
 
 
-def _anhaenge(session: DbSession, heart_moments: Iterable[HeartMoment]) -> dict[UUID, Attachment]:
+def _heart_attachments(
+    session: DbSession, heart_moments: Iterable[HeartMoment]
+) -> dict[UUID, Attachment]:
     ids = {
         heart_moment.attachment_id
         for heart_moment in heart_moments
@@ -312,12 +316,12 @@ def _anhaenge(session: DbSession, heart_moments: Iterable[HeartMoment]) -> dict[
     }
     if not ids:
         return {}
-    zeilen = session.execute(select(Attachment).where(Attachment.id.in_(ids))).scalars().all()
-    return {attachment.id: attachment for attachment in zeilen}
+    rows = session.execute(select(Attachment).where(Attachment.id.in_(ids))).scalars().all()
+    return {attachment.id: attachment for attachment in rows}
 
 
-def _autor(autoren: dict[UUID, Account], owner_id: UUID) -> AuthorSummary:
-    konto = autoren.get(owner_id)
-    if konto is None:
+def _author(authors: dict[UUID, Account], owner_id: UUID) -> AuthorSummary:
+    account = authors.get(owner_id)
+    if account is None:
         raise RuntimeError("Story author disappeared despite foreign key protection.")
-    return AuthorSummary(id=konto.id, display_name=konto.display_name)
+    return AuthorSummary(id=account.id, display_name=account.display_name)

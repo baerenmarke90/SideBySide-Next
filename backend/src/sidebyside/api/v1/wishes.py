@@ -1,4 +1,4 @@
-"""HTTP-Vertrag fuer M3-Wishes."""
+"""HTTP contract for M3 wishes."""
 
 from __future__ import annotations
 
@@ -23,19 +23,19 @@ router = APIRouter(tags=["wishes"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Version der Ressource fuer den naechsten If-Match-Schreibzugriff.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }
 
 
 class WishCreate(ApiModel):
-    """Ein Wish entsteht aus genau einem Feld.
+    """A wish is created from exactly one client field.
 
-    `extra="forbid"` ist hier mehr als Hygiene: `status`, `createdBy`,
-    `spaceId` und `version` sind nach M3-D01/D02 serverseitig. Ein Request,
-    der sie mitschickt, wird abgewiesen und nicht stillschweigend um sie
-    erleichtert - sonst glaubte der Client, er haette sie gesetzt.
+    ``extra=\"forbid\"`` is more than hygiene here: M3-D01/D02 make
+    ``status``, ``createdBy``, ``spaceId``, and ``version`` server-controlled.
+    A request supplying those fields is rejected rather than silently stripped,
+    so the client cannot believe it successfully set them.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -52,11 +52,11 @@ class WishCreate(ApiModel):
 
 
 class WishUpdate(ApiModel):
-    """Die Titelkorrektur.
+    """Wish title correction.
 
-    Es gibt bewusst kein `status`-Feld. Der Wish-Status folgt
-    ausschliesslich dem Wish->Plan-Vertrag (M3-D02/D03/D04); ein freier
-    Status-PATCH waere der Weg, an ihm vorbeizukommen.
+    There is deliberately no ``status`` field. Wish status is controlled only
+    by the Wish-to-Plan contract (M3-D02/D03/D04); an arbitrary status PATCH
+    would provide a way around that lifecycle.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -111,14 +111,13 @@ def wish_detail(
         updated_at=wish.updated_at,
         creator=AuthorSummary(id=creator.id, display_name=creator.display_name),
         capabilities=ResourceCapabilities(
-            # M3-D01: ein Wunsch gehoert dem Paar. `createdBy` ist
-            # Attribution, keine ACL - beide duerfen ihn aendern.
+            # M3-D01: a wish belongs to the couple. ``createdBy`` is
+            # attribution, not an ACL; both partners may edit it.
             can_edit=True,
-            # Ein `PLANNED` Wish wird ueber seinen Plan aufgeloest, nicht
-            # geloescht (M3-D05).
+            # A PLANNED wish is resolved through its plan rather than deleted
+            # directly (M3-D05).
             can_delete=wish.status != WishStatus.PLANNED.value,
-            # Kommentare kennen Wish als Ziel nicht; M3 fuehrt sie dort
-            # nicht ein.
+            # M3 does not introduce Wish as a comment target.
             can_comment=False,
         ),
     )
@@ -203,7 +202,7 @@ def update_wish(
     expected_version: IfMatchVersion,
     wish_id: Annotated[str, Path(alias="wishId")],
 ) -> WishDetail:
-    assert body.title is not None  # der Validator laesst nichts anderes durch
+    assert body.title is not None  # The validator permits no other state.
     wish = service.update_wish(
         session,
         authorization,

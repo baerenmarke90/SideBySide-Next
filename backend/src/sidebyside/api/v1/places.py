@@ -1,8 +1,8 @@
-"""HTTP-Vertrag fuer M3-Places.
+"""HTTP contract for M3 places.
 
-Koordinaten gehen als JSON-Zahl ueber die Leitung und liegen intern als
-`Decimal`. Der Uebergang laeuft ueber `str`, damit die binaere Darstellung
-eines Floats den Wert nicht um die letzte Stelle verschiebt.
+Coordinates are sent as JSON numbers and stored internally as ``Decimal``.
+Conversion passes through ``str`` so the binary representation of a float
+does not shift the value at the final decimal place.
 """
 
 from __future__ import annotations
@@ -28,17 +28,17 @@ router = APIRouter(tags=["places"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Version der Ressource fuer den naechsten If-Match-Schreibzugriff.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }
 
 
 def _as_number(value: Decimal | None) -> float | None:
-    """Die gespeicherte Dezimalzahl als JSON-Zahl.
+    """Project a stored decimal coordinate as a JSON number.
 
-    Sechs Nachkommastellen auf hoechstens drei Vorkommastellen liegen weit
-    innerhalb dessen, was ein Double exakt zurueckgibt.
+    Six fractional digits with at most three integral digits are well within
+    the range a double can round-trip accurately for this contract.
     """
     return None if value is None else float(value)
 
@@ -69,12 +69,11 @@ class PlaceCreate(ApiModel):
 
 
 class PlaceUpdate(ApiModel):
-    """Eine Korrektur am Ort.
+    """Place correction payload.
 
-    `latitude` und `longitude` duerfen hier ausdruecklich `null` sein - so
-    laesst sich ein Ort wieder auf reinen Namen zuruecksetzen. Der Dienst
-    behandelt sie als Paar: eine von beiden allein zu senden endet in
-    `PLACE_COORDINATE_PAIR_REQUIRED`.
+    ``latitude`` and ``longitude`` may explicitly be ``null`` here, allowing a
+    place to be reset to a name-only record. The service treats coordinates as
+    a pair; sending only one results in ``PLACE_COORDINATE_PAIR_REQUIRED``.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -140,10 +139,10 @@ def place_detail(
         updated_at=place.updated_at,
         creator=AuthorSummary(id=creator.id, display_name=creator.display_name),
         capabilities=ResourceCapabilities(
-            # M3-D01: ein Ort gehoert dem Paar.
+            # M3-D01: a place belongs to the couple.
             can_edit=True,
-            # Ein Ort laesst sich immer loeschen; die Folgen traegt der
-            # Dienst (M3-D06, Abschnitt 9).
+            # A place can always be deleted; the service applies the
+            # consequences defined by M3-D06 section 9.
             can_delete=True,
             can_comment=False,
         ),

@@ -1,4 +1,4 @@
-"""HTTP-Vertrag fuer M2-Attachments."""
+"""HTTP contract for M2 attachments."""
 
 from __future__ import annotations
 
@@ -32,10 +32,10 @@ _PUBLIC_STATUS: dict[str, str] = {
     AttachmentStatus.READY.value: "READY",
     AttachmentStatus.FAILED.value: "FAILED",
 }
-"""Die oeffentliche Projektion aus API-DESIGN.
+"""Public status projection defined by API-DESIGN.
 
-`DELETING` und `DELETE_FAILED` fehlen absichtlich: ein geloeschtes
-Attachment ist fachlich nicht mehr da und wird gar nicht erst ausgeliefert.
+``DELETING`` and ``DELETE_FAILED`` are intentionally absent: a deleted
+attachment no longer exists at the domain level and is not returned at all.
 """
 
 
@@ -49,9 +49,9 @@ class AttachmentUploadCreate(ApiModel):
 
 
 class AttachmentFinalize(ApiModel):
-    """Leer nach Vertrag - Finalize traegt keine Clientangaben.
+    """Empty by contract: finalize carries no client-supplied metadata.
 
-    Was der Server ueber die Datei wissen muss, stellt er selbst fest.
+    The server determines everything it needs to know about the file itself.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -88,11 +88,11 @@ class AttachmentDetail(ApiModel):
 
 
 class AttachmentSummary(ApiModel):
-    """Die Projektion eines gebundenen Attachments an seinem Parent.
+    """Projection of a bound attachment at its parent resource.
 
-    Ein Typ und nicht je Domaene einer: zwei gleichnamige DTOs haetten im
-    OpenAPI-Vertrag modulqualifizierte Namen erzeugt und damit interne
-    Pfade nach aussen getragen.
+    A single shared type is used rather than one per domain. Duplicate DTO
+    names would make OpenAPI generate module-qualified schema names and leak
+    internal paths into the public contract.
     """
 
     id: UUID
@@ -140,8 +140,8 @@ def _content_path(space_id: UUID, attachment_id: UUID) -> str:
 
 
 def _no_store(response: Response) -> None:
-    # Descriptor-Antworten koennen Bearer-Capabilities enthalten. Weder der
-    # Browsercache noch ein vorgeschalteter Cache darf sie dauerhaft halten.
+    # Descriptor responses can contain bearer capabilities. Neither the browser
+    # cache nor an intermediary cache may retain them persistently.
     response.headers["Cache-Control"] = "private, no-store"
     response.headers["Referrer-Policy"] = "no-referrer"
 
@@ -206,31 +206,30 @@ async def upload_attachment_content(
     request: Request,
     attachment_id: Annotated[str, Path(alias="attachmentId")],
 ) -> Response:
-    """Die Bytes im Serverstream entgegennehmen (M2-D13, Local-Adapter).
+    """Receive bytes through the server stream (M2-D13, local adapter).
 
-    Zwei Dinge stehen hier bewusst in dieser Reihenfolge.
+    Two operations intentionally happen in this order.
 
-    Erst wird autorisiert, dann gelesen. Andernfalls entschiede ein
-    beliebiger Absender darueber, wie viel der Server entgegennimmt, bevor
-    feststeht, ob er ueberhaupt hochladen darf.
+    Authorization happens before reading. Otherwise an arbitrary sender could
+    determine how much data the server accepts before upload authorization is
+    known.
 
-    Und gelesen wird gegen eine Grenze. `await request.body()` wuerde den
-    ganzen Koerper puffern, wie gross er auch ist - die Media-Pipeline
-    verlangt ausdruecklich kein unbegrenztes Puffern im RAM. Der Strom
-    bricht deshalb bei der ersten Ueberschreitung ab, statt erst danach zu
-    messen.
+    Reading is also bounded. ``await request.body()`` would buffer the entire
+    body regardless of size, while the media pipeline explicitly forbids
+    unbounded RAM buffering. Streaming therefore aborts at the first limit
+    violation instead of measuring only after the full body is read.
     """
     attachment, rule = service.open_upload(session, authorization, attachment_id)
 
-    bloecke: list[bytes] = []
-    gelesen = 0
-    async for stueck in request.stream():
-        gelesen += len(stueck)
-        if gelesen > rule.max_size:
+    chunks: list[bytes] = []
+    bytes_read = 0
+    async for chunk in request.stream():
+        bytes_read += len(chunk)
+        if bytes_read > rule.max_size:
             raise service.too_large()
-        bloecke.append(stueck)
+        chunks.append(chunk)
 
-    service.complete_upload(session, attachment, rule, b"".join(bloecke))
+    service.complete_upload(session, attachment, rule, b"".join(chunks))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -322,11 +321,11 @@ def get_attachment_content(
     attachment_id: Annotated[str, Path(alias="attachmentId")],
     variant: Literal["original", "thumbnail"] = "original",
 ) -> StreamingResponse:
-    """Die autorisierte Streamingroute (Media-Pipeline, Abschnitt 9).
+    """Authorized streaming route (media pipeline, section 9).
 
-    Jeder Zugriff wird unmittelbar vor dem Oeffnen geprueft. Der zuvor
-    ausgestellte ReadDescriptor ist kein Ausweis: er verkuerzt nichts und
-    ersetzt diese Pruefung nicht.
+    Every access is verified immediately before opening the content. A
+    previously issued ``ReadDescriptor`` is not an authorization credential:
+    it does not shorten or replace this check.
     """
     attachment = service.authorize_read(
         session,
@@ -337,26 +336,26 @@ def get_attachment_content(
     if variant == "thumbnail" and not attachment.has_thumbnail:
         raise Attachment.privacy_absence.error()
 
-    quelle = service.open_content(attachment, variant=variant)
-    typ = (
+    source = service.open_content(attachment, variant=variant)
+    media_type = (
         "image/jpeg"
         if variant == "thumbnail"
         else (attachment.mime_type or "application/octet-stream")
     )
 
-    def bloecke() -> object:
+    def chunks() -> object:
         try:
-            while stueck := quelle.read(STREAM_CHUNK):
-                yield stueck
+            while chunk := source.read(STREAM_CHUNK):
+                yield chunk
         finally:
-            quelle.close()
+            source.close()
 
     return StreamingResponse(
-        bloecke(),  # type: ignore[arg-type]
-        media_type=typ,
+        chunks(),  # type: ignore[arg-type]
+        media_type=media_type,
         headers={
-            # Kein Dateisystempfad und kein Benutzername im Header; der
-            # Downloadname wird serverseitig kontrolliert.
+            # Do not leak a filesystem path or username in the header; the
+            # download name is controlled by the server.
             "Content-Disposition": f'inline; filename="{attachment.id}"',
             "Cache-Control": "private, no-store",
         },

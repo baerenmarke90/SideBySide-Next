@@ -1,4 +1,4 @@
-"""Einladungen in einen Space."""
+"""Invitations to a space."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ class InvitationView(ApiModel):
 
 class IssuedInvitationView(InvitationView):
     token: str
-    """Wird genau einmal ausgegeben. Danach existiert nur noch der Hash."""
+    """Returned exactly once; only the token hash is stored afterwards."""
 
 
 class AcceptRequest(ApiModel):
@@ -47,12 +47,12 @@ class MembershipView(ApiModel):
     responses=problem_responses(401, 404, 409),
 )
 def create_invitation(tenant: Tenant, session: DbSession) -> IssuedInvitationView:
-    ergebnis = invitations.create(session, tenant.space_id, tenant.account)
+    result = invitations.create(session, tenant.space_id, tenant.account)
     return IssuedInvitationView(
-        id=ergebnis.invitation.id,
-        expires_at=ergebnis.invitation.expires_at,
-        created_at=ergebnis.invitation.created_at,
-        token=ergebnis.token,
+        id=result.invitation.id,
+        expires_at=result.invitation.expires_at,
+        created_at=result.invitation.created_at,
+        token=result.token,
     )
 
 
@@ -62,7 +62,7 @@ def create_invitation(tenant: Tenant, session: DbSession) -> IssuedInvitationVie
     responses=problem_responses(401, 404),
 )
 def list_invitations(tenant: Tenant, session: DbSession) -> list[InvitationView]:
-    """Die offenen Einladungen. Ohne Token - der ist einmalig gewesen."""
+    """Return open invitations without their one-time tokens."""
     return [
         InvitationView(id=e.id, expires_at=e.expires_at, created_at=e.created_at)
         for e in invitations.list_open(session, tenant.space_id)
@@ -79,10 +79,10 @@ def revoke_invitation(
     session: DbSession,
     invitation_id_raw: Annotated[str, Path(alias="invitationId")],
 ) -> None:
-    einladung_id = parse_id(invitation_id_raw)
-    if einladung_id is None:
+    invitation_id = parse_id(invitation_id_raw)
+    if invitation_id is None:
         raise NotFoundError("Invitation not found.", InvitationErrorCode.NOT_FOUND)
-    invitations.revoke(session, tenant.space_id, einladung_id)
+    invitations.revoke(session, tenant.space_id, invitation_id)
 
 
 @router.post(
@@ -94,14 +94,14 @@ def revoke_invitation(
 def accept_invitation(
     body: AcceptRequest, account: CurrentAccount, session: DbSession
 ) -> MembershipView:
-    """Eine Einladung annehmen.
+    """Accept an invitation.
 
-    Ausserhalb von /spaces/..., weil der Aufrufer den Space noch nicht
-    kennt - der Token bestimmt ihn.
+    This endpoint lives outside ``/spaces/...`` because the caller does not
+    know the space yet; the token identifies it.
     """
-    mitgliedschaft = invitations.accept(session, body.token, account)
+    membership = invitations.accept(session, body.token, account)
     return MembershipView(
-        space_id=mitgliedschaft.space_id,
-        role=mitgliedschaft.role,
-        status=mitgliedschaft.status,
+        space_id=membership.space_id,
+        role=membership.role,
+        status=membership.status,
     )

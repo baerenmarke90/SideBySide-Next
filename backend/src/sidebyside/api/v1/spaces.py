@@ -1,7 +1,7 @@
-"""Space-Endpunkte.
+"""Space endpoints.
 
-Jeder Zugriff laeuft ueber den Tenant Context. Die Route selbst prueft
-keine Berechtigung - sie bekommt einen Kontext, der bereits geprueft ist.
+Every access passes through the tenant context. Routes do not repeat the
+authorization check; they receive a context that has already been verified.
 """
 
 from __future__ import annotations
@@ -30,22 +30,21 @@ from sidebyside.relationship.models import (
 
 router = APIRouter(tags=["spaces"])
 
-ETAG_KOPF = {
+ETAG_HEADERS = {
     "ETag": {
-        "description": "Die Version der Ressource. Gehoert unveraendert in das "
-        "`If-Match` des naechsten Schreibzugriffs.",
+        "description": "Resource version. Send it unchanged in the next write request's `If-Match` header.",
         "schema": {"type": "string"},
     }
 }
-"""Der ETag steht im Vertrag, weil ein Client ohne ihn nicht schreiben kann."""
+"""ETag is part of the contract because clients cannot write without it."""
 
 
 class PartnerView(ApiModel):
-    """Was von einem Account nach aussen geht.
+    """Account projection exposed through a space response.
 
-    Ausdruecklich eine Whitelist. Am Account haengen Anmeldedaten und
-    Kontaktangaben, die in einer Space-Antwort nichts verloren haben - und
-    eine allgemeine Modell-Serialisierung wuerde sie irgendwann mitnehmen.
+    This is deliberately an allowlist. Accounts also contain authentication
+    and contact data that do not belong in a space response; serializing the
+    general model would eventually expose such fields by accident.
     """
 
     id: UUID
@@ -65,10 +64,10 @@ class SpaceView(ApiModel):
 
 
 class SpaceProfileView(ApiModel):
-    """Das Beziehungsprofil eines Space.
+    """Relationship profile of a space.
 
-    `version` ist der Stand, den ein spaeterer Schreibzugriff per `If-Match`
-    vorlegen muss. Die Antwort traegt ihn zusaetzlich als ETag.
+    ``version`` is the state a later write must supply through ``If-Match``.
+    The response also carries that version as an ETag.
     """
 
     space_id: UUID
@@ -82,12 +81,12 @@ class SpaceProfileView(ApiModel):
 
 
 class SpaceProfileUpdate(ApiModel):
-    """Der vollstaendige neue Stand des Profils.
+    """Complete replacement state for a relationship profile.
 
-    Alle drei Felder sind Pflicht. Ein weggelassenes Feld waere sonst nicht
-    von "auf leer setzen" zu unterscheiden - und der Unterschied entscheidet
-    darueber, ob ein Beziehungsbeginn erhalten bleibt oder verschwindet.
-    `relationshipStartedOn` wird mit `null` ausdruecklich geloescht.
+    All three fields are required. Otherwise an omitted field could not be
+distinguished from clearing it, and that distinction determines whether a
+relationship start date is preserved or removed. ``relationshipStartedOn``
+is explicitly removed by sending ``null``.
     """
 
     relationship_started_on: date | None
@@ -95,56 +94,55 @@ class SpaceProfileUpdate(ApiModel):
     duration_display_mode: DurationDisplayMode
 
 
-def _mit_dauer(
-    ansicht: SpaceProfileView | SpaceView,
-    profil: SpaceProfile,
+def _add_duration(
+    view: SpaceProfileView | SpaceView,
+    profile: SpaceProfile,
     today: date,
 ) -> None:
-    """Die gemeinsame Zeit ergaenzen, sofern sie ueberhaupt gezeigt wird.
+    """Add relationship duration when the profile permits it to be shown.
 
-    Ist die Anzeige abgeschaltet, wird sie auch nicht mitgeschickt. Ein
-    Wert, den der Client ausblenden soll, ist trotzdem uebertragen worden.
+    When display is disabled, the value is not transmitted at all. A value the
+    client is merely told to hide has still been disclosed.
     """
-    if not profil.show_relationship_duration or profil.relationship_started_on is None:
+    if not profile.show_relationship_duration or profile.relationship_started_on is None:
         return
 
-    gemeinsam = duration_calc.since(profil.relationship_started_on, today)
-    if gemeinsam is None:
+    duration = duration_calc.since(profile.relationship_started_on, today)
+    if duration is None:
         return
 
-    ansicht.relationship_days = gemeinsam.days
-    ansicht.relationship_years = gemeinsam.years
-    ansicht.relationship_months = gemeinsam.months
+    view.relationship_days = duration.days
+    view.relationship_years = duration.years
+    view.relationship_months = duration.months
 
 
-def _profile_view(space_id: UUID, profil: SpaceProfile | None, today: date) -> SpaceProfileView:
-    """Die Profilansicht - auch fuer einen Space, der noch keine Zeile hat.
+def _profile_view(space_id: UUID, profile: SpaceProfile | None, today: date) -> SpaceProfileView:
+    """Build the profile view, including for a space without a profile row.
 
-    Ein Space ohne Profilzeile ist ein Altbestand. Er bekommt hier dieselben
-    Standardwerte, die der erste Schreibzugriff anlegen wuerde, samt der
-    Version, die dieser dann vorfindet. Ein Lesezugriff legt bewusst nichts
-    an.
+    A space without a profile row is legacy state. Reads project the same
+    defaults that the first write would create, including the version that
+    write will observe. Reads intentionally do not create database state.
     """
-    if profil is None:
+    if profile is None:
         return SpaceProfileView(space_id=space_id, version=INITIAL_VERSION)
 
-    ansicht = SpaceProfileView(
+    view = SpaceProfileView(
         space_id=space_id,
-        version=profil.version,
-        relationship_started_on=profil.relationship_started_on,
-        show_relationship_duration=profil.show_relationship_duration,
-        duration_display_mode=DurationDisplayMode(profil.duration_display_mode),
+        version=profile.version,
+        relationship_started_on=profile.relationship_started_on,
+        show_relationship_duration=profile.show_relationship_duration,
+        duration_display_mode=DurationDisplayMode(profile.duration_display_mode),
     )
-    _mit_dauer(ansicht, profil, today)
-    return ansicht
+    _add_duration(view, profile, today)
+    return view
 
 
 def _today_for(tenant: TenantContext) -> date:
-    """Der heutige Tag aus Sicht der lesenden Person.
+    """Return today's date from the reading account's timezone.
 
-    Gemeinsame Tage und Jahrestage wechseln um Mitternacht am Ort dieser
-    Person. `today_utc()` waere fuer westlich von UTC lebende Menschen bis
-    zu einen Tag zu weit und fuer oestlich lebende einen Tag zu kurz.
+    Shared-day counters and anniversaries roll over at midnight where that
+    person is located. ``today_utc()`` would be up to one day ahead for users
+    west of UTC and one day behind for users east of UTC.
     """
     return today_in(tenant.account.timezone)
 
@@ -155,11 +153,11 @@ def _today_for(tenant: TenantContext) -> date:
     responses=problem_responses(401, 404),
 )
 def get_space(tenant: Tenant, session: DbSession) -> SpaceView:
-    profil = profile_service.load(session, tenant.space_id)
+    profile = profile_service.load(session, tenant.space_id)
 
-    # Ueber die Mitgliedschaften, nicht ueber eine Account-Abfrage: so kann
-    # die Antwort keine Person enthalten, die nicht in diesem Space ist.
-    mitglieder = (
+    # Query through memberships rather than Accounts directly so the response
+    # cannot include a person who is not a member of this space.
+    members = (
         session.execute(
             select(Account)
             .join(Membership, Membership.account_id == Account.id)
@@ -173,47 +171,47 @@ def get_space(tenant: Tenant, session: DbSession) -> SpaceView:
         .all()
     )
 
-    ansicht = SpaceView(
+    view = SpaceView(
         id=tenant.space_id,
         created_at=tenant.membership.space.created_at,
-        partners=[PartnerView(id=a.id, display_name=a.display_name or "") for a in mitglieder],
+        partners=[PartnerView(id=a.id, display_name=a.display_name or "") for a in members],
     )
 
-    if profil is None:
-        return ansicht
+    if profile is None:
+        return view
 
-    ansicht.show_relationship_duration = profil.show_relationship_duration
-    ansicht.duration_display_mode = profil.duration_display_mode
-    if profil.relationship_started_on is not None:
-        ansicht.relationship_started_on = profil.relationship_started_on.isoformat()
+    view.show_relationship_duration = profile.show_relationship_duration
+    view.duration_display_mode = profile.duration_display_mode
+    if profile.relationship_started_on is not None:
+        view.relationship_started_on = profile.relationship_started_on.isoformat()
 
-    _mit_dauer(ansicht, profil, _today_for(tenant))
-    return ansicht
+    _add_duration(view, profile, _today_for(tenant))
+    return view
 
 
 @router.get(
     "/spaces/{spaceId}/profile",
     response_model=SpaceProfileView,
     responses={
-        200: {"headers": ETAG_KOPF},
+        200: {"headers": ETAG_HEADERS},
         **problem_responses(401, 404),
     },
 )
 def get_space_profile(tenant: Tenant, session: DbSession, response: Response) -> SpaceProfileView:
-    ansicht = _profile_view(
+    view = _profile_view(
         tenant.space_id,
         profile_service.load(session, tenant.space_id),
         _today_for(tenant),
     )
-    response.headers["ETag"] = etag_for(ansicht.version)
-    return ansicht
+    response.headers["ETag"] = etag_for(view.version)
+    return view
 
 
 @router.put(
     "/spaces/{spaceId}/profile",
     response_model=SpaceProfileView,
     responses={
-        200: {"headers": ETAG_KOPF},
+        200: {"headers": ETAG_HEADERS},
         **problem_responses(
             401,
             404,
@@ -221,8 +219,8 @@ def get_space_profile(tenant: Tenant, session: DbSession, response: Response) ->
             422,
             descriptions={
                 409: (
-                    "Die vorgelegte Version ist nicht mehr aktuell. Es wurde nichts "
-                    "geaendert; der aktuelle Stand ist neu zu laden."
+                    "The supplied version is no longer current. Nothing was changed; "
+                    "reload the latest state before retrying."
                 )
             },
         ),
@@ -235,24 +233,23 @@ def update_space_profile(
     body: SpaceProfileUpdate,
     expected_version: IfMatchVersion,
 ) -> SpaceProfileView:
-    """Das Beziehungsprofil ersetzen.
+    """Replace the relationship profile.
 
-    Der Aufrufer legt mit `If-Match` die Version vor, die er gelesen hat.
-    Hat der Partner inzwischen geschrieben, antwortet der Endpunkt mit 409
-    und aendert nichts - ein stilles Ueberschreiben gaebe es sonst genau
-    dann, wenn beide gleichzeitig am selben Profil arbeiten.
+    The caller supplies the version it read through ``If-Match``. If the
+    partner has written in the meantime, the endpoint returns 409 and changes
+    nothing; otherwise simultaneous edits could silently overwrite each other.
     """
-    heute = _today_for(tenant)
-    profil = profile_service.update(
+    today = _today_for(tenant)
+    profile = profile_service.update(
         session,
         tenant.space_id,
         expected_version=expected_version,
         relationship_started_on=body.relationship_started_on,
         show_relationship_duration=body.show_relationship_duration,
         duration_display_mode=body.duration_display_mode,
-        today=heute,
+        today=today,
     )
 
-    ansicht = _profile_view(tenant.space_id, profil, heute)
-    response.headers["ETag"] = etag_for(ansicht.version)
-    return ansicht
+    view = _profile_view(tenant.space_id, profile, today)
+    response.headers["ETag"] = etag_for(view.version)
+    return view
