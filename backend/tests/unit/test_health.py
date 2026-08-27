@@ -16,7 +16,7 @@ def client() -> TestClient:
 
 class TestHealth:
     def test_liveness_does_not_require_database(self, client: TestClient) -> None:
-        """An orchestrator must not restart the container merely because the database is unavailable."""
+        """Liveness must not fail merely because the database is unavailable."""
         response = client.get("/api/v1/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
