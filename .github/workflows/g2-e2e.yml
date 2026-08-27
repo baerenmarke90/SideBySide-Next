@@ -105,10 +105,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle 9.5.0
+      - name: Set up Gradle cache and validate wrapper
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
-        with:
-          gradle-version: "9.5.0"
+
+      - name: Verify pinned Gradle wrapper JAR
+        working-directory: android
+        shell: bash
+        run: |
+          printf '%s  %s\n' \
+            '497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7' \
+            'gradle/wrapper/gradle-wrapper.jar' \
+            | sha256sum --check --strict -
 
       - name: Install Android SDK 37.1
         run: |
@@ -117,7 +124,7 @@ jobs:
       - name: Android uses OkHttpReferenceApi against the same real stack
         working-directory: android
         run: >-
-          gradle --no-daemon --stacktrace
+          ./gradlew --no-daemon --stacktrace --dependency-verification strict
           :app:testDebugUnitTest
           --tests de.sidebyside.next.reference.ReferenceFlowE2eTest
 
