@@ -67,6 +67,34 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             findings = check_file(path)
             self.assertGreaterEqual(len(findings), 2)
 
+    def test_hybrid_identifiers_from_backend_migration_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            path.write_text(
+                "def upload_hoch():\n"
+                "    pass\n\n"
+                "def test_png_als_jpeg_angekuendigt_scheitert():\n"
+                "    pass\n\n"
+                "CANARY_FREMD = b'fixture'\n",
+                encoding="utf-8",
+            )
+            findings = check_file(path)
+            self.assertEqual(len(findings), 3)
+            self.assertTrue(any("upload_hoch" in finding for finding in findings))
+            self.assertTrue(any("angekuendigt" in finding for finding in findings))
+            self.assertTrue(any("CANARY_FREMD" in finding for finding in findings))
+
+    def test_hybrid_engineering_prose_from_backend_migration_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            path.write_text(
+                '"""Schwerpunkte: attachment status and metadata stripping."""\n'
+                "# No Storage-Interna are exposed.\n",
+                encoding="utf-8",
+            )
+            findings = check_file(path)
+            self.assertEqual(len(findings), 2)
+
     def test_ordinary_product_literal_is_not_classified(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.py"
