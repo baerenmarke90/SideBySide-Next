@@ -1,4 +1,4 @@
-"""Accounts und ihre Adressen."""
+"""Accounts and their addresses."""
 
 from __future__ import annotations
 
@@ -27,29 +27,28 @@ class AccountErrorCode:
 
 
 def normalize_email(email: str) -> str:
-    """Klein geschrieben und ohne Rand.
+    """Return an address lowercased and stripped of surrounding whitespace.
 
-    Sonst waeren "A@b.de" und "a@b.de " zwei Adressen, und die
-    Eindeutigkeit haette ein Loch. Die Datenbank haelt mit einer
-    Check-Bedingung dagegen.
+    Otherwise "A@b.de" and "a@b.de " would be two different addresses and
+    uniqueness would have a gap. A database check constraint provides an
+    additional guard.
     """
     return (email or "").strip().lower()
 
 
 def validate_email(email: str) -> str:
-    """Eine bewusst grobe Pruefung.
+    """Apply deliberately coarse email validation.
 
-    Ob eine Adresse wirklich existiert, klaert nur ein Versand dorthin.
-    Eine strenge Mustererkennung weist erfahrungsgemaess vor allem gueltige
-    Sonderfaelle ab.
+    Only delivery can establish whether an address really exists. In
+    practice, strict pattern matching mostly rejects valid edge cases.
     """
-    normalisiert = normalize_email(email)
-    lokal, at, domain = normalisiert.partition("@")
-    if not at or not lokal or "." not in domain or domain.startswith("."):
+    normalized = normalize_email(email)
+    local_part, at, domain = normalized.partition("@")
+    if not at or not local_part or "." not in domain or domain.startswith("."):
         raise ValidationError("Enter a valid email address.", AccountErrorCode.EMAIL_INVALID)
-    if len(normalisiert) > 320:
+    if len(normalized) > 320:
         raise ValidationError("Enter a valid email address.", AccountErrorCode.EMAIL_INVALID)
-    return normalisiert
+    return normalized
 
 
 def find_by_email(session: Session, email: str) -> Account | None:
@@ -67,32 +66,32 @@ def account_count(session: Session) -> int:
 def create_account(
     session: Session, *, display_name: str, email: str, password_hash: str
 ) -> Account:
-    """Einen Account mit lokaler Anmeldung anlegen."""
+    """Create an account with local authentication."""
     name = (display_name or "").strip()
     if not name:
         raise ValidationError("A display name is required.", AccountErrorCode.DISPLAY_NAME_REQUIRED)
 
-    adresse = validate_email(email)
-    if find_by_email(session, adresse) is not None:
+    email_address = validate_email(email)
+    if find_by_email(session, email_address) is not None:
         raise ConflictError(
             "This email address is already registered.", AccountErrorCode.EMAIL_TAKEN
         )
 
-    konto = Account(display_name=name[:MAX_DISPLAY_NAME])
-    session.add(konto)
+    account = Account(display_name=name[:MAX_DISPLAY_NAME])
+    session.add(account)
     session.flush()
 
-    session.add(AccountEmail(account_id=konto.id, email=adresse, is_primary=True))
+    session.add(AccountEmail(account_id=account.id, email=email_address, is_primary=True))
     session.add(
         AuthIdentity(
-            account_id=konto.id,
+            account_id=account.id,
             provider=AuthProvider.LOCAL_PASSWORD.value,
-            subject=adresse,
+            subject=email_address,
             secret_hash=password_hash,
         )
     )
     session.flush()
-    return konto
+    return account
 
 
 def create_oidc_account(
@@ -101,36 +100,35 @@ def create_oidc_account(
     display_name: str,
     verified_email: str | None = None,
 ) -> Account:
-    """Ein Konto fuer ein bereits verifiziertes OIDC-Onboarding anlegen.
+    """Create an account for an already verified OIDC onboarding flow.
 
-    OIDC braucht weder ein lokales Passwort noch eine lokale AuthIdentity.
-    Eine E-Mail-Adresse ist nur zusaetzliche, optionale Profildaten. Sie wird
-    verworfen, wenn der Claim unbrauchbar oder die Adresse bereits vergeben
-    ist. Insbesondere wird darueber niemals ein bestehendes Konto gesucht
-    und uebernommen.
+    OIDC needs neither a local password nor a local AuthIdentity. An email
+    address is only additional, optional profile data. It is discarded if the
+    claim is unusable or the address is already assigned. In particular, it
+    is never used to find and take over an existing account.
     """
     name = (display_name or "").strip() or "Partner"
-    konto = Account(display_name=name[:MAX_DISPLAY_NAME])
-    session.add(konto)
+    account = Account(display_name=name[:MAX_DISPLAY_NAME])
+    session.add(account)
     session.flush()
 
     if verified_email:
         try:
-            adresse = validate_email(verified_email)
+            email_address = validate_email(verified_email)
         except ValidationError:
-            adresse = ""
-        if adresse and find_by_email(session, adresse) is None:
+            email_address = ""
+        if email_address and find_by_email(session, email_address) is None:
             session.add(
                 AccountEmail(
-                    account_id=konto.id,
-                    email=adresse,
+                    account_id=account.id,
+                    email=email_address,
                     verified_at=now(),
                     is_primary=True,
                 )
             )
             session.flush()
 
-    return konto
+    return account
 
 
 def local_identity(session: Session, account: Account) -> AuthIdentity | None:
@@ -143,7 +141,7 @@ def local_identity(session: Session, account: Account) -> AuthIdentity | None:
 
 
 def oidc_identity(session: Session, *, issuer: str, subject: str) -> AuthIdentity | None:
-    """Eine OIDC-Identitaet anhand des vom Standard definierten Paars finden."""
+    """Find an OIDC identity by the issuer/subject pair defined by the standard."""
     return session.execute(
         select(AuthIdentity).where(
             AuthIdentity.provider == AuthProvider.OIDC.value,
@@ -161,10 +159,10 @@ def add_oidc_identity(
     subject: str,
     connection_id: str,
 ) -> AuthIdentity:
-    """Eine verifizierte externe Identitaet mit ihrer Verbindung speichern.
+    """Persist a verified external identity together with its connection.
 
-    Diese Funktion prueft kein OIDC-Token. Der aufrufende Adapter darf sie
-    erst nach Discovery, Signatur- und Claim-Pruefung verwenden.
+    This function does not verify an OIDC token. The calling adapter may use
+    it only after discovery, signature verification, and claim validation.
     """
     issuer_value = issuer.strip()
     connection_value = connection_id.strip()
@@ -203,7 +201,7 @@ def store_webauthn_credential(
     backup_eligible: bool = False,
     backup_state: bool = False,
 ) -> WebAuthnCredential:
-    """Das Ergebnis einer bereits verifizierten Registration Ceremony speichern."""
+    """Persist the result of an already verified registration ceremony."""
     if not credential_id or not public_key or sign_count < 0:
         raise ValidationError(
             "Credential ID, public key and a valid sign count are required.",
