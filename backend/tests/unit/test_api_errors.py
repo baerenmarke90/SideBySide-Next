@@ -122,7 +122,9 @@ class TestApiRouteMisses:
             "code": "HTTP_404",
         }
 
-    def test_route_miss_with_extra_path_segment_has_problem_details(self, client: TestClient) -> None:
+    def test_route_miss_with_extra_path_segment_has_problem_details(
+        self, client: TestClient
+    ) -> None:
         response = client.get("/api/v1/domain-not-found/unexpected-segment")
         assert response.status_code == 404
         assert set(response.json()) == REQUIRED_FIELDS
