@@ -32,6 +32,16 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             )
             self.assertEqual(check_file(path), [])
 
+    def test_english_address_identifier_is_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            path.write_text(
+                "def normalize_address(address: str) -> str:\n"
+                "    return address.strip()\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(check_file(path), [])
+
     def test_english_domain_moment_identifier_is_valid(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.py"
