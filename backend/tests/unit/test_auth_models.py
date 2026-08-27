@@ -1,4 +1,4 @@
-"""Datenmodell-Grenzen der Auth-Architektur ohne Datenbank pruefen."""
+"""Verify authentication architecture model boundaries without a database."""
 
 from __future__ import annotations
 
