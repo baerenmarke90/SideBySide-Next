@@ -58,11 +58,15 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
 
+      - name: Install git for temporary branch update
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+
       - name: Generate lockfile with npm
         working-directory: web
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
 
       - name: Commit generated lockfile to PR branch
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_REF: ${{ github.head_ref }}
