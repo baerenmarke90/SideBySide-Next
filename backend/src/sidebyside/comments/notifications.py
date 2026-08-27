@@ -1,9 +1,9 @@
-"""Inhaltsfreier Notification-Hook fuer COMMENT_CREATED.
+"""Content-free notification hook for COMMENT_CREATED.
 
-Kein Push-Provider in M2-S6. Diese Grenze uebersetzt eine Outbox-Zeile in
-einen generischen Zustellauftrag. Die Outbox-ID ist der stabile
-Idempotency-Key: falls der externe Versand erfolgreich war, aber der Worker
-vor `mark_processed` stirbt, bekommt der Retry exakt denselben Schluessel.
+M2-S6 has no push provider. This boundary translates an outbox row into a
+generic delivery request. The outbox ID is the stable idempotency key: if the
+external send succeeds but the worker dies before `mark_processed`, the retry
+receives exactly the same key.
 """
 
 from __future__ import annotations
@@ -28,12 +28,12 @@ class CommentNotificationSink(Protocol):
 
 
 def deliver(event: OutboxEvent, sink: CommentNotificationSink) -> bool:
-    """Eine Comment-Notification zustellen, falls die Zeile dafuer bestimmt ist.
+    """Deliver a comment notification when the row belongs to this consumer.
 
-    Rueckgabe `False` bedeutet: anderes Event, nicht von diesem Consumer
-    verarbeitet. Fehler des Sinks werden nicht verschluckt; der aufrufende
-    Outbox-Worker markiert die Zeile dann als fehlgeschlagen und versucht sie
-    spaeter mit derselben Event-ID erneut.
+    Returning `False` means this is another event and was not handled by this
+    consumer. Sink failures are deliberately not swallowed; the calling
+    outbox worker then marks the row as failed and retries it later with the
+    same event ID.
     """
     if event.event_type != EventType.COMMENT_CREATED.value:
         return False
