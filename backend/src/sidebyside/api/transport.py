@@ -1,4 +1,4 @@
-"""Transportgrenzen fuer produktive HTTP-Anfragen."""
+"""Transport boundaries for production HTTP requests."""
 
 from __future__ import annotations
 
@@ -11,11 +11,11 @@ _LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
 class RequireHttpsForExternalHostsMiddleware:
-    """Klartext nur fuer den lokalen Loopback-Zugriff erlauben.
+    """Allow cleartext HTTP only for local loopback access.
 
-    Ein TLS-Reverse-Proxy setzt das Scheme ueber Forwarded Headers. Uvicorn
-    uebernimmt diese Header nur von explizit vertrauten Proxy-Adressen; ein
-    Client kann HTTPS daher nicht mit einem eigenen Header vortaeuschen.
+    A TLS reverse proxy sets the scheme through forwarded headers. Uvicorn
+    accepts those headers only from explicitly trusted proxy addresses, so a
+    client cannot spoof HTTPS by supplying its own forwarded header.
     """
 
     def __init__(self, app: ASGIApp) -> None:

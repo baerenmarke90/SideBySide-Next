@@ -1,4 +1,4 @@
-"""Der ASGI-Einstiegspunkt."""
+"""ASGI application entry point."""
 
 from __future__ import annotations
 
@@ -22,51 +22,51 @@ logging.basicConfig(
 _log = logging.getLogger(__name__)
 
 
-def _betriebsart_melden(settings: Settings) -> None:
-    """Sagen, in welchem Betrieb diese Instanz laeuft.
+def _log_operating_mode(settings: Settings) -> None:
+    """Log the operating mode of this instance.
 
-    Der mitgelieferte Compose-Stack startet nach ADR 0002 absichtlich als
-    lokaler Testbetrieb. Damit daraus kein unbemerkter Dauerzustand wird,
-    steht der Unterschied in der ersten Zeile der Logs statt nur in einer
-    Datei, die beim Aufsetzen einmal gelesen wird.
+    Per ADR 0002, the bundled Compose stack intentionally starts in local
+    test mode. To keep that from becoming an unnoticed permanent state, the
+    distinction is logged at startup instead of existing only in setup
+    documentation that may be read once.
     """
     if settings.is_production:
         _log.info(
-            "Produktionsbetrieb: HTTPS-Zwang, Host-Pruefung und geschlossene Schema-Auskunft aktiv."
+            "Production mode: HTTPS enforcement, host validation, and closed schema discovery enabled."
         )
         return
     if settings.environment is Environment.TEST:
-        # Die Testsuite baut die App je Test neu; eine Warnung pro Aufbau
-        # waere Rauschen und keine Information.
+        # The test suite rebuilds the app for each test; one warning per setup
+        # would add noise rather than useful information.
         return
     _log.warning(
-        "Lokaler Testbetrieb (SBS_ENVIRONMENT=%s). HTTPS-Zwang und Host-Pruefung "
-        "sind aus, /docs ist offen und der Cursor-Signing-Key ist ein lokaler "
-        "Rueckfallwert. Fuer echten Betrieb SBS_ENVIRONMENT=production setzen; "
-        "die Checkliste steht in docs/SELF-HOSTING.md.",
+        "Local test mode (SBS_ENVIRONMENT=%s). HTTPS enforcement and host validation "
+        "are disabled, /docs is open, and the cursor signing key uses a local "
+        "fallback value. Set SBS_ENVIRONMENT=production for real deployments; "
+        "see the checklist in docs/SELF-HOSTING.md.",
         settings.environment.value,
     )
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    _betriebsart_melden(settings)
+    _log_operating_mode(settings)
 
     app = SideBySideFastAPI(
         title="SideBySide Next",
         version="0.1.0",
-        description="Application Core. OpenAPI ist der verbindliche Vertrag.",
-        # In Produktion keine offene Schema-Auskunft: sie ist eine
-        # Landkarte der Angriffsfläche.
+        description="Application Core. OpenAPI is the authoritative contract.",
+        # Production does not expose schema discovery: it is a map of the
+        # attack surface.
         docs_url=None if settings.is_production else "/docs",
         redoc_url=None,
         openapi_url=None if settings.is_production else "/openapi.json",
     )
 
     if settings.is_production:
-        # Die HTTPS-Pruefung verlaesst sich nur auf das von Uvicorn bereits
-        # bereinigte Scheme. Uvicorn vertraut Forwarded Headers ausschliesslich
-        # von den im Deployment explizit gesetzten Proxy-Adressen.
+        # HTTPS validation relies only on the scheme Uvicorn has already
+        # normalized. Uvicorn trusts forwarded headers exclusively from the
+        # proxy addresses explicitly configured by the deployment.
         app.add_middleware(RequireHttpsForExternalHostsMiddleware)
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 

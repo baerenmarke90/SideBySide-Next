@@ -1,13 +1,12 @@
-"""Optimistic Concurrency an der HTTP-Grenze.
+"""Optimistic concurrency at the HTTP boundary.
 
-Die Version einer Ressource geht als ETag hinaus und als `If-Match` wieder
-herein. Damit steht die Konfliktpruefung dort, wo HTTP sie ohnehin vorsieht,
-und nicht als Sonderfeld in jedem einzelnen Anfragekoerper.
+A resource version is sent as an ETag and returns in ``If-Match``. Conflict
+checking therefore lives where HTTP already defines it instead of being a
+special field in every request body.
 
-Ein Schreibzugriff ohne `If-Match` wird abgelehnt statt stillschweigend
-durchgelassen. Ein fehlender Kopf ist sonst genau der Weg, auf dem ein
-Client den Konfliktschutz versehentlich abschaltet - und der Lost Update
-faellt niemandem auf.
+A write without ``If-Match`` is rejected rather than silently accepted. A
+missing header would otherwise be exactly how a client accidentally disables
+conflict protection and causes an unnoticed lost update.
 """
 
 from __future__ import annotations
@@ -20,38 +19,37 @@ from sidebyside.core.errors import ErrorCode, ValidationError
 
 
 def etag_for(version: int) -> str:
-    """Die Version als starkes ETag."""
+    """Encode a resource version as a strong ETag."""
     return f'"{version}"'
 
 
 def parse_if_match(value: str) -> int:
-    """Aus dem `If-Match`-Kopf die erwartete Version lesen.
+    """Read the expected version from an ``If-Match`` header.
 
-    Akzeptiert wird genau ein starkes ETag - mit oder ohne
-    Anfuehrungszeichen, weil beide Schreibweisen in freier Wildbahn
-    vorkommen.
+    Exactly one strong ETag is accepted, with or without quotes because both
+    forms occur in practice.
 
-    Ein leerer Wert zaehlt wie ein unbrauchbarer: er benennt keine Version.
+    An empty value is treated as unusable because it does not name a version.
 
-    Ausdruecklich nicht akzeptiert:
+    Explicitly rejected:
 
-    - `*`, das nur "irgendeine vorhandene Darstellung" bedeutet und den
-      Konfliktschutz damit aufheben wuerde,
-    - schwache Validatoren `W/"..."`, die fuer `If-Match` ohnehin
-      unzulaessig sind,
-    - mehrere Werte, weil eine Ressource genau eine Version hat.
+    - ``*``, which only means "any current representation" and would bypass
+      conflict protection;
+    - weak validators such as ``W/\"...\"``, which are invalid for
+      ``If-Match`` anyway;
+    - multiple values, because a resource has exactly one version.
     """
-    roh = value.strip()
-    if roh.startswith('"') and roh.endswith('"') and len(roh) >= 2:
-        roh = roh[1:-1]
+    raw = value.strip()
+    if raw.startswith('"') and raw.endswith('"') and len(raw) >= 2:
+        raw = raw[1:-1]
 
-    if not (roh.isascii() and roh.isdigit()):
+    if not (raw.isascii() and raw.isdigit()):
         raise ValidationError(
             "The If-Match header must carry a single concrete version.",
             ErrorCode.IF_MATCH_MALFORMED,
         )
 
-    return int(roh)
+    return int(raw)
 
 
 def if_match_version(
@@ -60,17 +58,17 @@ def if_match_version(
         Header(
             alias="If-Match",
             description=(
-                "Die zuletzt gelesene Version der Ressource, als starkes ETag. "
-                "Ohne diesen Kopf wird nicht geschrieben."
+                "The last-read resource version, encoded as a strong ETag. "
+                "Writes are rejected without this header."
             ),
         ),
     ],
 ) -> int:
-    """Pflichtkopf.
+    """Require and parse the optimistic-concurrency header.
 
-    Ausdruecklich ohne Standardwert: so steht er auch im OpenAPI-Vertrag als
-    Pflicht. Ein Vertrag, der ihn als optional fuehrt, waere eine Einladung,
-    ihn wegzulassen - und genau das schaltet den Konfliktschutz ab.
+    There is deliberately no default value, so OpenAPI also marks the header
+    as required. Describing it as optional would invite clients to omit it,
+    which would defeat conflict protection.
     """
     return parse_if_match(if_match)
 

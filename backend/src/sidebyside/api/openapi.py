@@ -1,13 +1,13 @@
-"""OpenAPI-Anpassungen fuer den tatsaechlichen SideBySide-HTTP-Vertrag.
+"""OpenAPI adjustments for the actual SideBySide HTTP contract.
 
-FastAPI fuegt fuer Routen mit Path-/Body-Parametern automatisch eine 422-
-Antwort mit ``HTTPValidationError`` ein. SideBySide liefert zur Laufzeit
-aber ausschliesslich ``ProblemDetails``. Ausserdem sind manche automatisch
-ergaenzten 422 bei bewusst als ``str`` entgegengenommenen IDs gar nicht
-erreichbar: fehlgeformte IDs werden aus Privacy-Gruenden fachlich zu 404.
+FastAPI automatically adds a 422 response with ``HTTPValidationError`` to
+routes that have path/body parameters. At runtime, SideBySide exclusively
+returns ``ProblemDetails``. Some automatically added 422 responses are also
+unreachable for IDs intentionally accepted as ``str``: malformed IDs become
+semantic 404 responses for privacy reasons.
 
-Tatsaechliche 422-Pfade werden an der Route explizit mit ``ProblemDetails``
-dokumentiert. Nur verbliebene FastAPI-Defaults werden hier entfernt.
+Actual 422 paths are documented explicitly on the route with
+``ProblemDetails``. Only remaining FastAPI defaults are removed here.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ def _response_schema_ref(response: dict[str, Any]) -> str | None:
 
 
 def _paths_reference(schema: dict[str, Any], ref: str) -> bool:
-    """Pruefen, ob irgendeine Operation noch auf ein Schema verweist."""
+    """Return whether any operation still references a schema."""
     stack: list[Any] = [schema.get("paths", {})]
     while stack:
         current = stack.pop()
@@ -68,7 +68,7 @@ def _remove_implicit_fastapi_validation(schema: dict[str, Any]) -> None:
 
 
 class SideBySideFastAPI(FastAPI):
-    """FastAPI mit dem bereinigten, produktiven Fehlervertrag."""
+    """FastAPI with SideBySide's normalized production error contract."""
 
     def openapi(self) -> dict[str, Any]:
         schema = super().openapi()
