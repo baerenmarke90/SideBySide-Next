@@ -1,4 +1,4 @@
-"""Optionale Client-Transportfaehigkeit eines MediaStore."""
+"""Optional client-transport capability of a MediaStore."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from sidebyside.media.base import MediaStore
 
 @dataclass(frozen=True)
 class SignedUpload:
-    """Eine kurzlebige, an genau ein Objekt gebundene Upload-Capability."""
+    """A short-lived upload capability bound to exactly one object."""
 
     url: str
     required_headers: dict[str, str]
@@ -19,7 +19,7 @@ class SignedUpload:
 
 @runtime_checkable
 class SignedUploadMediaStore(Protocol):
-    """MediaStore mit direktem, serverseitig signiertem Clientupload."""
+    """MediaStore with direct, server-signed client uploads."""
 
     def create_upload_url(
         self,
