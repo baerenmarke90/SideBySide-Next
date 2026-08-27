@@ -40,6 +40,12 @@ Die Pruefung ist Pflicht fuer relevante Features oder Aenderungen, die mindesten
 
 Fuer rein fachliche Domainlogik ohne Commodity-Infrastruktur kann die Pruefung als nicht relevant markiert werden.
 
+Reine Versionsanhebungen bereits eingefuehrter Abhaengigkeiten sind keine
+Reuse-Entscheidung und deshalb ausgenommen. Der automatisierte Gate ueberspringt
+Pull Requests von `dependabot[bot]`. Ein Wechsel der Komponente selbst, ein
+Major-Upgrade mit neuem Funktionsumfang oder eine neu aufgenommene Abhaengigkeit
+bleiben pruefpflichtig und werden nicht von Dependabot eingebracht.
+
 ## Pflichtfragen vor Implementierungsbeginn
 
 Bei einem relevanten Feature muessen Issue oder Pull Request nachvollziehbar beantworten:
