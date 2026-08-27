@@ -1,0 +1,75 @@
+name: PR 219 language quality cleanup
+
+on:
+  push:
+    branches:
+      - chore/214-backend-english-engineering
+    paths:
+      - tools/ci/pr219_quality_cleanup.py
+      - .github/workflows/pr219-quality-cleanup.yml
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: chore/214-backend-english-engineering
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Install locked backend tooling
+        working-directory: backend
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv lock --check
+          uv sync --frozen
+
+      - name: Apply deterministic cleanup
+        run: python3 tools/ci/pr219_quality_cleanup.py
+
+      - name: Format backend tests
+        working-directory: backend
+        run: uv run --frozen ruff format tests
+
+      - name: Verify syntax
+        run: python3 -m compileall -q backend/tests
+
+      - name: Verify authoritative language audit
+        run: python3 tools/ci/engineering_language_audit.py
+
+      - name: Verify strict language quality audit
+        run: python3 tools/ci/pr219_quality_audit.py
+
+      - name: Verify Ruff
+        working-directory: backend
+        run: uv run --frozen ruff check src tests scripts alembic
+
+      - name: Remove temporary PR tooling
+        run: |
+          rm tools/ci/pr219_quality_cleanup.py
+          rm tools/ci/pr219_quality_audit.py
+          rm .github/workflows/pr219-quality-cleanup.yml
+          rm .github/workflows/pr219-quality-audit.yml
+
+      - name: Commit cleanup result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/tests tools/ci/pr219_quality_cleanup.py tools/ci/pr219_quality_audit.py .github/workflows/pr219-quality-cleanup.yml .github/workflows/pr219-quality-audit.yml
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(tests): remove residual hybrid engineering language"
+          git push origin HEAD:chore/214-backend-english-engineering
