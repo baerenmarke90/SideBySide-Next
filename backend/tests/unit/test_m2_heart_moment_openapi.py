@@ -1,4 +1,4 @@
-"""Der implementierte HeartMoment-Slice muss den in #70 freigegebenen Vertrag spiegeln."""
+"""The implemented HeartMoment slice must mirror the contract approved in #70."""
 
 from __future__ import annotations
 
@@ -35,11 +35,11 @@ def test_every_heart_moment_mutation_requires_if_match() -> None:
 
 def test_list_exposes_exactly_the_agreed_query_parameters() -> None:
     paths = _schema()["paths"]  # type: ignore[index]
-    namen = {parameter["name"] for parameter in paths[COLLECTION]["get"]["parameters"]}
-    assert {"cursor", "limit", "visibility"} <= namen
-    # `year` gehoert zu Memory und Milestone, nicht zu HeartMoment.
-    assert "year" not in namen
-    assert "q" not in namen
+    names = {parameter["name"] for parameter in paths[COLLECTION]["get"]["parameters"]}
+    assert {"cursor", "limit", "visibility"} <= names
+    # `year` belongs to Memory and Milestone, not HeartMoment.
+    assert "year" not in names
+    assert "q" not in names
 
 
 def test_write_dtos_only_expose_approved_fields() -> None:
@@ -66,7 +66,7 @@ def test_write_dtos_only_expose_approved_fields() -> None:
 
 
 def test_privacy_class_is_never_a_client_field() -> None:
-    """`visibility` ist die einzige fachliche Clientwahrheit (M2-D09)."""
+    """`visibility` is the only domain-level client truth (M2-D09)."""
     components = _schema()["components"]["schemas"]  # type: ignore[index]
     for name in (
         "HeartMomentCreate",
@@ -78,7 +78,7 @@ def test_privacy_class_is_never_a_client_field() -> None:
 
 
 def test_heart_moment_detail_projects_its_single_attachment() -> None:
-    """Hoechstens eines (M2-D03) - deshalb ein Feld und keine Liste."""
+    """At most one attachment (M2-D03), therefore one field rather than a list."""
     components = _schema()["components"]["schemas"]  # type: ignore[index]
     detail = components["HeartMomentDetail"]
     assert "attachment" in detail["properties"]
