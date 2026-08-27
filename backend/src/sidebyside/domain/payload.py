@@ -1,27 +1,27 @@
-"""Die Grenze zwischen Metadaten und schützenswertem Inhalt.
+"""Boundary between metadata and protected content.
 
-Im ersten Release gibt es KEINE Ende-zu-Ende-Verschlüsselung. Dieses Modul
-implementiert sie nicht und darf nicht so vermarktet werden.
+The first release has NO end-to-end encryption. This module does not implement
+it and must not be presented as if it did.
 
-Was es tut: es zieht die Trennlinie jetzt, damit sie später nicht durch die
-ganze Anwendung gezogen werden muss.
+What it does is draw the boundary now so it does not need to be introduced
+throughout the whole application later.
 
     Metadata                 ProtectedPayload
     ------------------       -----------------
     id, space_id             title
     author_id                body
-    happened_on              weitere sensible Felder
+    happened_on              other sensitive fields
     created_at
     crypto_version
 
-In Version 1 ist der Payload Klartext, `crypto_version = 0`. Später
-enthält dasselbe Feld Ciphertext, den der Client erzeugt hat, und der
-Server sieht ihn nie im Klartext.
+In version 1 the payload is plaintext, `crypto_version = 0`. Later the same
+field can contain ciphertext produced by the client, which the server never
+sees in plaintext.
 
-Die Konsequenz für alles, was darauf aufbaut: Dashboard, Rückblicke,
-Regeln und Benachrichtigungen sollen mit Metadaten auskommen. Was den
-Klartext braucht, funktioniert nach der Umstellung nicht mehr - und das
-soll beim Schreiben auffallen, nicht Jahre später.
+The consequence for everything built on top of this boundary: dashboards,
+recaps, rules, and notifications should work from metadata. Anything requiring
+plaintext will stop working after that transition, and that dependency should
+be visible while writing the feature rather than years later.
 """
 
 from __future__ import annotations
@@ -31,18 +31,18 @@ from typing import Any, ClassVar, Self
 from pydantic import BaseModel, ConfigDict
 
 CRYPTO_VERSION_PLAINTEXT = 0
-"""Klartext. Version 1 des Produkts."""
+"""Plaintext. Product version 1."""
 
 CRYPTO_VERSION_CLIENT_SEALED = 1
-"""Reserviert: clientseitig verschlüsselt. Noch nicht implementiert."""
+"""Reserved for client-side encryption. Not implemented yet."""
 
 
 class ProtectedPayload(BaseModel):
-    """Basis für den schützenswerten Teil eines Fachobjekts.
+    """Base class for the protected part of a domain object.
 
-    Fachobjekte leiten davon ab und ergänzen ihre sensiblen Felder. Der Rest
-    des Objekts - alles, was zum Sortieren, Filtern und Verknüpfen nötig ist -
-    bleibt außerhalb.
+    Domain objects derive from this class and add their sensitive fields. The
+    rest of the object - everything needed for sorting, filtering, and linking
+    - remains outside it.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -50,30 +50,29 @@ class ProtectedPayload(BaseModel):
     crypto_version: ClassVar[int] = CRYPTO_VERSION_PLAINTEXT
 
     def seal(self) -> dict[str, Any]:
-        """Den Payload in die Form bringen, die persistiert wird.
+        """Convert the payload to its persisted representation.
 
-        Heute eine verlustfreie Abbildung nach JSON. Später der Ort, an dem
-        aus dem Klartext ein Ciphertext wird - beziehungsweise an dem
-        auffällt, dass der Server den Klartext gar nicht mehr besitzt.
+        Today this is a lossless JSON mapping. Later this is the boundary where
+        plaintext becomes ciphertext - or where it becomes explicit that the
+        server no longer possesses plaintext at all.
         """
         return self.model_dump(mode="json")
 
     @classmethod
     def unseal(cls, stored: dict[str, Any] | None) -> Self:
-        """Den gespeicherten Payload zurücklesen.
+        """Read a stored payload.
 
-        Ein fehlender Payload ergibt ein leeres Objekt statt einer Ausnahme:
-        nach der Umstellung auf echte Verschlüsselung wird es Zeilen geben,
-        die der Server nicht lesen kann. Sie dürfen eine Liste nicht
-        umwerfen.
+        A missing payload produces an empty object rather than an exception:
+        after a transition to real encryption there may be rows the server
+        cannot read. Such rows must not break an entire list.
         """
         return cls.model_validate(stored or {})
 
 
 def is_readable_by_server(crypto_version: int) -> bool:
-    """Kann der Server den Inhalt dieser Zeile lesen?
+    """Return whether the server can read this row's content.
 
-    Gedacht für abgeleitete Funktionen, die auf Klartext angewiesen sind.
-    Sie sollen die Zeile überspringen können, statt zu raten.
+    Intended for derived features that depend on plaintext. They should be
+    able to skip the row rather than guess.
     """
     return crypto_version == CRYPTO_VERSION_PLAINTEXT
