@@ -23,6 +23,12 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             path.write_text("## Summary\n", encoding="utf-8")
             self.assertEqual(check_file(path), [])
 
+    def test_english_status_drift_term_is_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.md"
+            path.write_text("Status-drift migration guard.\n", encoding="utf-8")
+            self.assertEqual(check_file(path), [])
+
     def test_legacy_status_marker_is_allowed_as_migration_input(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.py"
