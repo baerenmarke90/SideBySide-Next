@@ -1,11 +1,11 @@
-"""Owner- und Privacy-Autorisierung.
+"""Owner and privacy authorization.
 
-Die zweite Haelfte der Zugriffsfrage. Der Tenant Guard in
-`sidebyside.relationship.service` klaert, ob ein Account zu einem Space
-gehoert; erst danach beginnt hier die Frage, was er innerhalb dieses Space
-sehen und aendern darf.
+The second half of the access question. The tenant guard in
+`sidebyside.relationship.service` establishes whether an account belongs to a
+Space; only then does this module decide what the account may see and change
+inside that Space.
 
-Eine Domaene braucht drei Dinge:
+A domain needs three things:
 
     class PrivateNote(IdMixin, TimestampMixin, PrivateResourceMixin, Base):
         __tablename__ = "private_notes"
@@ -16,8 +16,8 @@ Eine Domaene braucht drei Dinge:
     note = require_readable(session, PrivateNote, context, note_id)
     notes = session.execute(readable(PrivateNote, context)).scalars().all()
 
-Mehr nicht. Es gibt keinen Ort, an dem eine Domaene ihre eigene
-Sichtbarkeitsbedingung formuliert.
+Nothing more. There is no place where a domain defines its own visibility
+condition.
 """
 
 from __future__ import annotations
