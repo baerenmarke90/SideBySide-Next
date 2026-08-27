@@ -1,4 +1,4 @@
-"""Persistenz fuer gemeinsame M2-Milestones."""
+"""Persistence for shared M2 milestones."""
 
 from __future__ import annotations
 
@@ -16,11 +16,10 @@ from sidebyside.domain.payload import CRYPTO_VERSION_PLAINTEXT, ProtectedPayload
 
 
 class MilestonePayload(ProtectedPayload):
-    """Schuetzenswerter Inhalt eines Milestones.
+    """Protected content of a milestone.
 
-    Wie bei Memory: Titel und Body liegen gemeinsam hinter der
-    ProtectedPayload-Grenze. Sortierung und Autorisierung duerfen von
-    ihrem Klartext nicht abhaengen.
+    As with memories, title and body share the ``ProtectedPayload`` boundary.
+    Sorting and authorization must not depend on their plaintext.
     """
 
     title: str
@@ -34,10 +33,10 @@ class Milestone(
     PrivateResourceMixin,
     Base,
 ):
-    """Ein gemeinsamer Meilenstein - lesbar fuer beide, author-only editierbar.
+    """A shared milestone readable by both partners and editable by its author.
 
-    `happened_on` ist anders als bei Memory Pflicht: ein Meilenstein ohne
-    Datum waere kein Meilenstein, und die Story sortiert danach.
+    Unlike a memory, ``happened_on`` is required. A milestone without a date
+    would not be a milestone, and story ordering depends on that date.
     """
 
     __tablename__ = "milestones"
@@ -61,10 +60,9 @@ class Milestone(
     __table_args__ = (
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
-        # Traegt den zusammengesetzten Fremdschluessel der
-        # place_milestones-Relationen. Ohne dieses Paar koennte eine Join-Zeile
-        # nicht gleichzeitig auf Zeile und Space zeigen - und Same-Space
-        # waere wieder eine Dienstregel statt einer Schemaeigenschaft.
+        # Supports the composite foreign key used by place-milestone relations.
+        # Without this pair, a relation row could not constrain both resource
+        # ID and space, leaving same-space enforcement only to service code.
         UniqueConstraint("id", "space_id", name="uq_milestones_id_space_id"),
         Index("ix_milestones_owner_id", "owner_id"),
         Index("ix_milestones_space_id_created_at_id", "space_id", "created_at", "id"),
@@ -73,5 +71,5 @@ class Milestone(
 
 
 def shared_privacy() -> PrivacyClass:
-    """Milestones sind immer gemeinsamer Space-Inhalt (M2-D25)."""
+    """Milestones are always shared space content under M2-D25."""
     return PrivacyClass.SPACE_SHARED
