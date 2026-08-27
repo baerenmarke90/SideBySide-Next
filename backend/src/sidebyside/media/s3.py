@@ -1,4 +1,4 @@
-"""S3-kompatible Medienablage mit AWS Signature Version 4."""
+"""S3-compatible media storage using AWS Signature Version 4."""
 
 from __future__ import annotations
 
@@ -39,11 +39,11 @@ def _normalize_header(value: str) -> str:
 
 
 class S3MediaStore(MediaStore):
-    """Privater S3-Bucket hinter der MediaStore-Schnittstelle.
+    """Private S3 bucket behind the MediaStore interface.
 
-    Der Adapter verwendet ausschliesslich objektbezogene GET/PUT/HEAD/DELETE-
-    Requests. ACL-Operationen gibt es bewusst nicht; die Bucket-Policy bleibt
-    Sache des Betriebs und muss Public Access verbieten.
+    The adapter uses only object-scoped GET/PUT/HEAD/DELETE requests. ACL
+    operations are intentionally absent; bucket policy remains an operations
+    responsibility and must prohibit public access.
     """
 
     def __init__(
@@ -233,8 +233,8 @@ class S3MediaStore(MediaStore):
                 content=content,
             )
         except httpx.HTTPError:
-            # Kein Requestobjekt an den Aufrufer durchreichen: Authorization-
-            # Header/Signatur duerfen auch in Fehlerlogs nicht auftauchen.
+            # Do not pass the request object to the caller: authorization
+            # headers and signatures must not appear even in error logs.
             raise OSError("S3 request failed.") from None
 
     @staticmethod
