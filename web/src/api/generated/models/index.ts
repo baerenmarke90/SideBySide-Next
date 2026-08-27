@@ -80,6 +80,7 @@ export * from './RegisterRequest';
 export * from './RelatedPersonDeletePolicy';
 export * from './RelatedPersonFields';
 export * from './RelatedPersonView';
+export * from './RelationTargets';
 export * from './ResourceCapabilities';
 export * from './SessionView';
 export * from './SharedHeartMomentSummary';

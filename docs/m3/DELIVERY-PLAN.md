@@ -1,6 +1,6 @@
 # M3 Delivery Plan
 
-**Status:** S0 abgeschlossen; Runtime freigegeben; S1 bis S3 geliefert  
+**Status:** S0 abgeschlossen; Runtime freigegeben; S1 bis S4 geliefert  
 **Stand:** 26.08.2026
 
 ## 1. Gate vor Runtime
@@ -159,18 +159,21 @@ Umgesetzt. Zwei Punkte zur Ausfuehrung:
 
 `Chapter.placeId` bleibt bei S5 - ohne Chapter-Domaene gibt es die Spalte nicht.
 
-## 7. S4 – Typisierte Content Relations – naechster Slice
+## 7. S4 – Typisierte Content Relations – geliefert
 
-M3 implementiert:
+Dieser Slice implementiert:
 
 ```text
 place_memories
 place_heart_moments
 place_milestones
-chapter_memories
-chapter_heart_moments
-chapter_milestones
 ```
+
+Die drei `chapter_*`-Relationen stehen in Abschnitt 8 bei S5 und wurden hier
+frueher irrtuemlich mitgefuehrt. Sie sind in S4 nicht baubar: die Tabelle
+`chapters` entsteht erst mit der Chapter-Domaene, und ein Fremdschluessel
+haette bis dahin kein Ziel. Dieselbe Begruendung wie bei `Plan.placeId`, das
+aus S2 nach S3 verschoben wurde.
 
 Technische Regeln:
 
@@ -185,6 +188,12 @@ Technische Regeln:
 
 `place_plans` und `place_chapters` werden nicht gebaut; `Plan.placeId` und `Chapter.placeId` sind kanonisch.
 
+Umgesetzt. Drei Punkte zur Ausfuehrung:
+
+- Same-Space ist keine Dienstregel geworden, sondern eine Schemaeigenschaft. Die Join-Zeile traegt `space_id` einmal, und *dieselbe* Spalte steht in beiden zusammengesetzten Fremdschluesseln. Eine Relation ueber Spacegrenzen hinweg ist damit nicht verboten, sondern nicht formulierbar.
+- Der Ausschluss privater HeartMoments liegt ebenfalls im Schema. `place_heart_moments` fuehrt die Privacy-Klasse des Ziels als Teil des Fremdschluessels, mit `ON UPDATE CASCADE` und einem CHECK auf `SPACE_SHARED`. Wechselt ein Moment auf `OWNER_ONLY`, ohne dass seine Relationen zuvor entfernt wurden, bricht die Transaktion ab. Der Dienst entfernt sie in derselben Transaktion und laeuft nie dagegen; der Riegel ist fuer den Codepfad, den es noch nicht gibt.
+- `change_visibility` sperrt den HeartMoment jetzt exklusiv, statt ihn nur zu autorisieren. Ohne die Sperre lag zwischen dem Entfernen der Relationen und dem Klassenwechsel ein Fenster, in dem ein gleichzeitiger Relation-Create seine Zeile noch als gemeinsam einfuegen durfte.
+
 ## 8. S5 – Chapter
 
 Scope:
@@ -193,7 +202,7 @@ Scope:
 - CRUD/List;
 - `startOn`/`endOn` optional, bei beiden `endOn >= startOn`;
 - `placeId`;
-- typisierte Content Relations;
+- typisierte Content Relations (`chapter_memories`, `chapter_heart_moments`, `chapter_milestones`), auf derselben Join-Form wie S4;
 - abgeleitete chronologische Darstellung;
 - mehrere Chapters duerfen dasselbe Target referenzieren;
 - Delete entfernt nur Chapter + Relations.

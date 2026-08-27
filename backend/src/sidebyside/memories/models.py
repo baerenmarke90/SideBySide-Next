@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import ClassVar
 
-from sqlalchemy import CheckConstraint, Date, Index, SmallInteger, text
+from sqlalchemy import CheckConstraint, Date, Index, SmallInteger, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from sidebyside.authorization import PrivacyClass, PrivateResourceMixin, ResourceAbsence
@@ -57,6 +57,11 @@ class Memory(
     __table_args__ = (
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
+        # Traegt den zusammengesetzten Fremdschluessel der
+        # place_memories-Relationen. Ohne dieses Paar koennte eine Join-Zeile
+        # nicht gleichzeitig auf Zeile und Space zeigen - und Same-Space
+        # waere wieder eine Dienstregel statt einer Schemaeigenschaft.
+        UniqueConstraint("id", "space_id", name="uq_memories_id_space_id"),
         Index("ix_memories_owner_id", "owner_id"),
         Index("ix_memories_space_id_created_at_id", "space_id", "created_at", "id"),
         Index("ix_memories_space_id_happened_on", "space_id", "happened_on"),
