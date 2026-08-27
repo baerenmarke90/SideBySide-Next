@@ -1,1 +1,1 @@
-"""Partnerprofile und Praeferenzen."""
+"""Partner profiles and preferences."""
