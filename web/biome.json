@@ -21,5 +21,20 @@
       "quoteStyle": "single",
       "trailingCommas": "all"
     }
-  }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.tsx", "**/*.jsx"],
+      "javascript": {
+        "globals": ["React"]
+      }
+    }
+  ]
 }
