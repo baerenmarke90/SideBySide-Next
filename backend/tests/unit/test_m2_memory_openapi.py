@@ -1,4 +1,4 @@
-"""Der implementierte Memory-Slice muss den in #70 freigegebenen Vertrag spiegeln."""
+"""The implemented Memory slice must mirror the contract approved in #70."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def test_memory_write_dtos_only_expose_approved_fields() -> None:
 
 
 def test_memory_detail_projects_its_gallery() -> None:
-    """Bis zum Media-Integrationsslice fehlte das Feld absichtlich."""
+    """The field was deliberately absent until the media integration slice."""
     schema = _schema()
     detail = schema["components"]["schemas"]["MemoryDetail"]  # type: ignore[index]
     assert "attachments" in detail["properties"]
@@ -60,8 +60,8 @@ def test_memory_detail_projects_its_gallery() -> None:
 def test_the_gallery_never_exposes_storage_internals() -> None:
     schema = _schema()
     summary = schema["components"]["schemas"]["MemoryAttachmentSummary"]  # type: ignore[index]
-    for verboten in ("storageKey", "bucket", "provider", "filesystemPath", "privacyClass"):
-        assert verboten not in summary["properties"]
+    for forbidden in ("storageKey", "bucket", "provider", "filesystemPath", "privacyClass"):
+        assert forbidden not in summary["properties"]
     assert "position" in summary["properties"]
 
 
