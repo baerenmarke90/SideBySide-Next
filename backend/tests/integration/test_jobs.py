@@ -1,7 +1,7 @@
-"""Job-Warteschlange in PostgreSQL.
+"""PostgreSQL-backed job queue integration tests.
 
-Geprueft wird vor allem das Verhalten unter Nebenlaeufigkeit und im
-Fehlerfall - der Rest ist Buchhaltung.
+The tests focus on concurrency and failure handling; the remaining behavior is
+bookkeeping.
 """
 
 from __future__ import annotations
@@ -20,132 +20,133 @@ from tests.conftest import requires_database
 pytestmark = [pytest.mark.integration, requires_database]
 
 
-class TestEinstellenUndAbholen:
-    def test_eingestellte_aufgabe_wird_abgeholt(self, engine: Engine) -> None:
-        macher = sessionmaker(bind=engine, expire_on_commit=False)
-        sitzung = macher()
+class TestEnqueueAndClaim:
+    def test_enqueued_job_is_claimed(self, engine: Engine) -> None:
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+        session = factory()
         try:
-            job = queue.enqueue(sitzung, "send_push", {"notification_id": "x"})
-            sitzung.commit()
+            job = queue.enqueue(session, "send_push", {"notification_id": "x"})
+            session.commit()
 
-            geholt = queue.claim(sitzung, "worker-1")
-            assert job.id in {j.id for j in geholt}
+            claimed = queue.claim(session, "worker-1")
+            assert job.id in {item.id for item in claimed}
             assert job.status == JobStatus.RUNNING.value
             assert job.attempts == 1
-            sitzung.commit()
+            session.commit()
         finally:
-            sitzung.query(Job).delete()
-            sitzung.commit()
-            sitzung.close()
+            session.query(Job).delete()
+            session.commit()
+            session.close()
 
-    def test_verzoegerte_aufgabe_wird_noch_nicht_abgeholt(self, engine: Engine) -> None:
-        macher = sessionmaker(bind=engine, expire_on_commit=False)
-        sitzung = macher()
+    def test_delayed_job_is_not_claimed(self, engine: Engine) -> None:
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+        session = factory()
         try:
-            job = queue.enqueue(sitzung, "spaeter", delay=timedelta(hours=1))
-            sitzung.commit()
-            assert job.id not in {j.id for j in queue.claim(sitzung, "worker-1")}
-            sitzung.commit()
+            job = queue.enqueue(session, "spaeter", delay=timedelta(hours=1))
+            session.commit()
+            assert job.id not in {item.id for item in queue.claim(session, "worker-1")}
+            session.commit()
         finally:
-            sitzung.query(Job).delete()
-            sitzung.commit()
-            sitzung.close()
+            session.query(Job).delete()
+            session.commit()
+            session.close()
 
 
-class TestNebenlaeufigkeit:
-    def test_zwei_worker_greifen_nie_dieselbe_aufgabe(self, engine: Engine) -> None:
-        """Das ist der Grund fuer FOR UPDATE SKIP LOCKED. Ohne das wuerde
-        entweder doppelt zugestellt oder der zweite Worker blockiert."""
-        macher = sessionmaker(bind=engine, expire_on_commit=False)
+class TestConcurrency:
+    def test_two_workers_never_claim_the_same_job(self, engine: Engine) -> None:
+        """This is why the queue uses FOR UPDATE SKIP LOCKED.
 
-        vorbereitung = macher()
+        Without it, a job could be delivered twice or the second worker could
+        block behind the first one.
+        """
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+
+        preparation = factory()
         try:
             for i in range(6):
-                queue.enqueue(vorbereitung, "arbeit", {"i": i})
-            vorbereitung.commit()
+                queue.enqueue(preparation, "arbeit", {"i": i})
+            preparation.commit()
         finally:
-            vorbereitung.close()
+            preparation.close()
 
-        erste = macher()
-        zweite = macher()
+        first = factory()
+        second = factory()
         try:
-            a = {job.id for job in queue.claim(erste, "worker-a", limit=3)}
-            b = {job.id for job in queue.claim(zweite, "worker-b", limit=3)}
+            a = {job.id for job in queue.claim(first, "worker-a", limit=3)}
+            b = {job.id for job in queue.claim(second, "worker-b", limit=3)}
 
             assert len(a) == 3
             assert len(b) == 3
             assert a.isdisjoint(b)
 
-            erste.commit()
-            zweite.commit()
+            first.commit()
+            second.commit()
         finally:
-            erste.close()
-            zweite.close()
-            aufraeumen = macher()
-            aufraeumen.query(Job).delete()
-            aufraeumen.commit()
-            aufraeumen.close()
+            first.close()
+            second.close()
+            cleanup = factory()
+            cleanup.query(Job).delete()
+            cleanup.commit()
+            cleanup.close()
 
-    def test_abgelaufene_sperre_wird_neu_vergeben(self, engine: Engine) -> None:
-        """Eine Aufgabe, deren Worker gestorben ist, darf nicht fuer immer
-        liegenbleiben."""
-        macher = sessionmaker(bind=engine, expire_on_commit=False)
-        sitzung = macher()
+    def test_expired_lock_is_reassigned(self, engine: Engine) -> None:
+        """A job must not remain stuck forever when its worker dies."""
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+        session = factory()
         try:
-            job = queue.enqueue(sitzung, "verwaist")
-            sitzung.commit()
+            job = queue.enqueue(session, "verwaist")
+            session.commit()
 
             job.status = JobStatus.RUNNING.value
             job.locked_by = "toter-worker"
             job.locked_until = now() - timedelta(minutes=1)
-            sitzung.commit()
+            session.commit()
 
-            geholt = queue.claim(sitzung, "worker-neu")
-            assert job.id in {j.id for j in geholt}
+            claimed = queue.claim(session, "worker-neu")
+            assert job.id in {item.id for item in claimed}
             assert job.locked_by == "worker-neu"
-            sitzung.commit()
+            session.commit()
         finally:
-            sitzung.query(Job).delete()
-            sitzung.commit()
-            sitzung.close()
+            session.query(Job).delete()
+            session.commit()
+            session.close()
 
 
-class TestFehlerbehandlung:
-    def test_fehlschlag_geht_mit_verzoegerung_zurueck(self, engine: Engine) -> None:
-        macher = sessionmaker(bind=engine, expire_on_commit=False)
-        sitzung = macher()
+class TestFailureHandling:
+    def test_failure_returns_job_to_pending_with_delay(self, engine: Engine) -> None:
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+        session = factory()
         try:
-            job = queue.enqueue(sitzung, "wackelig", max_attempts=3)
-            sitzung.commit()
-            queue.claim(sitzung, "worker-1")
+            job = queue.enqueue(session, "wackelig", max_attempts=3)
+            session.commit()
+            queue.claim(session, "worker-1")
 
             queue.fail(job, "Empfaenger antwortet nicht")
-            sitzung.commit()
+            session.commit()
 
             assert job.status == JobStatus.PENDING.value
             assert job.run_after > now()
             assert job.locked_by is None
         finally:
-            sitzung.query(Job).delete()
-            sitzung.commit()
-            sitzung.close()
+            session.query(Job).delete()
+            session.commit()
+            session.close()
 
-    def test_aufgebrauchte_versuche_enden_als_failed(self, engine: Engine) -> None:
-        """Nicht still verwerfen - eine dauerhaft gescheiterte Aufgabe muss
-        sichtbar bleiben."""
-        macher = sessionmaker(bind=engine, expire_on_commit=False)
-        sitzung = macher()
+    def test_exhausted_attempts_end_as_failed(self, engine: Engine) -> None:
+        """A permanently failed job must stay visible instead of disappearing."""
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+        session = factory()
         try:
-            job = queue.enqueue(sitzung, "hoffnungslos", max_attempts=1)
-            sitzung.commit()
-            queue.claim(sitzung, "worker-1")
+            job = queue.enqueue(session, "hoffnungslos", max_attempts=1)
+            session.commit()
+            queue.claim(session, "worker-1")
 
             queue.fail(job, "geht nicht")
-            sitzung.commit()
+            session.commit()
 
             assert job.status == JobStatus.FAILED.value
             assert job.finished_at is not None
         finally:
-            sitzung.query(Job).delete()
-            sitzung.commit()
-            sitzung.close()
+            session.query(Job).delete()
+            session.commit()
+            session.close()
