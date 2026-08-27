@@ -1,10 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
   "files": {
-    "includes": [
-      "**",
-      "!src/api/generated/**"
-    ]
+    "includes": ["**", "!src/api/generated"]
   },
   "formatter": {
     "enabled": true,
@@ -12,8 +9,11 @@
   },
   "linter": {
     "enabled": true,
+    "domains": {
+      "react": "recommended"
+    },
     "rules": {
-      "recommended": true
+      "preset": "recommended"
     }
   },
   "javascript": {
@@ -21,20 +21,5 @@
       "quoteStyle": "single",
       "trailingCommas": "all"
     }
-  },
-  "assist": {
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
-    }
-  },
-  "overrides": [
-    {
-      "includes": ["**/*.tsx", "**/*.jsx"],
-      "javascript": {
-        "globals": ["React"]
-      }
-    }
-  ]
+  }
 }
