@@ -1,4 +1,4 @@
-"""Contract-Abnahme fuer die eingefrorenen M2-Comment-Routen und DTOs."""
+"""Contract acceptance for the frozen M2 Comment routes and DTOs."""
 
 from __future__ import annotations
 
