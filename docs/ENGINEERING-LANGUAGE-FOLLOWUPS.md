@@ -2,7 +2,7 @@
 
 Issue #212 establishes the policy and migrates the central contributor/developer surfaces. The remaining legacy repository content is intentionally split into reviewable work packages.
 
-## Work package A - Backend and authoritative API sources
+## #214 - Backend and authoritative API sources
 
 Scope:
 
@@ -18,7 +18,7 @@ Constraints:
 - do not manually translate generated API clients;
 - do not change user-facing localization behavior.
 
-## Work package B - Web, Android, CI, and deployment engineering surfaces
+## #215 - Web, Android, CI, and deployment engineering surfaces
 
 Scope:
 
@@ -29,10 +29,10 @@ Scope:
 Constraints:
 
 - locale resources and locale-specific fixtures remain in their target language;
-- generated API output follows work package A and is not edited manually;
+- generated API output follows #214 and is not edited manually;
 - no dependency or functional refactor solely for translation.
 
-## Work package C - Active technical documentation and specifications
+## #216 - Active technical documentation and specifications
 
 Scope:
 
@@ -45,4 +45,4 @@ Constraints:
 - translation must not silently alter product scope, privacy rules, release gates, or architectural decisions;
 - documents that are active inputs to implementation should be migrated before adding substantial new sections to them.
 
-The concrete GitHub issues for these packages are linked from #212. This file exists so the migration boundary remains visible in the repository after the tracker is closed.
+These issues remain linked from #212 as the tracking issue. This file keeps the migration boundary visible in the repository after the tracker is closed.
