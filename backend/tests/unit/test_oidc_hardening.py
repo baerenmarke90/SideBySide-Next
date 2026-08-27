@@ -1,4 +1,4 @@
-"""Zusaetzliche Protokollhaertung fuer OIDC Discovery und ID-Token-Audiences."""
+"""Additional protocol hardening for OIDC discovery and ID-token audiences."""
 
 from __future__ import annotations
 
