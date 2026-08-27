@@ -25,9 +25,6 @@ TARGETS = tuple(
     )
 )
 
-# These stems deliberately target developer-facing German that escaped the
-# authoritative audit after the first migration pass. They are not applied to
-# ordinary product/protocol string literals.
 IDENTIFIER_SEGMENTS = re.compile(
     r"(?:^|_)(?:hoch|verarbeite|validiert|projiziert|als|angekuendigt|scheitert|"
     r"verleiht|ungebunden(?:en)?|sperrt|macht|sofort|unsichtbar|verlangt|aktuelle|"
@@ -43,7 +40,7 @@ IDENTIFIER_SEGMENTS = re.compile(
 PROSE = re.compile(
     r"(?:\b(?:Schwerpunkte|Statusautomat|Strippen|Clientpfad|Lieferstand|Typ|"
     r"sortierbar(?:es|er|e|en)?|Metadatum|Interna|verleiht|volle|erlaubt|"
-    r"geworden|Capture timestamp|Plaintext field)\b|"
+    r"geworden)\b|"
     r"\b(?:der|die|das|den|dem|des|ein|eine|einen|einem|einer|und|oder|ist|sind|"
     r"wird|werden|fuer|ueber|nicht|kein|keine|ohne|mit|wenn|sonst|auch|bei|beim|"
     r"von|vom|zum|zur|im|ins|am|auf|aus|gegen|zwischen|damit|dass|nur)\b)",
