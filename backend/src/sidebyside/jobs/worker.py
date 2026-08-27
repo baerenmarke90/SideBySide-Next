@@ -1,8 +1,7 @@
-"""Der Worker.
+"""Background job worker.
 
-Bewusst schlicht: er kennt eine Zuordnung von Aufgabenart zu Funktion und
-sorgt dafür, dass jede Aufgabe in ihrer eigenen Transaktion läuft. Fällt
-eine aus, betrifft das die anderen nicht.
+Deliberately simple: it maps job kinds to handlers and ensures every job runs
+inside its own transaction. If one fails, the others are unaffected.
 """
 
 from __future__ import annotations
@@ -28,7 +27,7 @@ class JobRegistry:
 
     def register(self, kind: str, handler: Handler) -> None:
         if kind in self._handlers:
-            raise ValueError(f"Handler für '{kind}' ist bereits registriert.")
+            raise ValueError(f"Handler for '{kind}' is already registered.")
         self._handlers[kind] = handler
 
     def get(self, kind: str) -> Handler | None:
@@ -39,11 +38,11 @@ registry = JobRegistry()
 
 
 def run_once(worker_name: str, limit: int = 10) -> int:
-    """Eine Runde. Gibt zurück, wie viele Aufgaben bearbeitet wurden.
+    """Run one round and return the number of processed jobs.
 
-    Das Übernehmen geschieht in einer eigenen, kurzen Transaktion. Würde die
-    Sperre bis zum Ende der Verarbeitung gehalten, blockierte eine lange
-    Aufgabe die Warteschlange für alle.
+    Claiming happens in its own short transaction. Holding the claim lock
+    until processing completes would allow one long-running job to block the
+    queue for everybody.
     """
     with unit_of_work() as session:
         jobs = list(queue.claim(session, worker_name, limit=limit))
@@ -64,10 +63,10 @@ def _run_job(job_id: Any, kind: str, payload: dict[str, Any]) -> None:
             return
 
         if handler is None:
-            # Eine unbekannte Art ist ein Fehler in der Anwendung, kein
-            # vorübergehender Ausfall - es hilft nicht, sie zu wiederholen.
+            # An unknown kind is an application error, not a transient
+            # failure. Retrying it cannot help.
             job.attempts = job.max_attempts
-            queue.fail(job, f"Keine Verarbeitung für Aufgabenart '{kind}'.")
+            queue.fail(job, f"No handler registered for job kind '{kind}'.")
             log.error("unknown job kind", extra={"kind": kind})
             return
 
@@ -75,9 +74,9 @@ def _run_job(job_id: Any, kind: str, payload: dict[str, Any]) -> None:
             handler(session, payload)
         except Exception as exc:
             session.rollback()
-            # Nach dem Rollback ist die Sitzung wieder brauchbar; der
-            # Fehlschlag selbst muss aber verbucht werden, sonst bliebe die
-            # Aufgabe als RUNNING mit ablaufender Sperre liegen.
+            # After rollback the session is usable again, but the failure must
+            # still be recorded or the job would remain RUNNING until its
+            # lease expires.
             failed = session.get(Job, job_id)
             if failed is not None:
                 queue.fail(failed, f"{type(exc).__name__}: {exc}")
