@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Document the intentionally staged engineering-language migration boundary.
+"""Guard the staged English engineering-language migration boundary.
 
-This is not a natural-language detector. It guards only concrete legacy markers
-that have already been audited in central developer surfaces migrated by #212.
-Broad repository translation is tracked in explicit follow-up issues because a
-heuristic language detector would create false positives in localization data,
-quoted material, protocols, and historical snapshots.
+This is deliberately not a generic language detector. It checks concrete
+legacy engineering markers in the developer surfaces migrated by #212 and in
+the backend scope migrated by #214. Product/i18n content, protocol values, and
+historical contract data are not classified merely because they are German.
 """
 
 from __future__ import annotations
@@ -28,15 +27,35 @@ SCOPED_FILES = (
     Path("tools/ci/test_status_drift.py"),
 )
 
-# High-confidence legacy engineering words only. These are intentionally
-# narrow; this gate must never classify arbitrary user/product text by language.
+BACKEND_ROOTS = (
+    Path("backend/src/sidebyside"),
+    Path("backend/scripts"),
+    Path("backend/alembic"),
+    Path("backend/tests"),
+)
+
+BACKEND_SUFFIXES = {".py", ".md", ".ini", ".toml", ".txt", ".sh"}
+BACKEND_FILENAMES = {"Dockerfile"}
+
+# High-confidence legacy engineering words/stems only. The ASCII forms are
+# especially useful because the original backend comments and identifiers
+# commonly transliterated umlauts. Avoid broad words such as "für" or "nicht"
+# that could legitimately occur in product/localization fixtures.
 LEGACY_ENGINEERING_MARKERS = re.compile(
-    r"\b(?:"
-    r"Zusammenfassung|Begruendung|Begründung|Gepruefte|Geprüfte|Entscheidung|"
+    r"(?:"
+    r"\b(?:Zusammenfassung|Begruendung|Begründung|Gepruefte|Geprüfte|Entscheidung|"
     r"Erzeugt|erzeugen|wurzel|vertrag|pruefmodus|Prüfmodus|abweichung|"
     r"ungueltig|ungültig|geprueft|geprüft|ausgefuehrt|ausgeführt|"
-    r"abgeschwaecht|abgeschwächt|Living-Status-Datei"
-    r")\b",
+    r"abgeschwaecht|abgeschwächt|Living-Status-Datei)\b|"
+    r"\b(?:fuer|ueber|wuerde|koennte|koennen|muessen|muesste|zurueck|"
+    r"pruef(?:t|en|ung)?|gueltig|ungueltig|laesst|enthaelt|abhaengig|"
+    r"zulaessig|benoetigt|verschluessel(?:t|ung)?|schluessel|"
+    r"eigentuemer|domaene|bedingung|durchsetzbar|speicherbar|"
+    r"vollstaendig|unveraendert|ausnahm(?:e|en)|fehler)\b|"
+    r"\b(?:zurück|prüf(?:t|en|ung)?|gültig|ungültig|lässt|enthält|abhängig|"
+    r"zulässig|benötigt|verschlüssel(?:t|ung)?|schlüssel|Eigentümer|Domäne|"
+    r"Bedingung|durchsetzbar|vollständig|unverändert)\b"
+    r")",
     re.IGNORECASE,
 )
 
@@ -55,6 +74,20 @@ def check_file(path: Path) -> list[str]:
     return findings
 
 
+def backend_files() -> list[Path]:
+    files: list[Path] = []
+    for root in BACKEND_ROOTS:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if path.is_file() and (path.suffix in BACKEND_SUFFIXES or path.name in BACKEND_FILENAMES):
+                files.append(path)
+    dockerfile = Path("backend/Dockerfile")
+    if dockerfile.is_file():
+        files.append(dockerfile)
+    return sorted(set(files))
+
+
 def main() -> int:
     findings: list[str] = []
     for path in SCOPED_FILES:
@@ -63,13 +96,16 @@ def main() -> int:
             continue
         findings.extend(check_file(path))
 
+    for path in backend_files():
+        findings.extend(check_file(path))
+
     if findings:
         print("Legacy engineering-language markers found in migrated developer surfaces:", file=sys.stderr)
         for finding in findings:
             print(f"- {finding}", file=sys.stderr)
         return 1
 
-    print("Migrated developer surfaces satisfy the scoped English-language audit.")
+    print("Migrated developer and backend surfaces satisfy the scoped English-language audit.")
     return 0
 
 
