@@ -30,7 +30,7 @@ EXPECTED_PROBLEM_RESPONSES: dict[tuple[str, str], set[int]] = {
     ("/api/v1/auth/oidc/{connectionId}/callback", "post"): {401, 409, 422},
     ("/api/v1/auth/passkeys/registration/start", "post"): {401},
     ("/api/v1/auth/passkeys/registration/finish", "post"): {401, 422},
-    ("/api/v1/auth/passkeys/authentication/start", "post"): {422},
+    ("/api/v1/auth/passkeys/authentication/start", "post"): {422, 429},
     ("/api/v1/auth/passkeys/authentication/finish", "post"): {401, 422},
     ("/api/v1/spaces/{spaceId}/invitations", "post"): {401, 404, 409},
     ("/api/v1/spaces/{spaceId}/invitations", "get"): {401, 404},

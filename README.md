@@ -81,10 +81,10 @@ künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
 </p>
 
 <p align="center">
-  <strong>Aktuell: G1 ist bestanden. M2-S0 ist abgeschlossen; die M2-Runtime läuft.</strong><br>
+  <strong>Aktuell: G2 ist bestanden. M2 ist abgeschlossen; M3 ist als nächster Milestone freigegeben.</strong><br>
   <a href="docs/ROADMAP.md">Roadmap, parallele Arbeitsströme und Release Gates ansehen</a> ·
   <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a> ·
-  <a href="docs/m2/PROJECT-CONTROL.md">M2 Project Control öffnen</a>
+  <a href="docs/m3/README.md">M3 Technical Readiness Package öffnen</a>
 </p>
 
 ## Leitsätze
@@ -104,14 +104,15 @@ Clients schreiben `privacyClass` nicht redundant als zweite Wahrheitsquelle.
 ## Aufbau
 
 ```
-backend/        FastAPI, SQLAlchemy 2, Alembic, PostgreSQL
-web/            React, TypeScript, Vite
-android/        Kotlin, Jetpack Compose
-compose.yaml    Docker Compose für Self-Hosted
-deploy/         Docker Compose für die Entwicklungsdatenbank
-docs/           Architektur, Sicherheit, Datenschutzmodell, Abhängigkeiten
-specification/  Produktspezifikation als verbindliche Vorgabe
-tools/          Hilfsskripte
+backend/             FastAPI, SQLAlchemy 2, Alembic, PostgreSQL
+web/                 React, TypeScript, Vite
+android/             Kotlin, Jetpack Compose
+compose.yaml         Docker Compose für vollständige Self-Hosted-Checkouts
+compose.arcane.yaml  Remote-Git-Builds für Arcane/Remote-Workspaces
+deploy/              Docker Compose für die Entwicklungsdatenbank
+docs/                Architektur, Sicherheit, Datenschutzmodell, Abhängigkeiten
+specification/       Produktspezifikation als verbindliche Vorgabe
+tools/               Hilfsskripte
 ```
 
 ## Entwicklung
@@ -145,6 +146,9 @@ aktualisiert; die CI vergleicht ihn mit dem Schema der tatsächlichen App.
 
 ## Self-Hosted
 
+Für einen vollständigen Repository-Checkout bleibt `compose.yaml` der normale
+Einstieg:
+
 ```bash
 cp .env.example .env    # und ausfüllen
 docker compose up -d
@@ -155,11 +159,13 @@ Klartextzugang ist absichtlich auf den lokalen Rechner begrenzt. Fuer Zugriff
 aus LAN oder Internet muss ein HTTPS-Reverse-Proxy vorgeschaltet werden; die
 API darf dafuer nicht direkt auf allen Interfaces veroeffentlicht werden.
 
-`compose.yaml` liegt bewusst im Wurzelverzeichnis: der Build-Kontext
-`./backend` muss unterhalb des Verzeichnisses liegen, in dem die
-Compose-Datei steht. Oberflächen wie Arcane oder Portainer legen jedes
-Projekt in einem eigenen Verzeichnis ab — ein Pfad wie `../backend` zeigt
-dort ins Leere. Das ganze Repository ist deshalb das Projektverzeichnis.
+Verwaltungsoberflächen wie **Arcane**, deren Projekt-Workspace nicht den
+vollständigen Repository-Checkout enthält, verwenden stattdessen
+`compose.arcane.yaml`. Diese Variante baut `backend` und `web` direkt aus dem
+konfigurierten Git-Repository und benötigt deshalb keine lokalen
+`./backend`-/`./web`-Verzeichnisse im Workspace. Einrichtung, private
+Repositorys und Release-Refs sind in [docs/ARCANE.md](docs/ARCANE.md)
+dokumentiert.
 
 Der Dienst `migrate` zieht das Schema einmalig hoch, bevor `api` und
 `worker` starten. Die Anwendung migriert nicht selbst; zwei startende
@@ -185,28 +191,31 @@ PostgreSQL-/Privacy-/Tenant-Tests abgesichert. #61 wurde mit einer expliziten
 `preserve`-/`cascade`-Delete-Policy ohne destruktiven Default geschlossen.
 
 Der [G1 Gate Review nach Abschluss von #61](docs/reviews/2026-08-25-g1-gate-review-after-61.md)
-setzt G1 auf **BESTANDEN** und gibt M2-S0 frei. #59 und #60 bleiben
-verpflichtende Pre-Exposure-Härtungen vor öffentlichem/Managed-Betrieb; #25
-bleibt Repository-Hardening.
+setzt G1 auf **BESTANDEN**. #59 und #60 bleiben verpflichtende
+Pre-Exposure-Härtungen vor öffentlichem/Managed-Betrieb; #25 bleibt
+Repository-Hardening.
 
-**M2-S0 — abgeschlossen.** Die blockierenden Domain-, Privacy-, Media- und
-API-Entscheidungen sind über #67, #68, #69, #70 und #78 geschlossen; alle
-`BLOCKING`-Einträge im Decision Log stehen auf `DECIDED`.
+**M2 / G2 — abgeschlossen und bestanden.** Memory CRUD, HeartMoment mit
+Owner-only-Privacy, Bild-Attachments samt sicherem Ingest und Bindung,
+Milestone, Comments, S3-kompatibler MediaStore, Story Read Model sowie die
+dünnen Web-/Android-Referenzflows sind geliefert. Der reale kritische
+Memory/Media/Story-Flow wurde gegen API, Worker, PostgreSQL und LocalMediaStore
+auf beiden Clientpfaden nachgewiesen.
 
-**M2-Runtime — laufend.** Geliefert sind Memory CRUD (#71), HeartMoment mit
-Owner-only-Privacy (#80), der Attachment-Lifecycle für Bilder (#79) samt
-Metadaten-Entfernung beim Ingest und Thumbnail, die Attachment-Bindung an
-Memory und HeartMoment (#90), die Milestone-Domain (#94), Comments samt Outbox
-und Notification Hook (#97), der S3-kompatible MediaStore-Adapter (#87) sowie
-die Story-Zeitleiste (#113). Damit ist die M2-Domain vollständig; als
-Nächstes folgen die dünnen Web-/Android-Referenzflows. Video ist nicht Teil
-von M2/G2 und als zukünftige Entwicklung in #88 vorgemerkt. Die präzisierten
-Milestone-Grenzen und der aktuelle Arbeitsstand stehen in
-[docs/m2/PROJECT-CONTROL.md](docs/m2/PROJECT-CONTROL.md).
+Der [finale G2 Gate Review](docs/reviews/2026-08-26-g2-final-gate-review.md)
+setzt G2 ausdrücklich auf **BESTANDEN**. Die manuelle Accessibility-Abnahme
+wurde dabei nicht als bestanden behauptet; sie bleibt Teil der späteren
+Client-/Release-QA in M5/G4.
+
+**M3 — freigegeben.** Die S0-Readiness und alle M3-D01 bis M3-D32 sind
+`DECIDED`. Runtime-Slices dürfen nach dem
+[M3 Technical Readiness Package](docs/m3/README.md) und dem
+[M3 Delivery Plan](docs/m3/DELIVERY-PLAN.md) beginnen, sobald der jeweilige
+produktive REST-/OpenAPI-Vertrag contract-testbar konkretisiert ist.
 
 Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
 [docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten,
-[docs/m2/README.md](docs/m2/README.md) für das M2-Readiness-Paket und
+[docs/m3/README.md](docs/m3/README.md) für das M3-Readiness-Paket und
 [specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md) für den
 fachlichen Umfang.
 

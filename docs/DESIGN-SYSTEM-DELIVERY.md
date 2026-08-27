@@ -1,8 +1,8 @@
 # SideBySide Design System Delivery
 
 **Status:** Verbindlicher Umsetzungsrahmen  
-**Version:** 1.0  
-**Stand:** 24.08.2026
+**Version:** 1.1  
+**Stand:** 26.08.2026
 
 Dieses Dokument macht aus Designprinzipien, Tokens und Component Contracts ein ausführbares Design-System für React/TypeScript und Kotlin/Jetpack Compose. Ziel ist semantische Parität, nicht pixelidentische Plattformen.
 
@@ -23,6 +23,7 @@ docs/COMPONENT-CONTRACTS.md + design/component-manifest.json
 - Component Contracts sind die Quelle für Verhalten, Zustände und Accessibility.
 - Plattformadapter übersetzen Einheiten und native Mechanik, nicht Bedeutung.
 - OpenAPI liefert fachliche Datenmodelle; UI-Komponenten enthalten keine Domain-Autorisierung.
+- Light und Dark verwenden dieselben semantischen Rollen; Komponenten kennen keine theme-spezifischen Rohfarben.
 
 ## 2. Paritätsstufen
 
@@ -70,10 +71,20 @@ android design system/
 
 `design/tokens.json` enthält semantische Farben, Typografie, Spacing, Radius, Layout, Bewegung, Schatten und Zielgrößen.
 
+Für Farben gilt zusätzlich:
+
+- `color.semantic` bleibt der Light-Kompatibilitätsdefault für bestehende Adapter.
+- `color.scheme.light` und `color.scheme.dark` sind die expliziten Theme-Paletten.
+- Beide Schemes besitzen dieselben Rollen; ein Theme darf keine neue fachliche Farbbedeutung einführen.
+- Akzent-, Status- und Privacy-Farben werden pro Scheme auf ausreichenden Kontrast angepasst statt mechanisch invertiert.
+
 ### Web-Ausgabe
 
 - CSS Custom Properties für Theme- und Laufzeitwerte.
 - typisierte TypeScript-Namen für Komponentenlogik.
+- Systemdarstellung über `prefers-color-scheme` als Standard.
+- Nutzerwahl **System / Hell / Dunkel** überschreibt die Systemvorgabe und wird lokal persistent gespeichert.
+- Browser-`theme-color` und `color-scheme` folgen dem tatsächlich aufgelösten Theme.
 - Media Queries/Container Queries aus Breakpoint- und Motion-Tokens.
 - `prefers-reduced-motion` setzt reguläre Übergänge auf `instant` oder eine sichere reduzierte Variante.
 
@@ -81,15 +92,19 @@ android design system/
 
 - Compose `Color`, `Dp`, Shapes, Typography und Motion-Werte.
 - Material-3-Theme als Adapter, ohne SideBySide-Semantik in generische Materialnamen zu verlieren.
+- `SideBySideTheme` besitzt getrennte Light-/Dark-`ColorScheme`s und folgt standardmäßig `isSystemInDarkTheme()`.
+- Der Theme-Einstieg muss einen expliziten Override zulassen, damit eine spätere Einstellung **System / Hell / Dunkel** ohne Screen-Umbau ergänzt werden kann.
+- Status- und Navigationsleiste folgen Theme-Hintergrund und passender Icon-Helligkeit.
 - Window Size Classes werden auf Compact/Medium/Expanded gemappt.
 
 ### Pipeline-Gates
 
 - JSON und Schema sind gültig.
+- jeder semantische Farbtoken existiert in Light und Dark oder ist explizit plattformspezifisch,
 - jeder semantische Token existiert in beiden Adaptern oder ist explizit plattformspezifisch,
 - generierte Ausgabe ist reproduzierbar und im CI-Diff sauber,
-- Farbkontrast-Smoketests prüfen zentrale Vorder-/Hintergrundpaare,
-- rohe Hexwerte und nicht-tokenisierte Abstände werden außerhalb des Tokenmoduls verhindert oder gemeldet.
+- Farbkontrast-Smoketests prüfen zentrale Vorder-/Hintergrundpaare in beiden Themes,
+- rohe Hexwerte und nicht-tokenisierte Abstände werden außerhalb des Token-/Theme-Moduls verhindert oder gemeldet.
 
 ## 5. Komponentenstufen
 
@@ -136,7 +151,7 @@ Jeder Eintrag zeigt:
 - Default, Hover/Pressed, Focus, Disabled, Loading, Error,
 - lange Texte und Lokalisierungsbeispiel,
 - große Schrift/200 % Zoom,
-- Hellmodus und spätere Themes,
+- Hell- und Darkmodus,
 - Privacy- und Statusfarben mit Text,
 - Compact und Expanded, falls layoutrelevant,
 - Codebeispiel und verbotene Nutzung.
@@ -152,6 +167,7 @@ Der Katalog ist Entwicklungswerkzeug, keine öffentliche Produktseite.
 - `loading` und `disabled` sind getrennte Zustände.
 - Layoutkomponenten besitzen keine versteckte Navigation oder API-Abfrage.
 - Domain-IDs, Tokens und private Inhalte werden nicht in Analytics-Callbacks einer Basiskomponente aufgenommen.
+- Komponenten verwenden semantische Theme-Rollen und keine ausschließlich für Light geeigneten Rohfarben.
 
 ## 8. Beispiel eines plattformneutralen Contracts
 
@@ -184,7 +200,8 @@ Web kann dies als natives `<button>` umsetzen; Android als Compose Button-Adapte
 - Contract-Varianten und Zustände,
 - lange Labels,
 - große Schrift/Zoom,
-- Hellmodus und hoher Kontrast,
+- Hell- und Darkmodus einschließlich zentraler WCAG-2.2-AA-Kontraste,
+- System-Theme-Wechsel, sofern die Plattform diesen Zustand unterstützt,
 - zugänglicher Name/Rolle/Wert,
 - Fokus/Zurück/Schließen,
 - Touch-/Klickziel,
@@ -194,6 +211,8 @@ Web kann dies als natives `<button>` umsetzen; Android als Compose Button-Adapte
 ### Web zusätzlich
 
 - native HTML-Semantik,
+- `System / Hell / Dunkel` einschließlich Persistenz und Reload,
+- Systemänderung wird bei Auswahl `System` ohne Reload übernommen,
 - Tastaturmuster nach WAI-ARIA APG, wenn kein natives Element reicht,
 - Server-/Client-Rendering ohne Layoutsprung, falls später relevant,
 - Browsermatrix gemäß QA-Dokument.
@@ -201,6 +220,7 @@ Web kann dies als natives `<button>` umsetzen; Android als Compose Button-Adapte
 ### Android zusätzlich
 
 - Compose Semantics und TalkBack,
+- System Light/Dark und korrekte Systembar-Icon-Helligkeit,
 - System Back und Prozesswiederherstellung,
 - unterschiedliche Schrift-/Displaygrößen,
 - Compact/Medium/Expanded.
@@ -268,6 +288,9 @@ Neue Muster werden zuerst als Contract/Decision dokumentiert. Ein lokaler Sonder
 - Tokenadapter sind reproduzierbar.
 - P0-Komponenten sind in beiden Katalogen sichtbar.
 - Keine lokale Farb-/Spacing-Semantik dupliziert Tokens.
+- Light und Dark sind auf Web und Android für alle ausgelieferten UI-Flächen vollständig lesbar und bedienbar.
+- Zentrale Text-, UI- und Fokuskontraste erfüllen in beiden Themes WCAG 2.2 AA.
+- Neue UI führt keine ausschließlich für Light geeigneten Hardcoded Colors ein.
 - Accessibility-Matrix ist für P0 erfüllt.
 - Privacy-Zustände verwenden technische Klassen korrekt.
 - Offline-MVP zeigt Read Cache, aber keinen erfundenen Write Sync.

@@ -31,12 +31,17 @@ def test_migration_braucht_keine_production_runtimewerte(
     assert DatabaseSettings().database_url == "postgresql+psycopg://u:p@postgres:5432/sidebyside"
 
 
-def test_leere_datenbank_url_ist_ein_fehler(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Eine Interpolation ohne Ergebnis darf nicht auf den Default zurueckfallen."""
-    monkeypatch.setenv("SBS_DATABASE_URL", "   ")
+@pytest.mark.parametrize("leer", ["", "   "])
+def test_leere_datenbank_url_ist_in_beiden_pfade_ein_fehler(
+    monkeypatch: pytest.MonkeyPatch, leer: str
+) -> None:
+    """Runtime und Migration teilen dieselbe Regel fuer leere Interpolation."""
+    monkeypatch.setenv("SBS_DATABASE_URL", leer)
 
     with pytest.raises(ValidationError, match="SBS_DATABASE_URL"):
         DatabaseSettings()
+    with pytest.raises(ValidationError, match="SBS_DATABASE_URL"):
+        Settings()
 
 
 def test_vorgabewert_bleibt_mit_der_anwendung_gleich(monkeypatch: pytest.MonkeyPatch) -> None:

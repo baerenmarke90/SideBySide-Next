@@ -2,7 +2,7 @@ import { AttachmentsApi } from '../api/generated/apis/AttachmentsApi';
 import { AuthApi } from '../api/generated/apis/AuthApi';
 import { MemoriesApi } from '../api/generated/apis/MemoriesApi';
 import { StoryApi } from '../api/generated/apis/StoryApi';
-import { Configuration } from '../api/generated/runtime';
+import { Configuration, ResponseError } from '../api/generated/runtime';
 import type { MemoryCreate } from '../api/generated/models/MemoryCreate';
 import type { MemoryDetail } from '../api/generated/models/MemoryDetail';
 import type { SessionView } from '../api/generated/models/SessionView';
@@ -12,6 +12,7 @@ import { UploadDescriptorMethodEnum } from '../api/generated/models/UploadDescri
 import { ReadDescriptorMethodEnum } from '../api/generated/models/ReadDescriptor';
 import { AttachmentReadRequestParentTypeEnum } from '../api/generated/models/AttachmentReadRequest';
 import { MediaType } from '../api/generated/models/MediaType';
+import { i18n } from '../i18n';
 
 export interface FlowResult {
   memory: MemoryDetail;
@@ -24,6 +25,17 @@ export interface ReferenceApis {
   auth: AuthApi;
   memories: MemoriesApi;
   story: StoryApi;
+}
+
+interface ApiProblem {
+  code?: unknown;
+}
+
+export class ReferenceFlowError extends Error {
+  constructor(message: string, readonly code?: string) {
+    super(message);
+    this.name = 'ReferenceFlowError';
+  }
 }
 
 export function createReferenceApis(apiBaseUrl: string, accessToken?: string): ReferenceApis {
@@ -45,16 +57,27 @@ function resolveTransportUrl(apiBaseUrl: string, target: string): string {
   return `${apiBaseUrl.replace(/\/+$/, '')}/${target.replace(/^\/+/, '')}`;
 }
 
+async function rethrowLocalized(error: unknown, fallback: string): Promise<never> {
+  if (!(error instanceof ResponseError)) {
+    if (error instanceof Error) throw error;
+    throw new ReferenceFlowError(fallback);
+  }
+
+  let code: string | undefined;
+  try {
+    const problem = (await error.response.clone().json()) as ApiProblem;
+    if (typeof problem.code === 'string' && problem.code.trim()) code = problem.code.trim();
+  } catch {
+    // A non-ProblemDetails response still receives the localized client fallback.
+  }
+
+  throw new ReferenceFlowError(fallback, code);
+}
+
 async function assertOk(response: Response, action: string): Promise<void> {
   if (response.ok) return;
-  let detail = `${response.status} ${response.statusText}`.trim();
-  try {
-    const problem = (await response.json()) as { detail?: string };
-    if (problem.detail) detail = problem.detail;
-  } catch {
-    // Binary/empty error responses intentionally keep the HTTP status text.
-  }
-  throw new Error(`${action}: ${detail}`);
+  const detail = `${response.status} ${response.statusText}`.trim();
+  throw new ReferenceFlowError(detail ? `${action}: ${detail}` : action);
 }
 
 export async function uploadAttachmentBytes(
@@ -74,7 +97,7 @@ export async function uploadAttachmentBytes(
     headers,
     body: file,
   });
-  await assertOk(response, 'Bild-Upload fehlgeschlagen');
+  await assertOk(response, i18n.t('flow.uploadFailed'));
 }
 
 async function waitUntilReady(apis: ReferenceApis, spaceId: string, attachmentId: string): Promise<void> {
@@ -83,11 +106,11 @@ async function waitUntilReady(apis: ReferenceApis, spaceId: string, attachmentId
     const attachment = await apis.attachments.getAttachment({ spaceId, attachmentId });
     if (attachment.status === 'READY') return;
     if (attachment.status === 'FAILED' || attachment.status === 'DELETE_FAILED' || attachment.status === 'DELETING') {
-      throw new Error(`Medienverarbeitung beendet mit Status ${attachment.status}.`);
+      throw new ReferenceFlowError(i18n.t('flow.processingStatus', { status: attachment.status }));
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
-  throw new Error('Medienverarbeitung hat das READY-Fenster nicht rechtzeitig erreicht.');
+  throw new ReferenceFlowError(i18n.t('flow.processingTimeout'));
 }
 
 export async function loadAuthorizedImage(
@@ -113,7 +136,7 @@ export async function loadAuthorizedImage(
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
   const response = await fetchApi(resolveTransportUrl(apiBaseUrl, descriptor.url), { headers });
-  await assertOk(response, 'Bild konnte nicht geladen werden');
+  await assertOk(response, i18n.t('flow.imageLoadFailed'));
   return URL.createObjectURL(await response.blob());
 }
 
@@ -123,14 +146,18 @@ export async function signIn(
   password: string,
 ): Promise<SessionView> {
   const { auth } = createReferenceApis(apiBaseUrl);
-  return auth.signInApiV1AuthSignInPost({
-    signInRequest: {
-      email,
-      password,
-      deviceName: 'SideBySide Web M2 Referenzflow',
-      platform: 'web',
-    },
-  });
+  try {
+    return await auth.signInApiV1AuthSignInPost({
+      signInRequest: {
+        email,
+        password,
+        deviceName: 'SideBySide Web M2 Referenzflow',
+        platform: 'web',
+      },
+    });
+  } catch (error) {
+    return rethrowLocalized(error, i18n.t('flow.signInFailed'));
+  }
 }
 
 export async function runMemoryMediaStoryFlow(
@@ -142,46 +169,51 @@ export async function runMemoryMediaStoryFlow(
   file: File,
   fetchApi: typeof fetch = fetch,
 ): Promise<FlowResult> {
-  if (!file.type.startsWith('image/')) throw new Error('S8 akzeptiert ausschließlich Bilder.');
+  if (!file.type.startsWith('image/')) throw new ReferenceFlowError(i18n.t('flow.imageOnly'));
 
-  const memory = await apis.memories.createMemory({ spaceId, memoryCreate });
-  const upload = await apis.attachments.createAttachmentUpload({
-    spaceId,
-    attachmentUploadCreate: {
-      expectedMimeType: file.type,
-      expectedSize: file.size,
-      mediaType: MediaType.IMAGE,
-      originalName: file.name,
-    },
-  });
+  try {
+    const memory = await apis.memories.createMemory({ spaceId, memoryCreate });
+    const upload = await apis.attachments.createAttachmentUpload({
+      spaceId,
+      attachmentUploadCreate: {
+        expectedMimeType: file.type,
+        expectedSize: file.size,
+        mediaType: MediaType.IMAGE,
+        originalName: file.name,
+      },
+    });
 
-  await uploadAttachmentBytes(apiBaseUrl, accessToken, upload, file, fetchApi);
-  await apis.attachments.finalizeAttachmentUpload({
-    spaceId,
-    attachmentId: upload.attachment.id,
-    body: {},
-  });
-  await waitUntilReady(apis, spaceId, upload.attachment.id);
+    await uploadAttachmentBytes(apiBaseUrl, accessToken, upload, file, fetchApi);
+    await apis.attachments.finalizeAttachmentUpload({
+      spaceId,
+      attachmentId: upload.attachment.id,
+      body: {},
+    });
+    await waitUntilReady(apis, spaceId, upload.attachment.id);
 
-  const boundMemory = await apis.memories.replaceMemoryAttachments({
-    spaceId,
-    memoryId: memory.id,
-    ifMatch: String(memory.version),
-    memoryAttachmentSet: {
-      attachments: [{ attachmentId: upload.attachment.id, position: 0 }],
-    },
-  });
+    const boundMemory = await apis.memories.replaceMemoryAttachments({
+      spaceId,
+      memoryId: memory.id,
+      ifMatch: String(memory.version),
+      memoryAttachmentSet: {
+        attachments: [{ attachmentId: upload.attachment.id, position: 0 }],
+      },
+    });
 
-  const story = await apis.story.getStoryTimeline({ spaceId, limit: 25 });
-  const imageUrl = await loadAuthorizedImage(
-    apis,
-    apiBaseUrl,
-    accessToken,
-    spaceId,
-    boundMemory.id,
-    upload.attachment.id,
-    fetchApi,
-  );
+    const story = await apis.story.getStoryTimeline({ spaceId, limit: 25 });
+    const imageUrl = await loadAuthorizedImage(
+      apis,
+      apiBaseUrl,
+      accessToken,
+      spaceId,
+      boundMemory.id,
+      upload.attachment.id,
+      fetchApi,
+    );
 
-  return { memory: boundMemory, story, imageUrl };
+    return { memory: boundMemory, story, imageUrl };
+  } catch (error) {
+    if (error instanceof ReferenceFlowError) throw error;
+    return rethrowLocalized(error, i18n.t('flow.saveFailed'));
+  }
 }
