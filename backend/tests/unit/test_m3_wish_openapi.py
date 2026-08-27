@@ -1,10 +1,9 @@
-"""Der Wish-Slice muss den in M3-D01/D02/D05 entschiedenen Vertrag spiegeln.
+"""The Wish slice must mirror the contract decided in M3-D01/D02/D05.
 
-Der Vertrag ist hier mehr als Formsache. Zwei Entscheidungen leben
-ausschliesslich in seiner Form: dass `status` kein Feld ist, das ein Client
-schreibt, und dass `createdBy` Attribution und keine ACL ist. Ein Request-
-Schema, das eines von beiden durchliesse, waere der Weg am Wish->Plan-
-Vertrag vorbei - und zwar bevor irgendein Dienst gefragt wird.
+The contract is more than formality here. Two decisions exist exclusively in
+its shape: `status` is not a field a client writes, and `createdBy` is
+attribution rather than an ACL. A request schema that allowed either would
+bypass the Wish-to-Plan contract before any service is invoked.
 """
 
 from __future__ import annotations
@@ -37,55 +36,55 @@ def test_wish_routes_have_frozen_operation_ids() -> None:
 
 
 def test_the_contract_carries_exactly_the_decided_wish_surface() -> None:
-    """M3-D02 nennt sechs Wish-Operationen.
+    """M3-D02 names six Wish operations.
 
-    Fuenf davon kamen mit M3-S1; die sechste, `POST .../wishes/{wishId}/plan`,
-    mit M3-S2. Sie wird hier nur gezaehlt - ihre Form prueft
-    `test_m3_plan_openapi`, weil sie einen Plan erzeugt.
+    Five arrived with M3-S1; the sixth, `POST .../wishes/{wishId}/plan`, arrived
+    with M3-S2. This test only counts it; `test_m3_plan_openapi` verifies its
+    shape because it creates a Plan.
     """
-    wish_paths = {pfad for pfad in _paths() if "/wishes" in pfad}
+    wish_paths = {path for path in _paths() if "/wishes" in path}
     assert wish_paths == {COLLECTION, DETAIL, f"{DETAIL}/plan"}
 
 
 def test_no_wish_operation_sets_the_status_directly() -> None:
-    """Der Wish-Status hat keine eigene Route - und soll keine bekommen.
+    """Wish status has no dedicated route and must not gain one.
 
-    Jede seiner Kanten haengt an einer Plan-Operation (M3-D02/D03/D04).
-    Eine Route wie `/wishes/{wishId}/complete` waere genau der direkte Weg,
-    den der Vertrag ausschliesst.
+    Every status transition is tied to a Plan operation (M3-D02/D03/D04). A
+    route such as `/wishes/{wishId}/complete` would be exactly the direct path
+    excluded by the contract.
     """
-    wish_paths = {pfad for pfad in _paths() if "/wishes" in pfad}
-    for verboten in ("complete", "plan-status", "status", "reopen"):
-        assert not any(pfad.endswith(f"/{verboten}") for pfad in wish_paths), verboten
+    wish_paths = {path for path in _paths() if "/wishes" in path}
+    for forbidden in ("complete", "plan-status", "status", "reopen"):
+        assert not any(path.endswith(f"/{forbidden}") for path in wish_paths), forbidden
 
 
 def test_mutations_require_if_match() -> None:
     detail = _paths()[DETAIL]
-    for methode in ("patch", "delete"):
-        namen = {parameter["name"] for parameter in detail[methode].get("parameters", [])}
-        assert "If-Match" in namen
-        pflicht = next(
+    for method in ("patch", "delete"):
+        names = {parameter["name"] for parameter in detail[method].get("parameters", [])}
+        assert "If-Match" in names
+        required = next(
             parameter
-            for parameter in detail[methode]["parameters"]
+            for parameter in detail[method]["parameters"]
             if parameter["name"] == "If-Match"
         )
-        assert pflicht["required"] is True
+        assert required["required"] is True
 
 
 def test_create_does_not_require_if_match() -> None:
-    """Ein Wish, den es noch nicht gibt, hat keine Version zum Vergleichen."""
-    namen = {parameter["name"] for parameter in _paths()[COLLECTION]["post"].get("parameters", [])}
-    assert "If-Match" not in namen
+    """A Wish that does not exist yet has no version to compare."""
+    names = {parameter["name"] for parameter in _paths()[COLLECTION]["post"].get("parameters", [])}
+    assert "If-Match" not in names
 
 
 def test_no_request_body_accepts_status_or_ownership() -> None:
-    """M3-D01/D02: Status und Attribution kommen vom Server, nicht vom Client."""
-    verboten = {"status", "createdBy", "spaceId", "version", "id", "createdAt", "updatedAt"}
+    """M3-D01/D02: status and attribution come from the server, not the client."""
+    forbidden = {"status", "createdBy", "spaceId", "version", "id", "createdAt", "updatedAt"}
     for name in ("WishCreate", "WishUpdate"):
         schema = _components()[name]
-        assert set(schema["properties"]) & verboten == set()
-        # Kein stilles Verschlucken: zusaetzliche Felder werden abgewiesen,
-        # sonst glaubte ein Client, er haette den Status gesetzt.
+        assert set(schema["properties"]) & forbidden == set()
+        # Do not silently discard extra fields; otherwise a client could
+        # believe that it successfully set the status.
         assert schema.get("additionalProperties") is False
 
 
@@ -96,7 +95,7 @@ def test_create_requires_only_a_title() -> None:
 
 
 def test_update_offers_only_the_title() -> None:
-    """Es gibt kein Feld, ueber das ein PATCH den Status setzen koennte."""
+    """There is no field through which PATCH could set the status."""
     assert set(_components()["WishUpdate"]["properties"]) == {"title"}
 
 
@@ -107,23 +106,22 @@ def test_detail_exposes_status_and_attribution_read_only() -> None:
 
 
 def test_detail_carries_no_wish_body() -> None:
-    """Ein Wish hat in M3 nur einen Titel - `body` gehoert zum Plan."""
+    """A Wish has only a title in M3; `body` belongs to the Plan."""
     assert "body" not in _components()["WishDetail"]["properties"]
 
 
 def test_list_filters_by_status_and_not_by_free_text() -> None:
-    """Volltextsuche ist M4-A und ausdruecklich nicht Teil von M3."""
-    parameter = {p["name"] for p in _paths()[COLLECTION]["get"].get("parameters", [])}
-    assert {"status", "cursor", "limit"} <= parameter
-    assert "q" not in parameter
+    """Full-text search is M4-A and explicitly not part of M3."""
+    parameters = {p["name"] for p in _paths()[COLLECTION]["get"].get("parameters", [])}
+    assert {"status", "cursor", "limit"} <= parameters
+    assert "q" not in parameters
 
 
 def test_conflict_is_a_documented_answer_for_every_versioned_write() -> None:
-    """Ein 409 ist bei Wish nicht nur der Versionskonflikt.
+    """For Wish, 409 means more than a version conflict.
 
-    Ueber denselben Status antwortet spaeter die Delete-Matrix aus M3-D05.
-    Beide muessen im Vertrag stehen, sonst behandelt ein Client den Fall
-    als unerwarteten Fehler.
+    The M3-D05 delete matrix later uses the same status. Both cases must be in
+    the contract or a client would treat the response as an unexpected error.
     """
     detail = _paths()[DETAIL]
     assert "409" in detail["patch"]["responses"]
