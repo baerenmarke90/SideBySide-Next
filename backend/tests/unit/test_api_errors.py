@@ -82,7 +82,12 @@ class TestFormat:
         ],
     )
     def test_domain_errors(
-        self, client: TestClient, path: str, status: int, problem_type: str, code: str
+        self,
+        client: TestClient,
+        path: str,
+        status: int,
+        problem_type: str,
+        code: str,
     ) -> None:
         response = client.get(path)
         assert response.status_code == status
