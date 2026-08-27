@@ -36,13 +36,31 @@ def test_place_routes_have_frozen_operation_ids() -> None:
     assert paths[DETAIL]["delete"]["operationId"] == "deletePlace"
 
 
-def test_the_place_surface_is_exactly_crud() -> None:
-    """Die typisierten Relationen aus M3-D08 sind M3-S4.
+RELATION_SLUGS = ("memories", "heart-moments", "milestones")
 
-    `places/{placeId}/memories` und die beiden Geschwister fehlen hier
-    absichtlich - es gibt noch keine Join-Tabelle, die sie fuellen wuerde.
+RELATION_PATHS = {
+    f"{DETAIL}/{slug}{suffix}" for slug in RELATION_SLUGS for suffix in ("", "/{targetId}")
+}
+
+
+def test_the_place_surface_is_crud_plus_typed_relations() -> None:
+    """Die Flaeche ist geschlossen und vollstaendig aufgezaehlt.
+
+    Mit M3-S4 kommen die typisierten Relationen aus M3-D08 hinzu - und
+    ausschliesslich sie. Der Test bleibt eine Gleichheit und keine
+    Teilmenge: eine Route, die niemand bewusst hier eingetragen hat, soll
+    auffallen, bevor sie in einem generierten Client landet.
+
+    `places/{placeId}/plans` und `places/{placeId}/chapters` fehlen
+    absichtlich und dauerhaft. `Plan.placeId` ist kanonisch und einspaltig,
+    `Chapter.placeId` wird es in S5 - eine zweite Wahrheit ueber dieselbe
+    Zuordnung gibt es nicht (M3-D08/D31).
     """
-    assert {pfad for pfad in _paths() if "/places" in pfad} == {COLLECTION, DETAIL}
+    assert {pfad for pfad in _paths() if "/places" in pfad} == {
+        COLLECTION,
+        DETAIL,
+        *RELATION_PATHS,
+    }
 
 
 def test_mutations_require_if_match() -> None:

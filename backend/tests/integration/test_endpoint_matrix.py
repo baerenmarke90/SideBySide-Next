@@ -351,6 +351,51 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
         if_match=True,
         resource_absence="PLACE_NOT_FOUND",
     ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/memories",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/memories/{targetId}",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/memories/{targetId}",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/heart-moments",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/heart-moments/{targetId}",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/heart-moments/{targetId}",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "GET",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/milestones",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/milestones/{targetId}",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
+    Endpunkt(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/places/{placeId}/milestones/{targetId}",
+        resource_absence="PLACE_NOT_FOUND",
+    ),
     Endpunkt("GET", "/api/v1/spaces/{spaceId}/plans"),
     Endpunkt("POST", "/api/v1/spaces/{spaceId}/plans", body=PLAN),
     Endpunkt(
@@ -534,6 +579,10 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "wishId": wish["id"],
             "planId": plan["id"],
             "placeId": place["id"],
+            # Das Ziel einer typisierten Relation. Eine Erinnerung reicht
+            # fuer alle drei Relationsarten: die Pruefungen dieser Matrix
+            # greifen vor der Zielaufloesung.
+            "targetId": memory["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
@@ -644,6 +693,7 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "wishId",
             "planId",
             "placeId",
+            "targetId",
         )
         if "{" + name + "}" in endpunkt.template
     )

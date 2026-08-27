@@ -1,6 +1,4 @@
 (function bootstrapTheme() {
-  'use strict';
-
   var storageKey = 'sidebyside.theme';
   var darkModeQuery = '(prefers-color-scheme: dark)';
   var themeColors = {
@@ -9,8 +7,9 @@
   };
 
   var preference = 'system';
+  var storedPreference;
   try {
-    var storedPreference = window.localStorage.getItem(storageKey);
+    storedPreference = window.localStorage.getItem(storageKey);
     if (
       storedPreference === 'system' ||
       storedPreference === 'light' ||
@@ -24,7 +23,12 @@
   }
 
   var systemPrefersDark = window.matchMedia(darkModeQuery).matches;
-  var theme = preference === 'system' ? (systemPrefersDark ? 'dark' : 'light') : preference;
+  var theme =
+    preference === 'system'
+      ? systemPrefersDark
+        ? 'dark'
+        : 'light'
+      : preference;
   var root = document.documentElement;
 
   root.dataset.theme = theme;

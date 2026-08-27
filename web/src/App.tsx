@@ -1,6 +1,18 @@
-import { FormEvent, useCallback, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
-import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { type FormEvent, useCallback, useMemo, useState } from 'react';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import {
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';
 import type { TokenView } from './api/generated/models/TokenView';
 import { loadReferenceClientConfig } from './client/config';
@@ -15,7 +27,8 @@ import { useTranslation } from './i18n';
 
 function readableError(error: unknown, fallback: string): string {
   if (!(error instanceof Error)) return fallback;
-  if (!error.message || error.message === 'Response returned an error code') return fallback;
+  if (!error.message || error.message === 'Response returned an error code')
+    return fallback;
   return error.message;
 }
 
@@ -23,7 +36,9 @@ function Brand() {
   const { t } = useTranslation();
   return (
     <Link className="brand" to="/story" aria-label={t('brand.storyAria')}>
-      <span className="brand-mark" aria-hidden="true">S</span>
+      <span className="brand-mark" aria-hidden="true">
+        S
+      </span>
       <span>SideBySide</span>
     </Link>
   );
@@ -35,7 +50,9 @@ function SetupNotice() {
     <main className="setup-shell">
       <section className="setup-card" aria-labelledby="setup-heading">
         <div className="brand brand-static">
-          <span className="brand-mark" aria-hidden="true">S</span>
+          <span className="brand-mark" aria-hidden="true">
+            S
+          </span>
           <span>SideBySide</span>
         </div>
         <p className="eyebrow">{t('setup.eyebrow')}</p>
@@ -43,14 +60,21 @@ function SetupNotice() {
         <p>{t('setup.body')}</p>
         <details className="operator-note">
           <summary>{t('setup.operatorSummary')}</summary>
-          <p>{t('setup.operatorPrefix')} <code>SBS_WEB_SPACE_ID</code> {t('setup.operatorSuffix')}</p>
+          <p>
+            {t('setup.operatorPrefix')} <code>SBS_WEB_SPACE_ID</code>{' '}
+            {t('setup.operatorSuffix')}
+          </p>
         </details>
       </section>
     </main>
   );
 }
 
-function LoginScreen({ onLogin, pending, error }: {
+function LoginScreen({
+  onLogin,
+  pending,
+  error,
+}: {
   onLogin: (email: string, password: string) => void;
   pending: boolean;
   error: unknown;
@@ -67,7 +91,9 @@ function LoginScreen({ onLogin, pending, error }: {
     <main className="login-shell">
       <section className="login-intro" aria-labelledby="welcome-heading">
         <div className="brand brand-static brand-inverse">
-          <span className="brand-mark" aria-hidden="true">S</span>
+          <span className="brand-mark" aria-hidden="true">
+            S
+          </span>
           <span>SideBySide</span>
         </div>
         <p className="eyebrow eyebrow-inverse">{t('login.introEyebrow')}</p>
@@ -83,9 +109,21 @@ function LoginScreen({ onLogin, pending, error }: {
         </div>
         <form onSubmit={submit} className="form-grid">
           <label htmlFor="email">{t('login.email')}</label>
-          <input id="email" name="email" type="email" autoComplete="username" required />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="username"
+            required
+          />
           <label htmlFor="password">{t('login.password')}</label>
-          <input id="password" name="password" type="password" autoComplete="current-password" required />
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+          />
           <button type="submit" disabled={pending}>
             {pending ? t('login.pending') : t('login.submit')}
           </button>
@@ -124,7 +162,9 @@ function StoryPage({
           <h1>{t('story.title')}</h1>
           <p>{t('story.intro')}</p>
         </div>
-        <Link className="button-link primary-action" to="/memory/new">{t('story.addMemory')}</Link>
+        <Link className="button-link primary-action" to="/memory/new">
+          {t('story.addMemory')}
+        </Link>
       </header>
 
       <section className="story-surface" aria-labelledby="timeline-heading">
@@ -139,12 +179,18 @@ function StoryPage({
             onClick={() => storyQuery.refetch()}
             disabled={storyQuery.isFetching}
           >
-            {storyQuery.isFetching ? t('common.refreshing') : t('common.refresh')}
+            {storyQuery.isFetching
+              ? t('common.refreshing')
+              : t('common.refresh')}
           </button>
         </div>
 
         {storyQuery.isLoading && (
-          <div className="story-loading" role="status" aria-label={t('story.loadingAria')}>
+          <div
+            className="story-loading"
+            role="status"
+            aria-label={t('story.loadingAria')}
+          >
             <span />
             <span />
             <span />
@@ -153,12 +199,23 @@ function StoryPage({
         {storyQuery.error instanceof Error && (
           <div className="inline-message inline-message-error" role="alert">
             <strong>{t('story.loadErrorTitle')}</strong>
-            <span>{readableError(storyQuery.error, t('story.loadErrorFallback'))}</span>
-            <button type="button" className="secondary" onClick={() => storyQuery.refetch()}>{t('common.retry')}</button>
+            <span>
+              {readableError(storyQuery.error, t('story.loadErrorFallback'))}
+            </span>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => storyQuery.refetch()}
+            >
+              {t('common.retry')}
+            </button>
           </div>
         )}
         {storyQuery.data && (
-          <StoryList items={storyQuery.data.items} loadMemoryImage={loadMemoryImage} />
+          <StoryList
+            items={storyQuery.data.items}
+            loadMemoryImage={loadMemoryImage}
+          />
         )}
       </section>
     </div>
@@ -179,10 +236,21 @@ function MemoryCreatePage({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
-  const apis = useMemo(() => createReferenceApis(apiBaseUrl, accessToken), [apiBaseUrl, accessToken]);
+  const apis = useMemo(
+    () => createReferenceApis(apiBaseUrl, accessToken),
+    [apiBaseUrl, accessToken],
+  );
 
   const mutation = useMutation({
-    mutationFn: ({ title, body, happenedOn }: { title: string; body: string; happenedOn?: Date }) => {
+    mutationFn: ({
+      title,
+      body,
+      happenedOn,
+    }: {
+      title: string;
+      body: string;
+      happenedOn?: Date;
+    }) => {
       if (!file) throw new Error(t('memory.imageRequired'));
       return runMemoryMediaStoryFlow(
         apis,
@@ -207,13 +275,17 @@ function MemoryCreatePage({
     mutation.mutate({
       title: String(data.get('title')),
       body: String(data.get('body')),
-      happenedOn: happenedOnValue ? new Date(`${happenedOnValue}T00:00:00Z`) : undefined,
+      happenedOn: happenedOnValue
+        ? new Date(`${happenedOnValue}T00:00:00Z`)
+        : undefined,
     });
   }
 
   return (
     <div className="page create-page">
-      <Link className="back-link" to="/story">{t('memory.backToStory')}</Link>
+      <Link className="back-link" to="/story">
+        {t('memory.backToStory')}
+      </Link>
       <header className="page-heading create-heading">
         <div>
           <p className="eyebrow">{t('memory.eyebrow')}</p>
@@ -223,16 +295,30 @@ function MemoryCreatePage({
       </header>
 
       <section className="form-card" aria-labelledby="memory-form-heading">
-        <h2 id="memory-form-heading" className="sr-only">{t('memory.formAria')}</h2>
+        <h2 id="memory-form-heading" className="sr-only">
+          {t('memory.formAria')}
+        </h2>
         <form onSubmit={submit} className="form-grid memory-form">
           <div className="field-group">
             <label htmlFor="title">{t('memory.titleLabel')}</label>
-            <input id="title" name="title" required maxLength={200} placeholder={t('memory.titlePlaceholder')} />
+            <input
+              id="title"
+              name="title"
+              required
+              maxLength={200}
+              placeholder={t('memory.titlePlaceholder')}
+            />
           </div>
 
           <div className="field-group">
             <label htmlFor="body">{t('memory.bodyLabel')}</label>
-            <textarea id="body" name="body" required rows={5} placeholder={t('memory.bodyPlaceholder')} />
+            <textarea
+              id="body"
+              name="body"
+              required
+              rows={5}
+              placeholder={t('memory.bodyPlaceholder')}
+            />
           </div>
 
           <div className="field-group">
@@ -250,19 +336,31 @@ function MemoryCreatePage({
               type="file"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
               required
-              onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)}
+              onChange={(event) =>
+                setFile(event.currentTarget.files?.[0] ?? null)
+              }
             />
             <label className="file-picker" htmlFor="image">
-              <span className="file-picker-icon" aria-hidden="true">＋</span>
+              <span className="file-picker-icon" aria-hidden="true">
+                ＋
+              </span>
               <span>
-                <strong>{file ? t('memory.photoSelected') : t('memory.photoSelect')}</strong>
+                <strong>
+                  {file ? t('memory.photoSelected') : t('memory.photoSelect')}
+                </strong>
                 <small>{file ? file.name : t('memory.photoFormats')}</small>
               </span>
             </label>
           </div>
 
-          <div className="sharing-note" aria-label={t('memory.visibilityAria')}>
-            <span className="sharing-icon" aria-hidden="true">♥</span>
+          <div
+            className="sharing-note"
+            role="note"
+            aria-label={t('memory.visibilityAria')}
+          >
+            <span className="sharing-icon" aria-hidden="true">
+              ♥
+            </span>
             <div>
               <strong>{t('memory.sharedTitle')}</strong>
               <p>{t('memory.sharedBody')}</p>
@@ -270,7 +368,9 @@ function MemoryCreatePage({
           </div>
 
           <div className="form-actions">
-            <Link className="button-link secondary-link" to="/story">{t('common.cancel')}</Link>
+            <Link className="button-link secondary-link" to="/story">
+              {t('common.cancel')}
+            </Link>
             <button type="submit" disabled={mutation.isPending || !file}>
               {mutation.isPending ? t('memory.saving') : t('memory.save')}
             </button>
@@ -278,12 +378,19 @@ function MemoryCreatePage({
         </form>
 
         {mutation.isPending && (
-          <p className="status" role="status" aria-live="polite">{t('memory.processing')}</p>
+          <p className="status" role="status" aria-live="polite">
+            {t('memory.processing')}
+          </p>
         )}
         {mutation.error && (
-          <div className="inline-message inline-message-error form-error" role="alert">
+          <div
+            className="inline-message inline-message-error form-error"
+            role="alert"
+          >
             <strong>{t('memory.saveErrorTitle')}</strong>
-            <span>{readableError(mutation.error, t('memory.saveErrorFallback'))}</span>
+            <span>
+              {readableError(mutation.error, t('memory.saveErrorFallback'))}
+            </span>
           </div>
         )}
       </section>
@@ -304,21 +411,25 @@ function AuthenticatedApp({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const apis = useMemo(() => createReferenceApis(apiBaseUrl, tokens.accessToken), [apiBaseUrl, tokens.accessToken]);
+  const apis = useMemo(
+    () => createReferenceApis(apiBaseUrl, tokens.accessToken),
+    [apiBaseUrl, tokens.accessToken],
+  );
   const storyQuery = useQuery({
     queryKey: ['story', spaceId, tokens.accessToken],
     queryFn: () => apis.story.getStoryTimeline({ spaceId, limit: 25 }),
     retry: false,
   });
   const loadMemoryImage = useCallback(
-    (memoryId: string, attachmentId: string) => loadAuthorizedImage(
-      apis,
-      apiBaseUrl,
-      tokens.accessToken,
-      spaceId,
-      memoryId,
-      attachmentId,
-    ),
+    (memoryId: string, attachmentId: string) =>
+      loadAuthorizedImage(
+        apis,
+        apiBaseUrl,
+        tokens.accessToken,
+        spaceId,
+        memoryId,
+        attachmentId,
+      ),
     [apiBaseUrl, apis, spaceId, tokens.accessToken],
   );
 
@@ -331,8 +442,12 @@ function AuthenticatedApp({
       <header className="app-header">
         <Brand />
         <div className="header-actions">
-          <span className="shared-context"><span aria-hidden="true">♥</span> {t('header.sharedArea')}</span>
-          <button type="button" className="tertiary" onClick={logout}>{t('header.logout')}</button>
+          <span className="shared-context">
+            <span aria-hidden="true">♥</span> {t('header.sharedArea')}
+          </span>
+          <button type="button" className="tertiary" onClick={logout}>
+            {t('header.logout')}
+          </button>
         </div>
       </header>
 
@@ -341,18 +456,23 @@ function AuthenticatedApp({
           <Route path="/" element={<Navigate replace to="/story" />} />
           <Route
             path="/story"
-            element={<StoryPage storyQuery={storyQuery} loadMemoryImage={loadMemoryImage} />}
+            element={
+              <StoryPage
+                storyQuery={storyQuery}
+                loadMemoryImage={loadMemoryImage}
+              />
+            }
           />
           <Route
             path="/memory/new"
-            element={(
+            element={
               <MemoryCreatePage
                 accessToken={tokens.accessToken}
                 apiBaseUrl={apiBaseUrl}
                 spaceId={spaceId}
                 onSaved={refreshStory}
               />
-            )}
+            }
           />
           <Route path="*" element={<Navigate replace to="/story" />} />
         </Routes>
@@ -367,7 +487,8 @@ export function App() {
   const [tokens, setTokens] = useState<TokenView | null>(null);
 
   const loginMutation = useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) => signIn(config.apiBaseUrl, email, password),
+    mutationFn: ({ email, password }: { email: string; password: string }) =>
+      signIn(config.apiBaseUrl, email, password),
     onSuccess: (session) => {
       setTokens(session.tokens);
       queryClient.clear();

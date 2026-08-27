@@ -22,15 +22,23 @@ type ThemeWindow = {
 };
 
 function readBootstrap(): string {
-  const processRef = (globalThis as typeof globalThis & { process?: NodeProcess }).process;
+  const processRef = (
+    globalThis as typeof globalThis & { process?: NodeProcess }
+  ).process;
   if (!processRef) throw new Error('Node process API fehlt im Testlauf.');
-  return processRef.getBuiltinModule('fs').readFileSync(
-    new URL('../public/theme-bootstrap.js', import.meta.url),
-    'utf8',
-  );
+  return processRef
+    .getBuiltinModule('fs')
+    .readFileSync(
+      new URL('../public/theme-bootstrap.js', import.meta.url),
+      'utf8',
+    );
 }
 
-function runBootstrap(storedPreference: string | null, systemPrefersDark: boolean, storageThrows = false) {
+function runBootstrap(
+  storedPreference: string | null,
+  systemPrefersDark: boolean,
+  storageThrows = false,
+) {
   const dataset: Record<string, string> = {};
   const style: Record<string, string> = {};
   const themeColor = { content: '#faf8fc' };
@@ -70,25 +78,40 @@ describe('theme bootstrap', () => {
 
   it('keeps an explicit light preference before app startup even on a dark system', () => {
     const result = runBootstrap('light', true);
-    expect(result.dataset).toEqual({ theme: 'light', themePreference: 'light' });
+    expect(result.dataset).toEqual({
+      theme: 'light',
+      themePreference: 'light',
+    });
     expect(result.style.colorScheme).toBe('light');
     expect(result.themeColor.content).toBe('#faf8fc');
   });
 
   it('follows the operating-system preference in system mode', () => {
     const result = runBootstrap('system', true);
-    expect(result.dataset).toEqual({ theme: 'dark', themePreference: 'system' });
+    expect(result.dataset).toEqual({
+      theme: 'dark',
+      themePreference: 'system',
+    });
     expect(result.themeColor.content).toBe('#1c1525');
   });
 
   it('falls back to system for missing or invalid stored values', () => {
-    expect(runBootstrap(null, false).dataset).toEqual({ theme: 'light', themePreference: 'system' });
-    expect(runBootstrap('sepia', true).dataset).toEqual({ theme: 'dark', themePreference: 'system' });
+    expect(runBootstrap(null, false).dataset).toEqual({
+      theme: 'light',
+      themePreference: 'system',
+    });
+    expect(runBootstrap('sepia', true).dataset).toEqual({
+      theme: 'dark',
+      themePreference: 'system',
+    });
   });
 
   it('falls back to system when localStorage is unavailable', () => {
     const result = runBootstrap(null, true, true);
-    expect(result.dataset).toEqual({ theme: 'dark', themePreference: 'system' });
+    expect(result.dataset).toEqual({
+      theme: 'dark',
+      themePreference: 'system',
+    });
     expect(result.style.colorScheme).toBe('dark');
   });
 });

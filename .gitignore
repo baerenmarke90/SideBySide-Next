@@ -15,6 +15,11 @@ htmlcov/
 node_modules/
 dist/
 .vite/
+# Ausgabe von `tsc -b` (npm run lint). Der Build erzeugt sie neben den
+# Quellen; eingecheckt waeren sie ein zweiter, sofort veralteter Stand.
+*.tsbuildinfo
+web/vite.config.js
+web/vite.config.d.ts
 
 # Android
 android/.gradle/

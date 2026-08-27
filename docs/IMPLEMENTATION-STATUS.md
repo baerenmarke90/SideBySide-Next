@@ -174,8 +174,8 @@ Die Runtime-Reihenfolge folgt dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Ein k
 - [x] **M3-S1 — Wish Foundation:** Wish-Domain mit ProtectedPayload für den Titel, collaborative write nach M3-D01, `status` ausschließlich serverseitig, `If-Match`/409, Statusfilter über einen space- und filtergebundenen Cursor sowie redigierte `WISH_*`-Events. Die Wish->Plan-Operation und die planabhängigen Zeilen der Delete-Matrix folgen in S2.
 - [x] **M3-S2 — Plan + Wish->Plan:** Plan-Domain mit Direct Create nach M3-D30, Statusautomat `IDEA | PLANNED | COMPLETED` mit Datumsinvarianten als Service- **und** DB-Constraints, `sourceWishId` mit `UNIQUE` und zusammengesetztem Same-Space-Fremdschlüssel, atomare und idempotente Wish->Plan-Konvertierung, `return-to-wish`, `schedule`/`unschedule`/`complete` sowie die kanonische Lock-Reihenfolge `Wish -> Plan` mit echten PostgreSQL-Race- und Rollback-Tests. Die Wish-Delete-Matrix aus M3-D05 ist damit vollständig.
 - [x] **M3-S3 — Place Foundation:** Place-Domain mit Name, Beschreibung und Adresse hinter der ProtectedPayload-Grenze, Koordinaten als typisierte `NUMERIC`-Spalten mit Paar-, Bereichs- und Genauigkeitsinvarianten in Dienst **und** Schema, CRUD/List ohne Deduplizierung, kein Geocoding- oder Maps-Provider. `Plan.placeId` ist nachgezogen (kanonisch und einspaltig, mit zusammengesetztem Same-Space-Fremdschlüssel). Place-Delete löst zugeordnete Plans versioniert und lässt sie bestehen. Zusätzlich: gebundene DB-Parameter erscheinen nicht mehr in Fehlermeldungen und damit nicht mehr im Anwendungslog.
-- [ ] **M3-S4 — typisierte Content Relations:** nächster Runtime-Slice.
-- [ ] M3-S5 — Chapter.
+- [x] **M3-S4 — typisierte Content Relations:** `place_memories`, `place_heart_moments` und `place_milestones` mit echten zusammengesetzten Fremdschlüsseln über `(id, space_id)`, Primärschlüssel `(place_id, target_id)` und typisierten REST-Routen statt freier `(targetType,targetId)`-Polymorphie. Same-Space ist eine Schemaeigenschaft, keine Dienstregel: beide Fremdschlüssel teilen sich dieselbe `space_id`-Spalte. Unbekanntes, gelöschtes, fremdes und privates Ziel enden ununterscheidbar in `RELATION_TARGET_NOT_FOUND`. Der Privacy-Wechsel `SHARED -> PRIVATE` entfernt die Relationen in derselben Transaktion; darunter liegt ein Schema-Riegel, der den Zustand „privat mit gemeinsamer Relation" unformulierbar macht. Lock-Reihenfolge `Place -> Target` mit PostgreSQL-Race-Tests gegen Parent-Delete, Target-Delete und Privacy-Wechsel.
+- [ ] **M3-S5 — Chapter:** nächster Runtime-Slice. Bringt `Chapter.placeId` und die drei `chapter_*`-Relationen nach.
 - [ ] M3-S6+ — Collections und Private Area gemäß Delivery Plan.
 
 ## Spätere Milestones
@@ -190,6 +190,6 @@ Die Runtime-Reihenfolge folgt dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Ein k
 
 ## Nächster Prüfpunkt
 
-M3-S4 **typisierte Content Relations** nach dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Der Slice bringt `place_memories`, `place_heart_moments` und `place_milestones` mit echten Fremdschlüsseln und `UNIQUE(place_id, target_id)`, typisierte REST-Routen statt freier `(targetType,targetId)`-Polymorphie, Same-Space-Enforcement, ausschließlich `SHARED` HeartMoments sowie das atomare Entfernen der Relationen beim Privacy-Wechsel `SHARED -> PRIVATE`.
+M3-S5 **Chapter** nach dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Der Slice bringt das Chapter-Modell mit `startOn`/`endOn` nach M3-D11, die abgeleitete chronologische Darstellung nach M3-D10 sowie `Chapter.placeId` und die drei `chapter_*`-Relationen — letztere auf derselben Join-Form, die S4 für Places geliefert hat.
 
-`Chapter.placeId` und die drei `chapter_*`-Relationen folgen mit M3-S5, sobald es Chapters gibt.
+Chapter-Delete entfernt nach M3-D12 ausschließlich das Chapter und seine Relationen; kein Memory, HeartMoment oder Milestone darf dabei verschwinden.

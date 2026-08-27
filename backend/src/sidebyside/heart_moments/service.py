@@ -32,6 +32,7 @@ from sidebyside.authorization import (
     readable,
     require_readable,
     require_writable,
+    require_writable_locked,
     visibility_of,
 )
 from sidebyside.core import cursor as cursor_codec
@@ -213,6 +214,24 @@ def _delete_dependent_comments(session: Session, heart_moment: HeartMoment) -> N
     )
 
 
+def _drop_shared_relations(session: Session, heart_moment: HeartMoment) -> None:
+    """Gemeinsame Relationen beim Privacy-Wechsel entfernen (M3-D09).
+
+    Dieselbe Begruendung wie bei den Kommentaren, eine Stufe schaerfer: ein
+    Kommentar an einem privaten Moment waere ein verwaister Inhalt, eine
+    gemeinsame Relation darauf ist ein Beweis seiner Existenz. Der Partner
+    sieht die Verknuepfung am Ort, auch wenn er den Moment selbst nicht
+    lesen kann.
+
+    Laeuft vor dem Klassenwechsel und in derselben Transaktion. Der
+    Fremdschluessel in `place_heart_moments` fienge ein Vergessen ab - er
+    zoege die neue Klasse in die Join-Zeile und liefe gegen deren CHECK.
+    """
+    from sidebyside.relations import service as relation_service
+
+    relation_service.drop_shared_relations_of_heart_moment(session, heart_moment)
+
+
 def change_visibility(
     session: Session,
     context: AuthorizationContext,
@@ -228,9 +247,17 @@ def change_visibility(
     vollstaendig erhalten; es gibt keinen Zwischenstand, in dem die Klasse
     schon privat ist und Kommentare noch stehen.
 
-    `PRIVATE -> SHARED` stellt geloeschte Kommentare nicht wieder her.
+    `PRIVATE -> SHARED` stellt geloeschte Kommentare nicht wieder her - und
+    ebenso wenig frueher entfernte Relationen (M3-D09).
+
+    Die Zeile wird exklusiv gesperrt, bevor irgendetwas geprueft wird
+    (M3-D26). Ohne die Sperre laege zwischen dem Entfernen der Relationen
+    und dem Klassenwechsel ein Fenster, in dem ein gleichzeitiger
+    Relation-Create seine Zeile noch als gemeinsam einfuegen darf. Die
+    Sperre kommt vor dem Ziel-`FOR SHARE` des Creates zum Zug oder danach -
+    in beiden Reihenfolgen bleibt genau ein zulaessiger Endzustand.
     """
-    heart_moment = require_writable(session, HeartMoment, context, heart_moment_id)
+    heart_moment = require_writable_locked(session, HeartMoment, context, heart_moment_id)
     _ensure_expected_version(heart_moment, expected_version)
 
     target = privacy_for(visibility)
@@ -241,6 +268,7 @@ def change_visibility(
 
     if target is PrivacyClass.OWNER_ONLY:
         _delete_dependent_comments(session, heart_moment)
+        _drop_shared_relations(session, heart_moment)
 
     heart_moment.privacy_class = target.value
     _flush(session)
