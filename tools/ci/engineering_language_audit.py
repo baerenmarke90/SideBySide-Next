@@ -34,7 +34,7 @@ LEGACY_ENGINEERING_MARKERS = re.compile(
     r"Zusammenfassung|Begruendung|Begründung|Gepruefte|Geprüfte|Entscheidung|"
     r"Erzeugt|erzeugen|wurzel|vertrag|pruefmodus|Prüfmodus|abweichung|"
     r"ungueltig|ungültig|geprueft|geprüft|ausgefuehrt|ausgeführt|"
-    r"abgeschwaecht|abgeschwächt|Living-Status-Datei|Status-Drift"
+    r"abgeschwaecht|abgeschwächt|Living-Status-Datei"
     r")\b",
     re.IGNORECASE,
 )
