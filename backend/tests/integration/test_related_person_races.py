@@ -1,4 +1,4 @@
-"""Echte PostgreSQL-Races fuer das Loeschen einer nahestehenden Person."""
+"""Real PostgreSQL races for deleting a related person."""
 
 from __future__ import annotations
 
@@ -44,27 +44,31 @@ def _setup(production_client):  # type: ignore[no-untyped-def]
     return client, maker, space_id, token_a, UUID(person["id"]), person["version"]
 
 
-def _attempt_delete(client, path: str, headers: dict[str, str], started: Event) -> Any:  # type: ignore[no-untyped-def]
+def _attempt_delete(
+    client,
+    path: str,
+    headers: dict[str, str],
+    started: Event,
+) -> Any:  # type: ignore[no-untyped-def]
     started.set()
     return client.delete(path, headers=headers)
 
 
-def test_delete_gegen_parallelen_delete_antwortet_404_statt_500(
+def test_delete_against_parallel_delete_returns_404_instead_of_500(
     production_client,
 ) -> None:  # type: ignore[no-untyped-def]
-    """Die Zeile verschwindet zwischen Guard-Abfrage und Sperre.
+    """The row disappears between the guard query and lock acquisition.
 
-    Genau in diesem Fenster stand frueher ein ``session.refresh(...,
-    with_for_update=True)``. Es endete auf einer geloeschten Zeile im
-    Datenbankfehler und damit in einem 500 - einer Antwort, die es sonst
-    fuer keine Abwesenheit gibt und die deshalb selbst schon eine Auskunft
-    waere.
+    This window previously contained ``session.refresh(...,
+    with_for_update=True)``. On a deleted row it ended in a database error and
+    therefore a 500 response, which is not used for any other absence and
+    would itself disclose information.
     """
     client, maker, space_id, token_a, person_id, version = _setup(production_client)
 
-    # Der Blocker haelt die Zeile und loescht sie, committet aber noch
-    # nicht. Der Guard des Requests liest unter READ COMMITTED weiterhin
-    # die alte Zeile; erst die Sperre laeuft in die Wartezeit.
+    # The blocker holds and deletes the row but does not commit yet. Under READ
+    # COMMITTED the request guard can still read the old row; only lock
+    # acquisition then waits.
     blocker = maker()
     transaction = blocker.begin()
     person = blocker.execute(
@@ -81,8 +85,8 @@ def test_delete_gegen_parallelen_delete_antwortet_404_statt_500(
         with ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(_attempt_delete, client, path, headers, started)
             assert started.wait(timeout=2)
-            # Solange die exklusive Sperre steht, darf der Request nicht
-            # fertig werden - er wartet nachweislich auf sie.
+            # While the exclusive lock is held, the request must not finish; it
+            # demonstrably waits for that lock.
             sleep(0.2)
             assert not future.done()
 
