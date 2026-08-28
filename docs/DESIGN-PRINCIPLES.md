@@ -1,317 +1,316 @@
-# Design-Prinzipien für SideBySide Next
+# Design Principles for SideBySide Next
 
-**Status:** Verbindliche Grundlage für Web und App  
+**Status:** Mandatory foundation for Web and App  
 **Version:** 1.0  
-**Gültig ab:** 24. August 2026  
-**Markenversprechen:** *Gemeinsam leben. Privat verbunden.*
+**Effective from:** August 24, 2026  
+**Brand promise (de-DE):** *Gemeinsam leben. Privat verbunden.*
 
-Dieses Dokument übersetzt die Produktidee von SideBySide Next in verbindliche
-Gestaltungsregeln. Es gilt für Produktoberflächen, Website, Store-Auftritt,
-Marketingseiten und neue Funktionen.
+This document translates the SideBySide Next product idea into mandatory
+design rules. It applies to product surfaces, the website, store listings,
+marketing pages, and new features.
 
-Die Begriffe **MUSS**, **SOLLTE** und **KANN** beschreiben die Verbindlichkeit.
-Bei Konflikten gilt diese Reihenfolge:
+The terms **MUST**, **SHOULD**, and **MAY** describe the requirement level.
+When requirements conflict, use this priority order:
 
-1. Datenschutz und Sicherheit
-2. Barrierefreiheit
-3. Verständlichkeit und Nutzbarkeit
-4. Konsistenz
-5. Markenwirkung
-6. visuelle Neuheit
+1. privacy and security
+2. accessibility
+3. comprehensibility and usability
+4. consistency
+5. brand impact
+6. visual novelty
 
-## 1. Gestaltungsziel
+## 1. Design goal
 
-SideBySide soll sich wie ein ruhiger, privater Raum für zwei Menschen anfühlen:
-warm, persönlich und hochwertig, aber niemals kitschig oder überladen.
+SideBySide should feel like a calm, private space for two people: warm,
+personal, and high-quality, but never kitschy or overloaded.
 
-Jede Oberfläche beantwortet innerhalb weniger Sekunden:
+Every surface answers these questions within a few seconds:
 
-- Wo bin ich?
-- Was ist hier gemeinsam und was ist privat?
-- Was ist der nächste sinnvolle Schritt?
-- Welche Daten oder Berechtigungen sind betroffen?
+- Where am I?
+- What is shared here and what is private?
+- What is the next meaningful step?
+- Which data or permissions are affected?
 
-## 2. Zehn Kernprinzipien
+## 2. Ten core principles
 
-### 2.1 Ruhe vor Reiz
+### 2.1 Calm before stimulation
 
-Die Oberfläche MUSS den Inhalt tragen, nicht mit ihm konkurrieren.
+The surface MUST support the content rather than compete with it.
 
-- Pro Ansicht gibt es höchstens eine dominante Primäraktion.
-- Dekoration unterstützt Orientierung oder Stimmung; sie ist kein Selbstzweck.
-- Leerraum ist ein aktiver Bestandteil des Layouts.
-- Dauerhafte Animationen, aggressive Banner und unnötige Badges sind unzulässig.
+- Each view has at most one dominant primary action.
+- Decoration supports orientation or mood; it is not an end in itself.
+- Whitespace is an active part of the layout.
+- Persistent animations, aggressive banners, and unnecessary badges are not allowed.
 
-### 2.2 Privacy ist ein sichtbarer Produktzustand
+### 2.2 Privacy is a visible product state
 
-Privatsphäre darf nicht nur in Richtlinien erklärt werden. Sie MUSS direkt an
-der Stelle erkennbar sein, an der Daten entstehen oder geteilt werden.
+Privacy must not be explained only in policies. It MUST be directly visible at
+the point where data is created or shared.
 
-- Zustände heißen klar: **Nur für mich**, **Mit Partner teilen**, **Standort aus**.
-- Sichtbarkeit wird immer mit Text und Icon dargestellt, nie nur mit Farbe.
-- Berechtigungen werden erst im Nutzungskontext angefragt.
-- Sicherheits- und Verschlüsselungsversprechen dürfen nur verwendet werden,
-  wenn sie im produktiven Build technisch und operativ belegt sind.
-- Kein E2EE-Claim ohne verifizierte Ende-zu-Ende-Verschlüsselung.
+- States use clear labels. Intentional de-DE product examples are **Nur für mich**, **Mit Partner teilen**, and **Standort aus**.
+- Visibility is always represented with text and an icon, never with color alone.
+- Permissions are requested only in the context where they are needed.
+- Security and encryption claims may be used only when they are technically and
+  operationally demonstrated in the production build.
+- No E2EE claim is allowed without verified end-to-end encryption.
 
-### 2.3 Für zwei gedacht, nicht für ein soziales Netzwerk
+### 2.3 Designed for two, not for a social network
 
-Der Space und die Beziehung stehen vor Profil, Reichweite oder öffentlicher
-Selbstdarstellung.
+The Space and the relationship take precedence over profiles, reach, or public
+self-presentation.
 
-- Gemeinsamer Kontext ist in Navigation und Sprache stets erkennbar.
-- Es gibt keine öffentlichen Rankings, Follower-Mechaniken oder sozialen Druck.
-- Empfehlungen optimieren auf gemeinsame Relevanz statt maximale Verweildauer.
-- Beide Personen erhalten gleichwertige Kontrolle und nachvollziehbare Zustände.
+- Shared context is always recognizable in navigation and language.
+- There are no public rankings, follower mechanics, or social pressure.
+- Recommendations optimize for shared relevance rather than maximum dwell time.
+- Both people receive equal control and understandable state information.
 
-### 2.4 Ein klarer nächster Schritt
+### 2.4 One clear next step
 
-Jede Ansicht MUSS eine eindeutige visuelle Hierarchie besitzen.
+Every view MUST have an unambiguous visual hierarchy.
 
-- Titel erklärt den Kontext.
-- Eine kurze Unterzeile erklärt den Nutzen.
-- Die Primäraktion ist visuell eindeutig.
-- Sekundäraktionen treten zurück.
-- Komplexe Abläufe werden in kleine, reversible Schritte zerlegt.
+- The title explains the context.
+- A short subtitle explains the value.
+- The primary action is visually unambiguous.
+- Secondary actions recede visually.
+- Complex flows are split into small, reversible steps.
 
-### 2.5 Inhalt ist der Held
+### 2.5 Content is the hero
 
-Erinnerungen, Wünsche, Pläne und gemeinsame Momente stehen visuell im Zentrum.
+Memories, wishes, plans, and shared moments are visually central.
 
-- Karten zeigen zuerst den relevanten Inhalt, danach Metadaten.
-- Reale Inhalte ersetzen generische Platzhalter so früh wie möglich.
-- Bilder werden ruhig beschnitten und nie mit Text überladen.
-- Empty States erklären Nutzen und nächsten Schritt, nicht nur das Fehlen von Daten.
+- Cards show the relevant content first and metadata afterward.
+- Real content replaces generic placeholders as early as possible.
+- Images are cropped calmly and are never overloaded with text.
+- Empty states explain the value and the next step, not merely the absence of data.
 
-### 2.6 Progressive Offenlegung
+### 2.6 Progressive disclosure
 
-Die erste Ebene bleibt einfach; Details erscheinen bei Bedarf.
+The first level stays simple; details appear when needed.
 
-- Seltene Optionen gehören in Details, Menüs oder einen zweiten Schritt.
-- Kritische Zustände und Privacy-Informationen dürfen nicht versteckt werden.
-- Formulare fragen nur Informationen ab, die für den aktuellen Schritt nötig sind.
-- Erweiterte Einstellungen behalten verständliche Standardwerte.
+- Rare options belong in details, menus, or a second step.
+- Critical states and privacy information must not be hidden.
+- Forms request only information required for the current step.
+- Advanced settings retain understandable defaults.
 
-### 2.7 Menschliche, respektvolle Sprache
+### 2.7 Human, respectful language
 
-Die Sprache ist direkt, warm und nicht wertend.
+Language is direct, warm, and non-judgmental.
 
-- Bevorzugt werden „ihr“, „euer“, „gemeinsam“ und konkrete Verben.
-- Keine Schuldmechaniken, künstliche Dringlichkeit oder Dark Patterns.
-- Fehlertexte erklären, was passiert ist und wie es weitergeht.
-- Texte versprechen nur Funktionen, die im aktuellen Produktstand verfügbar sind.
+- In de-DE product copy, prefer “ihr”, “euer”, “gemeinsam”, and concrete verbs.
+- Do not use guilt mechanics, artificial urgency, or dark patterns.
+- Error messages explain what happened and what the user can do next.
+- Copy promises only capabilities available in the current product state.
 
-### 2.8 Barrierefreiheit ist Definition of Done
+### 2.8 Accessibility is Definition of Done
 
-Barrierefreiheit ist keine spätere Optimierung.
+Accessibility is not a later optimization.
 
-- Zielstandard ist WCAG 2.2 AA.
-- Fließtext erreicht mindestens 4,5:1 Kontrast; große Schrift und UI-Grafiken 3:1.
-- Farbe ist nie der einzige Informationsträger.
-- Weboberflächen sind vollständig per Tastatur bedienbar.
-- App-Oberflächen unterstützen Screenreader und Textskalierung bis mindestens 200 %.
-- Touch-Ziele sind mindestens 48 × 48 dp; Web-Ziele mindestens 44 × 44 px.
-- Reduzierte Bewegung und ausreichende Fokusindikatoren werden unterstützt.
+- The target standard is WCAG 2.2 AA.
+- Body text reaches at least 4.5:1 contrast; large text and UI graphics reach 3:1.
+- Color is never the only information carrier.
+- Web surfaces are fully operable by keyboard.
+- App surfaces support screen readers and text scaling to at least 200%.
+- Touch targets are at least 48 × 48 dp; Web targets are at least 44 × 44 px.
+- Reduced motion and sufficient focus indicators are supported.
 
-### 2.9 Eine Sprache über alle Plattformen
+### 2.9 One language across platforms
 
-Web und App teilen Semantik, Tonalität, Tokens und Komponentenlogik.
+Web and App share semantics, tone, tokens, and component logic.
 
-- Die gleiche Funktion trägt denselben Namen und dieselbe Farbrolle.
-- Plattformkonventionen haben Vorrang vor pixelgenauer Gleichheit.
-- Android bleibt Android; Web bleibt Web.
-- Neue Einzelkomponenten sind nur zulässig, wenn bestehende Muster nicht ausreichen.
+- The same function uses the same name and color role.
+- Platform conventions take precedence over pixel-level equality.
+- Android remains Android; Web remains Web.
+- New one-off components are allowed only when existing patterns are insufficient.
 
-### 2.10 Bewegung erklärt Veränderung
+### 2.10 Motion explains change
 
-Motion dient Orientierung und Feedback.
+Motion supports orientation and feedback.
 
-- Standardübergänge dauern 160–220 ms.
-- Größere Kontextwechsel dürfen bis 320 ms dauern.
-- Animationen verwenden ruhiges Ease-out ohne starkes Springen.
-- Erfolg, Synchronisation und Zustandswechsel werden subtil bestätigt.
-- Dekorative Bewegung stoppt automatisch und respektiert „Reduce Motion“.
+- Standard transitions last 160–220 ms.
+- Larger context changes may last up to 320 ms.
+- Animations use calm ease-out behavior without strong bouncing.
+- Success, synchronization, and state changes are confirmed subtly.
+- Decorative motion stops automatically and respects “Reduce Motion”.
 
-## 3. Visuelle Sprache
+## 3. Visual language
 
-### 3.1 Farbsemantik
+### 3.1 Color semantics
 
-Farben werden nach Bedeutung eingesetzt, nicht nach Geschmack der einzelnen
-Ansicht.
+Colors are used according to meaning, not according to the preference of an
+individual view.
 
-| Token | Wert | Bedeutung |
+| Token | Value | Meaning |
 |---|---:|---|
-| Background | `#FAF8FC` | warmer, ruhiger Seitenhintergrund |
-| Surface | `#FFFFFF` | Karten, Dialoge und Inhaltsflächen |
-| Ink | `#211A2B` | Haupttext und starke Kontraste |
-| Muted | `#6F6878` | Sekundärtext |
-| Line | `#E6DFEC` | Trennlinien und ruhige Umrandungen |
-| Brand Purple | `#7C4DFF` | Produktkern und Primäraktion |
-| Brand Soft | `#EEE7FF` | aktive oder hervorgehobene Flächen |
-| Shared Mint | `#36AE97` | gemeinsam, bestätigt, synchron |
-| Info Blue | `#4B96E6` | Systeminformation und Technik |
-| Discovery Yellow | `#E8A932` | Inspiration, Optionen und Entdecken |
-| Private Pink | `#F45B88` | privat, eingeschränkt oder owner-only |
-| Dark Background | `#1C1525` | hochwertige dunkle Hero- und Fokusflächen |
-| Dark Surface | `#2A2135` | Karten im Dark Mode |
+| Background | `#FAF8FC` | warm, calm page background |
+| Surface | `#FFFFFF` | cards, dialogs, and content surfaces |
+| Ink | `#211A2B` | primary text and strong contrast |
+| Muted | `#6F6878` | secondary text |
+| Line | `#E6DFEC` | dividers and subtle borders |
+| Brand Purple | `#7C4DFF` | product core and primary action |
+| Brand Soft | `#EEE7FF` | active or highlighted surfaces |
+| Shared Mint | `#36AE97` | shared, confirmed, synchronized |
+| Info Blue | `#4B96E6` | system information and technical context |
+| Discovery Yellow | `#E8A932` | inspiration, options, and discovery |
+| Private Pink | `#F45B88` | private, restricted, or owner-only |
+| Dark Background | `#1C1525` | high-quality dark hero and focus surfaces |
+| Dark Surface | `#2A2135` | cards in Dark Mode |
 
-Verbindliche Regeln:
+Mandatory rules:
 
-- Purple ist die einzige Standardfarbe für Primäraktionen.
-- Mint bedeutet geteilt, synchron oder positiv bestätigt.
-- Pink kennzeichnet Privacy oder Einschränkung, nicht automatisch einen Fehler.
-- Fehler und destruktive Aktionen benötigen zusätzlich ein klares Warnsymbol und
-  eindeutigen Text.
-- Pastellflächen dürfen nur mit ausreichend dunklem Text kombiniert werden.
-- Pro Ansicht SOLLTEN höchstens zwei Akzentfarben dominieren.
+- Purple is the only standard color for primary actions.
+- Mint means shared, synchronized, or positively confirmed.
+- Pink marks privacy or restriction, not automatically an error.
+- Errors and destructive actions additionally require a clear warning icon and
+  unambiguous text.
+- Pastel surfaces may be combined only with sufficiently dark text.
+- At most two accent colors SHOULD dominate a view.
 
-### 3.2 Typografie
+### 3.2 Typography
 
-Maximal zwei Schriftfamilien werden verwendet:
+At most two font families are used:
 
-- **Display:** Fraunces 600 für emotionale Hero-Titel und ausgewählte Story-Momente.
-- **UI:** Inter 400/500/600 für Navigation, Inhalte, Formulare und Bedienelemente.
-- Fallbacks: `Georgia, serif` beziehungsweise
-  `system-ui, -apple-system, Segoe UI, sans-serif`.
+- **Display:** Fraunces 600 for emotional hero titles and selected Story moments.
+- **UI:** Inter 400/500/600 for navigation, content, forms, and controls.
+- Fallbacks: `Georgia, serif` and
+  `system-ui, -apple-system, Segoe UI, sans-serif`, respectively.
 
-| Ebene | Mobile | Web | Verwendung |
+| Level | Mobile | Web | Use |
 |---|---:|---:|---|
-| Display | 32/38 | 44/52 | Hero und besondere Kapitel |
-| H1 | 28/34 | 36/44 | Seitentitel |
-| H2 | 24/30 | 28/36 | Abschnittstitel |
-| Title | 20/26 | 20/26 | Karten und Dialoge |
-| Body | 16/24 | 16/24 | Standardtext |
-| Meta | 13/18 | 13/18 | Datum, Status und Hilfstext |
+| Display | 32/38 | 44/52 | hero and special chapters |
+| H1 | 28/34 | 36/44 | page titles |
+| H2 | 24/30 | 28/36 | section titles |
+| Title | 20/26 | 20/26 | cards and dialogs |
+| Body | 16/24 | 16/24 | standard text |
+| Meta | 13/18 | 13/18 | date, status, and helper text |
 
-- Body-Text wird nie kleiner als 16 px beziehungsweise 16 sp.
-- Lange Texte erhalten höchstens 70 Zeichen pro Zeile.
-- Versalien sind nur für sehr kurze Labels zulässig.
-- Zahlen, Uhrzeiten und Statuswerte verwenden tabellarische Ziffern.
+- Body text is never smaller than 16 px or 16 sp, respectively.
+- Long-form text uses at most 70 characters per line.
+- All-caps is allowed only for very short labels.
+- Numbers, times, and status values use tabular figures.
 
-### 3.3 Abstand und Raster
+### 3.3 Spacing and grid
 
-Grundmaß ist ein 4er-Raster.
+The base unit is a 4-unit grid.
 
 `4 · 8 · 12 · 16 · 24 · 32 · 48 · 64`
 
-- Mobile Seitenränder: mindestens 20 dp.
-- Web Seitenränder: 24–64 px je nach Viewport.
-- Maximale Inhaltsbreite: 1200 px; Lesetext maximal 720 px.
-- Standardabstand innerhalb einer Card: 20–24 px.
-- Zusammengehörige Elemente stehen enger als getrennte Abschnitte.
-- Weblayouts wechseln unter 768 px auf eine Spalte.
+- Mobile page margins: at least 20 dp.
+- Web page margins: 24–64 px depending on the viewport.
+- Maximum content width: 1200 px; reading text is limited to 720 px.
+- Standard spacing inside a card: 20–24 px.
+- Related elements are closer together than separate sections.
+- Web layouts switch to one column below 768 px.
 
-### 3.4 Formen und Tiefe
+### 3.4 Shape and depth
 
-- Standardradius Cards: 20 px/dp.
-- Große Hero-Flächen und Modal-Surfaces: 24–32 px/dp.
-- Buttons: 14–16 px/dp; Pills nur für Filter und kompakte Statuswerte.
-- Schatten bleiben weich und flach; Grenzen werden bevorzugt über Fläche und Linie erzeugt.
-- Mehr als zwei sichtbare Tiefenebenen pro Ansicht sind zu vermeiden.
+- Standard card radius: 20 px/dp.
+- Large hero surfaces and modal surfaces: 24–32 px/dp.
+- Buttons: 14–16 px/dp; pills are reserved for filters and compact status values.
+- Shadows remain soft and shallow; surface and line differences are preferred for boundaries.
+- Avoid more than two visible depth levels per view.
 
-### 3.5 Bildwelt und Illustration
+### 3.5 Imagery and illustration
 
-- Die Bildwelt ist weich, taktil, ruhig und leicht verträumt.
-- Geeignet sind Wege, Erinnerungsobjekte, Natur, Licht und kleine Alltagsmomente.
-- Keine austauschbaren Stock-Paare oder überinszenierte Romantik.
-- 3D-Objekte dürfen Orientierung und Markenwärme erzeugen, aber keine UI verdecken.
-- Screenshots zeigen echte, lesbare UI und höchstens eine zentrale Aussage.
-- Bilder erhalten Alt-Texte; rein dekorative Bilder werden für Assistenztechnik ausgeblendet.
+- Imagery is soft, tactile, calm, and slightly dreamlike.
+- Suitable motifs include paths, memory objects, nature, light, and small everyday moments.
+- Do not use interchangeable stock couples or over-staged romance.
+- 3D objects may provide orientation and brand warmth but must not obscure UI.
+- Screenshots show real, readable UI and at most one central message.
+- Images have alt text; purely decorative images are hidden from assistive technology.
 
-## 4. Komponentenregeln
+## 4. Component rules
 
 ### Buttons
 
-- Pro Ansicht maximal eine visuell dominante Primäraktion.
-- Primär: Purple-Fläche, weißer Text.
-- Sekundär: helle Surface mit klarer Kontur.
-- Tertiär: Textaktion ohne eigene Fläche.
-- Destruktiv: eindeutiger Warntext; niemals ausschließlich durch Rot kommunizieren.
-- Loading-Zustände behalten Breite und Beschriftungskontext bei.
+- Each view has at most one visually dominant primary action.
+- Primary: Purple surface, white text.
+- Secondary: light Surface with a clear outline.
+- Tertiary: text action without its own surface.
+- Destructive: unambiguous warning text; never communicate destructiveness through red alone.
+- Loading states retain their width and labeling context.
 
 ### Cards
 
-Eine Card enthält in dieser Reihenfolge:
+A card contains information in this order:
 
-1. Kontext oder Status
-2. Titel
-3. zentrale Information
-4. optionale Metadaten
-5. höchstens eine direkte Hauptaktion
+1. context or status
+2. title
+3. central information
+4. optional metadata
+5. at most one direct primary action
 
-Verschachtelte Cards sind zu vermeiden.
+Avoid nested cards.
 
 ### Navigation
 
-- Mobile Hauptnavigation umfasst höchstens fünf primäre Ziele.
-- Webnavigation bleibt flach und zeigt den aktuellen Ort eindeutig.
-- „Zurück“ und Schließen dürfen nicht dieselbe Bedeutung erhalten.
-- Tiefe Links führen immer in einen verständlichen Kontext.
+- Mobile primary navigation contains at most five primary destinations.
+- Web navigation remains shallow and clearly indicates the current location.
+- A localized “Back” action and Close must not acquire the same meaning. For de-DE, “Zurück” is the corresponding product label.
+- Deep links always lead into an understandable context.
 
-### Privacy- und Sharing-Control
+### Privacy and sharing control
 
-- Jede teilbare Entität zeigt ihren aktuellen Sichtbarkeitsstatus.
-- Änderungen erklären vor Bestätigung ihre Wirkung.
-- Private Inhalte werden nicht in Vorschauen, Benachrichtigungen oder Analytics geleakt.
-- Standort ist standardmäßig aus und wird nur kontextbezogen aktiviert.
+- Every shareable entity displays its current visibility state.
+- Changes explain their effect before confirmation.
+- Private content is not leaked into previews, notifications, or analytics.
+- Location is off by default and activated only in context.
 
-### Feedback und Systemzustände
+### Feedback and system states
 
-Jede asynchrone Aktion braucht einen sichtbaren Zustand:
+Every asynchronous action needs a visible state:
 
 `idle → loading → success | empty | error | offline`
 
-- Optimistische Updates sind nur für reversible, unkritische Aktionen erlaubt.
-- Speichern und Synchronisieren werden unterscheidbar kommuniziert.
-- Offline-Zustände erklären, was lokal verfügbar bleibt.
-- Fehler entfernen keine bereits eingegebenen Inhalte.
+- Optimistic updates are allowed only for reversible, non-critical actions.
+- Saving and synchronizing are communicated as distinct states.
+- Offline states explain what remains available locally.
+- Errors do not remove content the user already entered.
 
-## 5. Responsive Verhalten
+## 5. Responsive behavior
 
 ### App
 
-- Mobile-first und einhändige Kernaktionen.
-- Systemleisten, Insets und Tastatur werden berücksichtigt.
-- Primäraktionen bleiben erreichbar, ohne Inhalte zu verdecken.
-- Große Bildflächen laden abgestuft und mit stabilem Platzhalter.
+- Mobile-first with one-handed core actions.
+- System bars, insets, and the keyboard are accounted for.
+- Primary actions remain reachable without covering content.
+- Large image surfaces load progressively with a stable placeholder.
 
 ### Web
 
-- 320 px bis 1440+ px werden unterstützt.
-- Eine Spalte auf Mobile, bis zu zwei Inhaltszonen auf Desktop.
-- Hover ergänzt Information, ist aber nie Voraussetzung.
-- Dialoge werden auf kleinen Viewports zu Bottom Sheets oder Vollbildschritten.
-- Fokusreihenfolge folgt der sichtbaren Leserichtung.
+- Viewports from 320 px through 1440+ px are supported.
+- One column on mobile, up to two content zones on desktop.
+- Hover may add information but is never required.
+- Dialogs become bottom sheets or full-screen steps on small viewports.
+- Focus order follows the visible reading order.
 
-## 6. Content- und Claim-Regeln
+## 6. Content and claim rules
 
-- Nutzen vor Feature-Namen.
-- Ein Satz pro Kernaussage.
-- Keine Rankings, Preise, Nutzerzahlen oder Sicherheitsclaims ohne belastbare Quelle.
-- „Verschlüsselt übertragen“ und „Ende-zu-Ende verschlüsselt“ sind nicht austauschbar.
-- Privacy-Texte nennen konkrete Wirkung statt abstrakter Versprechen.
-- Texte müssen auf Deutsch und Englisch ohne Layoutbruch funktionieren.
+- Lead with value before feature names.
+- Use one sentence per core message.
+- Do not use rankings, prices, user counts, or security claims without a reliable source.
+- The de-DE product claims “Verschlüsselt übertragen” and “Ende-zu-Ende verschlüsselt” are not interchangeable.
+- Privacy copy states the concrete effect instead of relying on abstract promises.
+- Copy must work in German and English without breaking the layout.
 
-## 7. Design-Definition-of-Done
+## 7. Design Definition of Done
 
-Eine Oberfläche ist erst fertig, wenn alle Punkte erfüllt sind:
+A surface is complete only when every item is satisfied:
 
-- [ ] Primärziel und nächste Aktion sind in fünf Sekunden verständlich.
-- [ ] Private und geteilte Zustände sind eindeutig.
-- [ ] Alle Standard-, Leer-, Lade-, Fehler- und Offline-Zustände sind gestaltet.
-- [ ] Kontraste, Textskalierung, Tastatur und Screenreader wurden geprüft.
-- [ ] Touch- und Klickziele erfüllen die Mindestgröße.
-- [ ] Responsive Verhalten wurde auf kleinen und großen Viewports geprüft.
-- [ ] Texte sind konkret, respektvoll und claim-sicher.
-- [ ] Komponenten und Tokens stammen aus dem gemeinsamen Designsystem.
-- [ ] Motion respektiert reduzierte Bewegung.
-- [ ] Screenshots und Marketingdarstellung entsprechen dem realen Produktstand.
+- [ ] The primary goal and next action are understandable within five seconds.
+- [ ] Private and shared states are unambiguous.
+- [ ] All default, empty, loading, error, and offline states are designed.
+- [ ] Contrast, text scaling, keyboard operation, and screen-reader behavior were reviewed.
+- [ ] Touch and click targets meet the minimum size.
+- [ ] Responsive behavior was reviewed on small and large viewports.
+- [ ] Copy is concrete, respectful, and claim-safe.
+- [ ] Components and tokens come from the shared design system.
+- [ ] Motion respects reduced-motion preferences.
+- [ ] Screenshots and marketing representation match the actual product state.
 
 ## 8. Governance
 
-- Design-Tokens sind die gemeinsame Quelle für Web und App.
-- Abweichungen werden dokumentiert und mit Produkt, Design und Engineering entschieden.
-- Neue Komponenten benötigen mindestens Nutzung, Zustände, Accessibility-Regeln und Tokens.
-- Wiederkehrende Sonderlösungen werden in das Designsystem überführt.
-- Dieses Dokument wird bei jeder wesentlichen Marken-, Privacy- oder Navigationsänderung
-  versioniert aktualisiert.
+- Design tokens are the shared source for Web and App.
+- Deviations are documented and decided with Product, Design, and Engineering.
+- New components require at least usage guidance, states, accessibility rules, and tokens.
+- Recurring special cases are moved into the design system.
+- This document is versioned and updated for every substantial brand, privacy, or navigation change.
