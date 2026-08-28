@@ -1,37 +1,37 @@
 # M2 Screen Flows
 
-**Zweck:** implementierbare End-to-End-Pfade für Web und Android  
-**Stand:** 24.08.2026
+**Purpose:** implementable end-to-end paths for Web and Android  
+**As of:** August 24, 2026
 
-## 1. Navigationsmodell
+## 1. Navigation model
 
-Die globale Reihenfolge bleibt unverändert:
+The global order remains unchanged:
 
 ```text
 Heute · Story · Planen · Entdecken · Mehr
 ```
 
-M2 lebt primär in `Story`. `Heute` darf kontextuelle Einstiege wie „Moment festhalten“ oder einen Rückblick zeigen, erzeugt aber keine zweite M2-Navigation.
+M2 primarily lives in `Story`. `Heute` may provide contextual entry points such as the intentional de-DE product action "Moment festhalten" or a retrospective, but it does not create a second M2 navigation structure.
 
-### M2-Routen als Produktvertrag
+### M2 routes as product contract
 
-| Route-ID | Ansicht | Sichtbarkeit | Compact | Expanded |
+| Route ID | View | Visibility | Compact | Expanded |
 |---|---|---|---|---|
-| `story` | gemeinsame Timeline | Space-Mitglieder | Seite | Liste + Detail-Pane |
-| `story/search` | Suche und Filter | Space-Mitglieder | Overlay/Seite | Toolbar + Ergebnisliste |
-| `memory/new` | Erinnerung erstellen | Space-Mitglieder | neue Seite | zentrierte Form Page |
-| `memory/:id` | Memory-Detail | Space-Mitglieder | neue Seite | Detail-Pane |
-| `heart-moment/new` | Herzmoment erstellen | Space-Mitglieder | neue Seite | zentrierte Form Page |
-| `heart-moment/:id` | HeartMoment-Detail | gemäß Visibility | neue Seite | Detail-Pane |
-| `private-moments` | persönliche HeartMoments | nur Owner | neue Seite unter `Mehr` | geschützter Bereich unter `Mehr` |
-| `milestone/new` | Meilenstein erstellen | Space-Mitglieder | neue Seite | zentrierte Form Page |
-| `milestone/:id` | Milestone-Detail | Space-Mitglieder | neue Seite | Detail-Pane |
+| `story` | shared Timeline | Space members | page | list + Detail Pane |
+| `story/search` | Search and filters | Space members | Overlay/page | Toolbar + result list |
+| `memory/new` | create Memory | Space members | new page | centered Form Page |
+| `memory/:id` | Memory Detail | Space members | new page | Detail Pane |
+| `heart-moment/new` | create HeartMoment | Space members | new page | centered Form Page |
+| `heart-moment/:id` | HeartMoment Detail | according to visibility | new page | Detail Pane |
+| `private-moments` | personal HeartMoments | owner only | new page under `Mehr` | protected area under `Mehr` |
+| `milestone/new` | create Milestone | Space members | new page | centered Form Page |
+| `milestone/:id` | Milestone Detail | Space members | new page | Detail Pane |
 
-Die technischen URL-Pfade folgen später dem Router-Konzept. Die Route-IDs beschreiben Navigation und Deep-Link-Verhalten, nicht automatisch Backend-Routen.
+Technical URL paths follow the later Router concept. Route IDs describe navigation and Deep-Link behavior, not automatically Backend routes.
 
-## 2. Einstieg „Moment festhalten“
+## 2. Entry point "Moment festhalten"
 
-**Einstiege:** Quick Action auf `Heute`, primäre Aktion in `Story`, Kontextaktion im leeren Story-Zustand.
+**Entry points:** Quick Action on `Heute`, primary action in `Story`, contextual action in the empty Story state.
 
 ```text
 Moment festhalten
@@ -40,147 +40,147 @@ Moment festhalten
 └── Meilenstein
 ```
 
-- Compact: Bottom Sheet mit drei klar beschriebenen Optionen.
-- Expanded: kleines Menü oder Dialog am auslösenden Element.
-- Fokus kehrt beim Abbrechen zur auslösenden Aktion zurück.
-- Die Auswahl wird nicht gemerkt; jeder neue Inhalt beginnt bewusst.
-- „Privat“ wird nicht im Picker vorweggenommen, weil nur HeartMoment diese Wahl unterstützt.
+- Compact: Bottom Sheet with three clearly described options.
+- Expanded: small Menu or Dialog anchored to the triggering element.
+- Focus returns to the triggering action when canceled.
+- The selection is not remembered; every new item begins intentionally.
+- "Privat" is not preselected in the picker because only HeartMoment supports that choice.
 
-## 3. Flow M2-A – Story ansehen, filtern und öffnen
+## 3. Flow M2-A – View, filter, and open Story
 
-**Ziel:** geteilte Geschichte chronologisch lesen, ohne private Inhalte anzudeuten.
+**Goal:** read the shared history chronologically without implying private content.
 
-1. Person öffnet `Story`.
-2. Die Timeline lädt cursor-basiert und gruppiert nach Monat.
-3. Filter bieten Typ, Jahr und Sortierreihenfolge; Suche ist serverseitig.
-4. Auswahl einer Karte öffnet das Original.
-5. Compact nutzt eine neue Seite; Expanded hält die Timeline sichtbar und öffnet ein Detail-Pane.
-6. Zurück stellt Suchtext, Filter, Cursor, Auswahl und Scrollposition wieder her.
+1. Person opens `Story`.
+2. Timeline loads with Cursor Pagination and groups by month.
+3. Filters provide type, year, and sort order; Search is server-side.
+4. Selecting a Card opens the original resource.
+5. Compact uses a new page; Expanded keeps the Timeline visible and opens a Detail Pane.
+6. Back restores Search text, filters, Cursor, selection, and scroll position.
 
-**Story enthält:** Memory, Milestone, `SHARED` HeartMoment.  
-**Story enthält niemals:** `PRIVATE` HeartMoment, versteckte Attachment-Relation oder Partner-Canary.
+**Story contains:** Memory, Milestone, `SHARED` HeartMoment.  
+**Story never contains:** `PRIVATE` HeartMoment, hidden Attachment relation, or partner Canary.
 
-**Karteninhalt**
+**Card content**
 
-- Typ und Autor,
-- Titel/Textvorschau gemäß Domain,
-- `happenedOn` als fachliches Datum,
-- maximal eine ruhige Medienvorschau plus Anzahl,
-- Kommentaranzahl nur für erlaubte Targets,
-- kein redundantes „geteilt“-Badge auf jeder gemeinsamen Memory; Privacy-Hinweis dort, wo eine Wahl existiert.
+- type and author,
+- Title/text Preview according to Domain,
+- `happenedOn` as domain date,
+- at most one calm Media Preview plus count,
+- Comment count only for permitted Targets,
+- no redundant "shared" Badge on every shared Memory; Privacy notice only where a choice exists.
 
-## 4. Flow M2-B – Memory mit Medien erstellen
+## 4. Flow M2-B – Create Memory with Media
 
-**Privacy:** immer `SPACE_SHARED`; kein versteckter Privatmodus.
+**Privacy:** always `SPACE_SHARED`; no hidden private mode.
 
-1. Typ „Erinnerung“ wählen.
-2. Titel, Text und fachliches Datum erfassen.
-3. Null bis mehrere Medien auswählen.
-4. Jede Datei erscheint sofort als lokale Kachel mit Status.
-5. Validierungsfehler werden pro Datei gezeigt; andere Dateien und Texte bleiben erhalten.
-6. Vor dem Speichern steht sichtbar „Mit Partner geteilt“.
-7. Online speichern; Erfolg öffnet die neue Memory.
-8. Story wird aktualisiert, sobald der fachliche Inhalt verfügbar ist; Medien dürfen nachvollziehbar nachziehen.
+1. Select the de-DE product type "Erinnerung".
+2. Enter Title, text, and domain date.
+3. Select zero to multiple Media items.
+4. Each file appears immediately as a local Tile with status.
+5. Validation errors are shown per file; other files and text remain intact.
+6. Before saving, the intentional de-DE product copy "Mit Partner geteilt" is visible.
+7. Save Online; success opens the new Memory.
+8. Story updates as soon as the Domain content is available; Media may follow with transparent status.
 
-### Medienzustände im Formular
+### Media states in the form
 
 ```text
 selected → validating → uploading → processing → ready
                   └──────────────→ failed → retry | remove
 ```
 
-| Zustand | Darstellung | Erlaubte Aktion |
+| State | Presentation | Allowed action |
 |---|---|---|
-| selected | Vorschau + Dateityp | entfernen |
-| validating | „Datei wird geprüft …“ | abbrechen, falls technisch sicher |
-| uploading | Fortschritt ohne falsche Genauigkeit | abbrechen/entfernen gemäß Contract |
-| processing | „Foto wird verarbeitet …“ | Formular verlassen nur mit Hinweis |
-| ready | Vorschau, Reihenfolge, Beschreibung | verschieben, entfernen |
-| failed | Grund in verständlicher Kategorie | erneut versuchen oder entfernen |
+| selected | Preview + file type | remove |
+| validating | de-DE product copy "Datei wird geprüft …" | cancel if technically safe |
+| uploading | progress without false precision | cancel/remove according to contract |
+| processing | de-DE product copy "Foto wird verarbeitet …" | leave form only with notice |
+| ready | Preview, order, description | move, remove |
+| failed | reason in understandable category | Retry or remove |
 
-Ein fehlgeschlagenes Medium verwirft nicht automatisch den Memory-Entwurf. Ob die Memory vor allen Uploads gespeichert werden darf, folgt der Media-/API-Entscheidung und wird nicht clientseitig improvisiert.
+A failed Media item does not automatically discard the Memory draft. Whether the Memory may be saved before all Uploads finish follows the Media/API decision and is not improvised client-side.
 
-## 5. Flow M2-C – HeartMoment privat oder geteilt
+## 5. Flow M2-C – HeartMoment private or shared
 
-1. Text und Emotion erfassen.
-2. Sichtbarkeit verpflichtend wählen:
-   - **Nur für mich** – der Partner sieht diesen Moment nicht.
-   - **Mit Partner teilen** – der Moment erscheint im gemeinsamen Bereich.
-3. Optional ein Attachment hinzufügen.
-4. Vor dem ersten Teilen erklärt die UI knapp die Folge.
-5. Speichern zeigt anschließend Privacy-Label und Sync-Zustand.
+1. Enter text and emotion.
+2. Select visibility explicitly:
+   - **Nur für mich** — the partner does not see this moment.
+   - **Mit Partner teilen** — the moment appears in the shared area.
+3. Optionally add an Attachment.
+4. Before the first share, the UI briefly explains the consequence.
+5. After saving, show the Privacy label and Sync state.
 
-### Private Route
+### Private route
 
-- Erfolg führt in den persönlichen Bereich `private-moments` beziehungsweise das Owner-only-Detail.
-- Die gemeinsame `Story` wird nicht als Rückweg angeboten.
-- Keine Kommentaraktion, keine Partner-Avatare und keine gemeinsame Aktivitätsanzeige.
-- Private Inhalte dürfen nicht in allgemeiner Suche, „zuletzt geöffnet“, Push Preview oder gemeinsamem Share Sheet auftauchen.
+- Success leads to the personal `private-moments` area or owner-only Detail.
+- The shared `Story` is not offered as the return path.
+- No Comment action, partner Avatars, or shared Activity indicator.
+- Private content must not appear in global Search, recently opened, Push Preview, or shared Share Sheet.
 
-### Geteilte Route
+### Shared route
 
-- Erfolg öffnet das geteilte Detail und macht den Eintrag in `Story` sichtbar.
-- Kommentare sind erlaubt.
-- Wechsel `SHARED → PRIVATE` ist online, versionsgeprüft und erklärt, dass bereits Gelesenes nicht rückwirkend ungesehen wird.
-- Das Verhalten vorhandener Kommentare folgt `M2-D07` im Decision Log.
+- Success opens Shared Detail and makes the item visible in `Story`.
+- Comments are permitted.
+- Transition `SHARED → PRIVATE` is Online, version-checked, and explains that already-read content cannot be made unread retroactively.
+- Existing Comment behavior follows `M2-D07` in the Decision Log.
 
-## 6. Flow M2-D – Milestone erfassen
+## 6. Flow M2-D – Create Milestone
 
-1. Typ „Meilenstein“ wählen.
-2. Titel, optionalen Text und fachliches Datum erfassen.
-3. Klarer Hinweis auf gemeinsame Sichtbarkeit.
-4. Speichern öffnet das Milestone-Detail.
-5. Story zeigt den Milestone als eigenständigen Typ, nicht als dekorierte Memory.
+1. Select the de-DE product type "Meilenstein".
+2. Enter Title, optional text, and domain date.
+3. Show a clear notice of shared visibility.
+4. Save opens Milestone Detail.
+5. Story shows the Milestone as a dedicated type, not a decorated Memory.
 
-Keine Chapter-, Place- oder Recap-Steuerung in M2. Die UI hält dafür nur strukturell Platz, zeigt aber keine deaktivierten Zukunftsfunktionen.
+No Chapter, Place, or Recap controls in M2. The UI may reserve structural space for them but does not show disabled future features.
 
-## 7. Flow M2-E – Kommentieren und Benachrichtigen
+## 7. Flow M2-E – Comment and notify
 
-**Erlaubte Targets:** geteilte Memory, Milestone, geteiltes HeartMoment.
+**Permitted Targets:** shared Memory, Milestone, shared HeartMoment.
 
-1. Person öffnet erlaubtes Detail.
-2. Kommentare laden nach Domainberechtigung.
-3. „Kommentar schreiben“ öffnet Inline Composer (Compact) oder festen Detailbereich (Expanded).
-4. Senden zeigt genau einen optimistischen Zustand nur, wenn der API-Vertrag Idempotenz sicher trägt; sonst „Wird gesendet …“ bis Bestätigung.
-5. Erfolg ergänzt den Kommentar und hält Fokus am neuen Element oder Composer gemäß Aktion.
-6. Kommentar auf fremdem Inhalt erzeugt ein minimales Domain Event; Push-Vorschau bleibt generisch.
+1. Person opens an allowed Detail.
+2. Comments load after Domain Authorization.
+3. The de-DE product action "Kommentar schreiben" opens an Inline Composer (Compact) or fixed Detail area (Expanded).
+4. Sending shows exactly one optimistic state only if the API contract safely supports Idempotency; otherwise show "Wird gesendet …" until confirmation.
+5. Success appends the Comment and keeps focus on the new item or Composer according to the action.
+6. Comment on another person's content creates a minimal Domain Event; Push Preview remains generic.
 
-Bei `404` wird weder Target-Existenz noch Privacy-Grund erklärt. Bei Wechsel zu privat verschwindet der gemeinsame Kommentarpfad vollständig.
+For `404`, neither Target existence nor Privacy reason is explained. When content becomes private, the shared Comment path disappears completely.
 
-## 8. Flow M2-F – Offline Read und blockiertes Write
+## 8. Flow M2-F – Offline Read and blocked Write
 
-### Lesen
+### Read
 
-- Letzte autorisierte Ansicht darf mit „Offline · Stand von {Zeit}“ gezeigt werden.
-- Medien ohne sicheren lokalen Cache erhalten einen neutralen Platzhalter.
-- Space-Wechsel, Logout oder Session-Widerruf entfernt/sperrt Space- und Owner-gebundene Caches.
+- The last authorized view may be shown with the de-DE status copy "Offline · Stand von {Zeit}".
+- Media without a secure local cache uses a neutral placeholder.
+- Space switch, Logout, or Session revocation removes/locks Space- and owner-bound caches.
 
-### Schreiben
+### Write
 
-- Eingaben dürfen als lokaler Entwurf im aktuellen sicheren Kontext bleiben.
-- Absenden endet niemals in „Gespeichert“ oder „Synchronisiert“.
-- Text: „Noch nicht gespeichert. Verbinde dich mit dem Internet und versuche es erneut.“
-- Nach Wiederverbindung erfolgt Retry nur durch bewusste Aktion.
-- Privacy-Wechsel ist offline nicht erlaubt.
+- Input may remain as a local draft in the current secure context.
+- Submit never ends in "Gespeichert" or "Synchronisiert" while Offline.
+- Product copy: "Noch nicht gespeichert. Verbinde dich mit dem Internet und versuche es erneut."
+- After reconnection, Retry occurs only through an intentional action.
+- Privacy transitions are not allowed Offline.
 
-## 9. Flow M2-G – Versionskonflikt
+## 9. Flow M2-G – Version conflict
 
-1. Update erhält `409`.
-2. Der aktuelle Serverstand wird sicher nachgeladen.
-3. UI zeigt „Dieser Inhalt wurde inzwischen geändert.“
-4. Person kann aktuellen Stand ansehen und eigene Eingabe kopieren/erneut anwenden.
-5. Kein automatisches Last-write-wins.
-6. Bei Privacy-relevanten Konflikten wird niemals eine ältere Sichtbarkeit erneut gespeichert.
+1. Update receives `409`.
+2. The current server state is safely reloaded.
+3. UI shows the de-DE product copy "Dieser Inhalt wurde inzwischen geändert."
+4. Person can inspect the current state and copy/reapply local input.
+5. No automatic last-write-wins.
+6. For Privacy-relevant conflicts, an older visibility value is never resaved automatically.
 
-## 10. Deep Links und Rückkehr
+## 10. Deep Links and return behavior
 
-- Deep Link prüft Auth, Membership und Ressourcensichtbarkeit vor Darstellung.
-- Nicht vorhanden und nicht berechtigt teilen denselben neutralen `404`-Zustand.
-- Nach Re-Authentifizierung wird nur zu einem weiterhin erlaubten Ziel zurückgekehrt.
-- Expanded: geschlossener Detail-Pane stellt Fokus und Listenauswahl wieder her.
-- Compact: System-Zurück kehrt zur vorherigen Filter-/Scrollposition zurück.
-- Ein Deep Link auf `PRIVATE` ist nur im Owner-Kontext auflösbar.
+- Deep Link checks Auth, Membership, and resource visibility before presentation.
+- Not found and unauthorized share the same neutral `404` state.
+- After Re-Authentication, return only to a still-permitted destination.
+- Expanded: closing Detail Pane restores focus and list selection.
+- Compact: System Back returns to the previous filter/scroll position.
+- A Deep Link to `PRIVATE` resolves only in owner context.
 
-## 11. Analytics-Grenzen
+## 11. Analytics boundaries
 
-Erlaubt sind Ereignisklasse, Erfolg/Fehlerkategorie, Plattform und grobe Dauerklasse. Nicht erlaubt sind Titel, Body, Kommentar, Suchtext, Originaldateiname, Medieninhalt, Read URL, konkrete Emotion, Resource-ID oder Partnerkennung.
+Allowed: Event class, success/error category, platform, and coarse duration class. Forbidden: Title, Body, Comment, Search text, original filename, Media content, Read URL, concrete emotion, Resource ID, or partner identifier.
