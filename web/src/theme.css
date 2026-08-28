@@ -9,6 +9,7 @@
   --color-brand-text: #4f2daa;
   --color-brand-glow: #eee7ff80;
   --color-on-accent: #ffffff;
+  --color-text-inverse-muted: rgb(255 255 255 / 90%);
   --color-shadow-card: #211a2b14;
   --color-shadow-soft: #211a2b0b;
   --color-shadow-brand: #6638dc25;
@@ -119,6 +120,10 @@ button.secondary,
 .eyebrow,
 .back-link {
   color: var(--color-brand-text);
+}
+
+.login-intro .eyebrow.eyebrow-inverse {
+  color: var(--color-text-inverse-muted);
 }
 
 .kind-badge,
