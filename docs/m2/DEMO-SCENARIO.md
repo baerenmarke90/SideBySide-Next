@@ -18,19 +18,21 @@ Demo reference date: **August 24, 2026**.
 
 ## 2. Seed content
 
+The titles, bodies, and quoted UI strings in this section intentionally remain de-DE localized fixture content.
+
 ### Shared Memories
 
 | Key | Author | Title | `happenedOn` | Media | Comments |
 |---|---|---|---|---:|---:|
-| `MEM-LAKE` | LEA | Sunrise at the lake | June 14, 2026 | 3 photos | 2 |
-| `MEM-KITCHEN` | ALEX | Our first pasta dough | May 3, 2026 | 1 photo | 1 |
-| `MEM-RAIN` | LEA | Walk in summer rain | July 19, 2026 | 0 | 0 |
+| `MEM-LAKE` | LEA | Sonnenaufgang am See | June 14, 2026 | 3 photos | 2 |
+| `MEM-KITCHEN` | ALEX | Unser erster Pastateig | May 3, 2026 | 1 photo | 1 |
+| `MEM-RAIN` | LEA | Spaziergang im Sommerregen | July 19, 2026 | 0 | 0 |
 
 ### HeartMoments
 
 | Key | Author | Text | Emotion | Visibility | `happenedOn` | Attachment |
 |---|---|---|---|---|---|---|
-| `HM-SHARED` | ALEX | “Thank you for simply listening today.” | APPRECIATED | SHARED | August 21, 2026 | no |
+| `HM-SHARED` | ALEX | „Danke, dass du heute einfach zugehört hast.“ | APPRECIATED | SHARED | August 21, 2026 | no |
 | `HM-PRIVATE` | LEA | `CANARY-PRIVATE-LEA-7421` | GRATEFUL | PRIVATE | August 22, 2026 | `private-lea-7421.jpg` |
 
 `HM-PRIVATE` is intentionally technically recognizable and may appear only in Lea's Owner context.
@@ -39,16 +41,16 @@ Demo reference date: **August 24, 2026**.
 
 | Key | Author | Title | `happenedOn` |
 |---|---|---|---|
-| `MS-GARDEN` | ALEX | Our first shared garden | April 10, 2026 |
-| `MS-HOME` | LEA | One year in our apartment | August 1, 2026 |
+| `MS-GARDEN` | ALEX | Unser erster gemeinsamer Garten | April 10, 2026 |
+| `MS-HOME` | LEA | Ein Jahr in unserer Wohnung | August 1, 2026 |
 
 ### Comments
 
 | Key | Author | Target | Body |
 |---|---|---|---|
-| `COM-1` | ALEX | `MEM-LAKE` | “The early alarm was worth it.” |
-| `COM-2` | LEA | `MEM-LAKE` | “Next time with hot coffee.” |
-| `COM-3` | LEA | `HM-SHARED` | “That means a lot to me.” |
+| `COM-1` | ALEX | `MEM-LAKE` | „Den frühen Wecker war es wert.“ |
+| `COM-2` | LEA | `MEM-LAKE` | „Nächstes Mal mit heißem Kaffee.“ |
+| `COM-3` | LEA | `HM-SHARED` | „Das bedeutet mir viel.“ |
 
 No Comment fixture references `HM-PRIVATE`.
 
@@ -82,18 +84,20 @@ For LEA and ALEX, the shared Story contains descending:
 
 ## 5. End-to-End scenarios
 
+Quoted labels and entered content below intentionally remain de-DE localized product/fixture content.
+
 ### E2E-01 Read Story
 
 1. ALEX opens Story.
 2. Expected six items appear in stable order.
-3. Filter “Memory” shows three Memories.
+3. Filter „Erinnerung“ shows three Memories.
 4. Reset restores Timeline and scroll position.
 5. DOM, Network responses, cache, and Analytics contain no Private Canary.
 
 ### E2E-02 Create Memory with Media
 
-1. LEA starts “Capture moment → Memory”.
-2. Enter title “Picnic under the linden trees”, date August 23, 2026, and two valid photos.
+1. LEA starts „Moment festhalten → Erinnerung“.
+2. Enter title „Picknick unter den Linden“, date August 23, 2026, and two valid photos.
 3. Add one broken file; only that file shows an error.
 4. Remove broken file and save.
 5. Detail opens exactly one new Memory with two Media items.
@@ -101,7 +105,7 @@ For LEA and ALEX, the shared Story contains descending:
 
 ### E2E-03 Private HeartMoment
 
-1. LEA creates a HeartMoment “Only for me”.
+1. LEA creates a HeartMoment with „Nur für mich“.
 2. Owner-only detail shows Privacy label and no Comment action.
 3. ALEX tries known ID, Story, Search, Comments, Attachment, and Export.
 4. All paths show neutral 404 or no hit.
@@ -117,15 +121,15 @@ For LEA and ALEX, the shared Story contains descending:
 
 ### E2E-05 Milestone
 
-1. ALEX creates “First shared mountain trip” with date.
+1. ALEX creates „Erste gemeinsame Bergtour“ with date.
 2. Milestone detail and own Story type appear.
 3. No disabled Chapter/Recap controls are visible.
 
 ### E2E-06 Offline Read/Write
 
 1. ALEX opens Story online, then enables airplane mode.
-2. Cache shows “Offline · snapshot from …”.
-3. ALEX starts a Memory; submit remains “Not saved yet”.
+2. Cache shows „Offline · Stand von …“.
+3. ALEX starts a Memory; submit remains „Noch nicht gespeichert“.
 4. Input remains; no Story card or Success Event is created.
 5. After reconnecting, deliberate retry creates exactly one Memory.
 
@@ -134,7 +138,7 @@ For LEA and ALEX, the shared Story contains descending:
 1. LEA and ALEX open `MEM-LAKE` with the same version.
 2. LEA saves a change.
 3. ALEX receives `409` on save.
-4. UI shows current state and preserves Alex's input separately.
+4. UI shows the current state and preserves Alex's input separately.
 5. No automatic last-write-wins.
 
 ### E2E-08 Cross-Tenant and Revocation
