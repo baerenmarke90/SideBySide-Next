@@ -22,7 +22,7 @@ User-facing product text remains localization-driven. German and other languages
 
 ## Reuse before build
 
-Before implementing technical commodity functionality from scratch, perform a current reuse review.
+Before implementing infrastructure, integration logic, or technical commodity functionality from scratch, perform a current reuse review.
 
 Check in particular:
 
@@ -45,6 +45,35 @@ When the change is relevant, the issue or pull request must document:
 - for third-party components: license/ToS, Cloud/Self-Hosted support, privacy, cost, fallback, and user effort
 
 `docs/EXTERNAL-PROVIDER-CANDIDATES.md` is a starting list; it does not replace a current search for better or newer options.
+
+## Semantic design tokens
+
+Reusable visual values must use semantic design tokens instead of repeated component-level literals.
+
+Rules:
+
+- define reusable colors, spacing, radii, typography, shadows, and similar visual constants through semantic tokens;
+- name tokens by interface meaning, not by their current literal value;
+- consume tokens through `var(...)` in components;
+- keep literal values at the token-definition boundary unless a value is genuinely one-off and does not provide reusable meaning;
+- tokenize theme-, branding-, and accessibility-sensitive values so they can be adjusted centrally.
+
+Prefer:
+
+```css
+--color-text-inverse-muted: rgb(255 255 255 / 90%);
+color: var(--color-text-inverse-muted);
+```
+
+Avoid:
+
+```css
+color: rgb(255 255 255 / 90%);
+```
+
+or implementation-only names such as `--purple-600` when the semantic role is known.
+
+This rule does not require meaningless token proliferation for isolated values without reuse or semantic value. See `docs/DESIGN-PRINCIPLES.md` for the design-system guidance.
 
 ## User rule
 
