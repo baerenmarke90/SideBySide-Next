@@ -5,7 +5,7 @@
 **Tracking:** #165  
 **Covers:** M3-D21, D22, D24, D25, D27, D29
 
-This document defines early what evidence G3 requires and what is deliberately deferred to M5/G4. It contains no runtime or client code and does not change the existing M3 start condition.
+This document defines early which evidence G3 requires and what is deliberately implemented only in M5/G4. It contains no Runtime or Client code and does not change the existing M3 start condition.
 
 ## 1. Binding sources
 
@@ -21,7 +21,7 @@ Roadmap boundary:
 - G3 verifies consistent Wishes/Plans/Places/Chapters/Collections, complete Private Area isolation, and understandable Delete/409 behavior.
 - M5/G4 delivers complete Web/Android productization, parity, Read Cache, Export/Import, Accessibility, and Performance.
 
-Therefore M3 must provide real Runtime/API/PostgreSQL evidence, but no premature complete client parity.
+Therefore M3 must provide real Runtime/API/PostgreSQL evidence, but no premature complete Client parity.
 
 ## 2. M3-D24 – G3 Evidence
 
@@ -29,31 +29,31 @@ Therefore M3 must provide real Runtime/API/PostgreSQL evidence, but no premature
 
 G3 is a **Domain/API/PostgreSQL gate**. Thin Web/Android reference flows are not additionally mandatory for G3. Client parity and systematic Accessibility remain M5/G4.
 
-However, G3 requires real HTTP E2E flows against the production-like FastAPI/PostgreSQL stack, not only Unit Tests or Mock Repository tests.
+G3 nevertheless requires real HTTP E2E flows against the production-like FastAPI/PostgreSQL stack, not only Unit Tests or Mock Repository tests.
 
 ### Required G3 E2E flows
 
 At minimum these five flows must be demonstrably green on the final G3 commit:
 
 1. **Wish -> Plan -> Complete**
-   - create OPEN Wish;
-   - atomically convert to Plan;
-   - schedule or complete Plan;
+   - create an OPEN Wish;
+   - atomically convert it to a Plan;
+   - schedule or complete the Plan spontaneously;
    - source Wish and Plan consistently COMPLETED;
    - cover Retry/Race/Version Conflict.
 
 2. **Place + Relation**
    - Place without and with coordinates;
-   - at least one typed Place Relation on existing Shared Content;
+   - at least one typed Place Relation to existing Shared Content;
    - Cross-Space/private target negative path;
    - Place Delete preserves Domain originals.
 
 3. **Chapter + Relation + Delete**
    - create Chapter;
    - connect Memory/SHARED HeartMoment/Milestone;
-   - verify deterministic derived order;
+   - verify deterministic derived ordering;
    - delete Chapter;
-   - originals remain readable.
+   - original content remains readable.
 
 4. **Shared Collection**
    - Collection + multiple Items;
@@ -76,7 +76,7 @@ G3 blocks on failures in:
 - Cross-Tenant Isolation;
 - OWNER_ONLY Isolation;
 - Relation to private/non-readable targets;
-- Wish->Plan double submit/half transactions;
+- Wish->Plan double submit/partial transactions;
 - Relation/Privacy races;
 - Collection Reorder consistency;
 - Delete Cascades on Domain originals;
@@ -86,113 +86,179 @@ G3 blocks on failures in:
 
 G3 cannot pass with:
 
-- open `Critical` or `High` Security/Privacy/Tenant Finding;
-- any actual Tenant or OWNER_ONLY leak;
+- an open `Critical` or `High` Security/Privacy/Tenant finding;
+- **any actual Tenant or OWNER_ONLY leak**, regardless of any otherwise assigned Severity;
 - data loss/Cascade of a Domain original outside documented Parent-Child semantics;
-- reproducible Race producing invalid Domain state;
-- missing real PostgreSQL/HTTP evidence for required flows.
+- a reproducible Race that creates an invalid Domain state;
+- missing real PostgreSQL/HTTP evidence for any of the five required flows.
+
+Medium/Low findings without a Tenant/Privacy leak may remain open only with a dedicated follow-up Issue and explicit risk acceptance in the G3 review.
 
 ### Evidence format
 
-The final G3 review is a new dated snapshot under:
+The final G3 review is a **new dated document** under:
 
 ```text
 docs/reviews/YYYY-MM-DD-g3-gate-review.md
 ```
 
-It names final SHA, relevant PRs/Issues, workflow runs, test status, E2E results, findings, and explicit G3 result.
+It names at least:
 
-## 3. G3 vs M5/G4
+- final `main` commit SHA;
+- relevant PRs/Issues;
+- workflow run IDs;
+- OpenAPI/Backend/PostgreSQL test status;
+- the five E2E flows with result;
+- open findings with Severity;
+- explicit `G3: PASSED` or `G3: FAILED`.
 
-G3 validates Domain/API/Persistence/Authorization evidence. It does not mean complete client parity, final Accessibility, final Performance, or complete Export.
+Historical gate reviews are not rewritten.
 
-M5/G4 contains:
+## 3. G3 vs. M5/G4
 
-- full Web/Android productization;
-- parity;
-- Read Cache;
-- Export/Import;
+G3 is deliberately a **milestone gate**, not the final project-wide Definition of Done for an M3 feature. The Web/Android portions, Export support, and complete Client product maturity required by the Product Specification are completed according to the Roadmap in M5/G4. `G3: PASSED` therefore does not mean "M3 is already a completely production-ready Client feature"; it means "M3 Domain, API, persistence, Authorization, and gate evidence are robust enough for the next milestone." The project-wide DoD for these functions is complete only once the later Client/Export portions are delivered.
+
+### Required in G3
+
+- Domain model/migration/API for M3;
+- Tenant/owner Authorization;
+- Optimistic Concurrency/races;
+- real HTTP/PostgreSQL E2E evidence;
+- Privacy/Security negative tests;
+- current OpenAPI;
+- documented Delete/409 semantics.
+
+### Required only in M5/G4
+
+- complete Web UI for all M3 functions;
+- complete Android UI for all M3 functions;
+- systematic Web/Android parity;
+- Offline Read Cache;
+- Export/Import implementation;
 - Deep Links;
-- Accessibility acceptance;
+- comprehensive Accessibility acceptance;
 - Client Performance Gate.
+
+M3 may later build small technical reference surfaces when useful for development, but they are **not required for G3** and must not present M5 as complete.
 
 ## 4. M3-D21 – Export boundary
 
-M3 implements no Export. The later contract separates:
+### Decision
 
-- Shared Space Export: only `SPACE_SHARED` content.
-- Personal Export: own `OWNER_ONLY` content only.
+M3 implements **no Export**. The following Privacy semantics are nevertheless already binding for M5.
 
-Never export:
+There are conceptually two Export contexts:
 
-- partner private data;
-- private counts/manifests revealing existence;
-- passwords, tokens, sessions, security credentials.
+### Shared Space Export
 
-Bundle/Import implementation remains M5.
+Contains:
+
+- `SPACE_SHARED` data from the Space;
+- jointly authorized Attachments/Relations according to the Export contract.
+
+Never contains:
+
+- PrivateNote;
+- GiftIdea;
+- PrivateCollection/Items;
+- the partner's private HeartMoments;
+- private Counts/manifest entries that reveal their existence.
+
+### Personal Export
+
+An authenticated Account may additionally receive **its own** `OWNER_ONLY` data in Personal Export.
+
+- the Account's own PrivateNote/GiftIdea/PrivateCollection may be included;
+- the partner's private data is excluded;
+- owner assignment must be preserved in the neutral transfer format;
+- manifest/checksums must not indirectly prove the other person's private resources to the partner.
+
+The technical Bundle/Import implementation remains M5.
 
 ## 5. M3-D22 – Client Cache
 
-M3 introduces no persistent Private Area Offline/Read Cache.
+### Decision
 
-M5 cache namespace:
+M3 introduces **no persistent Offline/Read Cache** for Private Area. Until M5, private data in technical reference clients remains only in process/memory state, if a Client exists at all.
+
+For M5, the following namespace boundary is binding:
 
 ```text
 accountId + spaceId + privacyContext
 ```
 
-For `OWNER_ONLY`:
+For `OWNER_ONLY`, at minimum:
 
 ```text
 accountId + spaceId + ownerId
 ```
 
-Clear on:
+### Clear/isolation rules
+
+Private cache data must be removed from the active Client context at least on:
 
 - Logout;
-- Session revoke/re-authentication;
+- Session revoke / re-authentication;
 - Account switch;
 - Space switch;
 - Owner context switch;
-- local reset.
+- local data deletion/reset.
 
-Web before M5:
+### Web
 
-- no Private payloads in localStorage;
-- no uncontrolled IndexedDB persistence;
-- no signed URL/token cache keys.
+Until the explicit M5 cache design:
 
-Android Private Room Cache remains M5 scope.
+- no Private Area payloads in `localStorage`;
+- no uncontrolled persistence in IndexedDB;
+- no Tokens/signed URLs as persistent cache keys;
+- Query Caches must namespace Account/Space/Owner correctly and be cleared on Logout.
+
+### Android
+
+Persistent Room Read Cache for Private Area is M5 scope. Before then, no ad-hoc SharedPreferences/file persistence of private payloads.
+
+The final encryption/Retention strategy is part of the M5 Security/cache review.
 
 ## 6. M3-D25 – Private Area Information Architecture
 
-The Private Area is a secondary personal area, not shared primary navigation.
+### Decision
 
-M5 concept:
+Private Area is a **secondary personal area**, not shared primary navigation.
+
+Canonical Client concept for M5, intentional de-DE product labels:
 
 ```text
-More / My Area
-  -> Private Notes
-  -> Gift Ideas
-  -> Private Lists
+Mehr / Mein Bereich
+  -> Private Notizen
+  -> Geschenkideen
+  -> Private Listen
+```
+
+Routes may internally use a clearly personal namespace, for example:
+
+```text
+/private/notes
+/private/gift-ideas
+/private/collections
 ```
 
 Rules:
 
-- no private counts/badges in shared areas;
-- Deep Links re-authorize server-side;
-- hiding in the client is not the security boundary;
-- partner cannot infer private resource quantity.
+- the UI describes this area as personal/for the current user only;
+- shared Space surfaces show no private Counts/Badges;
+- a Deep Link to a private resource re-authorizes server-side;
+- hiding content in the Client is never the Security boundary;
+- a partner must not be able to infer from navigation, Badges, or errors how many private resources exist.
+
+Exact visual navigation/label polish remains M5; the Security and IA boundary is decided here.
 
 ## 7. M3-D27 – Plan Richness
 
-Not pulled into M3:
+### Decision
 
-- Plan Checklist;
-- Plan media;
-- structured Plan notes beyond current Core.
+**Checklist, Plan Media, and further structured Plan notes are not pulled into M3.**
 
-M3 Plan remains:
+The M3 Plan remains the source-bound Core:
 
 ```text
 title
@@ -204,27 +270,40 @@ experiencedOn?
 placeId?
 ```
 
-Later Richness requires separate scope, model, API, Privacy, Media, and Reuse review.
+Therefore:
+
+- no hidden Checklist modeled as a `Collection`;
+- no `PlanChecklistItem` table in M3;
+- no Plan Attachment relation in M3;
+- `description` is the only general free-text field in the Plan Core;
+- a later Richness extension requires its own scope, data model, API, Privacy, Media, and Reuse review.
+
+M3-D27 is therefore deliberately decided as **later** and blocks no M3 runtime slice.
 
 ## 8. M3-D29 – Collection Multi-select
 
-Multi-select is client interaction state only:
+### Decision
+
+"Multi-select" in M3 is **Client interaction state only**, not persisted Domain semantics.
 
 - no `selected` column;
 - no Selection table;
-- no server persistence of UI selection;
-- batch operations use normal Domain operations or explicit later APIs.
+- Selection disappears on navigation/reload according to Client convention;
+- Batch actions may later use multiple ordinary Domain operations or an explicit Batch endpoint;
+- the server stores only Domain end states such as `completed`, not UI selection.
+
+This creates no additional Sync/Privacy state solely for a UI interaction.
 
 ## 9. G3 preparation for M4
 
-G3 requires prepared boundaries:
+G3 requires only that M4 Read Model boundaries are **prepared**:
 
-- M3 Events contain no ProtectedPayloads;
-- OWNER_ONLY Events cannot enter Shared Activity/Dashboard;
-- full-text Search remains M4-A;
-- M3 creates no private Search index;
-- IDs/status/Privacy classes are sufficient for controlled later Read Models.
+- M3 Events carry no ProtectedPayloads;
+- OWNER_ONLY Events cannot accidentally enter Shared Activity/Dashboard;
+- global full-text Search remains M4-A;
+- M3 creates no private Search index in advance;
+- IDs/status/Privacy classes are sufficient for later controlled Read Models where required by the Domain.
 
 ## 10. Reuse-before-build
 
-Not relevant for this Gate/Client boundary decision. Later Export, Cache, Deep Link, or Client technology must be reviewed again in its implementation PR.
+Not relevant for this pure Gate/Client-boundary decision. Later Export, Cache, Deep Link, or Client technology must be reviewed again in its implementation PR for existing libraries/platform mechanisms and Security properties.
