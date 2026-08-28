@@ -9,8 +9,9 @@ Before relevant work, read at least these documents:
 1. `docs/ENGINEERING-LANGUAGE.md`
 2. `specification/CLEAN-ROOM-MASTER-SPEC.md`
 3. `docs/REUSE-BEFORE-BUILD.md`
-4. `docs/EXTERNAL-PROVIDER-CANDIDATES.md` when providers, infrastructure, or platform components are affected
-5. `docs/ROADMAP.md` and the relevant milestone/project-control documentation
+4. `docs/CROSS-CUTTING-QUALITY.md`
+5. `docs/EXTERNAL-PROVIDER-CANDIDATES.md` when providers, infrastructure, or platform components are affected
+6. `docs/ROADMAP.md` and the relevant milestone/project-control documentation
 
 ## Engineering language
 
@@ -75,16 +76,40 @@ or implementation-only names such as `--purple-600` when the semantic role is kn
 
 This rule does not require meaningless token proliferation for isolated values without reuse or semantic value. See `docs/DESIGN-PRINCIPLES.md` for the design-system guidance.
 
+## Cross-cutting quality
+
+Cross-cutting requirements are architecture and product requirements, not late release cleanup.
+
+Before implementation begins and again before merge, apply `docs/CROSS-CUTTING-QUALITY.md` to larger runtime slices, client features, and production user flows. Deliberately assess at least these areas when relevant:
+
+- security, authentication, authorization, and abuse resistance;
+- privacy and data lifecycle;
+- internationalization and locale behavior;
+- accessibility;
+- concurrency and consistency;
+- resilience, offline behavior, and retry semantics;
+- observability;
+- performance and resource usage;
+- API, contract, and migration consequences;
+- operations, Self-Hosted behavior, and release impact;
+- testing and negative cases.
+
+Not every area applies to every change. `Not relevant` is acceptable when the decision is traceable. A pull request is not merge-ready when a recognizable cross-cutting consequence is left untreated or deferred in a way that creates an incompatible contract, privacy/security gap, or hard-to-reverse architecture.
+
+For client work in particular, user-facing text, date/number formatting, and pluralization must use the localization layer from the start, and accessibility must be implemented as part of the feature rather than postponed to final UI review.
+
 ## User rule
 
 Normal couples must not need to configure technical infrastructure. API keys, technical URLs, provider selection, tokens, and server details belong in the backend or hoster/admin layer.
 
 ## Do not weaken existing gates
 
-Reuse must never weaken Clean-Room, security, privacy, tenant-isolation, provenance, or licensing rules.
+Reuse or cross-cutting decisions must never weaken Clean-Room, security, privacy, tenant-isolation, provenance, licensing, or engineering-language rules.
 
 ## Pull requests
 
 A relevant pull request without a traceable reuse review is not merge-ready. Pure domain changes may mark the review as `not relevant` with a short rationale.
+
+Larger runtime slices, client features, and production user flows must document their relevant cross-cutting consequences in the pull request. The pull-request template is the minimum review surface; deeper decisions belong in the owning issue, decision document, or ADR.
 
 A pull request that introduces non-English engineering content without an allowed exception from `docs/ENGINEERING-LANGUAGE.md` is not merge-ready.
