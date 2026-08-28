@@ -1,267 +1,264 @@
 # SideBySide Screen Templates
 
-**Status:** Verbindliche Produktgrundlage  
+**Status:** Binding product foundation  
 **Version:** 1.1  
-**Stand:** 24.08.2026
+**As of:** August 24, 2026
 
-Screen-Templates übersetzen Informationsarchitektur, UX-Patterns und Components in wiederholbare Seitenstrukturen. Sie sind keine fertigen Screens, sondern verbindliche Layout- und Verhaltensrahmen.
+Screen Templates translate Information Architecture, UX Patterns, and Components into repeatable page structures. They are not finished screens, but binding layout and behavior frameworks.
 
-## 1. Fensterklassen
+## 1. Window classes
 
-| Klasse | Breite | Navigation | Inhalt |
+| Class | Width | Navigation | Content |
 |---|---:|---|---|
-| Compact | 0–599 px | Bottom Navigation | ein Haupt-Pane |
-| Medium | 600–839 px | Navigation Rail | ein bis zwei Panes |
-| Expanded | ab 840 px | Rail oder Sidebar | zwei bis drei Panes |
+| Compact | 0–599 px | Bottom Navigation | one primary pane |
+| Medium | 600–839 px | Navigation Rail | one to two panes |
+| Expanded | from 840 px | Rail or Sidebar | two to three panes |
 
-- Wechsel erfolgt nach verfügbarer Fensterbreite, nicht nach Gerätebezeichnung.
-- Inhalt bleibt bei Größenänderung erhalten; Auswahl und Eingaben gehen nicht verloren.
-- Hauptinhalt ist maximal 1200 px breit, Lesetext maximal 720 px.
-- Außenabstand: 20 px Compact, mindestens 24 px Medium, bis 64 px Expanded.
+- Switching is based on available window width, not device category.
+- Content is preserved across resize; selection and input are not lost.
+- Primary content is at most 1200 px wide; reading text is at most 720 px wide.
+- Outer spacing: 20 px on Compact, at least 24 px on Medium, up to 64 px on Expanded.
 
-## 2. Gemeinsame Screen-Anatomie
+## 2. Shared screen anatomy
 
-Jeder reguläre Screen besitzt in dieser Reihenfolge:
+Every regular screen contains, in this order:
 
-1. App Shell und Navigationskontext.
-2. Seitentitel und optionale kurze Einordnung.
-3. Primäre Aktion, passend zur Fensterklasse platziert.
-4. Optional: Tabs, Filter oder lokale Navigation.
-5. Hauptinhalt.
-6. Persistente Statusfläche für Offline, Sync oder Fehler, falls nötig.
+1. App Shell and navigation context.
+2. Page title and optional short orientation text.
+3. Primary action, placed appropriately for the window class.
+4. Optional Tabs, filters, or local navigation.
+5. Main content.
+6. Persistent status surface for Offline, Sync, or errors where required.
 
-Auf Compact darf eine Floating Action Button-ähnliche Aktion nur verwendet werden, wenn sie eindeutig, häufig und nicht mit der Bottom Navigation verwechselt wird.
+On Compact, a Floating Action Button-like action is used only when it is unambiguous, frequent, and cannot be confused with Bottom Navigation.
 
-## 3. Template: Heute
+## 3. Template: Today
 
-**Zweck:** Gemeinsamer Tagesüberblick und schneller Einstieg.
+**Purpose:** Shared daily overview and fast entry point.
 
 ### Compact
 
-- Begrüßung und gemeinsamer Kontext.
-- Eine hervorgehobene nächste Aktion oder Erinnerung.
-- Vertikale Module: heute geplant, offene Punkte, neuer Moment.
-- Primäre Aktion kontextabhängig, zum Beispiel „Moment festhalten“.
+- Greeting and shared context.
+- One highlighted next action or Memory.
+- Vertical modules: planned today, open items, new moment.
+- Contextual primary action, for example the intentional de-DE label **„Moment festhalten“**.
 
 ### Expanded
 
-- Zweispaltiges Dashboard.
-- Hauptspalte: Tagesverlauf und nächste Aufgaben.
-- Nebenspalte: Quick Actions, Sync-/Privacy-Hinweise und kompakte Zusammenfassung.
-- Keine frei konfigurierbare Widget-Wand in Version 1.
+- Two-column Dashboard.
+- Main column: day flow and next tasks.
+- Secondary column: Quick Actions, Sync/Privacy notices, and compact summary.
+- No freely configurable widget wall in version 1.
 
-**Pflichtzustände:** erster Start, alles erledigt, offline mit lokalen Daten, teilweiser Ladefehler.
+**Required states:** first launch, everything completed, offline with local data, partial loading failure.
 
 ## 4. Template: Story Timeline
 
-**Zweck:** Gemeinsame Erinnerungen chronologisch entdecken.
+**Purpose:** Explore shared Memories chronologically.
 
 ### Compact
 
-- Filter/Suche als Sheet.
-- Timeline als vertikale Liste.
-- Detail öffnet eine neue Seite.
-- „Erinnerung hinzufügen“ als sichtbare Hauptaktion.
+- Filter/search in a Sheet.
+- Timeline as a vertical list.
+- Detail opens as a new page.
+- Intentional de-DE primary action **„Erinnerung hinzufügen“**.
 
 ### Expanded
 
-- Linkes Pane: Filter und Zeiträume.
-- Mittleres Pane: Timeline.
-- Rechtes Pane: ausgewählte Erinnerung oder Vorschau.
-- Direkte URL für jedes Detail.
+- Left pane: filters and time ranges.
+- Middle pane: Timeline.
+- Right pane: selected Memory or preview.
+- Direct URL for every detail.
 
-**Pflichtzustände:** keine Erinnerungen, leere Filterung, Medien laden, privater Inhalt, Uploadfehler.
+**Required states:** no Memories, empty filtered result, media loading, private content, upload failure.
 
-## 5. Template: Planen Hub
+## 5. Template: Plan Hub
 
-**Zweck:** Einstieg in Wünsche und Pläne; Einkauf wird später als eigene Domain ergänzt.
+**Purpose:** Entry point for Wishes and Plans; Shopping is added later as its own domain.
 
 ### Compact
 
-- Zwei klar benannte Einstiege mit aktuellem Status; ein späterer Einkaufseinstieg
-  erscheint erst bei implementierter und aktivierter Domain.
-- Letzte oder dringende Inhalte unterhalb der Einstiege.
-- Keine verschachtelte Kartenlandschaft.
+- Two clearly named entry points with current state; a later Shopping entry appears only when the domain is implemented and enabled.
+- Recent or urgent content below the entry points.
+- No nested card landscape.
 
 ### Expanded
 
-- Lokale Navigation oder Segmentierung für Wünsche und Pläne; Einkauf später.
-- List-Detail-Struktur für gewählten Bereich.
-- Unterstützendes Pane nur bei echtem Zusatznutzen.
+- Local navigation or segmentation for Wishes and Plans; Shopping later.
+- List-Detail structure for the selected area.
+- Supporting pane only when it provides real additional value.
 
-**Primäre Aktion:** wechselt mit aktivem Bereich, zum Beispiel „Wunsch hinzufügen“.
+**Primary action:** changes with the active area, for example the intentional de-DE label **„Wunsch hinzufügen“**.
 
-**Pflichtzustände:** leerer Bereich, gemeinsame und private Einträge, Sync-Konflikt, erledigte Einträge.
+**Required states:** empty area, shared and private entries, Sync conflict, completed entries.
 
-## 6. Template: Einkaufsliste (spätere Domain)
+## 6. Template: Shopping List (later domain)
 
-**Zweck:** Schnelles gemeinsames Abhaken, auch bei schlechter Verbindung.
+**Purpose:** Fast shared checking-off, including under poor connectivity.
 
 ### Compact
 
-- Direkteingabe am oberen Rand.
-- Gruppierte Checkliste mit großen Touch-Zielen.
-- Offline-Stand bleibt sichtbar; Schreiben ist im MVP ohne Verbindung nicht erlaubt.
-- Zusatzinformationen öffnen ein Sheet oder eine Seite.
+- Direct input at the top.
+- Grouped Checklist with large touch targets.
+- Offline state remains visible; writes are not allowed in the MVP without connectivity.
+- Additional information opens a Sheet or page.
 
 ### Expanded
 
-- Hauptpane: Liste und Eingabe.
-- Optionales Nebenpane: ausgewähltes Rezept, Notiz oder Verlauf.
-- Tastaturkürzel für Hinzufügen und Fokuswechsel.
+- Main pane: list and input.
+- Optional secondary pane: selected Recipe, note, or history.
+- Keyboard shortcuts for adding and focus movement.
 
-**Pflichtzustände:** Offline-Read-Cache, Offline-Schreibversuch „Noch nicht gespeichert“, Online-Konflikt, alles erledigt, gelöschten Eintrag rückgängig machen.
+**Required states:** Offline read cache, offline write attempt with **„Noch nicht gespeichert“**, online conflict, everything completed, undo deleted entry.
 
-## 7. Template: Entdecken
+## 7. Template: Discover
 
-**Zweck:** Inspiration anbieten, ohne private Kernaufgaben zu überdecken.
+**Purpose:** Offer inspiration without overshadowing private core tasks.
 
 ### Compact
 
-- Suchfeld, Themenchips und vertikaler Feed.
-- Filter in einem Sheet.
-- Detail öffnet eine neue Seite.
+- Search field, topic chips, and vertical Feed.
+- Filters in a Sheet.
+- Detail opens as a new page.
 
 ### Expanded
 
-- Such- und Filterleiste oberhalb eines responsiven Grids.
-- Optionales Detail-Pane bei schneller Vorschau; vollständiges Detail besitzt eine URL.
-- Karten bleiben gleichartig und vermeiden wechselnde Interaktionslogik.
+- Search and filter bar above a responsive Grid.
+- Optional Detail Pane for quick preview; full detail has its own URL.
+- Cards remain consistent and avoid changing interaction logic.
 
-**Pflichtzustände:** personalisierte und neutrale Empfehlungen, keine Treffer, Empfehlungsfehler, blockierte externe Quelle.
+**Required states:** personalized and neutral recommendations, no results, recommendation failure, blocked external source.
 
-## 8. Template: Settings und Privacy
+## 8. Template: Settings and Privacy
 
-**Zweck:** Beziehung, Konto, Daten, Berechtigungen und Benachrichtigungen verständlich steuern.
+**Purpose:** Manage relationship, Account, data, permissions, and notifications understandably.
 
 ### Compact
 
-- Kategorisierte Liste; jede Kategorie öffnet eine eigene Seite.
-- Kritische Aktionen stehen am Ende des passenden Bereichs, nicht gesammelt als Gefahrzone ohne Kontext.
+- Categorized list; every category opens its own page.
+- Critical actions appear at the end of the relevant area rather than in an isolated danger zone without context.
 
 ### Expanded
 
-- Linkes Pane: Kategorien.
-- Rechtes Pane: ausgewählte Einstellungen.
-- Änderungen wirken entweder sofort mit Rückmeldung oder werden über eine klar sichtbare Speichern-Aktion bestätigt – nie gemischt innerhalb eines Formulars.
+- Left pane: categories.
+- Right pane: selected settings.
+- Changes either apply immediately with feedback or are confirmed through one clearly visible Save action — never both patterns mixed within one form.
 
-**Pflichtzustände:** Berechtigung abgelehnt/blockiert, Export wird erstellt, Kontoaktion ausstehend, Beziehung nicht verbunden.
+**Required states:** permission denied/blocked, export being generated, account action pending, relationship not connected.
 
-## 9. Template: Erstellen/Bearbeiten
+## 9. Template: Create/Edit
 
-**Zweck:** Inhalte sicher und nachvollziehbar anlegen oder ändern.
+**Purpose:** Create or modify content safely and transparently.
 
 ### Compact
 
-- Eigene Seite bei langen Formularen.
-- Sticky Abschlussaktion nur, wenn sie Inhalt nicht verdeckt und mit Tastatur sichtbar bleibt.
-- Sichtbarkeit steht nahe dem Abschluss.
+- Dedicated page for long forms.
+- Sticky completion action only when it does not obscure content and remains visible with the keyboard.
+- Visibility appears near completion.
 
 ### Expanded
 
-- Formular maximal 720 px breit.
-- Optionale Vorschau oder Kontextinformation im Nebenpane.
-- Seitenleiste ist kein Ablageort für Pflichtfelder.
+- Form width at most 720 px.
+- Optional preview or contextual information in a secondary pane.
+- Sidebar is not a dumping ground for required fields.
 
-**Reihenfolge:** Titel → Hauptinhalt → Datum/Metadaten → Medien → Sichtbarkeit → Abschluss.
+**Order:** title → main content → date/metadata → media → visibility → completion.
 
-**Pflichtzustände:** Validierungsfehler, Upload läuft/fehlt, ungespeicherte Änderungen, Offline-Schreibversuch „Noch nicht gespeichert“, Speichern fehlgeschlagen.
+**Required states:** validation error, upload running/missing, unsaved changes, offline write attempt with **„Noch nicht gespeichert“**, save failure.
 
-## 10. Template: Auth und Einladung
+## 10. Template: Authentication and Invitation
 
-**Zweck:** Sicherer, verständlicher Einstieg und Verbindung mit einer Partnerperson.
+**Purpose:** Secure, understandable entry and connection with a partner.
 
-### Alle Größen
+### All sizes
 
-- Ein fokussierter Flow ohne reguläre Hauptnavigation.
-- Nutzen und Privacy-Kontext vor sensiblen Angaben.
-- Fortschritt nur bei tatsächlich mehrstufigem Ablauf.
-- Einladung kann verschoben oder erneut gesendet werden.
-- Einzelne Nutzung ist möglich, soweit das Produktkonzept es erlaubt.
+- One focused flow without regular primary navigation.
+- Value and Privacy context before sensitive input.
+- Progress indicator only when the flow is genuinely multi-step.
+- Invitation can be deferred or resent.
+- Individual use remains possible where the product concept allows it.
 
 ### Expanded
 
-- Formular bleibt in einer schmalen Lesespalte.
-- Eine optionale Illustration unterstützt Atmosphäre, trägt aber keine notwendigen Informationen.
+- Form remains in a narrow reading column.
+- Optional illustration may support atmosphere but carries no required information.
 
-**Pflichtzustände:** Link abgelaufen, Konto existiert, falsche Person, Einladung ausstehend, Verbindung erfolgreich.
+**Required states:** link expired, Account exists, wrong person, Invitation pending, connection successful.
 
-## 11. Template: Detailansicht
+## 11. Template: Detail View
 
-**Zweck:** Ein Objekt lesen, bearbeiten, teilen oder verwalten.
+**Purpose:** Read, edit, share, or manage one object.
 
 ### Compact
 
-- Titel, Sichtbarkeit und wichtigste Meta-Information vor dem Inhalt.
-- Sekundäraktionen im Overflow; Bearbeiten bleibt sichtbar, wenn häufig.
-- Zurück führt zur vorherigen Liste mit erhaltenem Kontext.
+- Title, visibility, and most important metadata appear before the content.
+- Secondary actions live in Overflow; Edit remains visible when frequent.
+- Back returns to the prior list with context preserved.
 
 ### Expanded
 
-- Kann als zweites oder drittes Pane erscheinen.
-- Direkte URL und Browser-Zurück bleiben korrekt.
-- Bei sehr umfangreichem Inhalt wechselt das Detail auf eine vollständige Seite.
+- May appear as second or third pane.
+- Direct URL and Browser Back remain correct.
+- Very extensive content switches to a full page.
 
-**Pflichtzustände:** nicht gefunden, keine Berechtigung, veraltet, Konflikt, gelöscht.
+**Required states:** not found, no permission, stale, conflict, deleted.
 
-## 12. Template: Systemzustände
+## 12. Template: System states
 
 ### Empty
 
-- Titel benennt den Zustand.
-- Ein Satz erklärt Nutzen oder Ursache.
-- Eine primäre Aktion führt zum nächsten sinnvollen Schritt.
-- Illustration ist optional und rein unterstützend.
+- Title names the state.
+- One sentence explains value or cause.
+- One primary action leads to the next meaningful step.
+- Illustration is optional and purely supportive.
 
 ### Error
 
-- Vorhandene Inhalte bleiben sichtbar, wenn möglich.
-- Fehlermeldung erklärt Auswirkung und nächsten Schritt.
-- Retry erscheint nur, wenn technisch sinnvoll.
-- Support-/Diagnosecode ist kopierbar, aber visuell nachgeordnet.
+- Existing content remains visible where possible.
+- Error message explains impact and next step.
+- Retry appears only when technically meaningful.
+- Support/diagnostic code is copyable but visually secondary.
 
 ### Offline
 
-- Globaler Status erscheint kompakt in der Shell.
-- Betroffene Schreibaktionen erklären, dass sie nicht gespeichert wurden. Ein
-  sicherer Formularentwurf darf erhalten bleiben, ist aber kein Domainobjekt.
-- Wiederverbinden aktualisiert den Read-Cache; ein erneuter Schreibversuch erfolgt
-  im MVP bewusst und nicht über eine lokale Outbox.
+- Global status appears compactly in the Shell.
+- Affected write actions explain that they were not saved. A safe form draft may be retained but is not a domain object.
+- Reconnecting refreshes the read cache; another write attempt in the MVP happens deliberately and not through a local Outbox.
 
 ### No Permission
 
-- Erklärt fehlende Berechtigung und Alternative.
-- Führt bei dauerhaft blockierter Systemberechtigung zu den passenden Systemeinstellungen.
-- Kein wiederholtes automatisches Öffnen der Systemabfrage.
+- Explains the missing permission and alternative.
+- If a system permission is permanently blocked, links to the appropriate system settings.
+- No repeated automatic reopening of the system permission prompt.
 
-## 13. Responsives Verhalten
+## 13. Responsive behavior
 
-- Reihenfolge folgt Bedeutung, nicht der Desktop-Position.
-- Zwei Panes werden auf Compact zu zwei navigierbaren Seiten.
-- Unterstützende Inhalte folgen auf Compact nach dem Hauptinhalt oder öffnen kontextuell.
-- Tabellen werden zu Listen/Details, wenn horizontales Scrollen die Kernaufgabe behindert.
-- Aktionen bleiben in allen Größen semantisch gleich benannt.
-- Layoutänderungen verschieben Fokus nicht unerwartet.
-- Bei Bildschirmdrehung oder Fensteränderung bleiben Entwurf, Auswahl und Scrollkontext erhalten.
+- Order follows meaning, not desktop position.
+- Two panes become two navigable pages on Compact.
+- Supporting content follows the main content on Compact or opens contextually.
+- Tables become Lists/Details when horizontal scrolling would obstruct the core task.
+- Actions keep the same semantic naming at all sizes.
+- Layout changes do not move focus unexpectedly.
+- Draft, selection, and scroll context remain across orientation or window changes.
 
-## 14. Abnahmecheck pro Screen
+## 14. Acceptance checklist per screen
 
-- Seitentitel und Navigationskontext sind eindeutig.
-- Es gibt höchstens eine visuell dominante Aktion.
-- Compact, Medium und Expanded sind festgelegt.
-- Browser-Zurück, App-Zurück und Deep Link funktionieren.
-- Loading, Empty, Error, Offline und Success sind gestaltet.
-- Privacy-, Permission- und Sync-Zustände sind sichtbar.
-- Tastatur, Fokus, Screenreader und 200 % Textzoom sind geprüft.
-- Touch-Ziele und Kontrast erfüllen die gemeinsamen Vorgaben.
-- Analyse erfasst nur notwendige, nicht sensible Ereignisse.
+- Page title and navigation context are unambiguous.
+- At most one visually dominant action exists.
+- Compact, Medium, and Expanded behavior are defined.
+- Browser Back, App Back, and Deep Link behavior work.
+- Loading, Empty, Error, Offline, and Success are designed.
+- Privacy, Permission, and Sync states are visible.
+- Keyboard, focus, screen reader, and 200% text zoom are verified.
+- Touch targets and contrast meet the shared requirements.
+- Analytics capture only necessary non-sensitive events.
 
-## Verwandte Dokumente
+## Related documents
 
-- [Design-Prinzipien](./DESIGN-PRINCIPLES.md)
-- [Informationsarchitektur](./INFORMATION-ARCHITECTURE.md)
+- [Design Principles](./DESIGN-PRINCIPLES.md)
+- [Information Architecture](./INFORMATION-ARCHITECTURE.md)
 - [UX Patterns](./UX-PATTERNS.md)
 - [Component Contracts](./COMPONENT-CONTRACTS.md)
-- [Design-Tokens](../design/tokens.json)
+- [Design Tokens](../design/tokens.json)
 - [Critical User Flows](./USER-FLOWS.md)
-- [Accessibility- und QA-Matrix](./ACCESSIBILITY-QA-MATRIX.md)
+- [Accessibility and QA Matrix](./ACCESSIBILITY-QA-MATRIX.md)
