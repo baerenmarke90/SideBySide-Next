@@ -1,147 +1,147 @@
 # M2 Platform Handoff
 
-**Zweck:** gleicher fachlicher Vertrag, plattformgerechte Umsetzung  
-**Stand:** 24.08.2026
+**Purpose:** same Domain contract, platform-appropriate implementation  
+**As of:** August 24, 2026
 
-## 1. Gemeinsamer Kern
+## 1. Shared core
 
-Web und Android teilen:
+Web and Android share:
 
-- Route- und Screenbegriffe,
-- Privacy-Klassen und sichtbare Texte,
-- Feld- und Fehlersemantik,
-- API-DTOs und Concurrency-Regeln,
-- Media-Lifecycle und Retry-Kategorien,
-- Analytics-Namen und Datenminimierung,
-- Story-Sortierung, Filter und Cursorverhalten,
-- Abnahmedatensatz und Privacy-Canaries.
+- route and screen terminology,
+- Privacy classes and visible copy,
+- field and error semantics,
+- API DTOs and Concurrency rules,
+- Media lifecycle and Retry categories,
+- Analytics names and data minimization,
+- Story ordering, filters, and Cursor behavior,
+- acceptance dataset and Privacy Canaries.
 
-Plattformen dürfen Darstellung und Systemintegration anpassen, nicht fachliche Bedeutung oder Berechtigung.
+Platforms may adapt presentation and system integration, not Domain meaning or Authorization.
 
-## 2. Fensterklassen
+## 2. Window classes
 
-| Klasse | Breite | Navigation | Story | Detail | Create |
+| Class | Width | Navigation | Story | Detail | Create |
 |---|---:|---|---|---|---|
-| Compact | bis 599 px | Bottom Navigation, max. fünf Ziele | eine Spalte | neue Seite | neue Seite, volle Breite |
-| Medium | 600–839 px | Navigation Rail | breitere Liste | neue Seite oder schmale Side Pane nach Platz | zentrierte Form |
-| Expanded | ab 840 px | Sidebar | Liste + optionales Detail-Pane | 320–480 px Pane | zentrierte Form, Reading Max 720 px |
+| Compact | up to 599 px | Bottom Navigation, max five destinations | one column | new page | new page, full width |
+| Medium | 600–839 px | Navigation Rail | wider list | new page or narrow Side Pane depending on space | centered form |
+| Expanded | from 840 px | Sidebar | list + optional Detail Pane | 320–480 px Pane | centered form, Reading Max 720 px |
 
-Bei großen Webfenstern wächst nicht die Textzeile unbegrenzt. Content Max bleibt 1200 px, Reading Max 720 px.
+On large Web windows, text lines do not grow without limit. Content Max remains 1200 px and Reading Max remains 720 px.
 
-## 3. Komponenten-Mapping
+## 3. Component mapping
 
-| Aufgabe | Web | Android | gemeinsamer Contract |
+| Task | Web | Android | Shared contract |
 |---|---|---|---|
-| Hauptnavigation | Sidebar/Rail/Bottom Nav | Navigation Bar/Rail | `navigation-item` |
-| Typ auswählen | Menu oder Dialog | Modal Bottom Sheet | drei beschriebene Optionen |
-| Privacy wählen | Radio Group / Selection Cards | Radio/Selection Controls | verpflichtend, kein reines Farbsignal |
-| Story-Karte | semantischer Artikel/Link | klickbare Content Card | Typ, Autor, Datum, Vorschau |
-| Detail | Side Pane oder Seite | neue Destination | neutraler 404, stabile Zurück-Navigation |
-| Medien | Grid/List mit Dateiaktionen | Media Tiles, System Picker | Status, Retry, Remove, Reorder |
-| Kommentar | Inline Composer | Inline/Bottom Composer | nur erlaubte Targets |
-| Fehler | Inline Message + ggf. Summary | Inline Message/Snackbar | Ergebnis + nächster Schritt |
+| Main navigation | Sidebar/Rail/Bottom Nav | Navigation Bar/Rail | `navigation-item` |
+| Select type | Menu or Dialog | Modal Bottom Sheet | three described options |
+| Choose Privacy | Radio Group / Selection Cards | Radio/Selection Controls | mandatory, not color-only |
+| Story Card | semantic article/link | clickable Content Card | type, author, date, Preview |
+| Detail | Side Pane or page | new Destination | neutral 404, stable Back navigation |
+| Media | Grid/List with file actions | Media Tiles, System Picker | status, Retry, Remove, Reorder |
+| Comment | Inline Composer | Inline/Bottom Composer | permitted Targets only |
+| Error | Inline Message + optional Summary | Inline Message/Snackbar | outcome + next step |
 
-Bestehende Komponentenverträge bleiben maßgeblich; M2 führt keinen parallelen Komponentenbaukasten ein.
+Existing component contracts remain authoritative; M2 introduces no parallel component library.
 
-## 4. Web-spezifisch
+## 4. Web-specific
 
-- Native Links für navigierbare Story-Karten; Öffnen in neuem Tab respektiert Berechtigung erneut.
-- Tastatur: Tab/Shift+Tab, Enter/Space, Escape und Pfeiltasten gemäß Komponente.
-- Expanded List/Detail bewahrt Auswahl, Filter und Scrollposition.
-- Browser-Zurück ist ein Produktpfad, kein Notausgang.
-- Service Worker oder Query Cache darf Owner-/Space-Daten nicht über Logout oder Space-Wechsel behalten.
-- Signierte Media URLs nicht in dauerhaftem Cache, History State, Analytics oder DOM-Datensätzen persistieren.
-- Formulare nutzen passende Autocomplete-Semantik nur für nicht sensible Standardfelder.
+- Use native Links for navigable Story Cards; opening in a new tab re-evaluates Authorization.
+- Keyboard: Tab/Shift+Tab, Enter/Space, Escape, and arrow keys according to component semantics.
+- Expanded List/Detail preserves selection, filters, and scroll position.
+- Browser Back is a product path, not an emergency exit.
+- Service Worker or Query Cache must not retain owner/Space data across Logout or Space changes.
+- Do not persist signed Media URLs in persistent cache, History State, Analytics, or DOM datasets.
+- Forms use appropriate Autocomplete semantics only for non-sensitive standard fields.
 
-## 5. Android-spezifisch
+## 5. Android-specific
 
-- System Photo Picker bevorzugen; Berechtigung erst aus bewusstem „Foto hinzufügen“-Kontext.
-- System-Zurück schließt zuerst Sheet/Overlay, dann Detail, dann Destination.
-- TalkBack liest Karte als zusammenhängenden Inhalt mit separaten klaren Aktionen.
-- Drag zur Medienreihenfolge hat Move-up/Move-down-Alternative.
-- App-Switcher-/Recents-Schutz für private Screens wird als Security-/UX-Entscheidung dokumentiert.
-- Private Inhalte und Read URLs nicht in unverschlüsseltem Shared Preferences, allgemeinen Backups, Clipboard oder Share Sheet.
-- WorkManager darf im MVP keinen stillen Offline-Write-Sync vortäuschen.
+- Prefer System Photo Picker; request permission only from the intentional de-DE product action "Foto hinzufügen".
+- System Back closes Sheet/Overlay first, then Detail, then Destination.
+- TalkBack reads a Card as coherent content with separate clearly named actions.
+- Drag-based Media ordering has Move-up/Move-down alternatives.
+- App Switcher/Recents protection for private screens is documented as a Security/UX decision.
+- Do not place private content or Read URLs in unencrypted Shared Preferences, general Backups, Clipboard, or Share Sheet.
+- WorkManager must not simulate silent Offline Write Sync in the MVP.
 
 ## 6. Responsive Story
 
 ### Compact
 
-- Monatsgruppe über vertikaler Kartenliste.
-- Suche und Filter als eigene Oberfläche oder Bottom Sheet.
-- Floating Action nur, wenn sie keine Navigation oder Inhalte verdeckt; sonst klare Toolbar-Aktion.
-- Detail ersetzt Liste, Zurück stellt Zustand wieder her.
+- Month group above a vertical Card list.
+- Search and filters as a dedicated surface or Bottom Sheet.
+- Floating Action only if it obscures neither navigation nor content; otherwise use a clear Toolbar action.
+- Detail replaces the list; Back restores state.
 
 ### Expanded
 
-- Story-Liste bleibt primäre Fläche.
-- Detail-Pane öffnet rechts und erhält eigene Überschrift/Schließen-Aktion.
-- Suche/Filter in der lokalen Story-Toolbar.
-- Create Form verdrängt nicht gleichzeitig Liste und Detail in drei konkurrierende Spalten.
+- Story list remains the primary surface.
+- Detail Pane opens on the right with its own heading/close action.
+- Search/filters live in the local Story Toolbar.
+- Create Form does not displace list and Detail into three competing columns simultaneously.
 
-## 7. Accessibility-Budget
+## 7. Accessibility budget
 
-Diese Kriterien blockieren den M2-Release:
+These criteria block M2 Release:
 
-| Bereich | Web | Android |
+| Area | Web | Android |
 |---|---|---|
-| Zielgröße | mindestens 44 × 44 CSS-px | mindestens 48 × 48 dp |
-| Textskalierung | 200 % ohne Funktionsverlust | größte unterstützte Schrift-/Displaygröße |
-| Bedienung | vollständige Tastaturbedienung | TalkBack, Switch Access, externe Tastatur |
-| Fokus | sichtbar, logisch, Rückgabe nach Overlay | stabiler Semantics-Fokus und Zurückpfad |
-| Kontrast | WCAG-2.2-AA-Ziel gemäß QA-Vertrag | gleiche semantische Farbpaare |
-| Status | Live Region nur für relevante Änderung | höfliche Statusankündigung |
-| Medien | Beschreibung/Alt-Text-Vertrag | Content Description/Description |
-| Bewegung | `prefers-reduced-motion` | Systemoption reduzierte Bewegung |
+| Target size | at least 44 × 44 CSS px | at least 48 × 48 dp |
+| Text scaling | 200% without loss of function | largest supported font/display size |
+| Operation | complete keyboard operation | TalkBack, Switch Access, external keyboard |
+| Focus | visible, logical, restored after overlay | stable Semantics focus and Back path |
+| Contrast | WCAG 2.2 AA target according to QA contract | same semantic color pairs |
+| Status | Live Region only for relevant change | polite status announcement |
+| Media | description/Alt-Text contract | Content Description/Description |
+| Motion | `prefers-reduced-motion` | system reduced-motion option |
 
-Automatisierte Checks ergänzen, ersetzen aber keine Tastatur-, Screenreader- und große-Schrift-Abnahme.
+Automated checks supplement but do not replace keyboard, Screen Reader, and large-font acceptance.
 
-## 8. Produkt-Performancebudgets
+## 8. Product performance budgets
 
-Budgets sind interne Ziele und werden auf vereinbarten Referenzgeräten/-netzen gemessen.
+Budgets are internal targets measured on agreed reference devices/networks.
 
-| Messpunkt | Budget | Bemerkung |
+| Measurement | Budget | Note |
 |---|---:|---|
-| Route zeigt stabile Struktur | ≤ 150 ms nach Navigation | App Shell + Screenrahmen, noch ohne Netzwerkdaten |
-| gecachte Story nutzbar | ≤ 700 ms p75 | kein privater Cache aus falschem Kontext |
-| Web LCP | ≤ 2,5 s p75 | repräsentativer Mobile-Web-Test |
-| Web INP | ≤ 200 ms p75 | Filter, Karte, Formaktionen |
-| Web CLS | ≤ 0,10 p75 | Medien reservieren Platz |
-| Android Warm Start bis nutzbar | ≤ 1,0 s p75 | vereinbartes Mittelklassegerät |
-| Android Cold Start bis nutzbar | ≤ 2,5 s p75 | kein Blockieren auf Medienvorabruf |
-| erste sichtbare Medienvorschau | ≤ 1,5 s p75 | nach autorisiertem Inhalt auf Referenznetz |
-| lokale UI-Reaktion | ≤ 100 ms | Auswahl, Privacy, Datei entfernen |
-| sichtbarer Ladehinweis | ab 300 ms | kurze Vorgänge flackern nicht |
-| Uploadfortschritt | spätestens nach 500 ms | Status statt erfundener Prozentwerte |
+| route shows stable structure | ≤ 150 ms after navigation | App Shell + screen frame, before network data |
+| cached Story usable | ≤ 700 ms p75 | no private cache from wrong context |
+| Web LCP | ≤ 2.5 s p75 | representative Mobile Web test |
+| Web INP | ≤ 200 ms p75 | filter, Card, form actions |
+| Web CLS | ≤ 0.10 p75 | Media reserves space |
+| Android Warm Start until usable | ≤ 1.0 s p75 | agreed mid-range device |
+| Android Cold Start until usable | ≤ 2.5 s p75 | no blocking on Media prefetch |
+| first visible Media Preview | ≤ 1.5 s p75 | after authorized content on reference network |
+| local UI response | ≤ 100 ms | selection, Privacy, remove file |
+| visible loading indicator | from 300 ms | short operations do not flicker |
+| Upload progress | by 500 ms at latest | status instead of invented percentages |
 
-Budgets dürfen nicht durch Vorladen fremder oder privater Inhalte erreicht werden. Privacy-Filter und Autorisierung stehen vor Geschwindigkeit.
+Budgets must not be achieved by preloading foreign or private content. Privacy filtering and Authorization take precedence over speed.
 
-## 9. Telemetrie
+## 9. Telemetry
 
-Erlaubt:
+Allowed:
 
-- Screen-/Flow-ID,
-- Plattform und App-Version,
-- grobe Dauer- und Fehlerklasse,
-- Online/Offline als technischer Zustand,
-- Erfolg/Abbruch.
+- Screen/Flow ID,
+- platform and app version,
+- coarse duration and error class,
+- Online/Offline as technical state,
+- success/abort.
 
-Verboten:
+Forbidden:
 
-- Content, Emotion, Suchtext und Kommentar,
-- Originaldateiname, MIME-Details und Bildmerkmale,
-- Resource-, Attachment-, Space- oder Partner-ID in Produktanalytics,
-- Read URLs, Tokens oder Signaturen,
-- private/shared Kombinationen, wenn sie Re-Identifikation ermöglichen.
+- content, emotion, Search text, and Comment,
+- original filename, MIME details, and image characteristics,
+- Resource, Attachment, Space, or partner ID in product Analytics,
+- Read URLs, Tokens, or signatures,
+- private/shared combinations when they enable re-identification.
 
-## 10. Release-Handoff
+## 10. Release handoff
 
-Vor Merge eines Client-Flows liegen vor:
+Before merging a client flow, provide:
 
-1. Screenshots oder visuelle Tests für Compact, Medium und Expanded.
-2. Tastatur-/TalkBack-Aufzeichnung des Kernpfads.
-3. große-Schrift- und lange-Inhalte-Test.
-4. Offline-, 401-, 404-, 409-, 429- und 5xx-Nachweis.
-5. Privacy-Canary-Test aus dem Demo-Szenario.
-6. Messung gegen relevante Performancebudgets.
-7. Abgleich mit dem veröffentlichten OpenAPI-Vertrag.
+1. Screenshots or visual tests for Compact, Medium, and Expanded.
+2. Keyboard/TalkBack recording of the core path.
+3. Large-font and long-content test.
+4. Offline, 401, 404, 409, 429, and 5xx evidence.
+5. Privacy Canary test from the Demo Scenario.
+6. Measurement against the relevant performance budgets.
+7. Alignment with the published OpenAPI contract.
