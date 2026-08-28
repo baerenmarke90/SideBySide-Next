@@ -1,130 +1,75 @@
-# Nahestehende Personen und wichtige Termine
+# Related Persons and Important Dates
 
 ## Scope
 
-Die M1-Domain `people` traegt zwei Objekte aus Abschnitt 12 der
-Master-Spezifikation:
+The M1 Domain `people` contains two objects from section 12 of the Master Specification:
 
-- `RelatedPerson`: eine Person im Umfeld des Paares - Kind, Elternteil,
-  Geschwister, Freundin. Sie hat **keinen SideBySide-Account**, keine
-  Anmeldung und keine Einladung.
-- `ImportantDate`: ein Datum, das dem Paar wichtig ist. Es kann zu einer
-  `RelatedPerson` gehoeren, muss es aber nicht - der eigene Jahrestag
-  gehoert zu niemandem sonst.
+- `RelatedPerson`: a person in the couple's environment — child, parent, sibling, friend. It has **no SideBySide Account**, no login, and no invitation.
+- `ImportantDate`: a date important to the couple. It may belong to a `RelatedPerson`, but does not have to — the couple's own anniversary belongs to nobody else.
 
-Nicht enthalten: Erinnerungen, Benachrichtigungen und Regeln. Die Termine
-sind so modelliert, dass eine spaetere Regel wie "Lisa hat in 7 Tagen
-Geburtstag" mit Metadaten auskommt.
+Not included: Memories, Notifications, and Rules. Dates are modeled so a later Rule such as `"Lisa has a birthday in 7 days"` can work from metadata.
 
-## Datensparsamkeit
+## Data minimization
 
-Ueber Dritte wird gespeichert, was fuer die Beziehungspflege noetig ist:
-Anzeigename, Art der Beziehung, ein Geburtstag. Keine Adressen, keine
-Schulen, keine Telefonnummern. Diese Personen koennen ihre Daten nicht
-selbst einsehen oder loeschen; das Modell bleibt deshalb bewusst schmal.
+For third parties, store only what is needed for relationship care: display name, relationship type, and a birthday. No addresses, schools, phone numbers, or similar data. These people cannot view or delete their data themselves; therefore the model intentionally remains narrow.
 
-Anzeigename und Termin-Etikett sind der schuetzenswerte Teil und liegen in
-einer `ProtectedPayloadJSON`-Spalte mit `crypto_version = 0` - Klartext und
-**keine E2EE**. Alles, was zum Sortieren, Verknuepfen und spaeteren
-Erinnern gebraucht wird - Beziehung, Datum, Wiederholung, Sichtbarkeit -
-bleibt als Spalte abfragbar.
+Display name and date label are the protected parts and are stored in a `ProtectedPayloadJSON` column with `crypto_version = 0` — plaintext and **not E2EE**. Everything needed for sorting, linking, and later reminders — relationship, date, recurrence, visibility — remains queryable as columns.
 
-## Sichtbarkeit
+## Visibility
 
-Der Request nennt `visibility` (`SHARED` oder `PRIVATE`), nie die
-Privacy-Klasse. Der Server leitet ab: `SHARED` => `SPACE_SHARED`,
-`PRIVATE` => `OWNER_ONLY`. Lesen und Schreiben laufen anschliessend ueber
-den zentralen Owner-/Privacy-Guard; die Bedingung ist Teil der SQL-Abfrage
-und kein nachtraegliches Filtern.
+The request specifies `visibility` (`SHARED` or `PRIVATE`), never the Privacy class. The server derives:
 
-Schreiben darf nur der Eigentuemer. Ein geteilter Eintrag des Partners ist
-lesbar und ergibt beim Schreibversuch 403; ein privater Eintrag des
-Partners ergibt 404, weil ein 403 seine Existenz bestaetigen wuerde.
+- `SHARED` => `SPACE_SHARED`
+- `PRIVATE` => `OWNER_ONLY`
 
-## Ein Termin ist nie offener als seine Person
+Read and write operations then use the central Owner/Privacy Guard; the condition is part of the SQL query and not a later filter.
 
-Ein `SPACE_SHARED` Termin an einer `OWNER_ONLY` Person waere die Auskunft,
-dass es diese Person gibt - genau das soll der private Eintrag verhindern.
+Only the owner may write. A shared entry from the partner is readable and returns 403 on write attempts; a private partner entry returns 404 because a 403 would confirm its existence.
 
-Die Regel steht deshalb im Schema und nicht nur im Service.
-`important_dates` fuehrt `space_id` und die Privacy-Klasse seiner Person
-als Kopie mit; beide zusammen bilden mit `related_person_id` einen
-zusammengesetzten Fremdschluessel auf `related_persons (id, space_id,
-privacy_class)`. Damit gilt zweierlei ohne Zutun der Fachlogik:
+## A date is never more open than its person
 
-- Ein Termin kann nicht auf eine Person aus einem fremden Space zeigen.
-- Ein Termin kann nicht offener sein als seine Person; ein CHECK haelt
-  fest, dass eine `OWNER_ONLY` Person nur `OWNER_ONLY` Termine traegt.
+A `SPACE_SHARED` date attached to an `OWNER_ONLY` person would reveal that the private person exists.
 
-`ON UPDATE CASCADE` haelt die Kopie aktuell. Der Service prueft dieselbe
-Bedingung vorher, damit ein Client eine erklaerende 422 bekommt
-(`IMPORTANT_DATE_MORE_OPEN_THAN_PERSON`) und keinen Datenbankfehler.
+The rule therefore lives in the schema and not only in the service. `important_dates` carries `space_id` and the Privacy class of its person as a copy; both together form a composite foreign key to `related_persons (id, space_id, privacy_class)`. This ensures:
 
-## Aendern und Loeschen einer Person
+- a date cannot point to a person from another Space;
+- a date cannot be more open than its person; a CHECK enforces that an `OWNER_ONLY` person only has `OWNER_ONLY` dates.
 
-**Privater stellen:** Existieren noch geteilte Termine an dieser Person,
-wird die Umstellung mit 409 (`RELATED_PERSON_HAS_SHARED_DATES`) abgelehnt.
-Sie werden nicht still umklassifiziert - auch nicht die des Partners.
-Private Termine des Partners halten die Umstellung dagegen nicht auf: sie
-bleiben erlaubt, und eine Ablehnung ihretwegen waere die Auskunft, dass es
-sie gibt.
+`ON UPDATE CASCADE` keeps the copy current. The service checks the same rule first so clients receive an explanatory 422 (`IMPORTANT_DATE_MORE_OPEN_THAN_PERSON`) rather than a database error.
 
-**Loeschen:** Der Client muss bei jedem Delete eine explizite
-`deletePolicy` senden. Zulassig sind ausschliesslich:
+## Changing and deleting a person
 
-- `preserve`: Die `RelatedPerson` wird geloescht, alle verknuepften
-  `ImportantDate` bleiben erhalten und verlieren ihre Personenverknuepfung.
-  Das gilt auch fuer `OWNER_ONLY`-Termine des Partners.
-- `cascade`: Die `RelatedPerson` und alle mit ihr verknuepften
-  `ImportantDate` werden geloescht. Das gilt bewusst auch fuer
-  `OWNER_ONLY`-Termine des Partners.
+**Making private:** If shared dates still exist for this person, the transition is rejected with 409 (`RELATED_PERSON_HAS_SHARED_DATES`). They are not silently reclassified — including the partner's dates.
 
-Ohne gueltige Policy wird der Request mit 422 abgelehnt. Es gibt keinen
-destruktiven Default.
+Private dates owned by the partner do not block the transition: they remain allowed, and rejecting because of them would reveal that they exist.
 
-Beide Varianten laufen atomar in derselben DB-Transaktion. Die Person und
-bei `preserve` die verknuepften Termine werden fuer die Mutation gesperrt;
-die vorhandene `If-Match`-/Versionspruefung der Person bleibt verpflichtend.
-Beim Entkoppeln erhaltener Termine steigt deren Version wie bei jeder
-anderen ORM-Aenderung.
+**Deletion:** The client must send an explicit `deletePolicy` with every delete. Allowed values are only:
 
-Die Delete-Antwort ist fuer beide Policies ein leerer 204 und darf keinerlei
-Count-, Exists- oder Metadaten ueber verknuepfte Termine enthalten. Das gilt
-insbesondere unabhaengig davon, ob der Partner null, einen oder mehrere
-private Termine an dieser Person besitzt.
+- `preserve`: Delete the `RelatedPerson`; keep linked `ImportantDate` rows and remove the person relation. This also applies to the partner's `OWNER_ONLY` dates.
+- `cascade`: Delete the `RelatedPerson` and all linked `ImportantDate` rows. This intentionally also applies to the partner's `OWNER_ONLY` dates.
 
-Die Oberflaeche muss vor der Ausfuehrung aktiv zwischen **Termine erhalten**
-und **Termine mit loeschen** waehlen lassen. Fuer `cascade` ist eine deutliche,
-aber allgemein formulierte Warnung Pflicht, zum Beispiel sinngemaess:
+Without a valid policy the request returns 422. There is no destructive default.
 
-> Mit dieser Person verknuepfte Termine koennen auch Eintraege deines Partners enthalten.
+Both variants run atomically in the same DB transaction. The person and, for `preserve`, linked dates are locked for mutation; the existing person `If-Match`/version check remains mandatory. When unlinking preserved dates, their version increases like any other ORM change.
 
-Die UI darf niemals anzeigen oder indirekt verraten, ob solche privaten
-Partnertermine existieren, wie viele es sind oder welche Titel, Daten, Typen
-oder sonstigen Metadaten sie enthalten.
+The Delete response is empty 204 for both policies and must not contain counts, existence indicators, or metadata about linked dates. This applies regardless of whether the partner has zero, one, or multiple private dates on this person.
 
-## Geburtstag ohne bekanntes Jahr
+The UI must actively choose between **preserve dates** and **delete dates too** before execution. For `cascade`, a clear but general warning is required, for example:
 
-`DATE` kennt kein Datum ohne Jahr. Ist das Geburtsjahr unbekannt
-(`birthdayYearKnown = false`), speichert der Server Monat und Tag mit dem
-Platzhalterjahr **1904** - einem Schaltjahr, damit der 29. Februar
-speicherbar bleibt. Die Datenbank erzwingt den Platzhalter, damit keine
-zweite Stelle im Code ein anderes Jahr waehlt.
+> Dates linked to this person may also include entries from your partner.
 
-Clients zeigen bei `birthdayYearKnown = false` ausschliesslich Tag und
-Monat an. Ein bekanntes Jahr ohne Datum ist ein Widerspruch und wird mit
-422 (`RELATED_PERSON_BIRTHDAY_REQUIRED`) abgelehnt statt still korrigiert.
+The UI must never display or indirectly reveal whether such private partner dates exist, how many exist, or any titles, dates, types, or other metadata.
+
+## Birthday without known year
+
+`DATE` has no representation for a date without a year. If the birth year is unknown (`birthdayYearKnown = false`), the server stores month and day using placeholder year **1904** — a leap year so February 29 can be represented. The database enforces the placeholder so no second location in code can choose another year.
+
+Clients display only day and month when `birthdayYearKnown = false`. A known year without a date is inconsistent and is rejected with 422 (`RELATED_PERSON_BIRTHDAY_REQUIRED`) instead of silently corrected.
 
 ## Concurrency
 
-Beide Objekte tragen eine Version. Schreibzugriffe brauchen `If-Match` mit
-der zuletzt gelesenen Version; ein veralteter Stand ergibt 409
-(`VERSION_CONFLICT`). Antworten tragen die Version als `ETag`.
+Both objects carry a version. Writes require `If-Match` with the last read version; stale state returns 409 (`VERSION_CONFLICT`). Responses include the version as `ETag`.
 
-## Ereignisse
+## Events
 
-Diese Domain erzeugt keine Outbox-Ereignisse. Es gibt in M1 keinen
-Empfaenger dafuer, und ein Ereignis ueber eine dritte Person waere eine
-zweite Kopie ihrer Daten an einer Stelle mit eigener Aufbewahrung. Wenn
-die Erinnerungslogik kommt, entsteht das Ereignis dort - mit Metadaten und
-ohne Klartext.
+This Domain emits no Outbox Events. M1 has no recipient for them, and an Event about a third party would create a second copy of their data with its own retention. When reminder logic arrives, the Event is created there with metadata only and without plaintext.
