@@ -1,101 +1,100 @@
 # Arcane Deployment
 
-Diese Hinweise ergaenzen `SELF-HOSTING.md` fuer Installationen, bei denen Arcane
-den SideBySide-Stack verwaltet und ein separater TLS-Reverse-Proxy davorsteht.
+These notes supplement `SELF-HOSTING.md` for installations where Arcane manages
+the SideBySide stack and a separate TLS reverse proxy sits in front of it.
 
-## Welche Compose-Datei?
+## Which Compose file?
 
-SideBySide hat zwei bewusst getrennte Self-Hosting-Einstiege:
+SideBySide has two deliberately separate Self-Hosting entry points:
 
-| Umgebung | Compose-Datei | Build-Kontext |
+| Environment | Compose file | Build context |
 |---|---|---|
-| kompletter Repository-Checkout | `compose.yaml` | lokal: `./backend`, `./web` |
-| Arcane / Remote-Workspace | `compose.arcane.yaml` | Git-Repository + Ref |
+| complete repository checkout | `compose.yaml` | local: `./backend`, `./web` |
+| Arcane / remote workspace | `compose.arcane.yaml` | Git repository + ref |
 
-`compose.yaml` ist der kanonische Einstieg fuer normale Docker-Compose-Nutzer.
-Arcane soll dagegen **`compose.arcane.yaml`** verwenden. Diese Datei benoetigt
-weder `./backend` noch `./web` im Arcane-Projektverzeichnis und vermeidet damit
-den Fehler `build context not found` fuer `/app/data/projects/<projekt>/backend`.
+`compose.yaml` is the canonical entry point for normal Docker Compose users.
+Arcane should instead use **`compose.arcane.yaml`**. This file requires neither
+`./backend` nor `./web` in the Arcane project directory and therefore avoids the
+`build context not found` error for `/app/data/projects/<project>/backend`.
 
-Beide Varianten enthalten dieselben Dienste, Volumes, Netzwerke,
-Runtime-Einstellungen und Startabhaengigkeiten. CI vergleicht ihre gerenderte
-Konfiguration und erlaubt als beabsichtigten Unterschied nur die Build-Kontexte.
+Both variants contain the same services, volumes, networks, runtime settings,
+and startup dependencies. CI compares their rendered configuration and permits
+only the build contexts as an intentional difference.
 
-## Arcane einrichten
+## Configure Arcane
 
-1. In Arcane das SideBySide-Projekt mit GitOps bzw. der gewuenschten
-   Repository-Quelle anlegen.
-2. Als Compose-Datei `compose.arcane.yaml` auswaehlen.
-3. Die Werte aus `.env.example` als Projekt-Environment uebernehmen und
-   mindestens `POSTGRES_PASSWORD` sowie fuer die Erstregistrierung
-   `SBS_BOOTSTRAP_TOKEN` sicher setzen.
-4. Fuer Tests kann `SBS_SOURCE_REF=main` verwendet werden. Fuer Produktion
-   einen unveraenderlichen Release-Tag verwenden.
-5. Deployment starten. `migrate` muss erfolgreich abschliessen, bevor API und
-   Worker starten; Web wartet zusaetzlich auf die API-Readiness.
+1. Create the SideBySide project in Arcane with GitOps or the desired repository
+   source.
+2. Select `compose.arcane.yaml` as the Compose file.
+3. Import the values from `.env.example` as the project environment and set at
+   least `POSTGRES_PASSWORD` and, for initial registration,
+   `SBS_BOOTSTRAP_TOKEN` securely.
+4. `SBS_SOURCE_REF=main` may be used for tests. Use an immutable release tag for
+   production.
+5. Start the deployment. `migrate` must complete successfully before API and
+   worker start; Web additionally waits for API readiness.
 
-Die Arcane-Datei verwendet standardmaessig:
+The Arcane file uses these defaults:
 
 ```dotenv
 SBS_SOURCE_REPOSITORY=https://github.com/baerenmarke90/SideBySide-Next.git
 SBS_SOURCE_REF=main
 ```
 
-Daraus entstehen fuer die Builds beispielsweise:
+This produces build contexts such as:
 
 ```text
 https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
 https://github.com/baerenmarke90/SideBySide-Next.git#main:web
 ```
 
-`api`, `worker` und `migrate` verwenden immer denselben Backend-Kontext und
-entstehen damit aus demselben Quellstand.
+`api`, `worker`, and `migrate` always use the same backend context and are
+therefore built from the same source revision.
 
-## Oeffentliches und privates Repository
+## Public and private repositories
 
-Bei einem oeffentlichen Repository kann Docker/BuildKit den Git-Build-Kontext
-ohne Repository-Credentials laden.
+For a public repository, Docker/BuildKit can load the Git build context without
+repository credentials.
 
-Bei einem privaten Repository benoetigt der Docker-/BuildKit-Prozess dagegen
-eine vom Betreiber bzw. von Arcane bereitgestellte Git-Authentifizierung. Diese
-Authentifizierung ist eine Eigenschaft der Build-Umgebung und wird **nicht** in
-`compose.arcane.yaml`, `.env.example` oder einer Git-URL mit eingebettetem Token
-abgelegt.
+For a private repository, the Docker/BuildKit process instead requires Git
+authentication provided by the operator or Arcane. This authentication belongs
+to the build environment and is **not** stored in `compose.arcane.yaml`,
+`.env.example`, or a Git URL with an embedded token.
 
-Wenn die eingesetzte Arcane-/BuildKit-Konfiguration keinen authentifizierten
-Remote-Git-Build unterstuetzt, ist `compose.arcane.yaml` mit einem privaten Repo
-nicht ausreichend. Dann muss zuerst die Build-Authentifizierung der Plattform
-sauber eingerichtet oder spaeter auf versionierte Registry-Images umgestellt
-werden. Die Repository-Sichtbarkeit selbst ist keine SideBySide-Anforderung.
+If the Arcane/BuildKit configuration in use does not support authenticated
+remote Git builds, `compose.arcane.yaml` alone is not sufficient for a private
+repository. In that case, configure build authentication correctly first or
+later switch to versioned registry images. Repository visibility itself is not
+a SideBySide requirement.
 
-## Warum Git-Build-Kontexte?
+## Why Git build contexts?
 
-Docker Compose und BuildKit unterstuetzen Git-Repositorys mit Ref und
-Unterverzeichnis nativ. Deshalb ist fuer Arcane kein eigener Deployment-
-Orchestrator und keine SideBySide-spezifische Synchronisationslogik notwendig.
+Docker Compose and BuildKit natively support Git repositories with refs and
+subdirectories. Arcane therefore does not require a custom deployment
+orchestrator or SideBySide-specific synchronization logic.
 
-Der fruehere Weg, in der Standard-Compose-Datei `SBS_BACKEND_BUILD_CONTEXT` und
-`SBS_WEB_BUILD_CONTEXT` manuell zu setzen, wurde bewusst entfernt: Die normale
-Compose-Datei bleibt dadurch auf vollstaendige Repository-Checkouts fokussiert,
-waehrend Arcane einen eindeutigen eigenen Einstieg besitzt.
+The previous approach of setting `SBS_BACKEND_BUILD_CONTEXT` and
+`SBS_WEB_BUILD_CONTEXT` manually in the standard Compose file was deliberately
+removed. The normal Compose file remains focused on complete repository
+checkouts, while Arcane has one explicit dedicated entry point.
 
-## Zielbild mit Reverse-Proxy
+## Target architecture with a reverse proxy
 
-Der Reverse-Proxy ist der einzige oeffentliche TLS-Endpunkt. Er routet auf
-derselben oeffentlichen Origin zwei interne Ziele:
+The reverse proxy is the only public TLS endpoint. On the same public origin it
+routes to two internal targets:
 
-| Pfad | internes Ziel |
+| Path | Internal target |
 |---|---|
-| `/api/` | SideBySide API auf `API_PORT` |
-| alle anderen Pfade | SideBySide Web auf `WEB_PORT` |
+| `/api/` | SideBySide API on `API_PORT` |
+| all other paths | SideBySide Web on `WEB_PORT` |
 
-Die `/api/`-Route muss **direkt** zur API gehen. In Produktion darf sie nicht
-zuerst durch den Web-Nginx laufen, weil sonst der vertrauenswuerdige TLS-Proxy-
-Hop fuer `X-Forwarded-Proto` verloren geht.
+The `/api/` route must go **directly** to the API. In production it must not
+first pass through the Web Nginx container because that would lose the trusted
+TLS proxy hop for `X-Forwarded-Proto`.
 
-## Reverse-Proxy auf demselben Host
+## Reverse proxy on the same host
 
-Der sichere Standard reicht aus:
+The secure default is sufficient:
 
 ```dotenv
 SBS_BIND_IP=127.0.0.1
@@ -103,13 +102,12 @@ API_PORT=8000
 WEB_PORT=8080
 ```
 
-Der Proxy verwendet dann `127.0.0.1:<API_PORT>` und
-`127.0.0.1:<WEB_PORT>`.
+The proxy then uses `127.0.0.1:<API_PORT>` and `127.0.0.1:<WEB_PORT>`.
 
-## Reverse-Proxy auf einem anderen Host
+## Reverse proxy on another host
 
-Ist der Proxy ein eigener Host im privaten Netz, muss SideBySide gezielt an die
-private Adresse des Docker-/Arcane-Hosts gebunden werden:
+If the proxy runs on a separate host in the private network, bind SideBySide
+specifically to the private address of the Docker/Arcane host:
 
 ```dotenv
 SBS_BIND_IP=192.168.10.20
@@ -117,10 +115,10 @@ API_PORT=8000
 WEB_PORT=8099
 ```
 
-`SBS_BIND_IP` ist absichtlich **eine konkrete Hostadresse**. `0.0.0.0` ist fuer
-diesen Aufbau nicht erforderlich und vergroessert die Exposition unnoetig.
+`SBS_BIND_IP` is deliberately **one concrete host address**. `0.0.0.0` is not
+required for this topology and unnecessarily increases exposure.
 
-Der Reverse-Proxy routet dann beispielsweise:
+The reverse proxy then routes, for example:
 
 ```text
 https://sidebyside.example/
@@ -130,7 +128,7 @@ https://sidebyside.example/api/
     -> http://192.168.10.20:8000
 ```
 
-In SideBySide werden dazu die oeffentliche Origin und die Proxy-Adressen gesetzt:
+Configure the public origin and proxy addresses in SideBySide as follows:
 
 ```dotenv
 SBS_ENVIRONMENT=production
@@ -139,63 +137,61 @@ SBS_ALLOWED_HOSTS=["sidebyside.example","localhost","127.0.0.1"]
 TRUSTED_PROXY_IPS=192.168.10.30,192.168.10.31
 ```
 
-`TRUSTED_PROXY_IPS` enthaelt nur Adressen bzw. den kleinsten CIDR-Bereich, aus
-dem der Reverse-Proxy die API tatsaechlich erreicht. Niemals `*` verwenden.
+`TRUSTED_PROXY_IPS` contains only the addresses or smallest CIDR range from
+which the reverse proxy actually reaches the API. Never use `*`.
 
-## Web-Referenzflow
+## Web reference flow
 
-Der aktuelle Web-Referenzflow benoetigt noch eine vorhandene Space-UUID als
-Build-Konfiguration:
+The current Web reference flow still requires an existing Space UUID as build
+configuration:
 
 ```dotenv
 SBS_WEB_SPACE_ID=<space-uuid>
 ```
 
-Die UUID ist kein Secret. Sie wird beim Vite-Build in das Web-Bundle
-eingebettet. Nach einer Aenderung reicht deshalb ein Container-Restart nicht;
-das Web-Image muss neu gebaut werden.
+The UUID is not a secret. It is embedded in the Web bundle during the Vite
+build. A container restart is therefore insufficient after a change; the Web
+image must be rebuilt.
 
-## Pruefung nach dem Deploy
+## Post-deployment verification
 
-Vom Reverse-Proxy-Host bzw. aus demselben privaten Netz kann zuerst der
-Webdienst geprueft werden:
+From the reverse-proxy host or the same private network, first verify the Web
+service:
 
 ```bash
 curl --fail http://<docker-host>:<WEB_PORT>/healthz
 ```
 
-Die produktive API wird ueber den echten TLS-Pfad geprueft:
+Verify the production API over the real TLS path:
 
 ```bash
 curl --fail https://sidebyside.example/api/v1/health/ready
 ```
 
-Ueber die oeffentliche Origin sollten beide Ziele funktionieren:
+Both targets should work through the public origin:
 
 ```bash
 curl --fail https://sidebyside.example/
 curl --fail https://sidebyside.example/api/v1/health/ready
 ```
 
-Die Readiness-Antwort der API lautet im Normalfall:
+The normal API readiness response is:
 
 ```json
 {"status":"ok","database":"ok"}
 ```
 
-## Reuse-Pruefung
+## Reuse review
 
-Geprueft wurden ein eigener Arcane-Synchronisationsmechanismus, publizierte
-Registry-Images und die vorhandenen Docker-/Compose-Bordmittel. Gewaehlt wurden
-native Git-Build-Kontexte, weil sie das konkrete Workspace-Problem ohne neue
-Runtime-Komponente oder Provider-Abstraktion loesen.
+The reviewed alternatives were a custom Arcane synchronization mechanism,
+published registry images, and existing Docker/Compose capabilities. Native Git
+build contexts were selected because they solve the concrete workspace problem
+without introducing a new runtime component or provider abstraction.
 
-- Standard/Plattform: Docker Compose + BuildKit Git-Kontexte
-- neue Runtime-Abhaengigkeiten: keine
-- externer Provider: keiner; Git-Hosting ist nur Quelltransport beim Build
-- Privacy/Nutzdaten: keine SideBySide-Nutzdaten verlassen durch diesen Schritt
-  den Host
-- Kosten: keine zusaetzlichen SideBySide-Laufzeitkosten
-- Fallback: vollstaendiger Checkout mit `compose.yaml`; spaeter optional
-  versionierte Registry-Images, falls Remote-Git-Builds betrieblich ungeeignet
-  werden
+- Standard/platform: Docker Compose + BuildKit Git contexts
+- new runtime dependencies: none
+- external provider: none; Git hosting is only source transport during build
+- privacy/user data: this step does not send SideBySide user data off-host
+- cost: no additional SideBySide runtime cost
+- fallback: complete checkout with `compose.yaml`; optionally versioned registry
+  images later if remote Git builds become operationally unsuitable
