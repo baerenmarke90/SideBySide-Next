@@ -11,7 +11,7 @@ Binding product requirement. This file is the implementation source; a predecess
 
 A private digital companion for a couple's shared life, offered in two operating models: managed Cloud service and Self-Hosted installation.
 
-Positioning: *The couple app that belongs to you.*
+Positioning, intentional de-DE product copy: *Die Paar-App, die euch gehört.*
 
 Where users enable the corresponding functions, the product manages Memories, emotional moments, Milestones, shared history, Wishes, Plans, Places, Lists, private content, appointments, partner preferences, birthdays and important people, couple questions, shared well-being, Shopping Lists, recipe ideas, leisure suggestions, external photos, and optional location information.
 
