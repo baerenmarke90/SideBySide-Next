@@ -1,27 +1,30 @@
 # SideBySide Component Contracts
 
-**Status:** Verbindliche Produktgrundlage  
+**Status:** Binding product foundation  
 **Version:** 1.1  
-**Stand:** 24.08.2026
+**As of:** August 24, 2026
 
-Component Contracts beschreiben Verhalten und Bedeutung gemeinsamer UI-Bausteine unabhängig vom technischen Framework. WebApp und Smartphone-App dürfen unterschiedliche Implementierungen besitzen, müssen aber dieselben Verträge erfüllen.
+Component Contracts describe the behavior and meaning of shared UI building
+blocks independently of the technical framework. WebApp and smartphone app may
+use different implementations, but they must satisfy the same contracts.
 
-## 1. Aufbau eines Contracts
+## 1. Contract structure
 
-Jede Komponente dokumentiert:
+Every component documents:
 
-1. **Purpose** – welches Problem sie löst.
-2. **Anatomy** – verpflichtende und optionale Bestandteile.
-3. **Variants** – bewusst unterstützte Varianten.
-4. **States** – sichtbare und interaktive Zustände.
-5. **Behavior** – Eingabe, Ausgabe und Übergänge.
-6. **Accessibility** – Name, Rolle, Fokus und Bedienung.
-7. **Content** – Regeln für Beschriftung und Fehlermeldungen.
-8. **Analytics** – erlaubte Ereignisse ohne sensible Inhaltsdaten.
+1. **Purpose** – which problem it solves.
+2. **Anatomy** – required and optional parts.
+3. **Variants** – deliberately supported variants.
+4. **States** – visible and interactive states.
+5. **Behavior** – input, output, and transitions.
+6. **Accessibility** – name, role, focus, and operation.
+7. **Content** – rules for labels and error messages.
+8. **Analytics** – allowed events without sensitive content data.
 
-Neue visuelle Varianten werden nur ergänzt, wenn sie eine neue Bedeutung oder Interaktion ausdrücken.
+New visual variants are added only when they express a new meaning or
+interaction.
 
-## 2. Gemeinsame Zustandsmodelle
+## 2. Shared state models
 
 ```text
 LoadState       = idle | loading | content | empty | error | offline
@@ -31,221 +34,247 @@ PermissionState = unknown | explaining | requesting | granted | denied | blocked
 ActionState     = idle | submitting | success | error
 ```
 
-- `LoadState` beschreibt das Laden einer Ansicht.
-- `SyncState` beschreibt die Persistenz eines bereits sichtbaren Inhalts.
-- `PrivacyClass` beschreibt die fachliche Zugriffsklasse. UI-Kürzel wie `private`
-  und `shared` sind keine API-Werte.
-- Zustände werden nicht zu einem unklaren Boolean wie `isLoading` verdichtet, wenn mehrere Übergänge möglich sind.
-- Fehlermeldungen besitzen einen stabilen Fehlercode für Technik und eine verständliche Nachricht für Menschen.
+- `LoadState` describes loading a view.
+- `SyncState` describes persistence of already visible content.
+- `PrivacyClass` describes the domain access class. Presentation shortcuts such
+  as `private` and `shared` are not API values.
+- States are not collapsed into an ambiguous boolean such as `isLoading` when
+  multiple transitions are possible.
+- Error states expose a stable technical error code and a human-readable
+  message.
 
-## 3. Action Components
+## 3. Action components
 
 ### 3.1 Button
 
-**Purpose:** Löst eine klar benannte Aktion aus.
+**Purpose:** Triggers one clearly named action.
 
-**Varianten:**
+**Variants:**
 
-- `primary` – wichtigste Aktion der Ansicht, in der Regel einmal pro Bereich.
-- `secondary` – wichtige Alternative.
-- `tertiary` – leichte, kontextuelle Aktion.
-- `destructive` – potenziell irreversible Aktion.
+- `primary` – most important action in the view, generally once per section.
+- `secondary` – important alternative.
+- `tertiary` – lightweight contextual action.
+- `destructive` – potentially irreversible action.
 
-**Zustände:** `default`, `hover`, `focus`, `pressed`, `disabled`, `submitting`, `success`, `error`.
+**States:** `default`, `hover`, `focus`, `pressed`, `disabled`, `submitting`,
+`success`, `error`.
 
 **Contract:**
 
-- Beschriftung beginnt möglichst mit einem Verb: „Erinnerung speichern“.
-- Ein Button ändert seine Breite beim Ladezustand nicht.
-- `submitting` verhindert Doppelauslösung und zeigt eine textlich verständliche Aktivität.
-- `disabled` ersetzt keine Validierungs- oder Berechtigungserklärung.
-- Mindestziel: 48 dp in der App, 44 CSS-px im Web.
-- Der zugängliche Name entspricht der sichtbaren Beschriftung oder erweitert sie sinnvoll.
+- The label should start with a verb where possible; de-DE example:
+  **„Erinnerung speichern“**.
+- A button does not change width while loading.
+- `submitting` prevents duplicate activation and exposes understandable textual
+  activity.
+- `disabled` does not replace validation or permission explanations.
+- Minimum target size: 48 dp in the app, 44 CSS px on Web.
+- The accessible name matches the visible label or meaningfully extends it.
 
 ### 3.2 Icon Button
 
-- Nur für gelernte, häufige Aktionen wie Schließen, Zurück, Suchen oder Overflow.
-- Besitzt immer Tooltip auf Web und einen zugänglichen Namen auf allen Plattformen.
-- Kritische oder seltene Aktionen erhalten zusätzlich Text.
-- Badge, Icon und Status verändern die Bedienfläche nicht.
+- Used only for established, frequent actions such as close, back, search, or
+  overflow.
+- Always has a tooltip on Web and an accessible name on every platform.
+- Critical or uncommon actions also include text.
+- Badge, icon, and status do not change the interactive target size.
 
 ### 3.3 Link
 
-- Navigiert zu einem Ziel; ein Button verändert Zustand oder löst eine Aktion aus.
-- Links sind an Textstil, Unterstreichung im Kontext oder zusätzlichem Merkmal erkennbar.
-- Externe Ziele und Downloads werden angekündigt, wenn das Verhalten sonst überrascht.
+- Navigates to a destination; a button changes state or triggers an action.
+- Links remain identifiable through text styling, contextual underlining, or an
+  additional distinguishing characteristic.
+- External destinations and downloads are announced when their behavior would
+  otherwise be surprising.
 
-## 4. Input Components
+## 4. Input components
 
-### 4.1 Text Field und Text Area
+### 4.1 Text Field and Text Area
 
-**Anatomy:** Label, Eingabe, optionale Hilfestellung, Zeichenzähler, Status und Fehlermeldung.
+**Anatomy:** label, input, optional help, character counter, status, and error
+message.
 
-- Das Label bleibt sichtbar; Placeholder ersetzt kein Label.
-- Validierung erfolgt spätestens beim Verlassen des Feldes und erneut beim Absenden.
-- Fehler erklärt Problem und Korrektur direkt am Feld.
-- Eingabetyp, Autocomplete und virtuelle Tastatur passen zum Inhalt.
-- Text Area wächst bis zu einer definierten Maximalhöhe und bleibt danach scrollbar.
-- Sensible Inhalte werden nicht ohne Zweck protokolliert oder vorausgefüllt.
+- The label remains visible; a placeholder does not replace a label.
+- Validation occurs no later than field exit and again on submission.
+- An error explains both the problem and the correction next to the field.
+- Input type, autocomplete, and virtual keyboard match the content.
+- Text Area grows to a defined maximum height and then remains scrollable.
+- Sensitive content is not logged or prefilled without a documented purpose.
 
-### 4.2 Auswahlfelder
+### 4.2 Selection controls
 
-- Checkbox: mehrere unabhängige Optionen.
-- Radio Group: genau eine Option aus einer überschaubaren Menge.
-- Switch: sofort wirksamer An/Aus-Zustand; nicht zum Absenden eines Formulars.
-- Select/Combobox: größere oder durchsuchbare Optionsmenge.
-- Segmented Control: zwei bis vier gleichartige Ansichten oder Modi, keine langfristige Navigation.
+- Checkbox: multiple independent options.
+- Radio Group: exactly one option from a manageable set.
+- Switch: immediately effective on/off state; not a form-submission mechanism.
+- Select/Combobox: larger or searchable set of options.
+- Segmented Control: two to four equivalent views or modes, not long-term
+  navigation.
 
-### 4.3 Date, Time und Duration
+### 4.3 Date, Time, and Duration
 
-- Plattformnative Auswahl ist zulässig, wenn Ergebnisformat und Validierung gleich bleiben.
-- Zeitzone und ganztägige Ereignisse werden explizit behandelt.
-- Menschlich lesbare Zusammenfassung erscheint vor dem Speichern.
+- Platform-native selection is allowed if result format and validation remain
+  equivalent.
+- Time zone and all-day events are handled explicitly.
+- A human-readable summary appears before saving.
 
-## 5. Navigation Components
+## 5. Navigation components
 
 ### 5.1 Navigation Item
 
-**Anatomy:** Icon, sichtbares Label, optionaler Badge, aktiver Indikator.
+**Anatomy:** icon, visible label, optional badge, active indicator.
 
-- Status: `default`, `hover`, `focus`, `active`, `disabled`.
-- Aktivität ist nicht nur farblich erkennbar.
-- Reihenfolge und Bezeichnung sind auf allen Plattformen stabil.
-- Ein Item führt zu einem Ort, nicht zu einer einmaligen Aktion.
+- States: `default`, `hover`, `focus`, `active`, `disabled`.
+- Active state is not conveyed by color alone.
+- Order and naming are stable across platforms.
+- An item leads to a place, not to a one-time action.
 
 ### 5.2 Tabs
 
-- Wechseln gleichrangige Inhalte innerhalb eines Bereichs.
-- Die aktive Registerkarte ist programmatisch erkennbar.
-- Pfeiltastenbedienung folgt dem nativen Plattformmuster.
-- Tabs werden nicht über mehrere Zeilen umgebrochen; bei Platzmangel wird das Informationsmodell vereinfacht.
+- Switch between peer content within one area.
+- The active tab is programmatically identifiable.
+- Arrow-key behavior follows the native platform pattern.
+- Tabs do not wrap across multiple rows; if space is insufficient, simplify the
+  information model instead.
 
 ### 5.3 Breadcrumbs
 
-- Nur auf Web und nur ab mindestens drei nachvollziehbaren Hierarchieebenen.
-- Sie ergänzen die Hauptnavigation und ersetzen keinen Seitentitel.
+- Web only and only from at least three understandable hierarchy levels.
+- Supplement primary navigation and never replace the page title.
 
-## 6. Content Components
+## 6. Content components
 
 ### 6.1 List Item
 
-**Anatomy:** Titel, optionale Meta-Zeile, Leading Visual, Trailing Status oder Aktion.
+**Anatomy:** title, optional metadata line, leading visual, trailing status or
+action.
 
-- Die gesamte Zeile darf ein einziges Ziel öffnen.
-- Zusätzliche Aktionen sind getrennt fokussierbar und verständlich benannt.
-- Titel wird auf zwei Zeilen begrenzt; vollständiger Inhalt bleibt im Detail verfügbar.
-- Auswahl-, ungelesen- und Sync-Zustand sind unterscheidbar.
+- The whole row may open one single primary destination.
+- Additional actions are separately focusable and clearly named.
+- The title is limited to two lines; full content remains available in detail.
+- Selection, unread, and sync states are distinguishable.
 
 ### 6.2 Content Card
 
-- Eine Karte fasst ein Objekt oder eine Handlung zusammen, nicht bloß Dekoration.
-- Verschachtelte Karten sind nicht erlaubt.
-- Klickbare Karten besitzen sichtbaren Fokus und genau ein Hauptziel.
-- Sekundäraktionen stehen in einem klar abgegrenzten Bereich.
-- Kartenradius, Innenabstand und Schatten stammen ausschließlich aus Tokens.
+- A card summarizes one object or action, not decoration alone.
+- Nested cards are not allowed.
+- Clickable cards have visible focus and exactly one primary destination.
+- Secondary actions live in a clearly separated area.
+- Card radius, padding, and shadow come exclusively from tokens.
 
 ### 6.3 Timeline Item
 
-- Zeigt Zeitpunkt, Urheber:in, Inhaltstyp, Sichtbarkeit und Sync-Zustand.
-- Die visuelle Linie ist dekorativ; semantische Reihenfolge bleibt im Dokumentfluss.
-- Mehrere Ereignisse am selben Tag können gruppiert werden, ohne einzelne Ziele zu verlieren.
+- Shows timestamp/date, author, content type, visibility, and sync state.
+- The visual line is decorative; semantic order remains in document flow.
+- Multiple events on the same day may be grouped without losing individual
+  targets.
 
 ### 6.4 Checklist Row
 
-- Checkbox und Text bilden eine gemeinsame verständliche Bedienung.
-- Erledigte Einträge bleiben lesbar und können wieder geöffnet werden.
-- Gleichzeitige Online-Änderungen verwenden `version`; Konflikte überschreiben nichts still.
-- Löschen ist über Menü und optional ergänzend über Geste erreichbar.
+- Checkbox and text form one understandable control.
+- Completed entries remain readable and can be reopened.
+- Concurrent online changes use `version`; conflicts never overwrite silently.
+- Delete is available through a menu and may additionally be exposed as a
+  gesture.
 
-## 7. Privacy und Status Components
+## 7. Privacy and status components
 
 ### 7.1 Visibility Control
 
-**MVP-Auswahlwerte, wenn die Domain sie unterstützt:** `OWNER_ONLY`, `SPACE_SHARED`.
+**MVP values, when supported by the domain:** `OWNER_ONLY`, `SPACE_SHARED`.
 
-- Zeigt Icon und Text: „Nur für mich“ oder „Geteilt“.
-- Im Anzeigezustand als Chip/Status, im Formular als echte Auswahlkomponente.
-- Ein Wechsel erklärt Empfänger und Wirkung.
-- Pink markiert privaten/geschützten Kontext, Grün geteilten Kontext; Text bleibt verpflichtend.
-- Memory, Wish und Plan zeigen nur ihren Status; sie bieten im aktuellen Core
-  keinen Wechsel der Privacy-Klasse. HeartMoment darf beide MVP-Werte anbieten.
+- Shows icon and text. Intentional de-DE product labels are **„Nur für mich“**
+  and **„Geteilt“**.
+- Display state uses a chip/status; forms use a real selection control.
+- Changing visibility explains recipients and effect.
+- Pink denotes private/protected context and green denotes shared context;
+  textual indication remains mandatory.
+- Memory, Wish, and Plan show their status only; the current Core does not allow
+  changing their privacy class. HeartMoment may offer both MVP values.
 
 ### 7.2 Status Badge
 
-- Unterstützte Kategorien: `info`, `success`, `warning`, `error`, `private`, `shared`.
-- Badges enthalten maximal zwei kurze Wörter oder eine Zahl.
-- Status ist nicht allein durch Farbe vermittelt.
-- Badges sind nicht klickbar; interaktive Filterchips sind eine eigene Komponente.
+- Supported categories: `info`, `success`, `warning`, `error`, `private`,
+  `shared`.
+- Badges contain at most two short words or one number.
+- Status is not conveyed by color alone.
+- Badges are not clickable; interactive filter chips are a separate component.
 
 ### 7.3 Sync Indicator
 
-- Verwendet die Texte „Wird gespeichert“, „Gespeichert“ oder „Aktion nötig“.
-- Für einen fehlgeschlagenen Offline-Schreibversuch gilt separat: „Noch nicht gespeichert“.
-- `synced` darf nach kurzer Zeit visuell zurücktreten.
-- `failed` und `conflict` bleiben sichtbar, bis sie gelöst oder bewusst verworfen wurden.
+Intentional de-DE product copy:
 
-## 8. Overlay Components
+- **„Wird gespeichert“**
+- **„Gespeichert“**
+- **„Aktion nötig“**
+- for a failed offline write attempt: **„Noch nicht gespeichert“**
+
+`Synced` may visually recede after a short time. `failed` and `conflict` remain
+visible until resolved or deliberately discarded.
+
+## 8. Overlay components
 
 ### 8.1 Dialog
 
-- Besitzt Titel, verständlichen Inhalt, primäre und optionale sekundäre Aktion.
-- Fokus startet auf dem ersten sinnvollen Element, bleibt im Dialog und kehrt danach zum Auslöser zurück.
-- Escape/Zurück schließt nur, wenn dadurch keine kritischen Änderungen verloren gehen.
-- Destruktive Bestätigungen benennen Objekt und Folge.
+- Has a title, understandable content, a primary action, and an optional
+  secondary action.
+- Focus starts on the first meaningful element, remains trapped inside the
+  dialog, and returns to the trigger afterward.
+- Escape/Back closes only when no critical changes would be lost.
+- Destructive confirmations name the object and consequence.
 
 ### 8.2 Bottom Sheet
 
-- Wird auf Compact für kurze Auswahl oder kontextuelle Aktion verwendet.
-- Besitzt eine klare Überschrift und eine sichtbare Schließmöglichkeit.
-- Drag-to-dismiss ist nur ergänzend; Tastatur und Screenreader bleiben vollständig unterstützt.
-- Lange, komplexe Flows wechseln auf eine eigene Seite.
+- Used on Compact for short selections or contextual actions.
+- Has a clear heading and a visible close option.
+- Drag-to-dismiss is supplementary only; keyboard and screen reader support
+  remains complete.
+- Long or complex flows move to a dedicated page.
 
 ### 8.3 Side Pane
 
-- Wird ab Medium für Details, Vorschau oder kurze Bearbeitung genutzt.
-- Breite folgt Layout-Tokens; Inhalt besitzt eine eigene scrollbare Region.
-- Schließen stellt Fokus und Listenauswahl wieder her.
+- Used from Medium upward for details, preview, or short editing.
+- Width follows layout tokens; content has its own scrollable region.
+- Closing restores focus and list selection.
 
-## 9. Feedback Components
+## 9. Feedback components
 
 ### 9.1 Inline Message
 
-- Erste Wahl für anhaltende Fehler, Warnungen und blockierende Informationen.
-- Steht nahe dem betroffenen Inhalt und bietet bei Bedarf eine konkrete Aktion.
-- Meldung besteht aus Problem, Auswirkung und nächstem Schritt.
+- Preferred for persistent errors, warnings, and blocking information.
+- Appears near the affected content and offers a concrete action when needed.
+- The message contains problem, impact, and next step.
 
 ### 9.2 Snackbar
 
-- Für kurze, nicht kritische Bestätigung oder reversible Aktion.
-- Maximal eine Aktion, zum Beispiel „Rückgängig“.
-- Kritische Fehler und notwendige Entscheidungen werden nicht ausschließlich hier angezeigt.
-- Dauer berücksichtigt Leselänge und Bedienhilfen.
+- For brief, non-critical confirmation or a reversible action.
+- At most one action; de-DE example: **„Rückgängig“**.
+- Critical errors and required decisions are never shown only here.
+- Duration accounts for reading length and assistive technologies.
 
-### 9.3 Skeleton, Empty State und Error State
+### 9.3 Skeleton, Empty State, and Error State
 
-- Skeleton entspricht der Form des erwarteten Inhalts und animiert dezent.
-- Empty State unterscheidet Erstnutzung, leere Suche und fehlende Berechtigung.
-- Error State erhält „Erneut versuchen“, wenn Wiederholung sinnvoll ist.
-- Bestehende Inhalte werden bei Hintergrundfehlern nicht entfernt.
+- Skeleton matches the expected content shape and uses subtle animation.
+- Empty State distinguishes first use, empty search, and missing permission.
+- Error State offers de-DE **„Erneut versuchen“** when retry is meaningful.
+- Existing content is not removed because of background errors.
 
-## 10. Media Components
+## 10. Media components
 
 ### 10.1 Media Tile
 
-- Zeigt Vorschau, Typ, Uploadstatus, Sichtbarkeit und alternative Beschreibung.
-- Fehler und Retry gelten pro Datei.
-- Crop und Bearbeitung verändern nie unbemerkt das Original.
-- Videos besitzen Posterframe, Dauer und Untertitelstatus.
+- Shows preview, type, upload status, visibility, and alternative description.
+- Failure and retry are per file.
+- Crop and editing never modify the original without making that clear.
+- Videos have a poster frame, duration, and subtitle status.
 
 ### 10.2 Avatar Pair
 
-- Zwei Personen werden gleichwertig dargestellt; keine Person ist visuell standardmäßig dominant.
-- Initialen oder neutrale Platzhalter sind bei fehlendem Foto verfügbar.
-- Status oder Rolle wird als Text ergänzt, wenn relevant.
+- Two people are represented equally; neither is visually dominant by default.
+- Initials or neutral placeholders are available when no photo exists.
+- Status or role is supplemented with text when relevant.
 
-## 11. Analytics Contract
+## 11. Analytics contract
 
-Erlaubt sind Ereignisse wie:
+Allowed events include:
 
 ```text
 screen_viewed
@@ -257,28 +286,31 @@ permission_result
 sync_conflict_opened
 ```
 
-Nicht erlaubt sind Freitext, Suchtext, Nachrichtentexte, Bildinhalte, exakte private Datumsangaben, direkte Resource-IDs oder andere sensible Nutzinhalte. Technische/pseudonymisierte Referenzen werden nur bei dokumentiertem Zweck und nicht als Inhaltsmerkmal übertragen.
+Free text, search text, message content, image content, exact private dates,
+direct resource IDs, and other sensitive user content are not allowed.
+Technical/pseudonymized references are transmitted only for a documented
+purpose and never as content characteristics.
 
 ## 12. Definition of Done
 
-Eine gemeinsame Komponente ist bereit, wenn:
+A shared component is ready when:
 
-- Contract, Varianten und Zustände dokumentiert sind,
-- Design-Tokens statt lokaler Werte verwendet werden,
-- Web-Tastaturbedienung und Fokus geprüft sind,
-- Screenreader-Name, Rolle und Status korrekt sind,
-- große Schrift und Textzoom funktionieren,
-- Compact und Expanded geprüft sind,
-- Error, Disabled, Loading und Offline nicht fehlen,
-- Privacy- und Analytics-Folgen geklärt sind,
-- visuelle Regressionen automatisiert oder reproduzierbar prüfbar sind.
+- its contract, variants, and states are documented,
+- Design Tokens are used instead of local values,
+- Web keyboard operation and focus behavior are verified,
+- screen-reader name, role, and status are correct,
+- large text and text zoom work,
+- Compact and Expanded layouts are verified,
+- Error, Disabled, Loading, and Offline states are covered,
+- privacy and analytics consequences are resolved,
+- visual regressions are automated or reproducibly testable.
 
-## Verwandte Dokumente
+## Related documents
 
-- [Design-Prinzipien](./DESIGN-PRINCIPLES.md)
-- [Informationsarchitektur](./INFORMATION-ARCHITECTURE.md)
+- [Design Principles](./DESIGN-PRINCIPLES.md)
+- [Information Architecture](./INFORMATION-ARCHITECTURE.md)
 - [UX Patterns](./UX-PATTERNS.md)
-- [Screen-Templates](./SCREEN-TEMPLATES.md)
-- [Design-Tokens](../design/tokens.json)
-- [API-/UI-Verträge](./API-UI-CONTRACTS.md)
-- [Design-System-Umsetzung](./DESIGN-SYSTEM-DELIVERY.md)
+- [Screen Templates](./SCREEN-TEMPLATES.md)
+- [Design Tokens](../design/tokens.json)
+- [API/UI Contracts](./API-UI-CONTRACTS.md)
+- [Design System Delivery](./DESIGN-SYSTEM-DELIVERY.md)
