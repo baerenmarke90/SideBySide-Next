@@ -1,211 +1,247 @@
 # SideBySide UX Patterns
 
-**Status:** Verbindliche Produktgrundlage  
+**Status:** Binding product foundation  
 **Version:** 1.1  
-**Stand:** 24.08.2026
+**As of:** August 24, 2026
 
-Dieses Dokument legt die wiederkehrenden Interaktionsmuster für WebApp und Smartphone-App fest. Beide Oberflächen teilen dieselbe Informationsarchitektur, Semantik und Zustandslogik. Die konkrete Darstellung passt sich an Plattform, Fensterbreite und Eingabemethode an.
+This document defines recurring interaction patterns for the WebApp and
+smartphone app. Both surfaces share the same information architecture,
+semantics, and state logic. Concrete presentation adapts to platform, window
+width, and input method.
 
-## 1. Grundregeln
+## 1. Core rules
 
-1. **Gleiche Aufgabe, gleiche Begriffe.** Eine Funktion heißt auf allen Plattformen gleich.
-2. **Plattformgerecht statt pixelgleich.** Navigation, Dialoge und Gesten dürfen sich unterscheiden, solange Bedeutung und Ergebnis gleich bleiben.
-3. **Privacy ist sichtbar.** Private und geteilte Inhalte werden vor, während und nach einer Aktion eindeutig gekennzeichnet.
-4. **Der aktuelle Zustand ist erkennbar.** Laden, Speichern, Synchronisieren, Offline-Betrieb und Fehler bleiben nie unsichtbar.
-5. **Eine primäre Aktion pro Ansicht.** Weitere Aktionen sind visuell nachgeordnet.
-6. **Keine Sackgassen.** Jeder leere oder fehlerhafte Zustand bietet einen sinnvollen nächsten Schritt.
-7. **Progressive Offenlegung.** Häufige Aufgaben bleiben direkt erreichbar; seltene Optionen erscheinen kontextuell.
+1. **Same task, same terminology.** A feature uses the same product term on all
+   platforms.
+2. **Platform-appropriate, not pixel-identical.** Navigation, dialogs, and
+   gestures may differ as long as meaning and result remain equivalent.
+3. **Privacy is visible.** Private and shared content is clearly identified
+   before, during, and after an action.
+4. **Current state is observable.** Loading, saving, synchronization, offline
+   state, and errors are never hidden.
+5. **One primary action per view.** Additional actions are visually secondary.
+6. **No dead ends.** Every empty or error state provides a meaningful next step.
+7. **Progressive disclosure.** Frequent tasks remain directly accessible;
+   uncommon options appear contextually.
 
-## 2. App Shell und Navigation
+## 2. App Shell and navigation
 
-| Fensterklasse | Primärnavigation | Sekundärnavigation | Detailansicht |
+| Window class | Primary navigation | Secondary navigation | Detail view |
 |---|---|---|---|
-| Compact, bis 599 px | Bottom Navigation mit maximal 5 Zielen | Tabs oder lokale Liste | neue Seite |
-| Medium, 600–839 px | Navigation Rail | Tabs oder Liste | neue Seite oder zweites Pane |
-| Expanded, ab 840 px | persistente Sidebar/Rail | lokale Navigation im Inhaltsbereich | zweites oder drittes Pane |
+| Compact, up to 599 px | Bottom Navigation with at most 5 destinations | Tabs or local list | new page |
+| Medium, 600–839 px | Navigation Rail | Tabs or list | new page or second pane |
+| Expanded, from 840 px | persistent Sidebar/Rail | local navigation in content area | second or third pane |
 
-- Primärziele: **Heute, Story, Planen, Entdecken, Mehr**.
-- Das aktive Ziel ist durch Form, Farbe und Text erkennbar – nicht nur durch Farbe.
-- Badge-Zahlen werden nur für handlungsrelevante, aktuelle Hinweise genutzt.
-- Auf Web sind alle Hauptfunktionen per Tastatur erreichbar; Fokus bleibt sichtbar.
-- Zurück navigiert innerhalb des aktuellen Arbeitsflusses, nicht überraschend zum Start.
+- Primary destinations are the intentional de-DE product labels **Heute, Story,
+  Planen, Entdecken, Mehr**.
+- The active destination is identifiable through shape, color, and text state,
+  never through color alone.
+- Badge counts are used only for current, actionable information.
+- On Web, every primary function is keyboard-accessible and focus remains
+  visible.
+- Back navigation stays inside the current workflow rather than unexpectedly
+  returning to the start.
 
-## 3. Kanonische Interaktionsmuster
+## 3. Canonical interaction patterns
 
-| Aufgabe | Smartphone | WebApp |
+| Task | Smartphone | WebApp |
 |---|---|---|
-| Hauptnavigation | Bottom Navigation | Rail oder Sidebar |
-| Liste und Detail | getrennte Seiten | List-Detail-Layout ab Medium |
-| Kurze Eingabe | Bottom Sheet oder Dialog | Dialog oder Side Pane |
-| Langes Formular | eigene Seite | eigene Seite oder breites Side Pane |
-| Filter | Filter-Sheet | Popover oder persistente Filterleiste |
-| Kontextaktionen | Overflow-Menü; Gesten nur ergänzend | Overflow- oder Kontextmenü |
-| Bestätigung | Dialog bei hohem Risiko | Dialog bei hohem Risiko |
-| Rückmeldung | inline plus Snackbar bei Bedarf | inline plus Snackbar bei Bedarf |
+| Primary navigation | Bottom Navigation | Rail or Sidebar |
+| List and detail | separate pages | List-Detail layout from Medium upward |
+| Short input | Bottom Sheet or Dialog | Dialog or Side Pane |
+| Long form | dedicated page | dedicated page or wide Side Pane |
+| Filters | Filter Sheet | Popover or persistent filter bar |
+| Context actions | Overflow menu; gestures supplementary only | Overflow or context menu |
+| Confirmation | Dialog for high-risk actions | Dialog for high-risk actions |
+| Feedback | inline plus Snackbar when useful | inline plus Snackbar when useful |
 
-### 3.1 Liste–Detail
+### 3.1 List–Detail
 
-- Eine Zeile oder Karte öffnet genau ein Detailobjekt.
-- Auswahlzustand bleibt auf breiten Layouts sichtbar.
-- Filter, Sortierung und Scrollposition bleiben beim Zurücknavigieren erhalten.
-- Auf Compact ersetzt das Detail die Liste; auf Expanded bleibt die Liste sichtbar.
-- Direkte Links öffnen das Zielobjekt und markieren den passenden Navigationskontext.
+- One row or card opens exactly one detail object.
+- Selection state remains visible on wide layouts.
+- Filters, sorting, and scroll position are preserved when navigating back.
+- On Compact, detail replaces the list; on Expanded, the list remains visible.
+- Direct links open the target object and activate the appropriate navigation
+  context.
 
-### 3.2 Erstellen und Bearbeiten
+### 3.2 Create and edit
 
-- Kurze Formulare: maximal fünf einfache Felder in Sheet, Dialog oder Side Pane.
-- Lange, verzweigte oder medienreiche Formulare: eigene Seite.
-- Pflichtfelder werden in Textform markiert; Fehler stehen direkt am betroffenen Feld.
-- Änderungen werden nur automatisch gespeichert, wenn der Zustand eindeutig sichtbar und wiederherstellbar ist.
-- Bei ungespeicherten Änderungen fragt die App vor dem Verlassen nach.
-- Nach erfolgreichem Erstellen führt die App zum neuen Inhalt oder zurück zur aktualisierten Liste.
+- Short forms: at most five simple fields in a Sheet, Dialog, or Side Pane.
+- Long, branching, or media-heavy forms: dedicated page.
+- Required fields are marked textually; errors appear next to the affected
+  field.
+- Changes are autosaved only when the state is unambiguous, visible, and
+  recoverable.
+- If unsaved changes exist, the app asks before leaving.
+- After successful creation, the app navigates to the new content or back to
+  the refreshed list.
 
-### 3.3 Dialog, Bottom Sheet, Side Pane oder Seite
+### 3.3 Dialog, Bottom Sheet, Side Pane, or page
 
-| Muster | Verwenden für | Nicht verwenden für |
+| Pattern | Use for | Do not use for |
 |---|---|---|
-| Dialog | irreversible Entscheidung, kurze Bestätigung | mehrstufige Formulare |
-| Bottom Sheet | mobile Auswahl, kurze kontextuelle Aktion | kritische Langtexte |
-| Side Pane | Web-Details, Vorschau, kurze Bearbeitung | zentrale Vollbildaufgabe auf Compact |
-| eigene Seite | fokussierte, komplexe oder teilbare Aufgabe | einzelne Ja/Nein-Frage |
+| Dialog | irreversible decision, short confirmation | multi-step forms |
+| Bottom Sheet | mobile selection, short contextual action | critical long-form text |
+| Side Pane | Web detail, preview, short edit | central full-screen task on Compact |
+| dedicated page | focused, complex, or shareable task | single yes/no question |
 
-### 3.4 Suche, Filter und Sortierung
+### 3.4 Search, filters, and sorting
 
-- Suche startet erst nach sinnvoller Eingabe oder kurzer Verzögerung; laufende Anfragen werden ersetzt.
-- Aktive Filter sind als entfernbare Chips sichtbar.
-- „Zurücksetzen“ erscheint nur, wenn mindestens ein Filter aktiv ist.
-- Trefferzahl und leerer Suchzustand erklären das Ergebnis.
-- Sortierung verändert keine Daten und ist klar von Filtern getrennt.
-- Suchbegriffe, Filter und Sortierung bleiben während einer Sitzung erhalten.
+- Search starts only after meaningful input or a short delay; in-flight requests
+  are replaced.
+- Active filters are visible as removable chips.
+- The intentional de-DE label **„Zurücksetzen“** appears only when at least one
+  filter is active.
+- Result count and empty-search state explain the outcome.
+- Sorting changes no data and remains clearly distinct from filtering.
+- Search terms, filters, and sorting remain available throughout a session.
 
-## 4. Zustände jeder datenbasierten Ansicht
+## 4. States for every data-driven view
 
-Jede datenbasierte Komponente und jeder Screen unterstützt diese Zustände:
+Every data-driven component and screen supports these states:
 
-| Zustand | Darstellung | Primäre Reaktion |
+| State | Presentation | Primary response |
 |---|---|---|
-| Initial | stabile Grundstruktur | noch keine Aktion |
-| Loading | Skeleton in erwarteter Form | Inhalt abwarten |
-| Content | echte Inhalte | Kernaufgabe ausführen |
-| Empty | Ursache und Nutzen erklären | Inhalt anlegen oder entdecken |
-| Error | verständliche Ursache, soweit bekannt | erneut versuchen |
-| Offline | letzter autorisierter Read-Cache plus Stand | lesen; Schreiben klar blockieren |
-| Syncing | dezenter, persistenter Status | weiterarbeiten |
-| Conflict | Unterschiede und Folgen erklären | Version bewusst auswählen |
+| Initial | stable base structure | no action yet |
+| Loading | Skeleton matching expected content | wait for content |
+| Content | actual content | perform core task |
+| Empty | explain cause and value | create or discover content |
+| Error | understandable cause where known | retry |
+| Offline | last authorized read cache plus timestamp/age | read; clearly block writes |
+| Syncing | subtle persistent status | continue working |
+| Conflict | explain differences and consequences | consciously choose a version |
 
-- Ein Spinner allein ersetzt keine stabile Ladeansicht.
-- Vorhandene Inhalte bleiben bei Hintergrundaktualisierung sichtbar.
-- Kritische Fehler stehen inline; eine Snackbar allein reicht nicht.
-- Erfolgsrückmeldungen verschwinden automatisch, solange keine weitere Handlung nötig ist.
+- A spinner alone does not replace a stable loading state.
+- Existing content remains visible during background refresh.
+- Critical errors are inline; a Snackbar alone is insufficient.
+- Success feedback disappears automatically when no further action is needed.
 
-## 5. Speichern, Synchronisieren und Rückgängig
+## 5. Saving, synchronization, and undo
 
-- Sichere, reversible Änderungen dürfen optimistisch dargestellt werden.
-- Bei fehlgeschlagenem Speichern wird der lokale Entwurf erhalten.
-- Synchronisationsstatus lautet klar: **Wird gespeichert**, **Gespeichert** oder **Aktion nötig**.
-- Android unterstützt im MVP Offline-Lesen, aber kein Offline-Schreiben und keine lokale Outbox. Ein Schreibversuch endet mit **Noch nicht gespeichert**; ein sicherer Formularentwurf darf erhalten bleiben.
-- Löschungen sind nach Möglichkeit über „Rückgängig“ wiederherstellbar.
-- Konflikte werden niemals still überschrieben.
-- Zeitstempel dienen nur als Zusatz; der verständliche Status steht zuerst.
+- Safe reversible changes may be represented optimistically.
+- If saving fails, the local draft is preserved.
+- Intentional de-DE synchronization copy is **„Wird gespeichert“**,
+  **„Gespeichert“**, or **„Aktion nötig“**.
+- Android supports offline reading in the MVP, but no offline writes and no local
+  Outbox. A write attempt ends with **„Noch nicht gespeichert“**; a secure form
+  draft may be retained.
+- Deletions should be recoverable through de-DE **„Rückgängig“** where feasible.
+- Conflicts are never overwritten silently.
+- Timestamps are supplementary; understandable state comes first.
 
-## 6. Privacy und Teilen
+## 6. Privacy and sharing
 
-- Jedes Objekt besitzt eine fachliche Privacy-Klasse. Die UI bildet `OWNER_ONLY`
-  als „Nur für mich“ und `SPACE_SHARED` als „Geteilt“ ab.
-- Eine Privacy-Auswahl erscheint nur in Domains, die mehrere Klassen unterstützen;
-  Memory, Wish und Plan bleiben im aktuellen Core `SPACE_SHARED`.
-- Der Sichtbarkeitsstatus steht nahe Titel, Formularabschluss oder Hauptaktion.
-- Wo eine Auswahl fachlich erlaubt ist, ist die datensparsamere zulässige Klasse
-  die Voreinstellung, sofern die Produktspezifikation nichts anderes vorgibt.
-- Vor dem ersten Teilen werden Empfänger, Inhalt und Wirkung erklärt.
-- Ein Wechsel von privat zu geteilt ist eine bewusste Aktion und erhält eine klare Bestätigung im Ergebnis.
-- Ein Wechsel zurück zu privat erklärt, ob bereits synchronisierte Kopien oder Benachrichtigungen betroffen sind.
-- Sicherheits- und Verschlüsselungsaussagen werden nur angezeigt, wenn sie technisch belegt sind.
+- Every object has a domain privacy class. The UI maps `OWNER_ONLY` to the
+  intentional de-DE label **„Nur für mich“** and `SPACE_SHARED` to
+  **„Geteilt“**.
+- A privacy choice appears only in domains supporting multiple classes; Memory,
+  Wish, and Plan remain `SPACE_SHARED` in the current Core.
+- Visibility state appears near the title, form completion area, or primary
+  action.
+- Where selection is allowed, the most data-minimizing permitted class is the
+  default unless the product specification defines otherwise.
+- Before first sharing, the UI explains recipient, content, and effect.
+- Changing private content to shared is a deliberate action and receives clear
+  confirmation in the result.
+- Changing back to private explains whether already synchronized copies or
+  notifications are affected.
+- Security and encryption claims are shown only when technically substantiated.
 
-## 7. Berechtigungen
+## 7. Permissions
 
-- Systemberechtigungen werden **just in time** angefragt, unmittelbar nach einer verständlichen Nutzeraktion.
-- Vor der Systemabfrage erklärt die App Nutzen und Alternative.
-- Ablehnen blockiert nur die betroffene Funktion, nicht die gesamte App.
-- Einstellungen bieten einen nachvollziehbaren Weg, Berechtigungen später zu ändern.
-- Kamera, Fotos, Standort, Kontakte und Benachrichtigungen werden getrennt begründet.
+- System permissions are requested **just in time**, immediately after an
+  understandable user action.
+- Before the system prompt, the app explains value and alternatives.
+- Denial blocks only the affected feature, not the entire app.
+- Settings provide an understandable path to change permissions later.
+- Camera, photos, location, contacts, and notifications are justified
+  separately.
 
-## 8. Destruktive und sensible Aktionen
+## 8. Destructive and sensitive actions
 
-- Destruktive Aktionen sind textlich benannt und visuell eindeutig.
-- Eine Bestätigung ist erforderlich, wenn Daten nicht direkt wiederherstellbar sind oder andere Personen betroffen sind.
-- Die Bestätigung benennt konkretes Objekt und Folge, zum Beispiel „Erinnerung endgültig löschen“.
-- Swipe-Gesten sind nur Abkürzungen; dieselbe Aktion ist über ein sichtbares Menü verfügbar.
-- Abmelden, Beziehung trennen und Konto löschen sind getrennte Aktionen mit unterschiedlicher Risikostufe.
+- Destructive actions are named in text and visually distinct.
+- Confirmation is required when data is not directly recoverable or another
+  person is affected.
+- The confirmation names the concrete object and consequence; de-DE example:
+  **„Erinnerung endgültig löschen“**.
+- Swipe gestures are shortcuts only; the same action remains available through
+  a visible menu.
+- Sign out, disconnect relationship, and delete account are separate actions
+  with different risk levels.
 
-## 9. Medien-Upload
+## 9. Media upload
 
-Medien durchlaufen die Zustände `selected → preparing → uploading → processing → ready` oder `failed`.
+Media passes through `selected → preparing → uploading → processing → ready` or
+`failed`.
 
-- Vor dem Upload sind Vorschau, Dateityp und Entfernen möglich.
-- Fortschritt wird pro Medium angezeigt.
-- Ein Fehler betrifft nur das jeweilige Medium und bietet „Erneut versuchen“.
-- Abbruch und erneute Auswahl sind jederzeit vor dem finalen Speichern möglich.
-- Alt-Text oder eine Beschreibung ist für inhaltlich relevante Bilder verfügbar.
-- Metadaten und Standortinformationen werden nach dokumentierter Privacy-Regel behandelt.
+- Before upload, preview, file type, and removal are available.
+- Progress is shown per media item.
+- A failure affects only that item and offers the de-DE action
+  **„Erneut versuchen“**.
+- Cancellation and reselection remain possible before final save.
+- Alt text or a description is available for semantically relevant images.
+- Metadata and location information follow the documented privacy rule.
 
-## 10. Benachrichtigungen
+## 10. Notifications
 
-- Push-Vorschauen enthalten standardmäßig keine sensiblen Inhalte.
-- Nutzer:innen wählen Ereignistyp, Kanal und Vorschaugrad.
-- Jede Benachrichtigung führt zu einem konkreten Ziel.
-- Gruppierung verhindert eine Folge einzelner Hinweise für denselben Vorgang.
-- In-App-Hinweise ersetzen keine systemische Fehleranzeige.
+- Push previews contain no sensitive content by default.
+- Users choose event type, channel, and preview level.
+- Every notification leads to one concrete destination.
+- Grouping prevents a stream of separate notifications for the same activity.
+- In-app notices do not replace system-level error presentation.
 
-## 11. Bewegung und Feedback
+## 11. Motion and feedback
 
-- Animation erklärt Hierarchie, Ursache oder Ortswechsel.
-- Standarddauer: 120–280 ms; kein regulärer Übergang dauert länger als 320 ms.
-- `prefers-reduced-motion` und die Systemeinstellung für reduzierte Bewegung werden respektiert.
-- Kein Inhalt ist nur während einer Animation lesbar.
-- Haptisches Feedback ergänzt eine sichtbare Zustandsänderung, ersetzt sie aber nicht.
+- Animation explains hierarchy, causality, or movement between places.
+- Standard duration: 120–280 ms; no normal transition lasts longer than 320 ms.
+- `prefers-reduced-motion` and the platform reduced-motion setting are
+  respected.
+- No content is readable only during an animation.
+- Haptic feedback supplements a visible state change and never replaces it.
 
-## 12. Barrierefreiheit
+## 12. Accessibility
 
-- Touch-Ziele sind mindestens 48 × 48 dp in der App und 44 × 44 CSS-px im Web.
-- Text und wesentliche Symbole erfüllen mindestens WCAG 2.2 AA.
-- Fokusreihenfolge folgt der visuellen und semantischen Reihenfolge.
-- Web-Komponenten nutzen native HTML-Elemente, bevor ARIA-Rollen ergänzt werden.
-- Jeder Icon-Button besitzt einen zugänglichen Namen.
-- Informationen werden nie ausschließlich über Farbe, Position, Bewegung oder Haptik vermittelt.
-- Dynamische Statusmeldungen sind für Assistenztechnologien angekündigt, ohne den Fokus unnötig zu verschieben.
+- Touch targets are at least 48 × 48 dp in the app and 44 × 44 CSS px on Web.
+- Text and essential symbols meet at least WCAG 2.2 AA.
+- Focus order follows visual and semantic order.
+- Web components use native HTML elements before adding ARIA roles.
+- Every icon button has an accessible name.
+- Information is never conveyed through color, position, motion, or haptics
+  alone.
+- Dynamic status messages are announced to assistive technologies without
+  moving focus unnecessarily.
 
-## 13. Anti-Patterns
+## 13. Anti-patterns
 
-- Karten in Karten ohne echte Hierarchie.
-- Mehrere gleich starke Hauptaktionen.
-- Icon-only für seltene oder kritische Aktionen.
-- Löschen ausschließlich per Swipe.
-- Kritische Fehler nur als kurzlebige Snackbar.
-- Deaktivierte Buttons ohne Erklärung für fehlende Voraussetzungen.
-- Horizontales Scrollen als versteckte Hauptnavigation.
-- Unterschiedliche Begriffe für dieselbe Funktion auf Web und Mobile.
-- Privacy-Versprechen, die nicht durch Technik und Betrieb abgesichert sind.
-- Desktop-Layout, das auf dem Smartphone nur zusammengestaucht wird.
+- Cards nested inside cards without real hierarchy.
+- Multiple equally strong primary actions.
+- Icon-only treatment for uncommon or critical actions.
+- Delete available only through swipe.
+- Critical errors shown only as transient Snackbars.
+- Disabled buttons without explanation of missing prerequisites.
+- Horizontal scrolling used as hidden primary navigation.
+- Different terminology for the same feature on Web and Mobile.
+- Privacy claims not backed by technology and operations.
+- Desktop layout merely compressed onto a smartphone.
 
-## 14. Abnahmekriterien
+## 14. Acceptance criteria
 
-Ein neuer Flow ist erst bereit für Umsetzung, wenn:
+A new flow is ready for implementation only when:
 
-- Compact- und Expanded-Verhalten beschrieben sind,
-- Loading, Empty, Error, Offline und Success berücksichtigt sind,
-- Privacy- und Berechtigungsfolgen geklärt sind,
-- Tastatur, Fokus, Screenreader und große Schrift mitgedacht sind,
-- eine primäre Aktion und ein klarer Rückweg existieren,
-- destruktive Aktionen reversibel oder bewusst bestätigt sind,
-- Analyseereignisse keine sensiblen Inhaltsdaten übertragen.
+- Compact and Expanded behavior are described,
+- Loading, Empty, Error, Offline, and Success are covered,
+- privacy and permission consequences are resolved,
+- keyboard, focus, screen reader, and large-text behavior are considered,
+- one primary action and a clear way back exist,
+- destructive actions are reversible or consciously confirmed,
+- analytics events contain no sensitive content data.
 
-## Verwandte Dokumente
+## Related documents
 
-- [Design-Prinzipien](./DESIGN-PRINCIPLES.md)
-- [Informationsarchitektur](./INFORMATION-ARCHITECTURE.md)
+- [Design Principles](./DESIGN-PRINCIPLES.md)
+- [Information Architecture](./INFORMATION-ARCHITECTURE.md)
 - [Component Contracts](./COMPONENT-CONTRACTS.md)
-- [Screen-Templates](./SCREEN-TEMPLATES.md)
-- [Design-Tokens](../design/tokens.json)
+- [Screen Templates](./SCREEN-TEMPLATES.md)
+- [Design Tokens](../design/tokens.json)
 - [Critical User Flows](./USER-FLOWS.md)
-- [API-/UI-Verträge](./API-UI-CONTRACTS.md)
+- [API/UI Contracts](./API-UI-CONTRACTS.md)
