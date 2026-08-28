@@ -77,9 +77,9 @@ jobs:
               text,
           )
           if count == 0:
-              raise SystemExit("Keine SHA-256-Eintraege zum Negativtest gefunden.")
+              raise SystemExit("No SHA-256 entries found for the negative test.")
           path.write_text(tampered, encoding="utf-8")
-          print(f"Negativtest manipuliert {count} SHA-256-Eintraege temporaer.")
+          print(f"Negative test temporarily changed {count} SHA-256 entries.")
           PY
 
           set +e
@@ -93,12 +93,12 @@ jobs:
 
           if [[ "$status" -eq 0 ]]; then
             cat "$log"
-            echo "Dependency Verification hat manipulierte Checksums unerwartet akzeptiert."
+            echo "Dependency Verification unexpectedly accepted modified checksums."
             exit 1
           fi
           if ! grep -q "Dependency verification failed" "$log"; then
             cat "$log"
-            echo "Gradle scheiterte nicht eindeutig an Dependency Verification."
+            echo "Gradle did not fail clearly on Dependency Verification."
             exit 1
           fi
-          echo "Manipulierte Dependency-Checksums wurden erwartungsgemaess abgewiesen."
+          echo "Modified dependency checksums were rejected as expected."

@@ -1,13 +1,12 @@
--- Die Testdatenbank fuer die Integrationstests, angelegt beim ersten Start
--- des Containers. Ohne sie muesste jeder Entwickler denselben Handgriff
--- wiederholen, und wer ihn vergisst, bekommt einen gruenen Lauf, in dem
--- alle Integrationstests uebersprungen wurden.
+-- Create the integration-test database on the container's first startup.
+-- Without it, every developer would need to repeat the same manual step, and
+-- forgetting it could produce a green run with every integration test skipped.
 --
--- Bewusst getrennt von "sidebyside": die Testvorrichtung legt das Schema
--- selbst an und raeumt es am Ende wieder ab. Gegen die Entwicklungs-
--- datenbank waere das kein Testlauf, sondern ein Datenverlust.
+-- Keep it separate from "sidebyside": the test harness creates the schema and
+-- removes it at the end. Running against the development database would cause
+-- data loss instead of providing a test run.
 --
--- Dieses Verzeichnis wird vom Postgres-Image nur ausgefuehrt, wenn das
--- Datenverzeichnis noch leer ist. Bei einem bereits bestehenden Volume
--- legt der in der README dokumentierte createdb-Aufruf die Datenbank nach.
+-- The PostgreSQL image executes this directory only while the data directory is
+-- empty. For an existing volume, use the createdb command documented in the
+-- README to add the database.
 CREATE DATABASE sidebyside_test OWNER sidebyside;

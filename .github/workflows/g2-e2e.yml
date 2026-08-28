@@ -56,15 +56,15 @@ jobs:
             -d "$payload" \
             "$G2_E2E_API_BASE/api/v1/auth/register")
           account_id=$(jq -r '.account.id // empty' <<< "$response")
-          test -n "$account_id" || { echo "Bootstrap lieferte keine account.id."; exit 1; }
+          test -n "$account_id" || { echo "Bootstrap returned no account.id."; exit 1; }
 
           space_id=$(docker compose exec -T postgres \
             psql -U sidebyside -d sidebyside -Atc \
             "select space_id from memberships where account_id = '$account_id' and status = 'ACTIVE' limit 1;")
-          test -n "$space_id" || { echo "Kein aktiver Space fuer den synthetischen Account gefunden."; exit 1; }
+          test -n "$space_id" || { echo "No active Space found for the synthetic account."; exit 1; }
 
           echo "G2_E2E_SPACE_ID=$space_id" >> "$GITHUB_ENV"
-          echo "Synthetischer G2-Space ist bereit."
+          echo "Synthetic G2 Space is ready."
 
       - name: Web uses production S8/OpenAPI path against the real stack
         run: |
@@ -89,14 +89,14 @@ jobs:
 
           report = Path("web/g2-web-e2e.log")
           if not report.is_file():
-              raise SystemExit("Web-E2E-Konsolenausgabe fehlt.")
+              raise SystemExit("Web E2E console output is missing.")
           text = report.read_text(encoding="utf-8", errors="replace")
           plain = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text)
           if not re.search(r"Tests\s+1 passed", plain):
-              raise SystemExit("Web-E2E-Ausgabe belegt keinen erfolgreich ausgefuehrten Test.")
+              raise SystemExit("Web E2E output does not prove a successful test run.")
           if re.search(r"Tests\s+.*skipped", plain, re.IGNORECASE):
-              raise SystemExit("Web-E2E wurde uebersprungen.")
-          print("Web-E2E: 1 realer Test erfolgreich und nicht uebersprungen.")
+              raise SystemExit("Web E2E was skipped.")
+          print("Web E2E: 1 real test passed and was not skipped.")
           PY
 
       - name: Set up JDK 17
@@ -138,7 +138,7 @@ jobs:
               "android/app/build/test-results/testDebugUnitTest/TEST-*ReferenceFlowE2eTest.xml"
           )
           if len(reports) != 1:
-              raise SystemExit(f"Erwartet genau einen Android-E2E-Report, gefunden: {reports}")
+              raise SystemExit(f"Expected exactly one Android E2E report, found: {reports}")
           root = ET.parse(reports[0]).getroot()
           cases = root.findall(".//testcase")
           skipped = sum(case.find("skipped") is not None for case in cases)
@@ -146,10 +146,10 @@ jobs:
               case.find("failure") is not None or case.find("error") is not None for case in cases
           )
           if not cases:
-              raise SystemExit("Kein Android-E2E-Test gelaufen.")
+              raise SystemExit("No Android E2E test ran.")
           if skipped or failures:
               raise SystemExit(f"Android-E2E: {skipped} skipped, {failures} failed.")
-          print(f"Android-E2E: {len(cases)} realer Test erfolgreich.")
+          print(f"Android E2E: {len(cases)} real test(s) passed.")
           PY
 
       - name: Logs on failure

@@ -1,25 +1,24 @@
-# Kotlin-Datenklassen fuer den Android-Client.
+# Kotlin data classes for the Android client.
 #
-# Bewusst nur Modelle. Ein Service-Layer wuerde Retrofit, Ktor oder OkHttp
-# als Runtime-Abhaengigkeit festlegen - fuer ein Android-Projekt, das es
-# noch nicht gibt. Diese Wahl trifft, wer den Client baut.
+# Models only by design. A service layer would select Retrofit, Ktor, or OkHttp
+# as a runtime dependency. That decision belongs to the Android client.
 #
-# Das eigentliche Driftrisiko sind ohnehin die DTOs: ein umbenanntes Feld
-# faellt ohne generierte Modelle erst zur Laufzeit auf. Genau das ist hier
-# abgedeckt; Service-Interfaces koennen spaeter additiv dazukommen.
+# DTOs are the actual drift risk: without generated models, a renamed field is
+# detected only at runtime. This configuration covers that risk; service
+# interfaces can be added later without replacing the models.
 serializationLibrary: kotlinx_serialization
 library: jvm-retrofit2
 enumPropertyNaming: original
 sourceFolder: .
 
-# Der Generator-Platzhalter `org.openapitools.client` wuerde als fremder
-# Namensraum im Android-Projekt landen. `sidebyside.api` spiegelt die
-# Benennung des Backends (`sidebyside`) und beansprucht keine Domain - die
-# Application ID des Android-Projekts ist eine eigene, spaetere Entscheidung.
+# The generator placeholder `org.openapitools.client` would introduce an
+# unrelated namespace into the Android project. `sidebyside.api` mirrors the
+# backend package name (`sidebyside`) without claiming an application domain;
+# the Android application ID is a separate decision.
 packageName: sidebyside.api
 modelPackage: sidebyside.api.models
 
-# Erzeugt fuer oneOf/anyOf mit Discriminator echte Wrapper-/Subtyp-Modelle.
-# Diese Generator-Option wird fuer Kotlin mit jvm-retrofit2 und
-# kotlinx_serialization unterstuetzt.
+# Generate real wrapper/subtype models for discriminated oneOf/anyOf schemas.
+# Kotlin supports this generator option with jvm-retrofit2 and
+# kotlinx_serialization.
 generateOneOfAnyOfWrappers: true

@@ -37,7 +37,7 @@ class OkHttpReferenceApi(
 
     init {
         require(baseUrl.startsWith("https://") || baseUrl.startsWith("http://")) {
-            "SBS_API_BASE_URL muss eine vollständige HTTP(S)-URL sein."
+            "SBS_API_BASE_URL must be a complete HTTP(S) URL."
         }
     }
 
@@ -45,7 +45,7 @@ class OkHttpReferenceApi(
         val payload = SignInRequest(
             email = email,
             password = password,
-            deviceName = "SideBySide Android M2 Referenzflow",
+            deviceName = "SideBySide Android M2 reference flow",
             platform = "android",
         )
         return executeJson(
@@ -185,7 +185,7 @@ class OkHttpReferenceApi(
         client.newCall(request).execute().use { response ->
             assertSuccessful(response)
             val body = response.body.string()
-            if (body.isBlank()) throw ReferenceApiException(null, "Leere API-Antwort.")
+            if (body.isBlank()) throw ReferenceApiException(null, "Empty API response.")
             SideBySideJson.decodeFromString(serializer, body)
         }
     }
@@ -202,7 +202,7 @@ class OkHttpReferenceApi(
         }.getOrNull()
         throw ReferenceApiException(
             problem?.code,
-            problem?.detail ?: "API-Anfrage fehlgeschlagen (HTTP ${response.code}).",
+            problem?.detail ?: "API request failed (HTTP ${response.code}).",
         )
     }
 }

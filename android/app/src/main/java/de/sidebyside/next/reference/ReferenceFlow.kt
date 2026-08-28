@@ -19,8 +19,8 @@ suspend fun runMemoryMediaStoryFlow(
     happenedOn: LocalDate?,
     image: SelectedImage,
 ): ReferenceFlowResult {
-    require(image.mimeType.startsWith("image/")) { "S8 akzeptiert ausschließlich Bilder." }
-    require(image.bytes.isNotEmpty()) { "Das ausgewählte Bild ist leer." }
+    require(image.mimeType.startsWith("image/")) { "S8 accepts images only." }
+    require(image.bytes.isNotEmpty()) { "The selected image is empty." }
 
     val memory = api.createMemory(
         spaceId,
@@ -84,10 +84,10 @@ private suspend fun waitUntilReady(
         when (attachment.status) {
             "READY" -> return
             "FAILED", "DELETE_FAILED", "DELETING" -> {
-                throw IllegalStateException("Medienverarbeitung beendet mit Status ${attachment.status}.")
+                throw IllegalStateException("Media processing ended with status ${attachment.status}.")
             }
         }
         delay(500)
     }
-    throw IllegalStateException("Medienverarbeitung hat das READY-Fenster nicht rechtzeitig erreicht.")
+    throw IllegalStateException("Media processing did not reach READY before the deadline.")
 }

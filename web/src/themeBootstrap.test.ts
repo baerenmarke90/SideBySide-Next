@@ -25,7 +25,8 @@ function readBootstrap(): string {
   const processRef = (
     globalThis as typeof globalThis & { process?: NodeProcess }
   ).process;
-  if (!processRef) throw new Error('Node process API fehlt im Testlauf.');
+  if (!processRef)
+    throw new Error('Node process API is unavailable in the test run.');
   return processRef
     .getBuiltinModule('fs')
     .readFileSync(

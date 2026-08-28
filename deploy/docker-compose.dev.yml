@@ -1,8 +1,8 @@
-# Entwicklung: nur die Datenbank im Container, die Anwendung laeuft lokal.
+# Development: run only the database in a container and the application locally.
 #
-# Kein SQLite-Rueckfall. Das Datenmodell nutzt PostgreSQL-Eigenschaften -
-# JSONB, Teilindizes, FOR UPDATE SKIP LOCKED -, und ein zweiter Dialekt im
-# Test prueft nicht, was in Produktion laeuft.
+# Do not fall back to SQLite. The data model uses PostgreSQL features such as
+# JSONB, partial indexes, and FOR UPDATE SKIP LOCKED. Testing a second dialect
+# would not verify the production behavior.
 
 services:
   postgres:
@@ -15,9 +15,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres_dev:/var/lib/postgresql/data
-      # Legt beim ersten Start zusaetzlich die Testdatenbank an. Die
-      # Integrationstests laufen bewusst nicht gegen die Entwicklungs-
-      # datenbank, weil sie ihr Schema am Ende wieder abraeumen.
+      # Create the test database on first startup. Integration tests deliberately
+      # do not use the development database because they remove their schema at
+      # the end of a run.
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sidebyside -d sidebyside"]

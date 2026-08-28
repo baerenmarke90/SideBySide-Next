@@ -23,6 +23,15 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             path.write_text("## Summary\n", encoding="utf-8")
             self.assertEqual(check_file(path), [])
 
+    def test_localized_product_fixture_is_allowed_without_excluding_test_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "localized.test.ts"
+            path.write_text(
+                "expect(screen).toContain('Eure Story beginnt hier.');\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(check_file(path), [])
+
     def test_common_english_article_is_not_a_german_marker(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.md"
@@ -36,8 +45,7 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.py"
             path.write_text(
-                "def normalize_address(address: str) -> str:\n"
-                "    return address.strip()\n",
+                "def normalize_address(address: str) -> str:\n    return address.strip()\n",
                 encoding="utf-8",
             )
             self.assertEqual(check_file(path), [])
@@ -69,9 +77,7 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.py"
             path.write_text(
-                "# Die Pruefung bleibt technisch.\n"
-                "def test_fehler_wird_abgewiesen():\n"
-                "    pass\n",
+                "# Die Pruefung bleibt technisch.\ndef test_fehler_wird_abgewiesen():\n    pass\n",
                 encoding="utf-8",
             )
             findings = check_file(path)
@@ -109,8 +115,7 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.py"
             path.write_text(
-                'subject = "Dein Anmeldelink fuer SideBySide"\n'
-                'body = "Nur fuer mich"\n',
+                'subject = "Dein Anmeldelink fuer SideBySide"\nbody = "Nur fuer mich"\n',
                 encoding="utf-8",
             )
             self.assertEqual(check_file(path), [])

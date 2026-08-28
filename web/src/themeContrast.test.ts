@@ -12,7 +12,8 @@ function readSource(relativePath: string): string {
   const processRef = (
     globalThis as typeof globalThis & { process?: NodeProcess }
   ).process;
-  if (!processRef) throw new Error('Node process API fehlt im Testlauf.');
+  if (!processRef)
+    throw new Error('Node process API is unavailable in the test run.');
   return processRef
     .getBuiltinModule('fs')
     .readFileSync(new URL(relativePath, import.meta.url), 'utf8');
@@ -51,7 +52,7 @@ function cssBlock(css: string, selector: string): string {
   const match = css.match(
     new RegExp(`${escapeRegExp(selector)}\\s*\\{([^}]*)\\}`),
   );
-  if (!match) throw new Error(`CSS-Block fehlt: ${selector}`);
+  if (!match) throw new Error(`CSS block is missing: ${selector}`);
   return match[1];
 }
 
@@ -59,14 +60,14 @@ function darkThemeBlock(css: string): string {
   const match = css.match(
     /:root\[data-theme=(?:"dark"|'dark')\]\s*\{([^}]*)\}/,
   );
-  if (!match) throw new Error('CSS-Block fehlt: :root[data-theme=dark]');
+  if (!match) throw new Error('CSS block is missing: :root[data-theme=dark]');
   return match[1];
 }
 
 function cssVariable(block: string, name: string): string {
   const match = block.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6,8});`));
   if (!match)
-    throw new Error(`CSS-Variable fehlt oder ist keine Hex-Farbe: --${name}`);
+    throw new Error(`CSS variable is missing or is not a hex color: --${name}`);
   return match[1];
 }
 

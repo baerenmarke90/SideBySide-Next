@@ -15,14 +15,14 @@ sbs_assert_accepts() {
     sbs_expected=$2
     sbs_actual=$(sbs_run_validator "$sbs_input")
     if [ "$sbs_actual" != "$sbs_expected" ]; then
-        echo "CSP-Origin wurde falsch normalisiert." >&2
+        echo "CSP origin was normalized incorrectly." >&2
         exit 1
     fi
 }
 
 sbs_assert_rejects() {
     if sbs_run_validator "$1" >/dev/null 2>&1; then
-        echo "Unsichere CSP-Quelle wurde akzeptiert." >&2
+        echo "Unsafe CSP source was accepted." >&2
         exit 1
     fi
 }
@@ -44,4 +44,4 @@ sbs_assert_rejects 'https://example.test:65536'
 sbs_assert_rejects "'unsafe-inline'"
 sbs_assert_rejects "https://example.test; add_header X-Injected true"
 
-echo "CSP-Originvalidierung: erfolgreich"
+echo "CSP origin validation: successful"
