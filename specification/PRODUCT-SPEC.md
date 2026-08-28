@@ -134,7 +134,7 @@ Android: Offline Read Cache yes, offline writes no. Without connectivity, the cl
 | M3 | Wishes, Plans, Places, Relations, Chapters, Collections, Private Area |
 | M4 | Reminders, Activity, Notifications, "Ich denke an dich", Dashboard, Search, Rules |
 | M5 | Export, Import, Web client, Android client, Read Cache, parity |
-| M6 | Questions, new question pool, yearly and monthly recaps, Check-in |
+| M6 | "Unsere Fragen", new question pool, yearly and monthly recaps, Check-in |
 | M7 | Integrations: Discovery, Shopping, Recipes, Entertainment, external media, location history, Maps |
 | M8 | opt-in location context, Geofencing, contextual suggestions, Presence |
 | M9 | Self-Hosted Compose, Backup, Cloud deployment, Entitlements, Billing adapter, hardening, Release |
@@ -142,7 +142,7 @@ Android: Offline Read Cache yes, offline writes no. Without connectivity, the cl
 
 ## 10. Not in the first MVP
 
-Real E2EE, offline write sync, AI, public share links, movie recommendations, Event Discovery, recipe integration, Shopping automation, external media and location integrations, Maps integration, Geofencing, partner removal, Daily Check-in, Questions, Year in Review.
+Real E2EE, offline write sync, AI, public share links, movie recommendations, Event Discovery, recipe integration, Shopping automation, external media and location integrations, Maps integration, Geofencing, partner removal, Daily Check-in, "Unsere Fragen", Year in Review.
 
 The architecture must support these extensions; the Core is built cleanly and securely first.
 
