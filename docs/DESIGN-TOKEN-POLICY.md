@@ -60,8 +60,8 @@ This policy does not require creating tokens for every possible number or isolat
 
 ## Boundaries
 
-- User-facing text remains in i18n resources.
-- Existing token structures should be reused before creating new abstractions.
+- User-facing text remains in i18n resources and is unrelated to design-token policy.
+- The existing CSS custom-property structure in `web/src/styles.css` is the current Web implementation basis and should be reused before creating new abstractions.
 - Full replacement of existing literals is not required by this policy; future changes should follow this rule.
 
 ## Reference
