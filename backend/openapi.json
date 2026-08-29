@@ -1076,6 +1076,7 @@
         "additionalProperties": false,
         "properties": {
           "body": {
+            "default": "",
             "title": "Body",
             "type": "string"
           },
@@ -1097,8 +1098,7 @@
           }
         },
         "required": [
-          "title",
-          "body"
+          "title"
         ],
         "title": "MemoryCreate",
         "type": "object"
