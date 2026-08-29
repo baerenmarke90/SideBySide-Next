@@ -9,6 +9,7 @@ import { initializeTheme } from './theme';
 import './styles.css';
 import './story-media.css';
 import './theme.css';
+import './attachment-drafts.css';
 
 initializeTheme();
 
