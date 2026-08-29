@@ -7,6 +7,7 @@ import { ThemeControl } from './components/ThemeControl';
 import './i18n';
 import { initializeTheme } from './theme';
 import './styles.css';
+import './attachment-draft.css';
 import './story-media.css';
 import './theme.css';
 
