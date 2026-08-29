@@ -24,7 +24,12 @@ from sidebyside.identity.models import Account, DeviceSession
 from sidebyside.relationship.models import Membership
 from sidebyside.relationship.service import SpaceErrorCode, require_membership
 
-DbSession = Annotated[Session, Depends(get_session)]
+# The unit-of-work exit commits the request transaction. FastAPI's default
+# scope for yield dependencies is "request", which runs that exit after the
+# response has already been sent. Function scope closes the dependency after
+# the route returns but before response serialization is exposed to the client,
+# so a successful response cannot race ahead of its commit.
+DbSession = Annotated[Session, Depends(get_session, scope="function")]
 
 
 def _bearer_token(request: Request) -> str:
