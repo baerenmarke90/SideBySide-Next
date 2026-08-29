@@ -466,9 +466,7 @@ class TestProductionTransactionBoundary:
             assert state is not None
             assert state.completed_at is not None
 
-    def test_failed_attempts_persist_after_rejected_requests(
-        self, production_client
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_failed_attempts_persist_after_rejected_requests(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         email = "anna@example.org"
         assert (
