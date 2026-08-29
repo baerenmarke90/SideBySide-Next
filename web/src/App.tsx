@@ -16,12 +16,13 @@ import {
 import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';
 import type { TokenView } from './api/generated/models/TokenView';
 import { loadReferenceClientConfig } from './client/config';
+import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
 import {
   createReferenceApis,
   loadAuthorizedImage,
-  runMemoryMediaStoryFlow,
   signIn,
 } from './client/referenceFlow';
+import { useAttachmentDrafts } from './client/useAttachmentDrafts';
 import { StoryList } from './components/StoryList';
 import { useTranslation } from './i18n';
 
@@ -235,11 +236,16 @@ function MemoryCreatePage({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [file, setFile] = useState<File | null>(null);
   const apis = useMemo(
     () => createReferenceApis(apiBaseUrl, accessToken),
     [apiBaseUrl, accessToken],
   );
+  const attachments = useAttachmentDrafts({
+    apis,
+    apiBaseUrl,
+    accessToken,
+    spaceId,
+  });
 
   const mutation = useMutation({
     mutationFn: ({
@@ -251,18 +257,14 @@ function MemoryCreatePage({
       body: string;
       happenedOn?: Date;
     }) =>
-      runMemoryMediaStoryFlow(
+      createMemoryWithReadyAttachments(
         apis,
-        apiBaseUrl,
-        accessToken,
         spaceId,
         { title, body, happenedOn },
-        file ?? undefined,
+        attachments.readyIds,
       ),
-    onSuccess: async (result) => {
-      if (result.imageUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(result.imageUrl);
-      }
+    onSuccess: async () => {
+      attachments.clear();
       await onSaved();
       navigate('/story', { replace: true, state: { saved: true } });
     },
@@ -270,6 +272,7 @@ function MemoryCreatePage({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (attachments.hasPending) return;
     const data = new FormData(event.currentTarget);
     const happenedOnValue = String(data.get('happenedOn') || '');
     mutation.mutate({
@@ -334,9 +337,11 @@ function MemoryCreatePage({
               name="image"
               type="file"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-              onChange={(event) =>
-                setFile(event.currentTarget.files?.[0] ?? null)
-              }
+              multiple
+              onChange={(event) => {
+                attachments.addFiles(event.currentTarget.files);
+                event.currentTarget.value = '';
+              }}
             />
             <label className="file-picker" htmlFor="image">
               <span className="file-picker-icon" aria-hidden="true">
@@ -344,11 +349,89 @@ function MemoryCreatePage({
               </span>
               <span>
                 <strong>
-                  {file ? t('memory.photoSelected') : t('memory.photoSelect')}
+                  {attachments.items.length
+                    ? t('memory.photoAddMore')
+                    : t('memory.photoSelect')}
                 </strong>
-                <small>{file ? file.name : t('memory.photoFormats')}</small>
+                <small>{t('memory.photoFormats')}</small>
               </span>
             </label>
+
+            {attachments.items.length > 0 && (
+              <ul
+                className="attachment-draft-list"
+                aria-label={t('memory.photoDraftsAria')}
+              >
+                {attachments.items.map((attachment) => {
+                  const statusText =
+                    attachment.status === 'uploading'
+                      ? t('memory.photoUploading')
+                      : attachment.status === 'validating'
+                        ? t('memory.photoValidating')
+                        : attachment.status === 'ready'
+                          ? t('memory.photoReady')
+                          : t('memory.photoFailed');
+
+                  return (
+                    <li className="attachment-draft-item" key={attachment.id}>
+                      <div className="attachment-preview-wrap">
+                        <img
+                          className="attachment-preview"
+                          src={attachment.previewUrl}
+                          alt={t('memory.photoPreviewAlt', {
+                            name: attachment.file.name,
+                          })}
+                        />
+                        <span className="attachment-preview-label">
+                          {t('memory.photoLocalPreview')}
+                        </span>
+                      </div>
+                      <div className="attachment-draft-meta">
+                        <strong>{attachment.file.name}</strong>
+                        <span
+                          className={`attachment-status attachment-status-${attachment.status}`}
+                          role={attachment.status === 'failed' ? 'alert' : 'status'}
+                          aria-live="polite"
+                        >
+                          {statusText}
+                        </span>
+                        {attachment.status === 'failed' && (
+                          <>
+                            <small className="attachment-draft-error">
+                              {attachment.error}
+                            </small>
+                            <small>{t('memory.photoFailedNotSaved')}</small>
+                          </>
+                        )}
+                      </div>
+                      <div className="attachment-draft-actions">
+                        {attachment.status === 'failed' && (
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => attachments.retry(attachment)}
+                          >
+                            {t('common.retry')}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="tertiary"
+                          onClick={() => attachments.remove(attachment.id)}
+                        >
+                          {t('memory.photoRemove')}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {attachments.hasPending && (
+              <p className="field-help" role="status" aria-live="polite">
+                {t('memory.photoPendingSave')}
+              </p>
+            )}
           </div>
 
           <div
@@ -369,7 +452,10 @@ function MemoryCreatePage({
             <Link className="button-link secondary-link" to="/story">
               {t('common.cancel')}
             </Link>
-            <button type="submit" disabled={mutation.isPending}>
+            <button
+              type="submit"
+              disabled={mutation.isPending || attachments.hasPending}
+            >
               {mutation.isPending ? t('memory.saving') : t('memory.save')}
             </button>
           </div>
