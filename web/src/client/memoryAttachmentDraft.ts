@@ -51,8 +51,7 @@ export async function uploadMemoryDraftAttachment(
 ): Promise<ReadyDraftAttachment> {
   if (!file.type.startsWith('image/'))
     throw new ReferenceFlowError(i18n.t('flow.imageOnly'));
-  if (file.size === 0)
-    throw new ReferenceFlowError(i18n.t('flow.imageEmpty'));
+  if (file.size === 0) throw new ReferenceFlowError(i18n.t('flow.imageEmpty'));
 
   try {
     onPhase?.('uploading');

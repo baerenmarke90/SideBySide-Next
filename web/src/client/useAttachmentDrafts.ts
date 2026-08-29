@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-} from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import {
   attachmentDraftReducer,
   hasPendingAttachments,
@@ -25,7 +19,9 @@ interface AttachmentDraftOptions {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message ? error.message : String(error);
+  return error instanceof Error && error.message
+    ? error.message
+    : String(error);
 }
 
 export function useAttachmentDrafts({

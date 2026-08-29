@@ -390,7 +390,9 @@ function MemoryCreatePage({
                         <strong>{attachment.file.name}</strong>
                         <span
                           className={`attachment-status attachment-status-${attachment.status}`}
-                          role={attachment.status === 'failed' ? 'alert' : 'status'}
+                          role={
+                            attachment.status === 'failed' ? 'alert' : 'status'
+                          }
                           aria-live="polite"
                         >
                           {statusText}

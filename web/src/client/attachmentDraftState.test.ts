@@ -16,7 +16,10 @@ function draft(id: string): AttachmentDraft {
 
 describe('attachmentDraftReducer', () => {
   it('ignores a late READY result after the draft was removed', () => {
-    let state = attachmentDraftReducer([], { type: 'add', draft: draft('one') });
+    let state = attachmentDraftReducer([], {
+      type: 'add',
+      draft: draft('one'),
+    });
     state = attachmentDraftReducer(state, {
       type: 'start',
       id: 'one',
@@ -34,7 +37,10 @@ describe('attachmentDraftReducer', () => {
   });
 
   it('ignores a stale retry result and keeps the latest attempt authoritative', () => {
-    let state = attachmentDraftReducer([], { type: 'add', draft: draft('one') });
+    let state = attachmentDraftReducer([], {
+      type: 'add',
+      draft: draft('one'),
+    });
     state = attachmentDraftReducer(state, {
       type: 'start',
       id: 'one',
@@ -102,9 +108,6 @@ describe('attachmentDraftReducer', () => {
       attachmentId: 'attachment-3',
     });
 
-    expect(readyAttachmentIds(state)).toEqual([
-      'attachment-1',
-      'attachment-3',
-    ]);
+    expect(readyAttachmentIds(state)).toEqual(['attachment-1', 'attachment-3']);
   });
 });
