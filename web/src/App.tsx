@@ -246,6 +246,10 @@ interface DraftAttachment {
   error?: string;
 }
 
+function revokeDraftPreview({ previewUrl }: DraftAttachment) {
+  URL.revokeObjectURL(previewUrl);
+}
+
 function MemoryCreatePage({
   accessToken,
   apiBaseUrl,
@@ -275,9 +279,7 @@ function MemoryCreatePage({
   useEffect(
     () => () => {
       activeAttachmentIds.current.clear();
-      attachmentsRef.current.forEach(({ previewUrl }) =>
-        URL.revokeObjectURL(previewUrl),
-      );
+      attachmentsRef.current.forEach(revokeDraftPreview);
     },
     [],
   );
@@ -370,9 +372,7 @@ function MemoryCreatePage({
 
   function clearDraftAttachments() {
     activeAttachmentIds.current.clear();
-    attachmentsRef.current.forEach(({ previewUrl }) =>
-      URL.revokeObjectURL(previewUrl),
-    );
+    attachmentsRef.current.forEach(revokeDraftPreview);
     attachmentsRef.current = [];
     setAttachments([]);
   }
