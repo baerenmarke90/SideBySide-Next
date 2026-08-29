@@ -560,9 +560,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
     wish = client.post(f"{base_path}/wishes", json=WISH, headers=headers).json()
     place = client.post(f"{base_path}/places", json=PLACE, headers=headers).json()
     plan = client.post(f"{base_path}/plans", json=PLAN, headers=headers).json()
-    attachment = client.post(
-        f"{base_path}/attachments", json=ATTACHMENT, headers=headers
-    ).json()
+    attachment = client.post(f"{base_path}/attachments", json=ATTACHMENT, headers=headers).json()
 
     return {
         "client": client,
