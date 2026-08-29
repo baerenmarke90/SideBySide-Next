@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from engineering_language_audit import check_file
+from engineering_language_audit import check_file, documentation_files
 
 
 class EngineeringLanguageAuditTest(unittest.TestCase):
@@ -72,6 +72,20 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             path = Path(directory) / "example.py"
             path.write_text('sample = "Aktueller `main`"\n', encoding="utf-8")
             self.assertEqual(check_file(path), [])
+
+    def test_stable_markdown_link_target_is_not_treated_as_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.md"
+            path.write_text(
+                "[English label](docs/example.md#status-und-entscheidung)\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(check_file(path), [])
+
+    def test_frozen_review_snapshots_are_outside_active_documentation_scope(self) -> None:
+        self.assertFalse(
+            any(path.parts[:2] == ("docs", "reviews") for path in documentation_files())
+        )
 
     def test_python_comment_and_identifier_are_audited(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

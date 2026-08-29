@@ -4,9 +4,10 @@
 This is deliberately not a generic language detector. For Python in the #214
 backend scope it checks engineering surfaces only: identifiers, comments,
 docstrings, assertions, and developer/runtime diagnostics. For the migrated
-#215 Web, Android, CI, deployment, and developer-tooling scope it checks the
-complete handwritten text while removing narrow, explicit localized-product
-fixtures. Generated, vendored, and localization-owned paths remain excluded.
+#215 Web, Android, CI, deployment, and developer-tooling scope and the #216
+# active-documentation scope it checks the complete handwritten text while
+# removing narrow, explicit localized-product fixtures and stable link targets.
+# Generated, vendored, localization-owned, and frozen review paths remain excluded.
 """
 
 from __future__ import annotations
@@ -97,6 +98,14 @@ EXCLUDED_PLATFORM_PREFIXES = (
     Path("web/src/i18n/locales"),
 )
 
+DOCUMENTATION_ROOTS = (
+    Path("docs"),
+    Path("specification"),
+    Path("design"),
+)
+DOCUMENTATION_SUFFIXES = {".json", ".md", ".svg"}
+EXCLUDED_DOCUMENTATION_PREFIXES = (Path("docs/reviews"),)
+
 # Common German grammar is safe to use for comments/docstrings because those
 # are engineering prose. The additional stems catch transliterated legacy
 # identifiers that contain compounds rather than standalone words. Avoid
@@ -165,6 +174,20 @@ ALLOWED_LOCALIZED_TEXTS = (
     "Noch keine Einträge in eurer Story.",
 )
 
+# These values are user-visible German product copy embedded in the M2 design
+# handoff mockup. The engineering annotations around them remain audited.
+ALLOWED_LOCALIZED_TEXTS_BY_PATH = {
+    Path("design/m2/m2-screenflow.svg"): (
+        "Heute",
+        "Planen",
+        "Entdecken",
+        "Mehr",
+        "Moment festhalten",
+    ),
+}
+
+MARKDOWN_LINK_TARGET = re.compile(r"(?<=\]\()[^)]+(?=\))")
+
 DIAGNOSTIC_CALLS = {"print", "fail", "skip", "xfail"}
 DIAGNOSTIC_METHODS = {"debug", "info", "warning", "error", "exception", "critical"}
 
@@ -173,10 +196,14 @@ def _format_finding(path: Path, line_number: int, text: str) -> str:
     return f"{path}:{line_number}: {text.strip()}"
 
 
-def _contains_marker(text: str) -> bool:
+def _contains_marker(text: str, path: Path | None = None) -> bool:
     sanitized = text.replace(ALLOWED_LEGACY_INPUT, "")
     for localized_text in ALLOWED_LOCALIZED_TEXTS:
         sanitized = sanitized.replace(localized_text, "")
+    if path is not None:
+        for localized_text in ALLOWED_LOCALIZED_TEXTS_BY_PATH.get(path, ()):
+            sanitized = sanitized.replace(localized_text, "")
+    sanitized = MARKDOWN_LINK_TARGET.sub("", sanitized)
     return ENGINEERING_PROSE_MARKERS.search(sanitized) is not None
 
 
@@ -273,7 +300,7 @@ def check_text_file(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8").replace(ALLOWED_LEGACY_INPUT, "")
     findings: list[str] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
-        if _contains_marker(line):
+        if _contains_marker(line, path):
             findings.append(_format_finding(path, line_number, line))
     return findings
 
@@ -315,6 +342,21 @@ def platform_files() -> list[Path]:
     return sorted(set(files))
 
 
+def documentation_files() -> list[Path]:
+    files: list[Path] = []
+    for root in DOCUMENTATION_ROOTS:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            excluded = any(
+                path == prefix or prefix in path.parents
+                for prefix in EXCLUDED_DOCUMENTATION_PREFIXES
+            )
+            if path.is_file() and path.suffix in DOCUMENTATION_SUFFIXES and not excluded:
+                files.append(path)
+    return sorted(set(files))
+
+
 def main() -> int:
     findings: list[str] = []
     for path in SCOPED_FILES:
@@ -323,7 +365,7 @@ def main() -> int:
             continue
         findings.extend(check_file(path))
 
-    for path in sorted(set(backend_files()) | set(platform_files())):
+    for path in sorted(set(backend_files()) | set(platform_files()) | set(documentation_files())):
         findings.extend(check_file(path))
 
     if findings:
@@ -336,7 +378,7 @@ def main() -> int:
         return 1
 
     print(
-        "Migrated developer, backend, client, CI, and deployment surfaces "
+        "Migrated developer, backend, client, CI, deployment, and active documentation surfaces "
         "satisfy the scoped English-language audit."
     )
     return 0
