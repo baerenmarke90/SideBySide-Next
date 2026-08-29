@@ -3,30 +3,30 @@
 **Status:** `PROPOSED` – template for later decisions and OpenAPI work  
 **As of:** August 26, 2026
 
-This file does **not** change the production OpenAPI contract. It describes a consistent target surface so the M3-S0 decisions can be made concretely against routes, DTOs, errors, and transactions.
+This file does **not** change the production OpenAPI contract. It describes a consistent target surface so that M3-S0 decisions can be made concretely against routes, DTOs, errors, and transactions.
 
 ## 1. Binding API principles
 
 M3 adopts the existing project conventions:
 
 - REST under `/api/v1/...`;
-- all domain resources are space-scoped;
+- all Domain resources are Space-scoped;
 - UUIDv7 IDs;
 - external JSON fields use `camelCase`;
 - consistent Problem Details with stable `code`;
-- membership before resource resolution;
-- privacy-safe 404 for unreadable/owner-only resources;
-- 403 only for known readable resources where the action is not allowed;
+- Membership is checked before resource resolution;
+- Privacy-safe 404 for unreadable/owner-only resources;
+- 403 only for known readable resources where the action is not permitted;
 - mutable resources use `version`/ETag and `If-Match`;
 - stale mutation -> `409 RESOURCE_VERSION_CONFLICT`;
-- client authorization is never a security boundary;
-- no polymorphic universal relation without a server-side target allowlist and DB foreign keys.
+- no client Authorization as a security boundary;
+- no polymorphic universal relation without a server-side target allowlist and DB FKs.
 
 ## 2. List and pagination convention
 
-`PROPOSED`: growing M3 lists use the same opaque cursor convention as existing APIs.
+`PROPOSED`: growing M3 Lists use the same opaque cursor convention as existing APIs.
 
-Shared parameters where appropriate:
+Common parameters where meaningful for the Domain:
 
 ```text
 limit
@@ -36,14 +36,14 @@ order
 
 Domain filters:
 
-- Wish: `status`, optional `createdBy`
-- Plan: `status`, optional `createdBy`, optional date range
-- Place: no global full-text search in M3; simple stable ordering
+- Wish: `status`, optionally `createdBy`
+- Plan: `status`, optionally `createdBy`, optionally a date range
+- Place: no global full-text Search in M3; simple stable ordering
 - Chapter: optional date range
-- Collection: no global content search in M3
+- Collection: no global content Search in M3
 - Private Area: owner scope only; no partner view
 
-A `q` parameter for global full-text search is **not part of M3**. Search belongs to M4-A.
+A `q` parameter for global full-text Search is **not part of M3**. Search belongs to M4-A.
 
 ## 3. Wish API
 
@@ -57,7 +57,7 @@ PATCH  /api/v1/spaces/{spaceId}/wishes/{wishId}
 DELETE /api/v1/spaces/{spaceId}/wishes/{wishId}
 ```
 
-Whether `PATCH` permits arbitrary status changes is explicitly **not** decided in this draft. Dedicated domain operations are preferred when a transition affects relations/transactions.
+Whether `PATCH` may perform arbitrary status changes is explicitly **not** decided here. Domain-specific status changes through dedicated operations are preferred where relations/transactions are affected.
 
 ### Proposed DTO
 
@@ -80,11 +80,11 @@ WishResponse
 - capabilities?
 ```
 
-`capabilities` may later avoid UI guesswork (`canEdit`, `canDelete`, `canConvertToPlan`) but never replaces server authorization.
+`capabilities` may later reduce UI round trips (`canEdit`, `canDelete`, `canConvertToPlan`) but never replaces server Authorization.
 
-## 4. Wish -> Plan as a dedicated domain operation
+## 4. Wish -> Plan as a dedicated Domain operation
 
-Conversion is not a normal `PATCH status=PLANNED` because at least two domain objects and a relation are affected atomically.
+Conversion is not a normal `PATCH status=PLANNED`, because at least two Domain objects and a relation are affected atomically.
 
 ### Proposed route
 
@@ -97,7 +97,7 @@ Request, depending on M3-D02/D04:
 
 ```text
 WishToPlanRequest
-- title?          # if a title differing from the Wish title is allowed
+- title?          # if deviation from Wish title is allowed
 - description?
 - plannedStart?
 - plannedEnd?
@@ -116,13 +116,13 @@ WishToPlanResponse
 
 A successful request must, in **one commit**:
 
-1. authorize Wish and check current version,
-2. create exactly one allowed Plan or apply the idempotency decision,
+1. authorize the Wish and verify the current version,
+2. create exactly one permitted Plan or apply the idempotency decision,
 3. set `sourceWishId`,
-4. transition Wish to the decided successor state,
+4. transition the Wish into the decided follow-up state,
 5. write safe Domain Events.
 
-Duplicate concurrent confirmation must never create two Plans.
+Two concurrent confirmations must never create two Plans.
 
 ### Proposed error codes
 
@@ -135,7 +135,7 @@ RESOURCE_VERSION_CONFLICT       409
 PLACE_NOT_FOUND                 404
 ```
 
-The exact idempotency response remains open in this draft.
+The exact idempotent response remains open in this readiness draft.
 
 ## 5. Plan API
 
@@ -149,7 +149,7 @@ PATCH  /api/v1/spaces/{spaceId}/plans/{planId}
 DELETE /api/v1/spaces/{spaceId}/plans/{planId}
 ```
 
-Direct `POST /plans` creates a Plan without `sourceWishId` and is not excluded by the Product Specification.
+Direct `POST /plans` creates a Plan without `sourceWishId` and is not excluded by the product specification.
 
 ### Transition routes – proposed
 
@@ -161,10 +161,10 @@ POST /api/v1/spaces/{spaceId}/plans/{planId}/return-to-wish
 
 Why dedicated operation routes are proposed:
 
-- status transitions may enforce date invariants;
+- status changes can enforce date invariants;
 - Completion may set `experiencedOn`;
 - Return-to-Wish affects at least two resources;
-- events and races are more explicit than with unrestricted `PATCH status`.
+- Events and races are more explicit than with a free `PATCH status`.
 
 M3-D03/D04 decide which of these routes actually enter v1.
 
@@ -203,7 +203,7 @@ PlanResponse
 - capabilities?
 ```
 
-Status is preferably not freely set through normal update requests.
+Status is preferably not freely set in normal Update requests.
 
 ## 6. Plan -> Wish return
 
@@ -216,11 +216,11 @@ If-Match: "<plan-version>"
 
 The response depends on M3-D03. Possible semantics:
 
-- reactivate the original `sourceWishId` and preserve Plan,
-- reactivate original Wish and delete Plan,
-- create a new Wish and preserve Plan as history.
+- reactivate the original `sourceWishId` and keep the Plan,
+- reactivate the original Wish and delete the Plan,
+- create a new Wish and keep the Plan as history.
 
-Until this decision is `DECIDED`, no route may be transferred into the OpenAPI contract.
+Until this decision is `DECIDED`, no route may be added to the production OpenAPI contract on the basis of this draft alone.
 
 ## 7. Place API
 
@@ -258,18 +258,18 @@ PlaceResponse
 - version
 ```
 
-M3 delivers **no** endpoint family such as `/geocode`, `/nearby`, `/map-search`, or provider proxy. Such surfaces require separate reuse/privacy/provider decisions later.
+M3 provides **no** endpoint family such as `/geocode`, `/nearby`, `/map-search`, or Provider proxy. Such surfaces require separate Reuse/Privacy/Provider decisions later.
 
 ### Validation – proposed
 
-- `latitude` and `longitude` only together or explicitly individually? **M3-D06**
-- numeric values within geographic limits;
-- coordinates are not mandatory;
-- `address` is user content, not a server-validated provider record.
+- `latitude` and `longitude` together or explicitly individually? **M3-D06**
+- numeric values within geographic bounds;
+- no requirement to provide coordinates;
+- `address` is user content, not a Provider record validated by the server.
 
 ## 8. Content Relations API
 
-The DB side remains typed. Two forms are possible for the external API.
+The DB side remains typed. Two shapes are conceivable for the external API.
 
 ### Option A – typed nested routes
 
@@ -283,7 +283,7 @@ DELETE /api/v1/spaces/{spaceId}/places/{placeId}/plans/{planId}
 
 Advantages:
 
-- contract and authorization are very explicit,
+- contract and Authorization are very explicit,
 - no uncontrolled discriminator,
 - simple OpenAPI types.
 
@@ -302,22 +302,22 @@ with a strictly enumerated union, for example:
 { relation: "PLACE_PLAN", placeId, planId }
 ```
 
-Internally still separate FK tables.
+Internally, separate FK tables still apply.
 
 Advantage: one shared client entry point.  
-Risk: must not degrade into unrestricted `targetType/targetId` polymorphism.
+Risk: must not degrade into free `targetType/targetId` polymorphism.
 
-**M3-D08 decides A/B or a justified hybrid.**
+**M3-D08 decides A/B or a justified mixed form.**
 
 ### Relation security response
 
-When a target belongs to another space or is `OWNER_ONLY`/unreadable:
+If a target belongs to a foreign Space or is `OWNER_ONLY`/unreadable:
 
 ```text
 404 RELATION_TARGET_NOT_FOUND
 ```
 
-No response may distinguish whether the ID exists, is private, or belongs to another space.
+No response may distinguish whether the ID exists, is private, or belongs to another Space.
 
 ## 9. Chapter API
 
@@ -356,9 +356,9 @@ ChapterResponse
 - relationSummary?  # safe shared counts only; M3-D10
 ```
 
-A relation count must never include private targets. The simpler safe start is to count only actually relationable shared targets or initially omit counts.
+A relation count must never include private targets. The simpler safe starting point is to count only actually relationable shared targets or omit counts initially.
 
-Delete Chapter returns 204 and removes only Chapter + its relation entries. Original content remains.
+Delete Chapter responds 204 and removes only the Chapter plus its relation entries. Original content remains intact.
 
 ## 10. Collection API
 
@@ -378,7 +378,7 @@ DELETE /api/v1/spaces/{spaceId}/collections/{collectionId}/items/{itemId}
 
 ### Reorder – proposed
 
-Do not use a sequence of N individual `PATCH position` requests. Prefer one atomic operation:
+Do not send a sequence of N individual `PATCH position` requests. Prefer one atomic operation:
 
 ```text
 PUT /api/v1/spaces/{spaceId}/collections/{collectionId}/item-order
@@ -393,11 +393,11 @@ or a rank-based single-move model. M3-D14 decides the strategy.
 
 ### Completion
 
-`completed` may be modeled as a normal item mutation if item versioning is approved. With parent-based versioning, the whole Collection state must remain conflict-free.
+`completed` may be modeled as a normal Item mutation if Item versioning is decided. With parent-based versioning, the whole Collection state must remain conflict-safe.
 
 ## 11. Private Area routing
 
-All routes remain space-scoped even though the current account is implicitly the owner. This keeps tenant isolation explicit and prevents an account with multiple spaces from referencing a private resource from the wrong space.
+All routes remain Space-scoped even though the current Account is implicitly the owner. This keeps Tenant Isolation visible and prevents an Account with multiple Spaces from referencing a private resource from the wrong Space.
 
 ### Proposed PrivateNote
 
@@ -419,7 +419,7 @@ PATCH  /api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}
 DELETE /api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}
 ```
 
-`status` remains domain-undefined for Create/Update until M3-D17 defines an enum.
+`status` remains domain-undetermined for Create/Update in this readiness draft until M3-D17 defines an enum.
 
 ### Proposed PrivateCollection
 
@@ -446,10 +446,10 @@ The same safe response applies to:
 
 - unknown ID,
 - partner's private ID,
-- ID from another space,
+- ID from another Space,
 - resource after deletion.
 
-No different `detail` text, timing-optimized existence check, or count may distinguish the cases.
+No distinct `detail` text, timing-optimized existence check, or count may make these cases distinguishable.
 
 ## 12. ETag / If-Match
 
@@ -462,11 +462,11 @@ If-Match: "<version>"
 
 Required for:
 
-- update/delete of mutable root resources,
+- Update/Delete of mutable root resources,
 - transition operations,
-- relational reorder operations when they change root state.
+- relational Reorder operations where they mutate root state.
 
-For child items, M3-D14/M3-D18 must decide whether an item version or parent version protects consistency.
+For child Items, M3-D14/M3-D18 decide whether an Item version or Parent version protects consistency.
 
 ## 13. Error-code catalog – proposed
 
@@ -475,13 +475,13 @@ General:
 ```text
 RESOURCE_VERSION_CONFLICT       409
 INVALID_CURSOR                  400
-RELATION_TARGET_NOT_FOUND       404  # unifies unknown/private/foreign space
+RELATION_TARGET_NOT_FOUND       404  # unifies unknown/private/foreign Space
 RELATION_ALREADY_EXISTS         409
 RELATION_NOT_FOUND              404
 STATUS_TRANSITION_INVALID       409
 ```
 
-There is intentionally **no** separate cross-space error code for relation targets. Foreign space, `OWNER_ONLY`/unreadable, and unknown IDs remain externally indistinguishable.
+For Relation targets there is deliberately **no** separate Cross-Space error code. Foreign Space, `OWNER_ONLY`/unreadable, and unknown ID remain indistinguishable externally.
 
 Wish:
 
@@ -539,37 +539,37 @@ PRIVATE_COLLECTION_NOT_FOUND
 PRIVATE_COLLECTION_ITEM_NOT_FOUND
 ```
 
-The final list becomes binding only with OpenAPI/domain decisions.
+The final list becomes binding only with OpenAPI/Domain decisions.
 
 ## 14. Delete semantics
 
-The API must not turn `DELETE` into a generic cascade switch. Each domain decides in advance:
+The API must not turn `DELETE` into a generic cascade switch. Each Domain decides in advance:
 
-- which owned child rows are deleted,
-- which external relations are only removed,
+- which own child rows are deleted,
+- which external Relations are only removed,
 - which linked originals remain,
 - whether `If-Match` is required.
 
-For Chapter, source-bound: Delete removes relations, not original content.
+For Chapter it is source-bound: Delete removes Relations, not original content.
 
 ## 15. No server-side fetching of GiftIdea URLs
 
-`GiftIdea.url` is a stored string in the M3 core. M3 introduces **no** URL preview, OpenGraph, screenshot, or metadata fetcher.
+`GiftIdea.url` is a stored string in the M3 Core. M3 introduces **no** URL Preview, OpenGraph, screenshot, or metadata fetcher.
 
 Reason:
 
 - SSRF surface,
-- tracking/privacy exfiltration,
-- additional provider/parser/supply-chain scope.
+- tracking/Privacy egress,
+- additional Provider/parser/Supply Chain scope.
 
-A later preview requires a dedicated reuse/security design.
+A later Preview needs its own Reuse/Security design.
 
 ## 16. No Maps/Geocoding API in M3
 
-`Place` is not mixed with technical endpoints for maps or search. M3 stores only domain data supplied by the user/client through the normal contract. Provider integration follows separately later.
+`Place` is not mixed with technical endpoints for maps or Search. M3 stores only Domain data provided by the user/client through the normal contract. Provider integration follows separately later.
 
-## 17. G3 API evidence – still to decide in this draft
+## 17. G3 API evidence – unresolved in this readiness draft
 
-Before G3, it must be decided whether pure Backend/OpenAPI/PostgreSQL evidence is sufficient or whether — analogous to M2 — a thin Web/Android reference flow is required. M5 remains the complete client productization milestone.
+Before G3, it must be decided whether Backend/OpenAPI/PostgreSQL evidence alone is sufficient or whether — analogous to M2 — a thin Web/Android reference flow is required. M5 remains complete client productization.
 
 This question is **M3-D24** and must not first appear during the Gate Review.

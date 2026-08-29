@@ -1,53 +1,53 @@
-# Statusquellen und Drift-Regeln
+# Status Sources and Drift Rules
 
-## Zweck
+## Purpose
 
-Dieses Dokument legt fest, welche Projektdateien den laufenden Stand beschreiben und welche bewusst unveraenderliche historische Snapshots sind.
+This document defines which project files describe the current working state and which are intentionally immutable historical snapshots.
 
-## Living Status
+## Living status
 
-Diese Dateien werden als laufende Statusquellen gepflegt und vom automatisierten Drift-Guard geprueft:
+These files are maintained as living status sources and checked by the automated drift guard:
 
-- `docs/IMPLEMENTATION-STATUS.md` — tatsaechlich gelieferter und noch offener Arbeitsstand;
-- `docs/ROADMAP.md` — aktuelle Milestone-/Gate-Orientierung und Priorisierung.
+- `docs/IMPLEMENTATION-STATUS.md` — work actually delivered and still outstanding;
+- `docs/ROADMAP.md` — current milestone/gate orientation and prioritization.
 
-Fuer diese Dateien gelten folgende Regeln:
+The following rules apply to these files:
 
-1. GitHub ist die kanonische Quelle fuer den aktuellen `main`-Commit sowie Issue-/PR-Zustaende.
-2. Ein statisch eingetragener angeblich aktueller `main`-SHA ist verboten. Er waere nach dem naechsten Merge zwangsläufig veraltet.
-3. Ein GitHub-Issue darf nur als offene Markdown-Task (`- [ ] ... #123`) gefuehrt werden, solange GitHub das Issue tatsaechlich als `open` meldet.
-4. Bei Gate-/Milestone-Merges werden die fachlichen Current-Marker und der naechste Runtime-/Pruefpunkt aktualisiert.
-5. GitHub-Issues und Pull Requests bleiben die operative Quelle fuer einzelne Arbeitspakete; Living-Status-Dokumente sind keine zweite Issue-Datenbank.
+1. GitHub is the canonical source for the current `main` commit and Issue/PR states.
+2. A statically recorded supposedly current `main` SHA is forbidden. It would inevitably become stale after the next merge.
+3. A GitHub Issue may be tracked as an open Markdown task (`- [ ] ... #123`) only while GitHub actually reports the Issue as `open`.
+4. Gate/milestone merges update the relevant current markers and the next runtime/checkpoint.
+5. GitHub Issues and Pull Requests remain the operational source for individual work packages; living-status documents are not a second Issue database.
 
-## Historische Snapshots
+## Historical snapshots
 
-Datierte Reviews unter `docs/reviews/` sind historische Nachweise. Sie werden nach ihrer Erstellung nicht umgeschrieben, auch wenn darin ein damaliger `main`-SHA, offene Findings oder damalige Issue-Zustaende stehen.
+Dated reviews under `docs/reviews/` are historical evidence. They are not rewritten after creation, even when they contain the `main` SHA, open findings, or Issue states that were current at that time.
 
-Dasselbe gilt fuer ausdruecklich datierte Entscheidungs- oder Gate-Snapshots, sofern ihre Dokumentenrolle sie als historischen Nachweis ausweist.
+The same applies to explicitly dated decision or gate snapshots where the document role identifies them as historical evidence.
 
-Der Drift-Guard scannt solche Dateien deshalb absichtlich nicht.
+The drift guard therefore intentionally does not scan such files.
 
-## Automatisierter Guard
+## Automated guard
 
-`tools/ci/status_drift.py` prueft die Living-Status-Dateien.
+`tools/ci/status_drift.py` checks the living-status files.
 
-Lokal ohne Netzwerk:
+Locally without network access:
 
 ```bash
 python3 tools/ci/test_status_drift.py
 python3 tools/ci/status_drift.py
 ```
 
-Im Pull Request laeuft zusaetzlich der Online-Abgleich explizit als offen gefuehrter Issues gegen die GitHub API. Er ist in den bereits verpflichtenden `Reuse Review`-Statuscheck integriert:
+In Pull Requests, the online check additionally verifies Issues explicitly tracked as open against the GitHub API. It is integrated into the already mandatory `Reuse Review` status check:
 
 ```bash
 python3 tools/ci/status_drift.py --online
 ```
 
-Der Online-Check verwendet ausschließlich `contents: read` und `issues: read`. Er schreibt keine GitHub-Daten und benoetigt keinen externen Bot oder Provider.
+The online check uses only `contents: read` and `issues: read`. It writes no GitHub data and requires no external bot or Provider.
 
-## Pflegeverantwortung
+## Maintenance responsibility
 
-Der PR, der einen Gate-, Milestone- oder Slice-Status veraendert, aktualisiert die betroffenen Living-Status-Dateien im selben Arbeitszusammenhang oder dokumentiert nachvollziehbar, warum dort keine Aenderung erforderlich ist.
+A PR that changes a gate, milestone, or slice status updates the affected living-status files in the same work context or documents clearly why no change is required there.
 
-Historische Reviews bleiben davon unberuehrt. Eine neue Gate-Entscheidung wird als neuer datierter Review angelegt.
+Historical reviews remain unaffected. A new gate decision is recorded as a new dated review.

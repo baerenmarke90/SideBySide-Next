@@ -1,19 +1,22 @@
 # SideBySide Next
 
-Ein privater digitaler Begleiter für das gemeinsame Leben eines Paares.
+A private digital companion for a couple's shared life.
 
-SideBySide Next ist eine eigenständige Neuimplementierung. Sie wird in zwei
-Betriebsformen angeboten:
+SideBySide Next is an independent reimplementation. It is offered in two
+operating models:
 
-- **SideBySide Cloud** — betriebener Dienst für Nutzer, die keine eigene Infrastruktur administrieren möchten
-- **SideBySide Self-Hosted** — eigene Installation für persönliche und nichtkommerzielle Nutzung
+- **SideBySide Cloud** — a managed service for users who do not want to administer their own infrastructure
+- **SideBySide Self-Hosted** — a self-operated installation for personal and noncommercial use
 
-Beide teilen denselben Application Core. Die Cloud monetarisiert Betrieb,
-Komfort und Service; Self-Hosted soll nicht allein zur Verkaufsförderung
-künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
-[docs/BUSINESS-MODEL.md](docs/BUSINESS-MODEL.md) dokumentiert.
+Both share the same Application Core. The Cloud monetizes operations,
+convenience, and service; Self-Hosted must not be artificially deprived of
+Core functionality solely to promote the Cloud. The strategic model is
+documented in [docs/BUSINESS-MODEL.md](docs/BUSINESS-MODEL.md).
 
-## Produktvorschau
+## Product preview
+
+The product-preview artwork and labels below intentionally remain de-DE
+localized product content.
 
 <p align="center">
   <img src="docs/assets/playstore/app-icon.png" alt="SideBySide Next App-Icon" width="112">
@@ -27,23 +30,23 @@ künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
   <strong>Erinnerungen, Wünsche, Pläne und gemeinsame Zeit – ruhig gestaltet und privacy-first gedacht.</strong>
 </p>
 
-> Die folgenden Screens sind Produkt- und Google-Play-Mockups. Der technische
-> Implementierungsstand ist im Abschnitt [Stand](#stand) dokumentiert.
+> The following screens are product and Google Play mockups. The technical
+> implementation state is documented under [Status](#status).
 
-### Design- und UX-Grundlagen
+### Design and UX foundations
 
-- [Design-Prinzipien](docs/DESIGN-PRINCIPLES.md) – visuelle Sprache, Accessibility und Privacy-first Leitlinien
-- [Informationsarchitektur](docs/INFORMATION-ARCHITECTURE.md) – Navigation, Bereiche, Routen und Deep Links
-- [Critical User Flows](docs/USER-FLOWS.md) – End-to-End-Abläufe für Auth, Einladung, Inhalte, Offline und Konflikte
-- [UX-Patterns](docs/UX-PATTERNS.md) – plattformübergreifende Interaktions- und Zustandsmuster
-- [Screen-Templates](docs/SCREEN-TEMPLATES.md) – responsive Layouts für Compact, Medium und Expanded
-- [Component Contracts](docs/COMPONENT-CONTRACTS.md) – Verhalten, Varianten und Accessibility gemeinsamer Bausteine
-- [API-/UI-Verträge](docs/API-UI-CONTRACTS.md) – gemeinsame DTOs, Fehler, Privacy-Klassen, Cache und Concurrency
-- [Accessibility- und QA-Matrix](docs/ACCESSIBILITY-QA-MATRIX.md) – verbindliche Release Gates für Web und Android
-- [Content- und Privacy-Guidelines](docs/CONTENT-PRIVACY-GUIDELINES.md) – Tonalität, Systemtexte, Notifications und Analytics-Grenzen
-- [Design-System-Umsetzung](docs/DESIGN-SYSTEM-DELIVERY.md) – Token-Pipeline, Komponentenstufen und Lieferphasen
-- [Design-Tokens](design/tokens.json) – Farben, Typografie, Abstände, Layout und Motion als maschinenlesbare Quelle
-- [Component Manifest](design/component-manifest.json) – plattformübergreifender Implementierungsstatus
+- [Design Principles](docs/DESIGN-PRINCIPLES.md) — visual language, Accessibility, and Privacy-first guidance
+- [Information Architecture](docs/INFORMATION-ARCHITECTURE.md) — navigation, areas, routes, and Deep Links
+- [Critical User Flows](docs/USER-FLOWS.md) — end-to-end flows for Auth, invitations, content, Offline, and conflicts
+- [UX Patterns](docs/UX-PATTERNS.md) — cross-platform interaction and state patterns
+- [Screen Templates](docs/SCREEN-TEMPLATES.md) — responsive layouts for Compact, Medium, and Expanded
+- [Component Contracts](docs/COMPONENT-CONTRACTS.md) — behavior, variants, and Accessibility of shared components
+- [API/UI Contracts](docs/API-UI-CONTRACTS.md) — shared DTOs, errors, Privacy classes, Cache, and Concurrency
+- [Accessibility and QA Matrix](docs/ACCESSIBILITY-QA-MATRIX.md) — binding Release Gates for Web and Android
+- [Content and Privacy Guidelines](docs/CONTENT-PRIVACY-GUIDELINES.md) — tone, system text, Notifications, and Analytics boundaries
+- [Design System Delivery](docs/DESIGN-SYSTEM-DELIVERY.md) — Token pipeline, component stages, and delivery phases
+- [Design Tokens](design/tokens.json) — colors, typography, spacing, layout, and Motion as a machine-readable source
+- [Component Manifest](design/component-manifest.json) — cross-platform implementation status
 
 <table>
   <tr>
@@ -81,51 +84,50 @@ künstlich um Kernfunktionen beschnitten werden. Das strategische Modell ist in
 </p>
 
 <p align="center">
-  <strong>Aktuell: G2 ist bestanden. M2 ist abgeschlossen; M3 ist als nächster Milestone freigegeben.</strong><br>
-  <a href="docs/ROADMAP.md">Roadmap, parallele Arbeitsströme und Release Gates ansehen</a> ·
-  <a href="docs/IMPLEMENTATION-STATUS.md">tatsächlichen Umsetzungsstand öffnen</a> ·
-  <a href="docs/m3/README.md">M3 Technical Readiness Package öffnen</a>
+  <strong>Current: G2 has passed. M2 is complete; M3 is released as the next milestone.</strong><br>
+  <a href="docs/ROADMAP.md">View roadmap, parallel workstreams, and Release Gates</a> ·
+  <a href="docs/IMPLEMENTATION-STATUS.md">Open the actual implementation state</a> ·
+  <a href="docs/m3/README.md">Open the M3 Technical Readiness Package</a>
 </p>
 
-## Leitsätze
+## Principles
 
-Privatsphäre ist Kernfunktion, nicht Beiwerk. Keine Werbung, kein Verkauf
-persönlicher Daten, kein unnötiges Tracking. Sensible Inhalte fließen nicht
-in Analytics.
+Privacy is a Core function, not an add-on. No advertising, no sale of personal
+data, no unnecessary tracking. Sensitive content does not flow into Analytics.
 
-Der zentrale Mandant heißt **Space** — der gemeinsame Raum eines Paares.
-Jeder gemeinsame Datensatz gehört genau einem Space. Kein Zugriff erfolgt
-allein anhand einer Ressourcen-ID.
+The central tenant is named **Space** — the shared private area of a couple.
+Every shared record belongs to exactly one Space. No access is performed from
+a Resource ID alone.
 
-Für M2 gilt zusätzlich: `SHARED` und `PRIVATE` sind fachliche Domainwerte.
-`SPACE_SHARED` und `OWNER_ONLY` sind interne Authorization-/Privacy-Klassen.
-Clients schreiben `privacyClass` nicht redundant als zweite Wahrheitsquelle.
+For M2, additionally: `SHARED` and `PRIVATE` are domain-level values.
+`SPACE_SHARED` and `OWNER_ONLY` are internal Authorization/Privacy classes.
+Clients do not redundantly write `privacyClass` as a second source of truth.
 
-## Aufbau
+## Structure
 
-```
+```text
 backend/             FastAPI, SQLAlchemy 2, Alembic, PostgreSQL
 web/                 React, TypeScript, Vite
 android/             Kotlin, Jetpack Compose
-compose.yaml         Docker Compose für vollständige Self-Hosted-Checkouts
-compose.arcane.yaml  Remote-Git-Builds für Arcane/Remote-Workspaces
-deploy/              Docker Compose für die Entwicklungsdatenbank
-docs/                Architektur, Sicherheit, Datenschutzmodell, Abhängigkeiten
-specification/       Produktspezifikation als verbindliche Vorgabe
-tools/               Hilfsskripte
+compose.yaml         Docker Compose for complete Self-Hosted checkouts
+compose.arcane.yaml  remote-Git builds for Arcane/remote workspaces
+deploy/              Docker Compose for the development database
+docs/                architecture, security, Privacy model, dependencies
+specification/       product specification as the binding requirement
+tools/               helper scripts
 ```
 
-## Entwicklung
+## Development
 
-### Voraussetzungen
+### Prerequisites
 
-- **Docker** für die Entwicklungsdatenbank
-- **Python 3.13** und `uv` für Backend und Tests
-- **Node 22 und npm** für den Web-Client
+- **Docker** for the development database
+- **Python 3.13** and `uv` for Backend and tests
+- **Node 22 and npm** for the Web client
 
-PostgreSQL ist Voraussetzung. Einen SQLite-Notbehelf gibt es bewusst nicht —
-das Datenmodell nutzt PostgreSQL-Eigenschaften, und ein zweiter Dialekt im
-Test würde eine Sicherheit vortäuschen, die er nicht gibt.
+PostgreSQL is required. There is deliberately no SQLite fallback — the data
+model uses PostgreSQL properties, and a second test dialect would create a
+false sense of confidence rather than equivalent coverage.
 
 ### Backend
 
@@ -146,144 +148,138 @@ npm run dev
 
 ### Tests
 
-Integrationstests laufen gegen eine eigene Datenbank `sidebyside_test`, die
-`deploy/docker-compose.dev.yml` beim ersten Start mit anlegt. Die
-Testvorrichtung legt dort ihr Schema selbst an und räumt es am Ende wieder
-ab — gegen die Entwicklungsdatenbank wäre das kein Testlauf, sondern ein
-Datenverlust.
+Integration tests run against a dedicated `sidebyside_test` database created
+by `deploy/docker-compose.dev.yml` on first startup. The test fixture creates
+its own schema there and removes it again at the end — running that lifecycle
+against the development database would be data loss, not a test run.
 
 ```bash
 export SBS_TEST_DATABASE_URL=postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
-cd backend && uv run pytest                    # alles
-cd backend && uv run pytest -m "not integration"   # ohne Datenbank
+cd backend && uv run pytest                         # everything
+cd backend && uv run pytest -m "not integration"   # without database
 ```
 
-**Ohne `SBS_TEST_DATABASE_URL` werden alle Integrationstests übersprungen** —
-auch dann, wenn die Entwicklungsdatenbank läuft und erreichbar ist. `pytest`
-meldet den Lauf trotzdem grün, etwa als `353 passed, 1141 skipped`. Ein
-vollständiger Lauf ist das nicht. Übersprungen heißt übersprungen und wird
-nicht stillschweigend als bestanden gewertet; wer die Variable nicht setzt,
-prüft nur die Unit-Ebene.
+**Without `SBS_TEST_DATABASE_URL`, all Integration Tests are skipped** — even
+when the development database is running and reachable. `pytest` can still
+report the run as green, for example `353 passed, 1141 skipped`. That is not a
+complete run. Skipped means skipped and must not silently be treated as
+passed; without the variable, only the Unit level is being tested.
 
-Stammt das Datenbank-Volume noch aus der Zeit vor dem Init-Skript, fehlt
-`sidebyside_test`. Das Postgres-Image führt `deploy/postgres-init/` nur bei
-einem leeren Datenverzeichnis aus. Einmalig nachlegen:
+If the database volume predates the initialization script,
+`sidebyside_test` is missing. The Postgres image runs `deploy/postgres-init/`
+only for an empty data directory. Create it once manually:
 
 ```bash
 docker compose -f deploy/docker-compose.dev.yml exec postgres \
   createdb -U sidebyside sidebyside_test
 ```
 
-Der Web-Client wird mit `cd web && npm test` geprüft.
+The Web client is tested with `cd web && npm test`.
 
-`backend/uv.lock` ist der verbindliche, plattformübergreifende
-Abhängigkeitsstand. Nach einer beabsichtigten API-Änderung wird der
-versionierte Vertrag mit `uv run python scripts/openapi_contract.py write`
-aktualisiert; die CI vergleicht ihn mit dem Schema der tatsächlichen App.
+`backend/uv.lock` is the binding cross-platform dependency state. After an
+intentional API change, update the versioned contract with
+`uv run python scripts/openapi_contract.py write`; CI compares it with the
+schema of the actual application.
 
 ## Self-Hosted
 
-Für einen vollständigen Repository-Checkout bleibt `compose.yaml` der normale
-Einstieg:
+For a complete repository checkout, `compose.yaml` remains the normal entry
+point:
 
 ```bash
-cp .env.example .env    # und ausfüllen
+cp .env.example .env    # then fill in the required values
 docker compose up -d
 ```
 
-Die API ist danach unter `http://127.0.0.1:8000` erreichbar. Dieser
-Klartextzugang ist absichtlich auf den lokalen Rechner begrenzt. Fuer Zugriff
-aus LAN oder Internet muss ein HTTPS-Reverse-Proxy vorgeschaltet werden; die
-API darf dafuer nicht direkt auf allen Interfaces veroeffentlicht werden.
+The API is then available at `http://127.0.0.1:8000`. This plaintext endpoint
+is deliberately restricted to the local host. Access from a LAN or the
+Internet requires an HTTPS reverse proxy; the API must not be published
+directly on all interfaces for that purpose.
 
-Verwaltungsoberflächen wie **Arcane**, deren Projekt-Workspace nicht den
-vollständigen Repository-Checkout enthält, verwenden stattdessen
-`compose.arcane.yaml`. Diese Variante baut `backend` und `web` direkt aus dem
-konfigurierten Git-Repository und benötigt deshalb keine lokalen
-`./backend`-/`./web`-Verzeichnisse im Workspace. Einrichtung, private
-Repositorys und Release-Refs sind in [docs/ARCANE.md](docs/ARCANE.md)
-dokumentiert.
+Management surfaces such as **Arcane**, whose project workspace does not
+contain the complete repository checkout, use `compose.arcane.yaml` instead.
+This variant builds `backend` and `web` directly from the configured Git
+repository and therefore does not require local `./backend` or `./web`
+directories in the workspace. Setup, private repositories, and Release refs
+are documented in [docs/ARCANE.md](docs/ARCANE.md).
 
-Der Dienst `migrate` zieht das Schema einmalig hoch, bevor `api` und
-`worker` starten. Die Anwendung migriert nicht selbst; zwei startende
-API-Container würden das sonst gleichzeitig tun.
+The `migrate` service upgrades the schema once before `api` and `worker`
+start. The application does not migrate itself; otherwise two starting API
+containers could attempt the migration concurrently.
 
-Der vollstaendige sichere Startablauf, Reverse-Proxy-Anforderungen und ein
-Smoke-Test stehen in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md).
+The complete secure startup procedure, reverse-proxy requirements, and a
+Smoke Test are documented in [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md).
 
-## Stand
+## Status
 
-**M0 — technische Plattform abgeschlossen.** Fehlerformat, Transactional
-Outbox, Job-Warteschlange, MediaStore- und Provider-Schnittstellen,
-ProtectedPayload-Grenze, reproduzierbare Dependencies, OpenAPI-Contract und
-CI-/Supply-Chain-Prüfungen sind für den M0-Umfang vorhanden.
+**M0 — technical platform complete.** Error format, Transactional Outbox, Job
+Queue, MediaStore and Provider interfaces, ProtectedPayload boundary,
+reproducible dependencies, OpenAPI contract, and CI/Supply-Chain checks exist
+for the M0 scope.
 
-**M1 / G1 — abgeschlossen und bestanden.** Account, Space, Membership,
-Tenant Context, Owner-/Privacy-Guard und Geraetesitzungen mit rotierenden
-Tokens sind implementiert. Lokales Passwort, OIDC mit PKCE/State/Nonce,
-OIDC-Einladungs-Onboarding, Passkeys, Magic Link, E-Mail-Verifikation,
-Recovery, Invitations, SpaceProfile, PartnerProfile/ProfilePreference sowie
-RelatedPerson/ImportantDate sind im Backend vorhanden und durch
-PostgreSQL-/Privacy-/Tenant-Tests abgesichert. #61 wurde mit einer expliziten
-`preserve`-/`cascade`-Delete-Policy ohne destruktiven Default geschlossen.
+**M1 / G1 — complete and passed.** Account, Space, Membership, Tenant Context,
+Owner/Privacy Guard, and Device Sessions with rotating Tokens are implemented.
+Local password, OIDC with PKCE/State/Nonce, OIDC invitation onboarding,
+Passkeys, Magic Link, email verification, Recovery, Invitations, SpaceProfile,
+PartnerProfile/ProfilePreference, and RelatedPerson/ImportantDate are present
+in the Backend and covered by PostgreSQL/Privacy/Tenant tests. #61 was closed
+with an explicit `preserve`/`cascade` Delete Policy and no destructive default.
 
-Der [G1 Gate Review nach Abschluss von #61](docs/reviews/2026-08-25-g1-gate-review-after-61.md)
-setzt G1 auf **BESTANDEN**. #59 und #60 bleiben verpflichtende
-Pre-Exposure-Härtungen vor öffentlichem/Managed-Betrieb; #25 bleibt
-Repository-Hardening.
+The [G1 Gate Review after #61](docs/reviews/2026-08-25-g1-gate-review-after-61.md)
+sets G1 to **PASSED**. #59 and #60 remain mandatory Pre-Exposure hardening
+before public/Managed operation; #25 remains Repository Hardening.
 
-**M2 / G2 — abgeschlossen und bestanden.** Memory CRUD, HeartMoment mit
-Owner-only-Privacy, Bild-Attachments samt sicherem Ingest und Bindung,
-Milestone, Comments, S3-kompatibler MediaStore, Story Read Model sowie die
-dünnen Web-/Android-Referenzflows sind geliefert. Der reale kritische
-Memory/Media/Story-Flow wurde gegen API, Worker, PostgreSQL und LocalMediaStore
-auf beiden Clientpfaden nachgewiesen.
+**M2 / G2 — complete and passed.** Memory CRUD, HeartMoment with owner-only
+Privacy, image Attachments including safe ingest and binding, Milestone,
+Comments, S3-compatible MediaStore, Story Read Model, and the thin Web/Android
+reference flows are delivered. The real critical Memory/Media/Story flow was
+demonstrated against API, Worker, PostgreSQL, and LocalMediaStore on both
+client paths.
 
-Der [finale G2 Gate Review](docs/reviews/2026-08-26-g2-final-gate-review.md)
-setzt G2 ausdrücklich auf **BESTANDEN**. Die manuelle Accessibility-Abnahme
-wurde dabei nicht als bestanden behauptet; sie bleibt Teil der späteren
-Client-/Release-QA in M5/G4.
+The [final G2 Gate Review](docs/reviews/2026-08-26-g2-final-gate-review.md)
+sets G2 explicitly to **PASSED**. Manual Accessibility acceptance was not
+claimed as passed there; it remains part of later Client/Release QA in M5/G4.
 
-**M3 — freigegeben.** Die S0-Readiness und alle M3-D01 bis M3-D32 sind
-`DECIDED`. Runtime-Slices dürfen nach dem
-[M3 Technical Readiness Package](docs/m3/README.md) und dem
-[M3 Delivery Plan](docs/m3/DELIVERY-PLAN.md) beginnen, sobald der jeweilige
-produktive REST-/OpenAPI-Vertrag contract-testbar konkretisiert ist.
+**M3 — released.** S0 Readiness and all M3-D01 through M3-D32 are `DECIDED`.
+Runtime slices may proceed according to the
+[M3 Technical Readiness Package](docs/m3/README.md) and
+[M3 Delivery Plan](docs/m3/DELIVERY-PLAN.md) once the respective production
+REST/OpenAPI contract is concretized in a contract-testable form.
 
-Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für den Zielaufbau,
-[docs/SECURITY.md](docs/SECURITY.md) für die Sicherheitsinvarianten,
-[docs/m3/README.md](docs/m3/README.md) für das M3-Readiness-Paket und
-[specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md) für den
-fachlichen Umfang.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the target architecture,
+[docs/SECURITY.md](docs/SECURITY.md) for Security invariants,
+[docs/m3/README.md](docs/m3/README.md) for the M3 Readiness Package, and
+[specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md) for functional
+scope.
 
-## Projektsteuerung
+## Project control
 
-Die vollständige verbindliche Vorgabe ist die
+The complete binding requirement is the
 [Clean-Room Master Specification](specification/CLEAN-ROOM-MASTER-SPEC.md).
-Der [laufende Umsetzungsstand](docs/IMPLEMENTATION-STATUS.md) enthält die
-aktuelle Arbeitsliste. Datierte Dateien unter [docs/reviews](docs/reviews)
-sind unveränderliche Prüf-Snapshots; bei Widersprüchen gilt immer die
-Master-Spezifikation.
+The [living implementation status](docs/IMPLEMENTATION-STATUS.md) contains the
+current work list. Dated files under [docs/reviews](docs/reviews) are immutable
+review snapshots; if they conflict with current normative guidance, the Master
+Specification remains authoritative.
 
-Parallele Implementierungsarbeit wird über klar abgegrenzte GitHub Issues,
-eigene Branches und Pull Requests koordiniert. Solange Branch Protection bei
-diesem privaten Repository tarifbedingt nicht technisch erzwungen werden
-kann, gilt die PR-/CI-Pflicht als Projektregel.
+Parallel implementation work is coordinated through clearly scoped GitHub
+Issues, separate branches, and Pull Requests. While Branch Protection cannot
+be enforced technically for this private repository under the current plan,
+the PR/CI requirement remains a project rule.
 
-## Lizenz
+## License
 
-Der eigene SideBySide-Next-Quellcode wird unter der **PolyForm Noncommercial
-License 1.0.0** bereitgestellt. Nichtkommerzielle Nutzung, Änderung und
-Weitergabe sind im Rahmen dieser Lizenz erlaubt. Für kommerzielle Nutzung ist
-eine separate kommerzielle Lizenz des Rechteinhabers erforderlich.
+SideBySide Next's own source code is provided under the **PolyForm
+Noncommercial License 1.0.0**. Noncommercial use, modification, and
+distribution are allowed under that license. Commercial use requires a
+separate commercial license from the rights holder.
 
 - [LICENSE](LICENSE) — PolyForm Noncommercial License 1.0.0
-- [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) — kommerzielle Lizenzierung
-- [CONTRIBUTING.md](CONTRIBUTING.md) und [CLA.md](CLA.md) — Beiträge und Rechte an Contributions
-- [TRADEMARKS.md](TRADEMARKS.md) — Name, Logo und Branding
-- [docs/BUSINESS-MODEL.md](docs/BUSINESS-MODEL.md) — Self-Hosted, SideBySide Cloud und Produktprinzipien
+- [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) — commercial licensing
+- [CONTRIBUTING.md](CONTRIBUTING.md) and [CLA.md](CLA.md) — contributions and contribution rights
+- [TRADEMARKS.md](TRADEMARKS.md) — name, logo, and branding
+- [docs/BUSINESS-MODEL.md](docs/BUSINESS-MODEL.md) — Self-Hosted, SideBySide Cloud, and product principles
 
-SideBySide Next ist damit **source-available**, nicht Open Source im engeren
-OSI-Sinn, da kommerzielle Nutzung nicht allgemein freigegeben wird.
-Drittanbieter-Abhängigkeiten bleiben unter ihren jeweiligen Lizenzen; die
-Pflichten sind in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) dokumentiert.
+SideBySide Next is therefore **source-available**, not Open Source in the
+narrower OSI sense, because commercial use is not granted generally.
+Third-party dependencies remain under their respective licenses; obligations
+are documented in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).

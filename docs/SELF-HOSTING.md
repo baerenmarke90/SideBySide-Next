@@ -1,43 +1,43 @@
-# Sicherer Self-Hosted-Betrieb
+# Secure Self-Hosted Operation
 
-## Zwei Betriebsarten
+## Two operating modes
 
-Der mitgelieferte Compose-Stack kennt zwei Betriebsarten, und der Unterschied
-ist kein Detail:
+The bundled Compose stack supports two operating modes, and the distinction is
+not incidental:
 
-| | lokaler Testbetrieb | Produktionsbetrieb |
+| | local test mode | production mode |
 |---|---|---|
-| `SBS_ENVIRONMENT` | `development` (Standard) | `production` |
-| Cursor-Signing-Key | lokaler Rueckfallwert | Pflicht, mindestens 32 Zeichen |
-| Ausgehende Post | landet im Log | `smtp` oder `none`, kein `log` |
-| `SBS_PUBLIC_BASE_URL` | `http://localhost:8080` | muss `https://` sein |
-| HTTPS-Zwang, Host-Pruefung | aus | an |
-| Schema-Auskunft `/docs` | offen | geschlossen |
+| `SBS_ENVIRONMENT` | `development` (default) | `production` |
+| cursor signing key | local fallback value | required, at least 32 characters |
+| outgoing mail | written to the log | `smtp` or `none`, never `log` |
+| `SBS_PUBLIC_BASE_URL` | `http://localhost:8080` | must use `https://` |
+| HTTPS enforcement, host validation | off | on |
+| schema documentation `/docs` | open | closed |
 
-Der Standard ist der Testbetrieb. Das ist eine bewusste Entscheidung
-([ADR 0002](decisions/0002-self-hosted-first-start-mode.md)): Ein Erststart
-soll ohne SMTP-Zugang und ohne HTTPS-Domain moeglich sein. Web-PoC und API
-sind dabei ausschliesslich an `127.0.0.1` gebunden und damit auch dann nicht
-aus LAN oder Internet erreichbar, wenn die Firewall des Hosts zu offen
-konfiguriert ist.
+The default is test mode. This is a deliberate decision
+([ADR 0002](decisions/0002-self-hosted-first-start-mode.md)): initial startup
+must be possible without SMTP access and without an HTTPS domain. The Web PoC
+and API are bound exclusively to `127.0.0.1` in this mode and therefore remain
+unreachable from the LAN or Internet even if the host firewall is configured
+too permissively.
 
-Die Anwendung sagt bei jedem Start, in welcher Betriebsart sie laeuft. Im
-Testbetrieb ist das eine Warnung in `docker compose logs api`.
+On every startup, the application reports which operating mode it is using. In
+test mode this appears as a warning in `docker compose logs api`.
 
-## Lokaler Test
+## Local test
 
 ```bash
 cp .env.example .env
-# Mindestens POSTGRES_PASSWORD durch ein langes, zufaelliges Geheimnis ersetzen.
-# SBS_BOOTSTRAP_TOKEN in .env auf ein separat erzeugtes Geheimnis mit
-# mindestens 32 Zeichen setzen.
+# Replace at least POSTGRES_PASSWORD with a long, random secret.
+# Set SBS_BOOTSTRAP_TOKEN in .env to a separately generated secret with
+# at least 32 characters.
 docker compose config --quiet
 docker compose up -d --wait --wait-timeout 300
 ```
 
-`API_PORT=8000` und `WEB_PORT=8080` sind nur Vorgabewerte. Beide Ports
-muessen auf dem Docker-Host frei sein. Ist einer bereits belegt, vor dem Start
-in `.env` einen freien Port waehlen, zum Beispiel:
+`API_PORT=8000` and `WEB_PORT=8080` are only default values. Both ports must be
+free on the Docker host. If either port is already in use, choose a free port in
+`.env` before startup, for example:
 
 ```dotenv
 API_PORT=8010
@@ -45,24 +45,23 @@ WEB_PORT=8081
 SBS_PUBLIC_BASE_URL=http://localhost:8081
 ```
 
-Das aendert nur die Host-Ports. API und Webdienst lauschen in den Containern
-weiterhin auf 8000 beziehungsweise 8080. Ein belegter Host-Port darf nicht
-durch einen zweiten Dienst geteilt werden; `docker compose up` muss in
-diesem Fall eindeutig fehlschlagen.
+This changes only the host ports. The API and Web service continue to listen on
+8000 and 8080 respectively inside their containers. A host port that is already
+in use must not be shared by a second service; `docker compose up` must fail
+clearly in that case.
 
-Den tatsaechlich veroeffentlichten Port zeigt Compose an:
+Compose shows the port that is actually published:
 
 ```bash
 docker compose port api 8000
 docker compose port web 8080
 ```
 
-Beide Ausgaben muessen an `127.0.0.1` gebunden sein. Eine Ausgabe mit `0.0.0.0`, `::`
-oder einer unerwarteten externen Adresse ist fuer den Standardbetrieb nicht
-zulaessig.
+Both outputs must be bound to `127.0.0.1`. An output containing `0.0.0.0`, `::`,
+or an unexpected external address is not allowed for the default setup.
 
-Nach dem Start wird die Betriebsbereitschaft geprueft, nicht nur der laufende
-HTTP-Prozess:
+After startup, verify operational readiness rather than only whether the HTTP
+process is running:
 
 ```bash
 api_port=$(docker compose port api 8000 | awk -F: '{print $NF}')
@@ -72,124 +71,121 @@ curl --fail "http://127.0.0.1:${web_port}/healthz"
 curl --fail "http://127.0.0.1:${web_port}/"
 ```
 
-Erwartet wird:
+Expected response:
 
 ```json
 {"status":"ok","database":"ok"}
 ```
 
-Die Web-Startseite ist bereits ohne Space-Konfiguration sichtbar. Der
-technische Login-/Memory-/Bild-/Story-Flow wird erst aktiv, wenn
-`SBS_WEB_SPACE_ID` in `.env` auf eine vorhandene Space-UUID gesetzt und das
-Image mit `docker compose up -d --build web` neu gebaut wurde.
+The Web start page is visible without Space configuration. The technical
+login/Memory/image/Story flow becomes active only after `SBS_WEB_SPACE_ID` in
+`.env` is set to an existing Space UUID and the image is rebuilt with
+`docker compose up -d --build web`.
 
-Dieser Stand ist zum Ausprobieren gedacht und nicht zum Veroeffentlichen. Wer
-die Instanz erreichbar machen will, arbeitet vorher die Checkliste unten ab.
+This state is intended for evaluation, not publication. Before making the
+instance reachable, complete the production checklist below.
 
-Noch einmal getrennt davon ist der Entwicklungsablauf am Quellcode:
-`deploy/docker-compose.dev.yml` startet nur PostgreSQL. Das lokal gestartete
-Uvicorn ist ein Entwicklungsserver und keine Vorlage fuer einen extern
-erreichbaren produktiven Dienst.
+The source-code development workflow is separate again:
+`deploy/docker-compose.dev.yml` starts PostgreSQL only. A locally started
+Uvicorn process is a development server and is not a template for an
+externally reachable production service.
 
-## Compose-Netzwerk und Readiness
+## Compose network and readiness
 
-`postgres`, `migrate`, `api`, `worker` und `web` sind in `compose.yaml` explizit an
-dasselbe projektbezogene Bridge-Netzwerk `app` angeschlossen. Der konkrete
-Docker-Netzwerkname enthaelt zusaetzlich den Compose-Projektnamen, damit mehrere
-SideBySide-Stacks auf demselben Host nicht kollidieren.
+`postgres`, `migrate`, `api`, `worker`, and `web` are explicitly attached to the
+same project-specific bridge network `app` in `compose.yaml`. The concrete
+Docker network name also contains the Compose project name so multiple
+SideBySide stacks on the same host do not collide.
 
-Die Datenbank-URL verwendet absichtlich den Compose-Service-Namen
-`postgres:5432`. Keine Container-ID, feste Docker-IP und kein Host-Port gehoeren
-in `SBS_DATABASE_URL`.
+The database URL deliberately uses the Compose service name `postgres:5432`.
+Container IDs, fixed Docker IP addresses, and host ports do not belong in
+`SBS_DATABASE_URL`.
 
-Nach einem Deployment kann die Docker-DNS-Verbindung direkt aus der API
-geprueft werden:
+After a deployment, the Docker DNS path can be checked directly from the API:
 
 ```bash
 docker compose exec -T api python -c \
   'import socket; print(socket.gethostbyname("postgres"))'
 ```
 
-Zusatzkontrolle des tatsaechlichen Netzwerkzustands:
+Additional check of the actual network state:
 
 ```bash
 api_id=$(docker compose ps -q api)
 docker inspect "$api_id" --format '{{json .NetworkSettings.Networks}}'
 ```
 
-Ein laufender API-Container mit leerem Ergebnis `{}` ist **nicht**
-betriebsbereit. In diesem Zustand kann Docker-DNS `postgres` nicht aufloesen.
+A running API container with an empty `{}` result is **not** ready. In that
+state, Docker DNS cannot resolve `postgres`.
 
-SideBySide trennt zwei Gesundheitsfragen:
+SideBySide separates two health questions:
 
-- `/api/v1/health` ist reine **Liveness**: der API-Prozess antwortet.
-- `/api/v1/health/ready` ist **Readiness**: die API kann auch PostgreSQL
-  erreichen und einen echten `SELECT 1` ausfuehren.
-- `/healthz` am Webdienst bestaetigt nur, dass der statische Server antwortet.
-  Die Abhaengigkeit von der API wird separat durch Compose und deren Readiness
-  abgebildet.
+- `/api/v1/health` is pure **liveness**: the API process responds.
+- `/api/v1/health/ready` is **readiness**: the API can also reach PostgreSQL and
+  execute a real `SELECT 1`.
+- `/healthz` on the Web service confirms only that the static server responds.
+  API dependency is represented separately through Compose and API readiness.
 
-Der API-Docker-Healthcheck verwendet bewusst die Readiness-Route. Dadurch meldet
-`docker compose up -d --wait` einen fehlenden Datenbank-/Netzwerkpfad als
-Deploymentfehler, auch wenn Uvicorn selbst noch laeuft. Docker Compose startet
-einen Prozess nicht allein wegen des Status `unhealthy` neu; ein kurzfristiger
-Datenbankausfall bleibt damit von einem Prozessabsturz getrennt.
+The API Docker health check deliberately uses the readiness route. This makes
+`docker compose up -d --wait` report a missing database/network path as a
+deployment failure even if Uvicorn itself is still running. Docker Compose does
+not restart a process merely because its status is `unhealthy`, so a temporary
+database outage remains distinct from a process crash.
 
-## Checkliste fuer den Produktionsbetrieb
+## Production operation checklist
 
-Vor dem ersten oeffentlichen Start in `.env` setzen:
+Before the first public startup, set the following in `.env`:
 
 ```dotenv
 SBS_ENVIRONMENT=production
 SBS_CURSOR_SIGNING_KEY=...        # openssl rand -base64 48
-SBS_PUBLIC_BASE_URL=https://deine-domain.example
-SBS_ALLOWED_HOSTS=["deine-domain.example"]
-TRUSTED_PROXY_IPS=...             # kleinster IP-Bereich des Reverse-Proxys
-SBS_WEB_SPACE_ID=...              # vorhandene Space-UUID des G2-Referenzflows
+SBS_PUBLIC_BASE_URL=https://your-domain.example
+SBS_ALLOWED_HOSTS=["your-domain.example"]
+TRUSTED_PROXY_IPS=...             # smallest IP range used by the reverse proxy
+SBS_WEB_SPACE_ID=...              # existing Space UUID for the G2 reference flow
 
-# Mit Mailserver:
+# With a mail server:
 SBS_MAIL_TRANSPORT=smtp
-SBS_MAIL_FROM=no-reply@deine-domain.example
-SBS_SMTP_HOST=smtp.deine-domain.example
+SBS_MAIL_FROM=no-reply@your-domain.example
+SBS_SMTP_HOST=smtp.your-domain.example
 
-# Oder ohne Mailserver - siehe unten:
+# Or without a mail server - see below:
 # SBS_MAIL_TRANSPORT=none
 ```
 
-Fehlt der Cursor-Signing-Key oder ist die Basisadresse kein `https://`, startet
-die Anwendung nicht. Das ist Absicht und wird nicht umgangen: Der
-Cursor-Signing-Key schuetzt die Integritaet opaker Pagination-Cursor, und ein
-Anmeldelink ueber Klartext-HTTP ist ein uebernehmbarer Zugang.
+If the cursor signing key is missing or the base URL does not use `https://`,
+the application refuses to start. This is intentional and must not be bypassed:
+the cursor signing key protects the integrity of opaque pagination cursors, and
+a sign-in link delivered over plaintext HTTP is a transferable credential.
 
-### Betrieb ohne Mailserver
+### Operation without a mail server
 
-Ein SMTP-Zugang ist **keine** Startvoraussetzung. Mit
-`SBS_MAIL_TRANSPORT=none` laeuft die Instanz ohne Mailweg:
+SMTP access is **not** a startup requirement. With `SBS_MAIL_TRANSPORT=none`,
+the instance runs without a mail path:
 
-- Magic Link, Passwort-Recovery und Adressbestaetigung antworten mit
-  `503 MAIL_TRANSPORT_UNAVAILABLE` statt eine Nachricht zu versprechen, die
-  nie ankommt.
-- Anmeldung laeuft ueber Passwort, Passkey/WebAuthn und OIDC weiter.
-- Wer sein Passwort vergisst und keinen Passkey hat, kommt ohne Mailweg nicht
-  mehr selbst in sein Konto. Das ist der Preis dieser Betriebsart.
+- Magic Link, password Recovery, and email verification return
+  `503 MAIL_TRANSPORT_UNAVAILABLE` instead of promising a message that will
+  never arrive.
+- Sign-in through password, Passkey/WebAuthn, and OIDC continues to work.
+- A user who forgets their password and has no Passkey cannot recover access
+  without mail delivery. That is the trade-off of this operating mode.
 
-Was Produktion **nicht** akzeptiert, ist `SBS_MAIL_TRANSPORT=log`. Dabei
-stuenden gueltige Einmal-Token im Log der API und damit in jeder
-Log-Aggregation und jedem Backup davon. Der Unterschied zu `none` ist nicht
-formal: dort verlaesst kein Token das System.
+Production explicitly **does not** accept `SBS_MAIL_TRANSPORT=log`. That mode
+would place valid single-use tokens in API logs and therefore in any log
+aggregation or backup containing them. The distinction from `none` is
+substantive: with `none`, no token leaves the system.
 
-Danach `docker compose up -d --build --force-recreate --wait --wait-timeout
-300` und pruefen, dass `docker compose logs api` den Produktionsbetrieb
-meldet. `--build` ist fuer den PoC erforderlich, weil die Betreiber-Space-ID
-beim Vite-Build eingebettet wird.
+Then run `docker compose up -d --build --force-recreate --wait --wait-timeout
+300` and verify that `docker compose logs api` reports production mode.
+`--build` is required for the PoC because the operator Space ID is embedded at
+Vite build time.
 
-## Medienablage
+## Media storage
 
-`SBS_MEDIA_STORE=local` ist der Standard. API und Worker benutzen dabei das
-private Compose-Volume `media_data`; Dateisystempfade werden nicht an Clients
-ausgegeben.
+`SBS_MEDIA_STORE=local` is the default. The API and worker use the private
+Compose volume `media_data`; filesystem paths are not exposed to clients.
 
-Fuer einen S3-kompatiblen Objektspeicher wird in `.env` stattdessen gesetzt:
+For an S3-compatible object store, configure `.env` instead as follows:
 
 ```dotenv
 SBS_MEDIA_STORE=s3
@@ -198,126 +194,121 @@ SBS_S3_REGION=eu-central-1
 SBS_S3_BUCKET=sidebyside-private
 SBS_S3_ACCESS_KEY_ID=...
 SBS_S3_SECRET_ACCESS_KEY=...
-# Nur bei temporaeren Provider-Credentials:
+# Only for temporary provider credentials:
 # SBS_S3_SESSION_TOKEN=...
 ```
 
-Der Endpoint ist eine S3-API-Origin ohne eingebettete Zugangsdaten oder
-Unterpfad. Fuer produktiven Verkehr ueber nicht vollstaendig vertrauenswuerdige
-Netze muss HTTPS verwendet werden. Der Bucket selbst bleibt privat: keine
-Public ACLs, keine anonyme Read-Policy und keine statische Website-Freigabe.
-Die Server-Credentials benoetigen fuer den verwendeten Bucket/Key-Prefix nur
-die Objektoperationen GET/PUT/HEAD/DELETE; ein oeffentliches Bucket ist dafuer
-nicht notwendig.
+The endpoint is an S3 API origin without embedded credentials or a subpath.
+HTTPS must be used for production traffic over networks that are not fully
+trusted. The bucket itself remains private: no public ACLs, no anonymous read
+policy, and no static website exposure. Server credentials need only the
+GET/PUT/HEAD/DELETE object operations for the bucket/key prefix in use; making
+the bucket public is not required.
 
-Bei S3 lädt der Client mit einer serverseitig signierten PUT-Capability direkt
-auf genau den erzeugten Storage Key. Die Upload-URL gilt exakt 10 Minuten und
-ist mit `If-None-Match: *` gegen ein spaeteres Ueberschreiben desselben Objekts
-gebunden. Ein Provider-Upload setzt das Attachment nicht auf `READY`:
-`finalizeUpload` bestaetigt das Objekt serverseitig und die vorhandene
-Validierung entscheidet weiterhin allein ueber `READY`.
+With S3, the client uploads directly to the exact generated storage key using a
+server-signed PUT capability. The upload URL is valid for exactly 10 minutes and
+is bound with `If-None-Match: *` to prevent later overwriting of the same object.
+A provider upload does not set the Attachment to `READY`: `finalizeUpload`
+verifies the object server-side and the existing validation remains the sole
+authority for transitioning to `READY`.
 
-Lesen wird erst nach der normalen Membership-/Parent-Autorisierung freigegeben.
-Die signierte GET-URL gilt exakt 5 Minuten und nur fuer dieses Objekt. Bereits
-ausgestellte URLs koennen nach einem Membership- oder Privacy-Entzug technisch
-bis zum Ende dieser 5 Minuten weiter funktionieren. Das ist der dokumentierte
-Privacy-Trade-off des S3-Adapters; neue URLs werden nach dem Entzug nicht mehr
-ausgestellt.
+Reads are released only after the normal Membership/parent authorization. The
+signed GET URL is valid for exactly 5 minutes and only for that object. An
+already-issued URL can technically continue to work after Membership or privacy
+revocation until those 5 minutes have elapsed. This is the documented privacy
+trade-off of the S3 adapter; no new URLs are issued after revocation.
 
-Descriptor-Antworten und gespeicherte Objekte tragen `Cache-Control: private,
-no-store`; die API setzt fuer Descriptoren zusaetzlich `Referrer-Policy:
-no-referrer`. Presigned URLs, Signaturen und Storage-Credentials duerfen nicht
-in Access-Logs, Analytics, Supportdaten oder dauerhafte Clientcaches uebernommen
-werden.
+Descriptor responses and stored objects use `Cache-Control: private, no-store`;
+the API additionally sets `Referrer-Policy: no-referrer` for descriptors.
+Presigned URLs, signatures, and storage credentials must not be copied into
+access logs, analytics, support data, or persistent client caches.
 
-Bei einem Browser-Client braucht der Bucket eine enge CORS-Regel fuer die
-konkrete SideBySide-Origin. Fuer den Upload sind `PUT` und die Header
-`Content-Type`, `Cache-Control` und `If-None-Match` erforderlich; fuer direkte
-Reads `GET`/`HEAD`. Keine CORS-Regel ersetzt die private Bucket-Policy oder die
-serverseitige Autorisierung.
+For a browser client, the bucket requires a narrow CORS rule for the concrete
+SideBySide origin. Uploads require `PUT` and the `Content-Type`, `Cache-Control`,
+and `If-None-Match` headers; direct reads require `GET`/`HEAD`. No CORS rule
+replaces the private bucket policy or server-side authorization.
 
-Der Web-Container erlaubt diese direkte Verbindung zusätzlich in seiner
-Content Security Policy. Compose leitet dafür ausschließlich die exakte
-`SBS_S3_ENDPOINT`-Origin an `connect-src` weiter. Wildcards, Scheme-Freigaben
-wie `https:`, Pfade, Zugangsdaten und freie CSP-Fragmente werden vor dem
-Nginx-Start abgewiesen. Normale Nutzer konfigurieren daran nichts. Eine
-abweichende Cloud-/Hoster-Topologie kann am Web-Container mehrere exakte
-Origins whitespace-getrennt über `SBS_WEB_CSP_CONNECT_ORIGINS` setzen; im
-kanonischen Compose-Pfad wird dieser technische Wert automatisch abgeleitet.
+The Web container also permits this direct connection in its Content Security
+Policy. Compose forwards only the exact `SBS_S3_ENDPOINT` origin into
+`connect-src`. Wildcards, scheme-wide allowances such as `https:`, paths,
+credentials, and free-form CSP fragments are rejected before Nginx starts.
+Normal users do not configure this. An alternative Cloud/hosting topology may
+set multiple exact origins on the Web container as a whitespace-separated
+`SBS_WEB_CSP_CONNECT_ORIGINS` value; in the canonical Compose path this
+technical value is derived automatically.
 
-## Einmalige Erstregistrierung
+## One-time initial registration
 
-Eine leere Instanz nimmt den ersten Account nur mit dem in der lokalen `.env`
-gesetzten `SBS_BOOTSTRAP_TOKEN` an. Der Wert wird als `bootstrapToken` an
-`POST /api/v1/auth/register` uebergeben. Er wird weder in der Datenbank
-gespeichert noch von der Anwendung geloggt.
+An empty instance accepts the first account only with the `SBS_BOOTSTRAP_TOKEN`
+configured in the local `.env`. The value is passed as `bootstrapToken` to
+`POST /api/v1/auth/register`. It is neither stored in the database nor logged by
+the application.
 
-Fuer einen Start ohne vorhandene Benutzer gilt:
+For an instance without existing users:
 
-1. Ein zufaelliges Geheimnis mit mindestens 32 Zeichen erzeugen und nur in der
-   nicht versionierten `.env` als `SBS_BOOTSTRAP_TOKEN` speichern.
-2. Den Stack starten und die erste Registrierung lokal ueber `127.0.0.1`
-   ausfuehren.
-3. Nach erfolgreicher Registrierung `SBS_BOOTSTRAP_TOKEN` aus `.env` entfernen
-   und den API-Container neu erstellen: `docker compose up -d --force-recreate api`.
-4. Weitere Accounts ausschliesslich ueber Einladungen registrieren.
+1. Generate a random secret with at least 32 characters and store it only as
+   `SBS_BOOTSTRAP_TOKEN` in the untracked `.env`.
+2. Start the stack and perform the first registration locally through
+   `127.0.0.1`.
+3. After successful registration, remove `SBS_BOOTSTRAP_TOKEN` from `.env` and
+   recreate the API container with `docker compose up -d --force-recreate api`.
+4. Register all additional accounts exclusively through invitations.
 
-Die Datenbank speichert den erfolgreichen Abschluss dauerhaft. Derselbe oder
-ein spaeter neu gesetzter Bootstrap-Wert kann danach keinen zweiten initialen
-Owner erzeugen. Zwei parallele Erstregistrierungen werden in PostgreSQL
-serialisiert; genau eine kann erfolgreich sein.
+The database records successful bootstrap completion permanently. Neither the
+same value nor a later replacement bootstrap value can create a second initial
+owner. Two concurrent initial registrations are serialized by PostgreSQL;
+exactly one can succeed.
 
-Das Geheimnis darf nicht in Shell-Historie, Screenshots, Support-Anfragen oder
-Repository-Dateien gelangen. `.env` ist deshalb in `.gitignore` ausgeschlossen.
+The secret must not enter shell history, screenshots, support requests, or
+repository files. `.env` is therefore excluded by `.gitignore`.
 
-## Zugriff aus LAN oder Internet
+## Access from the LAN or Internet
 
-Externer Zugriff erfolgt ausschliesslich ueber einen TLS-Reverse-Proxy auf
-demselben Host oder in einem kontrollierten privaten Netz. Der sichere
-Standard bindet Web und API in `compose.yaml` nur an Loopback.
+External access is provided exclusively through a TLS reverse proxy on the
+same host or in a controlled private network. The secure default in
+`compose.yaml` binds Web and API to loopback only.
 
-Auf demselben Host braucht der Proxy zwei Ziele auf derselben oeffentlichen
-HTTPS-Origin:
+On the same host, the proxy requires two targets on the same public HTTPS
+origin:
 
-| Pfad | internes Ziel |
+| Path | Internal target |
 |---|---|
 | `/api/` | `http://127.0.0.1:<API_PORT>` |
-| alle anderen Pfade | `http://127.0.0.1:<WEB_PORT>` |
+| all other paths | `http://127.0.0.1:<WEB_PORT>` |
 
-Die spezifischere `/api/`-Route muss vor der allgemeinen Web-Route greifen.
-Sie geht in Produktion **direkt** zur API, nicht durch den Web-Container.
-Nur der lokale Loopback-Test verwendet dessen internen `/api/`-Proxy. So
-bleibt der TLS-Reverse-Proxy der eine vertrauenswuerdige Hop fuer
-`X-Forwarded-*`, und `TRUSTED_PROXY_IPS` muss weder um das Compose-Netz
-noch um `*` erweitert werden.
+The more specific `/api/` route must take precedence over the general Web
+route. In production it goes **directly** to the API, not through the Web
+container. Only the local loopback test uses the Web container's internal
+`/api/` proxy. This preserves the TLS reverse proxy as the single trusted hop
+for `X-Forwarded-*`, so `TRUSTED_PROXY_IPS` does not need to include the Compose
+network or `*`.
 
-Steht der Reverse-Proxy auf einem **anderen** Host, sind beide Loopback-Ziele
-dort nicht erreichbar. Dann braucht das Deployment eine bewusst konfigurierte,
-auf das private Netz begrenzte Weiterleitung fuer Web und API statt einer
-pauschalen Freigabe auf `0.0.0.0`. Diese Freigabe gehoert zur
-Hoster-Konfiguration und darf nicht versehentlich durch den
-Standard-Compose-Stack entstehen.
+If the reverse proxy runs on a **different** host, neither loopback target is
+reachable from it. The deployment then needs a deliberately configured,
+private-network-limited exposure for Web and API instead of a blanket bind to
+`0.0.0.0`. That exposure belongs to hosting configuration and must not arise
+accidentally from the standard Compose stack.
 
-In `.env` werden zusaetzlich gesetzt:
+Set the following additionally in `.env`:
 
 ```dotenv
 SBS_ALLOWED_HOSTS=["sidebyside.example.com","localhost","127.0.0.1"]
 TRUSTED_PROXY_IPS=192.0.2.10
 ```
 
-- `SBS_ALLOWED_HOSTS` ist eine JSON-Liste der oeffentlichen API-Hostnamen.
-  Ein globales `"*"` wird in Produktion abgelehnt.
-- `TRUSTED_PROXY_IPS` ist die genaue Adresse oder der kleinste CIDR-Bereich,
-  aus dem der Proxy den API-Container erreicht. Niemals `*` verwenden.
-- Der Proxy setzt `Host`, `X-Forwarded-For` und `X-Forwarded-Proto: https` neu;
-  vom Client angelieferte Forwarded Header werden nicht ungeprueft übernommen.
-- TLS-Zertifikate muessen gueltig sein und automatisch erneuert werden.
+- `SBS_ALLOWED_HOSTS` is a JSON list of public API hostnames. A global `"*"` is
+  rejected in production.
+- `TRUSTED_PROXY_IPS` is the exact address or smallest CIDR range from which the
+  proxy reaches the API container. Never use `*`.
+- The proxy sets `Host`, `X-Forwarded-For`, and `X-Forwarded-Proto: https`
+  itself; Forwarded headers supplied by the client are not trusted blindly.
+- TLS certificates must be valid and renewed automatically.
 
-Die Anwendung lehnt einen erlaubten externen Host trotzdem ab, solange das von
-Uvicorn bereinigte Request-Scheme nicht `https` ist. Ein normaler Client kann
-diese Pruefung nicht allein durch einen gefaelschten Forwarded Header umgehen.
+The application still rejects an allowed external host unless the request
+scheme sanitized by Uvicorn is `https`. A normal client cannot bypass this
+check merely by forging a Forwarded header.
 
-Nach der Proxy-Konfiguration muessen beide Pfade funktionieren:
+After proxy configuration, both paths must work:
 
 ```bash
 curl --fail https://sidebyside.example.com/
@@ -325,65 +316,64 @@ curl --fail https://sidebyside.example.com/api/v1/health/ready
 web/scripts/check_csp_header.sh https://sidebyside.example.com/
 ```
 
-Antwortet die API-Readiness, aber die Startseite nicht, zeigt die allgemeine
-Route noch auf den API-Port statt auf den Web-Port.
+If API readiness responds but the start page does not, the general route still
+points to the API port instead of the Web port.
 
-## Ausgehende E-Mail
+## Outgoing email
 
-Magic Link und Passwort-Wiederherstellung brauchen einen Mailweg. Im
-Standard steht `SBS_MAIL_TRANSPORT=log`: die Nachricht landet im Log der
-API, damit sich beides ohne Mailserver ausprobieren laesst.
+Magic Link and password Recovery require a mail path. The default is
+`SBS_MAIL_TRANSPORT=log`: the message is written to the API log so both flows
+can be tested without a mail server.
 
-Fuer den echten Betrieb wird ein SMTP-Server eingetragen:
+For real operation, configure an SMTP server:
 
-```
+```dotenv
 SBS_MAIL_TRANSPORT=smtp
-SBS_MAIL_FROM=no-reply@deine-domain.example
-SBS_SMTP_HOST=smtp.deine-domain.example
+SBS_MAIL_FROM=no-reply@your-domain.example
+SBS_SMTP_HOST=smtp.your-domain.example
 SBS_SMTP_PORT=587
 SBS_SMTP_USERNAME=...
 SBS_SMTP_PASSWORD=...
-SBS_PUBLIC_BASE_URL=https://deine-domain.example
+SBS_PUBLIC_BASE_URL=https://your-domain.example
 ```
 
-`SBS_PUBLIC_BASE_URL` steht in jedem Link. Sie kommt bewusst aus der
-Konfiguration und nicht aus dem Host-Header der Anfrage.
+`SBS_PUBLIC_BASE_URL` appears in every link. It deliberately comes from
+configuration rather than from the request Host header.
 
-Mit `SBS_ENVIRONMENT=production` startet die API nicht, wenn der Log-Versand
-stehen bleibt oder die Basisadresse kein `https://` ist. Sonst stuenden
-gueltige Anmeldelinks im Log.
+With `SBS_ENVIRONMENT=production`, the API refuses to start if log transport is
+still enabled or the base URL does not use `https://`. Otherwise valid sign-in
+links would appear in logs.
 
-Wer keinen Mailserver hat, setzt `SBS_MAIL_TRANSPORT=none` statt `log` - siehe
-[Betrieb ohne Mailserver](#betrieb-ohne-mailserver).
+If no mail server is available, use `SBS_MAIL_TRANSPORT=none` instead of `log`;
+see [Operation without a mail server](#operation-without-a-mail-server).
 
-## Smoke-Test nach Aenderungen
+## Smoke test after changes
 
 ```bash
-# Tatsaechlichen Host-Port ermitteln.
+# Determine the actual host port.
 api_port=$(docker compose port api 8000 | awk -F: '{print $NF}')
 
-# Liveness: der API-Prozess antwortet.
+# Liveness: the API process responds.
 curl --fail "http://127.0.0.1:${api_port}/api/v1/health"
 
-# Readiness: Docker-DNS und PostgreSQL funktionieren ebenfalls.
+# Readiness: Docker DNS and PostgreSQL work as well.
 curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
 
-# Der API-Container kann den Compose-Service postgres aufloesen.
+# The API container can resolve the Compose service postgres.
 docker compose exec -T api python -c \
   'import socket; print(socket.gethostbyname("postgres"))'
 
-# Der Webserver liefert genau die dokumentierte restriktive CSP.
+# The Web server serves exactly the documented restrictive CSP.
 web_port=$(docker compose port web 8080 | awk -F: '{print $NF}')
 web/scripts/check_csp_header.sh "http://127.0.0.1:${web_port}/"
 
-# Die oeffentliche Adresse muss HTTPS verwenden.
+# The public address must use HTTPS.
 curl --fail https://sidebyside.example.com/api/v1/health
 
-# Klartext darf extern keine erfolgreiche API-Antwort liefern.
+# Plaintext HTTP must not return a successful external API response.
 curl --fail http://sidebyside.example.com/api/v1/health && exit 1 || true
 ```
 
-Der Container-Healthcheck greift intern auf `127.0.0.1` zu und bewertet
-`/health/ready`. Damit wird ein API-Prozess ohne funktionsfaehigen
-Datenbankpfad als `unhealthy` sichtbar, ohne die separate Liveness-Route zu
-veraendern.
+The container health check accesses `127.0.0.1` internally and evaluates
+`/health/ready`. This makes an API process without a functioning database path
+visible as `unhealthy` without changing the separate liveness route.

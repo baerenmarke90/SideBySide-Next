@@ -3,22 +3,22 @@
 **Status:** binding pre-runtime contract after M2-S0 #70  
 **Version:** 2.0
 
-This document freezes routes, DTO names, concurrency, and pagination semantics for M2. The machine-readable planning source is `API-CONTRACT.json`. `backend/openapi.json` remains exclusively the contract generated from actually implemented FastAPI code and is updated only with the corresponding runtime slice. This avoids pretending that runtime endpoints already exist.
+This document freezes routes, DTO names, Concurrency, and Pagination semantics for M2. The machine-readable planning source is `API-CONTRACT.json`. `backend/openapi.json` remains exclusively the contract generated from actually implemented FastAPI code and is updated only with the respective runtime slice. This prevents pretending that Runtime endpoints already exist.
 
 ## 1. Global rules
 
 - Base: `/api/v1/spaces/{spaceId}/...`.
-- External JSON fields: `camelCase`.
-- Persistent IDs: UUIDv7 strings.
-- Authentication and active membership are checked before every space resource.
-- Foreign or privacy-protected resources return neutral `404`.
-- `visibility` is the public domain value; `privacyClass` is internal and is neither writable nor normally exposed as a client field.
-- All mutable resources have `version` and return `ETag`.
-- `PATCH`/`DELETE` and explicit relation/privacy mutations require `If-Match`.
-- Stale `If-Match` returns `409 RESOURCE_VERSION_CONFLICT`.
+- external JSON fields: `camelCase`.
+- persistent IDs: UUIDv7 strings.
+- Authentication and active Membership are checked before every Space resource.
+- foreign or Privacy-protected resources return neutral `404`.
+- `visibility` is the public Domain value; `privacyClass` is internal and is neither writable nor a normally exposed client field.
+- all mutable resources have `version` and return `ETag`.
+- `PATCH`/`DELETE` and explicit relation/Privacy mutations require `If-Match`.
+- stale `If-Match` returns `409 RESOURCE_VERSION_CONFLICT`.
 - Problem Details and stable `code` values follow the existing API style.
-- Domain dates use `YYYY-MM-DD`; technical timestamps are UTC instants.
-- Collection and Story pages use opaque keyset cursors.
+- domain calendar days use `YYYY-MM-DD`; technical timestamps are UTC instants.
+- Collection and Story pages use opaque Keyset Cursors.
 
 ## 2. Binding route catalog
 
@@ -33,7 +33,7 @@ This document freezes routes, DTO names, concurrency, and pagination semantics f
 | DELETE | `/spaces/{spaceId}/memories/{memoryId}` | `deleteMemory` | `If-Match` | `204` |
 | PUT | `/spaces/{spaceId}/memories/{memoryId}/attachments` | `replaceMemoryAttachments` | `If-Match`, `MemoryAttachmentSet` | `MemoryDetail` |
 
-`MemoryCreate` contains **no** attachments in S2; the relation endpoint is implemented only with the media-integration slice. The contract is nevertheless fixed now.
+`MemoryCreate` contains **no** Attachments in S2; the relation endpoint is implemented only with the Media integration slice. The contract is nevertheless fixed now.
 
 ### HeartMoment
 
@@ -46,7 +46,7 @@ This document freezes routes, DTO names, concurrency, and pagination semantics f
 | PATCH | `/spaces/{spaceId}/heart-moments/{heartMomentId}/visibility` | `changeHeartMomentVisibility` | `If-Match`, `HeartMomentVisibilityChange` | `HeartMomentDetail` |
 | DELETE | `/spaces/{spaceId}/heart-moments/{heartMomentId}` | `deleteHeartMoment` | `If-Match` | `204` |
 
-`SHARED -> PRIVATE` is the atomic privacy operation defined in #68. Private HeartMoments are visible only to the owner and are never Story items.
+`SHARED -> PRIVATE` is the atomic Privacy operation defined in #68. Private HeartMoments are visible only to the owner and are never Story items.
 
 ### Milestone
 
@@ -69,11 +69,11 @@ This document freezes routes, DTO names, concurrency, and pagination semantics f
 | POST | `/spaces/{spaceId}/attachments/{attachmentId}/read-access` | `createAttachmentReadAccess` | `AttachmentReadRequest` | `ReadDescriptor` |
 | DELETE | `/spaces/{spaceId}/attachments/{attachmentId}` | `deleteAttachment` | `If-Match` | `204` |
 
-`uploadAttachmentContent` is allowed only for a `STREAM` descriptor. With S3, `createAttachmentUpload` returns a `SIGNED_UPLOAD` descriptor. `finalize` means acceptance for asynchronous validation, not `READY`.
+`uploadAttachmentContent` is allowed only for a `STREAM` descriptor. With S3, `createAttachmentUpload` returns a `SIGNED_UPLOAD` descriptor. `finalize` means only acceptance for asynchronous validation, not `READY`.
 
 ### Comment
 
-Create/List are intentionally nested under the parent; Update/Delete are space-scoped by Comment ID.
+Create/List are deliberately nested under the parent; Update/Delete are Space-scoped by Comment ID.
 
 | Method | Route | operationId |
 |---|---|---|
@@ -86,7 +86,7 @@ Create/List are intentionally nested under the parent; Update/Delete are space-s
 | PATCH | `/spaces/{spaceId}/comments/{commentId}` | `updateComment` |
 | DELETE | `/spaces/{spaceId}/comments/{commentId}` | `deleteComment` |
 
-Create uses `CommentCreate { body }`; lists use `cursor?`, `limit?`; Update uses `If-Match` + `CommentUpdate`; Delete uses `If-Match`. A client sends neither `targetType` nor `targetId` in the body; the parent is determined exclusively by the route.
+Create uses `CommentCreate { body }`; Lists use `cursor?`, `limit?`; Update uses `If-Match` + `CommentUpdate`; Delete uses `If-Match`. A client sends neither `targetType` nor `targetId` in the Body; the parent is determined exclusively by the route.
 
 ### Story
 
@@ -96,7 +96,7 @@ Create uses `CommentCreate { body }`; lists use `cursor?`, `limit?`; Update uses
 
 G2 filters:
 
-- `type`: repeatable query parameter from `MEMORY | HEART_MOMENT | MILESTONE`.
+- `type`: repeatable Query parameter from `MEMORY | HEART_MOMENT | MILESTONE`.
 - `year`: `1900..2100`.
 - `order`: `DESC` by default, alternatively `ASC`.
 - `cursor`: opaque.
@@ -122,7 +122,7 @@ interface ResourceCapabilities {
 }
 ```
 
-Capabilities are a UX aid, not an authorization source.
+Capabilities are UX assistance, not an Authorization source.
 
 ### Memory
 
@@ -159,7 +159,7 @@ interface MemoryAttachmentSet {
 }
 ```
 
-`authorId`, `spaceId`, `version`, and capabilities are not writable. Partners can read shared Memories; Update/Delete remain author-only.
+`authorId`, `spaceId`, `version`, and Capabilities are not writable. Partners read shared Memories; Update/Delete remain author-only.
 
 ### HeartMoment
 
@@ -185,7 +185,7 @@ interface HeartMomentUpdate {
 interface HeartMomentVisibilityChange { visibility: HeartVisibility; }
 ```
 
-`privacyClass` is neither writable nor published as a regular DTO field. `visibility` is the only domain-level client source of truth.
+`privacyClass` is neither written nor published as a regular DTO field. `visibility` is the single Domain-level client truth.
 
 ### Milestone
 
@@ -246,7 +246,7 @@ interface ReadDescriptor {
 }
 ```
 
-Internal states such as `VALIDATING`, `DELETING`, `DELETE_FAILED`, storage keys, bucket names, provider, filesystem paths, and credentials are not client fields.
+Internal states such as `VALIDATING`, `DELETING`, `DELETE_FAILED`, Storage Keys, Bucket names, Providers, filesystem paths, and credentials are not client fields.
 
 `AttachmentReadRequest` contains the authorized parent reference as a closed object:
 
@@ -257,9 +257,9 @@ type AttachmentReadRequest =
   | { parentType: "NONE" };
 ```
 
-The server rechecks parent, space, and privacy; a parent reference is not a capability token.
+The server revalidates parent, Space, and Privacy; a parent reference is not a Capability Token.
 
-`parentType: "NONE"` denotes the owner's still-unbound upload within the M2-D20 binding window (M2-D24). It is not an authorization shortcut: the server requires owner identity, `READY`, and an unexpired window. This variant is invalid for a bound attachment — only parent reachability applies there.
+`parentType: "NONE"` represents the owner's own, still-unbound upload within the binding window from M2-D20 (M2-D24). It is not an Authorization shortcut: the server requires owner identity, `READY`, and an unexpired window. For a bound Attachment this variant is invalid — only parent reachability applies there.
 
 ## 4. Story union
 
@@ -270,9 +270,9 @@ type StoryItem =
   | { kind: "MILESTONE"; effectiveDate: LocalDate; milestone: MilestoneSummary };
 ```
 
-No `PRIVATE` HeartMoment variant exists in the Story schema.
+There is no `PRIVATE` HeartMoment variant in the Story schema.
 
-## 5. Story sorting and cursor – M2-D08
+## 5. Story ordering and Cursor — M2-D08
 
 `effectiveDate` is determined per resource as:
 
@@ -289,11 +289,11 @@ with `kindRank`: `MEMORY=1`, `HEART_MOMENT=2`, `MILESTONE=3`.
 
 - `DESC`: all four keys descending.
 - `ASC`: all four keys ascending.
-- Keyset pagination uses strict `>` or `<` over the complete tuple, never offset.
-- Tenant and privacy filters are applied **before** sorting and cursor comparison.
-- Identical date/time values create neither tie duplicates nor tie gaps because of `kindRank + id`.
+- Keyset Pagination uses strict `>` or `<` on the complete tuple, never Offset.
+- Tenant and Privacy filters are applied **before** sorting and Cursor comparison.
+- identical date/time values produce neither tie duplicates nor tie gaps because of `kindRank + id`.
 
-Cursor format is opaque to clients. Server-side version 1 encodes at least:
+Cursor format is opaque to clients. Server-side, version 1 encodes at least:
 
 ```json
 {
@@ -307,13 +307,13 @@ Cursor format is opaque to clients. Server-side version 1 encodes at least:
 }
 ```
 
-The cursor is integrity-protected/signed and bound to space, `type`, `year`, `order`, and filter context independent of `limit`. A cursor from another space or with changed filters is rejected neutrally as `400 INVALID_CURSOR`. `limit` may decrease or increase between pages without changing the logical continuation point.
+The Cursor is integrity-protected/signed and bound to Space, `type`, `year`, `order`, and the filter context independent of `limit`. A Cursor from another Space or with changed filters is neutrally rejected as `400 INVALID_CURSOR`. `limit` may be reduced/increased between pages without changing the logical continuation point.
 
-Concurrent domain changes to sort fields do not promise a historical snapshot; clients may reload after refresh. The invariant “no tie duplicates/gaps” applies to an unchanged sorted data set between two pages.
+With concurrent domain changes to sort fields, no historical snapshot is promised; clients may reload after Refresh. The invariant "no tie duplicates/gaps" applies to an unchanged sorted dataset between two pages.
 
-## 6. Collection pagination
+## 6. Collection Pagination
 
-Memories, Milestones, HeartMoments, and Comments use the same base cursor contract. The concrete sort key is documented per collection but is at least uniquely determined by `createdAt, id`. Default `limit=50`, maximum `100`.
+Memories, Milestones, HeartMoments, and Comments use the same base Cursor contract. The concrete sort key is documented per Collection but is at minimum made unique by `createdAt, id`. Default `limit=50`, maximum `100`.
 
 ## 7. Error codes
 
@@ -321,34 +321,34 @@ Binding M2 codes:
 
 | Code | HTTP | Meaning |
 |---|---:|---|
-| `RESOURCE_NOT_FOUND` | 404 | neutrally invisible/not present |
+| `RESOURCE_NOT_FOUND` | 404 | neutrally not visible/not present |
 | `RESOURCE_VERSION_CONFLICT` | 409 | stale If-Match |
 | `INVALID_CURSOR` | 400 | manipulated, foreign context, or incompatible version |
 | `ATTACHMENT_TYPE_NOT_ALLOWED` | 415 | not in allowlist |
 | `ATTACHMENT_TOO_LARGE` | 413 | server-side limit exceeded |
-| `ATTACHMENT_VALIDATION_FAILED` | 422 | media validation failed |
-| `ATTACHMENT_NOT_READY` | 409 | bind/read before READY |
+| `ATTACHMENT_VALIDATION_FAILED` | 422 | Media validation failed |
+| `ATTACHMENT_NOT_READY` | 409 | Bind/Read before READY |
 | `ATTACHMENT_ALREADY_LINKED` | 409 | exclusive binding violated |
-| `ATTACHMENT_LIMIT_EXCEEDED` | 409 | parent cardinality/total-size limit violated |
-| `COMMENT_TARGET_NOT_AVAILABLE` | 404 | parent invisible/not commentable |
-| `RATE_LIMITED` | 429 | existing rate-limit convention |
+| `ATTACHMENT_LIMIT_EXCEEDED` | 409 | parent cardinality/total size violated |
+| `COMMENT_TARGET_NOT_AVAILABLE` | 404 | parent not visible/not commentable |
+| `RATE_LIMITED` | 429 | existing Rate Limit convention |
 
-Pydantic form validation remains `422` with the existing Problem Details transport. Privacy-relevant errors must contain no existence/count/metadata leaks.
+Pydantic form validation remains `422` with the existing Problem Details transport. Privacy-relevant errors must not contain existence/count/metadata leaks.
 
 ## 8. OpenAPI handoff
 
 `API-CONTRACT.json` is a pre-runtime manifest, not a second production OpenAPI document. The CI test checks:
 
-- unique operation IDs and method/routes,
-- space-scoped paths,
-- required If-Match for mutable resources,
-- Story filters and cursor contract,
+- unique operationIds and methods/routes,
+- Space-scoped paths,
+- mandatory If-Match for mutable resources,
+- Story filters and Cursor contract,
 - exclusion of `q` from G2,
 - exclusion of `privacyClass` from client write fields,
-- exclusion of internal storage fields from attachment descriptors,
+- exclusion of internal Storage fields from Attachment descriptors,
 - no PRIVATE Story variant.
 
-For each runtime slice, the implemented FastAPI contract in `backend/openapi.json` must be brought into exact alignment with the manifest operations belonging to that slice. `backend/openapi.json` continues to be generated exclusively with `uv run python scripts/openapi_contract.py write`.
+For each runtime slice, the implemented FastAPI contract in `backend/openapi.json` must be aligned exactly with the manifest operations belonging to that slice. `backend/openapi.json` continues to be generated exclusively with `uv run python scripts/openapi_contract.py write`.
 
 ## Related documents
 

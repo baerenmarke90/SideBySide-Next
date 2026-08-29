@@ -1,21 +1,21 @@
 # M3 Delivery Plan
 
-**Status:** S0 complete; runtime approved; S1 through S4 delivered  
+**Status:** S0 complete; runtime released; S1 through S4 delivered  
 **As of:** August 26, 2026
 
 ## 1. Gate before runtime
 
-This plan describes the sequence **after runtime approval**.
+This plan describes the sequence **after runtime release**.
 
 Before the first M3 runtime commit, the current project rule requires:
 
-1. the final G2 review on current `main` to state `G2: BESTANDEN` (#147),
-2. #146 to synchronize status sources and approve M3,
-3. the concrete runtime PR to handle the production OpenAPI contract and reuse-before-build correctly.
+1. the final G2 review on current `main` to determine `G2: PASSED` (#147),
+2. #146 to synchronize the status sources and release M3,
+3. the concrete runtime PR to address the production OpenAPI contract and Reuse-before-build cleanly.
 
-Items 1 and 2 are satisfied. Item 3 remains a condition **per runtime PR** and is not discharged by the gate.
+Items 1 and 2 are satisfied. Item 3 remains a condition **for each runtime PR** and is not discharged by the gate.
 
-The domain S0 decisions are complete: M3-D01 through M3-D32 are `DECIDED`.
+The domain-level S0 decisions are complete: M3-D01 through M3-D32 are `DECIDED`.
 
 ## 2. S0 – complete
 
@@ -32,11 +32,11 @@ Contract: [`decisions/WISH-PLAN-LIFECYCLE.md`](./decisions/WISH-PLAN-LIFECYCLE.m
 
 ### #163 Place / Relations / Chapters
 
-- Place privacy and coordinates;
+- Place Privacy and coordinates;
 - no automatic deduplication;
 - typed relation surface;
-- `Plan.placeId`/`Chapter.placeId` as canonical single-Place foreign keys;
-- relation privacy and races;
+- `Plan.placeId`/`Chapter.placeId` as canonical single-Place FKs;
+- Relation Privacy and races;
 - Chapter dates, derived ordering, and Delete.
 
 Contract: [`decisions/PLACE-RELATIONS-CHAPTERS.md`](./decisions/PLACE-RELATIONS-CHAPTERS.md)
@@ -44,12 +44,12 @@ Contract: [`decisions/PLACE-RELATIONS-CHAPTERS.md`](./decisions/PLACE-RELATIONS-
 ### #164 Collections / Private Area
 
 - Shared Collection root/item versioning;
-- atomic reorder;
+- atomic Reorder;
 - Private ProtectedPayload;
 - GiftIdea status;
-- PrivateCollection schema/auth;
+- PrivateCollection schema/Auth;
 - owner-scoped Private API;
-- M3 event redaction.
+- M3 Event Redaction.
 
 Contract: [`decisions/COLLECTIONS-PRIVATE-AREA.md`](./decisions/COLLECTIONS-PRIVATE-AREA.md)
 
@@ -57,8 +57,8 @@ Contract: [`decisions/COLLECTIONS-PRIVATE-AREA.md`](./decisions/COLLECTIONS-PRIV
 
 - G3 as a Domain/API/PostgreSQL gate;
 - five mandatory real HTTP E2E flows;
-- M5/G4 boundary for clients/accessibility/performance;
-- later export/cache privacy;
+- M5/G4 boundary for clients/Accessibility/Performance;
+- later Export/cache Privacy;
 - Private IA;
 - Plan Richness later;
 - multi-select as client state.
@@ -78,14 +78,14 @@ Plan --------> Place (max. one primary Place)
 Chapter -----> Place (max. one primary Place)
 
 Memory -----------+
-SHARED HeartMoment+---- typed relations ----> Chapter / Place
+SHARED HeartMoment+---- typed Relations ----> Chapter / Place
 Milestone --------+
 
 Shared Collection
-  -> CollectionItems + atomic reorder
+  -> CollectionItems + atomic Reorder
 
 PrivateNote / GiftIdea / PrivateCollection
-  -> OWNER_ONLY, completely separate query/API boundary
+  -> OWNER_ONLY, completely separate Query/API boundary
 ```
 
 ## 4. S1 – Wish Foundation – delivered
@@ -99,15 +99,15 @@ Scope:
 - collaborative write;
 - `If-Match`/409;
 - Tenant Guard;
-- safe events;
-- PostgreSQL/HTTP/cross-tenant tests.
+- safe Events;
+- PostgreSQL/HTTP/Cross-Tenant tests.
 
 Exit:
 
-- Wish is robust as an independent shared domain;
-- no unrestricted status mutation bypasses the Wish->Plan contract.
+- Wish is robust as an independent Shared Domain;
+- no free status mutation can bypass the Wish->Plan contract.
 
-Delivered. The two points deliberately left open in S1 — the first real status transition and the Plan-dependent rows of the Delete matrix — were completed with S2.
+Implemented. The two points left open in S1 — the first real status transition and the Plan-dependent rows of the Delete matrix — were completed in S2.
 
 ## 5. S2 – Plan + Wish->Plan – delivered
 
@@ -134,9 +134,9 @@ Wish Create
 -> Wish + Plan consistently COMPLETED
 ```
 
-Delivered, including the mandatory race and rollback tests from the decision document: concurrent Convert creates exactly one Plan, a failure between Plan insert and Wish transition leaves nothing behind, and Delete vs. Convert or Complete vs. Return ends deterministically without a partial lifecycle.
+Implemented, including the mandatory race and rollback tests from the decision document: parallel Convert creates exactly one Plan, a failure between Plan insert and Wish transition leaves nothing behind, and Delete vs. Convert or Complete vs. Return ends deterministically without a half lifecycle.
 
-Not included and explicitly assigned to S3: `Plan.placeId`. M3-D02 and M3-D30 name the field for Create, PATCH, and conversion; without the Place domain it could not point anywhere, and a contract with an unusable field would promise an association the server cannot establish.
+Not included and explicitly deferred to S3: `Plan.placeId`. M3-D02 and M3-D30 name the field for Create, PATCH, and conversion; without a Place Domain it could point to nothing, and a contract with an unusable field would promise an association the server could not establish.
 
 ## 6. S3 – Place Foundation – delivered
 
@@ -144,20 +144,20 @@ Scope:
 
 - Place model + migration;
 - `name/description/address/latitude/longitude`;
-- Lat/Lon as a pair, max. 6 decimal places;
+- lat/lon as a pair, max. 6 decimal places;
 - CRUD/List;
 - no automatic deduplication;
-- no Maps/Geocoding provider;
-- redaction in logs/events;
-- Delete sets Plan/Chapter Place foreign keys to NULL and removes only join relations;
+- no Maps/Geocoding Provider;
+- Redaction in logs/Events;
+- Delete sets Plan/Chapter Place FKs to NULL and removes only Join Relations;
 - add `Plan.placeId` as field, migration, and contract surface (moved from S2).
 
-Delivered. Two execution details:
+Implemented. Two execution details:
 
-- Place Delete detaches assigned Plans **versioned in the service**, not only through `ON DELETE SET NULL`. A Plan whose location disappears has changed; without a new version, a partner could continue writing from a state that still shows a Place that no longer exists. The foreign key remains as the integrity boundary.
-- Log redaction became more than a domain rule: bound parameters previously appeared in every database error and therefore in the application log. This affected coordinates and all existing ProtectedPayloads alike. The fix was applied at the engine boundary.
+- Place Delete unlinks assigned Plans **versionedly in the service** rather than relying only on `ON DELETE SET NULL`. A Plan whose Place disappears has changed; without a new version, a partner could continue writing from a state that still shows a Place that no longer exists. The foreign key remains as the integrity boundary.
+- Log Redaction became more than a Domain rule: bound parameters had previously appeared in every database error message and therefore in the application log. This affected coordinates as well as all existing ProtectedPayloads. Fixed at the engine level.
 
-`Chapter.placeId` remains with S5 — there is no Chapter table before the Chapter domain exists.
+`Chapter.placeId` remains in S5 — without a Chapter Domain there is no column.
 
 ## 7. S4 – Typed Content Relations – delivered
 
@@ -169,26 +169,26 @@ place_heart_moments
 place_milestones
 ```
 
-The three `chapter_*` relations belong to S5 in section 8 and were previously listed here by mistake. They cannot be built in S4: the `chapters` table is created only with the Chapter domain, so a foreign key would have no target until then. This is the same reason `Plan.placeId` moved from S2 to S3.
+The three `chapter_*` Relations are listed in section 8 under S5 and had previously been carried here by mistake. They are not buildable in S4: the `chapters` table is created only with the Chapter Domain, so a foreign key would have no target until then. This is the same reasoning used when `Plan.placeId` was moved from S2 to S3.
 
 Technical rules:
 
-- real foreign keys + Unique Constraints;
-- no unrestricted `(targetType,targetId)` polymorphism;
-- same-space enforcement;
+- real FKs + Unique Constraints;
+- no free `(targetType,targetId)` polymorphism;
+- Same-Space enforcement;
 - SHARED HeartMoments only;
 - typed REST routes;
 - Relation Create locks/revalidates Parent->Target;
-- privacy change SHARED->PRIVATE removes relations atomically;
-- Delete/privacy races tested with PostgreSQL.
+- Privacy transition SHARED->PRIVATE removes Relations atomically;
+- Delete/Privacy races tested with PostgreSQL.
 
 `place_plans` and `place_chapters` are not built; `Plan.placeId` and `Chapter.placeId` are canonical.
 
-Delivered. Three execution details:
+Implemented. Three execution details:
 
-- Same-space is not merely a service rule; it is a schema property. The join row carries `space_id` once, and the *same* column participates in both composite foreign keys. A cross-space relation is therefore not just forbidden but unrepresentable.
-- Exclusion of private HeartMoments is also encoded in the schema. `place_heart_moments` carries the target privacy class as part of the foreign key, with `ON UPDATE CASCADE` and a CHECK for `SPACE_SHARED`. If a moment switches to `OWNER_ONLY` without its relations being removed first, the transaction fails. The service removes them in the same transaction and never hits that barrier; the barrier protects the code path that does not exist yet.
-- `change_visibility` now locks the HeartMoment exclusively instead of merely authorizing it. Without the lock, there was a window between removing relations and changing the class where a concurrent Relation Create could still insert its row as shared.
+- Same-Space became a schema property rather than a service rule. The Join row carries `space_id` once, and *the same* column participates in both composite foreign keys. A Cross-Space relation is therefore not merely forbidden; it cannot be represented.
+- Excluding private HeartMoments also lives in the schema. `place_heart_moments` carries the target Privacy class as part of the foreign key, with `ON UPDATE CASCADE` and a CHECK for `SPACE_SHARED`. If a moment changes to `OWNER_ONLY` without first removing its Relations, the transaction fails. The service removes them in the same transaction and therefore never hits the guard; the guard protects code paths that do not yet exist.
+- `change_visibility` now locks the HeartMoment exclusively instead of merely authorizing it. Without the lock, there was a window between removing Relations and changing the class in which a concurrent Relation Create could still insert its row as shared.
 
 ## 8. S5 – Chapter
 
@@ -198,17 +198,17 @@ Scope:
 - CRUD/List;
 - optional `startOn`/`endOn`, with `endOn >= startOn` when both are set;
 - `placeId`;
-- typed Content Relations (`chapter_memories`, `chapter_heart_moments`, `chapter_milestones`) using the same join form as S4;
+- typed Content Relations (`chapter_memories`, `chapter_heart_moments`, `chapter_milestones`) using the same Join shape as S4;
 - derived chronological presentation;
 - multiple Chapters may reference the same target;
-- Delete removes only Chapter + relations.
+- Delete removes only Chapter + Relations.
 
 Mandatory test:
 
 ```text
 Chapter + Memory + SHARED HeartMoment + Milestone
 -> DELETE Chapter
--> relations removed
+-> Relations gone
 -> all originals remain readable unchanged
 ```
 
@@ -217,14 +217,14 @@ Chapter + Memory + SHARED HeartMoment + Milestone
 Scope:
 
 - Collection + CollectionItem;
-- `createdBy` attribution, collaborative write;
+- `createdBy` Attribution, collaborative write;
 - root version for structure/order;
-- item version for title/completed;
-- position `0..n-1`;
-- atomic full-list reorder;
-- item Delete + compaction;
-- parent Delete cascades only items;
-- cross-tenant/concurrency tests.
+- item version for Title/Completed;
+- positions `0..n-1`;
+- atomic full-list Reorder;
+- Item Delete + compaction;
+- Parent Delete cascades only Items;
+- Cross-Tenant/Concurrency tests.
 
 Not included: ShoppingList and persisted multi-select state.
 
@@ -235,11 +235,11 @@ Scope:
 - separate tables/services;
 - owner-only CRUD/List;
 - `/spaces/{spaceId}/private/...`;
-- PrivateNote title/body as protected content;
+- PrivateNote title/body as Protected Content;
 - GiftIdea `IDEA | BOUGHT | GIVEN`;
-- no URL preview/server fetches;
-- privacy-safe 404;
-- event/log redaction;
+- no URL Preview/server Fetches;
+- Privacy-safe 404;
+- Event/log Redaction;
 - partner negative tests.
 
 ## 11. S8 – PrivateCollection
@@ -247,25 +247,25 @@ Scope:
 Scope:
 
 - PrivateCollection root with id/space/owner/version;
-- items with parent FK, id/version/position;
-- authorize owner/space exclusively through parent;
+- Items with Parent FK, id/version/position;
+- authorize owner/space exclusively through Parent;
 - owner-only Reorder/Completion;
-- parent Delete cascades only items;
-- partner/cross-space negative tests.
+- Parent Delete cascades only Items;
+- partner/Cross-Space negative tests.
 
 Shared Collection and PrivateCollection share neither a table nor an unsafe query path.
 
-## 12. S9 – Integrated M3 Backend/API evidence
+## 12. S9 – Integrated M3 backend/API evidence
 
 The five mandatory G3 flows are demonstrated against the real SideBySide API + PostgreSQL:
 
 1. Wish -> Plan -> Complete;
-2. Place + typed relation + Delete;
-3. Chapter + relations + Delete without original-data loss;
+2. Place + typed Relation + Delete;
+3. Chapter + Relations + Delete without original loss;
 4. Collection Completion + Reorder + Conflict;
 5. PrivateNote/GiftIdea/PrivateCollection with partner negative path.
 
-Cross-tenant, race, event/log redaction, and Delete suites also run.
+Additionally, Cross-Tenant, race, Event/log Redaction, and Delete suites run.
 
 ## 13. S10 – G3 Review
 
@@ -275,24 +275,24 @@ The final review is created as a new dated snapshot:
 docs/reviews/YYYY-MM-DD-g3-gate-review.md
 ```
 
-It references final `main` SHA, CI runs, the five E2E flows, and open findings and ends with:
+It references the final `main` SHA, CI runs, the five E2E flows, and open findings and ends with:
 
 ```text
-G3: BESTANDEN
+G3: PASSED
 ```
 
 or
 
 ```text
-G3: NICHT BESTANDEN
+G3: NOT PASSED
 ```
 
-G3 does not require complete Web/Android reference flows. Systematic client parity, accessibility, Read Cache, Export/Import, and performance remain M5/G4.
+G3 does not require complete Web/Android reference flows. Systematic client parity, Accessibility, Read Cache, Export/Import, and Performance remain M5/G4.
 
 ## 14. Dependency graph
 
 ```text
-G2 BESTANDEN + #146
+G2 PASSED + #146
         |
         v
 S1 Wish
@@ -324,4 +324,4 @@ S2 + S3 + S4 + S5 + S6 + S7 + S8
            S10 G3
 ```
 
-S3/S6/S7 may be partially parallelized after runtime approval as long as their schema/migrations remain cleanly coordinated.
+S3/S6/S7 may be partially parallelized after runtime release as long as their schema/migrations remain cleanly coordinated.

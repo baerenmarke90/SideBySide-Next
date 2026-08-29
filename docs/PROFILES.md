@@ -1,65 +1,46 @@
-# Partnerprofile und Praeferenzen
+# Partner Profiles and Preferences
 
 ## Scope
 
-Die M1-Profiles-Domain trennt zwei fachlich unterschiedliche Arten von
-Informationen strikt:
+The M1 Profiles Domain strictly separates two technically different kinds of information:
 
-- `SELF_PROFILE`: Ein Account beschreibt sich selbst fuer den aktiven
-  Partner im selben Space. Diese Zeilen sind `SPACE_SHARED`.
-- `PRIVATE_PARTNER_NOTE`: Ein Account merkt sich privat etwas ueber den
-  anderen aktiven Partner. Diese Zeilen sind `OWNER_ONLY`.
+- `SELF_PROFILE`: An Account describes itself to the active partner in the same Space. These rows are `SPACE_SHARED`.
+- `PRIVATE_PARTNER_NOTE`: An Account privately remembers something about the other active partner. These rows are `OWNER_ONLY`.
 
-Es gibt keine `PUBLIC`-Sichtbarkeit und der Request kann `privacyClass`
-nicht frei setzen. Die API leitet die Privacy-Klasse serverseitig aus der
-fachlichen `visibility` ab.
+There is no `PUBLIC` visibility and the request cannot freely set `privacyClass`. The API derives the Privacy class server-side from the Domain `visibility`.
 
-## Persistenz
+## Persistence
 
-`partner_profiles` ist der sichtbare Profil-Aggregatkopf eines Accounts in
-einem Space. Pro `(space_id, owner_id)` existiert hoechstens eine Zeile und
-die Datenbank erzwingt `SPACE_SHARED`.
+`partner_profiles` is the visible profile aggregate root of an Account in a Space. At most one row exists per `(space_id, owner_id)` and the database enforces `SPACE_SHARED`.
 
-`profile_preferences` speichert strukturierte Praeferenzen. Metadaten wie
-Kategorie, Topic, Sentiment, Ownership und Sichtbarkeit bleiben separat vom
-schuetzenswerten `value`. Der Wert liegt in einer `ProtectedPayloadJSON`-
-Spalte mit `crypto_version = 0`; das ist Klartext und **keine E2EE**. Die
-Trennung haelt den spaeteren Wechsel auf clientseitig versiegelte Payloads
-offen.
+`profile_preferences` stores structured preferences. Metadata such as category, topic, sentiment, ownership, and visibility remain separate from the protected `value`. The value is stored in a `ProtectedPayloadJSON` column with `crypto_version = 0`; this is plaintext and **not E2EE**. The separation keeps the later migration to client-side sealed payloads possible.
 
-Die Datenbank erzwingt zusaetzlich:
+The database additionally enforces:
 
-- `SELF_PROFILE` => `account_id == owner_id`, `SPACE_SHARED`, sichtbares
-  `partner_profile` vorhanden.
-- `PRIVATE_PARTNER_NOTE` => `account_id != owner_id`, `OWNER_ONLY`, keine
-  Verbindung zum sichtbaren `partner_profile`.
+- `SELF_PROFILE` => `account_id == owner_id`, `SPACE_SHARED`, visible `partner_profile` exists.
+- `PRIVATE_PARTNER_NOTE` => `account_id != owner_id`, `OWNER_ONLY`, no connection to visible `partner_profile`.
 
-Damit kann eine private Partnernotiz nicht durch eine fehlerhafte
-Serialisierung Teil des sichtbaren Partnerprofils werden.
+Therefore a private partner note cannot become part of the visible partner profile through faulty serialization.
 
-## Autorisierung
+## Authorization
 
-Jeder Endpunkt beginnt mit dem bestehenden Tenant Context. Listen und
-Detailzugriffe verwenden anschliessend den zentralen Owner-/Privacy-Guard.
-Die Filterbedingung ist Bestandteil der SQL-Abfrage; unsichtbare Zeilen
-werden nicht zuerst geladen und danach verworfen.
+Every endpoint begins with the existing Tenant Context. Lists and detail access then use the central Owner/Privacy Guard. The filter condition is part of the SQL query; invisible rows are not loaded first and discarded afterward.
 
-Fuer `SPACE_SHARED` gilt:
+For `SPACE_SHARED`:
 
-- beide aktiven Partner duerfen lesen,
-- nur der Owner darf schreiben oder loeschen.
+- both active partners may read,
+- only the owner may write or delete.
 
-Fuer `OWNER_ONLY` gilt:
+For `OWNER_ONLY`:
 
-- nur der Owner darf lesen, schreiben oder loeschen,
-- fuer den betroffenen Partner und Cross-Tenant-Aufrufer ist die Ressource
-  ununterscheidbar von einer nicht vorhandenen Ressource (`404`).
+- only the owner may read, write, or delete,
+- for the affected partner and Cross-Tenant caller the resource is indistinguishable from a missing resource (`404`).
 
-Der sichtbare Endpunkt
-`GET /api/v1/spaces/{spaceId}/profiles/{accountId}` filtert zusaetzlich
-immer auf `SELF_PROFILE`. Eigene private Notizen ueber diese Person werden
-also auch dem Notiz-Owner nicht versehentlich in dieser Profilansicht
-beigemischt.
+The visible endpoint:
+
+`GET /api/v1/spaces/{spaceId}/profiles/{accountId}`
+
+always filters to `SELF_PROFILE`. The owner's own private notes about this person therefore cannot accidentally appear in this profile view.
 
 ## API
 
@@ -70,15 +51,13 @@ beigemischt.
 - `PUT /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`
 - `DELETE /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`
 
-Aendern und Loeschen verwenden ETag/`If-Match`. Veraltete Versionen liefern
-`409 VERSION_CONFLICT` statt eines stillen Lost Updates.
+Changes and deletes use ETag/`If-Match`. Stale versions return `409 VERSION_CONFLICT` instead of a silent Lost Update.
 
-## Stabile Enums
+## Stable enums
 
-Kategorien:
+Categories:
 
-`FOOD`, `DRINK`, `FLOWERS`, `MOVIES`, `SERIES`, `MUSIC`, `HOBBIES`,
-`ACTIVITIES`, `TRAVEL`, `RESTAURANTS`, `COLORS`, `OTHER`.
+`FOOD`, `DRINK`, `FLOWERS`, `MOVIES`, `SERIES`, `MUSIC`, `HOBBIES`, `ACTIVITIES`, `TRAVEL`, `RESTAURANTS`, `COLORS`, `OTHER`.
 
 Sentiments:
 
@@ -88,5 +67,4 @@ Visibility:
 
 `SELF_PROFILE`, `PRIVATE_PARTNER_NOTE`.
 
-Unbekannte Werte werden an der API abgewiesen und sind zusaetzlich durch
-Datenbank-Constraints ausgeschlossen.
+Unknown values are rejected by the API and additionally excluded through database constraints.

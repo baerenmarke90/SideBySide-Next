@@ -1,13 +1,13 @@
 # M3 Place, Relations, and Chapter Semantics
 
-**Status:** `DECIDED` – effective when this decision PR is merged  
+**Status:** `DECIDED` – effective with merge of this decision PR  
 **Date:** August 26, 2026  
 **Tracking:** #163  
-**Affects:** M3-D06, D07, D08, D09, D10, D11, D12, D26, D28, D31
+**Covers:** M3-D06, D07, D08, D09, D10, D11, D12, D26, D28, D31
 
-This document closes the blocking M3 decisions for Places, typed Content Relations, and Chapters. It contains only domain, persistence, API, privacy, concurrency, and test decisions. It **does not approve M3 runtime code**; the existing G2/status-sync gate rule remains unchanged.
+This document closes the blocking M3 decisions for Places, typed Content Relations, and Chapters. It contains only Domain, persistence, API, Privacy, Concurrency, and test decisions. It does **not release M3 runtime code**; the existing G2/status-sync gate rule remains unchanged.
 
-## 1. Authoritative sources
+## 1. Binding sources
 
 - `specification/CLEAN-ROOM-MASTER-SPEC.md`
 - `specification/PRODUCT-SPEC.md`
@@ -19,23 +19,23 @@ This document closes the blocking M3 decisions for Places, typed Content Relatio
 - `docs/m3/SECURITY-TEST-MATRIX.md`
 - M3-D01 from #162: collaborative write for shared M3 planning resources
 
-The following remain source-bound in particular:
+In particular, the following remain source-bound:
 
 - Place is `SPACE_SHARED` and may exist without coordinates.
-- Place can be linked to Memories, HeartMoments, Milestones, Plans, and Chapters.
+- Place may be linked with Memories, HeartMoments, Milestones, Plans, and Chapters.
 - Relations require real referential integrity; no uncontrolled `(targetType,targetId)` universal relation.
-- Chapter groups Memories, shared HeartMoments, and Milestones.
-- Chapter Delete removes relations, never original content.
-- `OWNER_ONLY` must not leak indirectly through relations, counts, errors, or ordering gaps.
-- exact location data must not enter logs, analytics, events, or metric labels.
+- Chapter bundles Memories, shared HeartMoments, and Milestones.
+- Chapter Delete removes Relations, never original content.
+- `OWNER_ONLY` must not leak indirectly through Relations, counts, errors, or ordering gaps.
+- precise location data must not reach logs, Analytics, Events, or metric labels.
 
-## 2. M3-D06 / D28 – Place Privacy, Field Classification, and Location Leakage
+## 2. M3-D06 / D28 – Place Privacy, field classification, and location leakage
 
 ### Decision
 
-Place remains a **shared `SPACE_SHARED` object**. Both active space members may read its domain content. M3 has no per-Place visibility level.
+Place remains a **shared `SPACE_SHARED` object**. Both active Space members may read its Domain content. There is no per-Place visibility level in M3.
 
-The following are **protected domain content**:
+The following are **protected Domain content**:
 
 - `name`
 - `description`
@@ -43,7 +43,7 @@ The following are **protected domain content**:
 - `latitude`
 - `longitude`
 
-These fields belong to the ProtectedPayload/E2EE-readiness boundary. In version 1, `latitude`/`longitude` may exist as typed DB columns for clean validation and future provider/map extensibility; their classification remains `sensitive protected content`. The technical column representation does not make them telemetry or event data.
+These fields belong to the ProtectedPayload/E2EE-readiness boundary. In version 1, `latitude`/`longitude` may exist as typed DB columns for clean validation and future Provider/map extensibility; their classification nevertheless remains `sensitive protected content`. Technical column representation does not turn them into Telemetry or Event data.
 
 Technical metadata outside the ProtectedPayload boundary:
 
@@ -59,47 +59,47 @@ Technical metadata outside the ProtectedPayload boundary:
 - both coordinates are set or both are `NULL`;
 - Latitude: `-90 <= latitude <= 90`;
 - Longitude: `-180 <= longitude <= 180`;
-- M3 persistence precision: maximum 6 decimal places;
-- no automatic rounding in API responses beyond that persistence precision;
+- M3 persistence precision: at most 6 decimal places;
+- no automatic rounding in API responses except to this persistence precision;
 - a Place without coordinates is fully valid;
-- address may exist without coordinates and coordinates may exist without an address.
+- Address may be stored without coordinates and coordinates may be stored without Address.
 
-### Output / privacy
+### Output / Privacy
 
-An active partner in the same space receives the stored exact Place values. Non-members or IDs from other spaces receive no distinguishable existence information.
+An active partner in the same Space receives the exact stored Place values. Non-members or IDs from another Space receive no distinguishable existence information.
 
-Forbidden in particular:
+In particular, the following are forbidden:
 
 - coordinates in application logs;
-- coordinates/address in error context;
+- coordinates/address in Error Context;
 - coordinates/address in Domain Events;
-- coordinates/address in analytics or metric labels;
-- automatic geocoding/reverse-geocoding calls;
-- server-side provider IDs or map metadata in M3.
+- coordinates/address in Analytics or metric labels;
+- automatic Geocoding/Reverse-Geocoding calls;
+- server-side Provider IDs or map metadata in M3.
 
-Maps, geocoding, current position, and provider data remain reserved for M7/M8 or a later explicit provider scope.
+Maps, Geocoding, current position, and Provider data remain reserved for M7/M8 or later explicit Provider scope.
 
-## 3. M3-D07 – Place Identity and Deduplication
+## 3. M3-D07 – Place identity and deduplication
 
 ### Decision
 
 **No automatic or implicit deduplication.**
 
 - every Create request creates a new Place;
-- name, address, and coordinates are not unique keys;
-- equal or nearly equal coordinates are not merged automatically;
-- no fuzzy matching in the write path;
-- a later explicit merge/duplicate UX is separate scope.
+- name, address, and coordinates are not Unique Keys;
+- identical or nearly identical coordinates are not automatically merged;
+- no fuzzy matching in the Write Path;
+- a later explicit Merge/Duplicate UX is separate scope.
 
-Rationale: Places with the same name or address may intentionally be separate domain objects; automatic merging would mutate data and create privacy risk.
+Rationale: Places with the same name or address may intentionally be distinct from a Domain perspective; automatic merging would mutate data and introduce Privacy risk.
 
-## 4. M3-D08 / D31 – Canonical Relation Surface
+## 4. M3-D08 / D31 – Canonical relation surface
 
 ### Decision
 
-M3 uses **typed relations and direct foreign keys**, not a generic relation table.
+M3 uses **typed Relations and direct FKs**, not a generic relation table.
 
-### 4.1 Direct single-Place foreign keys
+### 4.1 Direct single-Place FKs
 
 For Plans and Chapters there is exactly one canonical truth:
 
@@ -115,14 +115,14 @@ Semantics:
 - a Plan has at most one primary Place;
 - a Chapter has at most one primary Place;
 - `placeId` is nullable;
-- deleting a Place sets these FKs to `NULL` (`ON DELETE SET NULL` or equivalent transactional semantics);
-- Plan/Chapter remain after Place deletion.
+- Place Delete sets these FKs to `NULL` (`ON DELETE SET NULL` or equivalent transactional semantics);
+- Plan/Chapter remains after Place Delete.
 
-This decides M3-D31: `Chapter.placeId` is canonical; `place_chapters` is not introduced in parallel.
+This decides M3-D31: `Chapter.placeId` is canonical and `place_chapters` is not introduced in parallel.
 
-### 4.2 Place relations to existing content
+### 4.2 Place Relations to existing content
 
-M3 provides these typed many-to-many relations:
+M3 provides the following typed n:m Relations:
 
 ```text
 place_memories
@@ -130,23 +130,23 @@ place_heart_moments
 place_milestones
 ```
 
-Each table contains at least:
+Each table contains at minimum:
 
 ```text
 - place_id      FK places.id
-- target_id     FK to concrete target type
+- target_id     FK to the concrete target type
 - created_by
 - created_at
 UNIQUE(place_id, target_id)
 ```
 
-- Place Delete removes only join rows;
-- target Delete removes only affected join rows;
-- original resources are never deleted with them.
+- Place Delete removes only Join rows;
+- Target Delete removes only the affected Join rows;
+- original resources are never deleted with the relation.
 
-Only `SHARED` HeartMoments are allowed in `place_heart_moments`.
+For `place_heart_moments`, only `SHARED` HeartMoments are allowed.
 
-### 4.3 Chapter relations
+### 4.3 Chapter Relations
 
 M3 provides:
 
@@ -156,17 +156,17 @@ chapter_heart_moments
 chapter_milestones
 ```
 
-Each table contains at least:
+Each table contains at minimum:
 
 ```text
 - chapter_id    FK chapters.id
-- target_id     FK to concrete target type
+- target_id     FK to the concrete target type
 - created_by
 - created_at
 UNIQUE(chapter_id, target_id)
 ```
 
-A target may appear in multiple Chapters; there is **no** global unique constraint on `target_id`.
+A target may appear in multiple Chapters; there is **no** global Unique Constraint on `target_id`.
 
 ### 4.4 External API
 
@@ -194,55 +194,55 @@ PUT    /api/v1/spaces/{spaceId}/chapters/{chapterId}/milestones/{milestoneId}
 DELETE /api/v1/spaces/{spaceId}/chapters/{chapterId}/milestones/{milestoneId}
 ```
 
-Plan/Chapter Place is set through the normal versioned update or the resource operation defined for it; no additional generic Relation Service is introduced.
+Plan/Chapter Place is set through the normal versioned update of those resources or the resource operation defined for that purpose; no additional generic Relation Service is introduced for it.
 
 ## 5. M3-D09 – Relation Privacy
 
 ### Decision
 
-A shared relation may reference only a target that is allowed as shared content for both shared space members.
+A shared Relation may point only to a target that is permitted as shared content for both Space members.
 
 In particular:
 
 - private HeartMoments must not be bound to Place or Chapter;
-- `OWNER_ONLY` targets are generally forbidden for shared relations;
-- unknown, foreign, cross-space, or unreadable targets are handled identically as privacy-safe `404` during Create;
-- lists/counts exclude private targets;
-- an error must not distinguish whether a target exists, is private, or belongs to another space.
+- `OWNER_ONLY` targets are forbidden for Shared Relations in general;
+- unknown, foreign, Cross-Space, or unreadable targets are handled identically as Privacy-safe `404` on Create;
+- Lists/counts do not include private targets;
+- an error must not distinguish whether a target exists, is private, or belongs to another Space.
 
-### HeartMoment privacy change
+### HeartMoment Privacy transition
 
-When changing `SHARED -> PRIVATE`, all shared relations are removed **in the same DB transaction**, before or together with the visibility change:
+During `SHARED -> PRIVATE`, all Shared Relations are removed **in the same DB transaction**, before or together with the visibility change:
 
 ```text
 place_heart_moments
 chapter_heart_moments
 ```
 
-The commit must not expose any state in which a private HeartMoment remains provable through shared relations.
+The commit must never expose a state in which a private HeartMoment remains provable through Shared Relations.
 
-A later `PRIVATE -> SHARED` change does **not** automatically reconstruct old relations.
+On a later `PRIVATE -> SHARED` transition, old Relations are **not automatically reconstructed**.
 
-## 6. M3-D10 – Chapter Ordering
+## 6. M3-D10 – Chapter ordering
 
 ### Decision
 
-Chapter content has **no manually persisted order** in M3.
+Chapter content receives **no manually persisted ordering** in M3.
 
-Presentation order is derived deterministically from linked original resources:
+Presentation is derived deterministically from the linked original resources:
 
-1. domain event date (`happenedOn`) ascending;
-2. if no domain date exists: `createdAt`;
-3. stable tie-breaker: resource type and UUID.
+1. Domain event date (`happenedOn`) ascending;
+2. if no Domain date exists: `createdAt`;
+3. stable tie-breaker: Resource Type and UUID.
 
 Consequences:
 
 - no `position` column in Chapter relation tables;
-- no Chapter reorder endpoint in M3;
+- no Chapter Reorder endpoint in M3;
 - relation tables remain simple and fully referential;
 - a later curated manual order is separate decision/migration scope.
 
-## 7. M3-D11 – Chapter Dates
+## 7. M3-D11 – Chapter dates
 
 ### Decision
 
@@ -253,9 +253,9 @@ Valid:
 - both `NULL`;
 - only `startOn`;
 - only `endOn`;
-- both set, when `endOn >= startOn`.
+- both set, if `endOn >= startOn`.
 
-Date boundaries are not automatically derived from linked content and are not silently changed by relation updates.
+The date boundaries are not automatically calculated from linked content and are not silently adjusted when Relations change.
 
 ## 8. M3-D12 – Chapter Delete
 
@@ -273,69 +273,69 @@ If the Chapter has a `placeId` reference, only the Chapter is deleted; the Place
 
 ## 9. Place Delete
 
-Place Delete is allowed and has these semantics:
+Place Delete is allowed with the following semantics:
 
-| Relation | Effect |
+| Relationship | Consequence |
 |---|---|
-| `place_memories` | delete join rows |
-| `place_heart_moments` | delete join rows |
-| `place_milestones` | delete join rows |
+| `place_memories` | delete Join rows |
+| `place_heart_moments` | delete Join rows |
+| `place_milestones` | delete Join rows |
 | `Plan.placeId` | set to `NULL` |
 | `Chapter.placeId` | set to `NULL` |
 | Memory/HeartMoment/Milestone | original remains |
 | Plan/Chapter | original remains |
 
-There is no Place cascade to domain originals.
+There is no Place Cascade to Domain originals.
 
-## 10. M3-D26 – Concurrency and Relation Races
+## 10. M3-D26 – Concurrency and Relation races
 
-### Base rule
+### Baseline rule
 
-No relation Create uses unsafe `check-then-insert` without locks/constraints.
+No Relation Create uses unsafe `check-then-insert` without locks/constraints.
 
 ### Relation Create
 
-Transactional order for join relations:
+Transactional order for Join Relations:
 
 ```text
 1. verify Membership
-2. load parent space-scoped and lock FOR UPDATE
-3. load target space-scoped and lock FOR UPDATE
-4. re-check target privacy
-5. insert UNIQUE/FK-protected join
-6. write safe Outbox/audit metadata
-7. commit
+2. load Parent Space-scoped and lock FOR UPDATE
+3. load Target Space-scoped and lock FOR UPDATE
+4. re-check Target Privacy
+5. insert UNIQUE/FK-protected Join
+6. write safe Outbox/Audit metadata
+7. Commit
 ```
 
-Duplicate `PUT` of the same relation is idempotent and may return the same end state without creating a second join row.
+A duplicate `PUT` of the same Relation is idempotent and may return the same end state without creating a second Join row.
 
 ### Parent Delete vs. Relation Create
 
-- whichever obtains the parent lock first wins;
-- Delete removes parent + join rows;
-- a waiting Create revalidates after acquiring the lock and returns 404/conflict without an orphaned relation.
+- whoever acquires the Parent lock first wins;
+- Delete removes Parent + Join rows;
+- a waiting Create revalidates after acquiring the lock and returns 404/Conflict without an orphaned Relation.
 
 ### Target Delete vs. Relation Create
 
-- target Delete locks the target;
-- Relation Create locks parent, then target;
-- if Delete wins first, Create sees no target after revalidation;
-- if Create wins first, Delete waits until commit and then removes target + join row according to FK semantics.
+- Target Delete locks the Target;
+- Relation Create locks Parent, then Target;
+- if Delete wins first, Create sees no Target after revalidation;
+- if Create wins first, Delete waits until commit and then removes Target + Join row according to FK semantics.
 
-### HeartMoment SHARED → PRIVATE vs. Relation Create
+### HeartMoment SHARED -> PRIVATE vs. Relation Create
 
-The privacy change locks the HeartMoment and removes its shared join rows in the same transaction. It does **not** then lock relation parents, avoiding a reversed parent→target lock order.
+The Privacy transition locks the HeartMoment and removes its Shared Join rows in the same transaction. It does **not lock Relation Parents afterward**, avoiding an inverted Parent->Target lock order.
 
-Relation Create locks parent → target. After target lock, `SHARED` is rechecked. The result is always either:
+Relation Create locks Parent -> Target. After the Target lock, `SHARED` is checked again. The result is always either:
 
-- shared + relation present, or
-- private + relation absent.
+- Shared + Relation present, or
+- Private + Relation absent.
 
-A `private + relation present` state is invalid.
+A state `Private + Relation present` is invalid.
 
 ### Direct FK updates
 
-`Plan.placeId` and `Chapter.placeId` use normal resource version/`If-Match` semantics and same-space Place revalidation within the same transaction.
+`Plan.placeId` and `Chapter.placeId` use normal resource-version/`If-Match` semantics and Same-Space Place revalidation in the same transaction.
 
 ## 11. Error codes
 
@@ -356,44 +356,44 @@ PLACE_LATITUDE_INVALID             422
 PLACE_LONGITUDE_INVALID            422
 ```
 
-No dedicated cross-space/private-target error code is introduced.
+No separate Cross-Space/private-target error code is introduced.
 
 ## 12. Mandatory tests
 
 ### Place
 
 - Place without coordinates is valid;
-- Latitude only or Longitude only → 422;
+- only Latitude or only Longitude -> 422;
 - Latitude/Longitude boundary values;
 - no automatic deduplication;
 - both partners may write according to M3-D01;
-- cross-tenant CRUD fail-closed;
-- Place Delete removes relations, sets Plan/Chapter FK to NULL, and preserves originals.
+- Cross-Tenant CRUD fails closed;
+- Place Delete removes Relations, sets Plan/Chapter FK to NULL, and preserves originals.
 
 ### Relations
 
-For every approved relation type:
+For every approved Relation type:
 
-- happy path;
+- Happy Path;
 - idempotent duplicate PUT;
-- same-space FK;
-- cross-space target → 404;
-- deleted target → 404;
-- parent Delete vs. Create race;
-- target Delete vs. Create race;
-- no domain-original cascade.
+- Same-Space FK;
+- Cross-Space target -> 404;
+- deleted target -> 404;
+- Parent Delete vs. Create race;
+- Target Delete vs. Create race;
+- no Domain-original Cascade.
 
-HeartMoment additionally:
+Additional HeartMoment tests:
 
-- PRIVATE target → 404;
-- SHARED → PRIVATE atomically removes Place/Chapter relations;
-- Relation Create vs. privacy-change race permits no leak state;
-- PRIVATE → SHARED reconstructs no old relations.
+- PRIVATE target -> 404;
+- SHARED -> PRIVATE atomically removes Place/Chapter Relations;
+- Race Relation Create vs. Privacy transition never leaves a leak state;
+- PRIVATE -> SHARED reconstructs no old Relations.
 
 ### Chapter
 
 - date variants: empty/start-only/end-only/both;
-- `endOn < startOn` → 422;
+- `endOn < startOn` -> 422;
 - multiple Chapters may reference the same target;
 - derived ordering is stable;
 - Chapter Delete preserves all original targets;
@@ -401,4 +401,4 @@ HeartMoment additionally:
 
 ## 13. Reuse-before-build
 
-Not relevant for this pure domain/privacy decision. Later Maps, Geocoding, Provider, or Ranking features must again be reviewed under `docs/REUSE-BEFORE-BUILD.md` and `docs/EXTERNAL-PROVIDER-CANDIDATES.md` before building them.
+Not relevant for this pure Domain/Privacy decision. Later Maps, Geocoding, Provider, or ranking functionality must be reviewed again before in-house implementation according to `docs/REUSE-BEFORE-BUILD.md` and `docs/EXTERNAL-PROVIDER-CANDIDATES.md`.
