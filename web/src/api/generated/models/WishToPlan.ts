@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -14,11 +14,12 @@
 
 import { mapValues } from '../runtime';
 /**
- * Der Konvertierungsrequest.
+ * Wish-to-Plan conversion request.
  * 
- * Alle Felder optional: ohne eigenen Titel uebernimmt der Plan den des
- * Wishes. `sourceWishId`, `status` und die Termine kommen nicht vom
- * Client - der Wish steht im Pfad, alles andere entsteht serverseitig.
+ * Every field is optional: without an explicit title the plan inherits the
+ * wish title. ``sourceWishId``, ``status``, and schedule fields are not
+ * supplied by the client; the wish is identified by the path and everything
+ * else is established server-side.
  * @export
  * @interface WishToPlan
  */

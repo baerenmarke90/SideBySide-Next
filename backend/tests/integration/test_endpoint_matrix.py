@@ -1,14 +1,12 @@
-"""Die Invarianten, die fuer *jeden* Endpunkt gelten muessen.
+"""Cross-cutting endpoint invariants.
 
-Die fachlichen Sichtbarkeitsregeln stehen bei ihrer Domaene - dort gehoeren
-sie hin, und dort sind sie ausfuehrlich geprueft. Was hier steht, ist der
-andere Teil: dass kein einziger Endpunkt die Mandantenpruefung vergisst.
+Domain-specific visibility rules live with their domain. This matrix covers
+the complementary guarantee that every endpoint enforces tenant isolation.
 
-Der Unterschied ist Vollstaendigkeit. Eine Luecke entsteht nicht dadurch,
-dass jemand eine Regel falsch schreibt, sondern dadurch, dass ein neuer
-Endpunkt sie gar nicht erst bekommt. `test_der_vertrag_ist_vollstaendig_
-abgedeckt` haelt die Tabelle unten deshalb gegen den OpenAPI-Vertrag: eine
-neue Operation ohne Eintrag macht die Suite rot, bevor sie in Betrieb geht.
+The distinction is completeness: a gap can exist because an endpoint is
+missing from the matrix entirely. `test_the_contract_is_complete_covered`
+therefore compares the table below with the OpenAPI contract. A new operation
+without an entry makes the suite fail before it reaches production.
 """
 
 from __future__ import annotations
@@ -30,8 +28,8 @@ SPACE_ABSENCE = "SPACE_NOT_FOUND"
 
 
 @dataclass(frozen=True)
-class Endpunkt:
-    """Ein Endpunkt und das, was eine Anfrage an ihn braucht."""
+class Endpoint:
+    "To endpoint and what a request to it requires."
 
     method: str
     template: str
@@ -102,377 +100,377 @@ WISH = {"title": "Matrix Wish"}
 PLAN = {"title": "Matrix Plan", "description": "Text"}
 PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 
-SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}"),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/profile"),
-    Endpunkt("PUT", "/api/v1/spaces/{spaceId}/profile", body=PROFIL, if_match=True),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/invitations"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/invitations", body={}),
-    Endpunkt(
+SPACE_ENDPUNKTE: tuple[Endpoint, ...] = (
+    Endpoint("GET", "/api/v1/spaces/{spaceId}"),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/profile"),
+    Endpoint("PUT", "/api/v1/spaces/{spaceId}/profile", body=PROFIL, if_match=True),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/invitations"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/invitations", body={}),
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/invitations/{invitationId}",
         resource_absence="INVITATION_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/profiles/{accountId}",
         resource_absence="PARTNER_PROFILE_NOT_FOUND",
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/profile-preferences"),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/profile-preferences"),
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/profile-preferences",
         body={**PRAEFERENZ, "accountId": str(uuid4()), "visibility": "SELF_PROFILE"},
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}",
         resource_absence="PROFILE_PREFERENCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}",
         body=PRAEFERENZ,
         if_match=True,
         resource_absence="PROFILE_PREFERENCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}",
         if_match=True,
         resource_absence="PROFILE_PREFERENCE_NOT_FOUND",
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/related-persons"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/related-persons", body=PERSON),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/related-persons"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/related-persons", body=PERSON),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/related-persons/{personId}",
         resource_absence="RELATED_PERSON_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/related-persons/{personId}",
         body=PERSON,
         if_match=True,
         resource_absence="RELATED_PERSON_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/related-persons/{personId}",
         if_match=True,
         resource_absence="RELATED_PERSON_NOT_FOUND",
         query={"deletePolicy": "preserve"},
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/important-dates"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/important-dates", body=TERMIN),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/important-dates"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/important-dates", body=TERMIN),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/important-dates/{dateId}",
         resource_absence="IMPORTANT_DATE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/important-dates/{dateId}",
         body=TERMIN,
         if_match=True,
         resource_absence="IMPORTANT_DATE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/important-dates/{dateId}",
         if_match=True,
         resource_absence="IMPORTANT_DATE_NOT_FOUND",
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/memories"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/memories", body=MEMORY),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/memories"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/memories", body=MEMORY),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/memories/{memoryId}",
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PATCH",
         "/api/v1/spaces/{spaceId}/memories/{memoryId}",
         body={"title": "Matrix Memory aktualisiert"},
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/memories/{memoryId}",
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/memories/{memoryId}/attachments",
         body={"attachments": []},
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/heart-moments"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/heart-moments", body=HEART_MOMENT),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/heart-moments"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/heart-moments", body=HEART_MOMENT),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}",
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PATCH",
         "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}",
         body={"text": "Matrix HeartMoment aktualisiert"},
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PATCH",
         "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/visibility",
         body={"visibility": "PRIVATE"},
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}",
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/timeline"),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/milestones"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/timeline"),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/milestones"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/milestones/{milestoneId}",
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PATCH",
         "/api/v1/spaces/{spaceId}/milestones/{milestoneId}",
         body={"title": "Matrix Milestone aktualisiert"},
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/milestones/{milestoneId}",
         if_match=True,
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/memories/{memoryId}/comments",
         body=COMMENT,
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/memories/{memoryId}/comments",
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
         body=COMMENT,
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/heart-moments/{heartMomentId}/comments",
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments",
         body=COMMENT,
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/milestones/{milestoneId}/comments",
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
-    Endpunkt(
+    Endpoint(
         "PATCH",
         "/api/v1/spaces/{spaceId}/comments/{commentId}",
         body=COMMENT,
         if_match=True,
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/comments/{commentId}",
         if_match=True,
         resource_absence="COMMENT_TARGET_NOT_AVAILABLE",
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/wishes"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/wishes", body=WISH),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/wishes"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/wishes", body=WISH),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/wishes/{wishId}",
         resource_absence="WISH_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PATCH",
         "/api/v1/spaces/{spaceId}/wishes/{wishId}",
         body={"title": "Matrix Wish aktualisiert"},
         if_match=True,
         resource_absence="WISH_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/wishes/{wishId}",
         if_match=True,
         resource_absence="WISH_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/wishes/{wishId}/plan",
         body={},
         if_match=True,
         resource_absence="WISH_NOT_FOUND",
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/places"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/places", body=PLACE),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/places"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/places", body=PLACE),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/places/{placeId}",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PATCH",
         "/api/v1/spaces/{spaceId}/places/{placeId}",
         body={"name": "Matrix Place aktualisiert"},
         if_match=True,
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/places/{placeId}",
         if_match=True,
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/places/{placeId}/memories",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/places/{placeId}/memories/{targetId}",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/places/{placeId}/memories/{targetId}",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/places/{placeId}/heart-moments",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/places/{placeId}/heart-moments/{targetId}",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/places/{placeId}/heart-moments/{targetId}",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/places/{placeId}/milestones",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/places/{placeId}/milestones/{targetId}",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/places/{placeId}/milestones/{targetId}",
         resource_absence="PLACE_NOT_FOUND",
     ),
-    Endpunkt("GET", "/api/v1/spaces/{spaceId}/plans"),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/plans", body=PLAN),
-    Endpunkt(
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/plans"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/plans", body=PLAN),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/plans/{planId}",
         resource_absence="PLAN_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PATCH",
         "/api/v1/spaces/{spaceId}/plans/{planId}",
         body={"title": "Matrix Plan aktualisiert"},
         if_match=True,
         resource_absence="PLAN_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/plans/{planId}",
         if_match=True,
         resource_absence="PLAN_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/plans/{planId}/schedule",
         body={"plannedStart": "2026-09-01T18:00:00Z"},
         if_match=True,
         resource_absence="PLAN_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/plans/{planId}/unschedule",
         body={},
         if_match=True,
         resource_absence="PLAN_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/plans/{planId}/complete",
         body={"experiencedOn": "2026-08-20"},
         if_match=True,
         resource_absence="PLAN_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/plans/{planId}/return-to-wish",
         body={},
         if_match=True,
         resource_absence="PLAN_NOT_FOUND",
     ),
-    Endpunkt("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
-    Endpunkt(
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/attachments/{attachmentId}",
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/attachments/{attachmentId}/content",
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/attachments/{attachmentId}/content",
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/attachments/{attachmentId}/finalize",
         body={},
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/attachments/{attachmentId}/read-access",
         body={"parentType": "NONE"},
         resource_absence="RESOURCE_NOT_FOUND",
     ),
-    Endpunkt(
+    Endpoint(
         "DELETE",
         "/api/v1/spaces/{spaceId}/attachments/{attachmentId}",
         if_match=True,
@@ -480,30 +478,30 @@ SPACE_ENDPUNKTE: tuple[Endpunkt, ...] = (
     ),
 )
 
-NUR_ANGEMELDET: tuple[tuple[str, str], ...] = (
+AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/auth/me"),
     ("POST", "/api/v1/auth/sign-out"),
     ("POST", "/api/v1/auth/password"),
     ("POST", "/api/v1/auth/email/verification/request"),
-    # Verknuepfen setzt voraus, dass schon jemand angemeldet ist - genau
-    # das unterscheidet es vom Anmelden ueber denselben Anbieter.
+    # Verknuepfen setzt voraus, that schon jemand signed in is; exactly
+    # This distinguishes it from sign-in through the same provider.
     ("POST", "/api/v1/auth/oidc/{connectionId}/link"),
-    # Ein Passkey ist ein zusaetzlicher Zugang zu einem bestehenden Konto;
-    # registriert wird er aus der Anmeldung heraus.
+    # A Passkey is a zusaetzlicher Zugang to a bestehenden Account;
+    # registriert is it from the Sign-in heraus.
     ("POST", "/api/v1/auth/passkeys/registration/start"),
     ("POST", "/api/v1/auth/passkeys/registration/finish"),
 )
 """Kontobezogen, aber nicht an einen Space gebunden. Anonym: 401."""
 
-OEFFENTLICH: tuple[tuple[str, str], ...] = (
+PUBLIC_ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/health"),
     ("GET", "/api/v1/health/ready"),
     ("POST", "/api/v1/auth/register"),
     ("POST", "/api/v1/auth/sign-in"),
     ("POST", "/api/v1/auth/refresh"),
     ("POST", "/api/v1/invitations/accept"),
-    # Die Wege zurueck ins Konto: sie beginnen ohne Sitzung, und ihr
-    # Nachweis ist der Einmal-Token aus der Mail.
+    # The Paths back into the Account: it start without Session, and their
+    # Proof is the Once-Token from the Mail.
     ("POST", "/api/v1/auth/magic-link/request"),
     ("POST", "/api/v1/auth/magic-link/consume"),
     ("POST", "/api/v1/auth/email/verification/confirm"),
@@ -522,53 +520,53 @@ Ihr Missbrauchsschutz sind Rate Limits und Einmal-Tokens, nachgewiesen in
 
 
 @pytest.fixture
-def welt(client, session: Session):  # type: ignore[no-untyped-def]
-    """Ein Paar mit je einer echten Ressource pro Domaene, plus ein Fremder."""
+def scenario(client, session: Session):  # type: ignore[no-untyped-def]
+    "A couple with one real resource per domain, plus a foreign one."
     anna = make_account(session, "Anna")
     ben = make_account(session, "Ben")
-    fremd = make_account(session, "Fremde Person")
+    foreign = make_account(session, "Fremde Person")
 
     space = make_space(session, anna)
-    make_space(session, fremd)
+    make_space(session, foreign)
     session.flush()
 
     token_a = sign_in(session, anna)
-    kopf = auth(token_a)
+    headers = auth(token_a)
     basis = f"/api/v1/spaces/{space.id}"
 
-    # Die Einladung entsteht, solange noch Platz ist: ein voller Paar-Space
-    # stellt keine mehr aus. Ben kommt gleich danach dazu.
-    einladung = client.post(f"{basis}/invitations", json={}, headers=kopf).json()
+    # The Einladung is created, while still Platz is: a voller Couple-Space
+    # stellt no more from. Ben kommt same danach dazu.
+    invitation = client.post(f"{basis}/invitations", json={}, headers=headers).json()
 
     relationship_service.add_member(session, space.id, ben)
     session.flush()
     praeferenz = client.post(
         f"{basis}/profile-preferences",
         json={**PRAEFERENZ, "accountId": str(anna.id), "visibility": "SELF_PROFILE"},
-        headers=kopf,
+        headers=headers,
     ).json()
-    person = client.post(f"{basis}/related-persons", json=PERSON, headers=kopf).json()
-    termin = client.post(f"{basis}/important-dates", json=TERMIN, headers=kopf).json()
-    memory = client.post(f"{basis}/memories", json=MEMORY, headers=kopf).json()
-    heart_moment = client.post(f"{basis}/heart-moments", json=HEART_MOMENT, headers=kopf).json()
-    milestone = client.post(f"{basis}/milestones", json=MILESTONE, headers=kopf).json()
+    person = client.post(f"{basis}/related-persons", json=PERSON, headers=headers).json()
+    termin = client.post(f"{basis}/important-dates", json=TERMIN, headers=headers).json()
+    memory = client.post(f"{basis}/memories", json=MEMORY, headers=headers).json()
+    heart_moment = client.post(f"{basis}/heart-moments", json=HEART_MOMENT, headers=headers).json()
+    milestone = client.post(f"{basis}/milestones", json=MILESTONE, headers=headers).json()
     comment = client.post(
-        f"{basis}/memories/{memory['id']}/comments", json=COMMENT, headers=kopf
+        f"{basis}/memories/{memory['id']}/comments", json=COMMENT, headers=headers
     ).json()
-    wish = client.post(f"{basis}/wishes", json=WISH, headers=kopf).json()
-    place = client.post(f"{basis}/places", json=PLACE, headers=kopf).json()
-    plan = client.post(f"{basis}/plans", json=PLAN, headers=kopf).json()
-    attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=kopf).json()
+    wish = client.post(f"{basis}/wishes", json=WISH, headers=headers).json()
+    place = client.post(f"{basis}/places", json=PLACE, headers=headers).json()
+    plan = client.post(f"{basis}/plans", json=PLAN, headers=headers).json()
+    attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=headers).json()
 
     return {
         "client": client,
         "space": space,
-        "kopf_owner": kopf,
-        "kopf_fremd": auth(sign_in(session, fremd)),
+        "kopf_owner": headers,
+        "kopf_fremd": auth(sign_in(session, foreign)),
         "ids": {
             "spaceId": str(space.id),
             "accountId": str(ben.id),
-            "invitationId": einladung["id"],
+            "invitationId": invitation["id"],
             "preferenceId": praeferenz["id"],
             "personId": person["id"],
             "dateId": termin["id"],
@@ -579,104 +577,106 @@ def welt(client, session: Session):  # type: ignore[no-untyped-def]
             "wishId": wish["id"],
             "planId": plan["id"],
             "placeId": place["id"],
-            # Das Ziel einer typisierten Relation. Eine Erinnerung reicht
-            # fuer alle drei Relationsarten: die Pruefungen dieser Matrix
-            # greifen vor der Zielaufloesung.
+            # The Target a typed Relation. A Erinnerung is sufficient
+            # for alle drei Relationsarten: the Checks this Matrix
+            # apply before the Zielaufloesung.
             "targetId": memory["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
 
 
-def _pfad(endpunkt: Endpunkt, ids: dict[str, str], **ersatz: str) -> str:
-    werte = {**ids, **ersatz}
-    return endpunkt.template.format(**werte)
+def _path(endpoint: Endpoint, ids: dict[str, str], **ersatz: str) -> str:
+    values = {**ids, **ersatz}
+    return endpoint.template.format(**values)
 
 
-def _sende(welt, endpunkt: Endpunkt, pfad: str, kopf: dict[str, str] | None):  # type: ignore[no-untyped-def]
-    kopfzeilen = dict(kopf or {})
-    if endpunkt.if_match:
-        # Der Konfliktschutz ist Pflicht; ohne den Kopf pruefte dieser Test
-        # nur noch, dass er fehlt.
-        kopfzeilen["If-Match"] = '"1"'
+def _send(scenario, endpoint: Endpoint, path: str, headers: dict[str, str] | None):  # type: ignore[no-untyped-def]
+    headers = dict(headers or {})
+    if endpoint.if_match:
+        # The Konfliktschutz is Pflicht; without the Kopf would check this Test
+        # only still, that it is missing.
+        headers["If-Match"] = '"1"'
 
-    zusatz: dict[str, Any] = {}
-    if endpunkt.body is not None:
-        zusatz["json"] = endpunkt.body
-    if endpunkt.query:
-        zusatz["params"] = endpunkt.query
-    return welt["client"].request(endpunkt.method, pfad, headers=kopfzeilen, **zusatz)
+    request_kwargs: dict[str, Any] = {}
+    if endpoint.body is not None:
+        request_kwargs["json"] = endpoint.body
+    if endpoint.query:
+        request_kwargs["params"] = endpoint.query
+    return scenario["client"].request(endpoint.method, path, headers=headers, **request_kwargs)
 
 
-@pytest.mark.parametrize("endpunkt", SPACE_ENDPUNKTE, ids=str)
+@pytest.mark.parametrize("endpoint", SPACE_ENDPUNKTE, ids=str)
 class TestJederSpaceEndpunkt:
-    """Vier Fragen an jeden Endpunkt, der an einem Space haengt."""
+    "Vier Fragen to every Endpoint, the to a Space haengt."
 
-    def test_anonym_bleibt_401(self, welt, endpunkt: Endpunkt) -> None:  # type: ignore[no-untyped-def]
-        antwort = _sende(welt, endpunkt, _pfad(endpunkt, welt["ids"]), None)
-        assert antwort.status_code == 401
-        assert antwort.json()["code"] == "AUTHENTICATION_REQUIRED"
+    def test_anonymous_remains_401(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+        response = _send(scenario, endpoint, _path(endpoint, scenario["ids"]), None)
+        assert response.status_code == 401
+        assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
 
-    def test_fremder_bekommt_404_und_nicht_403(self, welt, endpunkt: Endpunkt) -> None:  # type: ignore[no-untyped-def]
-        """Ein 403 wuerde bestaetigen, dass es den Space gibt."""
-        antwort = _sende(welt, endpunkt, _pfad(endpunkt, welt["ids"]), welt["kopf_fremd"])
-        assert antwort.status_code == 404
-        assert antwort.json()["code"] == SPACE_ABSENCE
+    def test_foreign_gets_404_and_not_403(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+        "a 403 would confirm that the space exists."
+        response = _send(
+            scenario, endpoint, _path(endpoint, scenario["ids"]), scenario["kopf_fremd"]
+        )
+        assert response.status_code == 404
+        assert response.json()["code"] == SPACE_ABSENCE
 
-    def test_fremder_space_und_erfundener_sind_ununterscheidbar(  # type: ignore[no-untyped-def]
-        self, welt, endpunkt: Endpunkt
+    def test_foreign_space_and_invented_are_indistinguishable(  # type: ignore[no-untyped-def]
+        self, scenario, endpoint: Endpoint
     ) -> None:
-        echt = _sende(welt, endpunkt, _pfad(endpunkt, welt["ids"]), welt["kopf_fremd"])
-        erfunden = _sende(
-            welt,
-            endpunkt,
-            _pfad(endpunkt, welt["ids"], spaceId=str(uuid4())),
-            welt["kopf_fremd"],
+        real = _send(scenario, endpoint, _path(endpoint, scenario["ids"]), scenario["kopf_fremd"])
+        erfunden = _send(
+            scenario,
+            endpoint,
+            _path(endpoint, scenario["ids"], spaceId=str(uuid4())),
+            scenario["kopf_fremd"],
         )
-        assert echt.status_code == erfunden.status_code == 404
-        assert echt.json() == erfunden.json()
+        assert real.status_code == erfunden.status_code == 404
+        assert real.json() == erfunden.json()
 
-    def test_fehlgeformte_space_id_bleibt_dieselbe_404(self, welt, endpunkt: Endpunkt) -> None:  # type: ignore[no-untyped-def]
-        antwort = _sende(
-            welt,
-            endpunkt,
-            _pfad(endpunkt, welt["ids"], spaceId="' OR 1=1 --"),
-            welt["kopf_owner"],
+    def test_malformed_space_id_remains_same_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+        response = _send(
+            scenario,
+            endpoint,
+            _path(endpoint, scenario["ids"], spaceId="' OR 1=1 --"),
+            scenario["kopf_owner"],
         )
-        assert antwort.status_code == 404
-        assert antwort.json()["code"] == SPACE_ABSENCE
+        assert response.status_code == 404
+        assert response.json()["code"] == SPACE_ABSENCE
 
 
 DETAIL_ENDPUNKTE = tuple(e for e in SPACE_ENDPUNKTE if e.resource_absence is not None)
 
 
-@pytest.mark.parametrize("endpunkt", DETAIL_ENDPUNKTE, ids=str)
+@pytest.mark.parametrize("endpoint", DETAIL_ENDPUNKTE, ids=str)
 class TestJedeRessourcenId:
-    """Im eigenen Space entscheidet die Ressourcen-ID - und verraet nichts."""
+    "Within the actor's own space, the resource ID decides and reveals nothing."
 
-    def test_unbekannte_ressource_bleibt_404(self, welt, endpunkt: Endpunkt) -> None:  # type: ignore[no-untyped-def]
-        pfad = endpunkt.template.format(
-            **{**welt["ids"], **dict.fromkeys(_ressourcen_platzhalter(endpunkt), str(uuid4()))}
+    def test_unknown_resource_remains_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+        path = endpoint.template.format(
+            **{**scenario["ids"], **dict.fromkeys(_resources_platzhalter(endpoint), str(uuid4()))}
         )
-        antwort = _sende(welt, endpunkt, pfad, welt["kopf_owner"])
-        assert antwort.status_code == 404
-        assert antwort.json()["code"] == endpunkt.resource_absence
+        response = _send(scenario, endpoint, path, scenario["kopf_owner"])
+        assert response.status_code == 404
+        assert response.json()["code"] == endpoint.resource_absence
 
-    def test_fehlgeformte_ressourcen_id_bleibt_dieselbe_404(self, welt, endpunkt: Endpunkt) -> None:  # type: ignore[no-untyped-def]
-        """Wohlgeformtheit darf keine Existenzauskunft sein."""
-        unbekannt = endpunkt.template.format(
-            **{**welt["ids"], **dict.fromkeys(_ressourcen_platzhalter(endpunkt), str(uuid4()))}
+    def test_malformed_resources_id_remains_same_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+        "well-formedness must not disclose existence."
+        unknown = endpoint.template.format(
+            **{**scenario["ids"], **dict.fromkeys(_resources_platzhalter(endpoint), str(uuid4()))}
         )
-        unfug = endpunkt.template.format(
-            **{**welt["ids"], **dict.fromkeys(_ressourcen_platzhalter(endpunkt), "nicht-echt")}
+        malformed = endpoint.template.format(
+            **{**scenario["ids"], **dict.fromkeys(_resources_platzhalter(endpoint), "nicht-echt")}
         )
-        erste = _sende(welt, endpunkt, unbekannt, welt["kopf_owner"])
-        zweite = _sende(welt, endpunkt, unfug, welt["kopf_owner"])
-        assert erste.status_code == zweite.status_code == 404
-        assert erste.json() == zweite.json()
+        first = _send(scenario, endpoint, unknown, scenario["kopf_owner"])
+        second = _send(scenario, endpoint, malformed, scenario["kopf_owner"])
+        assert first.status_code == second.status_code == 404
+        assert first.json() == second.json()
 
 
-def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
+def _resources_platzhalter(endpoint: Endpoint) -> tuple[str, ...]:
     return tuple(
         name
         for name in (
@@ -695,64 +695,70 @@ def _ressourcen_platzhalter(endpunkt: Endpunkt) -> tuple[str, ...]:
             "placeId",
             "targetId",
         )
-        if "{" + name + "}" in endpunkt.template
+        if "{" + name + "}" in endpoint.template
     )
 
 
 SCHREIBENDE_ENDPUNKTE = tuple(e for e in SPACE_ENDPUNKTE if e.if_match)
 
 
-@pytest.mark.parametrize("endpunkt", SCHREIBENDE_ENDPUNKTE, ids=str)
-def test_ohne_if_match_wird_nicht_geschrieben(welt, endpunkt: Endpunkt) -> None:  # type: ignore[no-untyped-def]
-    """Ein fehlender Kopf ist der stille Weg, den Konfliktschutz abzuschalten."""
-    pfad = _pfad(endpunkt, welt["ids"])
-    zusatz: dict[str, Any] = {"json": endpunkt.body} if endpunkt.body is not None else {}
-    if endpunkt.query:
-        zusatz["params"] = endpunkt.query
-    antwort = welt["client"].request(endpunkt.method, pfad, headers=welt["kopf_owner"], **zusatz)
-    assert antwort.status_code == 422
+@pytest.mark.parametrize("endpoint", SCHREIBENDE_ENDPUNKTE, ids=str)
+def test_without_if_match_is_not_geschrieben(scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+    "a missing header is the silent path to disabling conflict protection."
+    path = _path(endpoint, scenario["ids"])
+    request_kwargs: dict[str, Any] = {"json": endpoint.body} if endpoint.body is not None else {}
+    if endpoint.query:
+        request_kwargs["params"] = endpoint.query
+    response = scenario["client"].request(
+        endpoint.method, path, headers=scenario["kopf_owner"], **request_kwargs
+    )
+    assert response.status_code == 422
 
-    # Und die Ressource steht unveraendert da - auch die geloeschte nicht.
-    if endpunkt.method == "DELETE":
-        if "{commentId}" in endpunkt.template:
-            nachher = welt["client"].patch(
-                pfad,
+    # And the Resource is stored unchanged there; therefore the deleted not.
+    if endpoint.method == "DELETE":
+        if "{commentId}" in endpoint.template:
+            afterwards = scenario["client"].patch(
+                path,
                 json=COMMENT,
-                headers={**welt["kopf_owner"], "If-Match": '"1"'},
+                headers={**scenario["kopf_owner"], "If-Match": '"1"'},
             )
-            assert nachher.status_code == 200
+            assert afterwards.status_code == 200
         else:
-            nachher = welt["client"].get(pfad, headers=welt["kopf_owner"])
-            assert nachher.status_code == 200
+            afterwards = scenario["client"].get(path, headers=scenario["kopf_owner"])
+            assert afterwards.status_code == 200
 
 
-def test_der_vertrag_ist_vollstaendig_abgedeckt() -> None:
-    """Eine neue Operation ohne Eintrag in dieser Datei macht die Suite rot.
+def test_the_contract_is_complete_covered() -> None:
+    """a new operation without to entry in this file makes the suite fail.
 
-    Das ist der eigentliche Zweck der Matrix. Eine Regel, die man an jedem
-    neuen Endpunkt von Hand mitschreiben muss, wird irgendwann vergessen -
-    und ein vergessener Mandantenschutz faellt im Betrieb niemandem auf.
+    The is the eigentliche Zweck the Matrix. A Regel, the man to jedem
+    new Endpoint from Hand mitschreiben must, is irgendwann vergessen -
+    and a vergessener Mandantenschutz fails in the Betrieb niemandem on.
     """
     schema = create_app().openapi()
-    vertrag = {
-        (methode.upper(), pfad)
-        for pfad, operationen in schema["paths"].items()
+    contract = {
+        (methode.upper(), path)
+        for path, operationen in schema["paths"].items()
         for methode in operationen
     }
-    abgedeckt = (
-        {(e.method, e.template) for e in SPACE_ENDPUNKTE} | set(NUR_ANGEMELDET) | set(OEFFENTLICH)
+    covered = (
+        {(e.method, e.template) for e in SPACE_ENDPUNKTE}
+        | set(AUTHENTICATED_ONLY)
+        | set(PUBLIC_ENDPOINTS)
     )
-    assert vertrag == abgedeckt
+    assert contract == covered
 
 
-@pytest.mark.parametrize(("methode", "pfad"), NUR_ANGEMELDET, ids=str)
-def test_kontobezogene_endpunkte_bleiben_anonym_verschlossen(welt, methode: str, pfad: str) -> None:  # type: ignore[no-untyped-def]
-    antwort = welt["client"].request(methode, pfad, json={})
-    assert antwort.status_code == 401
-    assert antwort.json()["code"] == "AUTHENTICATION_REQUIRED"
+@pytest.mark.parametrize(("method", "path"), AUTHENTICATED_ONLY, ids=str)
+def test_account_scoped_endpoints_bleiben_anonymous_closed(
+    scenario, method: str, path: str
+) -> None:  # type: ignore[no-untyped-def]
+    response = scenario["client"].request(method, path, json={})
+    assert response.status_code == 401
+    assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
 
 
-def test_oeffentliche_endpunkte_verlangen_keinen_token(welt) -> None:  # type: ignore[no-untyped-def]
-    """Die Gegenprobe: sie sind der Weg zu einem Token und bleiben offen."""
-    for pfad in ("/api/v1/health", "/api/v1/health/ready"):
-        assert welt["client"].get(pfad).status_code == 200
+def test_public_endpoints_verlangen_no_token(scenario) -> None:  # type: ignore[no-untyped-def]
+    "the countercheck: these endpoints lead to a token and remain public."
+    for path in ("/api/v1/health", "/api/v1/health/ready"):
+        assert scenario["client"].get(path).status_code == 200

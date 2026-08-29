@@ -1,4 +1,4 @@
-"""Persistenztyp für die explizit erlaubte Outbox-Metadatenklasse."""
+"""Persistence type for the explicitly allowed outbox metadata class."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from sidebyside.domain.events import PublicEventPayload
 
 
 class PublicEventPayloadJSON(TypeDecorator[PublicEventPayload]):
-    """Weist rohe Dictionaries auch bei direkter ORM-Nutzung ab."""
+    """Reject raw dictionaries even when the ORM is used directly."""
 
     impl = postgresql.JSONB
     cache_ok = True
@@ -27,7 +27,7 @@ class PublicEventPayloadJSON(TypeDecorator[PublicEventPayload]):
     ) -> dict[str, Any]:
         del dialect
         if type(value) is not PublicEventPayload:
-            raise TypeError("PublicEventPayload erforderlich; rohe Outbox-Payload abgewiesen")
+            raise TypeError("PublicEventPayload required; raw outbox payload rejected")
         return value.model_dump(mode="json", exclude_none=True)
 
     def process_result_value(
@@ -35,5 +35,5 @@ class PublicEventPayloadJSON(TypeDecorator[PublicEventPayload]):
     ) -> PublicEventPayload:
         del dialect
         if value is None:
-            raise ValueError("Outbox-Payload fehlt in einer nicht-nullbaren Spalte")
+            raise ValueError("Outbox payload is missing from a non-null persistence column")
         return PublicEventPayload.model_validate(value)

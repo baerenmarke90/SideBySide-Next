@@ -1,4 +1,4 @@
-"""PartnerProfile- und ProfilePreference-Endpunkte."""
+"""PartnerProfile and ProfilePreference endpoints."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ router = APIRouter(tags=["profiles"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Version der ProfilePreference fuer den naechsten If-Match-Schreibzugriff.",
+        "description": "ProfilePreference version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }

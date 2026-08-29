@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -22,11 +22,11 @@ import {
 } from './HeartEmotion';
 
 /**
- * Inhaltliche Aenderung.
+ * Content update payload.
  * 
- * `visibility` fehlt hier bewusst: der Wechsel ist eine eigene Operation
- * mit destruktiver Folge und darf nicht als Nebenwirkung eines
- * Textupdates passieren.
+ * ``visibility`` is intentionally absent: changing visibility is a separate
+ * operation with destructive consequences and must not happen as a side
+ * effect of a text update.
  * @export
  * @interface HeartMomentUpdate
  */

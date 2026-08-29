@@ -1,13 +1,14 @@
-"""Wiederkehrende Wartung fuer Security-State.
+"""Recurring maintenance for security state.
 
-Aufbewahrungsfristen, die nur als Funktion im Code stehen, sind keine
-Fristen. `sessions.prune_replay_history()` und `rate_limit.prune()` sind
-getestet und dokumentiert - ausgefuehrt hat sie bisher niemand.
+Retention periods that exist only as functions in code are not retention
+periods in practice. `sessions.prune_replay_history()` and
+`rate_limit.prune()` are tested and documented, but previously nobody ran
+them.
 
-Hier bekommen sie einen Auftraggeber: eine gewoehnliche Aufgabe in der
-vorhandenen Warteschlange, die sich nach getaner Arbeit selbst neu
-einstellt. Kein zweiter Scheduler, kein Cron im Container - die
-Warteschlange liegt ohnehin in PostgreSQL und ueberlebt einen Neustart.
+This module gives them a scheduler: an ordinary job in the existing queue
+that schedules its own successor after successful work. No second scheduler
+and no container cron are needed because the queue already lives in
+PostgreSQL and survives restarts.
 """
 
 from __future__ import annotations
@@ -29,33 +30,33 @@ log = logging.getLogger(__name__)
 SECURITY_RETENTION = "security_retention"
 
 RETENTION_INTERVAL = timedelta(hours=6)
-"""Abstand zwischen zwei Laeufen.
+"""Interval between runs.
 
-Deutlich kuerzer als die kuerzeste Aufbewahrungsfrist (ein Tag fuer
-Rate-Limit-Ereignisse). Ein verpasster Lauf verschiebt damit nichts
-Wesentliches, und haeufiger waere nur mehr Last ohne mehr Wirkung.
+This is substantially shorter than the shortest retention period, one day
+for rate-limit events. A missed run therefore shifts nothing material, while
+running more frequently would add load without adding value.
 """
 
 _LOCK_KEY = 8_150_213
-"""Schluessel der Advisory Lock, unter der eingeplant wird.
+"""Advisory-lock key used while scheduling.
 
-Zwei gleichzeitig startende Worker wuerden sonst beide nachsehen, beide
-nichts finden und beide einstellen. Die Sperre gilt bis zum Ende der
-Transaktion und braucht keine eigene Tabelle.
+Without it, two workers starting concurrently could both inspect the queue,
+both find nothing, and both enqueue a job. The lock lasts until the end of
+the transaction and needs no dedicated table.
 
-Ein doppelter Lauf waere ohnehin harmlos - beide Prune-Funktionen sind
-idempotent. Die Sperre haelt nur die Warteschlange sauber.
+A duplicate run would still be harmless because both prune functions are
+idempotent. The lock merely keeps the queue tidy.
 """
 
 
-def _open_jobs(session: Session, *stati: JobStatus) -> int:
+def _open_jobs(session: Session, *statuses: JobStatus) -> int:
     return int(
         session.execute(
             select(func.count())
             .select_from(Job)
             .where(
                 Job.kind == SECURITY_RETENTION,
-                Job.status.in_([status.value for status in stati]),
+                Job.status.in_([status.value for status in statuses]),
             )
         ).scalar_one()
     )
@@ -66,14 +67,14 @@ def _lock(session: Session) -> None:
 
 
 def ensure_scheduled(session: Session, *, delay: timedelta | None = None) -> Job | None:
-    """Dafuer sorgen, dass ueberhaupt ein Lauf ansteht.
+    """Ensure that at least one run is scheduled.
 
-    Wird beim Start eines Workers und danach regelmaessig aufgerufen. Das
-    ist die Selbstheilung: gibt eine Aufgabe endgueltig auf, haengt keine
-    Kette mehr an ihr - hier entsteht die naechste trotzdem.
+    Called when a worker starts and periodically afterwards. This is the
+    self-healing path: if a job gives up permanently, no chain remains
+    attached to it, but this function still creates the next one.
 
-    Eine bereits laufende Aufgabe zaehlt mit. Sie stellt ihre Nachfolgerin
-    selbst ein; zusaetzlich einzuplanen hiesse, den Takt zu verdoppeln.
+    A currently running job counts as well. It schedules its own successor;
+    scheduling another here would double the cadence.
     """
     _lock(session)
     if _open_jobs(session, JobStatus.PENDING, JobStatus.RUNNING):
@@ -82,10 +83,10 @@ def ensure_scheduled(session: Session, *, delay: timedelta | None = None) -> Job
 
 
 def schedule_next(session: Session, *, delay: timedelta | None = None) -> Job | None:
-    """Den naechsten Lauf einstellen, aus einem laufenden heraus.
+    """Schedule the next run from within the currently running one.
 
-    Anders als `ensure_scheduled` zaehlt die eigene, gerade laufende
-    Aufgabe hier nicht mit - sonst plante sich die Kette nie fort.
+    Unlike `ensure_scheduled`, this deliberately does not count the current
+    RUNNING job; otherwise the chain could never schedule its successor.
     """
     _lock(session)
     if _open_jobs(session, JobStatus.PENDING):
@@ -94,31 +95,30 @@ def schedule_next(session: Session, *, delay: timedelta | None = None) -> Job | 
 
 
 def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
-    """Abgelaufenen Security-State raeumen und den naechsten Lauf einplanen.
+    """Prune expired security state and schedule the next run.
 
-    Die Fristen bleiben dort definiert, wo die Daten entstehen:
-    `sessions.REPLAY_HISTORY_RETENTION`, die Voreinstellung in
-    `rate_limit.prune()` und die Lebensdauer einer begonnenen
-    OIDC-Anmeldung. Dieser Job entscheidet nichts ueber die Aufbewahrung -
-    er sorgt nur dafuer, dass sie tatsaechlich eintritt.
+    Retention periods remain defined where the data originates:
+    `sessions.REPLAY_HISTORY_RETENTION`, the default in `rate_limit.prune()`,
+    and the lifetime of an initiated OIDC authentication request. This job
+    makes no retention decisions; it merely makes sure those decisions are
+    actually applied.
 
-    Laufende Token-Familien behalten ihre vollstaendige Historie: sie
-    *ist* die Replay-Erkennung, und `prune_replay_history` fasst sie nicht
-    an.
+    Active token families retain their complete history because that history
+    *is* replay detection, and `prune_replay_history` does not touch it.
     """
     del payload
 
-    historie = sessions.prune_replay_history(session)
-    limits = rate_limit.prune(session)
-    anmeldeversuche = oidc.prune_auth_requests(session)
+    replay_history = sessions.prune_replay_history(session)
+    rate_limits = rate_limit.prune(session)
+    oidc_requests = oidc.prune_auth_requests(session)
     ceremonies = passkeys.prune_challenges(session)
 
     log.info(
         "security retention completed",
         extra={
-            "replay_history_removed": historie,
-            "rate_limit_events_removed": limits,
-            "oidc_auth_requests_removed": anmeldeversuche,
+            "replay_history_removed": replay_history,
+            "rate_limit_events_removed": rate_limits,
+            "oidc_auth_requests_removed": oidc_requests,
             "webauthn_challenges_removed": ceremonies,
         },
     )
@@ -127,11 +127,11 @@ def run_security_retention(session: Session, payload: dict[str, Any]) -> None:
 
 
 def register_handlers(target: JobRegistry | None = None) -> None:
-    """Die Wartung beim Worker anmelden.
+    """Register maintenance with the worker.
 
-    Absichtlich ein Aufruf und kein Import-Nebeneffekt: wer den Worker
-    startet, soll sehen, was er ausfuehrt.
+    Deliberately an explicit call rather than an import side effect: whoever
+    starts the worker should be able to see what it runs.
     """
-    ziel = target if target is not None else registry
-    if ziel.get(SECURITY_RETENTION) is None:
-        ziel.register(SECURITY_RETENTION, run_security_retention)
+    destination = target if target is not None else registry
+    if destination.get(SECURITY_RETENTION) is None:
+        destination.register(SECURITY_RETENTION, run_security_retention)

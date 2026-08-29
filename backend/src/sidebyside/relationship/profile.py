@@ -1,13 +1,12 @@
-"""Das SpaceProfile lesen und schreiben.
+"""Read and write the SpaceProfile.
 
-Beziehungsbezogene Angaben zum Space: seit wann, ob die gemeinsame Zeit
-angezeigt wird und in welcher Form.
+Relationship-related Space attributes: start date, whether shared time is
+shown, and in which form.
 
-Geschrieben wird ausschliesslich mit Optimistic Concurrency. Zwei Partner
-bearbeiten dasselbe Profil oft kurz nacheinander vom Telefon aus; ohne
-Versionspruefung wuerde der zweite Schreibvorgang die Aenderung des ersten
-still ueberschreiben. Der Konflikt gehoert dem Menschen vorgelegt, nicht
-weggeraeumt.
+Writes use optimistic concurrency exclusively. Two partners often edit the
+same profile from their phones in short succession. Without a version check,
+the second write would silently overwrite the first. The conflict must be
+surfaced to the person rather than hidden.
 """
 
 from __future__ import annotations
@@ -24,10 +23,10 @@ from sidebyside.relationship.models import DurationDisplayMode, Space, SpaceProf
 from sidebyside.relationship.service import SpaceErrorCode
 
 EARLIEST_RELATIONSHIP_START = date(1900, 1, 1)
-"""Untergrenze fuer einen Beziehungsbeginn.
+"""Lower bound for a relationship start date.
 
-Kein fachliches Verbot, sondern ein Tippfehlerfilter: aus einer verrutschten
-Jahreszahl wuerden sonst sechsstellige "gemeinsame Tage".
+This is not a domain prohibition but a typo filter. A shifted year would
+otherwise produce six-digit counts of "shared days".
 """
 
 
@@ -37,11 +36,10 @@ class SpaceProfileErrorCode:
 
 
 def load(session: Session, space_id: UUID) -> SpaceProfile | None:
-    """Das Profil eines Space, ohne es anzulegen.
+    """Load a Space profile without creating it.
 
-    Ausdruecklich auf `space_id` eingeschraenkt und nicht ueber eine
-    Profil-ID erreichbar: es gibt keinen Datenzugriff allein anhand einer
-    Ressourcen-ID.
+    Deliberately scope by `space_id` rather than exposing lookup by profile ID:
+    there is no data access based only on a resource ID.
     """
     return session.execute(
         select(SpaceProfile).where(SpaceProfile.space_id == space_id)
@@ -49,16 +47,15 @@ def load(session: Session, space_id: UUID) -> SpaceProfile | None:
 
 
 def _locked_profile(session: Session, space_id: UUID) -> SpaceProfile:
-    """Das Profil zum Schreiben holen und konkurrierende Schreiber reihen.
+    """Load the profile for writing and serialize concurrent writers.
 
-    Die Space-Zeile ist die Serialisierungsstelle. Ein zweiter Schreiber
-    wartet hier, liest danach den bereits geschriebenen Stand und sieht
-    deshalb eine hoehere Version - der 409 entsteht deterministisch und
-    nicht je nach zeitlichem Zufall.
+    The Space row is the serialization point. A second writer waits here,
+    then reads the already written state and therefore observes a higher
+    version. The 409 is deterministic rather than timing-dependent.
 
-    Fehlt das Profil, wird es angelegt. `create_space` legt es normalerweise
-    mit an; ein Space ohne Profil ist ein Altbestand und kein Grund, eine
-    Aenderung abzulehnen.
+    If the profile is missing, create it. `create_space` normally creates one;
+    a Space without a profile is legacy state, not a reason to reject an
+    update.
     """
     space = session.execute(
         select(Space).where(Space.id == space_id).with_for_update()
@@ -66,18 +63,18 @@ def _locked_profile(session: Session, space_id: UUID) -> SpaceProfile:
     if space is None:
         raise NotFoundError("Space not found.", SpaceErrorCode.NOT_FOUND)
 
-    profil = session.execute(
+    profile = session.execute(
         select(SpaceProfile)
         .where(SpaceProfile.space_id == space_id)
         .execution_options(populate_existing=True)
     ).scalar_one_or_none()
 
-    if profil is None:
-        profil = SpaceProfile(space_id=space_id)
-        session.add(profil)
+    if profile is None:
+        profile = SpaceProfile(space_id=space_id)
+        session.add(profile)
         session.flush()
 
-    return profil
+    return profile
 
 
 def _validate_start(started_on: date | None, today: date) -> None:
@@ -105,19 +102,18 @@ def update(
     duration_display_mode: DurationDisplayMode,
     today: date,
 ) -> SpaceProfile:
-    """Das Profil vollstaendig ersetzen, sofern die Version noch stimmt.
+    """Replace the full profile when the expected version still matches.
 
-    `expected_version` ist der Stand, den der Aufrufer gelesen hat. Weicht
-    er ab, hat der Partner inzwischen geschrieben: 409, und nichts wird
-    veraendert.
+    `expected_version` is the state the caller read. A mismatch means the
+    partner wrote in the meantime: return 409 and mutate nothing.
 
-    `today` ist der Kalendertag in der Zeitzone des Aufrufers. Er entscheidet
-    darueber, ob ein Datum in der Zukunft liegt - ein Beginn "heute" ist
-    westlich von UTC sonst je nach Uhrzeit unzulaessig.
+    `today` is the calendar day in the caller's timezone. It determines
+    whether a date lies in the future; otherwise a start date of "today" west
+    of UTC could become invalid depending on the time of day.
     """
-    profil = _locked_profile(session, space_id)
+    profile = _locked_profile(session, space_id)
 
-    if profil.version != expected_version:
+    if profile.version != expected_version:
         raise ConflictError(
             "The space profile was changed by someone else.",
             ErrorCode.VERSION_CONFLICT,
@@ -125,22 +121,22 @@ def update(
 
     _validate_start(relationship_started_on, today)
 
-    profil.relationship_started_on = relationship_started_on
-    profil.show_relationship_duration = show_relationship_duration
-    profil.duration_display_mode = duration_display_mode.value
+    profile.relationship_started_on = relationship_started_on
+    profile.show_relationship_duration = show_relationship_duration
+    profile.duration_display_mode = duration_display_mode.value
 
     try:
         session.flush()
     except StaleDataError as stale:
-        # Zweite, unabhaengige Absicherung. Die Versionsspalte wird beim
-        # UPDATE mitgeprueft; selbst wenn die Serialisierung oben je
-        # umgangen wuerde, entstuende hier kein Lost Update, sondern
-        # dieselbe Antwort. Zurueckgerollt wird an der Transaktionsgrenze
-        # der Anfrage, nicht hier - ein Teil-Rollback mitten im Vorgang
-        # wuerde auch alles zuruecknehmen, was vorher dazugehoerte.
+        # Independent second line of defense. The version column participates
+        # in the UPDATE; even if the serialization above were ever bypassed,
+        # this still produces the same conflict rather than a lost update.
+        # Rollback belongs at the request transaction boundary, not here: a
+        # partial rollback inside this operation would also undo preceding
+        # work that is part of the same transaction.
         raise ConflictError(
             "The space profile was changed by someone else.",
             ErrorCode.VERSION_CONFLICT,
         ) from stale
 
-    return profil
+    return profile

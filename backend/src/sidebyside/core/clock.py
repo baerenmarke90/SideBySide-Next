@@ -1,14 +1,14 @@
-"""Zeit.
+"""Time.
 
-Zwei Begriffe, die nicht vermischt werden dürfen:
+Two concepts that must not be conflated:
 
-- Ein *Zeitpunkt* ist ein Moment auf der Weltzeitachse. Er wird in UTC
-  gehalten und als TIMESTAMPTZ gespeichert.
-- Ein *fachlicher Tag* ist ein Kalendertag ohne Uhrzeit - ein Geburtstag,
-  ein Jahrestag, der Tag eines Erlebnisses. Er wird als DATE gespeichert.
+- An *instant* is a moment on the global timeline. It is kept in UTC and
+  stored as TIMESTAMPTZ.
+- A *domain day* is a calendar date without a time - a birthday, anniversary,
+  or the day of an experience. It is stored as DATE.
 
-Ein Geburtstag hat keine Zeitzone. Ihn als Zeitpunkt zu speichern
-verschiebt ihn früher oder später um einen Tag.
+A birthday has no timezone. Storing it as an instant will eventually shift it
+by a day.
 """
 
 from __future__ import annotations
@@ -21,16 +21,16 @@ log = logging.getLogger(__name__)
 
 
 def now() -> datetime:
-    """Der aktuelle Zeitpunkt, zeitzonen-bewusst in UTC."""
+    """Return the current timezone-aware instant in UTC."""
     return datetime.now(UTC)
 
 
 def ensure_utc(value: datetime) -> datetime:
-    """Einen Zeitpunkt nach UTC bringen.
+    """Normalize an instant to UTC.
 
-    Ein Wert ohne Zeitzone wird als UTC gelesen. Das ist eine Annahme, und
-    sie gilt nur, weil in diesem Projekt kein naiver Zeitstempel entstehen
-    darf - siehe die Konventionen in docs/ARCHITECTURE.md.
+    A value without timezone information is interpreted as UTC. That is an
+    assumption and is valid only because this project must not create naive
+    timestamps; see the conventions in docs/ARCHITECTURE.md.
     """
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
@@ -38,23 +38,22 @@ def ensure_utc(value: datetime) -> datetime:
 
 
 def today_utc() -> date:
-    """Der heutige Kalendertag in UTC.
+    """Return today's calendar date in UTC.
 
-    Ausschließlich für technische Zwecke. Für jede nutzersichtbare
-    Tagesgrenze - gemeinsame Tage, Jahrestage, Erinnerungen - ist das
-    falsch: sie gehört in die Zeitzone der lesenden Person. Dafür gibt es
-    `today_in`.
+    For technical use only. This is wrong for every user-visible day boundary
+    - shared days, anniversaries, reminders - because those belong to the
+    timezone of the person reading them. Use `today_in` for that.
     """
     return now().date()
 
 
 def resolve_zone(name: str) -> ZoneInfo:
-    """Eine benannte Zeitzone aufloesen, mit UTC als Rueckfallebene.
+    """Resolve a named timezone, falling back to UTC.
 
-    `Account.timezone` ist ein freies Textfeld. Ein unbekannter Name darf
-    eine Leseanfrage nicht mit 500 beenden - die Beziehungsdauer ist eine
-    Anzeige, nicht der Zweck der Antwort. Der Fall wird protokolliert, damit
-    er sichtbar bleibt und nicht als stille Fehlberechnung untergeht.
+    `Account.timezone` is persisted text. An unknown name must not turn a read
+    request into a 500 response: relationship duration is display data rather
+    than the purpose of the request. The fallback is logged so invalid data
+    remains visible instead of becoming a silent miscalculation.
     """
     try:
         return ZoneInfo(name)
@@ -64,12 +63,12 @@ def resolve_zone(name: str) -> ZoneInfo:
 
 
 def today_in(zone: str, *, at: datetime | None = None) -> date:
-    """Der heutige Kalendertag in einer bestimmten Zeitzone.
+    """Return today's calendar date in a specific timezone.
 
-    Der fachliche Tag eines Menschen wechselt um Mitternacht an seinem Ort,
-    nicht um Mitternacht UTC. Wer westlich von UTC lebt, haette sonst bis
-    zu einen Tag zu viel gezaehlt, wer oestlich lebt, einen zu wenig - und
-    ein Jahrestag waere um Stunden verschoben.
+    A person's domain day changes at midnight where they are, not at midnight
+    UTC. Otherwise somebody west of UTC could count up to one day too many,
+    while somebody east of UTC could count one day too few, and an anniversary
+    would shift by hours.
     """
-    zeitpunkt = at if at is not None else now()
-    return ensure_utc(zeitpunkt).astimezone(resolve_zone(zone)).date()
+    instant = at if at is not None else now()
+    return ensure_utc(instant).astimezone(resolve_zone(zone)).date()

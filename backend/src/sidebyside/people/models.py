@@ -1,17 +1,16 @@
-"""Persistenz fuer nahestehende Personen und wichtige Termine.
+"""Persistence for related people and important dates.
 
-Ein Kind, ein Elternteil, eine Freundin: fuer SideBySide sind das keine
-Accounts. Sie melden sich nicht an, sie haben keine Sitzung und sie
-bekommen keine Einladung. Sie sind ein Eintrag, den ein Partner in seinem
-Space fuehrt - und damit Daten ueber Dritte, die diese Dritten nicht selbst
-verwalten koennen. Deshalb steht hier weniger, als technisch moeglich
-waere: Anzeigename, Art der Beziehung, ein Geburtstag. Keine Adresse,
-keine Schule, keine Telefonnummer.
+A child, parent, or friend: for SideBySide these are not accounts. They do
+not sign in, have no session, and receive no invitation. They are records
+maintained by a partner in their space and therefore contain data about
+third parties who cannot manage those records themselves. For that reason,
+less is stored here than would technically be possible: display name,
+relationship type, and a birthday. No address, school, or phone number.
 
-Der Anzeigename und das Etikett eines Termins sind der schuetzenswerte
-Teil und liegen als `ProtectedPayload` getrennt von den Metadaten. Was zum
-Sortieren, Verknuepfen und spaeter zum Erinnern gebraucht wird - Beziehung,
-Datum, Wiederholung, Sichtbarkeit - bleibt als Spalte abfragbar.
+The display name and the label of an important date are the protected parts
+and are stored as `ProtectedPayload`, separate from metadata. Everything
+needed for sorting, linking, and later reminders - relationship, date,
+recurrence, and visibility - remains queryable as columns.
 """
 
 from __future__ import annotations
@@ -61,11 +60,10 @@ class ImportantDateType(StrEnum):
 
 
 class DateRepeat(StrEnum):
-    """Wie oft ein Termin wiederkehrt.
+    """How often an important date recurs.
 
-    Bewusst nur zwei Werte. Eine vollstaendige Wiederholungsregel gehoert
-    zur spaeteren Erinnerungslogik; ein Geburtstag und ein Jahrestag
-    brauchen sie nicht.
+    Deliberately limited to two values. A full recurrence rule belongs to
+    later reminder logic; birthdays and anniversaries do not need it.
     """
 
     NONE = "NONE"
@@ -73,33 +71,32 @@ class DateRepeat(StrEnum):
 
 
 UNKNOWN_BIRTH_YEAR = 1904
-"""Platzhalterjahr fuer einen Geburtstag ohne bekanntes Jahr.
+"""Placeholder year for a birthday whose year is unknown.
 
-`DATE` kennt kein Datum ohne Jahr. Statt Monat und Tag in zwei eigene
-Spalten zu zerlegen - und damit jede Datumsrechnung zu verdoppeln - wird
-ein festes Jahr eingesetzt und `birthday_year_known` sagt, dass es nichts
-bedeutet. 1904 ist ein Schaltjahr: der 29. Februar bleibt speicherbar.
+`DATE` cannot represent a date without a year. Instead of splitting month
+and day into separate columns - which would duplicate every date operation -
+a fixed year is used and `birthday_year_known` indicates that the year has
+no meaning. 1904 is a leap year, so February 29 remains representable.
 
-Die Datenbank erzwingt den Platzhalter, damit nicht eine zweite Stelle im
-Code ein anderes Jahr waehlt und die beiden Bestaende danach nicht mehr
-vergleichbar sind.
+The database enforces the placeholder so that a second code path cannot
+choose another year and make the two populations incomparable.
 """
 
 
 class RelatedPersonPayload(ProtectedPayload):
-    """Der schuetzenswerte Klartext einer nahestehenden Person."""
+    """Protected plaintext for a related person."""
 
     display_name: str = Field(min_length=1, max_length=120)
 
 
 class ImportantDatePayload(ProtectedPayload):
-    """Das schuetzenswerte Etikett eines Termins."""
+    """Protected label of an important date."""
 
     label: str = Field(min_length=1, max_length=120)
 
 
 class RelatedPerson(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin, Base):
-    """Eine Person im Umfeld des Paares, die selbst keinen Account hat."""
+    """A person related to the couple who does not have an account."""
 
     __tablename__ = "related_persons"
 
@@ -124,10 +121,9 @@ class RelatedPerson(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin,
     )
 
     __table_args__ = (
-        # Zielspalten der zusammengesetzten Fremdschluessel aus
-        # `important_dates`. Ohne diese Eindeutigkeit koennte ein Termin
-        # seinen Space und die Privacy-Klasse seiner Person nicht auf
-        # Datenbankebene mitfuehren.
+        # Target columns for the composite foreign keys from `important_dates`.
+        # Without this uniqueness, an important date could not carry its
+        # person's space and privacy class at the database level.
         UniqueConstraint(
             "id",
             "space_id",
@@ -152,26 +148,22 @@ class RelatedPerson(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin,
 
 
 class ImportantDate(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin, Base):
-    """Ein Datum, das dem Paar wichtig ist - meist zu einer nahestehenden Person.
+    """A date important to the couple, usually linked to a related person.
 
-    `related_person_id` ist optional: der eigene Jahrestag gehoert zu
-    niemandem sonst. Ist er gesetzt, fuehrt die Zeile die Privacy-Klasse
-    ihrer Person als Kopie mit und beide zusammen sind ein
-    Fremdschluessel. Das erledigt zwei Dinge auf einmal, die sonst zwei
-    Serviceprueffungen waeren:
+    `related_person_id` is optional: the couple's own anniversary belongs to
+    nobody else. When set, the row carries a copy of the person's privacy
+    class, and both values together form a foreign key. This achieves two
+    things at once that would otherwise require two service checks:
 
-    - Der Space stimmt. Ein Termin kann nicht auf eine Person aus einem
-      fremden Space zeigen, auch nicht durch einen Fehler in der
-      Fachlogik.
-    - Ein Termin ist nie offener als seine Person. Ein `SPACE_SHARED`
-      Termin an einer `OWNER_ONLY` Person waere die Auskunft, dass es
-      diese Person gibt - und genau die soll der private Eintrag
-      verhindern.
+    - The space must match. An important date cannot point to a person from
+      another space, even due to a bug in domain logic.
+    - An important date is never more open than its person. A `SPACE_SHARED`
+      date attached to an `OWNER_ONLY` person would reveal that the person
+      exists, which is exactly what the private record must prevent.
 
-    `ON UPDATE CASCADE` haelt die Kopie aktuell, `ON DELETE CASCADE`
-    raeumt die Termine einer geloeschten Person mit ab. Ein `SET NULL`
-    waere hier nicht moeglich: `space_id` ist Teil desselben
-    Fremdschluessels und darf nicht leer werden.
+    `ON UPDATE CASCADE` keeps the copy current, while `ON DELETE CASCADE`
+    removes dates for a deleted person. `SET NULL` is not possible here:
+    `space_id` is part of the same foreign key and may not become null.
     """
 
     __tablename__ = "important_dates"

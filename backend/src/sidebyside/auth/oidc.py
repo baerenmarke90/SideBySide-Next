@@ -1,20 +1,19 @@
-"""OpenID Connect: Authorization Code Flow mit PKCE.
+"""OpenID Connect authorization code flow with PKCE.
 
-Ein ID Token ist eine Behauptung eines fremden Servers ueber eine Person.
-Sie wird erst zu einer Identitaet, wenn fuenf Dinge geprueft sind:
+An ID token is a claim by an external server about a person. It becomes a
+trusted identity only after five properties have been verified:
 
-- die **Signatur**, gegen den Schluessel aus dem JWKS des Issuers,
-- der **Issuer**, gegen den konfigurierten Wert und gegen das
-  Discovery-Dokument, das sich selbst benennen muss,
-- die **Audience**, damit ein Token fuer eine andere Anwendung hier nicht
-  gilt,
-- die **Nonce**, die dieses Token an genau diese Anfrage bindet,
-- der **State**, der die Rueckkehr an genau diesen Browser bindet.
+- the **signature**, against a key from the issuer's JWKS;
+- the **issuer**, against both configuration and the self-identifying discovery
+  document;
+- the **audience**, so a token issued for another application is rejected;
+- the **nonce**, binding the token to exactly this authentication request;
+- the **state**, binding the return to exactly this browser flow.
 
-Faellt eine dieser Pruefungen aus, ist der Rest wertlos. Deshalb steht
-keine davon im Endpunkt, sondern hier - an einer Stelle, die jeder Anbieter
-durchlaeuft. Pocket ID ist damit eine gewoehnliche Verbindung und kein
-Sonderfall.
+If any check is omitted the rest cannot restore the trust chain. These checks
+therefore live here rather than in individual endpoints, and every provider
+uses the same path. Pocket ID is an ordinary configured connection rather than
+a special case.
 """
 
 from __future__ import annotations
@@ -51,28 +50,26 @@ from sidebyside.relationship.invitations import InvitationErrorCode
 log = logging.getLogger(__name__)
 
 AUTH_REQUEST_LIFETIME = timedelta(minutes=10)
-"""Wie lange eine begonnene Anmeldung offen bleibt.
+"""Lifetime of a started authentication request.
 
-Lang genug fuer eine Anmeldung beim Anbieter samt Zwei-Faktor-Schritt,
-kurz genug, dass eine liegengebliebene Zeile nicht zum Dauerzustand wird.
+Long enough for provider sign-in including a two-factor step, but short enough
+that an abandoned row does not become permanent state.
 """
 
 ACTION_OIDC_START = "oidc_start"
 
 OIDC_START = rate_limit.Limit(attempts=60, window=timedelta(minutes=15))
-"""Begrenzt, wie viele Anmeldungen je Verbindung begonnen werden koennen.
+"""Limit how many authentication flows may start per connection.
 
-Jeder Start legt eine Zeile an. Ohne Grenze waere der Endpunkt ein
-bequemer Weg, die Tabelle zu fuellen - anonym, denn eine Anmeldung beginnt
-naturgemaess ohne Sitzung.
+Every start creates a row. Without a limit, the anonymous start endpoint would
+be a simple way to fill the table before any session exists.
 """
 
 ALLOWED_ALGORITHMS = ("RS256", "RS384", "RS512", "ES256", "ES384", "PS256", "PS384", "PS512")
-"""Asymmetrische Verfahren, mehr nicht.
+"""Accepted asymmetric signing algorithms only.
 
-`none` und die HMAC-Verfahren sind ausgeschlossen: bei `HS256` waere der
-Signaturschluessel das Client Secret, und ein Anbieter, der das anbietet,
-verwechselt Vertraulichkeit mit Authentizitaet.
+``none`` and HMAC algorithms are excluded. With ``HS256`` the signing key would
+be the client secret, confusing confidentiality with authenticity.
 """
 
 HTTP_TIMEOUT = 10.0
@@ -88,7 +85,7 @@ class OidcErrorCode:
 
 @dataclass(frozen=True)
 class Discovery:
-    """Die Endpunkte, die das Discovery-Dokument nennt."""
+    """Endpoints declared by the provider discovery document."""
 
     issuer: str
     authorization_endpoint: str
@@ -98,7 +95,7 @@ class Discovery:
 
 @dataclass(frozen=True)
 class StartedFlow:
-    """Was der Client braucht, um den Nutzer zum Anbieter zu schicken."""
+    """Values the client needs to send the user to the provider."""
 
     authorization_url: str
     state: str
@@ -111,40 +108,40 @@ class SignedIn:
 
 
 def client() -> httpx.Client:
-    """Der ausgehende HTTP-Client.
+    """Return the outbound HTTP client.
 
-    Eine eigene Funktion, damit ein Test einen Transport unterschieben
-    kann, ohne dass die Fachlogik davon etwas weiss.
+    Keeping construction in one function lets tests substitute a transport
+    without coupling domain logic to it.
     """
     return httpx.Client(timeout=HTTP_TIMEOUT, follow_redirects=False)
 
 
 def connection(connection_id: str) -> OidcConnection:
-    verbindung = get_settings().oidc_connection(connection_id)
-    if verbindung is None:
+    configured = get_settings().oidc_connection(connection_id)
+    if configured is None:
         raise ValidationError(
             "This sign-in method is not available.", OidcErrorCode.UNKNOWN_CONNECTION
         )
-    return verbindung
+    return configured
 
 
-def _get_json(url: str, *, was: str) -> dict[str, Any]:
+def _get_json(url: str, *, kind: str) -> dict[str, Any]:
     try:
-        with client() as verbindung:
-            antwort = verbindung.get(url)
-            antwort.raise_for_status()
-            inhalt: dict[str, Any] = antwort.json()
-    except (httpx.HTTPError, ValueError) as fehler:
-        log.warning("oidc request failed", extra={"kind": was})
+        with client() as http:
+            response = http.get(url)
+            response.raise_for_status()
+            content: dict[str, Any] = response.json()
+    except (httpx.HTTPError, ValueError) as error:
+        log.warning("oidc request failed", extra={"kind": kind})
         raise ValidationError(
             "The sign-in provider is currently unavailable.",
             OidcErrorCode.PROVIDER_UNREACHABLE,
-        ) from fehler
-    return inhalt
+        ) from error
+    return content
 
 
 def _https_discovery_endpoint(value: object, *, connection_id: str, field: str) -> str:
-    """Einen vom Provider genannten Endpoint nur als HTTPS-URL akzeptieren."""
+    """Accept a provider-declared endpoint only when it is an HTTPS URL."""
     endpoint = str(value)
     try:
         parsed = urlsplit(endpoint)
@@ -170,12 +167,12 @@ def _https_discovery_endpoint(value: object, *, connection_id: str, field: str) 
     return endpoint
 
 
-def discover(verbindung: OidcConnection) -> Discovery:
-    """Das Discovery-Dokument holen und auf sich selbst pruefen."""
-    dokument = _get_json(f"{verbindung.issuer}/.well-known/openid-configuration", was="discovery")
-    gefunden = str(dokument.get("issuer", "")).rstrip("/")
-    if gefunden != verbindung.issuer:
-        log.warning("oidc discovery issuer mismatch", extra={"connection": verbindung.id})
+def discover(configured: OidcConnection) -> Discovery:
+    """Fetch discovery metadata and verify that the document identifies itself."""
+    document = _get_json(f"{configured.issuer}/.well-known/openid-configuration", kind="discovery")
+    discovered_issuer = str(document.get("issuer", "")).rstrip("/")
+    if discovered_issuer != configured.issuer:
+        log.warning("oidc discovery issuer mismatch", extra={"connection": configured.id})
         raise ValidationError(
             "The sign-in provider is currently unavailable.",
             OidcErrorCode.PROVIDER_UNREACHABLE,
@@ -183,28 +180,28 @@ def discover(verbindung: OidcConnection) -> Discovery:
 
     try:
         authorization_endpoint = _https_discovery_endpoint(
-            dokument["authorization_endpoint"],
-            connection_id=verbindung.id,
+            document["authorization_endpoint"],
+            connection_id=configured.id,
             field="authorization_endpoint",
         )
         token_endpoint = _https_discovery_endpoint(
-            dokument["token_endpoint"],
-            connection_id=verbindung.id,
+            document["token_endpoint"],
+            connection_id=configured.id,
             field="token_endpoint",
         )
         jwks_uri = _https_discovery_endpoint(
-            dokument["jwks_uri"],
-            connection_id=verbindung.id,
+            document["jwks_uri"],
+            connection_id=configured.id,
             field="jwks_uri",
         )
-    except KeyError as fehlend:
+    except KeyError as missing:
         raise ValidationError(
             "The sign-in provider is currently unavailable.",
             OidcErrorCode.PROVIDER_UNREACHABLE,
-        ) from fehlend
+        ) from missing
 
     return Discovery(
-        issuer=gefunden,
+        issuer=discovered_issuer,
         authorization_endpoint=authorization_endpoint,
         token_endpoint=token_endpoint,
         jwks_uri=jwks_uri,
@@ -212,7 +209,7 @@ def discover(verbindung: OidcConnection) -> Discovery:
 
 
 def _challenge(verifier: str) -> str:
-    """Die S256-Challenge zu einem Verifier."""
+    """Return the S256 challenge for a PKCE verifier."""
     digest = hashlib.sha256(verifier.encode("ascii")).digest()
     return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
 
@@ -224,23 +221,22 @@ def start(
     account_id: UUID | None = None,
     invitation_token: str | None = None,
 ) -> StartedFlow:
-    """Eine Anmeldung beginnen.
+    """Start an OIDC authentication flow.
 
-    State, Nonce und PKCE-Verifier entstehen hier und werden serverseitig
-    festgehalten. Der Client bekommt nur den State - er ist das Stueck, das
-    mit dem Browser zurueckkommt.
+    State, nonce, and PKCE verifier are created here and persisted server-side.
+    The client receives only state, which is the value that returns with the
+    browser.
 
-    Ist `account_id` gesetzt, verknuepft der Rueckweg die externe
-    Identitaet mit genau diesem bereits angemeldeten Konto. Ein optionaler
-    Einladungstoken wird ausschliesslich gehasht an diesen kurzlebigen
-    Request gebunden; er erscheint weder in der Provider-URL noch im
-    Klartext in der Datenbank.
+    When ``account_id`` is set, the callback links the external identity to
+    exactly that already-authenticated account. An optional invitation token is
+    bound to the short-lived request only as a hash; it appears neither in the
+    provider URL nor as plaintext in the database.
     """
-    verbindung = connection(connection_id)
-    rate_limit.check(session, ACTION_OIDC_START, verbindung.id, OIDC_START)
-    rate_limit.record_attempt(session, ACTION_OIDC_START, verbindung.id)
+    configured = connection(connection_id)
+    rate_limit.check(session, ACTION_OIDC_START, configured.id, OIDC_START)
+    rate_limit.record_attempt(session, ACTION_OIDC_START, configured.id)
 
-    dokument = discover(verbindung)
+    discovery = discover(configured)
 
     state = generate_token()
     nonce = generate_token()
@@ -248,11 +244,11 @@ def start(
 
     session.add(
         OidcAuthRequest(
-            connection_id=verbindung.id,
+            connection_id=configured.id,
             state_hash=hash_token(state),
             nonce=nonce,
             code_verifier=verifier,
-            redirect_uri=verbindung.redirect_uri,
+            redirect_uri=configured.redirect_uri,
             account_id=account_id,
             invitation_token_hash=(hash_token(invitation_token) if invitation_token else None),
             expires_at=now() + AUTH_REQUEST_LIFETIME,
@@ -260,79 +256,83 @@ def start(
     )
     session.flush()
 
-    parameter = {
+    parameters = {
         "response_type": "code",
-        "client_id": verbindung.client_id,
-        "redirect_uri": verbindung.redirect_uri,
-        "scope": verbindung.scopes,
+        "client_id": configured.client_id,
+        "redirect_uri": configured.redirect_uri,
+        "scope": configured.scopes,
         "state": state,
         "nonce": nonce,
         "code_challenge": _challenge(verifier),
         "code_challenge_method": "S256",
     }
-    trenner = "&" if "?" in dokument.authorization_endpoint else "?"
+    separator = "&" if "?" in discovery.authorization_endpoint else "?"
     return StartedFlow(
-        authorization_url=f"{dokument.authorization_endpoint}{trenner}{urlencode(parameter)}",
+        authorization_url=(f"{discovery.authorization_endpoint}{separator}{urlencode(parameters)}"),
         state=state,
     )
 
 
 def _open_request(session: Session, connection_id: str, state: str) -> OidcAuthRequest:
-    """Die begonnene Anmeldung zu einem State finden und verbrauchen."""
-    ungueltig = ValidationError(
+    """Find and consume the started authentication request for a state value."""
+    invalid = ValidationError(
         "This sign-in attempt is no longer valid.", OidcErrorCode.INVALID_STATE
     )
     if not state:
-        raise ungueltig
+        raise invalid
 
-    anfrage = session.execute(
+    request = session.execute(
         select(OidcAuthRequest)
         .where(OidcAuthRequest.state_hash == hash_token(state))
         .with_for_update()
     ).scalar_one_or_none()
 
-    jetzt = now()
+    current_time = now()
     if (
-        anfrage is None
-        or anfrage.connection_id != connection_id
-        or anfrage.consumed_at is not None
-        or anfrage.expires_at <= jetzt
+        request is None
+        or request.connection_id != connection_id
+        or request.consumed_at is not None
+        or request.expires_at <= current_time
     ):
-        raise ungueltig
+        raise invalid
 
-    anfrage.consumed_at = jetzt
+    request.consumed_at = current_time
     session.flush()
-    return anfrage
+    return request
 
 
 def _exchange_code(
-    verbindung: OidcConnection, dokument: Discovery, *, code: str, anfrage: OidcAuthRequest
+    configured: OidcConnection,
+    discovery: Discovery,
+    *,
+    code: str,
+    request: OidcAuthRequest,
 ) -> dict[str, Any]:
-    daten = {
+    data = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": anfrage.redirect_uri,
-        "client_id": verbindung.client_id,
-        "code_verifier": anfrage.code_verifier,
+        "redirect_uri": request.redirect_uri,
+        "client_id": configured.client_id,
+        "code_verifier": request.code_verifier,
     }
-    if verbindung.client_secret is not None:
-        daten["client_secret"] = verbindung.client_secret.get_secret_value()
+    if configured.client_secret is not None:
+        data["client_secret"] = configured.client_secret.get_secret_value()
 
     try:
         with client() as http:
-            antwort = http.post(dokument.token_endpoint, data=daten)
-            antwort.raise_for_status()
-            inhalt: dict[str, Any] = antwort.json()
-    except (httpx.HTTPError, ValueError) as fehler:
-        log.warning("oidc token exchange failed", extra={"connection": verbindung.id})
+            response = http.post(discovery.token_endpoint, data=data)
+            response.raise_for_status()
+            content: dict[str, Any] = response.json()
+    except (httpx.HTTPError, ValueError) as error:
+        log.warning("oidc token exchange failed", extra={"connection": configured.id})
         raise ValidationError(
             "This sign-in attempt is no longer valid.", OidcErrorCode.INVALID_TOKEN
-        ) from fehler
-    return inhalt
+        ) from error
+    return content
 
 
 def _audience_is_trusted(claims: dict[str, Any], client_id: str) -> bool:
-    """Nur die eigene Client-ID ist fuer diese Verbindung eine vertrauenswuerdige Audience."""
+    """Trust only this connection's own client ID as audience."""
     raw_audience = claims.get("aud")
     if isinstance(raw_audience, str):
         audiences = [raw_audience]
@@ -355,62 +355,62 @@ def _audience_is_trusted(claims: dict[str, Any], client_id: str) -> bool:
 
 
 def _verified_claims(
-    verbindung: OidcConnection,
-    dokument: Discovery,
+    configured: OidcConnection,
+    discovery: Discovery,
     *,
     id_token: str,
     nonce: str,
 ) -> dict[str, Any]:
-    """Die Signatur- und Claim-Pruefung des ID Tokens."""
-    ungueltig = ValidationError(
+    """Verify the ID-token signature and required claims."""
+    invalid = ValidationError(
         "This sign-in attempt is no longer valid.", OidcErrorCode.INVALID_TOKEN
     )
     if not id_token:
-        raise ungueltig
+        raise invalid
 
-    schluesselsatz = jwt.PyJWKSet.from_dict(_get_json(dokument.jwks_uri, was="jwks"))
+    key_set = jwt.PyJWKSet.from_dict(_get_json(discovery.jwks_uri, kind="jwks"))
     try:
-        kopf = jwt.get_unverified_header(id_token)
-        schluessel = _matching_key(schluesselsatz, kopf.get("kid"))
+        header = jwt.get_unverified_header(id_token)
+        key = _matching_key(key_set, header.get("kid"))
         claims: dict[str, Any] = jwt.decode(
             id_token,
-            key=schluessel.key,
+            key=key.key,
             algorithms=list(ALLOWED_ALGORITHMS),
-            audience=verbindung.client_id,
-            issuer=dokument.issuer,
+            audience=configured.client_id,
+            issuer=discovery.issuer,
             options={"require": ["exp", "iat", "iss", "aud", "sub"]},
         )
-    except (jwt.PyJWTError, KeyError, ValueError) as fehler:
-        log.info("oidc id token rejected", extra={"connection": verbindung.id})
-        raise ungueltig from fehler
+    except (jwt.PyJWTError, KeyError, ValueError) as error:
+        log.info("oidc id token rejected", extra={"connection": configured.id})
+        raise invalid from error
 
     if claims.get("nonce") != nonce:
-        log.info("oidc nonce mismatch", extra={"connection": verbindung.id})
-        raise ungueltig
+        log.info("oidc nonce mismatch", extra={"connection": configured.id})
+        raise invalid
 
-    if not _audience_is_trusted(claims, verbindung.client_id):
-        log.info("oidc audience rejected", extra={"connection": verbindung.id})
-        raise ungueltig
+    if not _audience_is_trusted(claims, configured.client_id):
+        log.info("oidc audience rejected", extra={"connection": configured.id})
+        raise invalid
 
     if not str(claims.get("sub", "")).strip():
-        raise ungueltig
+        raise invalid
 
     return claims
 
 
-def _matching_key(schluesselsatz: jwt.PyJWKSet, kid: str | None) -> jwt.PyJWK:
+def _matching_key(key_set: jwt.PyJWKSet, kid: str | None) -> jwt.PyJWK:
     if kid is not None:
-        for schluessel in schluesselsatz.keys:
-            if schluessel.key_id == kid:
-                return schluessel
-        raise KeyError("kid unbekannt")
-    if len(schluesselsatz.keys) != 1:
-        raise KeyError("kein kid und mehrere Schluessel")
-    return schluesselsatz.keys[0]
+        for key in key_set.keys:
+            if key.key_id == kid:
+                return key
+        raise KeyError("unknown kid")
+    if len(key_set.keys) != 1:
+        raise KeyError("missing kid with multiple keys")
+    return key_set.keys[0]
 
 
 def _display_name(claims: dict[str, Any]) -> str:
-    """Einen Anzeigenamen aus Claims ableiten, ohne einen Pflichtclaim zu erfinden."""
+    """Derive a display name from claims without inventing a required claim."""
     for key in ("name", "preferred_username", "given_name"):
         value = claims.get(key)
         if isinstance(value, str) and value.strip():
@@ -419,7 +419,7 @@ def _display_name(claims: dict[str, Any]) -> str:
 
 
 def _verified_email(claims: dict[str, Any]) -> str | None:
-    """Nur eine vom Provider ausdruecklich bestaetigte Adresse uebernehmen."""
+    """Accept only an address the provider explicitly marks as verified."""
     value = claims.get("email")
     if claims.get("email_verified") is True and isinstance(value, str) and value.strip():
         return value.strip()
@@ -435,7 +435,7 @@ def _onboard_with_invitation(
     subject: str,
     connection_id: str,
 ) -> Account:
-    """Konto, OIDC-Identitaet und Mitgliedschaft atomar aus einer Einladung erzeugen."""
+    """Atomically create account, OIDC identity, and membership from an invitation."""
     if request.invitation_token_hash is None:
         raise UnauthenticatedError(
             "This identity is not linked to an account.", OidcErrorCode.NO_ACCOUNT
@@ -479,81 +479,78 @@ def complete(
     device_name: str = "",
     platform: str = "",
 ) -> SignedIn:
-    """Den Rueckweg vom Anbieter abschliessen.
+    """Complete the callback from the provider.
 
-    Am Ende steht immer eine gewoehnliche `DeviceSession`. Es gibt keinen
-    zweiten Ort, an dem Tokens entstehen - auch nicht fuer externe
-    Anmeldungen.
+    The result is always a normal ``DeviceSession``. Token creation has no
+    separate path for external authentication.
     """
-    verbindung = connection(connection_id)
-    anfrage = _open_request(session, verbindung.id, state)
-    dokument = discover(verbindung)
+    configured = connection(connection_id)
+    request = _open_request(session, configured.id, state)
+    discovery = discover(configured)
 
-    antwort = _exchange_code(verbindung, dokument, code=code, anfrage=anfrage)
+    response = _exchange_code(configured, discovery, code=code, request=request)
     claims = _verified_claims(
-        verbindung,
-        dokument,
-        id_token=str(antwort.get("id_token", "")),
-        nonce=anfrage.nonce,
+        configured,
+        discovery,
+        id_token=str(response.get("id_token", "")),
+        nonce=request.nonce,
     )
     subject = str(claims["sub"])
 
-    identitaet = accounts.oidc_identity(session, issuer=dokument.issuer, subject=subject)
-    if identitaet is not None:
-        konto = session.get(Account, identitaet.account_id)
-    elif anfrage.account_id is not None:
-        konto = session.get(Account, anfrage.account_id)
-        if konto is not None:
+    identity = accounts.oidc_identity(session, issuer=discovery.issuer, subject=subject)
+    if identity is not None:
+        account = session.get(Account, identity.account_id)
+    elif request.account_id is not None:
+        account = session.get(Account, request.account_id)
+        if account is not None:
             accounts.add_oidc_identity(
                 session,
-                konto,
-                issuer=dokument.issuer,
+                account,
+                issuer=discovery.issuer,
                 subject=subject,
-                connection_id=verbindung.id,
+                connection_id=configured.id,
             )
-    elif anfrage.invitation_token_hash is not None:
-        konto = _onboard_with_invitation(
+    elif request.invitation_token_hash is not None:
+        account = _onboard_with_invitation(
             session,
-            request=anfrage,
+            request=request,
             claims=claims,
-            issuer=dokument.issuer,
+            issuer=discovery.issuer,
             subject=subject,
-            connection_id=verbindung.id,
+            connection_id=configured.id,
         )
     else:
-        konto = None
+        account = None
 
-    if konto is None or not konto.is_active:
+    if account is None or not account.is_active:
         raise UnauthenticatedError(
             "This identity is not linked to an account.", OidcErrorCode.NO_ACCOUNT
         )
 
-    if identitaet is not None:
-        identitaet.last_used_at = now()
+    if identity is not None:
+        identity.last_used_at = now()
 
-    rate_limit.clear(session, ACTION_OIDC_START, verbindung.id)
-    _, ausgestellt = sessions.start_session(
-        session, konto, device_name=device_name, platform=platform
-    )
+    rate_limit.clear(session, ACTION_OIDC_START, configured.id)
+    _, issued = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
-    return SignedIn(account=konto, tokens=ausgestellt)
+    return SignedIn(account=account, tokens=issued)
 
 
 def prune_auth_requests(session: Session) -> int:
-    """Abgelaufene und verbrauchte Anmeldeversuche entfernen."""
-    grenze = now()
-    ergebnis = cast(
+    """Remove expired and consumed authentication requests."""
+    cutoff = now()
+    result = cast(
         "CursorResult[Any]",
         session.execute(
             delete(OidcAuthRequest).where(
                 or_(
-                    OidcAuthRequest.expires_at < grenze,
+                    OidcAuthRequest.expires_at < cutoff,
                     OidcAuthRequest.consumed_at.is_not(None),
                 )
             )
         ),
     )
-    return int(ergebnis.rowcount or 0)
+    return int(result.rowcount or 0)
 
 
 __all__ = [

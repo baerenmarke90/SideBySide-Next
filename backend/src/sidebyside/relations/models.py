@@ -1,15 +1,14 @@
-"""Persistenz fuer typisierte M3-Content-Relations.
+"""Persistence for typed M3 content relations.
 
-Eine Relation hat keinen eigenen Eigentuemer und keine eigene
-Privacy-Klasse. Sie ist kein Inhalt, sondern eine Aussage ueber zwei
-Inhalte, und ihre Sichtbarkeit ist die der beiden Seiten. Deshalb traegt
-keine dieser Tabellen `PrivateResourceMixin`: eine dritte Wahrheitsquelle
-neben Parent und Target waere genau die Stelle, an der die drei
-auseinanderlaufen.
+A relation has no owner and no privacy class of its own. It is not content,
+but a statement about two content objects, and its visibility is derived from
+both sides. Therefore none of these tables carries `PrivateResourceMixin`: a
+third source of truth beside parent and target would be exactly where the
+three could diverge.
 
-Was die Tabellen stattdessen tragen, ist `space_id` - einmal, gemeinsam
-fuer beide Fremdschluessel. Eine Relation ueber Spacegrenzen hinweg ist
-damit nicht verboten, sondern nicht formulierbar (M3-D08).
+What these tables carry instead is `space_id`, once and shared by both foreign
+keys. A cross-space relation is therefore not merely forbidden but impossible
+to express (M3-D08).
 """
 
 from __future__ import annotations
@@ -26,7 +25,7 @@ from sidebyside.db.base import Base
 
 
 class _RelationColumns:
-    """Die gemeinsame Spaltenform aller Join-Tabellen."""
+    """Columns shared by every relation join table."""
 
     place_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
     space_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
@@ -38,17 +37,16 @@ class _RelationColumns:
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    """Wann die Verknuepfung entstand.
+    """When the relation was created.
 
-    Kein `updated_at`: eine Relation existiert oder existiert nicht. Es
-    gibt nichts an ihr zu aendern, und deshalb auch keine Version - ein
-    zweites `PUT` derselben Relation ist kein Konflikt, sondern derselbe
-    Endzustand (M3-D26).
+    There is no `updated_at`: a relation either exists or does not. There is
+    nothing to update and therefore no version. A second `PUT` for the same
+    relation is not a conflict but the same final state (M3-D26).
     """
 
 
 class PlaceMemory(_RelationColumns, Base):
-    """Eine Erinnerung, die an einem Ort stattgefunden hat."""
+    """A memory that took place at a location."""
 
     __tablename__ = "place_memories"
 
@@ -74,7 +72,7 @@ class PlaceMemory(_RelationColumns, Base):
 
 
 class PlaceMilestone(_RelationColumns, Base):
-    """Ein Meilenstein, der an einem Ort stattgefunden hat."""
+    """A milestone that took place at a location."""
 
     __tablename__ = "place_milestones"
 
@@ -105,19 +103,19 @@ class PlaceMilestone(_RelationColumns, Base):
 
 
 class PlaceHeartMoment(_RelationColumns, Base):
-    """Ein gemeinsamer HeartMoment, der an einem Ort stattgefunden hat.
+    """A shared HeartMoment that took place at a location.
 
-    Die einzige Relation, deren Zulaessigkeit vom Zustand des Ziels
-    abhaengt: nur `SHARED` HeartMoments duerfen verknuepft sein (M3-D09).
+    This is the only relation whose validity depends on target state: only
+    `SHARED` HeartMoments may be linked (M3-D09).
 
-    Diese Bedingung steht nicht nur im Dienst. `target_privacy_class`
-    gehoert zum Fremdschluessel, der Fremdschluessel kaskadiert Updates,
-    und ein CHECK nagelt die Spalte auf `SPACE_SHARED` fest. Wechselt ein
-    HeartMoment auf `OWNER_ONLY`, ohne dass seine Relationen zuvor
-    entfernt wurden, bricht die Transaktion ab.
+    This condition is not enforced only in the service. `target_privacy_class`
+    participates in the foreign key, the foreign key cascades updates, and a
+    CHECK pins the column to `SPACE_SHARED`. If a HeartMoment changes to
+    `OWNER_ONLY` without first removing its relations, the transaction fails.
 
-    Der Dienst entfernt sie in derselben Transaktion und laeuft nie
-    dagegen. Der Riegel ist fuer den Codepfad, den es noch nicht gibt.
+    The service removes them in the same transaction and therefore never runs
+    into that constraint. The constraint is the safety rail for code paths
+    that do not exist yet.
     """
 
     __tablename__ = "place_heart_moments"

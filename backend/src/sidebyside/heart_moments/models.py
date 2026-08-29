@@ -1,4 +1,4 @@
-"""Persistenz fuer M2-HeartMoments."""
+"""Persistence for M2 HeartMoments."""
 
 from __future__ import annotations
 
@@ -31,10 +31,10 @@ from sidebyside.domain.payload import CRYPTO_VERSION_PLAINTEXT, ProtectedPayload
 
 
 class HeartEmotion(StrEnum):
-    """Die Emotionen aus dem M2-Domainvertrag.
+    """Emotions defined by the M2 domain contract.
 
-    Ein geschlossener Wertebereich, aber kein Metadatum: der Wert lebt in
-    der ProtectedPayload und nicht als eigene Spalte. Siehe M2-D06.
+    This is a closed value set but not metadata: the value lives in the
+    ProtectedPayload rather than a dedicated column. See M2-D06.
     """
 
     LOVED = "LOVED"
@@ -46,14 +46,14 @@ class HeartEmotion(StrEnum):
 
 
 class HeartMomentPayload(ProtectedPayload):
-    """Schuetzenswerter Inhalt eines HeartMoments.
+    """Protected content of a HeartMoment.
 
-    `emotion` steht bewusst hier und nicht in einer Spalte. Der Wert
-    beschreibt sensiblen Beziehungsinhalt und erlaubt auch ohne den Text
-    private Rueckschluesse; fuer Sortierung, Tenant-Isolation und Routing
-    wird er nicht gebraucht (M2-D06). Ein Filter nach Emotion ist deshalb
-    nicht Teil des M2-Vertrags - er waere ohne Klartextspalte oder Index
-    nicht zu haben, und beides ist genau das, was hier vermieden wird.
+    `emotion` deliberately lives here rather than in a column. The value
+    describes sensitive relationship content and permits private inferences
+    even without the text; sorting, tenant isolation, and routing do not need
+    it (M2-D06). Filtering by emotion is therefore not part of the M2
+    contract: it would require either a plaintext column or an index, exactly
+    what this boundary avoids.
     """
 
     text: str
@@ -67,11 +67,11 @@ class HeartMoment(
     PrivateResourceMixin,
     Base,
 ):
-    """Ein HeartMoment - je nach Sichtbarkeit gemeinsam oder owner-only.
+    """A HeartMoment that is either shared or owner-only by visibility.
 
-    Anders als Memory traegt diese Tabelle beide durchsetzbaren
-    Privacy-Klassen. Welche gilt, entscheidet der Owner ueber `visibility`;
-    die Klasse ist die serverseitige Ableitung davon und nie ein Clientfeld.
+    Unlike Memory, this table carries both enforceable privacy classes. The
+    owner chooses through `visibility`; the privacy class is derived
+    server-side and is never a client-controlled field.
     """
 
     __tablename__ = "heart_moments"
@@ -82,9 +82,9 @@ class HeartMoment(
 
     happened_on: Mapped[date] = mapped_column(Date, nullable=False)
 
-    # Hoechstens ein Attachment (M2-D03). Als Fremdschluessel und nicht als
-    # Relationstabelle: die Kardinalitaet steht damit im Schema und nicht
-    # in einer Regel, die jemand vergessen kann.
+    # At most one attachment (M2-D03). Model this as a foreign key rather than
+    # a relation table so cardinality lives in the schema instead of a rule
+    # that application code could forget.
     attachment_id: Mapped[UUID | None] = mapped_column(
         postgresql.UUID(as_uuid=True),
         ForeignKey("attachments.id", ondelete="RESTRICT"),
@@ -108,13 +108,12 @@ class HeartMoment(
             name="privacy_is_enforceable",
         ),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
-        # Dasselbe Attachment nicht an zwei HeartMoments.
+        # Prevent the same attachment from belonging to two HeartMoments.
         UniqueConstraint("attachment_id", name="uq_heart_moments_attachment"),
-        # Ziel des Fremdschluessels von `place_heart_moments`. Die
-        # Privacy-Klasse gehoert bewusst mit hinein: nur so kann die
-        # Join-Zeile den gemeinsamen Zustand ihres Ziels mitfuehren, und
-        # nur so bricht ein Wechsel auf OWNER_ONLY eine vergessene
-        # Relation auf, statt sie stehen zu lassen (M3-D09).
+        # Target of the foreign key from `place_heart_moments`. The privacy
+        # class deliberately participates in it so the join row can carry the
+        # shared state of its target, and so a transition to OWNER_ONLY breaks
+        # a forgotten relation instead of leaving it behind (M3-D09).
         UniqueConstraint(
             "id",
             "space_id",

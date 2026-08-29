@@ -1,11 +1,11 @@
-"""Space und Membership - das Mandantenmodell.
+"""Space and Membership, the tenant model.
 
     Account A ──┐
                 ├── Membership ── Space
     Account B ──┘
 
-Der Space ist der private gemeinsame Raum eines Paares. Jeder gemeinsame
-Datensatz gehoert genau einem Space.
+The Space is a couple's private shared room. Every shared record belongs to
+exactly one Space.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from sidebyside.db.base import Base
 from sidebyside.db.mixins import IdMixin, TimestampMixin, VersionMixin
 
 MAX_ACTIVE_PARTNERS = 2
-"""Ein normaler Paar-Space hat hoechstens zwei aktive Partner."""
+"""A normal couple Space has at most two active partners."""
 
 
 class MembershipStatus(StrEnum):
@@ -45,7 +45,7 @@ class MembershipRole(StrEnum):
 
 
 class DurationDisplayMode(StrEnum):
-    """Wie die gemeinsame Zeit dargestellt wird."""
+    """How shared relationship time is displayed."""
 
     YEARS_MONTHS = "YEARS_MONTHS"
     DAYS = "DAYS"
@@ -63,12 +63,11 @@ class Space(IdMixin, TimestampMixin, Base):
 
 
 class Membership(IdMixin, TimestampMixin, Base):
-    """Die Zugehoerigkeit eines Accounts zu einem Space.
+    """An account's membership in a Space.
 
-    Sie ist der einzige Weg, ueber den ein Account an Space-Daten kommt.
-    Eine beendete Mitgliedschaft wird nicht geloescht, sondern auf LEFT oder
-    REMOVED gesetzt - sonst waere spaeter nicht mehr nachvollziehbar, wer
-    einen Inhalt angelegt hat.
+    This is the only path through which an account can reach Space data. An
+    ended membership is not deleted but marked LEFT or REMOVED; otherwise it
+    would no longer be possible to determine who created content later.
     """
 
     __tablename__ = "memberships"
@@ -97,12 +96,12 @@ class Membership(IdMixin, TimestampMixin, Base):
     space: Mapped[Space] = relationship(back_populates="memberships")
 
     __table_args__ = (
-        # Ein Account ist je Space hoechstens einmal Mitglied. Zwei Zeilen
-        # waeren zwei Wahrheiten darueber, ob jemand Zugriff hat.
+        # An account is a member of a Space at most once. Two rows would create
+        # two sources of truth about whether somebody has access.
         UniqueConstraint("space_id", "account_id", name="uq_memberships_space_id_account_id"),
         CheckConstraint("status IN ('ACTIVE', 'LEFT', 'REMOVED')", name="status_is_known"),
         CheckConstraint("role IN ('PARTNER')", name="role_is_known"),
-        # Der Guard fragt bei jeder Anfrage nach genau dieser Kombination.
+        # The guard queries exactly this combination for every request.
         Index("ix_memberships_account_id_space_id_status", "account_id", "space_id", "status"),
     )
 
@@ -112,7 +111,7 @@ class Membership(IdMixin, TimestampMixin, Base):
 
 
 class SpaceProfile(IdMixin, TimestampMixin, VersionMixin, Base):
-    """Beziehungsbezogene Angaben zum Space."""
+    """Relationship-related attributes of a Space."""
 
     __tablename__ = "space_profiles"
 
@@ -122,8 +121,8 @@ class SpaceProfile(IdMixin, TimestampMixin, VersionMixin, Base):
         nullable=False,
     )
 
-    # Ein fachlicher Tag, kein Zeitpunkt: der Beginn einer Beziehung hat
-    # keine Uhrzeit.
+    # A domain calendar day, not an instant: a relationship start has no time
+    # of day.
     relationship_started_on: Mapped[date | None] = mapped_column(Date)
     show_relationship_duration: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     duration_display_mode: Mapped[str] = mapped_column(
@@ -142,14 +141,14 @@ class SpaceProfile(IdMixin, TimestampMixin, VersionMixin, Base):
 
 
 class Invitation(IdMixin, TimestampMixin, Base):
-    """Eine Einladung in einen Space.
+    """An invitation into a Space.
 
-    Der Token steht nur gehasht hier. Wer die Datenbank liest, kann damit
-    keinem fremden Space beitreten.
+    Only the token hash is stored. Reading the database therefore does not
+    allow somebody to join another Space.
 
-    Angenommen wird genau einmal: `accepted_at` ist die Sperre. Zusammen mit
-    einer Zeilensperre beim Annehmen verhindert das, dass zwei gleichzeitige
-    Versuche beide durchgehen.
+    Acceptance happens exactly once: `accepted_at` is the latch. Together
+    with a row lock during acceptance it prevents two concurrent attempts
+    from both succeeding.
     """
 
     __tablename__ = "invitations"
@@ -180,5 +179,5 @@ class Invitation(IdMixin, TimestampMixin, Base):
     )
 
     def is_open(self, at: datetime) -> bool:
-        """Offen heisst: nicht angenommen, nicht widerrufen, nicht abgelaufen."""
+        """Open means not accepted, not revoked, and not expired."""
         return self.accepted_at is None and self.revoked_at is None and self.expires_at > at

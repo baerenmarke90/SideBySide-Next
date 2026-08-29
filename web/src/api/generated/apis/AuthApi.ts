@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -197,7 +197,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Passwort aendern und alle Sitzungen beenden.  Auch die eigene: wer sein Passwort aendert, vermutet oft einen fremden Zugriff - dann darf kein Geraet angemeldet bleiben.
+     * Change the password and revoke every session.  This includes the current session. A password change often follows a suspected compromise, in which case no device should remain authenticated.
      * Change Password
      */
     async changePasswordApiV1AuthPasswordPostRaw(requestParameters: ChangePasswordApiV1AuthPasswordPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -208,7 +208,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Passwort aendern und alle Sitzungen beenden.  Auch die eigene: wer sein Passwort aendert, vermutet oft einen fremden Zugriff - dann darf kein Geraet angemeldet bleiben.
+     * Change the password and revoke every session.  This includes the current session. A password change often follows a suspected compromise, in which case no device should remain authenticated.
      * Change Password
      */
     async changePasswordApiV1AuthPasswordPost(requestParameters: ChangePasswordApiV1AuthPasswordPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -253,7 +253,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Den Rueckweg vom Anbieter abschliessen.
+     * Complete the callback from the external identity provider.
      * Complete Oidc
      */
     async completeOidcApiV1AuthOidcConnectionIdCallbackPostRaw(requestParameters: CompleteOidcApiV1AuthOidcConnectionIdCallbackPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SessionView>> {
@@ -264,7 +264,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Den Rueckweg vom Anbieter abschliessen.
+     * Complete the callback from the external identity provider.
      * Complete Oidc
      */
     async completeOidcApiV1AuthOidcConnectionIdCallbackPost(requestParameters: CompleteOidcApiV1AuthOidcConnectionIdCallbackPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SessionView> {
@@ -302,7 +302,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die Adresse bestaetigen.  Ohne Anmeldung: der Link wird oft in einem anderen Programm geoeffnet als dem, in dem die Sitzung liegt.
+     * Confirm the email address without requiring authentication.  Verification links are frequently opened in a different application from the one that holds the current session.
      * Confirm Email
      */
     async confirmEmailApiV1AuthEmailVerificationConfirmPostRaw(requestParameters: ConfirmEmailApiV1AuthEmailVerificationConfirmPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -313,7 +313,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die Adresse bestaetigen.  Ohne Anmeldung: der Link wird oft in einem anderen Programm geoeffnet als dem, in dem die Sitzung liegt.
+     * Confirm the email address without requiring authentication.  Verification links are frequently opened in a different application from the one that holds the current session.
      * Confirm Email
      */
     async confirmEmailApiV1AuthEmailVerificationConfirmPost(requestParameters: ConfirmEmailApiV1AuthEmailVerificationConfirmPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -397,7 +397,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Ein neues Passwort setzen; alle bisherigen Sitzungen enden.
+     * Set a new password and terminate all previous sessions.
      * Consume Recovery
      */
     async consumeRecoveryApiV1AuthRecoveryConsumePostRaw(requestParameters: ConsumeRecoveryApiV1AuthRecoveryConsumePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SessionView>> {
@@ -408,7 +408,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Ein neues Passwort setzen; alle bisherigen Sitzungen enden.
+     * Set a new password and terminate all previous sessions.
      * Consume Recovery
      */
     async consumeRecoveryApiV1AuthRecoveryConsumePost(requestParameters: ConsumeRecoveryApiV1AuthRecoveryConsumePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SessionView> {
@@ -538,7 +538,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Eine externe Identitaet mit dem angemeldeten Konto verknuepfen.
+     * Link an external identity to the authenticated account.
      * Link Oidc
      */
     async linkOidcApiV1AuthOidcConnectionIdLinkPostRaw(requestParameters: LinkOidcApiV1AuthOidcConnectionIdLinkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OidcStartView>> {
@@ -549,7 +549,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Eine externe Identitaet mit dem angemeldeten Konto verknuepfen.
+     * Link an external identity to the authenticated account.
      * Link Oidc
      */
     async linkOidcApiV1AuthOidcConnectionIdLinkPost(requestParameters: LinkOidcApiV1AuthOidcConnectionIdLinkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OidcStartView> {
@@ -671,7 +671,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Einen Account anlegen.  Der erste Account braucht den einmaligen Bootstrap-Nachweis. Danach braucht jede Registrierung eine gueltige Einladung.
+     * Create an account.  The first account requires the one-time bootstrap proof. Every later registration requires a valid invitation.
      * Register
      */
     async registerApiV1AuthRegisterPostRaw(requestParameters: RegisterApiV1AuthRegisterPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SessionView>> {
@@ -682,7 +682,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Einen Account anlegen.  Der erste Account braucht den einmaligen Bootstrap-Nachweis. Danach braucht jede Registrierung eine gueltige Einladung.
+     * Create an account.  The first account requires the one-time bootstrap proof. Every later registration requires a valid invitation.
      * Register
      */
     async registerApiV1AuthRegisterPost(requestParameters: RegisterApiV1AuthRegisterPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SessionView> {
@@ -710,7 +710,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die Bestaetigung der eigenen Adresse anfordern.
+     * Request verification of the authenticated account\'s own email address.
      * Request Email Verification
      */
     async requestEmailVerificationApiV1AuthEmailVerificationRequestPostRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -721,7 +721,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die Bestaetigung der eigenen Adresse anfordern.
+     * Request verification of the authenticated account\'s own email address.
      * Request Email Verification
      */
     async requestEmailVerificationApiV1AuthEmailVerificationRequestPost(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -758,7 +758,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Einen passwortlosen Anmeldelink anfordern.  Antwortet immer gleich - ob es die Adresse gibt, steht nicht in der Antwort. Sonst waere dieser Endpunkt ein Verzeichnis aller Konten.
+     * Request a passwordless sign-in link.  The response is identical whether or not the address exists. Otherwise this endpoint would become an account directory.
      * Request Magic Link
      */
     async requestMagicLinkApiV1AuthMagicLinkRequestPostRaw(requestParameters: RequestMagicLinkApiV1AuthMagicLinkRequestPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -769,7 +769,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Einen passwortlosen Anmeldelink anfordern.  Antwortet immer gleich - ob es die Adresse gibt, steht nicht in der Antwort. Sonst waere dieser Endpunkt ein Verzeichnis aller Konten.
+     * Request a passwordless sign-in link.  The response is identical whether or not the address exists. Otherwise this endpoint would become an account directory.
      * Request Magic Link
      */
     async requestMagicLinkApiV1AuthMagicLinkRequestPost(requestParameters: RequestMagicLinkApiV1AuthMagicLinkRequestPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -806,7 +806,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Das Zuruecksetzen des Passworts anfordern. Antwortet immer gleich.
+     * Request a password reset while always returning the same response.
      * Request Recovery
      */
     async requestRecoveryApiV1AuthRecoveryRequestPostRaw(requestParameters: RequestRecoveryApiV1AuthRecoveryRequestPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -817,7 +817,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Das Zuruecksetzen des Passworts anfordern. Antwortet immer gleich.
+     * Request a password reset while always returning the same response.
      * Request Recovery
      */
     async requestRecoveryApiV1AuthRecoveryRequestPost(requestParameters: RequestRecoveryApiV1AuthRecoveryRequestPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -891,7 +891,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Diese Sitzung beenden. Andere Geraete bleiben angemeldet.
+     * End this session while leaving other devices signed in.
      * Sign Out
      */
     async signOutApiV1AuthSignOutPostRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
@@ -902,7 +902,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Diese Sitzung beenden. Andere Geraete bleiben angemeldet.
+     * End this session while leaving other devices signed in.
      * Sign Out
      */
     async signOutApiV1AuthSignOutPost(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
@@ -940,7 +940,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Eine Anmeldung ueber einen externen Anbieter beginnen.  State, Nonce und PKCE-Verifier entstehen serverseitig. Der Client bekommt nur die Adresse und den State. Eine Einladung bleibt dabei serverseitig gebunden und wird nie an den Anbieter weitergegeben.
+     * Begin authentication through an external identity provider.  State, nonce, and PKCE verifier are created server-side. The client receives only the authorization URL and state. Any invitation remains bound server-side and is never forwarded to the provider.
      * Start Oidc
      */
     async startOidcApiV1AuthOidcConnectionIdStartPostRaw(requestParameters: StartOidcApiV1AuthOidcConnectionIdStartPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OidcStartView>> {
@@ -951,7 +951,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Eine Anmeldung ueber einen externen Anbieter beginnen.  State, Nonce und PKCE-Verifier entstehen serverseitig. Der Client bekommt nur die Adresse und den State. Eine Einladung bleibt dabei serverseitig gebunden und wird nie an den Anbieter weitergegeben.
+     * Begin authentication through an external identity provider.  State, nonce, and PKCE verifier are created server-side. The client receives only the authorization URL and state. Any invitation remains bound server-side and is never forwarded to the provider.
      * Start Oidc
      */
     async startOidcApiV1AuthOidcConnectionIdStartPost(requestParameters: StartOidcApiV1AuthOidcConnectionIdStartPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OidcStartView> {
@@ -979,7 +979,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Eine Anmeldung mit Passkey beginnen.  Ohne Kontobezug: der Authenticator waehlt selbst, welches auffindbare Credential er anbietet. Ein Endpunkt, der zu einer Adresse die passenden Credentials nennt, waere ein Verzeichnis der Konten.
+     * Begin passkey authentication without binding it to an account.  The authenticator selects which discoverable credential to offer. An endpoint that returned credentials for a given address would be an account directory.
      * Start Passkey Authentication
      */
     async startPasskeyAuthenticationApiV1AuthPasskeysAuthenticationStartPostRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: any | null; }>> {
@@ -990,7 +990,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Eine Anmeldung mit Passkey beginnen.  Ohne Kontobezug: der Authenticator waehlt selbst, welches auffindbare Credential er anbietet. Ein Endpunkt, der zu einer Adresse die passenden Credentials nennt, waere ein Verzeichnis der Konten.
+     * Begin passkey authentication without binding it to an account.  The authenticator selects which discoverable credential to offer. An endpoint that returned credentials for a given address would be an account directory.
      * Start Passkey Authentication
      */
     async startPasskeyAuthenticationApiV1AuthPasskeysAuthenticationStartPost(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: any | null; }> {
@@ -1018,7 +1018,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die Registrierung eines Passkeys beginnen.  Nur aus einer bestehenden Anmeldung heraus: ein Passkey ist ein zusaetzlicher Zugang zu einem Konto, das es schon gibt.
+     * Begin passkey registration for an existing authenticated account.  A passkey is an additional access method for an account that already exists, so registration starts only from an authenticated session.
      * Start Passkey Registration
      */
     async startPasskeyRegistrationApiV1AuthPasskeysRegistrationStartPostRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: any | null; }>> {
@@ -1029,7 +1029,7 @@ export class AuthApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die Registrierung eines Passkeys beginnen.  Nur aus einer bestehenden Anmeldung heraus: ein Passkey ist ein zusaetzlicher Zugang zu einem Konto, das es schon gibt.
+     * Begin passkey registration for an existing authenticated account.  A passkey is an additional access method for an account that already exists, so registration starts only from an authenticated session.
      * Start Passkey Registration
      */
     async startPasskeyRegistrationApiV1AuthPasskeysRegistrationStartPost(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: any | null; }> {

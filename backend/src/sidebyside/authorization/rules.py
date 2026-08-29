@@ -1,13 +1,13 @@
-"""Aus einer Privacy-Klasse wird eine Bedingung fuer die Abfrage.
+"""Turn a privacy class into a query predicate.
 
-Der entscheidende Punkt ist, dass hier ein SQL-Ausdruck entsteht und kein
-Wahrheitswert. Eine Regel, die erst auf einer geladenen Zeile antwortet,
-kommt zu spaet: die Zeile war dann schon im Speicher, in der Antwortgroesse
-und moeglicherweise im Log. Der Filter gehoert in die Abfrage.
+The important property is that this module produces SQL expressions rather
+than booleans for already-loaded rows. A rule evaluated only after loading is
+too late: the row has already entered memory, response sizing, and potentially
+logs. Privacy belongs in the query itself.
 
-Erweitert wird die Tabelle der Regeln, nicht der Aufrufort. Eine neue
-Klasse bekommt eine Funktion und einen Eintrag; alle bestehenden Domaenen
-verhalten sich danach ohne Aenderung richtig.
+New behavior is added to the rule table rather than at call sites. A new class
+gets one function and one registration; existing domains then inherit the new
+rule without route-specific changes.
 """
 
 from __future__ import annotations
@@ -23,27 +23,27 @@ from sidebyside.authorization.privacy import AuthorizationContext, PrivacyClass,
 
 
 class Access(StrEnum):
-    """Die Absicht hinter einer Anfrage."""
+    """Intent behind a query."""
 
     READ = "READ"
     WRITE = "WRITE"
 
 
 AccessRule = Callable[[type[PrivateResource], AuthorizationContext], ColumnElement[bool]]
-"""Eine Regel liefert die Bedingung, unter der eine Zeile ihrer Klasse zaehlt."""
+"""A rule returns the condition under which a row of its class is accessible."""
 
 
 def _the_whole_space(
     model: type[PrivateResource], context: AuthorizationContext
 ) -> ColumnElement[bool]:
-    """Beide Partner. Die Mandantenbedingung steht bereits davor."""
+    """Both partners; the tenant condition is already applied separately."""
     return true()
 
 
 def _only_the_owner(
     model: type[PrivateResource], context: AuthorizationContext
 ) -> ColumnElement[bool]:
-    """Nur der Eigentuemer - der Partner steht hier Fremden gleich."""
+    """Only the owner; the partner is equivalent to any other non-owner here."""
     return model.owner_id == context.account_id
 
 
@@ -58,17 +58,16 @@ _READ_RULES: Mapping[PrivacyClass, AccessRule] = MappingProxyType(
 def _shared_write(
     model: type[PrivateResource], context: AuthorizationContext
 ) -> ColumnElement[bool]:
-    """Die Schreibform, die die Domaene angesagt hat.
+    """Apply the write policy declared by the domain.
 
-    Der Standard bleibt author-only: "Der Autor darf persoenlichen Text
-    bearbeiten/loeschen. Partner darf gemeinsame Erinnerung lesen."
-    (Spezifikation, Abschnitt 14). Die gemeinsamen M3-Planungs- und
-    Listenressourcen sind nach M3-D01 ausdruecklich collaborative write -
-    ein Wunsch gehoert dem Paar und nicht dem, der ihn zuerst getippt hat.
+    The default remains author-only under specification section 14. Shared M3
+    planning/list resources explicitly opt into collaborative write under
+    M3-D01; a wish belongs to the couple rather than the person who first typed
+    it.
 
-    Die Fallunterscheidung steht hier und nicht im Endpunkt. Sonst waere
-    gemeinsames Schreiben eine Ausnahme je Route, und eine vergessene
-    Ausnahme faellt niemandem auf.
+    The distinction lives here rather than in endpoints. Otherwise shared write
+    would become a per-route exception whose omission could silently change
+    authorization behavior.
     """
     if model.shared_write is SharedWrite.COLLABORATIVE:
         return _the_whole_space(model, context)
@@ -78,8 +77,7 @@ def _shared_write(
 _WRITE_RULES: Mapping[PrivacyClass, AccessRule] = MappingProxyType(
     {
         PrivacyClass.SPACE_SHARED: _shared_write,
-        # Fuer OWNER_ONLY gibt es die Wahl nicht: dort ist der Partner
-        # kein Mitautor, sondern ein Fremder.
+        # OWNER_ONLY has no collaborative mode: the partner is not a co-author.
         PrivacyClass.OWNER_ONLY: _only_the_owner,
     }
 )
@@ -101,12 +99,11 @@ def privacy_clause(
     context: AuthorizationContext,
     access: Access,
 ) -> ColumnElement[bool]:
-    """Die Bedingung fuer genau diese Absicht - ohne die Mandantenbedingung.
+    """Build the privacy predicate for one access intent, without tenant scope.
 
-    Klassen ohne Eintrag erzeugen keinen Zweig. Damit faellt eine
-    unbekannte oder noch nicht durchsetzbare Klasse auf `false` und nicht
-    auf "durchgelassen": ein Vergessen macht Inhalte unsichtbar, nicht
-    sichtbar.
+    Classes without a registered rule contribute no branch. Unknown or not-yet
+    enforceable classes therefore fall through to ``false`` rather than being
+    allowed: an omission hides content instead of exposing it.
     """
     branches = [
         and_(model.privacy_class == privacy_class.value, rule(model, context))
@@ -120,10 +117,10 @@ def access_clause(
     context: AuthorizationContext,
     access: Access,
 ) -> ColumnElement[bool]:
-    """Mandant und Privatsphaere in einer Bedingung.
+    """Combine tenant isolation and privacy into one predicate.
 
-    Die Reihenfolge ist keine Stilfrage: der Space steht immer davor. Waere
-    nur die Eigentuemerbedingung im Ausdruck, wuerde ein Eigentuemer seine
-    Zeile auch aus einem Space sehen, in dem er laengst nicht mehr ist.
+    Ordering is not cosmetic: the space condition is always present. An owner
+    predicate alone would let an account see its row from a space it no longer
+    belongs to.
     """
     return and_(model.space_id == context.space_id, privacy_clause(model, context, access))

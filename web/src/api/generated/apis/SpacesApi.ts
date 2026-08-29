@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -192,7 +192,7 @@ export class SpacesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Das Beziehungsprofil ersetzen.  Der Aufrufer legt mit `If-Match` die Version vor, die er gelesen hat. Hat der Partner inzwischen geschrieben, antwortet der Endpunkt mit 409 und aendert nichts - ein stilles Ueberschreiben gaebe es sonst genau dann, wenn beide gleichzeitig am selben Profil arbeiten.
+     * Replace the relationship profile.  The caller supplies the version it read through ``If-Match``. If the partner has written in the meantime, the endpoint returns 409 and changes nothing; otherwise simultaneous edits could silently overwrite each other.
      * Update Space Profile
      */
     async updateSpaceProfileApiV1SpacesSpaceIdProfilePutRaw(requestParameters: UpdateSpaceProfileApiV1SpacesSpaceIdProfilePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceProfileView>> {
@@ -203,7 +203,7 @@ export class SpacesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Das Beziehungsprofil ersetzen.  Der Aufrufer legt mit `If-Match` die Version vor, die er gelesen hat. Hat der Partner inzwischen geschrieben, antwortet der Endpunkt mit 409 und aendert nichts - ein stilles Ueberschreiben gaebe es sonst genau dann, wenn beide gleichzeitig am selben Profil arbeiten.
+     * Replace the relationship profile.  The caller supplies the version it read through ``If-Match``. If the partner has written in the meantime, the endpoint returns 409 and changes nothing; otherwise simultaneous edits could silently overwrite each other.
      * Update Space Profile
      */
     async updateSpaceProfileApiV1SpacesSpaceIdProfilePut(requestParameters: UpdateSpaceProfileApiV1SpacesSpaceIdProfilePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SpaceProfileView> {

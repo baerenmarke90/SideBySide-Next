@@ -1,12 +1,11 @@
-"""Gemeinsame Testvorrichtungen.
+"""Shared test fixtures.
 
-Zwei Ebenen, bewusst getrennt:
+Two layers are deliberately kept separate:
 
-- Unit-Tests laufen ohne Datenbank und ohne Netz.
-- Integrationstests brauchen eine erreichbare PostgreSQL-Instanz. Ist keine
-  da, werden sie ÜBERSPRUNGEN und nicht stillschweigend als bestanden
-  gewertet - ein grüner Lauf soll nicht mehr versprechen, als er geprüft
-  hat.
+- Unit tests run without a database and without network access.
+- Integration tests require a reachable PostgreSQL instance. If none is
+  available, they are SKIPPED rather than silently counted as passed; a green
+  run must not promise more than it actually verified.
 """
 
 from __future__ import annotations
@@ -20,16 +19,15 @@ import pytest
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
-# Nie versehentlich gegen eine echte Instanz laufen.
+# Never accidentally run against a real instance.
 os.environ.setdefault("SBS_ENVIRONMENT", "test")
 
 TEST_BOOTSTRAP_TOKEN = "test-bootstrap-token-with-at-least-32-characters"
 os.environ.setdefault("SBS_BOOTSTRAP_TOKEN", TEST_BOOTSTRAP_TOKEN)
 
-# Medien landen im temporaeren Verzeichnis, nicht im Arbeitsbaum. Der
-# Standardwert der Konfiguration ist "./data/media" - ein Testlauf wuerde
-# damit Dateien im Repository hinterlassen, und zwar genau die, die
-# niemand versehentlich einchecken will.
+# Media files go into a temporary directory rather than the working tree. The
+# configuration default is "./data/media"; without this override, a test run
+# would leave files in the repository that nobody should accidentally commit.
 MEDIA_ROOT = os.environ.setdefault(
     "SBS_MEDIA_ROOT", tempfile.mkdtemp(prefix="sidebyside-test-media-")
 )
@@ -49,8 +47,8 @@ def _database_reachable(url: str) -> bool:
         return False
     try:
         engine = create_engine(url, pool_pre_ping=True)
-        with engine.connect() as verbindung:
-            verbindung.execute(text("SELECT 1"))
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
         engine.dispose()
     except Exception:
         return False
@@ -62,8 +60,7 @@ DATABASE_AVAILABLE = _database_reachable(INTEGRATION_DATABASE_URL)
 requires_database = pytest.mark.skipif(
     not DATABASE_AVAILABLE,
     reason=(
-        "Keine PostgreSQL-Instanz erreichbar. "
-        "SBS_TEST_DATABASE_URL setzen, um Integrationstests auszufuehren."
+        "No PostgreSQL instance is reachable. Set SBS_TEST_DATABASE_URL to run integration tests."
     ),
 )
 
@@ -71,13 +68,12 @@ requires_database = pytest.mark.skipif(
 @pytest.fixture(scope="session")
 def engine() -> Iterator[Engine]:
     if not DATABASE_AVAILABLE:
-        pytest.skip("Keine Datenbank erreichbar.")
+        pytest.skip("No database is reachable.")
 
-    # Dieselbe Liste wie in alembic/env.py, und aus demselben Grund: was
-    # hier fehlt, existiert beim create_all nicht. Ein spaeterer Import
-    # durch die App wuerde das Modell zwar registrieren, aber erst nachdem
-    # die Tabellen angelegt sind - die Tests liefen dann nur zufaellig
-    # gruen, je nachdem was vorher importiert wurde.
+    # The same list as in alembic/env.py, for the same reason: anything missing
+    # here does not exist during create_all. A later import by the app would
+    # register the model, but only after the tables have been created, making
+    # tests pass or fail accidentally depending on prior imports.
     from sidebyside.attachments import binding as _binding  # noqa: F401
     from sidebyside.attachments import models as _attachments  # noqa: F401
     from sidebyside.comments import models as _comments  # noqa: F401
@@ -95,42 +91,42 @@ def engine() -> Iterator[Engine]:
     from sidebyside.relationship import models as _relationship  # noqa: F401
     from sidebyside.wishes import models as _wishes  # noqa: F401
 
-    # Die Testsonde fuer die Owner-/Privacy-Autorisierung. Sie steht
-    # bewusst nur hier: alembic/env.py kennt sie nicht, also erscheint
-    # sie in keiner Migration und in keiner Produktionsdatenbank.
+    # Test probe for owner/privacy authorization. It deliberately exists only
+    # here: alembic/env.py does not know it, so it appears in no migration and
+    # no production database.
     from tests.support import privacy_probe as _privacy_probe  # noqa: F401
 
-    eng = create_engine(INTEGRATION_DATABASE_URL, future=True)
-    Base.metadata.create_all(eng)
-    yield eng
-    Base.metadata.drop_all(eng)
-    eng.dispose()
+    db_engine = create_engine(INTEGRATION_DATABASE_URL, future=True)
+    Base.metadata.create_all(db_engine)
+    yield db_engine
+    Base.metadata.drop_all(db_engine)
+    db_engine.dispose()
 
 
 @pytest.fixture
 def session(engine: Engine) -> Iterator[Session]:
-    """Eine Sitzung je Test, die am Ende zurückgerollt wird.
+    """Provide one session per test and roll it back afterwards.
 
-    Kein Test hinterlaesst Zeilen fuer den naechsten. Reihenfolge-
-    abhaengige Tests verbergen genau die Fehler, die man sucht.
+    No test leaves rows behind for the next one. Order-dependent tests hide
+    exactly the defects these tests are meant to find.
     """
-    verbindung = engine.connect()
-    transaktion = verbindung.begin()
-    sitzung = sessionmaker(bind=verbindung, expire_on_commit=False)()
+    connection = engine.connect()
+    transaction = connection.begin()
+    test_session = sessionmaker(bind=connection, expire_on_commit=False)()
     try:
-        yield sitzung
+        yield test_session
     finally:
-        sitzung.close()
-        transaktion.rollback()
-        verbindung.close()
+        test_session.close()
+        transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture
 def client(session: Session):  # type: ignore[no-untyped-def]
-    """Ein HTTP-Client auf derselben Transaktion wie der Test.
+    """Provide an HTTP client using the same transaction as the test.
 
-    Ohne die Umleitung wuerde die Anwendung eigene Sitzungen oeffnen und
-    die noch nicht uebergebenen Testdaten nicht sehen.
+    Without the override, the application would open its own sessions and
+    could not see uncommitted test data.
     """
     from fastapi.testclient import TestClient
 
@@ -143,7 +139,7 @@ def client(session: Session):  # type: ignore[no-untyped-def]
 
 
 def _clear_database(engine: Engine) -> None:
-    """Fest geschriebene Testdaten in FK-sicherer Reihenfolge entfernen."""
+    """Remove committed test data in foreign-key-safe order."""
     from sidebyside.db.base import Base
 
     with engine.begin() as connection:
@@ -153,10 +149,10 @@ def _clear_database(engine: Engine) -> None:
 
 @pytest.fixture
 def production_client(engine: Engine, monkeypatch):  # type: ignore[no-untyped-def]
-    """HTTP-Client mit dem echten Request-Unit-of-Work.
+    """Provide an HTTP client using the real request unit of work.
 
-    Im Gegensatz zum normalen ``client`` bekommt jede Anfrage eine eigene
-    Session und damit genau die Commit-/Rollback-Grenze aus der Produktion.
+    Unlike the normal ``client``, each request gets its own session and
+    therefore the exact commit/rollback boundary used in production.
     """
     from fastapi.testclient import TestClient
 
@@ -177,10 +173,10 @@ def production_client(engine: Engine, monkeypatch):  # type: ignore[no-untyped-d
 def make_account(session: Session, name: str = "Testperson"):  # type: ignore[no-untyped-def]
     from sidebyside.identity.models import Account
 
-    konto = Account(display_name=name)
-    session.add(konto)
+    account = Account(display_name=name)
+    session.add(account)
     session.flush()
-    return konto
+    return account
 
 
 def make_space(session: Session, founder):  # type: ignore[no-untyped-def]
@@ -190,10 +186,10 @@ def make_space(session: Session, founder):  # type: ignore[no-untyped-def]
 
 
 def sign_in(session: Session, account) -> str:  # type: ignore[no-untyped-def]
-    """Einen echten Access Token ausstellen.
+    """Issue a real access token.
 
-    Ueber den regulaeren Dienst, nicht an ihm vorbei - ein gefaelschter
-    Token wuerde genau den Weg ueberspringen, der geprueft werden soll.
+    Go through the regular service rather than around it; a forged token would
+    skip exactly the path that this helper is meant to exercise.
     """
     from sidebyside.auth.sessions import start_session
 

@@ -1,15 +1,13 @@
-"""Die Abfragegrenze fuer private Ressourcen.
+"""Query boundary for private resources.
 
-Alles, was eine Domaene braucht, um privat zu sein, steht hier - und nur
-hier. Eine Domaene beschreibt ihre Daten (`PrivateResourceMixin`) und ruft
-diese Funktionen auf; sie formuliert die Sichtbarkeitsbedingung nicht
-selbst. Ein zweiter, per Hand geschriebener Guard waere ein zweiter Ort,
-an dem er falsch sein kann.
+Everything a domain needs to enforce privacy lives here, and only here. A
+domain describes its data with ``PrivateResourceMixin`` and calls these
+functions; it does not restate visibility predicates. A second handwritten
+guard would be a second place for authorization to drift.
 
-Die Bedingung ist immer Teil der Abfrage. Es gibt in diesem Modul bewusst
-keine Funktion, die eine bereits geladene Zeile prueft: eine solche
-Funktion wuerde frueher oder spaeter benutzt, und dann waere die Zeile
-gelesen worden, bevor jemand nach der Berechtigung gefragt hat.
+The authorization condition is always part of the query. This module
+intentionally has no function that validates an already-loaded row: by then the
+row would already have been read before permission was checked.
 """
 
 from __future__ import annotations
@@ -35,15 +33,14 @@ from sidebyside.core.ids import parse_id
 def _rule_model[ResourceT: PrivateResourceMixin](
     model: type[ResourceT],
 ) -> type[PrivateResource]:
-    """Das ORM-Modell an die strukturelle Regel-Schnittstelle anpassen.
+    """Adapt the ORM model to the structural rule interface.
 
-    SQLAlchemy stellt die gemappten Deskriptoren zur Laufzeit genau in der
-    Form bereit, die `PrivateResource` beschreibt. Ohne SQLAlchemy-mypy-
-    Plugin kann mypy diese strukturelle Uebereinstimmung bei geerbten
-    Declarative-Mixins jedoch nicht beweisen. Der Cast sitzt deshalb nur an
-    dieser zentralen Typgrenze; die fachlichen Domaenen bleiben streng auf
-    `PrivateResourceMixin` gebunden und formulieren keine Privacy-Regeln
-    selbst.
+    SQLAlchemy exposes mapped descriptors at runtime in exactly the form
+    ``PrivateResource`` describes. Without the SQLAlchemy mypy plugin, mypy
+    cannot prove that structural match across inherited declarative mixins. The
+    cast therefore lives only at this central type boundary; domain models stay
+    constrained to ``PrivateResourceMixin`` and never define privacy rules
+    themselves.
     """
     return cast(type[PrivateResource], model)
 
@@ -55,13 +52,12 @@ def absence_of(model: type[PrivateResourceMixin]) -> ResourceAbsence:
 def readable[ResourceT: PrivateResourceMixin](
     model: type[ResourceT], context: AuthorizationContext
 ) -> Select[tuple[ResourceT]]:
-    """Der Einstieg fuer jede Liste, Suche und Zaehlung.
+    """Entry point for every list, search, and count query.
 
-    Wer von hier ausgeht, kann die Bedingung nicht vergessen: sie steht
-    bereits im Statement, bevor die Domaene ihre eigenen Filter,
-    Sortierungen und Grenzen anhaengt. Ein `count()` auf diesem Statement
-    zaehlt deshalb auch nur Sichtbares - eine Trefferzahl ist sonst selbst
-    schon eine Auskunft.
+    Starting here makes the visibility predicate impossible to forget: it is
+    already in the statement before the domain adds filters, ordering, and
+    limits. A ``count()`` based on this statement therefore counts only visible
+    rows; otherwise the count itself would disclose information.
     """
     return select(model).where(access_clause(_rule_model(model), context, Access.READ))
 
@@ -69,7 +65,7 @@ def readable[ResourceT: PrivateResourceMixin](
 def writable[ResourceT: PrivateResourceMixin](
     model: type[ResourceT], context: AuthorizationContext
 ) -> Select[tuple[ResourceT]]:
-    """Dasselbe fuer aendernde Zugriffe."""
+    """Equivalent query entry point for write access."""
     return select(model).where(access_clause(_rule_model(model), context, Access.WRITE))
 
 
@@ -83,11 +79,11 @@ def require_readable[ResourceT: PrivateResourceMixin](
     context: AuthorizationContext,
     resource_id: UUID | str,
 ) -> ResourceT:
-    """Eine Ressource lesen - oder erfahren, dass es sie nicht gibt.
+    """Read a resource or report it as absent.
 
-    Fehlgeformte ID, unbekannte ID, fremder Space und fremde private Zeile
-    enden in derselben Antwort. Die ID wird nicht vorab nachgeschlagen und
-    danach beurteilt; sie ist eine Bedingung derselben Abfrage.
+    Malformed ID, unknown ID, another space, and another account's private row
+    all produce the same response. The ID is never looked up first and judged
+    afterward; it is part of the same authorized query.
     """
     absence = absence_of(model)
     identifier = _identifier(resource_id)
@@ -110,19 +106,18 @@ def require_readable_shared[ResourceT: PrivateResourceMixin](
     context: AuthorizationContext,
     resource_id: UUID | str,
 ) -> ResourceT:
-    """Eine Ressource lesen und bis zum Commit gegen Loeschen halten.
+    """Read a resource and hold it against deletion until commit.
 
-    Fuer den Fall, dass eine Operation auf eine *fremde* Zeile verweist -
-    ein Plan auf einen Place. Zwischen dem Nachsehen und dem Schreiben des
-    Verweises darf sie nicht verschwinden, sonst zeigt der Verweis auf
-    nichts.
+    This is for operations that reference another row, such as a plan pointing
+    to a place. The row must not disappear between validation and writing the
+    reference.
 
-    Bewusst `FOR SHARE` und nicht `FOR UPDATE`: gehalten werden soll die
-    Existenz, nicht das Schreibrecht. Zwei Plans duerfen sich gleichzeitig
-    an denselben Ort haengen; nur ein Loeschen des Ortes muss warten.
+    Deliberately uses ``FOR SHARE`` rather than ``FOR UPDATE``: existence is
+    being held, not write ownership. Multiple plans may reference the same
+    place concurrently; only deletion of that place must wait.
 
-    Verschwindet die Zeile trotzdem in der Luecke davor, antwortet der
-    Guard wie bei einer unbekannten ID - siehe `require_writable_locked`.
+    If the row disappears in the gap before the lock, the guard responds as for
+    an unknown ID, matching ``require_writable_locked``.
     """
     found = require_readable(session, model, context, resource_id)
     try:
@@ -138,18 +133,17 @@ def require_writable_locked[ResourceT: PrivateResourceMixin](
     context: AuthorizationContext,
     resource_id: UUID | str,
 ) -> ResourceT:
-    """Aendern duerfen - und die Zeile danach exklusiv halten.
+    """Require write access and then hold the row exclusively.
 
-    Fuer Operationen, die nach der Autorisierung noch etwas nachsehen und
-    erst dann schreiben. Ohne die Sperre kann sich zwischen dem Nachsehen
-    und dem Schreiben genau das aendern, wonach gesehen wurde.
+    Used by operations that authorize, inspect additional state, and only then
+    write. Without the lock, the inspected state could change between check and
+    mutation.
 
-    Zwischen Autorisierung und Sperre kann eine parallele Transaktion die
-    Zeile geloescht haben. SQLAlchemy meldet das als `InvalidRequestError`,
-    was ungefiltert ein 500 waere. Fuer den Aufrufer ist es aber derselbe
-    Fall wie eine unbekannte ID - und er bekommt deshalb dieselbe Antwort
-    wie dort. Eine abweichende Antwort waere hier wieder eine
-    Existenzauskunft, diesmal ueber eine gerade geloeschte Zeile.
+    A concurrent transaction may delete the row between authorization and
+    locking. SQLAlchemy reports that as ``InvalidRequestError``; exposing it as
+    a 500 would both be incorrect and leak a different response for a recently
+    deleted row. The caller therefore receives the same absence response as for
+    an unknown ID.
     """
     found = require_writable(session, model, context, resource_id)
     try:
@@ -165,21 +159,18 @@ def require_writable[ResourceT: PrivateResourceMixin](
     context: AuthorizationContext,
     resource_id: UUID | str,
 ) -> ResourceT:
-    """Eine Ressource aendern duerfen.
+    """Require write access to a resource.
 
-    Zwei verschiedene Ablehnungen, und der Unterschied ist Absicht:
+    Two rejection modes are intentional. Content the account cannot read is
+    absent to it and therefore returns 404; a distinct response would reveal
+    what ``OWNER_ONLY`` is designed to hide.
 
-    Was der Account nicht lesen darf, existiert fuer ihn nicht - 404, wie
-    beim Lesen, sonst waere die abweichende Antwort die Auskunft, die
-    `OWNER_ONLY` gerade verhindern soll.
+    Content the account may read but not change returns 403. Its existence is
+    already known, so reporting 404 there would not protect anything and would
+    contradict what the client can already display.
 
-    Was er lesen darf, aber nicht aendern - eine geteilte Zeile des
-    Partners - ergibt 403. Ihre Existenz ist ihm ohnehin bekannt; ein 404
-    waere hier kein Schutz, sondern eine Luege ueber etwas, das er gerade
-    angezeigt bekommt.
-
-    Beide Bedingungen werden in einer Abfrage beantwortet, damit zwischen
-    Lese- und Schreibpruefung nichts liegt, was sich aendern koennte.
+    Both questions are answered in one query so no mutable state can change
+    between separate read and write checks.
     """
     absence = absence_of(model)
     identifier = _identifier(resource_id)

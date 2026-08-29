@@ -30,7 +30,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Das Beziehungsprofil eines Space.  `version` ist der Stand, den ein spaeterer Schreibzugriff per `If-Match` vorlegen muss. Die Antwort traegt ihn zusaetzlich als ETag.
+ * Relationship profile of a space.  ``version`` is the state a later write must supply through ``If-Match``. The response also carries that version as an ETag.
  *
  * @param spaceId 
  * @param version 

@@ -1,9 +1,9 @@
-"""Atomare Comment-Cascades an der Persistenzgrenze.
+"""Atomic comment cascades at the persistence boundary.
 
-Die Listener laufen nach dem jeweiligen Parent-UPDATE/DELETE innerhalb
-desselben DB-Commits. Der Parent ist zu diesem Zeitpunkt bereits exklusiv
-gesperrt. Ein paralleles Comment-Create, das den Parent mit FOR SHARE liest,
-ist damit sauber serialisiert.
+The listeners run after the corresponding parent UPDATE/DELETE inside the
+same database commit. At that point the parent is already exclusively locked.
+A concurrent comment create that reads the parent with FOR SHARE is therefore
+serialized cleanly.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""HTTP-Vertrag fuer M2-Milestones."""
+"""HTTP contract for M2 milestones."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ router = APIRouter(tags=["milestones"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Version der Ressource fuer den naechsten If-Match-Schreibzugriff.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }
@@ -112,7 +112,7 @@ def _milestone_detail(
         updated_at=milestone.updated_at,
         author=AuthorSummary(id=author.id, display_name=author.display_name),
         capabilities=ResourceCapabilities(
-            # M2-D25: geteilte Lesbarkeit ist keine Schreibvollmacht.
+            # M2-D25: shared readability does not grant write authority.
             can_edit=is_author,
             can_delete=is_author,
             can_comment=True,

@@ -1,8 +1,8 @@
-"""Magic Link, Adressbestaetigung und Account Recovery - ueber die Endpunkte.
+"""Magic link, address verification, and account recovery through the endpoints.
 
-Drei Ablaeufe mit derselben Grundfrage: Wer eine Adresse eingibt, darf aus
-der Antwort nicht ablesen, ob es sie gibt. Und ein Token aus dem einen
-Ablauf darf im anderen nicht gelten.
+Drei Ablaeufe with derselben Grundfrage: Who a Address eingibt, may from
+the Response not ablesen, ob it it exists. And a Token from the a
+Ablauf may in the other not apply.
 """
 
 from __future__ import annotations
@@ -35,11 +35,11 @@ pytestmark = [pytest.mark.integration, requires_database]
 
 GUTES_PASSWORT = "ein-ausreichend-langes-passwort"
 NEUES_PASSWORT = "ein-anderes-ausreichend-langes-passwort"
-ADRESSE = "anna@example.org"
+ADDRESS = "anna@example.org"
 
 
 class Postfach(MailSender):
-    """Sammelt statt zu senden."""
+    "Sammelt instead of to senden."
 
     def __init__(self) -> None:
         self.nachrichten: list[MailMessage] = []
@@ -49,19 +49,19 @@ class Postfach(MailSender):
 
     @property
     def letzter_token(self) -> str:
-        treffer = re.search(r"token=([A-Za-z0-9_\-]+)", self.nachrichten[-1].body)
-        assert treffer is not None, "Die Nachricht enthaelt keinen Link"
-        return treffer.group(1)
+        match = re.search(r"token=([A-Za-z0-9_\-]+)", self.nachrichten[-1].body)
+        assert match is not None, "The message contains no link"
+        return match.group(1)
 
 
 @pytest.fixture
-def postfach() -> Postfach:
+def mailbox() -> Postfach:
     return Postfach()
 
 
 @pytest.fixture
-def client(session: Session, postfach: Postfach) -> Iterator[object]:  # type: ignore[override]
-    """Wie der gemeinsame Client, aber mit einem Postfach statt Mailversand."""
+def client(session: Session, mailbox: Postfach) -> Iterator[object]:  # type: ignore[override]
+    "Like the gemeinsame Client, aber with a Postfach instead of Mailversand."
     from fastapi.testclient import TestClient
 
     from sidebyside.db.session import get_session
@@ -70,45 +70,44 @@ def client(session: Session, postfach: Postfach) -> Iterator[object]:  # type: i
 
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
-    app.dependency_overrides[sender] = lambda: postfach
+    app.dependency_overrides[sender] = lambda: mailbox
     yield TestClient(app, raise_server_exceptions=False)
 
 
 @pytest.fixture
 def anna(session: Session, client):  # type: ignore[no-untyped-def]
-    """Ein registrierter Account mit Passwort."""
+    "A registrierter Account with Password."
     from tests.conftest import TEST_BOOTSTRAP_TOKEN
 
-    antwort = client.post(
+    response = client.post(
         "/api/v1/auth/register",
         json={
             "displayName": "Anna",
-            "email": ADRESSE,
+            "email": ADDRESS,
             "password": GUTES_PASSWORT,
             "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
         },
     )
-    assert antwort.status_code == 201
-    return antwort.json()
+    assert response.status_code == 201
+    return response.json()
 
 
-def adresse_von(session: Session) -> AccountEmail:
-    eintrag = session.execute(
-        select(AccountEmail).where(AccountEmail.email == ADRESSE)
-    ).scalar_one()
-    return eintrag
+def address_von(session: Session) -> AccountEmail:
+    entry = session.execute(select(AccountEmail).where(AccountEmail.email == ADDRESS)).scalar_one()
+    return entry
 
 
 class TestInstanzOhneMailweg:
-    """`SBS_MAIL_TRANSPORT=none`: die Faehigkeit fehlt, und das steht in der Antwort.
+    """`SBS_MAIL_TRANSPORT=none`: the capability is unavailable, and the response
+    records that state.
 
-    Der schlechte Gegenentwurf waere `202 Accepted` - eine Bestaetigung fuer
-    eine Nachricht, die niemals entsteht, samt verbrauchtem Rate-Limit und
-    erzeugtem Token in der Datenbank.
+    The bad counterexample would be `202 Accepted`; a confirmation for
+    a Message, the niemals is created, samt verbrauchtem Rate-Limit and
+    generated token in the database.
     """
 
     @pytest.fixture
-    def client_ohne_mailweg(self, session: Session, monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
+    def client_without_mail_transport(self, session: Session, monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
         from fastapi.testclient import TestClient
 
         from sidebyside.config import MailTransport, get_settings
@@ -123,99 +122,105 @@ class TestInstanzOhneMailweg:
         with TestClient(app) as client:
             yield client
 
-    def test_magic_link_meldet_die_fehlende_faehigkeit(self, client_ohne_mailweg, anna) -> None:  # type: ignore[no-untyped-def]
-        antwort = client_ohne_mailweg.post(
-            "/api/v1/auth/magic-link/request", json={"email": ADRESSE}
+    def test_magic_link_reports_the_missing_capability(
+        self, client_without_mail_transport, anna
+    ) -> None:  # type: ignore[no-untyped-def]
+        response = client_without_mail_transport.post(
+            "/api/v1/auth/magic-link/request", json={"email": ADDRESS}
         )
-        assert antwort.status_code == 503
-        assert antwort.json()["code"] == "MAIL_TRANSPORT_UNAVAILABLE"
+        assert response.status_code == 503
+        assert response.json()["code"] == "MAIL_TRANSPORT_UNAVAILABLE"
 
-    def test_recovery_meldet_die_fehlende_faehigkeit(self, client_ohne_mailweg, anna) -> None:  # type: ignore[no-untyped-def]
-        antwort = client_ohne_mailweg.post("/api/v1/auth/recovery/request", json={"email": ADRESSE})
-        assert antwort.status_code == 503
+    def test_recovery_reports_the_missing_capability(
+        self, client_without_mail_transport, anna
+    ) -> None:  # type: ignore[no-untyped-def]
+        response = client_without_mail_transport.post(
+            "/api/v1/auth/recovery/request", json={"email": ADDRESS}
+        )
+        assert response.status_code == 503
 
-    def test_kein_token_entsteht(self, client_ohne_mailweg, session, anna) -> None:  # type: ignore[no-untyped-def]
-        """Der Endpunkt laeuft gar nicht erst an."""
-        client_ohne_mailweg.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
+    def test_no_token_is_created(self, client_without_mail_transport, session, anna) -> None:  # type: ignore[no-untyped-def]
+        "The Endpoint runs gar not erst to."
+        client_without_mail_transport.post(
+            "/api/v1/auth/magic-link/request", json={"email": ADDRESS}
+        )
         assert session.execute(select(MagicLinkToken)).scalars().all() == []
 
-    def test_passwortanmeldung_bleibt_moeglich(self, client_ohne_mailweg, anna) -> None:  # type: ignore[no-untyped-def]
-        """Ohne Mailweg fehlen Anmeldewege, aber nicht die Anmeldung."""
-        antwort = client_ohne_mailweg.post(
+    def test_password_sign_in_remains_possible(self, client_without_mail_transport, anna) -> None:  # type: ignore[no-untyped-def]
+        "Without Mail transport are missing Sign-in methods, aber not the Sign-in."
+        response = client_without_mail_transport.post(
             "/api/v1/auth/sign-in",
-            json={"email": ADRESSE, "password": GUTES_PASSWORT, "deviceName": "Test"},
+            json={"email": ADDRESS, "password": GUTES_PASSWORT, "deviceName": "Test"},
         )
-        assert antwort.status_code == 200
+        assert response.status_code == 200
 
 
 class TestMagicLink:
-    def test_bekannte_adresse_bekommt_einen_link(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        antwort = client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        assert antwort.status_code == 202
-        assert len(postfach.nachrichten) == 1
-        assert postfach.nachrichten[0].to == ADRESSE
-        assert "token=" in postfach.nachrichten[0].body
+    def test_known_address_gets_a_link(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        response = client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        assert response.status_code == 202
+        assert len(mailbox.nachrichten) == 1
+        assert mailbox.nachrichten[0].to == ADDRESS
+        assert "token=" in mailbox.nachrichten[0].body
 
-    def test_unbekannte_adresse_sieht_genauso_aus(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        """Sonst waere dieser Endpunkt ein Verzeichnis aller Konten."""
-        bekannt = client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        unbekannt = client.post(
+    def test_unknown_address_sees_genauso_aus(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        "Otherwise would be this Endpoint a Verzeichnis all Accounts."
+        known = client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        unknown = client.post(
             "/api/v1/auth/magic-link/request", json={"email": "niemand@example.org"}
         )
-        assert bekannt.status_code == unbekannt.status_code == 202
-        assert bekannt.text == unbekannt.text
-        assert [n.to for n in postfach.nachrichten] == [ADRESSE]
+        assert known.status_code == unknown.status_code == 202
+        assert known.text == unknown.text
+        assert [n.to for n in mailbox.nachrichten] == [ADDRESS]
 
-    def test_der_link_meldet_an(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        antwort = client.post(
+    def test_the_link_reports_to(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        response = client.post(
             "/api/v1/auth/magic-link/consume",
-            json={"token": postfach.letzter_token, "deviceName": "Pixel"},
+            json={"token": mailbox.letzter_token, "deviceName": "Pixel"},
         )
-        assert antwort.status_code == 201
+        assert response.status_code == 201
 
-        zugang = antwort.json()["tokens"]["accessToken"]
-        assert client.get("/api/v1/auth/me", headers=auth(zugang)).status_code == 200
+        access_token = response.json()["tokens"]["accessToken"]
+        assert client.get("/api/v1/auth/me", headers=auth(access_token)).status_code == 200
 
-    def test_der_eingeloeste_link_bestaetigt_die_adresse(
-        self, client, session, postfach, anna
-    ) -> None:  # type: ignore[no-untyped-def]
-        """Wer den Link im Postfach oeffnet, hat die Adresse nachgewiesen."""
-        assert adresse_von(session).verified_at is None
+    def test_the_redeemed_link_verifies_the_address(self, client, session, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        "Who the Link in the Postfach opens, has the Address nachgewiesen."
+        assert address_von(session).verified_at is None
 
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        client.post("/api/v1/auth/magic-link/consume", json={"token": postfach.letzter_token})
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        client.post("/api/v1/auth/magic-link/consume", json={"token": mailbox.letzter_token})
         session.expire_all()
-        assert adresse_von(session).verified_at is not None
+        assert address_von(session).verified_at is not None
 
-    def test_er_gilt_genau_einmal(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        token = postfach.letzter_token
+    def test_er_applies_exactly_einmal(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        token = mailbox.letzter_token
         assert (
             client.post("/api/v1/auth/magic-link/consume", json={"token": token}).status_code == 201
         )
 
-        zweite = client.post("/api/v1/auth/magic-link/consume", json={"token": token})
-        assert zweite.status_code == 422
-        assert zweite.json()["code"] == "ACTION_TOKEN_INVALID"
+        second = client.post("/api/v1/auth/magic-link/consume", json={"token": token})
+        assert second.status_code == 422
+        assert second.json()["code"] == "ACTION_TOKEN_INVALID"
 
-    def test_eine_neue_anforderung_entwertet_die_alte(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        """Sonst haeufen sich gueltige Anmeldenachweise im Postfach an."""
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        alt = postfach.letzter_token
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        neu = postfach.letzter_token
+    def test_a_new_request_invalidates_the_old(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        "Otherwise haeufen itself valid Sign-in credentials in the Postfach to."
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        alt = mailbox.letzter_token
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        new = mailbox.letzter_token
 
         assert (
             client.post("/api/v1/auth/magic-link/consume", json={"token": alt}).status_code == 422
         )
         assert (
-            client.post("/api/v1/auth/magic-link/consume", json={"token": neu}).status_code == 201
+            client.post("/api/v1/auth/magic-link/consume", json={"token": new}).status_code == 201
         )
 
-    def test_abgelaufener_link_gilt_nicht(self, client, session, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        token = postfach.letzter_token
+    def test_expired_link_applies_not(self, client, session, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        token = mailbox.letzter_token
 
         modell = session.execute(
             select(MagicLinkToken).where(MagicLinkToken.token_hash == hash_token(token))
@@ -227,35 +232,35 @@ class TestMagicLink:
             client.post("/api/v1/auth/magic-link/consume", json={"token": token}).status_code == 422
         )
 
-    def test_unfug_gilt_nicht(self, client, anna) -> None:  # type: ignore[no-untyped-def]
+    def test_malformed_applies_not(self, client, anna) -> None:  # type: ignore[no-untyped-def]
         for token in ("", "nicht-echt", "x" * 200):
             assert (
                 client.post("/api/v1/auth/magic-link/consume", json={"token": token}).status_code
                 == 422
             )
 
-    def test_der_klartext_steht_nicht_in_der_datenbank(
-        self, client, session, postfach, anna
+    def test_the_plaintext_is_stored_not_in_the_database(
+        self, client, session, mailbox, anna
     ) -> None:  # type: ignore[no-untyped-def]
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        token = postfach.letzter_token
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        token = mailbox.letzter_token
 
         hashes = session.execute(select(MagicLinkToken.token_hash)).scalars().all()
         assert token not in hashes
         assert hash_token(token) in hashes
 
-    def test_zu_viele_anforderungen_werden_gebremst(self, client, anna) -> None:  # type: ignore[no-untyped-def]
+    def test_to_viele_anforderungen_werden_gebremst(self, client, anna) -> None:  # type: ignore[no-untyped-def]
         for _ in range(rate_limit.MAGIC_LINK.attempts):
             assert (
-                client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE}).status_code
+                client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS}).status_code
                 == 202
             )
-        gebremst = client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
+        gebremst = client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
         assert gebremst.status_code == 429
         assert gebremst.json()["code"] == "RATE_LIMITED"
 
-    def test_die_bremse_gilt_auch_fuer_unbekannte_adressen(self, client, anna) -> None:  # type: ignore[no-untyped-def]
-        """Sonst waere der Unterschied im Verhalten selbst die Auskunft."""
+    def test_the_rate_limit_applies_auch_for_unknown_addresses(self, client, anna) -> None:  # type: ignore[no-untyped-def]
+        "Otherwise would be the Unterschied in the Behavior itself the Disclosure."
         for _ in range(rate_limit.MAGIC_LINK.attempts):
             client.post("/api/v1/auth/magic-link/request", json={"email": "wer@example.org"})
         gebremst = client.post("/api/v1/auth/magic-link/request", json={"email": "wer@example.org"})
@@ -263,95 +268,95 @@ class TestMagicLink:
 
 
 class TestAdressbestaetigung:
-    def test_angemeldet_anfordern_und_bestaetigen(self, client, session, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        kopf = auth(anna["tokens"]["accessToken"])
+    def test_signed_in_anfordern_and_verify(self, client, session, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        headers = auth(anna["tokens"]["accessToken"])
         assert (
-            client.post("/api/v1/auth/email/verification/request", headers=kopf).status_code == 202
+            client.post("/api/v1/auth/email/verification/request", headers=headers).status_code
+            == 202
         )
 
-        antwort = client.post(
+        response = client.post(
             "/api/v1/auth/email/verification/confirm",
-            json={"token": postfach.letzter_token},
+            json={"token": mailbox.letzter_token},
         )
-        assert antwort.status_code == 204
+        assert response.status_code == 204
 
         session.expire_all()
-        assert adresse_von(session).verified_at is not None
+        assert address_von(session).verified_at is not None
 
-    def test_ohne_anmeldung_kein_versand(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
+    def test_without_sign_in_no_delivery(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
         assert client.post("/api/v1/auth/email/verification/request").status_code == 401
-        assert postfach.nachrichten == []
+        assert mailbox.nachrichten == []
 
-    def test_bereits_bestaetigte_adresse_bekommt_nichts(
-        self, client, session, postfach, anna
-    ) -> None:  # type: ignore[no-untyped-def]
-        adresse_von(session).verified_at = now()
+    def test_bereits_bestaetigte_address_gets_nothing(self, client, session, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        address_von(session).verified_at = now()
         session.flush()
 
-        kopf = auth(anna["tokens"]["accessToken"])
+        headers = auth(anna["tokens"]["accessToken"])
         assert (
-            client.post("/api/v1/auth/email/verification/request", headers=kopf).status_code == 202
+            client.post("/api/v1/auth/email/verification/request", headers=headers).status_code
+            == 202
         )
-        assert postfach.nachrichten == []
+        assert mailbox.nachrichten == []
 
 
 class TestRecovery:
-    def _link_anfordern(self, client, postfach) -> str:  # type: ignore[no-untyped-def]
+    def _link_anfordern(self, client, mailbox) -> str:  # type: ignore[no-untyped-def]
         assert (
-            client.post("/api/v1/auth/recovery/request", json={"email": ADRESSE}).status_code == 202
+            client.post("/api/v1/auth/recovery/request", json={"email": ADDRESS}).status_code == 202
         )
-        return postfach.letzter_token
+        return mailbox.letzter_token
 
-    def test_neues_passwort_gilt_und_das_alte_nicht_mehr(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        token = self._link_anfordern(client, postfach)
-        antwort = client.post(
+    def test_new_password_applies_and_the_old_not_more(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        token = self._link_anfordern(client, mailbox)
+        response = client.post(
             "/api/v1/auth/recovery/consume",
             json={"token": token, "newPassword": NEUES_PASSWORT},
         )
-        assert antwort.status_code == 201
+        assert response.status_code == 201
 
         alt = client.post(
-            "/api/v1/auth/sign-in", json={"email": ADRESSE, "password": GUTES_PASSWORT}
+            "/api/v1/auth/sign-in", json={"email": ADDRESS, "password": GUTES_PASSWORT}
         )
         assert alt.status_code == 401
-        neu = client.post(
-            "/api/v1/auth/sign-in", json={"email": ADRESSE, "password": NEUES_PASSWORT}
+        new = client.post(
+            "/api/v1/auth/sign-in", json={"email": ADDRESS, "password": NEUES_PASSWORT}
         )
-        assert neu.status_code == 200
+        assert new.status_code == 200
 
-    def test_alle_bisherigen_sitzungen_enden(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        """Wer sein Passwort zuruecksetzt, vermutet oft einen fremden Zugriff."""
-        alter_zugang = anna["tokens"]["accessToken"]
-        assert client.get("/api/v1/auth/me", headers=auth(alter_zugang)).status_code == 200
+    def test_all_bisherigen_sessions_enden(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        "Who be Password resets, often suspects oft a foreign Access."
+        old_access_token = anna["tokens"]["accessToken"]
+        assert client.get("/api/v1/auth/me", headers=auth(old_access_token)).status_code == 200
 
-        token = self._link_anfordern(client, postfach)
-        antwort = client.post(
+        token = self._link_anfordern(client, mailbox)
+        response = client.post(
             "/api/v1/auth/recovery/consume",
             json={"token": token, "newPassword": NEUES_PASSWORT},
         )
 
-        assert client.get("/api/v1/auth/me", headers=auth(alter_zugang)).status_code == 401
-        neuer_zugang = antwort.json()["tokens"]["accessToken"]
-        assert client.get("/api/v1/auth/me", headers=auth(neuer_zugang)).status_code == 200
+        assert client.get("/api/v1/auth/me", headers=auth(old_access_token)).status_code == 401
+        new_access_token = response.json()["tokens"]["accessToken"]
+        assert client.get("/api/v1/auth/me", headers=auth(new_access_token)).status_code == 200
 
-    def test_unbekannte_adresse_sieht_genauso_aus(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        bekannt = client.post("/api/v1/auth/recovery/request", json={"email": ADRESSE})
-        unbekannt = client.post(
+    def test_unknown_address_sees_genauso_aus(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        known = client.post("/api/v1/auth/recovery/request", json={"email": ADDRESS})
+        unknown = client.post(
             "/api/v1/auth/recovery/request", json={"email": "niemand@example.org"}
         )
-        assert bekannt.status_code == unbekannt.status_code == 202
-        assert bekannt.text == unbekannt.text
-        assert len(postfach.nachrichten) == 1
+        assert known.status_code == unknown.status_code == 202
+        assert known.text == unknown.text
+        assert len(mailbox.nachrichten) == 1
 
-    def test_konto_ohne_passwort_bekommt_keinen_link(self, client, session, postfach) -> None:  # type: ignore[no-untyped-def]
-        """Recovery richtet keinen zusaetzlichen Anmeldeweg ein."""
-        konto = Account(display_name="Nur OIDC")
-        session.add(konto)
+    def test_account_without_password_gets_no_link(self, client, session, mailbox) -> None:  # type: ignore[no-untyped-def]
+        "Recovery richtet no additional Sign-in method a."
+        account = Account(display_name="Nur OIDC")
+        session.add(account)
         session.flush()
-        session.add(AccountEmail(account_id=konto.id, email="oidc@example.org", is_primary=True))
+        session.add(AccountEmail(account_id=account.id, email="oidc@example.org", is_primary=True))
         session.add(
             AuthIdentity(
-                account_id=konto.id,
+                account_id=account.id,
                 provider=AuthProvider.OIDC.value,
                 issuer="https://idp.example",
                 subject="abc",
@@ -366,10 +371,10 @@ class TestRecovery:
             ).status_code
             == 202
         )
-        assert postfach.nachrichten == []
+        assert mailbox.nachrichten == []
 
-    def test_schwaches_passwort_verbraucht_den_token_nicht(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        token = self._link_anfordern(client, postfach)
+    def test_weak_password_consumed_the_token_not(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        token = self._link_anfordern(client, mailbox)
         schwach = client.post(
             "/api/v1/auth/recovery/consume", json={"token": token, "newPassword": "kurz"}
         )
@@ -381,71 +386,69 @@ class TestRecovery:
         )
         assert wieder.status_code == 201
 
-    def test_er_gilt_genau_einmal(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        token = self._link_anfordern(client, postfach)
+    def test_er_applies_exactly_einmal(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        token = self._link_anfordern(client, mailbox)
         client.post(
             "/api/v1/auth/recovery/consume",
             json={"token": token, "newPassword": NEUES_PASSWORT},
         )
-        zweite = client.post(
+        second = client.post(
             "/api/v1/auth/recovery/consume",
             json={"token": token, "newPassword": "noch-ein-langes-passwort-hier"},
         )
-        assert zweite.status_code == 422
+        assert second.status_code == 422
 
 
 class TestKeinTokenGiltImFremdenAblauf:
-    """Getrennte Tabellen statt einer Pruefung: der Token wird dort nicht gesucht."""
+    "Separate tables instead of a check: the token is not searched there."
 
-    def test_magic_link_token_taugt_nicht_zur_wiederherstellung(
-        self, client, postfach, anna
-    ) -> None:  # type: ignore[no-untyped-def]
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        token = postfach.letzter_token
+    def test_magic_link_token_works_not_zur_recovery(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        token = mailbox.letzter_token
 
-        antwort = client.post(
+        response = client.post(
             "/api/v1/auth/recovery/consume",
             json={"token": token, "newPassword": NEUES_PASSWORT},
         )
-        assert antwort.status_code == 422
+        assert response.status_code == 422
 
-    def test_recovery_token_meldet_nicht_an(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        client.post("/api/v1/auth/recovery/request", json={"email": ADRESSE})
-        token = postfach.letzter_token
-
-        assert (
-            client.post("/api/v1/auth/magic-link/consume", json={"token": token}).status_code == 422
-        )
-
-    def test_verifikationstoken_meldet_nicht_an(self, client, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        kopf = auth(anna["tokens"]["accessToken"])
-        client.post("/api/v1/auth/email/verification/request", headers=kopf)
-        token = postfach.letzter_token
+    def test_recovery_token_reports_not_to(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        client.post("/api/v1/auth/recovery/request", json={"email": ADDRESS})
+        token = mailbox.letzter_token
 
         assert (
             client.post("/api/v1/auth/magic-link/consume", json={"token": token}).status_code == 422
         )
 
-    def test_jede_art_liegt_in_ihrer_eigenen_tabelle(self, client, session, postfach, anna) -> None:  # type: ignore[no-untyped-def]
-        kopf = auth(anna["tokens"]["accessToken"])
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        client.post("/api/v1/auth/recovery/request", json={"email": ADRESSE})
-        client.post("/api/v1/auth/email/verification/request", headers=kopf)
+    def test_verifikationstoken_reports_not_to(self, client, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        headers = auth(anna["tokens"]["accessToken"])
+        client.post("/api/v1/auth/email/verification/request", headers=headers)
+        token = mailbox.letzter_token
+
+        assert (
+            client.post("/api/v1/auth/magic-link/consume", json={"token": token}).status_code == 422
+        )
+
+    def test_every_art_liegt_in_ihrer_own_table(self, client, session, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
+        headers = auth(anna["tokens"]["accessToken"])
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        client.post("/api/v1/auth/recovery/request", json={"email": ADDRESS})
+        client.post("/api/v1/auth/email/verification/request", headers=headers)
 
         for modell in (MagicLinkToken, AccountRecoveryToken, EmailVerificationToken):
             assert len(session.execute(select(modell)).scalars().all()) == 1
 
 
 class TestSitzungsausgabe:
-    def test_jeder_erfolgreiche_weg_endet_in_einer_geraetesitzung(
-        self, client, session, postfach, anna
+    def test_every_successful_weg_endet_in_a_device_session(
+        self, client, session, mailbox, anna
     ) -> None:  # type: ignore[no-untyped-def]
-        """Es gibt keinen zweiten Ort, an dem Tokens entstehen."""
+        "It exists no zweiten Ort, to the Tokens entstehen."
         vorher = len(session.execute(select(DeviceSession)).scalars().all())
 
-        client.post("/api/v1/auth/magic-link/request", json={"email": ADRESSE})
-        client.post("/api/v1/auth/magic-link/consume", json={"token": postfach.letzter_token})
+        client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
+        client.post("/api/v1/auth/magic-link/consume", json={"token": mailbox.letzter_token})
 
-        nachher = session.execute(select(DeviceSession)).scalars().all()
-        assert len(nachher) == vorher + 1
-        assert all(geraet.refresh_token_hash for geraet in nachher)
+        afterwards = session.execute(select(DeviceSession)).scalars().all()
+        assert len(afterwards) == vorher + 1
+        assert all(device.refresh_token_hash for device in afterwards)

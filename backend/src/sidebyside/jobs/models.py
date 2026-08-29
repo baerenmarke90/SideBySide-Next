@@ -1,9 +1,8 @@
-"""Hintergrundaufgaben.
+"""Background jobs.
 
-Die Warteschlange liegt in PostgreSQL. Kein Redis, kein Celery: eine
-Datenbank, die ohnehin da sein muss, kann eine Warteschlange betreiben, und
-jede zusätzliche Infrastruktur ist eine weitere Sache, die im
-Self-Hosted-Betrieb ausfallen kann.
+The queue lives in PostgreSQL. No Redis and no Celery: a database that is
+already required can run a queue, and every additional infrastructure
+component is another thing that can fail in self-hosted deployments.
 """
 
 from __future__ import annotations
@@ -37,12 +36,12 @@ class Job(IdMixin, Base):
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
 
-    # Frühester Ausführungszeitpunkt: erlaubt Verzögerung und Backoff.
+    # Earliest execution time, allowing delay and backoff.
     run_after: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    # Ein Worker, der stirbt, gibt seine Sperre nicht zurück. Die Sperre
-    # läuft deshalb ab, statt für immer zu gelten.
+    # A worker that dies cannot release its lease. The lease therefore
+    # expires instead of remaining valid forever.
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     locked_by: Mapped[str | None] = mapped_column(String(128))
 

@@ -1,4 +1,4 @@
-"""SQLAlchemy-Persistenzgrenze für schützenswerte Fachinhalte."""
+"""SQLAlchemy persistence boundary for protected domain content."""
 
 from __future__ import annotations
 
@@ -12,11 +12,11 @@ from sidebyside.domain.payload import ProtectedPayload
 
 
 class ProtectedPayloadJSON[PayloadT: ProtectedPayload](TypeDecorator[PayloadT]):
-    """JSONB-Spalte, die ausschließlich einen konkreten ProtectedPayload bindet.
+    """JSONB column bound exclusively to one concrete ProtectedPayload type.
 
-    Ein rohes Dictionary kann damit nicht versehentlich als sensibler Inhalt
-    persistiert werden. Die konkrete Payload-Klasse ist Teil der Spaltendefinition
-    und übernimmt beim Lesen wieder die strikte Pydantic-Validierung.
+    A raw dictionary therefore cannot accidentally be persisted as sensitive
+    content. The concrete payload class is part of the column definition and
+    restores strict Pydantic validation when reading.
     """
 
     impl = postgresql.JSONB
@@ -35,12 +35,12 @@ class ProtectedPayloadJSON[PayloadT: ProtectedPayload](TypeDecorator[PayloadT]):
         del dialect
         if type(value) is not self.payload_type:
             raise TypeError(
-                f"{self.payload_type.__name__} erforderlich; rohe oder fremde Payload abgewiesen"
+                f"{self.payload_type.__name__} required; raw or foreign payload rejected"
             )
         return value.seal()
 
     def process_result_value(self, value: dict[str, Any] | None, dialect: Dialect) -> PayloadT:
         del dialect
         if value is None:
-            raise ValueError("Geschützte Payload fehlt in einer nicht-nullbaren Persistenzspalte")
+            raise ValueError("Protected payload is missing from a non-null persistence column")
         return self.payload_type.unseal(value)

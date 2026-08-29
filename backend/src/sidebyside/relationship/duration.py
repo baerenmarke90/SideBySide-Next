@@ -1,7 +1,7 @@
-"""Gemeinsame Zeit.
+"""Shared time.
 
-Reine Kalenderrechnung auf einem DATE - kein Zeitpunkt, keine Zeitzone.
-Der Beginn einer Beziehung ist ein Tag.
+Pure calendar arithmetic on a DATE: no instant and no timezone. The start of
+a relationship is a calendar day.
 """
 
 from __future__ import annotations
@@ -18,23 +18,23 @@ class Duration:
 
 
 def since(started_on: date, today: date) -> Duration | None:
-    """Die verstrichene Zeit, oder None wenn der Beginn in der Zukunft liegt.
+    """Return elapsed time, or None when the start lies in the future.
 
-    Ein Datum in der Zukunft ergibt keine gemeinsame Zeit. Negative Werte
-    zurueckzugeben waere schlimmer als nichts - eine Oberflaeche wuerde
-    daraus "-3 Tage zusammen" bauen.
+    A future date does not produce shared time. Returning negative values
+    would be worse than returning nothing because a UI could turn that into
+    wording such as "together for -3 days".
     """
     if started_on > today:
         return None
 
-    tage = (today - started_on).days
+    days = (today - started_on).days
 
-    jahre = today.year - started_on.year
-    monate = today.month - started_on.month
+    years = today.year - started_on.year
+    months = today.month - started_on.month
     if today.day < started_on.day:
-        monate -= 1
-    if monate < 0:
-        jahre -= 1
-        monate += 12
+        months -= 1
+    if months < 0:
+        years -= 1
+        months += 12
 
-    return Duration(days=tage, years=jahre, months=monate)
+    return Duration(days=days, years=years, months=months)

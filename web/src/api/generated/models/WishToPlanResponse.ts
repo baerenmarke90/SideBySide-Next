@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -29,11 +29,11 @@ import {
 } from './WishDetail';
 
 /**
- * Beide Ressourcen in einer Antwort.
+ * Both resources returned from a conversion.
  * 
- * Die Konvertierung veraendert den Wish und erzeugt den Plan. Ein Client,
- * der nur eines von beidem zurueckbekaeme, muesste das andere sofort
- * nachladen - und haette bis dahin einen veralteten Stand angezeigt.
+ * Conversion modifies the wish and creates the plan. Returning only one
+ * would force the client to immediately reload the other and display stale
+ * state in the meantime.
  * @export
  * @interface WishToPlanResponse
  */

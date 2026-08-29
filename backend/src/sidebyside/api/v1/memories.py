@@ -1,4 +1,4 @@
-"""HTTP-Vertrag fuer den ersten M2-Runtime-Slice: Memory CRUD."""
+"""HTTP contract for the first M2 runtime slice: Memory CRUD."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ router = APIRouter(tags=["memories"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Version der Ressource fuer den naechsten If-Match-Schreibzugriff.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }
@@ -80,7 +80,7 @@ class MemoryAttachmentSet(ApiModel):
 
 
 class MemoryAttachmentSummary(AttachmentSummary):
-    """Wie jedes gebundene Attachment, plus seinen Platz in der Galerie."""
+    """A bound attachment plus its position in the memory gallery."""
 
     position: int
 
@@ -115,7 +115,7 @@ def _memory_detail(
     if author is None:
         raise RuntimeError("Memory author disappeared despite foreign key protection.")
     is_author = memory.owner_id == authorization.account_id
-    gebunden = binding.attachments_of_memory(session, memory.id)
+    bound_attachments = binding.attachments_of_memory(session, memory.id)
     return MemoryDetail(
         id=memory.id,
         space_id=memory.space_id,
@@ -134,17 +134,17 @@ def _memory_detail(
         ),
         attachments=[
             MemoryAttachmentSummary(
-                id=eintrag.attachment.id,
+                id=entry.attachment.id,
                 status="READY",
-                media_type=MediaType(eintrag.attachment.media_type),
-                mime_type=eintrag.attachment.mime_type,
-                size=eintrag.attachment.size,
-                width=eintrag.attachment.width,
-                height=eintrag.attachment.height,
-                has_thumbnail=eintrag.attachment.has_thumbnail,
-                position=eintrag.position,
+                media_type=MediaType(entry.attachment.media_type),
+                mime_type=entry.attachment.mime_type,
+                size=entry.attachment.size,
+                width=entry.attachment.width,
+                height=entry.attachment.height,
+                has_thumbnail=entry.attachment.has_thumbnail,
+                position=entry.position,
             )
-            for eintrag in gebunden
+            for entry in bound_attachments
         ],
     )
 
@@ -287,17 +287,17 @@ def replace_memory_attachments(
     expected_version: IfMatchVersion,
     memory_id: Annotated[str, Path(alias="memoryId")],
 ) -> MemoryDetail:
-    """Menge und Reihenfolge in einem Zug setzen.
+    """Replace the attachment set and ordering in one operation.
 
-    Ein PUT, kein Hinzufuegen und Entfernen: der Client schickt den Zustand,
-    den er gesehen hat, und `If-Match` sorgt dafuer, dass er ihn noch hat.
+    This is a PUT rather than an add/remove sequence: the client submits the
+    state it observed, while ``If-Match`` verifies that state is still current.
     """
     memory = service.replace_attachments(
         session,
         authorization,
         memory_id,
         expected_version=expected_version,
-        entries=[(eintrag.attachment_id, eintrag.position) for eintrag in body.attachments],
+        entries=[(entry.attachment_id, entry.position) for entry in body.attachments],
     )
     response.headers["ETag"] = etag_for(memory.version)
     return _memory_detail(session, authorization, memory)

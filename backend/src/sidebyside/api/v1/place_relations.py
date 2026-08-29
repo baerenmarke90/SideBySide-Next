@@ -1,21 +1,19 @@
-"""HTTP-Vertrag fuer typisierte M3-Content-Relations.
+"""HTTP contract for typed M3 content relations.
 
-M3-D08 entscheidet Option A aus `docs/m3/API-DESIGN.md`: verschachtelte
-Routen je Zieltyp, kein gemeinsamer Relation-Endpunkt mit Discriminator.
-Der Zieltyp steht damit im Pfad und nicht im Body - ein Client kann keinen
-Typ benennen, den der Vertrag nicht schon kennt, und die OpenAPI-Typen
-bleiben ohne Union.
+M3-D08 selects option A from ``docs/m3/API-DESIGN.md``: nested routes per
+target type rather than one generic relation endpoint with a discriminator.
+The target type therefore lives in the path instead of the body. A client
+cannot name a type the contract does not already know, and the OpenAPI types
+remain free of unions.
 
-Die Routen entstehen ueber `_register`, weil sie sich ausser im Zieltyp
-nicht unterscheiden. Registriert werden trotzdem feste Pfade und feste
-`operation_id`s: das erzeugte Schema ist Zeichen fuer Zeichen dasselbe wie
-bei neun ausgeschriebenen Funktionen, nur ohne neun Gelegenheiten, eine
-davon anders zu machen als die anderen.
+Routes are created through ``_register`` because they differ only by target
+type. The registered paths and ``operation_id`` values are nevertheless
+fixed: the generated schema is identical to nine separately written
+functions, without nine opportunities to make one subtly different.
 
-`PUT` ist idempotent und antwortet immer `204`. Ob die Relation eben
-entstanden ist oder schon bestand, ist fuer den Aufrufer kein Unterschied,
-und ein `201` gegen ein `200` waere hier eine Auskunft darueber, was ein
-anderes Geraet kurz zuvor getan hat.
+``PUT`` is idempotent and always returns ``204``. Whether the relation was
+just created or already existed is irrelevant to the caller, and returning
+``201`` versus ``200`` would reveal what another device had just done.
 """
 
 from __future__ import annotations
@@ -35,23 +33,22 @@ router = APIRouter(tags=["place-relations"])
 
 
 class RelationTargets(ApiModel):
-    """Die verknuepften Ziele eines Ortes.
+    """Targets linked to a place.
 
-    Ausschliesslich IDs. Inhalte kommen ueber die Route der jeweiligen
-    Domaene und damit durch deren eigenen Guard; eine Relationsliste, die
-    Inhalte mitliefert, waere ein zweiter Leseweg mit eigener
-    Autorisierung.
+    Only IDs are returned. Content is fetched through each target domain's own
+    route and authorization guard; returning content here would create a
+    second read path with separate authorization logic.
     """
 
     items: list[UUID]
 
 
 def _register(kind: RelationKind, *, singular: str, plural: str) -> None:
-    """Die drei Routen einer Relationsart anlegen.
+    """Register the three routes for one relation kind.
 
-    `singular`/`plural` sind die Namensteile der `operation_id` - sie
-    landen in den generierten Clients und werden deshalb ausgeschrieben
-    uebergeben statt aus dem Slug abgeleitet.
+    ``singular``/``plural`` are the name components used in ``operation_id``.
+    They appear in generated clients and are therefore passed explicitly
+    instead of being derived from the slug.
     """
     collection = f"/spaces/{{spaceId}}/places/{{placeId}}/{kind.slug}"
     item = f"{collection}/{{targetId}}"

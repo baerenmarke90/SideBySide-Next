@@ -1,8 +1,8 @@
-"""API-Version 1.
+"""API version 1.
 
-Die Version steht im Pfad. Ein veröffentlichter Vertrag wird innerhalb
-ihrer Version nicht brechend geändert; brechende Änderungen bekommen eine
-neue Version, damit ältere App-Installationen weiterlaufen.
+The version is part of the path. A published contract is not changed in a
+breaking way within its version; breaking changes receive a new version so
+older app installations can continue to operate.
 """
 
 from __future__ import annotations

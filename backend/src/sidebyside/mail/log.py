@@ -1,8 +1,8 @@
-"""Der Entwicklungsadapter.
+"""Development mail adapter.
 
-Er schreibt die Nachricht ins Log, damit ein Magic Link ohne Mailserver
-ausprobierbar ist. Genau deshalb darf er in Produktion nicht laufen - der
-Token stuende dann im Log. Die Konfiguration verhindert das beim Start.
+It writes the message to logs so a magic link can be exercised without a mail
+server. That is exactly why it must never run in production: the token would be
+logged as well. Configuration rejects that mode at startup.
 """
 
 from __future__ import annotations
@@ -20,12 +20,11 @@ class LoggingMailSender(MailSender):
         self.sender_address = sender_address
 
     def send(self, message: MailMessage) -> None:
-        umgebung = get_settings().environment
-        if umgebung is Environment.PRODUCTION:
-            # Doppelter Boden. Die Konfiguration laesst diesen Adapter in
-            # Produktion gar nicht erst zu; faende er trotzdem einen Weg
-            # dorthin, schweigt er ueber den Inhalt.
-            raise RuntimeError("Der Log-Mailadapter ist in Produktion nicht zulaessig.")
+        environment = get_settings().environment
+        if environment is Environment.PRODUCTION:
+            # Defense in depth. Configuration already prevents this adapter in
+            # production; if it still reaches this path, do not expose content.
+            raise RuntimeError("The logging mail adapter is not allowed in production.")
 
         log.info(
             "mail (development transport)",

@@ -1,14 +1,14 @@
-"""Alembic-Umgebung.
+"""Alembic environment.
 
-Die Verbindung kommt aus der Umgebung, nicht aus alembic.ini - ein
-Zugangsdatum gehört nicht in eine eingecheckte Datei. Gelesen wird dafür
-`DatabaseSettings` und nicht die vollständige Anwendungskonfiguration:
-eine Migration braucht die Datenbank, aber weder Cursor-Signing-Key noch
-SMTP noch eine öffentliche Adresse. Hing sie an ihnen, scheiterte
-`alembic upgrade head` in Produktion, bevor die erste Revision lief.
+The connection comes from the environment rather than alembic.ini because
+credentials do not belong in a committed file. Only `DatabaseSettings` is
+loaded instead of the complete application configuration: a migration needs
+the database, but neither a cursor-signing key nor SMTP nor a public address.
+Depending on those would make `alembic upgrade head` fail in production
+before the first revision ran.
 
-Alle Modelle werden hier importiert, damit `--autogenerate` sie sieht. Ein
-vergessener Import erzeugt eine Migration, die eine Tabelle löschen will.
+All models are imported here so `--autogenerate` can see them. A missing
+import can produce a migration that tries to drop a table.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from sqlalchemy.schema import SchemaItem
 
 from sidebyside.attachments import binding as _binding  # noqa: F401
 
-# Modelle registrieren. Die Importe sehen ungenutzt aus, sind es aber nicht.
+# Register models. These imports look unused, but they are not.
 from sidebyside.attachments import models as _attachments  # noqa: F401
 from sidebyside.comments import models as _comments  # noqa: F401
 from sidebyside.config import DatabaseSettings
@@ -42,26 +42,26 @@ from sidebyside.relationship import models as _relationship  # noqa: F401
 from sidebyside.wishes import models as _wishes  # noqa: F401
 
 
-def _migrationsverbindung() -> str:
-    """Die Datenbank-URL für diesen Lauf, oder ein klarer Abbruch.
+def _migration_connection() -> str:
+    """Return the database URL for this run or fail with a clear diagnostic.
 
-    Der Fehler wird hier abgefangen und neu formuliert, weil ein
-    durchgereichter `ValidationError` wie ein Anwendungsfehler aussieht.
-    Wer eine Migration startet, soll lesen, welche Variable fehlt.
+    Validation is caught and reformulated here because a raw
+    `ValidationError` looks like an application error. A migration operator
+    should instead see which environment variable is missing.
     """
     try:
         return DatabaseSettings().database_url
-    except ValidationError as fehler:
+    except ValidationError as error:
         raise SystemExit(
-            "Migration nicht möglich: SBS_DATABASE_URL fehlt oder ist unbrauchbar. "
-            "Erwartet wird eine PostgreSQL-URL, zum Beispiel "
-            "postgresql+psycopg://benutzer:passwort@host:5432/datenbank. "
-            f"Ursache: {fehler}"
-        ) from fehler
+            "Migration cannot start: SBS_DATABASE_URL is missing or invalid. "
+            "Expected a PostgreSQL URL, for example "
+            "postgresql+psycopg://user:password@host:5432/database. "
+            f"Cause: {error}"
+        ) from error
 
 
 config = context.config
-config.set_main_option("sqlalchemy.url", _migrationsverbindung())
+config.set_main_option("sqlalchemy.url", _migration_connection())
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -69,50 +69,51 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def _typgebundene_pruefregeln(tabellenname: str) -> set[str]:
-    """Namen der CHECK-Regeln, die am Spaltentyp haengen statt an der Tabelle.
+def _type_bound_checks(table_name: str) -> set[str]:
+    """Return CHECK names owned by a column type rather than the table.
 
-    `SqlEnum(native_enum=False, create_constraint=True)` erzeugt seine
-    Wertebereichspruefung aus dem Typ heraus. Sie steht in der Tabelle, gehoert
-    aber dem Typ - Alembic nennt das typgebunden.
+    `SqlEnum(native_enum=False, create_constraint=True)` creates its allowed
+    value check from the type. The constraint lives on the table but belongs
+    to the type; Alembic calls this type-bound.
     """
-    tabelle = Base.metadata.tables.get(tabellenname)
-    if tabelle is None:
+    table = Base.metadata.tables.get(table_name)
+    if table is None:
         return set()
     return {
-        regel.name
-        for regel in tabelle.constraints
-        if isinstance(regel, CheckConstraint)
-        # Kein oeffentliches Attribut, aber genau das Merkmal, an dem auch
-        # Alembic selbst typgebundene Regeln erkennt.
-        and getattr(regel, "_type_bound", False)
-        and regel.name is not None
+        constraint.name
+        for constraint in table.constraints
+        if isinstance(constraint, CheckConstraint)
+        # No public attribute exists, but this is the same marker Alembic uses
+        # internally to identify type-bound constraints.
+        and getattr(constraint, "_type_bound", False)
+        and constraint.name is not None
     }
 
 
 def include_object(
-    objekt: SchemaItem,
+    object_: SchemaItem,
     name: str | None,
-    typ: str,
-    reflektiert: bool,
-    verglichen_mit: SchemaItem | None,
+    type_: str,
+    reflected: bool,
+    compare_to: SchemaItem | None,
 ) -> bool:
-    """Typgebundene CHECK-Regeln aus dem Autogenerate-Vergleich nehmen.
+    """Exclude type-bound CHECK constraints from autogenerate comparison.
 
-    Autogenerate laesst sie auf der Modellseite bewusst aus, liest sie in der
-    Datenbank aber mit - und schlaegt deshalb bei jedem Lauf vor, sie zu
-    loeschen. Der Drift-Check waere damit dauerhaft rot.
+    Autogenerate deliberately omits them on the model side but reads them
+    from the database, otherwise proposing their removal on every run and
+    keeping the drift check permanently red.
 
-    Dieselbe Regel zusaetzlich von Hand an die Tabelle zu haengen ist der
-    naheliegende Ausweg und der falsche: sie bekaeme denselben Namen wie die
-    des Typs, und `create_all` scheitert an der doppelten Constraint.
+    Manually adding the same rule to the table is the obvious but wrong
+    workaround: it would receive the same name as the type-owned constraint
+    and `create_all` would fail on the duplicate.
     """
-    if typ != "check_constraint" or not reflektiert or name is None:
+    del compare_to
+    if type_ != "check_constraint" or not reflected or name is None:
         return True
-    tabelle = getattr(objekt, "table", None)
-    if tabelle is None:
+    table = getattr(object_, "table", None)
+    if table is None:
         return True
-    return name not in _typgebundene_pruefregeln(tabelle.name)
+    return name not in _type_bound_checks(table.name)
 
 
 def run_migrations_offline() -> None:

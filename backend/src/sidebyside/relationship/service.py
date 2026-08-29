@@ -1,10 +1,9 @@
-"""Mitgliedschaft und Zugriff auf einen Space.
+"""Membership and access to a Space.
 
-Hier steht die zentrale Sicherheitsinvariante des Produkts. Jeder Zugriff
-auf Space-Daten laeuft ueber `require_membership`, und zwar BEVOR
-irgendeine Ressource geladen wird.
+This module contains the product's central security invariant. Every access to
+Space data goes through `require_membership` BEFORE any resource is loaded.
 
-Es gibt keinen Datenzugriff allein anhand einer Ressourcen-ID.
+There is no data access based only on a resource ID.
 """
 
 from __future__ import annotations
@@ -35,17 +34,17 @@ class SpaceErrorCode:
 
 
 def require_membership(session: Session, account: Account, space_id: UUID) -> Membership:
-    """Die aktive Mitgliedschaft - oder 404.
+    """Return the active membership, or 404.
 
-    Bewusst NotFoundError und nicht ForbiddenError: ein 403 bestaetigt, dass
-    es den Space gibt. Wer fremde IDs durchprobiert, soll nicht erfahren,
-    welche davon existieren. Fuer den Aufrufer ist ein fremder Space
-    ununterscheidbar von einem, den es nicht gibt.
+    Deliberately use NotFoundError rather than ForbiddenError because a 403
+    confirms that the Space exists. Someone probing foreign IDs must not learn
+    which ones exist. To the caller, another Space is indistinguishable from
+    one that does not exist.
 
-    Auch eine beendete Mitgliedschaft fuehrt hierher: wer den Space
-    verlassen hat, sieht seine Inhalte nicht mehr.
+    An ended membership follows the same path: after leaving the Space, an
+    account no longer sees its content.
     """
-    mitgliedschaft = session.execute(
+    membership = session.execute(
         select(Membership).where(
             Membership.account_id == account.id,
             Membership.space_id == space_id,
@@ -53,17 +52,17 @@ def require_membership(session: Session, account: Account, space_id: UUID) -> Me
         )
     ).scalar_one_or_none()
 
-    if mitgliedschaft is None:
+    if membership is None:
         raise NotFoundError("Space not found.", SpaceErrorCode.NOT_FOUND)
 
-    return mitgliedschaft
+    return membership
 
 
 def _ensure_partner_profile(session: Session, space_id: UUID, account_id: UUID) -> None:
-    """Profil-Lifecycle an den Membership-Lifecycle koppeln.
+    """Couple profile lifecycle to membership lifecycle.
 
-    Der Import bleibt lokal, damit Relationship- und Profiles-Domain keine
-    zyklische Modulinitialisierung erzeugen.
+    Keep the import local so the Relationship and Profiles domains do not
+    create a cyclic module initialization dependency.
     """
     from sidebyside.profiles.service import ensure_profile
 
@@ -71,7 +70,7 @@ def _ensure_partner_profile(session: Session, space_id: UUID, account_id: UUID) 
 
 
 def create_space(session: Session, founder: Account) -> Space:
-    """Einen Space anlegen und den Gruender als Partner aufnehmen."""
+    """Create a Space and add the founder as a partner."""
     space = Space()
     session.add(space)
     session.flush()
@@ -105,15 +104,14 @@ def active_memberships(session: Session, space_id: UUID) -> Sequence[Membership]
 
 
 def add_member(session: Session, space_id: UUID, account: Account) -> Membership:
-    """Einen Account in einen Space aufnehmen.
+    """Add an account to a Space.
 
-    Die Obergrenze wird hier geprueft, nicht erst beim Annehmen einer
-    Einladung: ein Paar-Space hat hoechstens zwei aktive Partner, und diese
-    Regel darf nicht davon abhaengen, ueber welchen Weg jemand hereinkommt.
+    The upper bound is enforced here rather than only when accepting an
+    invitation. A couple Space has at most two active partners, and that rule
+    must not depend on the path through which somebody joins.
 
-    Die Space-Zeile serialisiert Pruefung und Aenderung bis zum Commit. So
-    koennen auch zwei verschiedene Einladungen den letzten freien Platz
-    nicht gleichzeitig belegen.
+    The Space row serializes the check and mutation until commit, so two
+    different invitations cannot claim the final free slot concurrently.
     """
     space = session.execute(
         select(Space).where(Space.id == space_id).with_for_update()
@@ -121,56 +119,56 @@ def add_member(session: Session, space_id: UUID, account: Account) -> Membership
     if space is None:
         raise NotFoundError("Space not found.", SpaceErrorCode.NOT_FOUND)
 
-    vorhanden = session.execute(
+    existing = session.execute(
         select(Membership).where(
             Membership.space_id == space_id,
             Membership.account_id == account.id,
         )
     ).scalar_one_or_none()
 
-    if vorhanden is not None and vorhanden.is_active:
+    if existing is not None and existing.is_active:
         raise ConflictError("Account is already a member.", SpaceErrorCode.ALREADY_MEMBER)
 
     if len(active_memberships(session, space_id)) >= MAX_ACTIVE_PARTNERS:
         raise ConflictError("This space already has two partners.", SpaceErrorCode.FULL)
 
-    if vorhanden is not None:
-        # Eine frueher beendete Mitgliedschaft wird wiederbelebt statt
-        # doppelt angelegt - die Eindeutigkeit je Space und Account bleibt.
-        vorhanden.status = MembershipStatus.ACTIVE.value
-        vorhanden.joined_at = now()
-        vorhanden.ended_at = None
+    if existing is not None:
+        # Reactivate an earlier ended membership rather than creating a
+        # duplicate, preserving uniqueness per Space and account.
+        existing.status = MembershipStatus.ACTIVE.value
+        existing.joined_at = now()
+        existing.ended_at = None
         session.flush()
         _ensure_partner_profile(session, space_id, account.id)
-        return vorhanden
+        return existing
 
-    mitgliedschaft = Membership(
+    membership = Membership(
         space_id=space_id,
         account_id=account.id,
         role=MembershipRole.PARTNER.value,
         status=MembershipStatus.ACTIVE.value,
         joined_at=now(),
     )
-    session.add(mitgliedschaft)
+    session.add(membership)
     session.flush()
     _ensure_partner_profile(session, space_id, account.id)
-    return mitgliedschaft
+    return membership
 
 
 def end_membership(membership: Membership, *, removed: bool = False) -> None:
-    """Eine Mitgliedschaft beenden, ohne sie zu loeschen.
+    """End a membership without deleting it.
 
-    Geloescht waere spaeter nicht mehr nachvollziehbar, wer einen Inhalt
-    angelegt hat.
+    Deleting it would make it impossible to determine later who created
+    content.
     """
     membership.status = MembershipStatus.REMOVED.value if removed else MembershipStatus.LEFT.value
     membership.ended_at = now()
 
 
 def partner_of(session: Session, space_id: UUID, account: Account) -> Account | None:
-    """Der jeweils andere aktive Partner, falls es ihn gibt."""
-    mitglieder = active_memberships(session, space_id)
-    for mitgliedschaft in mitglieder:
-        if mitgliedschaft.account_id != account.id:
-            return session.get(Account, mitgliedschaft.account_id)
+    """Return the other active partner, if one exists."""
+    members = active_memberships(session, space_id)
+    for membership in members:
+        if membership.account_id != account.id:
+            return session.get(Account, membership.account_id)
     return None

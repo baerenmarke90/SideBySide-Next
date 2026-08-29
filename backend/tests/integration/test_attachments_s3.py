@@ -1,4 +1,4 @@
-"""HTTP-/Lifecycle-Abnahme des S3-Transportzweigs."""
+"""HTTP and lifecycle acceptance for the S3 transport branch."""
 
 from __future__ import annotations
 
@@ -150,7 +150,7 @@ def test_signed_upload_finalize_validation_and_read_access(
     attachment = session.execute(
         select(Attachment).where(Attachment.id == attachment_id)
     ).scalar_one()
-    # Der Providerupload allein entscheidet nichts ueber READY.
+    # The provider upload alone does not determine READY state.
     assert attachment.status == AttachmentStatus.PENDING.value
 
     finalized = client.post(
@@ -181,8 +181,8 @@ def test_signed_upload_finalize_validation_and_read_access(
     assert provider_read.status_code == 200
     assert provider_read.headers["cache-control"] == "private, no-store"
 
-    # Die urspruengliche Upload-Capability darf das inzwischen validierte,
-    # bereinigte Objekt trotz verbleibender TTL nicht ueberschreiben.
+    # The original upload capability must not overwrite the now validated and
+    # sanitized object even while the upload capability TTL remains valid.
     replay = provider_client.put(
         descriptor["uploadUrl"],
         content=b"replacement",

@@ -1,12 +1,11 @@
-"""Schnittstellen für externe Anbieter.
+"""Interfaces for external providers.
 
-Der Domain-Code kennt keinen konkreten Anbieter. Externe Daten werden vor
-dem Eintritt in die Domäne normalisiert - sonst tragen SideBySide-Objekte
-über kurz oder lang die Eigenheiten fremder APIs mit sich herum, und ein
-Anbieterwechsel wird zum Umbau.
+Domain code knows no concrete provider. External data is normalized before it
+enters the domain; otherwise SideBySide objects eventually carry the quirks of
+foreign APIs and changing providers becomes a domain rewrite.
 
-Keine dieser Schnittstellen wird in M0 implementiert. Sie stehen hier,
-damit spätere Integrationen einen vorgegebenen Platz haben.
+None of these interfaces is implemented in M0. They exist so later
+integrations have a predefined boundary.
 """
 
 from __future__ import annotations
@@ -26,7 +25,7 @@ class GeoPoint:
 
 @dataclass(frozen=True)
 class PlaceCandidate:
-    """Ein Ortsvorschlag aus einer externen Quelle."""
+    """A place candidate from an external source."""
 
     external_id: str
     name: str
@@ -37,7 +36,7 @@ class PlaceCandidate:
 
 @dataclass(frozen=True)
 class DiscoveryItem:
-    """Eine normalisierte externe Veranstaltung oder Freizeitidee."""
+    """A normalized external event or leisure suggestion."""
 
     external_id: str
     title: str
@@ -54,7 +53,7 @@ class DiscoveryItem:
 
 @dataclass(frozen=True)
 class MapRoute:
-    """Eine anbieterneutrale Route; Geometrie und Kennzahlen sind SI-Werte."""
+    """A provider-neutral route whose geometry and metrics use SI units."""
 
     geometry: tuple[GeoPoint, ...]
     distance_meters: int
@@ -70,7 +69,7 @@ class RecipeIngredient:
 
 @dataclass(frozen=True)
 class RecipeItem:
-    """Normalisierte Rezeptdaten ohne DTO eines konkreten Katalogs."""
+    """Normalized recipe data without a concrete catalog DTO."""
 
     external_id: str
     title: str
@@ -94,7 +93,7 @@ class EntertainmentKind(StrEnum):
 
 @dataclass(frozen=True)
 class EntertainmentItem:
-    """Normalisierter Medienfund, unabhängig von Shop oder Streamingdienst."""
+    """A normalized media result independent of a shop or streaming service."""
 
     external_id: str
     title: str
@@ -108,10 +107,10 @@ class EntertainmentItem:
 
 @dataclass(frozen=True)
 class ExternalMediaItem:
-    """Ein Foto oder Video in einem externen Dienst.
+    """A photo or video in an external service.
 
-    Bewusst ein Verweis und keine Kopie. Ob später referenziert oder
-    importiert wird, ist eine ausdrückliche Entscheidung.
+    Deliberately a reference rather than a copy. Whether a later integration
+    references or imports the item is an explicit decision.
     """
 
     external_id: str
@@ -122,7 +121,7 @@ class ExternalMediaItem:
 
 
 class SharingMode(StrEnum):
-    """Eine externe Verbindung ist nicht automatisch mit dem Partner geteilt."""
+    """An external connection is not shared with a partner automatically."""
 
     PRIVATE = "PRIVATE"
     SPACE_SHARED = "SPACE_SHARED"

@@ -30,7 +30,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Wie jedes gebundene Attachment, plus seinen Platz in der Galerie.
+ * A bound attachment plus its position in the memory gallery.
  *
  * @param hasThumbnail 
  * @param height 

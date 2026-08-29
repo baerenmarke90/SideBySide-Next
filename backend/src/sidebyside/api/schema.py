@@ -1,8 +1,8 @@
-"""Serialisierungsgrenze.
+"""API serialization boundary.
 
-Nach außen camelCase, intern snake_case. Die Umsetzung geschieht hier und
-nicht durch Umbenennen im Domain-Code - sonst trägt die Fachlogik eine
-Darstellungsentscheidung mit sich herum.
+Externally the API uses camelCase; internally Python uses snake_case. The
+conversion is centralized here instead of renaming domain identifiers, so the
+domain model does not carry a presentation decision.
 """
 
 from __future__ import annotations
@@ -14,12 +14,12 @@ from pydantic.json_schema import SkipJsonSchema
 
 
 def to_camel(value: str) -> str:
-    kopf, *rest = value.split("_")
-    return kopf + "".join(teil.capitalize() for teil in rest)
+    head, *rest = value.split("_")
+    return head + "".join(part.capitalize() for part in rest)
 
 
 class ApiModel(BaseModel):
-    """Basis aller Modelle, die die API verlassen oder betreten."""
+    """Base model for values entering or leaving the API boundary."""
 
     model_config = ConfigDict(
         alias_generator=to_camel,

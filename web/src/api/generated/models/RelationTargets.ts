@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -14,12 +14,11 @@
 
 import { mapValues } from '../runtime';
 /**
- * Die verknuepften Ziele eines Ortes.
+ * Targets linked to a place.
  * 
- * Ausschliesslich IDs. Inhalte kommen ueber die Route der jeweiligen
- * Domaene und damit durch deren eigenen Guard; eine Relationsliste, die
- * Inhalte mitliefert, waere ein zweiter Leseweg mit eigener
- * Autorisierung.
+ * Only IDs are returned. Content is fetched through each target domain's own
+ * route and authorization guard; returning content here would create a
+ * second read path with separate authorization logic.
  * @export
  * @interface RelationTargets
  */

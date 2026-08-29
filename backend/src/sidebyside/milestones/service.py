@@ -1,10 +1,9 @@
-"""Fachlogik fuer M2-Milestones.
+"""Domain logic for M2 milestones.
 
-Bewusst nah an `memories.service`: dieselbe Autorregel (M2-D25 bestaetigt
-sie fuer Milestone), dieselbe Concurrency, derselbe signierte Cursor. Wo
-sich beide unterscheiden, ist es fachlich gewollt - `happenedOn` ist hier
-Pflicht, und der Jahresfilter braucht deshalb keinen Fallback auf
-`createdAt`.
+Deliberately close to ``memories.service``: the same author-only write rule
+(M2-D25 confirms it for milestones), the same concurrency, and the same signed
+cursor. Differences are intentional domain semantics: ``happenedOn`` is
+required here, so the year filter needs no fallback to ``createdAt``.
 """
 
 from __future__ import annotations
@@ -130,7 +129,7 @@ def update_milestone(
         assert title is not None
         next_title = _normalize_title(title)
     if "body" in changed_fields:
-        # Anders als der Titel darf der Body ausdruecklich geleert werden.
+        # Unlike title, body may explicitly be cleared.
         next_body = body
     if "happened_on" in changed_fields:
         assert happened_on is not None
@@ -212,8 +211,8 @@ def list_milestones(
 ) -> MilestonePageResult:
     statement = readable(Milestone, context)
     if year is not None:
-        # Kein createdAt-Fallback wie bei Memory: `happenedOn` ist Pflicht,
-        # also gibt es keinen Milestone ohne fachliches Datum.
+        # No createdAt fallback as for Memory: ``happenedOn`` is required, so
+        # every milestone has a domain date.
         statement = statement.where(
             and_(
                 Milestone.happened_on >= date(year, 1, 1),

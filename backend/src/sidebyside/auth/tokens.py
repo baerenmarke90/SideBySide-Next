@@ -1,24 +1,21 @@
-"""Token-Erzeugung und -Pruefung.
+"""Token generation and verification.
 
-Bewusst undurchsichtige Zufallstoken statt JWT.
+Deliberately opaque random tokens rather than JWTs.
 
-Der ueblliche Vorteil eines JWT ist, dass der Server ihn ohne
-Datenbankzugriff pruefen kann. Dieser Vorteil greift hier nicht: jede
-Anfrage auf Space-Daten muss ohnehin die Mitgliedschaft nachschlagen. Ein
-zusaetzlicher indizierter Zugriff kostet also praktisch nichts.
+A common JWT advantage is that the server can validate one without a database
+lookup. That advantage does not apply here: every request for space data must
+look up membership anyway, so one additional indexed lookup is negligible.
 
-Dafuer bringt der undurchsichtige Token zwei Eigenschaften mit, die bei
-einem privaten Paar-Dienst schwerer wiegen als die eingesparte Abfrage:
+Opaque tokens provide two properties that matter more for a private couple
+service than saving that lookup:
 
-- Widerruf wirkt sofort. Ein JWT bleibt bis zum Ablauf gueltig, auch wenn
-  das Geraet als gestohlen gemeldet wurde.
-- Es gibt keinen Signaturschluessel, der rotiert, verteilt und geschuetzt
-  werden muss.
+- revocation takes effect immediately. A JWT remains valid until expiry even
+  after a device has been reported stolen;
+- there is no signing key that must be rotated, distributed, and protected.
 
-Gespeichert wird nur der Hash. Ein Token hat volle Entropie aus
-`secrets.token_urlsafe`, deshalb genuegt SHA-256 - es gibt kein Woerterbuch,
-gegen das sich das angreifen liesse, und ein langsames Verfahren wie bcrypt
-waere hier nur eine Bremse bei jeder Anfrage.
+Only the hash is stored. A token has full entropy from ``secrets.token_urlsafe``,
+so SHA-256 is sufficient: there is no dictionary to attack, and a slow scheme
+such as bcrypt would only add latency to every request.
 """
 
 from __future__ import annotations
@@ -32,38 +29,36 @@ REFRESH_TOKEN_BYTES = 32
 
 ACCESS_TOKEN_LIFETIME = timedelta(minutes=15)
 
-# Gleitendes Fenster: jede Rotation setzt es neu. Es begrenzt, wie lange ein
-# Geraet unbenutzt liegen darf, bevor es sich neu anmelden muss.
+# Sliding window: every rotation resets it. It limits how long an unused device
+# may remain idle before requiring a new sign-in.
 REFRESH_TOKEN_LIFETIME = timedelta(days=60)
 
-# Harte Obergrenze der Sitzung, gerechnet ab der Anmeldung und bei keiner
-# Rotation verlaengert.
+# Hard session lifetime calculated from sign-in and never extended by rotation.
 #
-# Ohne sie ist die Sitzungsdauer unbegrenzt: wer regelmaessig erneuert,
-# schiebt das gleitende Fenster beliebig weit vor sich her. Damit waere
-# weder die Familie noch ihre Replay-Historie nach oben beschraenkt, und
-# ein einmal gestohlenes Geraet bliebe dauerhaft angemeldet.
+# Without it the session lifetime is unbounded: a regularly refreshed session
+# can keep moving the sliding window forever. That would also leave the family
+# and its replay history unbounded, and a stolen device could remain signed in
+# indefinitely.
 #
-# Nach Ablauf hilft keine Rotation mehr; es braucht eine neue Anmeldung und
-# damit eine neue Token-Familie.
+# Once this lifetime expires no rotation helps; a new sign-in and therefore a
+# new token family is required.
 SESSION_ABSOLUTE_LIFETIME = timedelta(days=180)
 
 
 def generate_token(size: int = ACCESS_TOKEN_BYTES) -> str:
-    """Ein neues Geheimnis. Nur der Aufrufer bekommt es je zu sehen."""
+    """Generate a new secret. Only the caller receives its plaintext value."""
     return secrets.token_urlsafe(size)
 
 
 def hash_token(token: str) -> str:
-    """Der Hash, wie er persistiert wird."""
+    """Return the hash representation used for persistence."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def tokens_equal(left: str, right: str) -> bool:
-    """Zeitkonstanter Vergleich zweier Hashes.
+    """Compare two hashes in constant time.
 
-    Ein Vergleich mit `==` bricht beim ersten abweichenden Zeichen ab. Aus
-    der Laufzeit laesst sich dann Zeichen fuer Zeichen ein gueltiger Wert
-    erraten.
+    ``==`` can stop at the first differing character, allowing timing to leak a
+    valid value one character at a time.
     """
     return secrets.compare_digest(left, right)

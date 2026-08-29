@@ -1,4 +1,4 @@
-"""HTTP-Vertrag fuer M2-Kommentare."""
+"""HTTP contract for M2 comments."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ router = APIRouter(tags=["comments"])
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "Version der Ressource fuer den naechsten If-Match-Schreibzugriff.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }

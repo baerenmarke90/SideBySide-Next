@@ -182,7 +182,7 @@ export async function signIn(
       signInRequest: {
         email,
         password,
-        deviceName: 'SideBySide Web M2 Referenzflow',
+        deviceName: 'SideBySide Web M2 reference flow',
         platform: 'web',
       },
     });

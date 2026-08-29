@@ -1,8 +1,8 @@
-"""Anmeldung.
+"""Authentication API.
 
-Alle Antworten sind bewusst wortkarg. Ein Anmelde-Endpunkt, der freundlich
-erklaert, welcher Teil nicht gestimmt hat, erklaert das auch dem, der
-Konten aufzaehlen will.
+Responses are intentionally terse. An authentication endpoint that helpfully
+explains which part was wrong provides the same information to an attacker
+trying to enumerate accounts.
 """
 
 from __future__ import annotations
@@ -26,16 +26,16 @@ router = APIRouter(tags=["auth"])
 MAX_DEVICE_NAME = 120
 
 Mail = Annotated[MailSender, Depends(sender)]
-"""Der Mailversand als Abhaengigkeit.
+"""Mail delivery dependency.
 
-Damit ist er an der Grenze austauschbar - im Test durch einen Sammler, im
-Betrieb durch den konfigurierten Adapter.
+The boundary is replaceable: tests use a collector, while production uses the
+configured adapter.
 
-Auf einer Instanz ohne Mailweg (`SBS_MAIL_TRANSPORT=none`) wirft schon das
-Aufloesen dieser Abhaengigkeit `MailUnavailableError`. Der Endpunkt laeuft
-dann gar nicht erst an: er wuerde sonst einen Token erzeugen, eine
-Rate-Limit-Zaehlung verbrauchen und `202 Accepted` antworten, obwohl
-niemals eine Nachricht entsteht.
+On an instance without a mail path (``SBS_MAIL_TRANSPORT=none``), resolving
+this dependency already raises ``MailUnavailableError``. The endpoint then
+does not begin work at all; otherwise it could create a token, consume a
+rate-limit reservation, and return ``202 Accepted`` even though no message can
+be delivered.
 """
 
 
@@ -110,7 +110,7 @@ class OidcCallbackRequest(ApiModel):
 class OidcStartView(ApiModel):
     authorization_url: str
     state: str
-    """Der Client haelt ihn und schickt ihn beim Rueckweg wieder mit."""
+    """The client retains state and sends it back on the callback."""
 
 
 class RecoveryConsumeRequest(ApiModel):
@@ -156,10 +156,10 @@ def _view(result: SignedIn | cloud.SignedIn | oidc.SignedIn | passkeys.SignedIn)
     responses=problem_responses(403, 409, 422, 429),
 )
 def register(body: RegisterRequest, session: DbSession) -> SessionView:
-    """Einen Account anlegen.
+    """Create an account.
 
-    Der erste Account braucht den einmaligen Bootstrap-Nachweis. Danach
-    braucht jede Registrierung eine gueltige Einladung.
+    The first account requires the one-time bootstrap proof. Every later
+    registration requires a valid invitation.
     """
     configured = get_settings().bootstrap_token
     return _view(
@@ -217,7 +217,7 @@ def refresh(body: RefreshRequest, session: DbSession) -> TokenView:
     responses=problem_responses(401),
 )
 def sign_out(device_session: CurrentSession) -> None:
-    """Diese Sitzung beenden. Andere Geraete bleiben angemeldet."""
+    """End this session while leaving other devices signed in."""
     sessions.revoke(device_session)
 
 
@@ -229,10 +229,10 @@ def sign_out(device_session: CurrentSession) -> None:
 def change_password(
     body: ChangePasswordRequest, account: CurrentAccount, session: DbSession
 ) -> None:
-    """Passwort aendern und alle Sitzungen beenden.
+    """Change the password and revoke every session.
 
-    Auch die eigene: wer sein Passwort aendert, vermutet oft einen fremden
-    Zugriff - dann darf kein Geraet angemeldet bleiben.
+    This includes the current session. A password change often follows a
+    suspected compromise, in which case no device should remain authenticated.
     """
     local.change_password(session, account, current=body.current_password, new=body.new_password)
 
@@ -253,10 +253,10 @@ def me(account: CurrentAccount) -> AccountView:
     responses=problem_responses(422, 429, 503),
 )
 def request_magic_link(body: EmailRequest, session: DbSession, mail: Mail) -> Response:
-    """Einen passwortlosen Anmeldelink anfordern.
+    """Request a passwordless sign-in link.
 
-    Antwortet immer gleich - ob es die Adresse gibt, steht nicht in der
-    Antwort. Sonst waere dieser Endpunkt ein Verzeichnis aller Konten.
+    The response is identical whether or not the address exists. Otherwise
+    this endpoint would become an account directory.
     """
     cloud.request_magic_link(session, email=body.email, mail=mail)
     return Response(status_code=status.HTTP_202_ACCEPTED)
@@ -286,7 +286,7 @@ def consume_magic_link(body: MagicLinkConsumeRequest, session: DbSession) -> Ses
     responses=problem_responses(401, 429, 503),
 )
 def request_email_verification(account: CurrentAccount, session: DbSession, mail: Mail) -> Response:
-    """Die Bestaetigung der eigenen Adresse anfordern."""
+    """Request verification of the authenticated account's own email address."""
     cloud.request_email_verification(session, account, mail=mail)
     return Response(status_code=status.HTTP_202_ACCEPTED)
 
@@ -298,10 +298,10 @@ def request_email_verification(account: CurrentAccount, session: DbSession, mail
     responses=problem_responses(422),
 )
 def confirm_email(body: TokenOnlyRequest, session: DbSession) -> Response:
-    """Die Adresse bestaetigen.
+    """Confirm the email address without requiring authentication.
 
-    Ohne Anmeldung: der Link wird oft in einem anderen Programm geoeffnet
-    als dem, in dem die Sitzung liegt.
+    Verification links are frequently opened in a different application from
+    the one that holds the current session.
     """
     cloud.confirm_email(session, token=body.token)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -314,7 +314,7 @@ def confirm_email(body: TokenOnlyRequest, session: DbSession) -> Response:
     responses=problem_responses(422, 429, 503),
 )
 def request_recovery(body: EmailRequest, session: DbSession, mail: Mail) -> Response:
-    """Das Zuruecksetzen des Passworts anfordern. Antwortet immer gleich."""
+    """Request a password reset while always returning the same response."""
     cloud.request_recovery(session, email=body.email, mail=mail)
     return Response(status_code=status.HTTP_202_ACCEPTED)
 
@@ -326,7 +326,7 @@ def request_recovery(body: EmailRequest, session: DbSession, mail: Mail) -> Resp
     responses=problem_responses(422),
 )
 def consume_recovery(body: RecoveryConsumeRequest, session: DbSession) -> SessionView:
-    """Ein neues Passwort setzen; alle bisherigen Sitzungen enden."""
+    """Set a new password and terminate all previous sessions."""
     return _view(
         cloud.consume_recovery(
             session,
@@ -349,18 +349,18 @@ def start_oidc(
     connection_id: Annotated[str, Path(alias="connectionId")],
     body: OidcStartRequest | None = None,
 ) -> OidcStartView:
-    """Eine Anmeldung ueber einen externen Anbieter beginnen.
+    """Begin authentication through an external identity provider.
 
-    State, Nonce und PKCE-Verifier entstehen serverseitig. Der Client
-    bekommt nur die Adresse und den State. Eine Einladung bleibt dabei
-    serverseitig gebunden und wird nie an den Anbieter weitergegeben.
+    State, nonce, and PKCE verifier are created server-side. The client
+    receives only the authorization URL and state. Any invitation remains
+    bound server-side and is never forwarded to the provider.
     """
-    begonnen = oidc.start(
+    started = oidc.start(
         session,
         connection_id,
         invitation_token=body.invitation_token if body is not None else None,
     )
-    return OidcStartView(authorization_url=begonnen.authorization_url, state=begonnen.state)
+    return OidcStartView(authorization_url=started.authorization_url, state=started.state)
 
 
 @router.post(
@@ -374,9 +374,9 @@ def link_oidc(
     session: DbSession,
     connection_id: Annotated[str, Path(alias="connectionId")],
 ) -> OidcStartView:
-    """Eine externe Identitaet mit dem angemeldeten Konto verknuepfen."""
-    begonnen = oidc.start(session, connection_id, account_id=account.id)
-    return OidcStartView(authorization_url=begonnen.authorization_url, state=begonnen.state)
+    """Link an external identity to the authenticated account."""
+    started = oidc.start(session, connection_id, account_id=account.id)
+    return OidcStartView(authorization_url=started.authorization_url, state=started.state)
 
 
 @router.post(
@@ -390,7 +390,7 @@ def complete_oidc(
     session: DbSession,
     connection_id: Annotated[str, Path(alias="connectionId")],
 ) -> SessionView:
-    """Den Rueckweg vom Anbieter abschliessen."""
+    """Complete the callback from the external identity provider."""
     return _view(
         oidc.complete(
             session,
@@ -409,10 +409,10 @@ def complete_oidc(
     responses=problem_responses(401),
 )
 def start_passkey_registration(account: CurrentAccount, session: DbSession) -> dict[str, Any]:
-    """Die Registrierung eines Passkeys beginnen.
+    """Begin passkey registration for an existing authenticated account.
 
-    Nur aus einer bestehenden Anmeldung heraus: ein Passkey ist ein
-    zusaetzlicher Zugang zu einem Konto, das es schon gibt.
+    A passkey is an additional access method for an account that already
+    exists, so registration starts only from an authenticated session.
     """
     return passkeys.start_registration(session, account)
 
@@ -438,11 +438,11 @@ def finish_passkey_registration(
     responses=problem_responses(422, 429),
 )
 def start_passkey_authentication(request: Request, session: DbSession) -> dict[str, Any]:
-    """Eine Anmeldung mit Passkey beginnen.
+    """Begin passkey authentication without binding it to an account.
 
-    Ohne Kontobezug: der Authenticator waehlt selbst, welches auffindbare
-    Credential er anbietet. Ein Endpunkt, der zu einer Adresse die
-    passenden Credentials nennt, waere ein Verzeichnis der Konten.
+    The authenticator selects which discoverable credential to offer. An
+    endpoint that returned credentials for a given address would be an account
+    directory.
     """
     client_host = request.client.host if request.client is not None else None
     passkey_abuse.reserve_authentication_start(session, client_host)

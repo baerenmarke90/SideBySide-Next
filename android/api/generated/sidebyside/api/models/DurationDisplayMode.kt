@@ -29,7 +29,7 @@ import kotlinx.serialization.Serializable
 
 
 /**
- * Wie die gemeinsame Zeit dargestellt wird.
+ * How shared relationship time is displayed.
  *
  * Values: YEARS_MONTHS,DAYS
  */

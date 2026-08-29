@@ -1,8 +1,8 @@
-"""Identitaet.
+"""Identity persistence.
 
-Der Account traegt Profilidentitaet. Anmeldegeheimnisse liegen getrennt in
-AuthIdentity - ein Account kann mehrere Wege haben, sich auszuweisen, und
-keiner davon gehoert in die Tabelle, die eine Oberflaeche anzeigt.
+An Account carries profile identity. Authentication secrets live separately
+in AuthIdentity: an account may have multiple ways to authenticate, and none
+belongs in the table exposed to a user-facing profile.
 """
 
 from __future__ import annotations
@@ -34,11 +34,11 @@ from sidebyside.db.mixins import IdMixin, TimestampMixin
 
 
 class AuthProvider(StrEnum):
-    """Wie sich ein Account ausweist.
+    """How an account authenticates.
 
-    Cloud setzt auf Magic Link und Passkey ohne Passwortpflicht.
-    Self-Hosted erlaubt zusaetzlich lokales Passwort und OIDC - damit ist
-    ein externer Provider spaeter kein Sonderweg.
+    Cloud uses magic link and passkey without requiring a password.
+    Self-hosted additionally permits local password and OIDC so an external
+    provider is not a special path later.
     """
 
     MAGIC_LINK = "MAGIC_LINK"
@@ -48,11 +48,10 @@ class AuthProvider(StrEnum):
 
 
 class InstanceBootstrapState(Base):
-    """Dauerhafter Einmaligkeitsnachweis fuer die Erstregistrierung.
+    """Durable one-time proof for initial registration.
 
-    Der geheime Bootstrap-Wert steht ausschliesslich in der Laufzeit-
-    Konfiguration. Die Datenbank merkt nur, ob die Inbetriebnahme bereits
-    abgeschlossen ist.
+    The secret bootstrap value exists only in runtime configuration. The
+    database records only whether initial setup has already completed.
     """
 
     __tablename__ = "instance_bootstrap_state"
@@ -89,10 +88,10 @@ class Account(IdMixin, TimestampMixin, Base):
 
 
 class AccountEmail(IdMixin, TimestampMixin, Base):
-    """Eine E-Mail-Adresse eines Accounts.
+    """An email address belonging to an account.
 
-    Getrennt vom Account, weil eine Adresse wechseln kann und weil
-    Verifikation ein Zustand der Adresse ist, nicht der Person.
+    Stored separately from Account because an address can change and because
+    verification is state of the address, not of the person.
     """
 
     __tablename__ = "account_emails"
@@ -102,8 +101,8 @@ class AccountEmail(IdMixin, TimestampMixin, Base):
         ForeignKey("accounts.id", ondelete="CASCADE"),
         nullable=False,
     )
-    # Klein geschrieben abgelegt. Sonst waeren "A@b.de" und "a@b.de" zwei
-    # Adressen, und die Eindeutigkeit haette ein Loch.
+    # Persist lowercase. Otherwise "A@b.de" and "a@b.de" would be two
+    # addresses and uniqueness would have a gap.
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_primary: Mapped[bool] = mapped_column(nullable=False, default=False)
@@ -117,18 +116,17 @@ class AccountEmail(IdMixin, TimestampMixin, Base):
 
 
 class AuthIdentity(IdMixin, TimestampMixin, Base):
-    """Ein Anmeldeweg.
+    """An authentication method.
 
-    `subject` ist der Bezeichner beim jeweiligen Verfahren. Fuer OIDC ist
-    ein Subject erst zusammen mit dem Issuer eindeutig; `connection_id`
-    bezeichnet die konfigurierte Verbindung (zum Beispiel ``pocket-id``).
-    `secret_hash` traegt ausschliesslich Abgeleitetes - nie ein Geheimnis im
-    Klartext.
+    `subject` is the identifier used by the corresponding method. For OIDC a
+    subject is unique only together with the issuer; `connection_id` names the
+    configured connection, for example ``pocket-id``. `secret_hash` contains
+    derived values only, never plaintext secrets.
 
-    Passkeys liegen in einem eigenen Modell, weil Credential-ID, Public Key
-    und Signaturzaehler keine Eigenschaften einer generischen Identitaet
-    sind. MAGIC_LINK und PASSKEY bleiben hier als Legacy-Werte zulaessig,
-    damit bestehende Installationen ohne Datenverlust migrieren koennen.
+    Passkeys use a dedicated model because credential ID, public key, and
+    signature counter are not properties of a generic identity. MAGIC_LINK
+    and PASSKEY remain permitted legacy values so existing installations can
+    migrate without data loss.
     """
 
     __tablename__ = "auth_identities"
@@ -146,9 +144,8 @@ class AuthIdentity(IdMixin, TimestampMixin, Base):
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
-        # OIDC definiert die externe Identitaet als (issuer, subject), nicht
-        # als Subject allein. Zwei verschiedene Issuer duerfen dasselbe
-        # Subject verwenden.
+        # OIDC defines an external identity as (issuer, subject), not subject
+        # alone. Different issuers may use the same subject.
         UniqueConstraint("issuer", "subject", name="uq_auth_identities_issuer_subject"),
         CheckConstraint(
             "provider IN ('MAGIC_LINK', 'PASSKEY', 'LOCAL_PASSWORD', 'OIDC')",
@@ -159,9 +156,9 @@ class AuthIdentity(IdMixin, TimestampMixin, Base):
             "OR (provider <> 'OIDC' AND issuer IS NULL AND connection_id IS NULL)",
             name="oidc_metadata_matches_provider",
         ),
-        # Fuer alle anderen Verfahren bleibt die bisherige Eindeutigkeit
-        # erhalten. PostgreSQL behandelt NULL in einem normalen Unique-
-        # Constraint sonst als mehrfach zulaessig.
+        # Preserve the existing uniqueness rule for every other method.
+        # PostgreSQL otherwise permits multiple NULL values in a normal
+        # unique constraint.
         Index(
             "uq_auth_identities_non_oidc_provider_subject",
             "provider",
@@ -174,12 +171,11 @@ class AuthIdentity(IdMixin, TimestampMixin, Base):
 
 
 class WebAuthnCredential(IdMixin, TimestampMixin, Base):
-    """Ein Passkey in der Form, die eine WebAuthn-Pruefung benoetigt.
+    """A passkey in the representation required for WebAuthn verification.
 
-    Credential-ID und Public Key sind keine Geheimnisse. Private Schluessel
-    verlassen den Authenticator nie. Der Zaehler und die Backup-Metadaten
-    werden nach jeder erfolgreichen Assertion aktualisiert und helfen,
-    geklonte oder zurueckgesetzte Credentials zu erkennen.
+    Credential ID and public key are not secrets. Private keys never leave
+    the authenticator. The counter and backup metadata are updated after each
+    successful assertion and help detect cloned or reset credentials.
     """
 
     __tablename__ = "webauthn_credentials"
@@ -213,16 +209,15 @@ class WebAuthnCredential(IdMixin, TimestampMixin, Base):
 
 
 class WebAuthnChallenge(IdMixin, Base):
-    """Die Herausforderung einer laufenden WebAuthn-Ceremony.
+    """The challenge for an active WebAuthn ceremony.
 
-    Sie steht im Klartext, und das ist richtig: der Server muss sie mit
-    der im `clientDataJSON` vergleichen. Ein Geheimnis ist sie nicht - ihr
-    Zweck ist Einmaligkeit, und die kommt daher, dass sie hier verbraucht
-    wird.
+    It is stored in plaintext deliberately because the server must compare it
+    with the value in `clientDataJSON`. It is not a secret; its purpose is
+    one-time use, enforced by consuming it here.
 
-    `account_id` ist bei der Registrierung gesetzt (sie geschieht aus einer
-    bestehenden Anmeldung heraus) und bei einer Anmeldung mit auffindbarem
-    Passkey leer - dort sagt erst die Antwort, wer sich anmeldet.
+    `account_id` is set during registration, which starts from an existing
+    authenticated session, and is empty for authentication with a
+    discoverable passkey where only the response identifies the account.
     """
 
     __tablename__ = "webauthn_challenges"
@@ -246,7 +241,7 @@ class WebAuthnChallenge(IdMixin, Base):
 
 
 class OneTimeTokenMixin:
-    """Gemeinsame Sicherheitsinvarianten, keine gemeinsame Token-Tabelle."""
+    """Shared security invariants without creating a shared token table."""
 
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -261,7 +256,7 @@ class OneTimeTokenMixin:
 
 
 class EmailVerificationToken(IdMixin, OneTimeTokenMixin, Base):
-    """Einmaliger Nachweis fuer genau eine E-Mail-Adresse."""
+    """One-time proof for exactly one email address."""
 
     __tablename__ = "email_verification_tokens"
 
@@ -279,7 +274,7 @@ class EmailVerificationToken(IdMixin, OneTimeTokenMixin, Base):
 
 
 class MagicLinkToken(IdMixin, OneTimeTokenMixin, Base):
-    """Einmaliger passwortloser Anmeldenachweis fuer eine E-Mail-Adresse."""
+    """One-time passwordless authentication proof for an email address."""
 
     __tablename__ = "magic_link_tokens"
 
@@ -297,7 +292,7 @@ class MagicLinkToken(IdMixin, OneTimeTokenMixin, Base):
 
 
 class AccountRecoveryToken(IdMixin, OneTimeTokenMixin, Base):
-    """Einmaliger Recovery-Nachweis fuer einen Account."""
+    """One-time recovery proof for an account."""
 
     __tablename__ = "account_recovery_tokens"
 
@@ -315,16 +310,16 @@ class AccountRecoveryToken(IdMixin, OneTimeTokenMixin, Base):
 
 
 class OidcAuthRequest(IdMixin, Base):
-    """Eine begonnene OIDC-Anmeldung.
+    """An initiated OIDC authentication request.
 
-    Sie haelt die drei Werte, die den Rueckweg an genau diese Anfrage
-    binden: den State (nur als Hash - er kommt mit dem Browser zurueck),
-    die Nonce und den PKCE-Verifier.
+    It holds the three values binding the callback to exactly this request:
+    state, stored only as a hash because it returns via the browser; nonce;
+    and PKCE verifier.
 
-    Nonce und Verifier stehen im Klartext, und das ist hier richtig: der
-    Server muss beide selbst vorzeigen beziehungsweise vergleichen. Sie
-    sind kein Anmeldenachweis, sondern eine Bindung, und sie leben
-    Minuten. Der Wartungsjob raeumt sie danach weg.
+    Nonce and verifier are plaintext deliberately because the server must
+    present or compare them itself. They are not authentication proofs but
+    bindings, and they live for minutes before the maintenance job removes
+    them.
     """
 
     __tablename__ = "oidc_auth_requests"
@@ -335,15 +330,15 @@ class OidcAuthRequest(IdMixin, Base):
     code_verifier: Mapped[str] = mapped_column(String(128), nullable=False)
     redirect_uri: Mapped[str] = mapped_column(String(512), nullable=False)
 
-    # Gesetzt, wenn ein bereits angemeldeter Account eine externe
-    # Identitaet mit sich verknuepfen will.
+    # Set when an already authenticated account wants to link an external
+    # identity to itself.
     account_id: Mapped[UUID | None] = mapped_column(
         postgresql.UUID(as_uuid=True),
         ForeignKey("accounts.id", ondelete="CASCADE"),
     )
 
-    # Gesetzt, wenn ein noch nicht angelegter Account per Einladung ueber
-    # OIDC onboardet werden soll. Wie alle Bearer-Nachweise nur gehasht.
+    # Set when an account that does not yet exist is to be onboarded through
+    # OIDC via an invitation. Like all bearer proofs, stored only as a hash.
     invitation_token_hash: Mapped[str | None] = mapped_column(String(64))
 
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -359,22 +354,21 @@ class OidcAuthRequest(IdMixin, Base):
 
 
 class DeviceSession(IdMixin, Base):
-    """Eine angemeldete Geraetesitzung.
+    """An authenticated device session.
 
-    Tokens werden ausschliesslich gehasht abgelegt. Wer die Datenbank liest,
-    kann sich damit nicht anmelden - ein gestohlener Datenbestand ist
-    schlimm genug, ohne dass er auch noch Zugang verschafft.
+    Tokens are stored only as hashes. Reading the database therefore does not
+    grant authentication; a stolen database is harmful enough without also
+    becoming direct account access.
 
-    Die Sitzung ist zugleich die Refresh-Token-Familie: jeder Token, der
-    aus ihr hervorgeht, gehoert zu genau dieser Zeile. Verbrauchte
-    Generationen stehen in `ConsumedRefreshToken` und bleiben der Familie
-    zuordenbar, damit ein spaeter auftauchender alter Token nicht nur
-    abgewiesen, sondern als Kompromittierung erkannt wird.
+    The session is also the refresh-token family: every token derived from it
+    belongs to exactly this row. Consumed generations remain associated in
+    `ConsumedRefreshToken`, so an old token appearing later is not merely
+    rejected but recognized as compromise.
 
-    Zwei Ablaufzeitpunkte, die Verschiedenes bedeuten: `expires_at` ist das
-    gleitende Fenster gegen Untaetigkeit, `absolute_expires_at` die harte
-    Obergrenze der Familie ab Anmeldung. Ohne die zweite waere die erste
-    beliebig weit vorschiebbar und die Familie unendlich.
+    Two expiry points have different meanings: `expires_at` is the sliding
+    inactivity window, while `absolute_expires_at` is the hard family limit
+    from initial authentication. Without the latter, the former could be
+    extended indefinitely.
     """
 
     __tablename__ = "device_sessions"
@@ -398,13 +392,13 @@ class DeviceSession(IdMixin, Base):
     )
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    # Gleitend: jede Rotation setzt diesen Zeitpunkt neu. Er begrenzt die
-    # Untaetigkeit, nicht die Sitzung.
+    # Sliding: every rotation resets this point. It bounds inactivity, not the
+    # total session lifetime.
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    # Fest ab Anmeldung und von keiner Rotation verschoben. Erst diese
-    # Grenze macht Sitzung und Token-Familie endlich - und damit auch ihre
-    # Replay-Historie. `expires_at` wird nie darueber hinaus gesetzt.
+    # Fixed from authentication and never moved by rotation. This boundary
+    # makes the session and token family finite, including replay history.
+    # `expires_at` is never extended beyond it.
     absolute_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -417,21 +411,19 @@ class DeviceSession(IdMixin, Base):
 
 
 class ConsumedRefreshToken(IdMixin, Base):
-    """Eine bereits verbrauchte Refresh-Token-Generation.
+    """An already consumed refresh-token generation.
 
-    Die Rotation allein macht einen alten Token nur ungueltig. Damit ein
-    spaeter auftauchender alter Token auch nach mehreren Rotationen noch
-    seiner Familie zugeordnet werden kann - und damit als gestohlen erkannt
-    statt bloss abgewiesen wird -, bleibt jede verbrauchte Generation hier
-    stehen, solange die Sitzung lebt.
+    Rotation alone only invalidates an old token. To associate an old token
+    that appears after several rotations with its family, and therefore
+    recognize theft rather than merely reject it, every consumed generation
+    remains here for the session lifetime.
 
-    Gespeichert wird ausschliesslich der Hash. Diese Tabelle ist damit
-    keine zweite Kopie der Anmeldenachweise: wer sie liest, kann sich
-    weder anmelden noch einen Token rekonstruieren.
+    Only the hash is stored. This table is therefore not a second copy of
+    authentication proofs: reading it cannot authenticate or reconstruct a
+    token.
 
-    Der Hash ist global eindeutig. Ein Refresh Token gehoert deshalb zu
-    genau einer Familie, und ein Replay laesst sich nicht durch
-    Untergeschieben einer zweiten Zeile mehrdeutig machen.
+    The hash is globally unique. A refresh token therefore belongs to exactly
+    one family and replay cannot be made ambiguous by inserting a second row.
     """
 
     __tablename__ = "consumed_refresh_tokens"
@@ -454,11 +446,11 @@ class ConsumedRefreshToken(IdMixin, Base):
 
 
 class RateLimitEvent(IdMixin, Base):
-    """Ein gezaehlter Versuch.
+    """A counted rate-limit attempt.
 
-    Der Schluessel steht nur gehasht hier - er ist oft eine E-Mail-Adresse,
-    und wer wann einen Anmeldeversuch hatte, ist mehr Wissen, als die
-    Begrenzung braucht.
+    The key is stored only as a hash. It is often an email address, and who
+    attempted authentication when is more information than rate limiting
+    needs.
     """
 
     __tablename__ = "rate_limit_events"

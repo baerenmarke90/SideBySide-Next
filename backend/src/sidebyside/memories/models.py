@@ -1,4 +1,4 @@
-"""Persistenz fuer gemeinsame M2-Memories."""
+"""Persistence for shared M2 memories."""
 
 from __future__ import annotations
 
@@ -16,11 +16,11 @@ from sidebyside.domain.payload import CRYPTO_VERSION_PLAINTEXT, ProtectedPayload
 
 
 class MemoryPayload(ProtectedPayload):
-    """Schuetzenswerter Inhalt einer Erinnerung.
+    """Protected content of a memory.
 
-    Titel und Text bleiben bewusst in derselben ProtectedPayload-Grenze.
-    Sortierung, Tenant-Isolation und Autorisierung duerfen von ihrem Klartext
-    nicht abhaengen.
+    Title and body deliberately share the same ``ProtectedPayload`` boundary.
+    Sorting, tenant isolation, and authorization must not depend on their
+    plaintext.
     """
 
     title: str
@@ -34,7 +34,7 @@ class Memory(
     PrivateResourceMixin,
     Base,
 ):
-    """Eine fuer beide aktiven Partner lesbare, author-only editierbare Memory."""
+    """A memory readable by both active partners and editable by its author."""
 
     __tablename__ = "memories"
 
@@ -57,10 +57,9 @@ class Memory(
     __table_args__ = (
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
-        # Traegt den zusammengesetzten Fremdschluessel der
-        # place_memories-Relationen. Ohne dieses Paar koennte eine Join-Zeile
-        # nicht gleichzeitig auf Zeile und Space zeigen - und Same-Space
-        # waere wieder eine Dienstregel statt einer Schemaeigenschaft.
+        # Supports the composite foreign key used by place-memory relations.
+        # Without this pair, a relation row could not constrain both resource
+        # ID and space, leaving same-space enforcement only to service code.
         UniqueConstraint("id", "space_id", name="uq_memories_id_space_id"),
         Index("ix_memories_owner_id", "owner_id"),
         Index("ix_memories_space_id_created_at_id", "space_id", "created_at", "id"),
@@ -69,5 +68,5 @@ class Memory(
 
 
 def shared_privacy() -> PrivacyClass:
-    """Memories sind in M2 immer gemeinsamer Space-Inhalt."""
+    """Memories are always shared space content in M2."""
     return PrivacyClass.SPACE_SHARED

@@ -1,11 +1,10 @@
-"""Die gemeinsame Zeitleiste.
+"""The shared timeline.
 
-Story ist ein abgeleitetes Read Model ueber Memory, Milestone und
-ausschliesslich gemeinsame HeartMoments. Es gibt keine Story-Tabelle: nach
-M2-D11 waere sie eine zweite fachliche Wahrheitsquelle, die bei jedem
-Delete, jedem Privacy-Wechsel und jeder Retention-Regel nachgezogen werden
-muesste - und genau dort entstuende die Zeile, die es fachlich nicht mehr
-gibt.
+Story is a derived read model over Memory, Milestone, and shared HeartMoments
+only. There is no Story table: under M2-D11 it would become a second domain
+source of truth that would need to be synchronized after every delete,
+privacy transition, and retention rule, exactly where a row could otherwise
+survive after it no longer exists in the domain.
 """
 
 from __future__ import annotations

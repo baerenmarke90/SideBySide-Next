@@ -1,13 +1,12 @@
-"""Fachlogik fuer nahestehende Personen und wichtige Termine.
+"""Domain logic for related people and important dates.
 
-Jede Liste und jeder Detailzugriff beginnt beim zentralen Owner-/Privacy-
-Guard. Private Zeilen fallen damit in SQL heraus und nicht erst in der
-Serialisierung.
+Every list and detail lookup starts at the central owner/privacy guard.
+Private rows are therefore filtered in SQL rather than only during
+serialization.
 
-Die Regeln, die ueber die reine Sichtbarkeit hinausgehen, stehen an genau
-zwei Stellen: als Constraint im Schema und - damit der Client eine
-verstaendliche Antwort bekommt statt eines Datenbankfehlers - als Pruefung
-hier davor.
+Rules beyond pure visibility live in exactly two places: as a schema
+constraint and - so the client receives an understandable response instead
+of a database error - as a corresponding check here before persistence.
 """
 
 from __future__ import annotations
@@ -65,14 +64,14 @@ def _clean_text(value: str, code: str) -> str:
 
 
 def normalize_birthday(birthday: date | None, *, year_known: bool) -> date | None:
-    """Den Geburtstag in die Form bringen, die gespeichert wird.
+    """Normalize a birthday into its persisted representation.
 
-    Ohne bekanntes Jahr bekommt das Datum das Platzhalterjahr. Der Wert
-    bleibt damit ein `DATE` und laesst sich mit jedem anderen Geburtstag
-    vergleichen; dass sein Jahr nichts bedeutet, sagt `birthdayYearKnown`.
+    Without a known year, the date receives the placeholder year. It remains
+    a `DATE` and can be compared with every other birthday; whether its year
+    has meaning is expressed by `birthdayYearKnown`.
 
-    Ein bekanntes Jahr ohne Datum ist keine unvollstaendige Angabe, die
-    still zurechtgebogen wird - es ist ein Widerspruch und wird abgelehnt.
+    A known year without a date is not incomplete input to be silently
+    repaired - it is a contradiction and is rejected.
     """
     if birthday is None:
         if year_known:
@@ -131,12 +130,12 @@ def create_person(
 
 
 def _shared_dates_of(session: Session, person: RelatedPerson) -> int:
-    """Wie viele geteilte Termine an dieser Person haengen.
+    """Return the number of shared important dates attached to this person.
 
-    Gezaehlt wird ohne Guard, und das ist hier richtig: `SPACE_SHARED`
-    sieht ohnehin der ganze Space. Private Termine des Partners bleiben
-    ungezaehlt - sie bleiben auch nach einer Verschaerfung erlaubt, und
-    eine Ablehnung ihretwegen waere die Auskunft, dass es sie gibt.
+    The query deliberately runs without a guard: the whole space can already
+    see `SPACE_SHARED` rows. A partner's private dates remain uncounted - they
+    are still valid after tightening visibility, and rejecting because of
+    them would disclose that they exist.
     """
     return int(
         session.execute(
@@ -171,9 +170,9 @@ def update_person(
         and person.privacy_class != privacy.value
         and _shared_dates_of(session, person)
     ):
-        # Kein stilles Umklassifizieren fremder Zeilen: die geteilten
-        # Termine an dieser Person werden zuerst vom jeweiligen Eigentuemer
-        # verschaerft oder entfernt.
+        # Do not silently reclassify rows owned by somebody else: shared dates
+        # attached to this person must first be tightened or removed by their
+        # respective owners.
         raise ConflictError(
             "Shared important dates still refer to this person.",
             PeopleErrorCode.HAS_SHARED_DATES,
@@ -198,20 +197,20 @@ def delete_person(
     expected_version: int,
     delete_policy: RelatedPersonDeletePolicy,
 ) -> None:
-    """Eine Person mit expliziter, privacy-sicherer Terminbehandlung loeschen.
+    """Delete a person with explicit, privacy-safe important-date handling.
 
-    Die Person wird vor der Versionspruefung per ``FOR UPDATE`` gesperrt.
-    Dadurch koennen parallele FK-Verknuepfungen nicht zwischen der Auswahl
-    der Termine und dem Loeschen der Person sichtbar werden. Die Sperre
-    kommt aus dem Guard, damit eine parallel geloeschte Person hier dieselbe
-    404-Antwort ergibt wie jede andere Abwesenheit.
+    The person is locked with ``FOR UPDATE`` before the version check. This
+    prevents concurrent FK links from becoming visible between selecting the
+    dates and deleting the person. The lock is obtained through the guard so
+    that a concurrently deleted person yields the same 404 response as any
+    other absence.
 
-    ``preserve`` loest alle verknuepften Termine - einschliesslich privater
-    Partnertermine - von der Person. Die Termine werden absichtlich ohne
-    Privacy-Guard geladen: der Aufrufer erhaelt weder Zeilen noch Anzahl oder
-    Metadaten, die Mutation muss aber fuer alle Verknuepfungen gelten.
+    ``preserve`` detaches every linked important date - including a partner's
+    private dates - from the person. The dates are deliberately loaded without
+    a privacy guard: the caller receives neither rows, counts, nor metadata,
+    but the mutation must apply to every link.
 
-    ``cascade`` behaelt die bestehende DB-Cascade bewusst bei.
+    ``cascade`` deliberately preserves the existing database cascade.
     """
     person = require_writable_locked(session, RelatedPerson, context, person_id)
     _ensure_expected_version(person.version, expected_version, "related person")
@@ -244,11 +243,11 @@ def _person_link(
     related_person_id: UUID | str | None,
     privacy: PrivacyClass,
 ) -> tuple[UUID | None, str | None]:
-    """Die Person eines Termins aufloesen und ihre Klasse mitnehmen.
+    """Resolve an important date's person and carry along its privacy class.
 
-    Ueber den Guard: wer eine Person nicht lesen darf, kann auch keinen
-    Termin an sie haengen - und erfaehrt aus der Antwort nicht, ob es sie
-    gibt.
+    Resolution goes through the guard: callers who may not read a person also
+    cannot attach a date to that person, and the response does not reveal
+    whether the person exists.
     """
     if related_person_id is None:
         return None, None

@@ -1,20 +1,20 @@
-"""Registrierung und Anmeldung mit lokalem Passwort.
+"""Registration and sign-in with a local password.
 
-Der Weg fuer Self-Hosted. Die Cloud setzt auf Magic Link und Passkey ohne
-Passwortpflicht - diese kommen als eigene Anmeldewege dazu, ohne dass sich
-hier etwas aendert.
+This is the self-hosted path. Cloud uses magic links and passkeys without a
+password requirement; those are separate sign-in methods and do not change the
+semantics here.
 
-## Warum Registrierung eine Einladung braucht
+## Why registration requires an invitation
 
-Eine offene Registrierung waere auf einer privaten Paar-Instanz ein
-Fehler: wer die Adresse kennt, koennte sich ein Konto anlegen. Ein
-Space-Beitritt gaebe das zwar noch nicht, aber ein Fremder haette einen
-Fuss in der Tuer und koennte Anmeldeversuche zaehlen lassen.
+Open registration would be a security defect on a private couple instance:
+anyone who knows the address could create an account. That alone would not grant
+space membership, but an outsider would gain a foothold and could consume
+sign-in attempt budgets.
 
-Deshalb gilt: Der erste Account braucht einen einmaligen geheimen Bootstrap-
-Nachweis. Danach braucht jede Registrierung eine gueltige Einladung.
+The first account therefore requires a one-time secret bootstrap proof. Every
+later registration requires a valid invitation.
 
-Wer das anders will, aendert es an dieser Stelle - bewusst und sichtbar.
+Changing that policy must happen here deliberately and visibly.
 """
 
 from __future__ import annotations
@@ -57,13 +57,13 @@ def register(
     device_name: str = "",
     platform: str = "",
 ) -> SignedIn:
-    """Einen Account anlegen und sofort anmelden.
+    """Create an account and sign it in immediately.
 
-    Der erste Account braucht den einmaligen Bootstrap-Nachweis und bekommt
-    einen eigenen Space. Jeder weitere tritt ueber seine Einladung bei.
+    The first account requires the one-time bootstrap proof and receives its
+    own space. Every later account joins through an invitation.
     """
-    # Das Passwort wird vor dem Anlegen geprueft. Sonst entstuende ein
-    # Account, dessen Registrierung anschliessend scheitert.
+    # Validate the password before creating the account. Otherwise a database
+    # row could be created only for registration to fail afterward.
     passwords.validate(password)
 
     bootstrap_state = None
@@ -77,7 +77,7 @@ def register(
             configured_token=configured_bootstrap_token,
         )
 
-    konto = accounts.create_account(
+    account = accounts.create_account(
         session,
         display_name=display_name,
         email=email,
@@ -85,16 +85,16 @@ def register(
     )
 
     if bootstrap_state is not None:
-        spaces.create_space(session, konto)
-        bootstrap.complete(bootstrap_state, konto)
+        spaces.create_space(session, account)
+        bootstrap.complete(bootstrap_state, account)
     else:
         assert invitation_token is not None
-        invitations.accept(session, invitation_token, konto)
+        invitations.accept(session, invitation_token, account)
         rate_limit.clear(session, ACTION_ACCEPT, invitation_token)
 
-    _, tokens = sessions.start_session(session, konto, device_name=device_name, platform=platform)
+    _, tokens = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
-    return SignedIn(account=konto, tokens=tokens)
+    return SignedIn(account=account, tokens=tokens)
 
 
 def sign_in(
@@ -105,67 +105,65 @@ def sign_in(
     device_name: str = "",
     platform: str = "",
 ) -> SignedIn:
-    """Anmelden.
+    """Sign in with a local password.
 
-    Unbekannte Adresse und falsches Passwort ergeben dieselbe Antwort. Ein
-    Unterschied waere eine Auskunft darueber, welche Adressen registriert
-    sind - und damit ein Weg, Konten aufzuzaehlen.
+    Unknown address and wrong password produce the same response. Distinguishing
+    them would reveal which addresses are registered and enable enumeration.
     """
-    adresse = accounts.normalize_email(email)
-    gescheitert = UnauthenticatedError(
+    address = accounts.normalize_email(email)
+    failed = UnauthenticatedError(
         "Email address or password is incorrect.", AuthErrorCode.INVALID_CREDENTIALS
     )
 
-    # Vor der teuren Passwortpruefung, damit sie nicht als Rechenlast
-    # missbraucht werden kann.
-    rate_limit.check(session, ACTION_SIGN_IN, adresse, rate_limit.SIGN_IN)
-    rate_limit.record_attempt(session, ACTION_SIGN_IN, adresse)
+    # Check before the expensive password operation so it cannot be abused as
+    # a compute-amplification path.
+    rate_limit.check(session, ACTION_SIGN_IN, address, rate_limit.SIGN_IN)
+    rate_limit.record_attempt(session, ACTION_SIGN_IN, address)
 
-    konto = accounts.find_by_email(session, adresse)
-    identitaet = accounts.local_identity(session, konto) if konto else None
+    account = accounts.find_by_email(session, address)
+    identity = accounts.local_identity(session, account) if account else None
 
-    # Auch ohne Account wird einmal gerechnet. Sonst waere die Antwort bei
-    # unbekannter Adresse spuerbar schneller, und aus der Laufzeit liesse
-    # sich ablesen, wer registriert ist.
-    hash_wert = (
-        identitaet.secret_hash
-        if identitaet is not None and identitaet.secret_hash
+    # Perform one hash verification even without an account. Otherwise unknown
+    # addresses would be measurably faster than wrong passwords and leak which
+    # addresses are registered.
+    password_hash = (
+        identity.secret_hash
+        if identity is not None and identity.secret_hash
         else passwords.DUMMY_HASH
     )
-    stimmt = passwords.verify_password(hash_wert, password)
+    matches = passwords.verify_password(password_hash, password)
 
-    if konto is None or identitaet is None or not stimmt:
-        rate_limit.preserve_attempt_after_rollback(session, ACTION_SIGN_IN, adresse)
-        raise gescheitert
-    if not konto.is_active:
-        rate_limit.preserve_attempt_after_rollback(session, ACTION_SIGN_IN, adresse)
-        raise gescheitert
+    if account is None or identity is None or not matches:
+        rate_limit.preserve_attempt_after_rollback(session, ACTION_SIGN_IN, address)
+        raise failed
+    if not account.is_active:
+        rate_limit.preserve_attempt_after_rollback(session, ACTION_SIGN_IN, address)
+        raise failed
 
-    if passwords.needs_rehash(hash_wert):
-        identitaet.secret_hash = passwords.hash_password(password)
+    if passwords.needs_rehash(password_hash):
+        identity.secret_hash = passwords.hash_password(password)
 
-    rate_limit.clear(session, ACTION_SIGN_IN, adresse)
+    rate_limit.clear(session, ACTION_SIGN_IN, address)
 
-    _, tokens = sessions.start_session(session, konto, device_name=device_name, platform=platform)
+    _, tokens = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
-    return SignedIn(account=konto, tokens=tokens)
+    return SignedIn(account=account, tokens=tokens)
 
 
 def change_password(session: Session, account: Account, *, current: str, new: str) -> None:
-    """Passwort aendern.
+    """Change the local password.
 
-    Alle anderen Sitzungen werden beendet. Wer sein Passwort aendert, tut
-    das oft, weil er einen Zugriff vermutet - dann darf das fremde Geraet
-    nicht angemeldet bleiben.
+    All other sessions are revoked. Password changes often follow suspected
+    compromise, so another device must not remain signed in afterward.
     """
-    identitaet = accounts.local_identity(session, account)
-    if identitaet is None or not identitaet.secret_hash:
+    identity = accounts.local_identity(session, account)
+    if identity is None or not identity.secret_hash:
         raise ValidationError("This account has no password sign-in.", ErrorCode.VALIDATION_FAILED)
-    if not passwords.verify_password(identitaet.secret_hash, current):
+    if not passwords.verify_password(identity.secret_hash, current):
         raise UnauthenticatedError(
             "Email address or password is incorrect.", AuthErrorCode.INVALID_CREDENTIALS
         )
 
-    identitaet.secret_hash = passwords.hash_password(new)
+    identity.secret_hash = passwords.hash_password(new)
     sessions.revoke_all(session, account)
     session.flush()

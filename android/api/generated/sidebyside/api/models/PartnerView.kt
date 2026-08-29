@@ -29,7 +29,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Was von einem Account nach aussen geht.  Ausdruecklich eine Whitelist. Am Account haengen Anmeldedaten und Kontaktangaben, die in einer Space-Antwort nichts verloren haben - und eine allgemeine Modell-Serialisierung wuerde sie irgendwann mitnehmen.
+ * Account projection exposed through a space response.  This is deliberately an allowlist. Accounts also contain authentication and contact data that do not belong in a space response; serializing the general model would eventually expose such fields by accident.
  *
  * @param displayName 
  * @param id 

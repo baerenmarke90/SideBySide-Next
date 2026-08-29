@@ -1,9 +1,8 @@
-"""Fachlogik fuer M2-Kommentare.
+"""Domain logic for M2 comments.
 
-Kommentare besitzen keine eigene fachliche Sichtbarkeit. Sie erben die
-Erreichbarkeit ihres Parents; die Comment-Zeile ist deshalb zwar
-SPACE_SHARED, wird aber niemals ohne erneute Parent-Autorisierung gelesen
-oder geaendert.
+Comments have no independent domain visibility. They inherit reachability
+from their parent. A comment row is therefore `SPACE_SHARED`, but it is never
+read or mutated without authorizing the parent again.
 """
 
 from __future__ import annotations
@@ -414,7 +413,7 @@ def delete_for_parent(
     target_type: CommentTarget,
     target_id: UUID,
 ) -> None:
-    """Abhaengige Comments innerhalb der laufenden Parent-Transaktion loeschen."""
+    """Delete dependent comments inside the active parent transaction."""
     session.execute(
         delete(Comment).where(
             Comment.space_id == space_id,

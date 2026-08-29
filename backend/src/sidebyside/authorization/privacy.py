@@ -1,13 +1,12 @@
-"""Privacy-Klassen - die Sprache, in der eine Domaene ihre Sichtbarkeit sagt.
+"""Privacy classes: the vocabulary domains use to declare visibility.
 
-Der Tenant Guard beantwortet die Frage "gehoert dieser Account zu diesem
-Space?". Fuer private Inhalte reicht das nicht: der Partner ist Mitglied
-desselben Space und trotzdem kein berechtigter Leser. Diese Datei traegt
-die zweite Frage - "welche Klasse hat diese Ressource, und was folgt daraus
-fuer genau diesen Account?".
+The tenant guard answers "does this account belong to this space?". That is not
+enough for private content because the partner belongs to the same space but
+may still not be allowed to read a resource. This module answers the second
+question: "which privacy class does this resource have, and what does that mean
+for this account?"
 
-Es gibt keine implizite oeffentliche Klasse. Eine Ressource ohne Klasse
-laesst sich nicht speichern.
+There is no implicit public class. A resource without a class cannot be stored.
 """
 
 from __future__ import annotations
@@ -22,12 +21,12 @@ from sidebyside.core.errors import NotFoundError
 
 
 class PrivacyClass(StrEnum):
-    """Die Klassen aus der Spezifikation, Abschnitt 7.
+    """Classes defined by specification section 7.
 
-    Vollstaendig aufgefuehrt, damit der Begriff im Code derselbe ist wie in
-    der Spezifikation und in docs/PRIVACY-MODEL.md. Aufgefuehrt heisst
-    aber nicht durchsetzbar: erzwingbar ist nur, wofuer es eine Regel und
-    eine Speicherform gibt.
+    The list is complete so code, specification, and ``docs/PRIVACY-MODEL.md``
+    use the same vocabulary. Being listed does not mean a class is currently
+    enforceable; enforcement additionally requires a query rule and storage
+    representation.
     """
 
     SPACE_SHARED = "SPACE_SHARED"
@@ -38,20 +37,19 @@ class PrivacyClass(StrEnum):
 
 
 class SharedWrite(StrEnum):
-    """Wer eine `SPACE_SHARED`-Zeile aendern darf.
+    """Who may modify a ``SPACE_SHARED`` row.
 
-    `SPACE_SHARED` beantwortet die Lesefrage eindeutig - beide Partner -,
-    die Schreibfrage aber nicht. Memory und Milestone bleiben author-only
-    (Spezifikation, Abschnitt 14); die gemeinsamen M3-Planungs- und
-    Listenressourcen Wish, Plan, Place, Chapter und Collection sind
-    ausdruecklich `collaborative write` (M3-D01).
+    ``SPACE_SHARED`` answers the read question unambiguously: both partners.
+    It does not determine write access. Memory and Milestone remain author-only
+    under specification section 14, while shared M3 planning/list resources
+    Wish, Plan, Place, Chapter, and Collection explicitly use collaborative
+    write semantics under M3-D01.
 
-    Das ist eine Eigenschaft der Domaene, nicht der Klasse: dieselbe
-    Privacy-Klasse traegt beide Formen. Deshalb sagt das Modell sie einmal
-    an, statt dass ein Endpunkt eine Ausnahme formuliert.
+    This is a domain property rather than a privacy-class property, so the
+    model declares it once instead of routes adding exceptions.
 
-    Fuer `OWNER_ONLY` gibt es die Wahl nicht - dort schreibt ausschliesslich
-    der Eigentuemer, und der Partner steht Fremden gleich.
+    ``OWNER_ONLY`` has no such choice: only the owner may write, and the partner
+    is treated like any other non-owner.
     """
 
     AUTHOR_ONLY = "AUTHOR_ONLY"
@@ -59,15 +57,14 @@ class SharedWrite(StrEnum):
 
 
 class ContentVisibility(StrEnum):
-    """Die fachliche Sichtbarkeit aus Abschnitt 15 der Spezifikation.
+    """Domain visibility from specification section 15.
 
-    Der Request nennt sie, nicht die Privacy-Klasse: `privacyClass` ist
-    eine serverseitige Ableitung und kein Feld, das ein Client setzen kann.
+    Requests name visibility rather than a privacy class. ``privacyClass`` is a
+    server-side derivation and is never a client-settable field.
 
-    Sie steht hier und nicht in einer Domaene, weil sie keiner gehoert:
-    RelatedPerson, ImportantDate und HeartMoment sprechen dieselbe
-    Sichtbarkeit. Laege sie bei der ersten Domaene, die sie brauchte,
-    importierten alle spaeteren aus einem fremden Fachmodul.
+    The type lives here rather than in one domain because several domains use
+    the same vocabulary: RelatedPerson, ImportantDate, and HeartMoment should
+    not depend on whichever feature happened to need it first.
     """
 
     SHARED = "SHARED"
@@ -75,7 +72,7 @@ class ContentVisibility(StrEnum):
 
 
 def privacy_for(visibility: ContentVisibility) -> PrivacyClass:
-    """Die Privacy-Klasse folgt der fachlichen Sichtbarkeit, nicht dem Request."""
+    """Derive privacy class from domain visibility, not from request input."""
     if visibility is ContentVisibility.SHARED:
         return PrivacyClass.SPACE_SHARED
     return PrivacyClass.OWNER_ONLY
@@ -91,30 +88,28 @@ ENFORCEABLE_PRIVACY_CLASSES: tuple[PrivacyClass, ...] = (
     PrivacyClass.SPACE_SHARED,
     PrivacyClass.OWNER_ONLY,
 )
-"""Klassen, fuer die der Server heute eine Abfrageregel besitzt.
+"""Classes for which the server currently has a query rule.
 
-Eine Klasse, die der Server nicht durchsetzen kann, darf auch nicht in der
-Datenbank stehen. Sonst gaebe es Zeilen, deren Schutz niemand einloest -
-und der spaetere Zusatz einer Regel entschiede rueckwirkend ueber
-bestehende Daten.
+A class the server cannot enforce must not appear in persisted data. Otherwise
+rows would exist without an implemented protection rule, and adding a rule
+later would retroactively change the meaning of existing data.
 
-Eine Klasse aufzunehmen bedeutet deshalb drei Dinge zusammen: eine Regel in
-`authorization.rules`, ein Eintrag hier und eine Migration, die den
-Wertebereich der bestehenden Tabellen erweitert.
+Adding a class therefore requires three coordinated changes: a rule in
+``authorization.rules``, an entry here, and a migration expanding the accepted
+values of existing tables.
 """
 
 
 def privacy_class_type() -> SqlEnum:
-    """Der Spaltentyp fuer `privacy_class`.
+    """Column type for ``privacy_class``.
 
-    Kein freier Text: die Datenbank laesst nur Klassen zu, die der Server
-    auch durchsetzt. `native_enum=False` haelt den Wert als VARCHAR mit
-    CHECK - ein neuer Wert braucht dann eine gewoehnliche Migration statt
-    einer Typaenderung, die PostgreSQL nur eingeschraenkt zurueckdrehen
-    kann.
+    This is constrained data rather than free text: the database accepts only
+    classes the server enforces. ``native_enum=False`` stores VARCHAR plus
+    CHECK, so adding a value requires an ordinary migration rather than a
+    PostgreSQL type change with limited downgrade support.
     """
     return SqlEnum(
-        *(klasse.value for klasse in ENFORCEABLE_PRIVACY_CLASSES),
+        *(privacy_class.value for privacy_class in ENFORCEABLE_PRIVACY_CLASSES),
         name="privacy_class",
         native_enum=False,
         create_constraint=True,
@@ -124,12 +119,11 @@ def privacy_class_type() -> SqlEnum:
 
 @dataclass(frozen=True)
 class AuthorizationContext:
-    """Wer fragt, und in welchem Space.
+    """Who is asking and within which space.
 
-    Entsteht ausschliesslich aus einem bereits geprueften Tenant Context.
-    Beide Werte stammen vom Server: der Account aus dem Bearer Token, der
-    Space aus der geprueften Mitgliedschaft. Nichts davon kommt aus dem
-    Request-Body.
+    Created only from an already-verified tenant context. Both values are
+    server-derived: account from the bearer token and space from verified
+    membership. Neither comes from a request body.
     """
 
     account_id: UUID
@@ -138,12 +132,11 @@ class AuthorizationContext:
 
 @dataclass(frozen=True)
 class ResourceAbsence:
-    """Wie eine Domaene klingt, wenn es die Ressource fuer den Frager nicht gibt.
+    """How a domain reports a resource that is absent to the caller.
 
-    Genau eine Antwort fuer drei verschiedene Ursachen: die ID ist
-    fehlgeformt, die Ressource existiert nicht, oder sie existiert und geht
-    diesen Account nichts an. Waeren es drei Antworten, waere die
-    Fehlerantwort eine Existenzauskunft.
+    One response intentionally covers three causes: malformed ID, nonexistent
+    resource, or an existing resource the account must not know about. Distinct
+    responses would turn the error path into an existence oracle.
     """
 
     detail: str
@@ -159,4 +152,4 @@ class AuthorizationErrorCode:
 
 
 DEFAULT_ABSENCE = ResourceAbsence("Resource not found.", AuthorizationErrorCode.RESOURCE_NOT_FOUND)
-"""Fallback fuer Domaenen, die keinen eigenen Text gesetzt haben."""
+"""Fallback for domains that do not define their own absence response."""

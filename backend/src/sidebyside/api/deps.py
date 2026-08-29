@@ -1,9 +1,9 @@
-"""Abhaengigkeiten der API-Schicht.
+"""Dependencies for the API layer.
 
-Hier entsteht der Tenant Context: aus einem Bearer Token wird ein Account,
-aus Account und Pfad-ID wird eine geprüfte Mitgliedschaft. Routen bekommen
-nur das fertige Ergebnis - sie sollen die Pruefung nicht wiederholen und
-schon gar nicht vergessen koennen.
+The tenant context is established here: a bearer token resolves to an account,
+and the account plus path ID resolves to a verified membership. Routes receive
+only the completed result so they neither repeat nor accidentally omit the
+check.
 """
 
 from __future__ import annotations
@@ -28,24 +28,24 @@ DbSession = Annotated[Session, Depends(get_session)]
 
 
 def _bearer_token(request: Request) -> str:
-    """Den Token aus dem Authorization-Kopf ziehen.
+    """Extract the bearer token from the Authorization header.
 
-    Native Clients weisen sich ausschliesslich so aus - kein
-    Sitzungs-Cookie. Ein Cookie waere im Browser automatisch mitgesendet
-    worden und haette CSRF-Schutz noetig gemacht.
+    Native clients authenticate exclusively this way, without a session
+    cookie. A browser would send a cookie automatically, which would require
+    CSRF protection.
     """
-    kopf = request.headers.get("Authorization", "")
-    schema, _, wert = kopf.partition(" ")
-    if schema.lower() != "bearer" or not wert.strip():
+    header = request.headers.get("Authorization", "")
+    scheme, _, value = header.partition(" ")
+    if scheme.lower() != "bearer" or not value.strip():
         raise UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
-    return wert.strip()
+    return value.strip()
 
 
 def current_session(request: Request, session: DbSession) -> DeviceSession:
-    """Die Geraetesitzung hinter dem Token.
+    """Return the device session represented by the bearer token.
 
-    Fuer Abmelden und Sitzungsverwaltung - alles andere braucht nur den
-    Account.
+    Logout and session management need the session itself; other operations
+    normally need only the account.
     """
     return resolve(session, _bearer_token(request))[0]
 
@@ -60,12 +60,12 @@ CurrentSession = Annotated[DeviceSession, Depends(current_session)]
 
 @dataclass(frozen=True)
 class TenantContext:
-    """Ein geprueftes Paar aus Account und Space.
+    """A verified account/space pair.
 
-    Wer diesen Kontext in der Hand hat, hat die Mitgliedschaftspruefung
-    hinter sich. Alles, was eine Route danach laedt, muss zusaetzlich gegen
-    `space_id` eingeschraenkt werden - der Kontext beweist die
-    Zugehoerigkeit zum Space, nicht die einer einzelnen Ressource.
+    Holding this context proves membership has already been checked. Anything
+    a route loads afterwards must still be constrained by ``space_id``: the
+    context proves membership in the space, not ownership of an individual
+    resource.
     """
 
     account: Account
@@ -78,30 +78,29 @@ def tenant_context(
     account: CurrentAccount,
     space_id: Annotated[str, Path(alias="spaceId")],
 ) -> TenantContext:
-    """Zugriff auf einen Space pruefen.
+    """Verify access to a space.
 
-    Eine fehlgeformte ID ergibt 404 und nicht 422. Sonst liesse sich an der
-    Antwort ablesen, ob eine wohlgeformte ID existiert - und aus dem
-    Unterschied eine Existenzauskunft bauen.
+    A malformed ID yields 404 rather than 422. Otherwise the response would
+    reveal whether a syntactically valid ID exists and create an existence
+    oracle from the difference.
     """
-    gepruefte_id = parse_id(space_id)
-    if gepruefte_id is None:
+    parsed_id = parse_id(space_id)
+    if parsed_id is None:
         raise NotFoundError("Space not found.", SpaceErrorCode.NOT_FOUND)
 
-    mitgliedschaft = require_membership(session, account, gepruefte_id)
-    return TenantContext(account=account, space_id=gepruefte_id, membership=mitgliedschaft)
+    membership = require_membership(session, account, parsed_id)
+    return TenantContext(account=account, space_id=parsed_id, membership=membership)
 
 
 Tenant = Annotated[TenantContext, Depends(tenant_context)]
 
 
 def authorization_context(tenant: Tenant) -> AuthorizationContext:
-    """Der Kontext fuer Owner- und Privacy-Fragen.
+    """Build the context used for ownership and privacy decisions.
 
-    Entsteht ausschliesslich aus dem bereits geprueften Tenant Context. Es
-    gibt keinen zweiten Weg, ihn zu bauen - damit kann keine Route eine
-    Sichtbarkeitsentscheidung auf einen Account oder Space stuetzen, der
-    nicht durch die Mitgliedschaftspruefung gegangen ist.
+    It is created exclusively from an already verified tenant context. There
+    is no second construction path, so a route cannot make a visibility
+    decision using an account or space that has not passed membership checks.
     """
     return AuthorizationContext(account_id=tenant.account.id, space_id=tenant.space_id)
 

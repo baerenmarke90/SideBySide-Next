@@ -1,4 +1,4 @@
-"""Geraetesitzungen: anlegen, pruefen, erneuern, widerrufen."""
+"""Device sessions: create, resolve, refresh, and revoke."""
 
 from __future__ import annotations
 
@@ -29,31 +29,30 @@ from sidebyside.db.session import schedule_after_rollback
 from sidebyside.identity.models import Account, ConsumedRefreshToken, DeviceSession
 
 ACTION_REFRESH = "refresh"
-"""Der Rate-Limit-Schluessel haengt an der Sitzung, nicht am Token.
+"""The rate-limit key belongs to the session rather than the token.
 
-Der Tokenwert wechselt bei jeder Rotation - eine Begrenzung darauf waere
-nach genau einem Versuch wieder bei null. Die `DeviceSession` ist die
-Familie und bleibt ueber alle Generationen dieselbe.
+The token value changes on every rotation, so limiting by token would reset the
+budget after each attempt. ``DeviceSession`` represents the family and remains
+stable across generations.
 """
 
-# Wie lange die Replay-Historie eine beendete Familie ueberlebt.
+# How long replay history survives after its family has ended.
 #
-# Solange eine Sitzung laeuft, bleibt jede ihrer verbrauchten Generationen
-# stehen - sonst entstuende genau die Luecke, die diese Historie schliessen
-# soll. Erst wenn die Sitzung widerrufen oder abgelaufen ist, kann ein
-# Replay ohnehin nichts mehr ausloesen: der Refresh scheitert dann bereits
-# an der toten Sitzung. Die Frist danach ist reine Nachvollziehbarkeit.
+# While a session is active, every consumed generation remains stored; removing
+# one would create exactly the gap the history is intended to close. Once the
+# session is revoked or expired, replay cannot trigger any further access
+# because refresh already fails on the dead session. Retention after that point
+# exists only for traceability.
 #
-# Begrenzt ist die Historie dadurch aber erst zusammen mit
-# SESSION_ABSOLUTE_LIFETIME. Das gleitende Refresh-Fenster allein wuerde
-# eine regelmaessig genutzte Sitzung beliebig lange am Leben halten, und
-# mit ihr eine Historie, die nie geraeumt wird.
+# The history is bounded only together with SESSION_ABSOLUTE_LIFETIME. The
+# sliding refresh window alone would let a regularly used session live forever,
+# together with history that could never be pruned.
 REPLAY_HISTORY_RETENTION = timedelta(days=30)
 
 
 @dataclass(frozen=True)
 class IssuedTokens:
-    """Was der Client bekommt. Der Klartext existiert nur hier."""
+    """Tokens returned to the client. Their plaintext exists only here."""
 
     access_token: str
     refresh_token: str
@@ -70,201 +69,197 @@ def _revoke_by_id(session: Session, *, device_session_id: UUID) -> None:
 def start_session(
     session: Session, account: Account, *, device_name: str = "", platform: str = ""
 ) -> tuple[DeviceSession, IssuedTokens]:
-    """Eine neue Sitzung eroeffnen.
+    """Open a new device session.
 
-    Wird von den Anmeldewegen aufgerufen, sobald die Identitaet feststeht.
-    Diese Funktion prueft KEINE Identitaet - sie setzt voraus, dass das
-    bereits geschehen ist.
+    Sign-in paths call this after identity has been established. This function
+    does not verify identity itself; it assumes that has already happened.
     """
     access = generate_token()
     refresh = generate_token(REFRESH_TOKEN_BYTES)
-    jetzt = now()
+    current_time = now()
 
-    geraet = DeviceSession(
+    device_session = DeviceSession(
         account_id=account.id,
         device_name=device_name[:120],
         platform=platform[:32],
         refresh_token_hash=hash_token(refresh),
         access_token_hash=hash_token(access),
-        access_expires_at=jetzt + ACCESS_TOKEN_LIFETIME,
-        expires_at=jetzt + REFRESH_TOKEN_LIFETIME,
-        # Ab hier laeuft die Uhr der Familie. Keine Rotation stellt sie
-        # zurueck.
-        absolute_expires_at=jetzt + SESSION_ABSOLUTE_LIFETIME,
-        last_used_at=jetzt,
+        access_expires_at=current_time + ACCESS_TOKEN_LIFETIME,
+        expires_at=current_time + REFRESH_TOKEN_LIFETIME,
+        # The family clock starts here. No rotation resets it.
+        absolute_expires_at=current_time + SESSION_ABSOLUTE_LIFETIME,
+        last_used_at=current_time,
     )
-    session.add(geraet)
+    session.add(device_session)
 
-    return geraet, IssuedTokens(
+    return device_session, IssuedTokens(
         access_token=access,
         refresh_token=refresh,
-        access_expires_at=geraet.access_expires_at or jetzt,
-        refresh_expires_at=geraet.expires_at,
+        access_expires_at=device_session.access_expires_at or current_time,
+        refresh_expires_at=device_session.expires_at,
     )
 
 
 def authenticate(session: Session, access_token: str) -> Account:
-    """Der Account zu einem Access Token."""
+    """Return the account associated with an access token."""
     return resolve(session, access_token)[1]
 
 
 def resolve(session: Session, access_token: str) -> tuple[DeviceSession, Account]:
-    """Sitzung und Account zu einem Access Token ermitteln.
+    """Resolve a device session and account from an access token.
 
-    Jeder Fehlschlag ergibt dieselbe Meldung. Ein Aufrufer soll nicht
-    unterscheiden koennen, ob ein Token unbekannt, abgelaufen oder
-    widerrufen ist - das waere eine Auskunft ueber gueltige Token.
+    Every failure produces the same response. A caller must not be able to
+    distinguish whether a token is unknown, expired, or revoked, because that
+    would leak information about valid tokens.
     """
     if not access_token:
         raise UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
 
-    geraet = session.execute(
+    device_session = session.execute(
         select(DeviceSession).where(DeviceSession.access_token_hash == hash_token(access_token))
     ).scalar_one_or_none()
 
-    jetzt = now()
+    current_time = now()
     if (
-        geraet is None
-        or geraet.revoked_at is not None
-        or geraet.access_expires_at is None
-        or geraet.access_expires_at <= jetzt
-        # Sonst liefe ein kurz vor der Grenze ausgestellter Access Token
-        # noch bis zu seiner eigenen Frist weiter, und die harte Obergrenze
-        # waere keine.
-        or geraet.absolute_expires_at <= jetzt
+        device_session is None
+        or device_session.revoked_at is not None
+        or device_session.access_expires_at is None
+        or device_session.access_expires_at <= current_time
+        # Otherwise an access token issued shortly before the family deadline
+        # could outlive it, defeating the hard upper bound.
+        or device_session.absolute_expires_at <= current_time
     ):
         raise UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
 
-    account = session.get(Account, geraet.account_id)
+    account = session.get(Account, device_session.account_id)
     if account is None or not account.is_active:
         raise UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
 
-    geraet.last_used_at = jetzt
-    return geraet, account
+    device_session.last_used_at = current_time
+    return device_session, account
 
 
 def _revoke_family_on_replay(session: Session, *, token_hash: str) -> None:
-    """Die Familie widerrufen, zu der ein verbrauchter Token gehoert.
+    """Revoke the family to which a consumed token belongs.
 
-    Wird nur mit einem Hash aufgerufen, der keine aktuelle Sitzung mehr
-    trifft. Findet sich der Hash in der Verbrauchshistorie, war es ein
-    echter Token dieser Familie - und wer ihn jetzt noch vorlegt, hat eine
-    Kopie. Der rechtmaessige Client haette laengst die neue Generation.
+    This is called only with a hash that no longer matches a current session.
+    If that hash exists in consumption history, it was a genuine token from
+    this family and presenting it again means a copy exists. The legitimate
+    client would already hold a newer generation.
 
-    Der Widerruf wird zusaetzlich nach dem Rollback wiederholt: die Anfrage
-    endet mit 401, und ohne diese Vormerkung ginge die
-    Kompromittierungsreaktion mit der verworfenen Transaktion verloren.
+    Revocation is repeated after rollback as well: the request ends with 401,
+    and without this deferred action the compromise response would disappear
+    with the rejected transaction.
     """
-    familie = session.execute(
+    family_id = session.execute(
         select(ConsumedRefreshToken.device_session_id).where(
             ConsumedRefreshToken.token_hash == token_hash
         )
     ).scalar_one_or_none()
-    if familie is None:
+    if family_id is None:
         return
 
-    geraet = session.execute(
-        select(DeviceSession).where(DeviceSession.id == familie).with_for_update()
+    device_session = session.execute(
+        select(DeviceSession).where(DeviceSession.id == family_id).with_for_update()
     ).scalar_one_or_none()
-    if geraet is None:
+    if device_session is None:
         return
 
-    if geraet.revoked_at is None:
-        revoke(geraet)
-    schedule_after_rollback(session, partial(_revoke_by_id, device_session_id=familie))
+    if device_session.revoked_at is None:
+        revoke(device_session)
+    schedule_after_rollback(session, partial(_revoke_by_id, device_session_id=family_id))
 
 
 def refresh_session(session: Session, refresh_token: str) -> IssuedTokens:
-    """Die Sitzung erneuern und beide Token rotieren.
+    """Refresh the session and rotate both tokens.
 
-    Replay-Erkennung ueber die gesamte Token-Familie: die Sitzung ist die
-    Familie, und jede verbrauchte Generation bleibt ihr zugeordnet. Taucht
-    irgendeine davon wieder auf - auch viele Rotationen spaeter -, ist sie
-    kopiert worden; der rechtmaessige Client haette die aktuelle. Die
-    Sitzung wird dann widerrufen, statt dem Angreifer und dem Besitzer
-    nebeneinander Zugang zu lassen.
+    Replay detection spans the entire token family: the session is the family,
+    and every consumed generation remains linked to it. If any generation is
+    presented again, even many rotations later, it has been copied; the
+    legitimate client would possess the current generation. The family is then
+    revoked instead of allowing attacker and owner to retain parallel access.
 
-    Nach aussen ist das nicht unterscheidbar. Unbekannt, abgelaufen,
-    widerrufen und als Replay erkannt ergeben dieselbe Antwort - sonst
-    verriete die Fehlermeldung, welche Token einmal echt waren.
+    Externally these cases are indistinguishable. Unknown, expired, revoked, and
+    replayed tokens all produce the same response so errors cannot reveal which
+    values were once genuine.
 
-    Die Rotation verlaengert nur das gleitende Fenster, nie die absolute
-    Lebensdauer der Familie. Ist die erreicht, hilft kein Refresh mehr; es
-    braucht eine neue Anmeldung und damit eine neue Familie.
+    Rotation extends only the sliding window, never the absolute family
+    lifetime. Once the latter is reached, a new sign-in and token family are
+    required.
     """
-    gehasht = hash_token(refresh_token) if refresh_token else ""
-    gescheitert = UnauthenticatedError(
-        "Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED
-    )
-    if not gehasht:
-        raise gescheitert
+    hashed = hash_token(refresh_token) if refresh_token else ""
+    failed = UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
+    if not hashed:
+        raise failed
 
-    jetzt = now()
+    current_time = now()
 
-    geraet = session.execute(
-        select(DeviceSession).where(DeviceSession.refresh_token_hash == gehasht).with_for_update()
+    device_session = session.execute(
+        select(DeviceSession).where(DeviceSession.refresh_token_hash == hashed).with_for_update()
     ).scalar_one_or_none()
 
-    # Kein Treffer auf die aktuelle Generation. Das ist der Weg, auf dem
-    # sowohl ein alter Token als auch der Verlierer zweier paralleler
-    # Rotationen ankommt: PostgreSQL prueft die Bedingung nach der Sperre
-    # erneut gegen die inzwischen rotierte Zeile, sodass hier genau ein
-    # Request weiterlaeuft und der andere als Replay behandelt wird.
-    if geraet is None:
-        _revoke_family_on_replay(session, token_hash=gehasht)
-        raise gescheitert
+    # No match for the current generation. This is where both an old token and
+    # the loser of two concurrent rotations arrive: PostgreSQL re-evaluates the
+    # predicate after acquiring the lock against the now-rotated row, so exactly
+    # one request proceeds and the other is treated as replay.
+    if device_session is None:
+        _revoke_family_on_replay(session, token_hash=hashed)
+        raise failed
 
     if (
-        geraet.revoked_at is not None
-        or geraet.expires_at <= jetzt
-        or geraet.absolute_expires_at <= jetzt
+        device_session.revoked_at is not None
+        or device_session.expires_at <= current_time
+        or device_session.absolute_expires_at <= current_time
     ):
-        raise gescheitert
+        raise failed
 
-    account = session.get(Account, geraet.account_id)
+    account = session.get(Account, device_session.account_id)
     if account is None or not account.is_active:
-        raise gescheitert
+        raise failed
 
-    # Erst hier, und das ist der Punkt: bis hierher kommt nur, wer den
-    # aktuellen Token dieser Familie besitzt. Ein unbekannter, alter oder
-    # widerrufener Token ist laengst mit 401 abgebogen und kann aus einer
-    # 429 nichts ueber die Existenz einer Sitzung ableiten.
-    rate_limit.check(session, ACTION_REFRESH, str(geraet.id), rate_limit.REFRESH)
-    # Kein `clear` nach dem Erfolg: hier zaehlen die geglueckten
-    # Rotationen selbst, nicht die Fehlversuche davor.
-    rate_limit.record_attempt(session, ACTION_REFRESH, str(geraet.id))
+    # Only the current token for this family reaches this point. Unknown, old,
+    # or revoked tokens already returned 401 and therefore cannot use a 429 to
+    # infer that a session exists.
+    rate_limit.check(session, ACTION_REFRESH, str(device_session.id), rate_limit.REFRESH)
+    # Do not clear after success: refresh limits successful rotations rather
+    # than failures preceding them.
+    rate_limit.record_attempt(session, ACTION_REFRESH, str(device_session.id))
 
     access = generate_token()
-    refresh_neu = generate_token(REFRESH_TOKEN_BYTES)
+    new_refresh = generate_token(REFRESH_TOKEN_BYTES)
 
     session.add(
         ConsumedRefreshToken(
-            device_session_id=geraet.id,
-            token_hash=geraet.refresh_token_hash,
-            consumed_at=jetzt,
+            device_session_id=device_session.id,
+            token_hash=device_session.refresh_token_hash,
+            consumed_at=current_time,
         )
     )
-    geraet.refresh_token_hash = hash_token(refresh_neu)
-    geraet.access_token_hash = hash_token(access)
-    # Beide Fenster enden spaetestens mit der Familie. Sonst nennte die
-    # Antwort dem Client Ablaufdaten, die der Server nicht einhaelt.
-    geraet.access_expires_at = min(jetzt + ACCESS_TOKEN_LIFETIME, geraet.absolute_expires_at)
-    geraet.expires_at = min(jetzt + REFRESH_TOKEN_LIFETIME, geraet.absolute_expires_at)
-    geraet.last_used_at = jetzt
+    device_session.refresh_token_hash = hash_token(new_refresh)
+    device_session.access_token_hash = hash_token(access)
+    # Both windows end no later than the family lifetime. Otherwise the response
+    # would advertise expiry times the server does not honor.
+    device_session.access_expires_at = min(
+        current_time + ACCESS_TOKEN_LIFETIME, device_session.absolute_expires_at
+    )
+    device_session.expires_at = min(
+        current_time + REFRESH_TOKEN_LIFETIME, device_session.absolute_expires_at
+    )
+    device_session.last_used_at = current_time
 
     return IssuedTokens(
         access_token=access,
-        refresh_token=refresh_neu,
-        access_expires_at=geraet.access_expires_at,
-        refresh_expires_at=geraet.expires_at,
+        refresh_token=new_refresh,
+        access_expires_at=device_session.access_expires_at,
+        refresh_expires_at=device_session.expires_at,
     )
 
 
 def revoke(device_session: DeviceSession) -> None:
-    """Eine Sitzung beenden.
+    """End a device session.
 
-    Der Access Token wird mit entwertet, nicht nur der Refresh Token - sonst
-    liefe ein gestohlenes Geraet noch bis zum Ablauf weiter.
+    The access token is invalidated together with the refresh token; otherwise
+    a stolen device could continue until its access token expires.
     """
     device_session.revoked_at = now()
     device_session.access_token_hash = None
@@ -272,8 +267,8 @@ def revoke(device_session: DeviceSession) -> None:
 
 
 def revoke_all(session: Session, account: Account) -> int:
-    """Alle Sitzungen eines Accounts beenden."""
-    offen = (
+    """End every active session for an account."""
+    active_sessions = (
         session.execute(
             select(DeviceSession).where(
                 DeviceSession.account_id == account.id,
@@ -284,32 +279,31 @@ def revoke_all(session: Session, account: Account) -> int:
         .all()
     )
 
-    for geraet in offen:
-        revoke(geraet)
-    return len(offen)
+    for device_session in active_sessions:
+        revoke(device_session)
+    return len(active_sessions)
 
 
 def prune_replay_history(session: Session, older_than: datetime | None = None) -> int:
-    """Verbrauchte Generationen beendeter Familien entfernen.
+    """Remove consumed generations for ended families.
 
-    Fuer einen Hintergrundjob gedacht. Laufende Sitzungen bleiben
-    unangetastet - deren Historie ist die Replay-Erkennung selbst.
+    Intended for a background job. Active sessions remain untouched because
+    their history is the replay-detection mechanism itself.
     """
-    grenze = older_than or (now() - REPLAY_HISTORY_RETENTION)
+    cutoff = older_than or (now() - REPLAY_HISTORY_RETENTION)
 
-    # NULL-Vergleiche treffen nicht: eine laufende Sitzung ohne
-    # ``revoked_at`` faellt allein ueber ``expires_at``, und auch nur wenn
-    # sie tatsaechlich abgelaufen ist.
-    beendet = select(DeviceSession.id).where(
-        or_(DeviceSession.revoked_at < grenze, DeviceSession.expires_at < grenze)
+    # NULL comparisons do not match: an active session without ``revoked_at``
+    # can qualify only via ``expires_at``, and only once it has truly expired.
+    ended = select(DeviceSession.id).where(
+        or_(DeviceSession.revoked_at < cutoff, DeviceSession.expires_at < cutoff)
     )
 
-    # session.execute ist allgemein typisiert; ein DELETE liefert ein
-    # CursorResult mit rowcount.
-    ergebnis = cast(
+    # session.execute is typed generically; DELETE returns a CursorResult with
+    # rowcount.
+    result = cast(
         "CursorResult[Any]",
         session.execute(
-            delete(ConsumedRefreshToken).where(ConsumedRefreshToken.device_session_id.in_(beendet))
+            delete(ConsumedRefreshToken).where(ConsumedRefreshToken.device_session_id.in_(ended))
         ),
     )
-    return int(ergebnis.rowcount or 0)
+    return int(result.rowcount or 0)

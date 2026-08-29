@@ -18,12 +18,12 @@ depends_on = None
 
 UUID = postgresql.UUID(as_uuid=True)
 
-# Die beiden Ziele mit einheitlicher Form. `heart_moments` steht weiter
-# unten fuer sich: nur dort haengt die Zulaessigkeit einer Relation an der
-# Privacy-Klasse, und das schlaegt sich im Schluessel nieder.
+# The two targets with a uniform shape. `heart_moments` is handled separately
+# below because only there relation validity depends on the privacy class, and
+# that dependency becomes part of the key.
 #
-# `place_plans` und `place_chapters` entstehen bewusst nicht: `Plan.placeId`
-# ist kanonisch und einspaltig, und `Chapter` gibt es erst in S5
+# `place_plans` and `place_chapters` deliberately do not exist: `Plan.placeId`
+# is canonical and single-valued, while `Chapter` does not exist until S5
 # (M3-D08/D31).
 _TARGETS = ("memories", "milestones")
 
@@ -41,14 +41,13 @@ def _privacy_class() -> sa.Enum:
 
 
 def _relation_columns(target_column: str) -> list[sa.Column]:
-    """Die gemeinsame Form aller Join-Tabellen.
+    """Return the shared shape of every relation join table.
 
-    `space_id` steht in der Join-Zeile, obwohl sie aus beiden Seiten
-    ableitbar waere. Genau das ist der Zweck: weil *dieselbe* Spalte in
-    beiden zusammengesetzten Fremdschluesseln steht, kann eine Relation
-    zwei Zeilen aus verschiedenen Spaces gar nicht verbinden. Same-Space
-    ist damit eine Schemaeigenschaft und keine Regel, die ein Dienst
-    einhalten muss (M3-D08).
+    `space_id` is stored in the join row even though it can be derived from
+    both sides. That is the point: because the *same* column participates in
+    both composite foreign keys, a relation cannot connect rows from different
+    Spaces. Same-Space is therefore a schema property rather than a rule a
+    service must remember (M3-D08).
     """
     return [
         sa.Column("place_id", UUID, nullable=False),
@@ -65,15 +64,14 @@ def _relation_columns(target_column: str) -> list[sa.Column]:
 
 
 def upgrade() -> None:
-    # Ziel der zusammengesetzten Fremdschluessel. Ohne diese Unique-
-    # Constraints koennte PostgreSQL das Paar (id, space_id) nicht
-    # referenzieren.
+    # Targets for the composite foreign keys. Without these unique constraints
+    # PostgreSQL cannot reference the pair (id, space_id).
     op.create_unique_constraint("uq_memories_id_space_id", "memories", ["id", "space_id"])
     op.create_unique_constraint("uq_milestones_id_space_id", "milestones", ["id", "space_id"])
 
-    # Beim HeartMoment gehoert die Privacy-Klasse mit in den Schluessel.
-    # Sie ist der Grund, warum dieser Slice ueberhaupt heikel ist, und sie
-    # traegt hier die Last statt einer Dienstregel - siehe unten.
+    # HeartMoment additionally carries privacy class in the key. It is why
+    # this slice is sensitive at all, and the schema carries the invariant
+    # rather than leaving it to a service rule.
     op.create_unique_constraint(
         "uq_heart_moments_id_space_id_privacy",
         "heart_moments",
@@ -87,10 +85,9 @@ def upgrade() -> None:
         op.create_table(
             table,
             *_relation_columns(target_column),
-            # Der Primaerschluessel ist zugleich die Eindeutigkeit: dieselbe
-            # Relation kann nicht zweimal existieren. Ein doppeltes PUT ist
-            # deshalb idempotent und braucht kein vorheriges SELECT
-            # (M3-D26).
+            # The primary key is also uniqueness: the same relation cannot
+            # exist twice. A duplicate PUT is therefore idempotent and needs
+            # no preceding SELECT (M3-D26).
             sa.PrimaryKeyConstraint("place_id", target_column, name=f"pk_{table}"),
             sa.ForeignKeyConstraint(
                 ["place_id", "space_id"],
@@ -111,8 +108,8 @@ def upgrade() -> None:
                 ondelete="CASCADE",
             ),
         )
-        # Die Gegenrichtung: "welche Orte hat diese Erinnerung?" und das
-        # Aufraeumen beim Target-Delete.
+        # Reverse lookup for places linked to a target and cleanup on target
+        # deletion.
         op.create_index(f"ix_{table}_{target_column}", table, [target_column])
         op.create_index(f"ix_{table}_space_id", table, ["space_id"])
         op.create_index(
@@ -121,20 +118,19 @@ def upgrade() -> None:
             ["place_id", "created_at", target_column],
         )
 
-    # HeartMoments duerfen nur gemeinsam relationiert werden (M3-D09).
+    # HeartMoments may be related only while shared (M3-D09).
     #
-    # Die Join-Zeile traegt die Privacy-Klasse des Ziels mit und ist per
-    # CHECK auf `SPACE_SHARED` festgenagelt. Der Fremdschluessel zeigt auf
-    # `(id, space_id, privacy_class)` und kaskadiert Aenderungen. Wechselt
-    # ein HeartMoment auf `OWNER_ONLY`, ohne dass seine Relationen zuvor
-    # entfernt wurden, zieht das Update die Klasse in die Join-Zeile - und
-    # der CHECK bricht die Transaktion ab.
+    # The join row carries the target privacy class and pins it to
+    # `SPACE_SHARED` with a CHECK. The foreign key references
+    # `(id, space_id, privacy_class)` and cascades updates. If a HeartMoment
+    # changes to `OWNER_ONLY` without removing its relations first, the update
+    # propagates the class into the join row and the CHECK aborts the
+    # transaction.
     #
-    # Der Dienst entfernt die Relationen in derselben Transaktion und laeuft
-    # deshalb nie dagegen. Das hier ist der Boden darunter: der Zustand
-    # "privat, aber ueber eine gemeinsame Relation beweisbar" laesst sich
-    # nicht hinschreiben, auch nicht von einem spaeteren Codepfad, der die
-    # Regel nicht kennt.
+    # The service removes relations in the same transaction and therefore
+    # never hits that constraint. This is the safety floor beneath the
+    # service: the state "private but provable through a shared relation"
+    # cannot be persisted even by a later code path unaware of the rule.
     op.create_table(
         "place_heart_moments",
         *_relation_columns("heart_moment_id"),

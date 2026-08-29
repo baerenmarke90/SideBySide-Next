@@ -1,106 +1,101 @@
-# OpenAPI-Client-Generierung
+# OpenAPI Client Generation
 
-Web und Android sprechen denselben versionierten Vertrag. Diese Schicht
-erzeugt die mechanischen Teile davon — DTOs und, auf der Webseite, die
-Endpunktaufrufe — aus `backend/openapi.json`, statt sie zweimal von Hand zu
-pflegen.
+Web and Android use the same versioned contract. This layer generates the
+mechanical parts—DTOs and Web endpoint calls—from `backend/openapi.json`
+instead of maintaining them manually in two places.
 
-Generiert wird ausdrücklich **keine** Domain-, UI- oder State-Logik.
+It explicitly generates **no** domain, UI, or state logic.
 
 ```text
 FastAPI  ->  backend/openapi.json  ->  openapi-generator
                                         |-- web/src/api/generated      (TypeScript)
-                                        '-- android/api/generated      (Kotlin-Modelle)
+                                        '-- android/api/generated      (Kotlin models)
 ```
 
-## Benutzung
+## Usage
 
 ```bash
-tools/openapi/generate.sh           # neu erzeugen
-tools/openapi/generate.sh --check   # nur auf Drift prüfen (CI)
+tools/openapi/generate.sh           # regenerate
+tools/openapi/generate.sh --check   # check for drift only (CI)
 ```
 
-Voraussetzung ist Docker — dasselbe, was der Self-Hosted-Stack ohnehin
-verlangt. Ein JDK oder Node wird lokal nicht gebraucht.
+Docker is the only prerequisite, and the Self-Hosted stack already requires
+it. No local JDK or Node installation is needed.
 
-## Warum dieser Generator
+## Why this generator
 
-`openapi-generator` bedient TypeScript und Kotlin aus einer Konfiguration.
-Geprüfte Alternativen und warum sie hier nicht passen:
+`openapi-generator` serves TypeScript and Kotlin from one configuration.
+Alternatives considered and why they do not fit here:
 
-- **openapi-typescript + openapi-fetch** erzeugt sehr schlanken TypeScript-Code,
-  deckt Kotlin aber nicht ab. Zwei Werkzeuge hießen zwei Pins, zwei
-  Konfigurationsstile, zwei Lizenzprüfungen und zwei CI-Pfade.
-- **Kiota** (Microsoft) unterstützt TypeScript, aber kein Kotlin.
-- **orval**, **hey-api**, **oazapfts** sind TypeScript-only.
-- **swagger-codegen** ist der Vorgänger von openapi-generator; die aktive
-  Weiterentwicklung liegt bei letzterem.
+- **openapi-typescript + openapi-fetch** generates lean TypeScript code but does
+  not cover Kotlin. Two tools would require two pins, two configuration styles,
+  two license reviews, and two CI paths.
+- **Kiota** (Microsoft) supports TypeScript but not Kotlin.
+- **orval**, **hey-api**, and **oazapfts** are TypeScript-only.
+- **swagger-codegen** is the predecessor of openapi-generator; active
+  development continues in the latter.
 
-## Story-Union auf Kotlin
+## Story union on Kotlin
 
-Der frühere Generator-Stand erzeugte `StoryItem` als unbrauchbare
-`sealed class`: die Varianten erbten nicht von ihr und der Basistyp verlangte
-die Felder aller drei Varianten gleichzeitig. Das ist mit #119 behoben.
+The previous generator version produced `StoryItem` as an unusable
+`sealed class`: the variants did not inherit from it, and the base type required
+the fields of all three variants simultaneously. Issue #119 fixed this.
 
-OpenAPI Generator v7.24.0 erzeugt mit `generateOneOfAnyOfWrappers` und
-`kotlinx.serialization` jetzt eine discriminator-basierte `sealed interface`.
-Der generierte Serializer wertet `kind` aus und deserialisiert `MEMORY`,
-`HEART_MOMENT` und `MILESTONE` jeweils in den passenden Wrapper. Damit bleibt
-`StoryPage.items` eine `List<StoryItem>`, ohne dass eine Variante die Felder der
-anderen Varianten benötigt.
+OpenAPI Generator v7.24.0 now uses `generateOneOfAnyOfWrappers` and
+`kotlinx.serialization` to produce a discriminator-based `sealed interface`.
+The generated serializer evaluates `kind` and deserializes `MEMORY`,
+`HEART_MOMENT`, and `MILESTONE` into their corresponding wrappers. This keeps
+`StoryPage.items` as a `List<StoryItem>` without requiring any variant to carry
+the fields of the others.
 
-Die Ursache lag nicht im OpenAPI-Vertrag. Der Vertrag mit
-`discriminator.propertyName = kind` bleibt unverändert die einzige Quelle.
+The OpenAPI contract was not the cause. The contract with
+`discriminator.propertyName = kind` remains the unchanged source of truth.
 
-## Warum der generierte Code eingecheckt ist
+## Why generated code is committed
 
-Der Vertrag `backend/openapi.json` ist bereits eingecheckt und wird gegen die
-echte ASGI-App geprüft. Der Client-Code folgt derselben Linie:
+The `backend/openapi.json` contract is already committed and checked against the
+real ASGI application. Client code follows the same approach:
 
-- Ein Vertragsbruch ist im Pull Request als Diff **lesbar**, statt nur als
-  roter CI-Schritt zu erscheinen.
-- Web- und Android-Builds brauchen weder Docker noch Netzzugang, um zu
-  starten.
-- Der Drift-Check ist ein Vergleich und kein zweiter Erzeugungspfad, der
-  selbst abweichen könnte.
+- A contract break is **readable** as a pull-request diff instead of appearing
+  only as a failed CI step.
+- Web and Android builds need neither Docker nor network access to start.
+- The drift check is a comparison, not a second generation path that could
+  itself diverge.
 
-Der Preis ist ein größerer Diff bei Vertragsänderungen. Das ist beabsichtigt:
-eine Änderung an der Client-Schnittstelle *soll* im Review sichtbar sein.
+The tradeoff is a larger diff for contract changes. This is intentional: a
+change to the client interface *should* be visible during review.
 
-## Runtime-Abhängigkeiten
+## Runtime dependencies
 
-**TypeScript:** keine. Der Generator `typescript-fetch` erzeugt Code gegen die
-Fetch-API des Browsers. Es entsteht keine `package.json`, und die erzeugten
-Dateien importieren nichts außerhalb ihres eigenen Ordners — nachgeprüft, nicht
-angenommen.
+**TypeScript:** none. The `typescript-fetch` generator targets the browser Fetch
+API. It creates no `package.json`, and generated files import nothing outside
+their own directory—verified rather than assumed.
 
-**Kotlin:** `kotlinx.serialization`. Die Modelle tragen `@Serializable` und
-`@SerialName`; ohne eine JSON-Bibliothek geht das nicht, und
-`kotlinx.serialization` ist die einzige der Optionen, die den Android-Client
-**nicht** zusätzlich auf einen HTTP-Stack festlegt — sie funktioniert sowohl
-mit Retrofit als auch mit Ktor. Moshi, Gson und Jackson wären hier stärkere
-Vorfestlegungen.
+**Kotlin:** `kotlinx.serialization`. The models use `@Serializable` and
+`@SerialName`, which require a JSON library. Of the available options,
+`kotlinx.serialization` is the only one that does **not** also select an HTTP
+stack for the Android client; it works with both Retrofit and Ktor. Moshi, Gson,
+and Jackson would make stronger architectural choices here.
 
-Kein Service-Layer auf der Kotlin-Seite: Retrofit oder Ktor wären eine
-Entscheidung über den Android-Client, den es noch nicht gibt. Sie kommt
-additiv dazu, sobald das Projekt existiert.
+There is no Kotlin service layer. Selecting Retrofit or Ktor is an Android
+client decision and can be added independently when needed.
 
-## Lizenzen
+## Licenses
 
-`openapi-generator` steht unter **Apache-2.0**. Das Werkzeug wird nur zur
-Bauzeit ausgeführt und nicht ausgeliefert; Apache-2.0 stellt an den erzeugten
-Code keine Bedingungen. Der erzeugte Code ist damit Projektcode unter der
-Projektlizenz.
+`openapi-generator` is licensed under **Apache-2.0**. The tool runs only at
+build time and is not distributed; Apache-2.0 imposes no conditions on the
+generated output. Generated code is therefore project code under the project
+license.
 
-Der Container wird über Version **und** Digest festgenagelt
-(`tools/openapi/generator.env`). Ein neu gesetzter Tag kann so nicht
-unbemerkt anderen Client-Code erzeugen.
+The container is pinned by both version **and** digest
+(`tools/openapi/generator.env`). A reassigned tag therefore cannot silently
+produce different client code.
 
-## Aktualisieren
+## Updating
 
-1. Neuen Tag in `generator.env` eintragen.
-2. `docker pull openapitools/openapi-generator-cli:<tag>` ausführen und den
-   gemeldeten Digest eintragen.
-3. `tools/openapi/generate.sh` laufen lassen.
-4. Den entstehenden Diff im Pull Request begründen — ein Generatorwechsel
-   ändert Client-Code, und das ist eine Review-Frage, keine Formalie.
+1. Enter the new tag in `generator.env`.
+2. Run `docker pull openapitools/openapi-generator-cli:<tag>` and record the
+   reported digest.
+3. Run `tools/openapi/generate.sh`.
+4. Explain the resulting diff in the pull request—a generator change modifies
+   client code and is a review concern, not a formality.

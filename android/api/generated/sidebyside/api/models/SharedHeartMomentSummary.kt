@@ -33,7 +33,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Ein gemeinsamer HeartMoment. Eine private Variante gibt es nicht.
+ * A shared heart moment. There is deliberately no private variant.
  *
  * @param attachment 
  * @param author 

@@ -1,7 +1,7 @@
-"""Der SMTP-Adapter.
+"""SMTP mail adapter.
 
-`smtplib` aus der Standardbibliothek. Ein eigener Client waere eine
-Abhaengigkeit fuer ein Protokoll, das Python seit jeher mitbringt.
+Uses ``smtplib`` from the standard library. A separate client dependency would
+add little value for a protocol Python already provides.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from sidebyside.mail.base import MailMessage, MailSender, MailTransportError
 log = logging.getLogger(__name__)
 
 TIMEOUT_SECONDS = 15.0
-"""Ein haengender Mailserver darf keine Anfrage festhalten."""
+"""A stalled mail server must not hold a request indefinitely."""
 
 
 class SmtpMailSender(MailSender):
@@ -37,22 +37,21 @@ class SmtpMailSender(MailSender):
         self.sender_address = sender_address
 
     def send(self, message: MailMessage) -> None:
-        nachricht = EmailMessage()
-        nachricht["From"] = self.sender_address
-        nachricht["To"] = message.to
-        nachricht["Subject"] = message.subject
-        nachricht.set_content(message.body)
+        email_message = EmailMessage()
+        email_message["From"] = self.sender_address
+        email_message["To"] = message.to
+        email_message["Subject"] = message.subject
+        email_message.set_content(message.body)
 
         try:
-            with smtplib.SMTP(self.host, self.port, timeout=TIMEOUT_SECONDS) as verbindung:
+            with smtplib.SMTP(self.host, self.port, timeout=TIMEOUT_SECONDS) as connection:
                 if self.use_starttls:
-                    verbindung.starttls()
+                    connection.starttls()
                 if self.username:
-                    verbindung.login(self.username, self.password)
-                verbindung.send_message(nachricht)
-        except (OSError, smtplib.SMTPException) as fehler:
-            # Ohne den eigenen Typ und ohne diese Grenze staende der
-            # Fehlertext - und mit ihm moeglicherweise der Empfaenger - in
-            # einer Antwort an den Aufrufer.
+                    connection.login(self.username, self.password)
+                connection.send_message(email_message)
+        except (OSError, smtplib.SMTPException) as error:
+            # Keep transport details behind this boundary so an error response
+            # cannot expose provider text or recipient information.
             log.warning("mail transport failed", extra={"host": self.host})
-            raise MailTransportError("Die Nachricht konnte nicht zugestellt werden.") from fehler
+            raise MailTransportError("The message could not be delivered.") from error

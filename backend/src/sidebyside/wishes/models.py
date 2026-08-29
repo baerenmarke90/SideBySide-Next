@@ -1,4 +1,4 @@
-"""Persistenz fuer gemeinsame M3-Wishes."""
+"""Persistence for shared M3 wishes."""
 
 from __future__ import annotations
 
@@ -22,13 +22,12 @@ from sidebyside.domain.payload import CRYPTO_VERSION_PLAINTEXT, ProtectedPayload
 
 
 class WishStatus(StrEnum):
-    """Der Statusautomat aus M3-D02/D03/D04.
+    """State machine defined by M3-D02/D03/D04.
 
-    Vollstaendig aufgefuehrt, aber in M3-S1 erreicht ein Wish nur `OPEN`:
-    die beiden anderen Zustaende entstehen ausschliesslich aus dem noch
-    nicht gebauten Wish->Plan-Vertrag. Die Werte stehen trotzdem schon in
-    Modell und Datenbank, damit der spaetere Slice keine Statusmigration
-    ueber bestehende Zeilen fahren muss.
+    The complete set is declared here. A wish begins at ``OPEN`` and reaches
+    the other states only through the wish-to-plan lifecycle. Keeping the
+    values in the model and database avoids a later status-type migration over
+    existing rows.
     """
 
     OPEN = "OPEN"
@@ -37,11 +36,11 @@ class WishStatus(StrEnum):
 
 
 def wish_status_type() -> SqlEnum:
-    """Der Spaltentyp fuer `status`.
+    """Column type for ``status``.
 
-    Wie bei `privacy_class`: VARCHAR mit CHECK statt PostgreSQL-ENUM. Ein
-    spaeterer Wert braucht dann eine gewoehnliche Migration und keine
-    Typaenderung, die sich nur eingeschraenkt zurueckdrehen laesst.
+    As with ``privacy_class``, this uses VARCHAR plus CHECK rather than a
+    PostgreSQL enum. Adding a later value therefore requires an ordinary
+    migration rather than a database type change with limited reversibility.
     """
     return SqlEnum(
         *(status.value for status in WishStatus),
@@ -53,13 +52,12 @@ def wish_status_type() -> SqlEnum:
 
 
 class WishPayload(ProtectedPayload):
-    """Schuetzenswerter Inhalt eines Wishes.
+    """Protected content of a wish.
 
-    Nur der Titel - ein Wish hat in M3 keinen Body. Er liegt trotzdem
-    hinter der ProtectedPayload-Grenze: nach M3-D13 gehoert ein
-    Wunschtitel weder in Logs noch in Eventnutzlasten, und Status,
-    Sortierung und Autorisierung duerfen von seinem Klartext nicht
-    abhaengen.
+    M3 wishes contain only a title, but it still lives behind the
+    ``ProtectedPayload`` boundary. Per M3-D13, wish titles belong neither in
+    logs nor event payloads, and status, ordering, and authorization must not
+    depend on their plaintext.
     """
 
     title: str
@@ -72,11 +70,11 @@ class Wish(
     PrivateResourceMixin,
     Base,
 ):
-    """Ein gemeinsamer Wunsch - beide lesen, beide schreiben.
+    """A shared wish that both partners may read and write.
 
-    Anders als Memory und Milestone ist Wish nach M3-D01 collaborative
-    write. `owner_id` traegt hier deshalb `createdBy`: Attribution und
-    Audit, keine ACL.
+    Unlike memory and milestone, wishes use collaborative write semantics under
+    M3-D01. ``owner_id`` therefore represents ``createdBy`` attribution and
+    audit metadata rather than an ACL boundary.
     """
 
     __tablename__ = "wishes"
@@ -106,10 +104,9 @@ class Wish(
     __table_args__ = (
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
-        # Traegt den zusammengesetzten Fremdschluessel von `plans`. Die ID
-        # allein wuerde einen Plan auch auf einen Wish aus einem fremden
-        # Space zeigen lassen - der Dienst verhindert das, aber die
-        # Datenbank soll es ebenfalls nicht zulassen (M3-D02).
+        # Supports the composite foreign key from ``plans``. ID alone would
+        # allow a plan to reference a wish from another space. The service
+        # prevents that, and the database enforces it as well (M3-D02).
         UniqueConstraint("id", "space_id", name="uq_wishes_id_space_id"),
         Index("ix_wishes_owner_id", "owner_id"),
         Index("ix_wishes_space_id_created_at_id", "space_id", "created_at", "id"),
@@ -118,5 +115,5 @@ class Wish(
 
 
 def shared_privacy() -> PrivacyClass:
-    """Ein Wish ist immer gemeinsamer Space-Inhalt (M3-D01)."""
+    """A wish is always shared space content (M3-D01)."""
     return PrivacyClass.SPACE_SHARED

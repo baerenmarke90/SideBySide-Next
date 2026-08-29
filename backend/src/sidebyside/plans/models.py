@@ -1,4 +1,4 @@
-"""Persistenz fuer gemeinsame M3-Plans."""
+"""Persistence for shared M3 plans."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ from sidebyside.domain.payload import CRYPTO_VERSION_PLAINTEXT, ProtectedPayload
 
 
 class PlanStatus(StrEnum):
-    """Der Statusautomat aus M3-D04.
+    """State machine defined by M3-D04.
 
     ```text
     IDEA -- schedule --> PLANNED
@@ -43,8 +43,8 @@ class PlanStatus(StrEnum):
     PLANNED -- complete --> COMPLETED
     ```
 
-    `COMPLETED` ist terminal. `return-to-wish` ist keine Kante dieses
-    Automaten, sondern eine eigene Operation, die den Plan entfernt.
+    ``COMPLETED`` is terminal. ``return-to-wish`` is not an edge of this state
+    machine but a separate operation that removes the plan.
     """
 
     IDEA = "IDEA"
@@ -53,7 +53,7 @@ class PlanStatus(StrEnum):
 
 
 def plan_status_type() -> SqlEnum:
-    """Der Spaltentyp fuer `status` - VARCHAR mit CHECK, wie bei Wish."""
+    """Column type for ``status``: VARCHAR plus CHECK, matching wishes."""
     return SqlEnum(
         *(status.value for status in PlanStatus),
         name="plan_status",
@@ -64,12 +64,11 @@ def plan_status_type() -> SqlEnum:
 
 
 class PlanPayload(ProtectedPayload):
-    """Schuetzenswerter Inhalt eines Plans.
+    """Protected content of a plan.
 
-    Titel und Beschreibung liegen gemeinsam hinter der Grenze. Termine und
-    Status bleiben ausserhalb: nach ihnen wird gefiltert und sortiert, und
-    das muss auch dann noch gehen, wenn der Server den Klartext nicht mehr
-    besitzt.
+    Title and description live behind the protected boundary. Schedule and
+    status remain outside because filtering and ordering need them even when the
+    server no longer has plaintext content.
     """
 
     title: str
@@ -83,12 +82,11 @@ class Plan(
     PrivateResourceMixin,
     Base,
 ):
-    """Ein gemeinsames Vorhaben - beide lesen, beide schreiben.
+    """A shared plan that both partners may read and write.
 
-    Ein Plan entsteht auf zwei Wegen: aus einem Wish (M3-D02) oder direkt
-    (M3-D30). Der Unterschied steht in genau einem Feld, `source_wish_id`,
-    und er entscheidet ueber Completion-Folgen, `return-to-wish` und die
-    Delete-Matrix.
+    A plan is created either from a wish (M3-D02) or directly (M3-D30). The
+    distinction is represented by exactly one field, ``source_wish_id``, and
+    determines completion effects, ``return-to-wish``, and deletion rules.
     """
 
     __tablename__ = "plans"
@@ -105,28 +103,28 @@ class Plan(
         server_default=text("'IDEA'"),
     )
     place_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
-    """Der eine primaere Ort dieses Plans - oder keiner.
+    """The single primary place for this plan, or none.
 
-    Kanonisch und einspaltig (M3-D08/D31): es gibt bewusst keine Tabelle
-    `place_plans`. Ein Plan hat hoechstens einen Ort; mehrere waeren eine
-    Liste ohne Reihenfolge, und die braucht niemand.
+    Canonical and single-column by M3-D08/D31: there is deliberately no
+    ``place_plans`` table. A plan has at most one place; multiple places would
+    create an unordered list the product does not need.
     """
 
     source_wish_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
-    """Der Wish, aus dem dieser Plan entstanden ist - oder NULL.
+    """The wish from which this plan originated, or NULL.
 
-    Eindeutig, damit ein Wish zu keinem Zeitpunkt zwei originaere Plans
-    hat. PostgreSQL laesst in einem UNIQUE beliebig viele NULL zu; Direct
-    Plans stehen sich damit nicht gegenseitig im Weg.
+    Unique so a wish cannot have two originating plans at the same time.
+    PostgreSQL allows multiple NULL values in a UNIQUE constraint, so direct
+    plans do not conflict with one another.
     """
 
     planned_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     planned_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     experienced_on: Mapped[date | None] = mapped_column(Date)
-    """Der Kalendertag des Erlebnisses - ein fachlicher Tag, keine Zeitpunkt.
+    """Calendar day on which the experience happened, not an instant.
 
-    Deshalb DATE und nicht TIMESTAMPTZ: ein erlebter Tag hat keine
-    Zeitzone, und als Zeitpunkt gespeichert verschoebe er sich.
+    This is a DATE rather than TIMESTAMPTZ because an experienced calendar day
+    has no timezone and would shift if stored as an instant.
     """
 
     crypto_version: Mapped[int] = mapped_column(
@@ -143,9 +141,9 @@ class Plan(
     __table_args__ = (
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="privacy_is_space_shared"),
         CheckConstraint("crypto_version >= 0", name="crypto_version_is_non_negative"),
-        # Die Datumsinvarianten aus M3-D04. Sie stehen zusaetzlich im
-        # Dienst; hier sind sie die Grenze, die auch ein Wartungsskript
-        # oder eine spaetere Migration nicht unterlaufen kann.
+        # Date invariants from M3-D04. They also live in the service; the
+        # database constraint prevents maintenance scripts or later migrations
+        # from bypassing them.
         CheckConstraint(
             "planned_end IS NULL OR planned_start IS NOT NULL",
             name="planned_end_needs_start",
@@ -167,28 +165,26 @@ class Plan(
             name="completed_needs_experienced_on",
         ),
         UniqueConstraint("source_wish_id", name="uq_plans_source_wish_id"),
-        # Zusammengesetzt statt nur auf `id`: so kann ein Plan nicht auf
-        # einen Wish aus einem fremden Space zeigen. Weil `source_wish_id`
-        # NULL sein darf und PostgreSQL einen Fremdschluessel mit NULL-
-        # Anteil nicht prueft, bleibt Direct Plan Create davon unberuehrt.
+        # Composite rather than ID-only so a plan cannot point at a wish in a
+        # different space. Because ``source_wish_id`` may be NULL and
+        # PostgreSQL skips foreign-key validation when one component is NULL,
+        # direct plan creation remains unaffected.
         #
-        # Ohne ON DELETE: ein Wish mit originaerem Plan verschwindet nicht
-        # nebenbei. M3-D05 verbietet eine versteckte Cascade Wish -> Plan,
-        # und der Dienst weist den Fall vorher mit einem fachlichen 409 ab.
+        # Deliberately no ON DELETE: a wish with an originating plan must not
+        # disappear implicitly. M3-D05 forbids a hidden Wish -> Plan cascade,
+        # and the service rejects that case with a domain 409 first.
         ForeignKeyConstraint(
             ["source_wish_id", "space_id"],
             ["wishes.id", "wishes.space_id"],
             name="fk_plans_source_wish_id_wishes",
         ),
-        # Wie beim source Wish zusammengesetzt, damit ein Plan nicht auf
-        # einen Ort aus einem fremden Space zeigen kann. `SET NULL` nennt
-        # ausdruecklich die Spalte: ohne die Spaltenliste wuerde
-        # PostgreSQL auch `space_id` leeren, und die ist NOT NULL.
+        # As with source wish, the composite key prevents references to a place
+        # in another space. ``SET NULL`` explicitly names the column: without
+        # the column list PostgreSQL would also clear NOT NULL ``space_id``.
         #
-        # Der Place-Dienst loest die Zuordnung schon vorher versioniert
-        # auf. Dieser Fremdschluessel ist die Grenze fuer den Fall, dass
-        # das einmal nicht passiert ist - ein Plan zeigt nie auf einen Ort,
-        # den es nicht mehr gibt.
+        # The place service removes the association first under versioning.
+        # This foreign key is defense in depth so a plan never references a
+        # place that no longer exists.
         ForeignKeyConstraint(
             ["place_id", "space_id"],
             ["places.id", "places.space_id"],
@@ -204,5 +200,5 @@ class Plan(
 
 
 def shared_privacy() -> PrivacyClass:
-    """Ein Plan ist immer gemeinsamer Space-Inhalt (M3-D01)."""
+    """A plan is always shared space content (M3-D01)."""
     return PrivacyClass.SPACE_SHARED

@@ -1,14 +1,14 @@
-"""MediaStore-Schnittstelle.
+"""MediaStore interface.
 
-Self-Hosted legt Dateien ins Dateisystem, Cloud in einen Objektspeicher.
-Der Application Core kennt keinen von beiden.
+Self-hosted deployments store files on the filesystem, while cloud deployments
+use object storage. The application core knows neither implementation.
 
-Zwei Regeln, die für jede Implementierung gelten:
+Two rules apply to every implementation:
 
-- Der Storage Key wird NIEMALS aus einem Benutzer-Dateinamen abgeleitet.
-  Ein Dateiname aus einer Anfrage kann Pfadbestandteile enthalten.
-- Medien sind nicht öffentlich. Lesen erfolgt über eine autorisierte Route
-  oder eine kurzlebige signierte URL.
+- A storage key is NEVER derived from a user-provided filename. A filename
+  from a request may contain path components.
+- Media is not public. Reads happen through an authorized route or a
+  short-lived signed URL.
 """
 
 from __future__ import annotations
@@ -21,13 +21,12 @@ from uuid import UUID
 
 
 class ByteSource(Protocol):
-    """Was zum Ablegen wirklich gebraucht wird.
+    """The minimal surface required for storage.
 
-    Nicht `BinaryIO`: das verlangt ein gutes Dutzend Methoden, von denen
-    hier eine benutzt wird. Ein Aufrufer, der einen begrenzenden oder
-    zaehlenden Strom vorschaltet, muesste sonst eine ganze Dateischnittstelle
-    nachbilden - oder casten, und ein Cast an dieser Stelle waere die
-    Behauptung, die Grenze sei egal.
+    Deliberately not `BinaryIO`: that protocol requires many methods while
+    this boundary uses only one. A caller wrapping a bounded or counting
+    stream would otherwise need to emulate a full file interface or cast it,
+    and such a cast here would incorrectly claim the boundary does not matter.
     """
 
     def read(self, size: int = -1, /) -> bytes: ...
@@ -41,40 +40,40 @@ class StoredObject:
 
 
 def build_storage_key(space_id: UUID, attachment_id: UUID, variant: str = "original") -> str:
-    """Den Ablageort bilden.
+    """Build the storage location.
 
         spaces/{spaceUuid}/attachments/{attachmentUuid}/original
 
-    Ausschließlich aus UUIDs. Der ursprüngliche Dateiname wird als
-    Metadatum geführt und geht nie in den Pfad ein.
+    The path is derived exclusively from UUIDs. The original filename remains
+    metadata and never becomes part of the path.
     """
     if "/" in variant or ".." in variant:
-        raise ValueError("Ungültige Variante.")
+        raise ValueError("Invalid variant.")
     return f"spaces/{space_id}/attachments/{attachment_id}/{variant}"
 
 
 class MediaStore(ABC):
-    """Ablage für Anhänge."""
+    """Storage interface for attachments."""
 
     @abstractmethod
     def put(self, storage_key: str, data: ByteSource, content_type: str) -> StoredObject:
-        """Einen Datenstrom ablegen."""
+        """Store a byte stream."""
 
     @abstractmethod
     def open(self, storage_key: str) -> BinaryIO:
-        """Zum Lesen öffnen."""
+        """Open an object for reading."""
 
     @abstractmethod
     def delete(self, storage_key: str) -> None:
-        """Entfernen. Ein bereits fehlendes Objekt ist kein Fehler."""
+        """Delete an object. An already missing object is not an error."""
 
     @abstractmethod
     def exists(self, storage_key: str) -> bool: ...
 
     @abstractmethod
     def create_read_url(self, storage_key: str, expires_in: timedelta) -> str | None:
-        """Eine kurzlebige Lese-URL, sofern die Ablage das kann.
+        """Create a short-lived read URL when the backend supports one.
 
-        Gibt None zurück, wenn nicht - dann muss die Anwendung den Inhalt
-        selbst ausliefern. Das Dateisystem kann keine signierten URLs.
+        Return None otherwise, in which case the application must serve the
+        content itself. A filesystem cannot create signed URLs.
         """

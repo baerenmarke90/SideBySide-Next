@@ -1,13 +1,13 @@
-"""Abuse-Grenze fuer den anonymen Start einer Passkey-Anmeldung.
+"""Abuse boundary for anonymous passkey authentication starts.
 
-Der Start einer WebAuthn-Authentifizierung kennt absichtlich weder Konto noch
-Credential. Als Rate-Limit-Schluessel bleibt deshalb nur die bereits an der
-HTTP-Grenze vertrauenswuerdig aufgeloeste Netzwerkidentitaet des Clients.
+Starting WebAuthn authentication deliberately knows neither account nor
+credential. The only available rate-limit key is therefore the client's
+network identity after it has been resolved at the trusted HTTP boundary.
 
-`request.client.host` kommt in Produktion aus dem von Uvicorn bereinigten ASGI-
-Scope. Forwarded-Header werden dort nur fuer die explizit konfigurierten
-`FORWARDED_ALLOW_IPS` ausgewertet. Dieses Modul parst deshalb bewusst weder
-`Forwarded` noch `X-Forwarded-For` selbst.
+In production, ``request.client.host`` comes from the ASGI scope normalized by
+Uvicorn. Forwarded headers are evaluated there only for explicitly configured
+``FORWARDED_ALLOW_IPS``. This module deliberately parses neither ``Forwarded``
+nor ``X-Forwarded-For`` itself.
 """
 
 from __future__ import annotations
@@ -21,25 +21,24 @@ from sidebyside.auth import rate_limit
 
 ACTION_AUTHENTICATION_START = "passkey_auth_start"
 AUTHENTICATION_START = rate_limit.Limit(attempts=30, window=timedelta(minutes=15))
-"""Grosszuegiges Human-Budget, aber begrenzter Challenge-Schreibdurchsatz.
+"""Generous human budget with bounded challenge-write throughput.
 
-30 Starts in 15 Minuten liegen deutlich ueber einem normalen interaktiven
-Login-Flow. Die Grenze gilt pro Netzwerkidentitaet statt global, damit ein
-Angreifer nicht mit einem einzigen Schluessel alle Passkey-Anmeldungen der
-Instanz blockieren kann.
+Thirty starts in 15 minutes are well above a normal interactive login flow.
+The limit is per network identity rather than global so one attacker cannot use
+a single key to block all passkey sign-ins for the instance.
 """
 
 
 def network_key(client_host: str | None) -> str:
-    """Stabilen, nicht accountbezogenen Abuse-Key aus dem ASGI-Peer ableiten.
+    """Derive a stable non-account abuse key from the ASGI peer.
 
-    IPv4 wird einzeln begrenzt. IPv6 wird auf /64 normalisiert, damit ein
-    Client die Grenze nicht durch Rotation der Interface-ID im selben Netz
-    umgehen kann. IPv4-mapped IPv6 wird wie IPv4 behandelt.
+    IPv4 is limited per address. IPv6 is normalized to /64 so a client cannot
+    evade the limit by rotating interface IDs within one network. IPv4-mapped
+    IPv6 is handled as IPv4.
 
-    Der Rueckfall fuer nicht-IP-basierte ASGI-Test-/Transport-Clients bleibt
-    absichtlich an deren Peer-Bezeichner gebunden. In einem produktiven TCP-
-    Deployment liefert Uvicorn hier eine IP-Adresse.
+    The fallback for non-IP ASGI test/transport clients deliberately remains
+    bound to their peer identifier. In a production TCP deployment Uvicorn
+    provides an IP address here.
     """
     raw = (client_host or "unknown").strip().lower() or "unknown"
     try:
@@ -57,10 +56,10 @@ def network_key(client_host: str | None) -> str:
 
 
 def reserve_authentication_start(session: Session, client_host: str | None) -> None:
-    """Vor jedem Challenge-Write atomar einen DB-weiten Slot reservieren."""
+    """Atomically reserve a database-wide slot before each challenge write."""
     key = network_key(client_host)
     rate_limit.check(session, ACTION_AUTHENTICATION_START, key, AUTHENTICATION_START)
-    # Historische Aufrufer-Semantik beibehalten. Seit #60 erkennt
-    # `record_attempt`, dass `check` den Slot bereits persistent reserviert
-    # hat, und erzeugt deshalb keinen zweiten Event.
+    # Preserve historical caller semantics. Since #60, ``record_attempt``
+    # recognizes that ``check`` already persisted the slot and therefore does
+    # not create a second event.
     rate_limit.record_attempt(session, ACTION_AUTHENTICATION_START, key)

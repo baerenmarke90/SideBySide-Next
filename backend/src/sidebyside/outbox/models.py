@@ -1,15 +1,15 @@
 """Transactional Outbox.
 
-Fachliche Änderung und Ereignis werden in einer Transaktion geschrieben:
+Domain mutation and event are written in one transaction:
 
     BEGIN
-      INSERT/UPDATE  Domain-Objekt
+      INSERT/UPDATE  domain object
       INSERT         outbox_event
     COMMIT
 
-Damit kann kein Ereignis verlorengehen, weil die Zustellung nach dem Commit
-scheiterte, und keine Benachrichtigung zu einer Änderung entstehen, die
-zurückgerollt wurde. Ein Worker liest die Tabelle und stellt zu.
+This prevents an event from being lost because delivery fails after commit,
+and prevents a notification from being created for a mutation that was rolled
+back. A worker reads and delivers rows from this table.
 """
 
 from __future__ import annotations
@@ -35,11 +35,11 @@ class OutboxEvent(IdMixin, Base):
     actor_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
     subject_type: Mapped[str] = mapped_column(String(64), nullable=False)
     subject_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
-    # M2-D16: letzte/neue Ressourcen-Version im sicheren Envelope. Historische
-    # Nicht-M2-Ereignisse duerfen NULL bleiben.
+    # M2-D16: latest/new resource version in the safe envelope. Historical
+    # non-M2 events may remain NULL.
     resource_version: Mapped[int | None] = mapped_column(Integer)
 
-    # Nur Verweise und unkritische Merkmale - siehe domain/events.py.
+    # References and non-sensitive attributes only; see domain/events.py.
     payload: Mapped[PublicEventPayload] = mapped_column(
         PublicEventPayloadJSON(), nullable=False, default=PublicEventPayload
     )
@@ -56,8 +56,8 @@ class OutboxEvent(IdMixin, Base):
             "resource_version IS NULL OR resource_version >= 1",
             name="resource_version_is_positive",
         ),
-        # Der Worker sucht ausschließlich unverarbeitete Zeilen. Ein
-        # Teilindex haelt ihn klein, auch wenn die Tabelle waechst.
+        # The worker searches only unprocessed rows. A partial index keeps
+        # that lookup small even as the table grows.
         Index(
             "ix_outbox_events_unprocessed",
             "created_at",

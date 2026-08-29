@@ -1,20 +1,19 @@
-"""Fachlogik fuer M3-Places.
+"""Domain logic for M3 places.
 
-Zwei Dinge unterscheiden diesen Dienst von Wish und Plan.
+Two aspects distinguish this service from Wish and Plan.
 
-**Koordinaten.** Sie sind sensibler Inhalt, liegen aber nach M3-D06 als
-typisierte Spalten vor. Was hier passiert, ist deshalb Validierung und
-Quantisierung - nicht Anreicherung. Es gibt kein Geocoding, keinen
-Provideraufruf und keine Ableitung von Adresse zu Koordinaten oder
-umgekehrt. Ein Ort weiss genau das, was jemand eingetragen hat.
+**Coordinates.** They are sensitive content but, under M3-D06, are stored as
+typed columns. This service therefore performs validation and quantization,
+not enrichment. There is no geocoding, provider call, or derivation from
+address to coordinates or vice versa. A place knows exactly what someone
+entered.
 
-**Keine Deduplizierung.** Jeder Create-Request erzeugt einen neuen Place,
-auch bei gleichem Namen und gleichen Koordinaten (M3-D07). Zwei Orte
-zusammenzufuehren waere eine Datenaenderung, die niemand angefordert hat -
-und eine, die sich nicht zurueckdrehen laesst.
+**No deduplication.** Every create request produces a new place, even with
+the same name and coordinates (M3-D07). Merging two places would be an
+unsolicited data mutation and one that cannot be reversed reliably.
 
-Die kanonische Sperrreihenfolge im M3-Kern ist `Place -> Wish -> Plan`.
-Ein Place wird also immer *vor* einem Plan gesperrt, nie danach.
+The canonical lock order in the M3 core is `Place -> Wish -> Plan`. A place
+is therefore always locked *before* a plan, never after it.
 """
 
 from __future__ import annotations
@@ -79,14 +78,15 @@ def _normalize_name(value: str) -> str:
 
 
 def _quantize(value: float | Decimal, *, limit: Decimal, code: str) -> Decimal:
-    """Eine Koordinate auf die Persistenzgenauigkeit bringen.
+    """Quantize a coordinate to the persisted precision.
 
-    Ueber `str` und nicht direkt aus dem Float: `Decimal(52.520008)` traegt
-    den binaeren Rundungsfehler mit, `Decimal("52.520008")` nicht.
+    Construct through `str` rather than directly from a float:
+    `Decimal(52.520008)` carries the binary rounding error while
+    `Decimal("52.520008")` does not.
 
-    Quantisiert wird bewusst, statt zu viele Nachkommastellen abzulehnen.
-    Ein Client, der aus einem Sensor sechzehn Stellen bekommt, hat nichts
-    falsch gemacht; gespeichert werden davon sechs (M3-D06).
+    Values are deliberately quantized rather than rejected for excess decimal
+    places. A client receiving sixteen decimal places from a sensor has done
+    nothing wrong; six of them are persisted (M3-D06).
     """
     try:
         exact = Decimal(str(value))
@@ -96,7 +96,7 @@ def _quantize(value: float | Decimal, *, limit: Decimal, code: str) -> Decimal:
         raise ValidationError("Coordinate is out of range.", code)
     quantized = exact.quantize(_QUANTUM)
     if abs(quantized) > limit:
-        # Die Rundung selbst darf die Grenze nicht ueberschreiten.
+        # Quantization itself must not cross the boundary.
         raise ValidationError("Coordinate is out of range.", code)
     return quantized
 
@@ -105,7 +105,7 @@ def normalize_coordinates(
     latitude: float | Decimal | None,
     longitude: float | Decimal | None,
 ) -> Coordinates:
-    """Beide oder keine - und beide innerhalb ihrer Grenzen (M3-D06)."""
+    """Require both coordinates or neither, with each in range (M3-D06)."""
     if (latitude is None) != (longitude is None):
         raise ValidationError(
             "Latitude and longitude must be given together.",
@@ -138,11 +138,11 @@ def _ensure_expected_version(place: Place, expected_version: int) -> None:
 
 
 def _record(session: Session, place: Place, actor_id: UUID, event_type: EventType) -> None:
-    """Ein Ereignis ohne Name, Adresse und ohne Koordinaten (M3-D28).
+    """Record an event without name, address, or coordinates (M3-D28).
 
-    Der Eventvertrag laesst ohnehin nur die Allowlist aus
-    `PublicEventPayload` zu. Der Hinweis steht hier trotzdem: ein Ort ist
-    die Art von Angabe, die in einem Log ueber Jahre stehen bleibt.
+    The event contract already limits payloads to the `PublicEventPayload`
+    allowlist. The note remains explicit here because a place is exactly the
+    kind of information that can otherwise persist in logs for years.
     """
     outbox_service.record(
         session,
@@ -209,18 +209,17 @@ def update_place(
     latitude: float | Decimal | None,
     longitude: float | Decimal | None,
 ) -> Place:
-    """Eine Korrektur am Ort.
+    """Apply a correction to a place.
 
-    Koordinaten werden als Paar behandelt, auch beim PATCH: wer eine von
-    beiden anfasst, aendert beide. Nur `latitude` zu senden waere sonst
-    der Weg zu einer halben Koordinate, den die Invariante gerade
-    ausschliesst.
+    Coordinates are treated as a pair even for PATCH: touching one means
+    changing both. Sending only `latitude` must not create the half-coordinate
+    state that the invariant explicitly prevents.
     """
     place = require_writable_locked(session, Place, context, place_id)
     _ensure_expected_version(place, expected_version)
 
-    beruehrt_koordinaten = bool({"latitude", "longitude"} & changed_fields)
-    if beruehrt_koordinaten:
+    coordinates_touched = bool({"latitude", "longitude"} & changed_fields)
+    if coordinates_touched:
         coordinates = normalize_coordinates(
             latitude if "latitude" in changed_fields else place.latitude,
             longitude if "longitude" in changed_fields else place.longitude,
@@ -259,17 +258,17 @@ def delete_place(
     *,
     expected_version: int,
 ) -> None:
-    """Den Ort entfernen - und nichts sonst (M3-D06, Abschnitt 9).
+    """Remove the place and nothing else (M3-D06, section 9).
 
-    Plans, die auf ihn zeigen, verlieren ihre Zuordnung und bleiben
-    bestehen. Das geschieht ausdruecklich im Dienst und nicht nur ueber
-    `ON DELETE SET NULL`: ein Plan, dessen Ort verschwindet, hat sich
-    geaendert, und seine Version muss das sagen. Sonst schriebe ein
-    Partner mit einem Stand weiter, der einen Ort zeigt, den es nicht mehr
-    gibt - ohne je einen Konflikt zu sehen.
+    Plans referencing it lose the association and remain. This is performed
+    explicitly in the service rather than relying only on `ON DELETE SET
+    NULL`: a plan whose place disappears has changed, and its version must
+    reflect that. Otherwise a partner could continue writing from a state
+    that references a place which no longer exists without ever seeing a
+    conflict.
 
-    Der Fremdschluessel bleibt trotzdem auf `SET NULL`. Er ist die Grenze
-    fuer den Fall, dass dieser Weg einmal nicht gelaufen ist.
+    The foreign key still uses `SET NULL` as a safety boundary if this path is
+    ever bypassed.
     """
     from sidebyside.plans import service as plan_service
 
@@ -327,12 +326,12 @@ def list_places(
     cursor: str | None,
     limit: int,
 ) -> PlacePageResult:
-    """Neueste zuerst.
+    """Return newest places first.
 
-    Kein Filter nach Naehe, kein Umkreis, keine Sortierung nach Distanz -
-    das waere eine Geo-Abfrage und braucht einen bewussten spaeteren
-    Scope samt Indexform. Und kein Filter nach Name: der liegt hinter der
-    ProtectedPayload-Grenze.
+    There is no proximity filter, radius, or distance ordering: that would be
+    a geospatial query and needs a deliberate later scope with an appropriate
+    index. There is also no name filter because the name is behind the
+    ProtectedPayload boundary.
     """
     statement = readable(Place, context)
     if cursor is not None:

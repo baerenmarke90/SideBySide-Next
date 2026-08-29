@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Konservative Pfadklassifizierung fuer teure PR-Gates.
+"""Conservatively classify paths for expensive pull-request gates.
 
-Normale Dokumentation soll keine Runtime-/PostgreSQL-/Container-Gates starten.
-Sobald eine relevante oder unbekannte Datei betroffen ist, werden die
-zugehoerigen Gates bzw. bei unbekannter Wirkung alle teuren Gates fail-closed
-aktiviert. Pushes auf main werden in den Workflows separat immer mit allen
-teuren Gates ausgefuehrt.
+Ordinary documentation must not start runtime, PostgreSQL, or container gates.
+As soon as a relevant or unknown file is affected, enable the corresponding
+gates, or all expensive gates fail-closed when the effect is unknown. Workflow
+pushes to main always run every expensive gate separately.
 """
 
 from __future__ import annotations
@@ -59,7 +58,12 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
         if _matches(
             path,
             prefixes=("backend/", "web/", "android/"),
-            exact=(".github/workflows/ci.yml", ".env.example", *SELF_HOSTED_COMPOSE_FILES, ".gitignore"),
+            exact=(
+                ".github/workflows/ci.yml",
+                ".env.example",
+                *SELF_HOSTED_COMPOSE_FILES,
+                ".gitignore",
+            ),
         ):
             result["backend"] = True
             known = True
@@ -115,7 +119,7 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("changed_files", type=Path, help="Datei mit einem geaenderten Pfad pro Zeile")
+    parser.add_argument("changed_files", type=Path, help="File with one changed path per line")
     args = parser.parse_args()
 
     paths = args.changed_files.read_text(encoding="utf-8").splitlines()

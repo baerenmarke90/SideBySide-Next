@@ -1,4 +1,4 @@
-"""Konfiguration und Adapterauswahl fuer Medien."""
+"""Media configuration and adapter selection."""
 
 from __future__ import annotations
 

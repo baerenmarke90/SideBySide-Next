@@ -1,8 +1,8 @@
-"""Fachlogik fuer M2-Memories.
+"""Domain logic for M2 memories.
 
-Der Service erzwingt Tenant-/Owner-Grenzen vor jeder Ressourcenmutation,
-haelt ProtectedPayload aus Cursor und Events heraus und koppelt Domainzustand
-mit der Transactional Outbox in derselben Request-Transaktion.
+The service enforces tenant/owner boundaries before every resource mutation,
+keeps ``ProtectedPayload`` out of cursors and events, and couples domain state
+with the transactional outbox in the same request transaction.
 """
 
 from __future__ import annotations
@@ -162,7 +162,7 @@ def delete_memory(
 
 
 def _cursor_binding(context: AuthorizationContext, year: int | None) -> dict[str, Any]:
-    """Woran ein Memory-Cursor gebunden ist: Space und Jahresfilter."""
+    """Bind a memory cursor to its space and year filter."""
     return {"collection": "memories", "spaceId": str(context.space_id), "year": year}
 
 
@@ -264,36 +264,36 @@ def replace_attachments(
     expected_version: int,
     entries: list[tuple[UUID, int]],
 ) -> Memory:
-    """Die Galerie einer Memory vollstaendig neu setzen.
+    """Replace the complete attachment gallery of a memory.
 
-    Ein PUT und kein Hinzufuegen/Entfernen: die Menge samt Reihenfolge ist
-    der Zustand, den der Client gesehen hat, und `If-Match` sorgt dafuer,
-    dass er ihn auch noch hat. Ein partieller Fehler laesst die bestehende
-    Galerie unveraendert - alles laeuft in einer Transaktion.
+    This is PUT semantics rather than incremental add/remove. The set and order
+    are the state the client observed, and ``If-Match`` ensures it still owns
+    that version. Any partial failure leaves the existing gallery unchanged
+    because the entire operation runs in one transaction.
     """
     from sidebyside.attachments import binding
 
     memory = require_writable(session, Memory, context, memory_id)
     _ensure_expected_version(memory, expected_version)
 
-    positionen = [position for _, position in entries]
-    if sorted(positionen) != list(range(len(entries))):
+    positions = [position for _, position in entries]
+    if sorted(positions) != list(range(len(entries))):
         raise ValidationError(
             "Positions must be a gapless zero-based sequence.",
             "ATTACHMENT_POSITION_INVALID",
         )
-    kennungen = [attachment_id for attachment_id, _ in entries]
-    if len(set(kennungen)) != len(kennungen):
+    identifiers = [attachment_id for attachment_id, _ in entries]
+    if len(set(identifiers)) != len(identifiers):
         raise ValidationError(
             "An attachment may appear at most once.",
             "ATTACHMENT_POSITION_INVALID",
         )
 
-    gesperrt = binding.lock_for_binding(session, kennungen)
+    locked = binding.lock_for_binding(session, identifiers)
     attachments = []
-    for attachment_id in kennungen:
+    for attachment_id in identifiers:
         attachment = binding.ensure_bindable(
-            gesperrt.get(attachment_id),
+            locked.get(attachment_id),
             space_id=context.space_id,
             account_id=context.account_id,
         )
@@ -301,15 +301,13 @@ def replace_attachments(
         attachments.append(attachment)
     binding.ensure_within_limits(attachments)
 
-    vorher = {
-        gebunden.attachment.id for gebunden in binding.attachments_of_memory(session, memory.id)
-    }
+    previous = {bound.attachment.id for bound in binding.attachments_of_memory(session, memory.id)}
     session.execute(
         delete(binding.MemoryAttachment).where(binding.MemoryAttachment.memory_id == memory.id)
     )
-    # Vor dem Einfuegen leeren und in derselben Anweisungsfolge neu setzen:
-    # sonst kollidierte die Eindeutigkeit von `position` mit sich selbst,
-    # wenn zwei Attachments die Plaetze tauschen.
+    # Flush the empty set before re-inserting it in the same operation;
+    # otherwise the unique ``position`` constraint could collide with itself
+    # when two attachments swap positions.
     session.flush()
     for attachment_id, position in entries:
         session.add(
@@ -320,12 +318,12 @@ def replace_attachments(
             )
         )
 
-    for entfallen in vorher - set(kennungen):
-        geloest = session.get(Attachment, entfallen)
-        if geloest is not None:
-            # Letzte Referenz entfernt: fachlich unreferenziert, Cleanup
-            # asynchron (M2-D11).
-            attachment_service.mark_for_deletion(session, geloest)
+    for removed in previous - set(identifiers):
+        detached = session.get(Attachment, removed)
+        if detached is not None:
+            # The last reference was removed. It becomes domain-unreferenced
+            # immediately and provider cleanup remains asynchronous (M2-D11).
+            attachment_service.mark_for_deletion(session, detached)
 
     memory.updated_at = now()
     _flush(session)

@@ -1,13 +1,12 @@
-"""Domain-Ereignisse.
+"""Domain events.
 
-Die Domäne kennt weder Push noch Mail noch eine Integration. Sie stellt
-fest, dass etwas geschehen ist; was daraus folgt, entscheidet ein Worker.
+The domain knows neither push delivery nor mail nor any integration. It
+records that something happened; a worker decides what follows.
 
-Ereignisnutzlasten enthalten bewusst KEINE sensiblen Inhalte. Ein Ereignis
-transportiert Verweise - wer, wo, welches Objekt -, nicht den Text einer
-Erinnerung. Zwei Gründe: die Nutzlast überlebt in der Outbox und in Logs,
-und nach der Umstellung auf Ende-zu-Ende-Verschlüsselung stünde der Text
-ohnehin nicht mehr zur Verfügung.
+Event payloads deliberately contain NO sensitive content. An event carries
+references - who, where, which object - rather than the text of a memory. Two
+reasons: payloads persist in the outbox and in logs, and after the transition
+to end-to-end encryption the server would not have that text anyway.
 """
 
 from __future__ import annotations
@@ -22,7 +21,7 @@ from sidebyside.authorization import ContentVisibility
 
 
 class EventType(StrEnum):
-    """Der Katalog. Ein ausgelieferter Name wird nicht umbenannt."""
+    """Event catalog. A shipped name is never renamed."""
 
     MEMORY_CREATED = "MEMORY_CREATED"
     MEMORY_UPDATED = "MEMORY_UPDATED"
@@ -38,18 +37,17 @@ class EventType(StrEnum):
     WISH_CREATED = "WISH_CREATED"
     WISH_UPDATED = "WISH_UPDATED"
     WISH_DELETED = "WISH_DELETED"
-    # Die drei Wish-Statuskanten aus M3-D02/D03/D04. Eigene Typen statt
-    # `WISH_UPDATED`: fuer einen Consumer ist "eingeplant" eine andere
-    # Nachricht als "umbenannt".
+    # The three Wish status edges from M3-D02/D03/D04. Separate types instead
+    # of `WISH_UPDATED`: for a consumer, "planned" is a different event from
+    # "renamed".
     WISH_PLANNED = "WISH_PLANNED"
     WISH_REOPENED = "WISH_REOPENED"
     PLACE_CREATED = "PLACE_CREATED"
     PLACE_UPDATED = "PLACE_UPDATED"
     PLACE_DELETED = "PLACE_DELETED"
-    # Die typisierten Content-Relations aus M3-D08. Eigene Typen statt
-    # `PLACE_UPDATED`: eine Verknuepfung aendert den Ort nicht, sie stellt
-    # eine Beziehung her - und ein Consumer, der Orte spiegelt, muss davon
-    # nichts neu laden.
+    # Typed content relations from M3-D08. Separate types instead of
+    # `PLACE_UPDATED`: linking does not change the place, it establishes a
+    # relation, and a consumer mirroring places need not reload anything.
     PLACE_MEMORY_LINKED = "PLACE_MEMORY_LINKED"
     PLACE_MEMORY_UNLINKED = "PLACE_MEMORY_UNLINKED"
     PLACE_HEART_MOMENT_LINKED = "PLACE_HEART_MOMENT_LINKED"
@@ -69,12 +67,13 @@ class EventType(StrEnum):
 
 
 class PublicEventPayload(BaseModel):
-    """Explizite Allowlist für dauerhaft gespeicherte Ereignismetadaten.
+    """Explicit allowlist for persistently stored event metadata.
 
-    „Public“ bedeutet hier nur: außerhalb eines ProtectedPayload sicher
-    transportierbar. Es ist keine öffentliche API und keine Freigabe an
-    Dritte. Neue Felder brauchen eine bewusste Prüfung an dieser zentralen
-    Grenze; beliebige Dictionaries und damit Klartexte sind ausgeschlossen.
+    "Public" means only that the data is safe to transport outside a
+    ProtectedPayload. It is not a public API or permission to disclose the
+    data to third parties. New fields require deliberate review at this
+    central boundary; arbitrary dictionaries and plaintext content are
+    excluded.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -85,25 +84,24 @@ class PublicEventPayload(BaseModel):
     target_type: Literal["MEMORY", "HEART_MOMENT", "MILESTONE"] | None = None
     target_id: UUID | None = None
     recipient_id: UUID | None = None
-    """Sichere Comment-Referenzen fuer einen spaeteren Notification-Consumer.
+    """Safe comment references for a later notification consumer.
 
-    Ausschliesslich IDs und die geschlossene Target-Kategorie. Comment-Body,
-    Parent-Titel/-Text und HeartMoment-Emotion duerfen hier nicht auftauchen.
+    IDs and the closed target category only. Comment body, parent title/text,
+    and HeartMoment emotion must never appear here.
     """
 
 
 class DomainEvent(BaseModel):
-    """Ein fachliches Ereignis.
+    """A domain event.
 
-    `payload` ist auf Verweise und unkritische Merkmale beschränkt. Wer
-    Inhalt braucht, lädt ihn beim Verarbeiten aus der Domäne - dann greifen
-    die Sichtbarkeitsregeln erneut, statt dass eine Kopie an ihnen vorbei
-    unterwegs ist.
+    `payload` is limited to references and non-sensitive attributes. A
+    consumer that needs content loads it from the domain while processing,
+    which reapplies visibility rules instead of carrying a copy around them.
 
-    Fuer M2 bildet die Outbox-Zeile zusammen mit diesem Objekt den in #68
-    festgelegten Minimal-Envelope: Outbox-ID = eventId, createdAt = occurredAt,
-    subject_type/-id = resourceType/-Id und `resource_version` = resourceVersion.
-    Aeltere Nicht-M2-Events duerfen die Version weiterhin weglassen.
+    For M2 the outbox row together with this object forms the minimal envelope
+    defined in #68: Outbox ID = eventId, createdAt = occurredAt,
+    subject_type/-id = resourceType/-Id, and `resource_version` =
+    resourceVersion. Older non-M2 events may continue to omit the version.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)

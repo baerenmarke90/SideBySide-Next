@@ -1,4 +1,4 @@
-"""Unit-Invarianten fuer das M2-Memory-Modell."""
+"""Unit invariants for the M2 Memory model."""
 
 from __future__ import annotations
 

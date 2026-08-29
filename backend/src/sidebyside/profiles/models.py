@@ -1,9 +1,9 @@
-"""Persistenz fuer Partnerprofile und Praeferenzen.
+"""Persistence for partner profiles and preferences.
 
-`PartnerProfile` ist das sichtbare SELF_PROFILE eines Accounts in genau
-einem Space. Private Notizen ueber den Partner werden bewusst nicht an
-dieses sichtbare Profil gehaengt: sie sind `ProfilePreference`-Zeilen mit
-`PRIVATE_PARTNER_NOTE` und damit `OWNER_ONLY`.
+`PartnerProfile` is the visible SELF_PROFILE of an account in exactly one
+space. Private notes about the partner deliberately are not attached to this
+visible profile: they are `ProfilePreference` rows with
+`PRIVATE_PARTNER_NOTE` and therefore `OWNER_ONLY`.
 """
 
 from __future__ import annotations
@@ -65,18 +65,18 @@ class PreferenceSentiment(StrEnum):
 
 
 class ProfilePreferencePayload(ProtectedPayload):
-    """Der schuetenswerte Klartext einer Praeferenz.
+    """Protected plaintext of a preference.
 
-    Version 1 speichert ihn als JSONB-Klartext. Die getrennte Payload-Grenze
-    erlaubt spaeter Client-Verschluesselung, ohne Kategorie, Ownership und
-    Privacy-Metadaten neu modellieren zu muessen.
+    Version 1 stores it as JSONB plaintext. The separate payload boundary
+    allows later client-side encryption without having to remodel category,
+    ownership, or privacy metadata.
     """
 
     value: str = Field(min_length=1, max_length=2000)
 
 
 class PartnerProfile(IdMixin, TimestampMixin, PrivateResourceMixin, Base):
-    """Das fuer den Partner sichtbare SELF_PROFILE eines Accounts."""
+    """The SELF_PROFILE of an account that is visible to the partner."""
 
     __tablename__ = "partner_profiles"
 
@@ -97,15 +97,14 @@ class ProfilePreference(
     PrivateResourceMixin,
     Base,
 ):
-    """Eine strukturierte Praeferenz ueber sich selbst oder den Partner.
+    """A structured preference about yourself or the partner.
 
-    `owner_id` ist der Autor/Eigentuemer, `account_id` die beschriebene
-    Person. Die Kombination mit `visibility` ist in der Datenbank
-    festgeschrieben:
+    `owner_id` is the author/owner and `account_id` is the described person.
+    The combination with `visibility` is enforced by the database:
 
-    - SELF_PROFILE: Autor beschreibt sich selbst, SPACE_SHARED, Profil-FK.
-    - PRIVATE_PARTNER_NOTE: Autor beschreibt den anderen, OWNER_ONLY, keine
-      Verbindung zum sichtbaren PartnerProfile.
+    - SELF_PROFILE: author describes themself, SPACE_SHARED, profile FK.
+    - PRIVATE_PARTNER_NOTE: author describes the other person, OWNER_ONLY, no
+      link to the visible PartnerProfile.
     """
 
     __tablename__ = "profile_preferences"
@@ -171,7 +170,7 @@ class ProfilePreference(
 
 
 def privacy_for(visibility: ProfileVisibility) -> PrivacyClass:
-    """Privacy wird serverseitig aus der fachlichen Sichtbarkeit abgeleitet."""
+    """Derive privacy server-side from the domain visibility."""
     if visibility is ProfileVisibility.SELF_PROFILE:
         return PrivacyClass.SPACE_SHARED
     return PrivacyClass.OWNER_ONLY

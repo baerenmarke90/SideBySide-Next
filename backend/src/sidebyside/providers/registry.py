@@ -1,4 +1,4 @@
-"""Konfigurierbare Auswahl von Provider-Adaptern an der Composition Root."""
+"""Configurable provider-adapter selection at the composition root."""
 
 from __future__ import annotations
 
@@ -8,15 +8,15 @@ ProviderT = TypeVar("ProviderT")
 
 
 class ProviderNotConfiguredError(LookupError):
-    """Für Interface und konfigurierten Namen ist kein Adapter registriert."""
+    """No adapter is registered for the interface and configured name."""
 
 
 class ProviderRegistry:
-    """Ordnet frei konfigurierbare Namen abstrakten Provider-Typen zu.
+    """Map freely configurable names to abstract provider types.
 
-    Die Domain kennt nur das Interface. Ob eine Installation etwa einen
-    lokalen, freien oder kommerziellen Adapter unter einem Namen registriert,
-    entscheidet ausschließlich die Composition Root.
+    The domain knows only the interface. Whether an installation registers a
+    local, free, or commercial adapter under a name is decided exclusively by
+    the composition root.
     """
 
     def __init__(self) -> None:
@@ -26,15 +26,15 @@ class ProviderRegistry:
     def _normalize_name(name: str) -> str:
         normalized = name.strip().casefold()
         if not normalized:
-            raise ValueError("Provider-Name darf nicht leer sein")
+            raise ValueError("Provider name must not be empty")
         return normalized
 
     def register(self, interface: type[ProviderT], name: str, provider: ProviderT) -> None:
         if not isinstance(provider, interface):
-            raise TypeError(f"Adapter implementiert {interface.__name__} nicht")
+            raise TypeError(f"Adapter does not implement {interface.__name__}")
         key = (cast(type[object], interface), self._normalize_name(name))
         if key in self._providers:
-            raise ValueError(f"Provider bereits registriert: {interface.__name__}/{name}")
+            raise ValueError(f"Provider already registered: {interface.__name__}/{name}")
         self._providers[key] = provider
 
     def select(self, interface: type[ProviderT], configured_name: str) -> ProviderT:
@@ -42,6 +42,6 @@ class ProviderRegistry:
         provider = self._providers.get(key)
         if provider is None:
             raise ProviderNotConfiguredError(
-                f"Kein Provider fuer {interface.__name__}/{configured_name} konfiguriert"
+                f"No provider configured for {interface.__name__}/{configured_name}"
             )
         return cast(ProviderT, provider)

@@ -1,12 +1,12 @@
-"""Die Grenze zum Mailversand.
+"""Boundary for outgoing mail.
 
-Der Application Core kennt weder SMTP noch einen Anbieter. Er kennt eine
-Nachricht und einen Versender.
+The application core knows neither SMTP nor a provider. It knows a message and
+a sender.
 
-Eine Regel gilt fuer jede Implementierung: **der Inhalt gehoert nicht ins
-Log.** Eine Anmelde-Mail traegt einen gueltigen Einmal-Token; ein Log, das
-ihn mitschreibt, ist eine zweite Kopie des Anmeldenachweises an einer
-Stelle mit ganz anderer Aufbewahrung und ganz anderem Zugriff.
+One rule applies to every implementation: **message content does not belong in
+logs.** Authentication mail carries a valid one-time token. Logging that token
+would create a second copy of the authentication proof in a system with very
+different retention and access controls.
 """
 
 from __future__ import annotations
@@ -19,24 +19,23 @@ from sidebyside.core.errors import DomainError
 
 
 class MailTransportError(RuntimeError):
-    """Die Nachricht konnte nicht uebergeben werden.
+    """The message could not be handed to the transport.
 
-    Ausdruecklich ein eigener Typ: der Aufrufer soll einen Zustellfehler
-    von einem Programmierfehler unterscheiden koennen, ohne die
-    Fehlermeldung zu lesen.
+    This deliberately has its own type so callers can distinguish delivery
+    failure from programming errors without parsing an exception message.
     """
 
 
 class MailUnavailableError(DomainError):
-    """Diese Instanz versendet ueberhaupt keine E-Mail.
+    """This instance does not send email.
 
-    Bewusst **kein** `MailTransportError`: ein Zustellfehler wird in den
-    Auth-Fluessen absichtlich geschluckt, damit die Antwort nicht verraet,
-    ob eine Adresse bekannt ist. Ein fehlender Mailweg ist aber kein
-    Zustellfehler, sondern eine Eigenschaft der Instanz - und die darf der
-    Aufrufer erfahren, weil sie fuer jede Adresse gleich gilt.
+    Deliberately **not** a ``MailTransportError``: delivery failures are hidden
+    by authentication flows so their responses cannot reveal whether an
+    address exists. A missing mail path is instead an instance capability and
+    may be disclosed because it is identical for every address.
 
-    503 statt 404: der Endpunkt existiert, die Faehigkeit dahinter nicht.
+    503 rather than 404: the endpoint exists, but the capability behind it is
+    unavailable.
     """
 
     status = HTTPStatus.SERVICE_UNAVAILABLE
@@ -45,31 +44,31 @@ class MailUnavailableError(DomainError):
 
     def __init__(self) -> None:
         super().__init__(
-            "Diese Instanz versendet keine E-Mail. "
-            "Anmeldung ist ueber Passwort, Passkey oder OIDC moeglich.",
+            "This instance does not send email. "
+            "Sign-in remains available through password, passkey, or OIDC.",
             "MAIL_TRANSPORT_UNAVAILABLE",
         )
 
 
 @dataclass(frozen=True)
 class MailMessage:
-    """Eine Nachricht an genau einen Empfaenger."""
+    """A message for exactly one recipient."""
 
     to: str
     subject: str
     body: str
 
     def __post_init__(self) -> None:
-        # Ein Zeilenumbruch im Betreff oder in der Adresse waere eine
-        # Header Injection: alles danach wuerde zu einer eigenen Kopfzeile.
-        for feld, wert in (("to", self.to), ("subject", self.subject)):
-            if "\r" in wert or "\n" in wert:
-                raise ValueError(f"{feld} darf keinen Zeilenumbruch enthalten")
+        # A newline in subject or address would permit header injection: text
+        # following it would become another header field.
+        for field, value in (("to", self.to), ("subject", self.subject)):
+            if "\r" in value or "\n" in value:
+                raise ValueError(f"{field} must not contain a newline")
         if not self.to.strip() or not self.subject.strip():
-            raise ValueError("Empfaenger und Betreff sind erforderlich")
+            raise ValueError("Recipient and subject are required")
 
 
 class MailSender(ABC):
     @abstractmethod
     def send(self, message: MailMessage) -> None:
-        """Die Nachricht uebergeben oder `MailTransportError` werfen."""
+        """Hand off the message or raise ``MailTransportError``."""

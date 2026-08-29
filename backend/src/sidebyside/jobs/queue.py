@@ -1,4 +1,4 @@
-"""Aufgaben einstellen und abholen."""
+"""Enqueue and claim background jobs."""
 
 from __future__ import annotations
 
@@ -23,10 +23,10 @@ def enqueue(
     delay: timedelta | None = None,
     max_attempts: int = 5,
 ) -> Job:
-    """Eine Aufgabe einstellen.
+    """Enqueue a job.
 
-    Ohne Commit - eine Aufgabe, die aus einer fachlichen Änderung folgt,
-    gehört in deren Transaktion.
+    Deliberately does not commit: a job resulting from a domain mutation
+    belongs in the same transaction as that mutation.
     """
     job = Job(
         kind=kind,
@@ -41,23 +41,23 @@ def enqueue(
 def claim(
     session: Session, worker: str, limit: int = 10, lease: timedelta = DEFAULT_LEASE
 ) -> Sequence[Job]:
-    """Fällige Aufgaben übernehmen.
+    """Claim due jobs.
 
-    `FOR UPDATE SKIP LOCKED` sorgt dafür, dass nebenläufige Worker
-    disjunkte Mengen greifen, ohne einander zu blockieren.
+    `FOR UPDATE SKIP LOCKED` ensures concurrent workers claim disjoint sets
+    without blocking one another.
 
-    Übernommen wird auch, was als RUNNING gilt, dessen Sperre aber
-    abgelaufen ist: das ist eine Aufgabe, deren Worker gestorben ist. Ohne
-    diesen Zweig bliebe sie für immer liegen.
+    Also claim jobs still marked RUNNING whose lease has expired. Such a job
+    belonged to a worker that died; without this branch it would remain stuck
+    forever.
     """
-    jetzt = now()
+    current_time = now()
     stmt = (
         select(Job)
         .where(
-            Job.run_after <= jetzt,
+            Job.run_after <= current_time,
             or_(
                 Job.status == JobStatus.PENDING.value,
-                (Job.status == JobStatus.RUNNING.value) & (Job.locked_until < jetzt),
+                (Job.status == JobStatus.RUNNING.value) & (Job.locked_until < current_time),
             ),
         )
         .order_by(Job.run_after)
@@ -69,7 +69,7 @@ def claim(
     for job in jobs:
         job.status = JobStatus.RUNNING.value
         job.locked_by = worker
-        job.locked_until = jetzt + lease
+        job.locked_until = current_time + lease
         job.attempts += 1
 
     return jobs
@@ -84,13 +84,12 @@ def succeed(job: Job) -> None:
 
 
 def fail(job: Job, error: str, *, backoff: timedelta | None = None) -> None:
-    """Fehlschlag verbuchen.
+    """Record a failed attempt.
 
-    Solange Versuche übrig sind, geht die Aufgabe zurück in die
-    Warteschlange - mit Verzögerung, damit ein dauerhaft kaputter Empfänger
-    nicht im Sekundentakt erneut angefragt wird. Sind die Versuche
-    aufgebraucht, bleibt sie als FAILED liegen und wird nicht still
-    verworfen.
+    While attempts remain, return the job to the queue with a delay so a
+    persistently broken recipient is not retried every second. Once attempts
+    are exhausted, retain the job as FAILED rather than silently discarding
+    it.
     """
     job.last_error = error[:2000]
     job.locked_until = None
@@ -106,6 +105,6 @@ def fail(job: Job, error: str, *, backoff: timedelta | None = None) -> None:
 
 
 def _backoff_for(attempts: int) -> timedelta:
-    """Exponentiell, gedeckelt bei einer Stunde."""
-    sekunden = min(2 ** min(attempts, 12) * 5, 3600)
-    return timedelta(seconds=sekunden)
+    """Use exponential backoff capped at one hour."""
+    seconds = min(2 ** min(attempts, 12) * 5, 3600)
+    return timedelta(seconds=seconds)

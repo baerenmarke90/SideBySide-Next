@@ -1,31 +1,28 @@
-"""Fachlogik fuer M3-Plans und den Wish->Plan-Lifecycle.
+"""Domain logic for M3 plans and the wish-to-plan lifecycle.
 
-Dieser Dienst traegt die Operationen, die zwei Aggregate gleichzeitig
-beruehren. Drei Dinge sind daran wichtig und stehen deshalb hier oben.
+This service owns operations that touch two aggregates at once. Three rules are
+important enough to state here.
 
-**Sperrreihenfolge.** Im M3-Kern gilt `Place -> Wish -> Plan`. Der Plan
-wird immer zuletzt gesperrt; damit kann kein Paar von Operationen sich
-gegenseitig blockieren. Ein Plan-Einstieg darf die Plan-ID zunaechst
-ungesperrt aufloesen, muss dann den source Wish sperren und den Plan
-danach in derselben Transaktion erneut sperren und revalidieren. Zwischen
-dem ungesperrten Lesen und dem Sperren kann sich alles geaendert haben -
-deshalb wird nach dem Sperren nicht weitergerechnet, sondern nachgesehen.
+**Lock order.** The M3 core uses ``Place -> Wish -> Plan``. A plan is always
+locked last so two operations cannot deadlock by acquiring the pair in opposite
+order. A plan-based entry point may first resolve the plan ID without a lock,
+but must then lock the source wish and re-lock/revalidate the plan in the same
+transaction. Anything may have changed between the unlocked read and the lock,
+so the code verifies state again rather than continuing from the probe.
 
-Ein `placeId` im Request wird aus demselben Grund *vor* dem Plan
-aufgeloest und mit `FOR SHARE` gehalten: der Ort darf zwischen der
-Pruefung und dem Schreiben des Verweises nicht geloescht werden. Ein
-Place-Delete braucht `FOR UPDATE` und wartet deshalb.
+A request ``placeId`` is resolved *before* the plan for the same reason and held
+with ``FOR SHARE``: the place must not disappear between validation and writing
+the reference. Place deletion requires ``FOR UPDATE`` and therefore waits.
 
-**Wem der Status gehoert.** Der Plan-Automat steht hier, der Wish-Automat
-in `wishes.service`. Dieser Dienst ruft dort `plan_created`,
-`plan_completed` und `plan_returned` auf, statt `wish.status` selbst zu
-setzen. Damit gibt es fuer jede Wish-Kante genau eine Stelle, die ihren
-Ausgangszustand prueft.
+**Status ownership.** The plan state machine lives here; the wish state machine
+lives in ``wishes.service``. This service calls ``plan_created``,
+``plan_completed``, and ``plan_returned`` there instead of assigning
+``wish.status`` itself. Each wish edge consequently has one implementation that
+validates its source state.
 
-**Was der Client nicht setzt.** `status`, `sourceWishId`, `plannedStart`,
-`plannedEnd` und `experiencedOn` entstehen ausschliesslich aus den
-Lifecycle-Operationen (M3-D04/D30). Kein Create- und kein Update-Pfad
-dieses Moduls nimmt sie als freien Parameter entgegen.
+**Fields clients do not set.** ``status``, ``sourceWishId``, ``plannedStart``,
+``plannedEnd``, and ``experiencedOn`` are produced only by lifecycle operations
+(M3-D04/D30). No create or update path accepts them as arbitrary parameters.
 """
 
 from __future__ import annotations
@@ -80,11 +77,11 @@ class PlanPageResult:
 
 @dataclass(frozen=True)
 class WishToPlanResult:
-    """Das Ergebnis einer Konvertierung - inklusive der Frage, ob sie neu war.
+    """Conversion result, including whether this call created the plan.
 
-    `created` unterscheidet den ersten Aufruf (201) vom idempotenten Retry
-    (200). Die Antwort ist in beiden Faellen dieselbe; nur der Statuscode
-    sagt, ob dieser Aufruf den Plan erzeugt hat.
+    ``created`` distinguishes the first call (201) from an idempotent retry
+    (200). The response body is the same in both cases; only the status code
+    indicates whether this invocation created the plan.
     """
 
     wish: Wish
@@ -124,7 +121,7 @@ def _ensure_expected_version(plan: Plan, expected_version: int) -> None:
 
 
 def _record(session: Session, plan: Plan, actor_id: UUID, event_type: EventType) -> None:
-    """Ein Ereignis ohne Plantitel und ohne Beschreibung (M3-D13)."""
+    """Record an event without plan title or description (M3-D13)."""
     outbox_service.record(
         session,
         DomainEvent(
@@ -140,11 +137,11 @@ def _record(session: Session, plan: Plan, actor_id: UUID, event_type: EventType)
 
 
 def _actor_today(session: Session, context: AuthorizationContext) -> date:
-    """Der heutige Kalendertag des handelnden Accounts.
+    """Return the acting account's local calendar day.
 
-    M3-D04 misst `experiencedOn` am *lokalen* Tag, nicht an UTC. Wer
-    westlich von UTC lebt, haette am Abend sonst regelmaessig einen
-    gueltigen Tag als Zukunft abgewiesen bekommen.
+    M3-D04 evaluates ``experiencedOn`` against the *local* day rather than UTC.
+    Otherwise users west of UTC could have a valid evening date rejected as a
+    future day.
     """
     account = session.get(Account, context.account_id)
     if account is None:
@@ -186,11 +183,11 @@ def _resolve_place(
     context: AuthorizationContext,
     place_id: UUID | str | None,
 ) -> UUID | None:
-    """Den Ort space-scoped aufloesen und bis zum Commit halten.
+    """Resolve a place within the space and hold it until commit.
 
-    Ein Ort aus einem fremden Space, eine unbekannte ID und eine
-    fehlgeformte ID enden identisch in `PLACE_NOT_FOUND` - der Verweis
-    darf keine Existenzauskunft ueber fremde Orte werden.
+    A place from another space, an unknown ID, and a malformed ID all resolve
+    identically to ``PLACE_NOT_FOUND``. A reference must not disclose the
+    existence of places in another tenant.
     """
     if place_id is None:
         return None
@@ -205,11 +202,11 @@ def create_plan(
     description: str | None,
     place_id: UUID | str | None,
 ) -> Plan:
-    """Direct Plan Create nach M3-D30.
+    """Create a direct plan as defined by M3-D30.
 
-    Immer `IDEA`, immer ohne Termine, immer ohne source Wish. Ein Plan wird
-    erst ueber `/schedule` terminiert oder ueber `/complete` spontan
-    abgeschlossen.
+    It always starts as ``IDEA``, without schedule and without source wish. A
+    plan is scheduled only through ``/schedule`` or completed spontaneously
+    through ``/complete``.
     """
     plan = Plan(
         space_id=context.space_id,
@@ -244,16 +241,15 @@ def _lock_plan_and_source_wish(
     context: AuthorizationContext,
     plan_id: UUID | str,
 ) -> tuple[Plan, Wish | None]:
-    """Beide Aggregate in der kanonischen Reihenfolge sperren.
+    """Lock both aggregates in canonical order.
 
-    Die Plan-ID wird zunaechst ungesperrt aufgeloest - nur um zu erfahren,
-    *ob* es einen source Wish gibt und welchen. Danach wird der Wish
-    gesperrt und der Plan erneut geladen und gesperrt.
+    The plan ID is first resolved without a lock only to learn whether there is
+    a source wish and which one. The wish is then locked, followed by a fresh
+    locked load of the plan.
 
-    Die Revalidierung danach ist kein Ritual: zwischen dem ersten Lesen und
-    der Wish-Sperre kann der Plan geloescht oder zurueckgefuehrt worden
-    sein. Wer an dieser Stelle mit dem zuerst gelesenen Objekt
-    weiterarbeitet, schreibt auf einen Stand, den es nicht mehr gibt.
+    Revalidation is essential: while waiting for the wish lock, the plan could
+    have been deleted or returned. Continuing with the first object would write
+    against state that no longer exists.
     """
     probe = require_writable(session, Plan, context, plan_id)
     source_wish_id = probe.source_wish_id
@@ -263,9 +259,8 @@ def _lock_plan_and_source_wish(
     wish = wish_service.lock(session, context, source_wish_id)
     plan = _lock_plan(session, context, plan_id)
     if plan.source_wish_id != wish.id:
-        # Der Plan ist waehrend des Wartens auf den Wish-Lock ein anderer
-        # geworden. Ein zweiter Versuch waere ein Rekursionsrisiko; der
-        # Aufrufer bekommt den Konflikt und liest neu.
+        # The plan changed while waiting for the wish lock. Retrying here would
+        # risk recursion; return a conflict and let the caller reload.
         raise ConflictError(
             "The resource was changed since it was loaded.",
             ErrorCode.RESOURCE_VERSION_CONFLICT,
@@ -285,16 +280,14 @@ def update_plan(
     place_id: UUID | str | None,
     experienced_on: date | None,
 ) -> Plan:
-    """Fachliche Korrektur ohne Statuswirkung (M3-D04).
+    """Correct plan content without changing lifecycle status (M3-D04).
 
-    Auch ein `COMPLETED` Plan darf korrigiert werden; daraus entsteht keine
-    Rueckoeffnung. `experiencedOn` gehoert zum abgeschlossenen Zustand und
-    ist deshalb nur dort korrigierbar - auf einem Plan ohne Abschluss waere
-    es ein vorweggenommener Completion-Termin.
+    Even a ``COMPLETED`` plan may be corrected without reopening it.
+    ``experiencedOn`` belongs to completed state and is therefore editable only
+    there; on an unfinished plan it would predeclare a completion date.
     """
-    # Der Ort steht vor dem Plan - sonst entstuende die umgekehrte
-    # Reihenfolge zum Place-Delete, und zwei Requests koennten sich
-    # gegenseitig blockieren.
+    # Resolve place before locking the plan. Reversing the order relative to
+    # place deletion could let two requests block each other.
     next_place_id = (
         _resolve_place(session, context, place_id) if "place_id" in changed_fields else None
     )
@@ -311,7 +304,7 @@ def update_plan(
         assert title is not None
         next_title = _normalize_title(title)
     if "description" in changed_fields:
-        # Anders als der Titel darf die Beschreibung geleert werden.
+        # Unlike title, description may be cleared.
         next_description = description
     if "experienced_on" in changed_fields:
         if plan.status != PlanStatus.COMPLETED.value:
@@ -339,7 +332,7 @@ def schedule_plan(
     planned_start: datetime | None,
     planned_end: datetime | None,
 ) -> Plan:
-    """`IDEA -> PLANNED`, oder eine Terminkorrektur auf `PLANNED`."""
+    """Apply ``IDEA -> PLANNED`` or correct schedule on ``PLANNED``."""
     plan = _lock_plan(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
 
@@ -367,7 +360,7 @@ def unschedule_plan(
     *,
     expected_version: int,
 ) -> Plan:
-    """`PLANNED -> IDEA`. Die Termine werden verworfen, nicht aufgehoben."""
+    """Apply ``PLANNED -> IDEA`` and discard the schedule."""
     plan = _lock_plan(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
 
@@ -395,16 +388,14 @@ def complete_plan(
     expected_version: int,
     experienced_on: date | None,
 ) -> tuple[Plan, Wish | None]:
-    """`IDEA | PLANNED -> COMPLETED`, bei einem source Plan mitsamt dem Wish.
+    """Apply ``IDEA | PLANNED -> COMPLETED`` and complete a source wish too.
 
-    Beide Mutationen liegen in derselben Transaktion. Es gibt keinen
-    Zwischenstand, in dem der Plan abgeschlossen ist und der Wish noch
-    offen - genau der waere fuer beide Partner sichtbar und fachlich
-    falsch.
+    Both mutations occur in the same transaction. There is no observable
+    intermediate state in which the plan is complete while its wish is still
+    open.
 
-    Completion aus `IDEA` ist erlaubt: nicht alles Gemeinsame wird vorher
-    geplant. Die geplanten Zeiten eines `PLANNED` Plans bleiben als
-    Historie stehen.
+    Completion from ``IDEA`` is valid because shared experiences need not have
+    been scheduled first. A ``PLANNED`` plan keeps its schedule as history.
     """
     plan, wish = _lock_plan_and_source_wish(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
@@ -435,11 +426,11 @@ def return_to_wish(
     *,
     expected_version: int,
 ) -> ReturnToWishResult:
-    """Den Plan verwerfen und seinen Wish wieder oeffnen (M3-D03).
+    """Discard the plan and reopen its wish (M3-D03).
 
-    Ausdruecklich destruktiv: Plantitel, Beschreibung und Termine sind
-    danach weg und werden nicht in den Wish zurueckkopiert. Die UI muss das
-    vor der Bestaetigung verstaendlich machen.
+    This is intentionally destructive: plan title, description, and schedule
+    disappear and are not copied back into the wish. The UI must explain that
+    before confirmation.
     """
     plan, wish = _lock_plan_and_source_wish(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
@@ -473,19 +464,18 @@ def delete_plan(
     *,
     expected_version: int,
 ) -> None:
-    """Die Plan-Zeilen der Delete-Matrix aus M3-D05.
+    """Enforce the M3-D05 plan deletion matrix.
 
-    | Plan                         | Ergebnis                |
+    | Plan                         | Result                  |
     |------------------------------|-------------------------|
-    | Direct, jeder Status         | erlaubt                 |
-    | source, `IDEA` / `PLANNED`   | `PLAN_HAS_SOURCE_WISH`  |
-    | source, `COMPLETED`          | erlaubt                 |
+    | direct, any status           | allowed                 |
+    | source, ``IDEA`` / ``PLANNED`` | ``PLAN_HAS_SOURCE_WISH`` |
+    | source, ``COMPLETED``          | allowed                 |
 
-    Ein nicht abgeschlossener source Plan wird nicht geloescht, sondern
-    zurueckgefuehrt - sonst bliebe ein `PLANNED` Wish ohne Plan zurueck.
-    Nach dem Loeschen eines abgeschlossenen source Plans bleibt der Wish
-    `COMPLETED` und kann anschliessend separat geloescht werden. Es gibt
-    keine Cascade in die Gegenrichtung.
+    An unfinished source plan is returned rather than deleted; otherwise a
+    ``PLANNED`` wish would remain without its plan. Deleting a completed source
+    plan leaves the wish ``COMPLETED`` so it can be deleted separately. There
+    is no cascade in the opposite direction.
     """
     plan, wish = _lock_plan_and_source_wish(session, context, plan_id)
     _ensure_expected_version(plan, expected_version)
@@ -513,19 +503,18 @@ def convert_wish_to_plan(
     description: str | None,
     place_id: UUID | str | None,
 ) -> WishToPlanResult:
-    """Aus einem Wish genau einen Plan machen - atomar und idempotent (M3-D02).
+    """Convert one wish into exactly one plan atomically and idempotently (M3-D02).
 
-    Der Ablauf folgt der Reihenfolge aus dem Vertrag: Wish sperren,
-    vorhandenen originaeren Plan pruefen, den idempotenten Fall vor der
-    Versionspruefung beantworten, erst danach konvertieren.
+    The operation follows the contract order: lock the wish, inspect any
+    originating plan, answer the idempotent case before version validation, and
+    only then convert.
 
-    Dass der Retry *vor* `If-Match` steht, ist Absicht. Ein Client, dessen
-    Antwort unterwegs verlorenging, haelt noch die alte Wish-Version in der
-    Hand. Wuerde sie hier geprueft, bekaeme er einen Konflikt fuer eine
-    Operation, die laengst erfolgreich war - und der einzige Ausweg waere
-    ein zweiter Plan.
+    The retry intentionally precedes ``If-Match``. A client whose successful
+    response was lost still holds the old wish version. Checking it first would
+    return a conflict for an operation that already succeeded, with creating a
+    second plan as the only apparent escape.
     """
-    # Erst der Ort, dann der Wish, dann der Plan.
+    # Place first, then wish, then plan.
     resolved_place_id = _resolve_place(session, context, place_id)
 
     wish = wish_service.lock(session, context, wish_id)
@@ -539,9 +528,8 @@ def convert_wish_to_plan(
                 "This wish is planned but has no originating plan.",
                 wish_service.WISH_PLAN_STATE_CONFLICT,
             )
-        # Der idempotente Retry. Ein abweichender Request ueberschreibt den
-        # vorhandenen Plan ausdruecklich nicht - weitere Aenderungen laufen
-        # ueber den Plan selbst.
+        # Idempotent retry. A differing request deliberately does not overwrite
+        # the existing plan; further changes go through the plan itself.
         return WishToPlanResult(wish=wish, plan=existing, created=False)
 
     if wish.status == WishStatus.COMPLETED.value:
@@ -566,9 +554,9 @@ def convert_wish_to_plan(
         source_wish_id=wish.id,
         place_id=resolved_place_id,
         payload=PlanPayload(
-            # Ohne eigenen Titel uebernimmt der Plan den des Wishes. Danach
-            # laufen beide getrennt: eine spaetere Wish-Umbenennung
-            # veraendert den Plan nicht (M3-D01).
+            # Without an explicit title the plan inherits the wish title. From
+            # then on they diverge; later wish renaming does not change the plan
+            # (M3-D01).
             title=_normalize_title(title if title is not None else wish.payload.title),
             description=description,
         ),
@@ -577,9 +565,9 @@ def convert_wish_to_plan(
     try:
         _flush(session)
     except IntegrityError as error:
-        # Die letzte Integritaetsgrenze: `UNIQUE(source_wish_id)`. Sie
-        # sollte nach der Wish-Sperre nicht mehr greifen koennen - wenn
-        # doch, wird daraus ein Konflikt und kein 500.
+        # Final integrity boundary: ``UNIQUE(source_wish_id)``. The wish lock
+        # should make this unreachable, but if it occurs it remains a domain
+        # conflict rather than a 500.
         raise ConflictError(
             "This wish already has an originating plan.",
             wish_service.WISH_HAS_ACTIVE_PLAN,
@@ -601,17 +589,17 @@ def _ensure_wish_version(wish: Wish, expected_version: int) -> None:
 
 
 def detach_place(session: Session, place: Place, actor_id: UUID) -> None:
-    """Alle Plans von einem Ort loesen, der gleich geloescht wird.
+    """Detach all plans from a place that is about to be deleted.
 
-    Aufgerufen vom Place-Dienst, der den Ort bereits gesperrt haelt. Die
-    Plans werden hier gesperrt - Reihenfolge `Place -> Plan`, wie ueberall.
+    Called by the place service while it already holds the place lock. Plans are
+    locked here, preserving ``Place -> Plan`` ordering.
 
-    Jeder betroffene Plan bekommt eine neue Version und ein Ereignis. Ein
-    stilles `ON DELETE SET NULL` waere bequemer, wuerde aber die
-    Zuordnung unter einem Client wegziehen, der weiter mit seiner alten
-    Version schreibt und nie einen Konflikt saehe.
+    Every affected plan receives a new version and event. A silent
+    ``ON DELETE SET NULL`` would be simpler but could pull an association from
+    under a client that continues writing with its old version and never sees a
+    conflict.
     """
-    betroffen = list(
+    affected = list(
         session.execute(
             select(Plan)
             .where(Plan.space_id == place.space_id, Plan.place_id == place.id)
@@ -621,12 +609,12 @@ def detach_place(session: Session, place: Place, actor_id: UUID) -> None:
         .scalars()
         .all()
     )
-    for plan in betroffen:
+    for plan in affected:
         plan.place_id = None
-    if not betroffen:
+    if not affected:
         return
     _flush(session)
-    for plan in betroffen:
+    for plan in affected:
         _record(session, plan, actor_id, EventType.PLAN_UPDATED)
     _flush(session)
 
@@ -684,11 +672,11 @@ def list_plans(
     limit: int,
     status: PlanStatus | None,
 ) -> PlanPageResult:
-    """Neueste zuerst - wie Wish, und aus demselben Grund ueber Metadaten.
+    """List newest plans first, ordered by metadata like wishes.
 
-    Eine Sortierung nach `plannedStart` waere fuer eine Terminansicht
-    naheliegend, aber sie ist eine eigene Leseflaeche mit eigenem Cursor.
-    Sie kann spaeter additiv dazukommen, ohne diesen Vertrag zu brechen.
+    Ordering by ``plannedStart`` would be natural for a calendar view, but that
+    is a separate read surface with its own cursor and can be added later
+    without changing this contract.
     """
     statement = readable(Plan, context)
     if status is not None:

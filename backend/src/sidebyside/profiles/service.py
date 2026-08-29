@@ -1,7 +1,7 @@
-"""Fachlogik fuer PartnerProfile und ProfilePreference.
+"""Domain logic for PartnerProfile and ProfilePreference.
 
-Alle lesenden Listen starten beim zentralen Privacy-Guard. OWNER_ONLY-Zeilen
-werden damit bereits in SQL ausgeschlossen und nicht erst nach dem Laden.
+All read-side lists start at the central privacy guard. OWNER_ONLY rows are
+therefore excluded in SQL rather than only after loading.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ def active_subject(
     context: AuthorizationContext,
     account_id: UUID | str,
 ) -> Account:
-    """Eine beschreibbare Person im aktuellen Space - oder dieselbe 404 wie das Profil."""
+    """Return a writable person in the current space, or the profile's same 404."""
     identifier = _subject_id(account_id)
     if identifier is None:
         raise PartnerProfile.privacy_absence.error()
@@ -71,7 +71,7 @@ def active_subject(
 
 
 def ensure_profile(session: Session, space_id: UUID, owner_id: UUID) -> PartnerProfile:
-    """Das SELF_PROFILE eines nachweislich zu diesem Space gehoerenden Accounts sicherstellen."""
+    """Ensure the SELF_PROFILE for an account proven to belong to this space."""
     profile = session.execute(
         select(PartnerProfile).where(
             PartnerProfile.space_id == space_id,
@@ -96,7 +96,7 @@ def profile_for_subject(
     context: AuthorizationContext,
     account_id: UUID | str,
 ) -> tuple[PartnerProfile, Account]:
-    """Das sichtbare Profil eines aktiven Partners laden."""
+    """Load the visible profile of an active partner."""
     subject = active_subject(session, context, account_id)
     profile = session.execute(
         readable(PartnerProfile, context).where(PartnerProfile.owner_id == subject.id)
@@ -111,7 +111,7 @@ def profile_preferences(
     context: AuthorizationContext,
     account_id: UUID | str,
 ) -> tuple[PartnerProfile, Account, Sequence[ProfilePreference]]:
-    """Nur SELF_PROFILE-Zeilen - niemals private Notizen ueber dieselbe Person."""
+    """Return SELF_PROFILE rows only, never private notes about the same person."""
     profile, subject = profile_for_subject(session, context, account_id)
     preferences = (
         session.execute(
@@ -132,7 +132,7 @@ def list_preferences(
     session: Session,
     context: AuthorizationContext,
 ) -> Sequence[ProfilePreference]:
-    """Alle fuer den Aufrufer sichtbaren Praeferenzen, ohne unsichtbare Zeilen zu laden."""
+    """Return all preferences visible to the caller without loading hidden rows."""
     return (
         session.execute(
             readable(ProfilePreference, context).order_by(

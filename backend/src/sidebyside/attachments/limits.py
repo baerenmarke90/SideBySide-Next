@@ -1,8 +1,8 @@
-"""Die Medienregeln aus M2-D04 und der Lieferstand aus M2-D23.
+"""Media rules from M2-D04 and delivery support from M2-D23.
 
-Getrennt vom Lebenszyklus, damit die Grenzen an genau einer Stelle stehen.
-Wer eine Zahl aendern will, aendert sie hier - und nicht an der Stelle, an
-der sie gerade stoert.
+Kept separate from lifecycle logic so every limit has one authoritative home.
+Changing a number means changing it here rather than wherever it happens to be
+inconvenient.
 """
 
 from __future__ import annotations
@@ -23,12 +23,11 @@ class MediaRule:
     max_edge: int | None = None
     max_duration_seconds: int | None = None
     supported: bool = True
-    """Ob dieser Typ heute tatsaechlich verarbeitet werden kann.
+    """Whether this type can actually be processed by the current release.
 
-    M2-D04 erlaubt Video, M2-D23 vertagt es auf einen eigenen Slice. Die
-    Zeile bleibt deshalb im Katalog stehen und wird nicht geloescht - der
-    Vertrag hat sich nicht geaendert, nur der Lieferstand. Ein nicht
-    unterstuetzter Typ wird fail-closed abgewiesen.
+    M2-D04 permits video while M2-D23 defers implementation to a later slice.
+    The rule therefore remains in the catalog rather than changing the
+    contract. Unsupported types fail closed.
     """
 
 
@@ -77,20 +76,20 @@ RULES: dict[str, MediaRule] = {
 
 
 def rule_for(mime_type: str) -> MediaRule | None:
-    """Die Regel zu einem MIME-Typ, oder nichts.
+    """Return the rule for a MIME type, or none.
 
-    Nichts heisst fail-closed abweisen. Es gibt keine Standardregel fuer
-    unbekannte Typen - eine solche waere genau die Luecke, durch die ein
-    nicht vorgesehenes Format hereinkaeme.
+    None means reject fail-closed. There is deliberately no default rule for
+    unknown types; such a default would be the path through which an unplanned
+    format entered the system.
     """
     return RULES.get(mime_type.strip().lower())
 
 
 def supported_mime_types() -> frozenset[str]:
-    """Was der Server heute wirklich annimmt."""
+    """MIME types the current server release actually accepts."""
     return frozenset(mime for mime, rule in RULES.items() if rule.supported)
 
 
 def contracted_mime_types() -> frozenset[str]:
-    """Was der Vertrag erlaubt - einschliesslich des vertagten Videos."""
+    """MIME types permitted by the contract, including deferred video."""
     return frozenset(RULES)

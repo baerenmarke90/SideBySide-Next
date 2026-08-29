@@ -15,7 +15,7 @@ class ReferenceFlowE2eTest {
     @Test
     fun realClientRunsMemoryImageTimelineAndAuthorizedReadAgainstSideBySideStack() = runBlocking {
         assumeTrue(
-            "Nur der dedizierte G2-E2E-Workflow stellt den realen SideBySide-Stack bereit.",
+            "Only the dedicated G2 E2E workflow provides the real SideBySide stack.",
             System.getenv("G2_E2E_ENABLED") == "1",
         )
 
@@ -61,7 +61,7 @@ class ReferenceFlowE2eTest {
 
     private fun requiredEnv(name: String): String =
         System.getenv(name)?.takeIf { it.isNotBlank() }
-            ?: error("$name muss fuer den G2-E2E-Lauf gesetzt sein.")
+            ?: error("$name must be set for the G2 E2E run.")
 
     private companion object {
         const val PNG_FIXTURE =

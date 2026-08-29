@@ -1,7 +1,7 @@
 
 # WishToPlan
 
-Der Konvertierungsrequest.  Alle Felder optional: ohne eigenen Titel uebernimmt der Plan den des Wishes. `sourceWishId`, `status` und die Termine kommen nicht vom Client - der Wish steht im Pfad, alles andere entsteht serverseitig.
+Wish-to-Plan conversion request.  Every field is optional: without an explicit title the plan inherits the wish title. ``sourceWishId``, ``status``, and schedule fields are not supplied by the client; the wish is identified by the path and everything else is established server-side.
 
 ## Properties
 
