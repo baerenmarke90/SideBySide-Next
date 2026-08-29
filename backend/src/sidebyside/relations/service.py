@@ -331,7 +331,10 @@ def list_targets(
     kind: RelationKind,
 ) -> Sequence[UUID]:
     """Return target IDs for one typed relation, oldest link first."""
-    parent = require_readable(session, kind.parent, context, parent_id)
+    parent = cast(
+        "RelationParent",
+        require_readable(session, kind.parent, context, parent_id),
+    )
     table = kind.relation.__table__
     rows = session.execute(
         select(table.c[kind.target_column])
