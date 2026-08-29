@@ -148,6 +148,136 @@ IDENTIFIER_MARKERS = re.compile(
     re.IGNORECASE,
 )
 
+# #231 closes a false-negative class left by the original marker-based audit:
+# Python names may encode German words in CamelCase/PascalCase or in uppercase
+# constants, so looking only for underscore-delimited words is insufficient.
+# Split identifiers into semantic components first, then match only observed,
+# unambiguous German engineering words/stems. Localized string literals are
+# still handled separately and are not classified through this identifier path.
+CAMEL_CASE_BOUNDARIES = (
+    re.compile(r"(?<=[a-z0-9])(?=[A-Z])"),
+    re.compile(r"(?<=[A-Z])(?=[A-Z][a-z])"),
+)
+IDENTIFIER_COMPONENT_WORDS = {
+    "ableitung",
+    "aeltesten",
+    "anfrage",
+    "anfragen",
+    "anlegen",
+    "anmeldung",
+    "anzahl",
+    "aufraeumen",
+    "aufrufe",
+    "begrenzt",
+    "begrenzung",
+    "behaelt",
+    "beide",
+    "beginn",
+    "bereits",
+    "bestaetigte",
+    "bisherigen",
+    "danach",
+    "davor",
+    "eigen",
+    "einstellungen",
+    "endlich",
+    "endet",
+    "endpunkte",
+    "ergeben",
+    "erhalten",
+    "erkennbar",
+    "erlaubt",
+    "erster",
+    "fehlversuch",
+    "fenster",
+    "frei",
+    "fremder",
+    "geheim",
+    "gemeinsame",
+    "geraeumt",
+    "gerundet",
+    "gesammelt",
+    "gesendet",
+    "gesperrt",
+    "gezaehlt",
+    "gleiche",
+    "grenzen",
+    "gutes",
+    "historie",
+    "instanz",
+    "koordinaten",
+    "kurzlebig",
+    "lebensdauer",
+    "lesen",
+    "letzter",
+    "mailversand",
+    "mailweg",
+    "mehreren",
+    "mittleren",
+    "nachgetragen",
+    "nachrichten",
+    "neues",
+    "offen",
+    "offene",
+    "paralleler",
+    "passwort",
+    "passwoerter",
+    "postfach",
+    "praeferenz",
+    "profil",
+    "pruefen",
+    "registrieren",
+    "registrierung",
+    "richtige",
+    "rotiert",
+    "rotationen",
+    "rotationsflut",
+    "schreibende",
+    "schritt",
+    "sechs",
+    "seite",
+    "selbst",
+    "sieger",
+    "signieren",
+    "sitzungsverwaltung",
+    "stellen",
+    "transaktionsgrenze",
+    "uhr",
+    "verschiedene",
+    "viele",
+    "weiterhin",
+    "wiederverwendung",
+    "widerruf",
+    "wirft",
+    "zeitpunkt",
+    "zunaechst",
+    "zugeordnet",
+    "zweiter",
+}
+IDENTIFIER_COMPONENT_STEMS = (
+    "adressbestaetig",
+    "ablauf",
+    "anmeld",
+    "aufraeum",
+    "bestaetig",
+    "einstell",
+    "endpunkt",
+    "erneuer",
+    "geräum",
+    "geraeum",
+    "gezaehl",
+    "koordinat",
+    "nachricht",
+    "nachtrag",
+    "passwoert",
+    "registrier",
+    "rotier",
+    "schreibend",
+    "signier",
+    "sitzungsverwalt",
+    "widerruf",
+)
+
 # This exact German phrase is deliberately retained as matching input in the
 # status-drift migration compatibility regex and its corresponding unit test.
 ALLOWED_LEGACY_INPUT = "Aktueller `main`"
@@ -180,6 +310,24 @@ def _contains_marker(text: str) -> bool:
     return ENGINEERING_PROSE_MARKERS.search(sanitized) is not None
 
 
+def _identifier_components(identifier: str) -> list[str]:
+    normalized = identifier
+    for boundary in CAMEL_CASE_BOUNDARIES:
+        normalized = boundary.sub("_", normalized)
+    return [component.lower() for component in normalized.split("_") if component]
+
+
+def _identifier_contains_marker(identifier: str) -> bool:
+    if IDENTIFIER_MARKERS.search(identifier) is not None:
+        return True
+    for component in _identifier_components(identifier):
+        if component in IDENTIFIER_COMPONENT_WORDS:
+            return True
+        if any(component.startswith(stem) for stem in IDENTIFIER_COMPONENT_STEMS):
+            return True
+    return False
+
+
 def _literal_strings(node: ast.AST | None) -> list[tuple[int, str]]:
     if node is None:
         return []
@@ -209,8 +357,8 @@ def check_python_file(path: Path) -> list[str]:
             is_engineering_comment = token.type == tokenize.COMMENT and _contains_marker(
                 token.string
             )
-            is_legacy_identifier = (
-                token.type == tokenize.NAME and IDENTIFIER_MARKERS.search(token.string) is not None
+            is_legacy_identifier = token.type == tokenize.NAME and _identifier_contains_marker(
+                token.string
             )
             if is_engineering_comment or is_legacy_identifier:
                 findings.add((token.start[0], token.string))
