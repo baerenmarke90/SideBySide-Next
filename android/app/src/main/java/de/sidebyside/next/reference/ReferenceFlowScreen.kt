@@ -44,6 +44,8 @@ fun ReferenceFlowScreen(
     onCreateMemory: (String, String, String) -> Unit,
     onRefreshStory: () -> Unit,
     modifier: Modifier = Modifier,
+    onRetryImage: () -> Unit = {},
+    onRemoveImage: () -> Unit = {},
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -161,9 +163,61 @@ fun ReferenceFlowScreen(
                             } ?: stringResource(R.string.ref_image_select),
                         )
                     }
+
+                    if (state.selectedImageName != null && state.selectedImageBytes != null) {
+                        val selectedBitmap = remember(state.selectedImageBytes) {
+                            BitmapFactory.decodeByteArray(
+                                state.selectedImageBytes,
+                                0,
+                                state.selectedImageBytes.size,
+                            )
+                        }
+                        if (selectedBitmap != null) {
+                            Image(
+                                bitmap = selectedBitmap.asImageBitmap(),
+                                contentDescription = stringResource(
+                                    R.string.ref_image_preview_description,
+                                    state.selectedImageName,
+                                ),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        Text(stringResource(R.string.ref_image_preview_notice))
+                        state.imageUploadState?.let { uploadState ->
+                            Text(
+                                text = stringResource(
+                                    when (uploadState) {
+                                        DraftUploadState.UPLOADING -> R.string.ref_image_uploading
+                                        DraftUploadState.VALIDATING -> R.string.ref_image_validating
+                                        DraftUploadState.READY -> R.string.ref_image_ready
+                                        DraftUploadState.FAILED -> R.string.ref_image_failed
+                                    },
+                                ),
+                                color = if (uploadState == DraftUploadState.FAILED) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (state.imageUploadState == DraftUploadState.FAILED) {
+                                TextButton(onClick = onRetryImage, enabled = !state.busy) {
+                                    Text(stringResource(R.string.ref_image_retry))
+                                }
+                            }
+                            TextButton(onClick = onRemoveImage, enabled = !state.busy) {
+                                Text(stringResource(R.string.ref_image_remove))
+                            }
+                        }
+                    }
+
+                    val imageReadyToSave = state.selectedImageName == null ||
+                        state.imageUploadState == DraftUploadState.READY
                     Button(
                         onClick = { onCreateMemory(title, body, happenedOn) },
-                        enabled = !state.busy && title.isNotBlank(),
+                        enabled = !state.busy && title.isNotBlank() && imageReadyToSave,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     ) {
                         Text(

@@ -63,5 +63,7 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
         },
         onCreateMemory = referenceViewModel::createMemory,
         onRefreshStory = referenceViewModel::refreshStory,
+        onRetryImage = referenceViewModel::retrySelectedImage,
+        onRemoveImage = referenceViewModel::removeSelectedImage,
     )
 }

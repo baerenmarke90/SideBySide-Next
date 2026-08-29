@@ -9,35 +9,29 @@ import sidebyside.api.models.MediaType
 import sidebyside.api.models.MemoryAttachmentEntry
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
+import sidebyside.api.models.MemoryDetail
 
-suspend fun runMemoryMediaStoryFlow(
+data class PreparedAttachment(
+    val attachmentId: UUID,
+)
+
+enum class AttachmentPreparationPhase {
+    UPLOADING,
+    VALIDATING,
+    READY,
+}
+
+suspend fun prepareAttachment(
     api: ReferenceContract,
     spaceId: UUID,
     accessToken: String,
-    title: String,
-    body: String,
-    happenedOn: LocalDate?,
-    image: SelectedImage?,
-): ReferenceFlowResult {
-    if (image != null) {
-        require(image.mimeType.startsWith("image/")) { "S8 accepts images only." }
-        require(image.bytes.isNotEmpty()) { "The selected image is empty." }
-    }
+    image: SelectedImage,
+    onPhase: (AttachmentPreparationPhase) -> Unit = {},
+): PreparedAttachment {
+    require(image.mimeType.startsWith("image/")) { "S8 accepts images only." }
+    require(image.bytes.isNotEmpty()) { "The selected image is empty." }
 
-    val memory = api.createMemory(
-        spaceId,
-        accessToken,
-        MemoryCreate(body = body, title = title, happenedOn = happenedOn),
-    )
-
-    if (image == null) {
-        return ReferenceFlowResult(
-            memory = memory,
-            story = api.getTimeline(spaceId, accessToken),
-            imageBytes = null,
-        )
-    }
-
+    onPhase(AttachmentPreparationPhase.UPLOADING)
     val upload = api.createAttachmentUpload(
         spaceId,
         accessToken,
@@ -50,8 +44,35 @@ suspend fun runMemoryMediaStoryFlow(
     )
 
     api.uploadAttachmentBytes(accessToken, upload, image)
+    onPhase(AttachmentPreparationPhase.VALIDATING)
     api.finalizeAttachment(spaceId, accessToken, upload.attachment.id)
     waitUntilReady(api, spaceId, accessToken, upload.attachment.id)
+    onPhase(AttachmentPreparationPhase.READY)
+    return PreparedAttachment(upload.attachment.id)
+}
+
+suspend fun createMemoryWithPreparedAttachments(
+    api: ReferenceContract,
+    spaceId: UUID,
+    accessToken: String,
+    title: String,
+    body: String,
+    happenedOn: LocalDate?,
+    attachments: List<PreparedAttachment>,
+): ReferenceFlowResult {
+    val memory = api.createMemory(
+        spaceId,
+        accessToken,
+        MemoryCreate(body = body, title = title, happenedOn = happenedOn),
+    )
+
+    if (attachments.isEmpty()) {
+        return ReferenceFlowResult(
+            memory = memory,
+            story = api.getTimeline(spaceId, accessToken),
+            imageBytes = null,
+        )
+    }
 
     val boundMemory = api.replaceMemoryAttachments(
         spaceId = spaceId,
@@ -59,7 +80,9 @@ suspend fun runMemoryMediaStoryFlow(
         memoryId = memory.id,
         ifMatch = memory.version,
         attachments = MemoryAttachmentSet(
-            attachments = listOf(MemoryAttachmentEntry(upload.attachment.id, position = 0)),
+            attachments = attachments.mapIndexed { position, attachment ->
+                MemoryAttachmentEntry(attachment.attachmentId, position = position)
+            },
         ),
     )
 
@@ -67,7 +90,62 @@ suspend fun runMemoryMediaStoryFlow(
     val readDescriptor = api.createReadAccess(
         spaceId,
         accessToken,
-        upload.attachment.id,
+        attachments.first().attachmentId,
+        AttachmentReadRequest(
+            parentId = boundMemory.id,
+            parentType = AttachmentReadRequest.ParentType.MEMORY,
+        ),
+    )
+    val imageBytes = api.readImageBytes(accessToken, readDescriptor)
+
+    return ReferenceFlowResult(
+        memory = boundMemory,
+        story = story,
+        imageBytes = imageBytes,
+    )
+}
+
+suspend fun runMemoryMediaStoryFlow(
+    api: ReferenceContract,
+    spaceId: UUID,
+    accessToken: String,
+    title: String,
+    body: String,
+    happenedOn: LocalDate?,
+    image: SelectedImage?,
+): ReferenceFlowResult {
+    if (image == null) {
+        return createMemoryWithPreparedAttachments(
+            api = api,
+            spaceId = spaceId,
+            accessToken = accessToken,
+            title = title,
+            body = body,
+            happenedOn = happenedOn,
+            attachments = emptyList(),
+        )
+    }
+
+    val memory = api.createMemory(
+        spaceId,
+        accessToken,
+        MemoryCreate(body = body, title = title, happenedOn = happenedOn),
+    )
+    val prepared = prepareAttachment(api, spaceId, accessToken, image)
+    val boundMemory = api.replaceMemoryAttachments(
+        spaceId = spaceId,
+        accessToken = accessToken,
+        memoryId = memory.id,
+        ifMatch = memory.version,
+        attachments = MemoryAttachmentSet(
+            attachments = listOf(MemoryAttachmentEntry(prepared.attachmentId, position = 0)),
+        ),
+    )
+    val story = api.getTimeline(spaceId, accessToken)
+    val readDescriptor = api.createReadAccess(
+        spaceId,
+        accessToken,
+        prepared.attachmentId,
         AttachmentReadRequest(
             parentId = boundMemory.id,
             parentType = AttachmentReadRequest.ParentType.MEMORY,
