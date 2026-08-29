@@ -24,6 +24,7 @@ from sidebyside.attachments import binding as _binding  # noqa: F401
 
 # Register models. These imports look unused, but they are not.
 from sidebyside.attachments import models as _attachments  # noqa: F401
+from sidebyside.chapters import models as _chapters  # noqa: F401
 from sidebyside.comments import models as _comments  # noqa: F401
 from sidebyside.config import DatabaseSettings
 from sidebyside.db.base import Base

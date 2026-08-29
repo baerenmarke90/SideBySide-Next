@@ -12,8 +12,8 @@ entered.
 the same name and coordinates (M3-D07). Merging two places would be an
 unsolicited data mutation and one that cannot be reversed reliably.
 
-The canonical lock order in the M3 core is `Place -> Wish -> Plan`. A place
-is therefore always locked *before* a plan, never after it.
+The canonical lock order in the M3 core begins with `Place`. A place is
+therefore always locked before any Plan or Chapter that references it.
 """
 
 from __future__ import annotations
@@ -258,18 +258,14 @@ def delete_place(
     *,
     expected_version: int,
 ) -> None:
-    """Remove the place and nothing else (M3-D06, section 9).
+    """Remove the place and detach direct Plan/Chapter references versionedly.
 
-    Plans referencing it lose the association and remain. This is performed
-    explicitly in the service rather than relying only on `ON DELETE SET
-    NULL`: a plan whose place disappears has changed, and its version must
-    reflect that. Otherwise a partner could continue writing from a state
-    that references a place which no longer exists without ever seeing a
-    conflict.
-
-    The foreign key still uses `SET NULL` as a safety boundary if this path is
-    ever bypassed.
+    Referencing domain objects remain. The service clears their canonical
+    `place_id` fields before the Place is deleted so each object's version
+    reflects the change. Foreign-key `SET NULL` remains defense in depth for
+    code paths outside the normal service boundary.
     """
+    from sidebyside.chapters import service as chapter_service
     from sidebyside.plans import service as plan_service
 
     place = require_writable_locked(session, Place, context, place_id)
@@ -277,6 +273,7 @@ def delete_place(
 
     actor_id = context.account_id
     plan_service.detach_place(session, place, actor_id)
+    chapter_service.detach_place(session, place, actor_id)
 
     session.delete(place)
     _flush(session)
