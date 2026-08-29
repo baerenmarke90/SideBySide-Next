@@ -34,7 +34,7 @@ Constraints:
 
 ## #216 - Active technical documentation and specifications
 
-Delivery tracking: PR #219 covers this scope together with #214 and #215.
+Delivery tracking: #216 is implemented separately from #214 and #215; its working branch currently builds on the #219 migration baseline.
 
 Scope:
 
