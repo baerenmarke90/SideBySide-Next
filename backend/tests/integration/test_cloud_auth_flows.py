@@ -128,9 +128,7 @@ class TestInstanceWithoutMailTransport:
         assert response.status_code == 503
         assert response.json()["code"] == "MAIL_TRANSPORT_UNAVAILABLE"
 
-    def test_recovery_reports_missing_capability(
-        self, client_without_mail_transport, anna
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_recovery_reports_missing_capability(self, client_without_mail_transport, anna) -> None:  # type: ignore[no-untyped-def]
         response = client_without_mail_transport.post(
             "/api/v1/auth/recovery/request", json={"email": ADDRESS}
         )
@@ -238,9 +236,7 @@ class TestMagicLink:
                 == 422
             )
 
-    def test_plaintext_is_not_stored_in_database(
-        self, client, session, mailbox, anna
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_plaintext_is_not_stored_in_database(self, client, session, mailbox, anna) -> None:  # type: ignore[no-untyped-def]
         client.post("/api/v1/auth/magic-link/request", json={"email": ADDRESS})
         token = mailbox.latest_token
 
