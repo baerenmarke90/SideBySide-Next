@@ -177,7 +177,8 @@ class ReferenceViewModelAttachmentTest {
         viewModel.createMemory("Two photos", "", "")
         advanceUntilIdle()
 
-        val bound = assertNotNull(api.boundAttachments) as MemoryAttachmentSet
+        assertNotNull(api.boundAttachments)
+        val bound = checkNotNull(api.boundAttachments)
         assertEquals(listOf(0, 1), bound.attachments.map { it.position })
         assertEquals(api.createdAttachmentIds, bound.attachments.map { it.attachmentId })
     }
