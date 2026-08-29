@@ -1,174 +1,174 @@
 # M2 Demo & Acceptance Scenario
 
-**Zweck:** ein reproduzierbarer, rein fiktiver Datensatz für Demo, visuelle QA und End-to-End-Tests  
-**Stand:** 24.08.2026
+**Purpose:** a reproducible, entirely fictional data set for demos, visual QA, and end-to-end tests  
+**As of:** August 24, 2026
 
-Alle Namen, Inhalte und Medien sind synthetisch. Produktivdaten oder echte private Erinnerungen dürfen nicht als Testfixture verwendet werden.
+All names, content, and media are synthetic. Production data or real private memories must not be used as test fixtures.
 
-## 1. Personen und Spaces
+## 1. People and spaces
 
-| Kürzel | Person | Space | Rolle |
+| Key | Person | Space | Role |
 |---|---|---|---|
-| `LEA` | Lea Sommer | `ALPHA` – Lea & Alex | Mitglied/Autor |
-| `ALEX` | Alex Winter | `ALPHA` – Lea & Alex | Partner/Mitglied |
-| `MIRA` | Mira Berg | `BETA` – Mira & Sam | Fremdmitglied |
-| `REVOKED` | Robin Test | ehemals `ALPHA` | Mitgliedschaft widerrufen |
+| `LEA` | Lea Sommer | `ALPHA` – Lea & Alex | member/author |
+| `ALEX` | Alex Winter | `ALPHA` – Lea & Alex | partner/member |
+| `MIRA` | Mira Berg | `BETA` – Mira & Sam | foreign member |
+| `REVOKED` | Robin Test | formerly `ALPHA` | membership revoked |
 
-Referenzdatum der Demo: **24.08.2026**.
+Demo reference date: **August 24, 2026**.
 
-## 2. Seed-Inhalte
+## 2. Seed content
 
-### Geteilte Memories
+### Shared Memories
 
-| Key | Autor | Titel | `happenedOn` | Medien | Kommentare |
+| Key | Author | Title | `happenedOn` | Media | Comments |
 |---|---|---|---|---:|---:|
-| `MEM-LAKE` | LEA | Sonnenaufgang am See | 14.06.2026 | 3 Fotos | 2 |
-| `MEM-KITCHEN` | ALEX | Unser erster Pastateig | 03.05.2026 | 1 Foto | 1 |
-| `MEM-RAIN` | LEA | Spaziergang im Sommerregen | 19.07.2026 | 0 | 0 |
+| `MEM-LAKE` | LEA | Sonnenaufgang am See | 2026-06-14 | 3 photos | 2 |
+| `MEM-KITCHEN` | ALEX | Unser erster Pastateig | 2026-05-03 | 1 photo | 1 |
+| `MEM-RAIN` | LEA | Spaziergang im Sommerregen | 2026-07-19 | 0 | 0 |
 
 ### HeartMoments
 
-| Key | Autor | Text | Emotion | Visibility | `happenedOn` | Attachment |
+| Key | Author | Text | Emotion | Visibility | `happenedOn` | Attachment |
 |---|---|---|---|---|---|---|
-| `HM-SHARED` | ALEX | „Danke, dass du heute einfach zugehört hast.“ | APPRECIATED | SHARED | 21.08.2026 | nein |
-| `HM-PRIVATE` | LEA | `CANARY-PRIVATE-LEA-7421` | GRATEFUL | PRIVATE | 22.08.2026 | `private-lea-7421.jpg` |
+| `HM-SHARED` | ALEX | „Danke, dass du heute einfach zugehört hast.“ | APPRECIATED | SHARED | 2026-08-21 | no |
+| `HM-PRIVATE` | LEA | `CANARY-PRIVATE-LEA-7421` | GRATEFUL | PRIVATE | 2026-08-22 | `private-lea-7421.jpg` |
 
-`HM-PRIVATE` ist absichtlich technisch auffällig und darf ausschließlich in Leas Owner-Kontext erscheinen.
+`HM-PRIVATE` is intentionally conspicuous technically and must appear only in Lea's owner context.
 
 ### Milestones
 
-| Key | Autor | Titel | `happenedOn` |
+| Key | Author | Title | `happenedOn` |
 |---|---|---|---|
-| `MS-GARDEN` | ALEX | Unser erster gemeinsamer Garten | 10.04.2026 |
-| `MS-HOME` | LEA | Ein Jahr in unserer Wohnung | 01.08.2026 |
+| `MS-GARDEN` | ALEX | Unser erster gemeinsamer Garten | 2026-04-10 |
+| `MS-HOME` | LEA | Ein Jahr in unserer Wohnung | 2026-08-01 |
 
 ### Comments
 
-| Key | Autor | Target | Body |
+| Key | Author | Target | Body |
 |---|---|---|---|
 | `COM-1` | ALEX | `MEM-LAKE` | „Den frühen Wecker war es wert.“ |
 | `COM-2` | LEA | `MEM-LAKE` | „Nächstes Mal mit heißem Kaffee.“ |
 | `COM-3` | LEA | `HM-SHARED` | „Das bedeutet mir viel.“ |
 
-Keine Comment-Fixture referenziert `HM-PRIVATE`.
+No Comment fixture references `HM-PRIVATE`.
 
-## 3. Medienfixtures
+## 3. Media fixtures
 
-| Datei | Zweck | erwartetes Ergebnis |
+| File | Purpose | Expected result |
 |---|---|---|
-| `lake-01.jpg` | gültiges Querformat | READY |
-| `lake-02.jpg` | gültiges Hochformat | READY |
-| `lake-03.jpg` | langsame Verarbeitung | PENDING/PROCESSING → READY |
-| `pasta.webp` | gültiges unterstütztes Format | READY, sofern Allowlist entschieden |
-| `private-lea-7421.jpg` | Private Canary | nur LEA sichtbar |
-| `spoofed-jpg.exe` | MIME-Spoof | FAILED |
-| `oversize-image.jpg` | Größenlimit | FAILED |
-| `broken-image.jpg` | Decoderfehler | FAILED |
+| `lake-01.jpg` | valid landscape image | READY |
+| `lake-02.jpg` | valid portrait image | READY |
+| `lake-03.jpg` | slow processing | PENDING/PROCESSING → READY |
+| `pasta.webp` | valid supported format | READY, if allowlist permits it |
+| `private-lea-7421.jpg` | private canary | visible only to LEA |
+| `spoofed-jpg.exe` | MIME spoof | FAILED |
+| `oversize-image.jpg` | size limit | FAILED |
+| `broken-image.jpg` | decoder failure | FAILED |
 
-Binäre Fixtures werden erst nach Festlegung der Allowlist und Limits erzeugt. Dateinamen sind kein Storage Key.
+Binary fixtures are created only after the allowlist and limits are decided. Filenames are not storage keys.
 
-## 4. Story-Erwartung
+## 4. Story expectation
 
-Für LEA und ALEX enthält die gemeinsame Story, absteigend sortiert:
+For LEA and ALEX, the shared Story contains the following items in descending order:
 
-1. `HM-SHARED` – 21.08.2026
-2. `MS-HOME` – 01.08.2026
-3. `MEM-RAIN` – 19.07.2026
-4. `MEM-LAKE` – 14.06.2026
-5. `MEM-KITCHEN` – 03.05.2026
-6. `MS-GARDEN` – 10.04.2026
+1. `HM-SHARED` – 2026-08-21
+2. `MS-HOME` – 2026-08-01
+3. `MEM-RAIN` – 2026-07-19
+4. `MEM-LAKE` – 2026-06-14
+5. `MEM-KITCHEN` – 2026-05-03
+6. `MS-GARDEN` – 2026-04-10
 
-`HM-PRIVATE` vom 22.08.2026 erscheint **nicht**. Es erzeugt keine leere Gruppe, keinen Count-Unterschied und keinen verschobenen Cursor.
+`HM-PRIVATE` from 2026-08-22 does **not** appear. It creates no empty group, count difference, or shifted cursor.
 
-## 5. End-to-End-Szenarien
+## 5. End-to-end scenarios
 
-### E2E-01 Story lesen
+### E2E-01 Read Story
 
-1. ALEX öffnet Story.
-2. Erwartete sechs Items erscheinen in stabiler Reihenfolge.
-3. Filter „Erinnerung“ zeigt drei Memories.
-4. Zurücksetzen stellt Timeline und Scrollposition wieder her.
-5. DOM, Netzwerkantworten, Cache und Analytics enthalten keine Private Canary.
+1. ALEX opens Story.
+2. The expected six items appear in stable order.
+3. Filter “Erinnerung” shows three Memories.
+4. Reset restores the timeline and scroll position.
+5. DOM, network responses, cache, and analytics contain no private canary.
 
-### E2E-02 Memory mit Medien erstellen
+### E2E-02 Create Memory with media
 
-1. LEA startet „Moment festhalten → Erinnerung“.
-2. Titel „Picknick unter den Linden“, Datum 23.08.2026 und zwei gültige Fotos erfassen.
-3. Eine dritte defekte Datei hinzufügen; nur diese zeigt Fehler.
-4. Defekte Datei entfernen, speichern.
-5. Detail öffnet genau eine neue Memory mit zwei Medien.
-6. Story zeigt sie an korrekter Position; doppeltes Absenden erzeugt kein Duplikat.
+1. LEA starts “Moment festhalten → Erinnerung”.
+2. Enter title “Picknick unter den Linden”, date 2026-08-23, and two valid photos.
+3. Add a third broken file; only that file shows an error.
+4. Remove the broken file and save.
+5. Detail opens exactly one new Memory with two media items.
+6. Story shows it in the correct position; double submission does not create a duplicate.
 
 ### E2E-03 Private HeartMoment
 
-1. LEA erstellt einen HeartMoment mit „Nur für mich“.
-2. Owner-only-Detail zeigt Privacy-Label und keine Kommentaraktion.
-3. ALEX versucht bekannte ID, Story, Suche, Kommentare, Attachment und Export.
-4. Alle Pfade zeigen neutral 404 oder enthalten keinen Treffer.
-5. Logs, Events und Push enthalten weder Text noch Dateiname.
+1. LEA creates a HeartMoment with “Nur für mich”.
+2. Owner-only detail shows the privacy label and no comment action.
+3. ALEX tries the known ID, Story, search, comments, attachment, and export.
+4. Every path returns a neutral 404 or no result.
+5. Logs, events, and Push contain neither text nor filename.
 
 ### E2E-04 Shared HeartMoment
 
-1. ALEX erstellt einen geteilten HeartMoment.
-2. Einmalige Erklärung vor erstem Teilen erscheint.
-3. Eintrag erscheint in Story.
-4. LEA kommentiert.
-5. ALEX erhält höchstens eine generische Notification ohne Kommentartext.
+1. ALEX creates a shared HeartMoment.
+2. The one-time explanation before first sharing appears.
+3. The item appears in Story.
+4. LEA comments.
+5. ALEX receives at most one generic notification without comment text.
 
 ### E2E-05 Milestone
 
-1. ALEX erstellt „Erste gemeinsame Bergtour“ mit Datum.
-2. Milestone-Detail und eigener Story-Typ erscheinen.
-3. Keine deaktivierten Chapter-/Recap-Steuerungen sind sichtbar.
+1. ALEX creates “Erste gemeinsame Bergtour” with a date.
+2. Milestone detail and a distinct Story type appear.
+3. No disabled Chapter/Recap controls are visible.
 
 ### E2E-06 Offline Read/Write
 
-1. ALEX öffnet Story online, dann aktiviert er Flugmodus.
-2. Cache zeigt „Offline · Stand von …“.
-3. ALEX beginnt eine Memory, Absenden bleibt „Noch nicht gespeichert“.
-4. Eingabe bleibt erhalten; keine Story-Karte und kein Success-Event entsteht.
-5. Nach bewusster Wiederholung online wird genau eine Memory erzeugt.
+1. ALEX opens Story online, then enables airplane mode.
+2. The cache shows “Offline · Stand von …”.
+3. ALEX starts a Memory; submit remains “Noch nicht gespeichert”.
+4. Input remains; no Story card or success event is created.
+5. After an explicit retry online, exactly one Memory is created.
 
-### E2E-07 Versionskonflikt
+### E2E-07 Version conflict
 
-1. LEA und ALEX öffnen `MEM-LAKE` mit gleicher Version.
-2. LEA speichert eine Änderung.
-3. ALEX erhält bei seiner Änderung `409`.
-4. UI zeigt aktuellen Stand und bewahrt Alex’ Eingabe separat.
-5. Kein automatisches Überschreiben.
+1. LEA and ALEX open `MEM-LAKE` at the same version.
+2. LEA saves a change.
+3. ALEX receives `409` when saving his change.
+4. The UI shows the current state and preserves Alex's input separately.
+5. No automatic overwrite occurs.
 
-### E2E-08 Cross-Tenant und Revocation
+### E2E-08 Cross-tenant and revocation
 
-1. MIRA versucht bekannte Alpha-IDs und Cursor.
-2. Alle Zugriffe bleiben neutral und mutieren nichts.
-3. REVOKED versucht alten Token, Read URL und Cache.
-4. API verweigert; URL-Restfenster entspricht dokumentierter TTL; lokaler Cache ist gesperrt/gelöscht.
+1. MIRA tries known Alpha IDs and cursors.
+2. All access remains neutral and mutates nothing.
+3. REVOKED tries an old token, Read URL, and cache.
+4. The API rejects access; the URL's remaining validity matches the documented TTL; local cache is locked/deleted.
 
-## 6. Visuelle QA-Varianten
+## 6. Visual QA variants
 
-Jeder Kernscreen wird aufgenommen mit:
+Capture every core screen at:
 
 - Compact 360 px, Medium 720 px, Expanded 1440 px,
-- Standard- und 200-%-Webzoom beziehungsweise größte Android-Schrift,
-- hell/dunkel, sofern Dark Theme implementiert ist,
-- leer, normal, lange Inhalte, fehlendes Medium, Teilfehler,
-- Tastaturfokus beziehungsweise TalkBack-Fokus sichtbar,
-- Online, Offline Read, Offline Write blockiert,
-- privacy-sicherem 404.
+- standard and 200% Web zoom or the largest Android font,
+- light/dark when Dark Theme is implemented,
+- empty, normal, long content, missing media, partial failure,
+- visible keyboard focus or TalkBack focus,
+- Online, Offline Read, blocked Offline Write,
+- privacy-safe 404.
 
-## 7. Accessibility-Durchlauf
+## 7. Accessibility pass
 
-- Story vollständig per Tastatur/TalkBack lesen und öffnen.
-- Filter setzen und entfernen, ohne visuelle Orientierung vorauszusetzen.
-- Privacy-Gruppe verstehen und auswählen.
-- Medien hinzufügen, Fehler erkennen, entfernen und Reihenfolge ohne Drag ändern.
-- Kommentar senden und Status hören.
-- 409 lösen, ohne eigene Eingabe zu verlieren.
-- Zurückpfad stellt Kontext und Fokus wieder her.
+- Read and open Story completely via keyboard/TalkBack.
+- Set and remove filters without relying on visual orientation.
+- Understand and select the privacy group.
+- Add media, recognize errors, remove items, and change order without drag.
+- Send a comment and hear its status.
+- Resolve 409 without losing own input.
+- Back path restores context and focus.
 
-## 8. Analytics-Erwartung
+## 8. Analytics expectation
 
-Erlaubte Beispiele:
+Allowed examples:
 
 ```text
 story_opened
@@ -180,8 +180,8 @@ milestone_create_completed
 comment_send_completed|failed
 ```
 
-Fixture- und Canary-Werte dürfen in keinem Analytics-Payload erscheinen.
+Fixture and canary values must never appear in an analytics payload.
 
-## 9. Definition „Demo bestanden“
+## 9. Definition of “demo passed”
 
-Die Demo gilt nur als bestanden, wenn fachlicher Erfolg, Fehlerrückweg, Privacy, Offline-Verhalten, Accessibility und Cross-Tenant-Isolation sichtbar nachgewiesen sind. Ein reiner Happy-Path-Screenshot reicht nicht.
+The demo passes only when domain success, failure recovery, privacy, offline behavior, accessibility, and cross-tenant isolation are visibly demonstrated. A happy-path screenshot alone is not sufficient.
