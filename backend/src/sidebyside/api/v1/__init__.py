@@ -12,6 +12,8 @@ from fastapi import APIRouter
 from sidebyside.api.v1 import (
     attachments,
     auth,
+    chapter_relations,
+    chapters,
     comments,
     health,
     heart_moments,
@@ -45,3 +47,5 @@ router.include_router(wishes.router)
 router.include_router(places.router)
 router.include_router(place_relations.router)
 router.include_router(plans.router)
+router.include_router(chapters.router)
+router.include_router(chapter_relations.router)
