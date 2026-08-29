@@ -125,7 +125,7 @@ describe('runMemoryMediaStoryFlow', () => {
     const memory = {
       id: 'memory-1',
       version: 1,
-      title: 'Nur ein Titel',
+      title: 'Title only',
       body: '',
     };
     const story = { items: [] };
@@ -155,7 +155,7 @@ describe('runMemoryMediaStoryFlow', () => {
 
     expect(apis.memories.createMemory).toHaveBeenCalledWith({
       spaceId: 'space-1',
-      memoryCreate: { title: 'Nur ein Titel', body: '' },
+      memoryCreate: { title: 'Title only', body: '' },
     });
     expect(createAttachmentUpload).not.toHaveBeenCalled();
     expect(replaceMemoryAttachments).not.toHaveBeenCalled();
@@ -186,8 +186,8 @@ describe('runMemoryMediaStoryFlow', () => {
     const memory = {
       id: 'memory-1',
       version: 1,
-      title: 'Am See',
-      body: 'Zusammen unterwegs.',
+      title: 'Lakeside',
+      body: 'A day together.',
     };
     const boundMemory = { ...memory, version: 2 };
     const story = { items: [] };
