@@ -1,285 +1,285 @@
 # M2 Decision Log
 
-**Stand:** 25.08.2026  
-**Regel:** Eine offene Frage wird nicht stillschweigend im Code entschieden.
+**As of:** August 25, 2026  
+**Rule:** An open question is not decided silently in code.
 
-Dieses Log trennt Spezifikationsaussagen von Umsetzungsvorschlägen. `PROPOSED` ist nicht bindend. `DECIDED` benötigt Datum, Entscheider und Verweis auf ADR, Spec oder Issue.
+This log separates specification statements from implementation proposals. `PROPOSED` is not binding. `DECIDED` requires a date, decision owner, and reference to an ADR, specification, or issue.
 
-## Status und Priorität
+## Status and priority
 
-- `OPEN` – Entscheidung fehlt.
-- `PROPOSED` – bevorzugte Option liegt vor, Freigabe fehlt.
-- `DECIDED` – verbindlich dokumentiert.
-- `BLOCKING` – vor der ersten betroffenen Implementation entscheiden.
-- `BEFORE_CLIENTS` – vor stabiler Web-/Android-Integration entscheiden.
-- `LATER` – bewusst nach M2 verschiebbar, solange die Grenze offen bleibt.
+- `OPEN` – decision missing.
+- `PROPOSED` – preferred option exists, approval missing.
+- `DECIDED` – documented as binding.
+- `BLOCKING` – decide before the first affected implementation.
+- `BEFORE_CLIENTS` – decide before stable Web/Android integration.
+- `LATER` – intentionally deferrable until after M2 while the boundary remains open.
 
-## Entscheidungen
+## Decisions
 
-| ID | Priorität | Status | Owner | Frage | Vorschlag / nächste Aktion |
+| ID | Priority | Status | Owner | Question | Proposal / next action |
 |---|---|---|---|---|---|
-| M2-D01 | BLOCKING | DECIDED | Product + Domain | Darf der Partner eine Memory des Autors ändern oder löschen? | Nein. Beide aktiven Partner lesen gemeinsame Memories; Update/Delete bleiben ausschließlich beim unveränderlichen Autor. Siehe Entscheidung unten / #68. |
-| M2-D02 | BLOCKING | DECIDED | Domain + API | Erhalten Kommentare ein `version`-Feld für Optimistic Concurrency? | Ja. Editierbare Comments erhalten `version`; Update/Delete verlangen dieselbe If-Match-/409-Semantik wie andere veränderbare Ressourcen. Siehe #68. |
-| M2-D03 | BLOCKING | DECIDED | Domain + Data | Wie werden mehrere Attachments gebunden: exklusive Ownership, Wiederverwendung, Join-Entity und Sortierreihenfolge? | Exklusive Bindung an höchstens einen Parent; MemoryAttachment mit stabiler `position`; keine Cross-Space-/Mehrfachbindung. Siehe #69. |
-| M2-D04 | BLOCKING | DECIDED | Security + Product | Welche MIME-Typen, Dateigrößen, Pixelgrenzen und Videodauern gelten je Plattform? | JPEG/PNG/WebP/HEIC/HEIF ≤25 MiB/40 MP/12k px; MP4/QuickTime ≤250 MiB/180 s/4K; Memory ≤20 Attachments/500 MiB. Siehe #69. |
-| M2-D05 | BLOCKING | DECIDED | Backend + Ops | Erfolgt Media-Validierung synchron beim Finalize oder asynchron? Welche internen Zustände sind nötig? | Asynchron; `PENDING/UPLOADING/VALIDATING/READY/FAILED/DELETING/DELETE_FAILED`. Siehe #69. |
-| M2-D06 | BLOCKING | DECIDED | Security + Privacy | Wird Emotion bei HeartMoment als Metadatum oder ProtectedPayload klassifiziert? | ProtectedPayload. Emotion ist sensibler Beziehungsinhalt und darf nicht als Analytics-/Event-/Log-Metadatum verwendet werden. Siehe #68. |
-| M2-D07 | BLOCKING | DECIDED | Domain + Privacy | Was geschieht mit Kommentaren beim Wechsel eines HeartMoment von `SHARED` zu `PRIVATE`? | Wechsel ist nur als atomare Privacy-Operation zulässig; vorhandene Kommentare werden in derselben DB-Transaktion gelöscht. Keine Partnerprojektion darf danach verbleiben. Siehe #68. |
-| M2-D08 | BLOCKING | DECIDED | API + Data | Welche Story-Sortierung gilt bei fehlendem `happenedOn`, und welcher Tie-Breaker stabilisiert Cursor? | `effectiveDate = happenedOn ?? UTC_DATE(createdAt)`; Schlüssel `(effectiveDate, createdAt, kindRank, id)`, vollständige Keyset-Pagination; Cursor opak/integritätsgeschützt. Siehe #70. |
-| M2-D09 | BLOCKING | DECIDED | API | Exakte Routen, Nesting und DTO-Namen? | Space-scoped Routenkatalog und DTOs sind in `API-DESIGN.md`/`API-CONTRACT.json` eingefroren. Parent-Comments sind verschachtelt; Update/Delete per Space-scoped Comment-ID. Siehe #70. |
-| M2-D10 | BEFORE_CLIENTS | OPEN | Product + Privacy | Welche Notification Preview darf ein Kommentar zeigen? | Standardmäßig generisch; Content-Auszug nur nach expliziter Privacy-Freigabe. |
-| M2-D11 | BLOCKING | DECIDED | Data + Privacy | Delete-, Retention- und Cascade-Regeln für Entity, Relation, Blob, Event und Audit? | Domain-Anteil #68 plus Media-Anteil #69 entschieden: fachliche Entität sofort unsichtbar; Comments atomar; letzte Mediareferenz setzt `DELETING`; Providercleanup async/idempotent; `DELETE_FAILED` retrybar/messbar. |
-| M2-D12 | BLOCKING | DECIDED | Backend + Ops | Wie lange bleiben unvollständige/fehlgeschlagene Uploads erhalten? | PENDING/UPLOADING/FAILED 24 h; Cleanup mindestens stündlich; DELETE_FAILED bis Erfolg/manuellem Eingriff. Siehe #69. |
-| M2-D13 | BLOCKING | DECIDED | Security + Media | Direct Upload oder serverseitiger Stream je Local-/S3-Adapter? | Local: autorisierter Serverstream. S3: presigned Upload ≤10 min; Read URL ≤5 min. Domain-/Finalize-Autorisierung serverkontrolliert. Siehe #69. |
-| M2-D14 | BLOCKING | DECIDED | Privacy + Product | Werden EXIF, GPS und weitere eingebettete Metadaten entfernt? | Ja, beim Ingest. Der Validierungsjob extrahiert eine Allowlist technischer Felder nach ProtectedPayload und speichert danach ausschliesslich die bereinigte Datei. Siehe #78. |
-| M2-D15 | BLOCKING | DECIDED | Media + Product | Sind Thumbnailing, Transcoding und Poster Frames Teil von M2? | Je eine abgeleitete Variante: Bild-Thumbnail und Video-Posterframe. Transcoding ist nicht Teil von M2. Siehe #78. |
-| M2-D16 | BLOCKING | DECIDED | Architecture + Security | Minimales Schema je M2-Domain-Event? | Envelope: `eventId`, `eventType`, `occurredAt`, `spaceId`, `actorId`, `resourceType`, `resourceId`, `resourceVersion`; event-spezifisch nur IDs, sichere Zustände/Kategorien und technische Zeitpunkte. Keine ProtectedPayload, Dateinamen, URLs oder Emotion. Siehe #68. |
-| M2-D17 | BEFORE_CLIENTS | OPEN | Product + Privacy | Welche privaten Daten enthält persönlicher Export, gemeinsamer Export oder Backup? | Owner-Export und Partnerexport strikt trennen; Private niemals in Partnerexport. |
-| M2-D18 | BEFORE_CLIENTS | OPEN | Client + Security | Welche Cache-/Offline-Retention gilt für private Inhalte auf Web und Android? | Owner-/Space-gebundene Caches, vollständige Löschung bei Logout/Space-Wechsel, kein Offline Write. |
-| M2-D19 | LATER | PROPOSED | Architecture | Wie bleibt E2EE nachrüstbar, ohne heute echte E2EE vorzutäuschen? | ProtectedPayload und opaque MediaStore beibehalten; Key Management ausdrücklich außerhalb M2. |
-| M2-D20 | BLOCKING | DECIDED | Domain | Kann ein Attachment ohne Parent `READY` sein und wie lange? | Ja, nur Owner und maximal 60 min ab `readyAt`; danach `DELETING`; Bind-vs-Cleanup wird serialisiert. Siehe #69. |
-| M2-D21 | BEFORE_CLIENTS | OPEN | Search + Privacy | Wird M2-Suche direkt in Postgres oder über separaten Index umgesetzt? | Globale Volltextsuche ist nicht G2-pflichtig und liegt grundsätzlich in M4; falls früher benötigt, neue explizite Gate-Entscheidung. |
-| M2-D22 | BLOCKING | DECIDED | Product + UX | Ist der Owner-Bereich für private HeartMoments Teil der gemeinsamen Story-Route oder eine getrennte Ansicht? | Getrennte Ansicht. `/timeline` bleibt ein reines Shared-Read-Model ohne private Variante und ohne `visibility`-Parameter; der Owner-Bereich wird von der bestehenden HeartMoment-Collection bedient. Siehe #104. |
-| M2-D23 | BLOCKING | DECIDED | Security + Media | In welcher Reihenfolge entstehen Bild- und Videoverarbeitung, und welche Parser kommen dafür ins Projekt? | Bilder zuerst mit Pillow und pillow-heif; Video mitsamt ffmpeg folgt als eigener Slice. Bis dahin weist der Server MP4/QuickTime fail-closed ab. Siehe #85. |
-| M2-D24 | BLOCKING | DECIDED | API + Security | Wie liest der Owner ein noch ungebundenes Attachment, wenn AttachmentReadRequest eine Parentreferenz verlangt? | Die Union erhält additiv `parentType: "NONE"` für den eigenen ungebundenen Upload im Bindungsfenster. Owner, `READY` und Fenster werden serverseitig geprüft. Siehe #79. |
-| M2-D25 | BLOCKING | DECIDED | Product + Domain | Darf der Partner einen Milestone des anderen ändern oder löschen? | Nein. Beide lesen; Update und Delete bleiben beim unveränderlichen Autor, wie bei Memory (M2-D01). Siehe #94. |
+| M2-D01 | BLOCKING | DECIDED | Product + Domain | May the partner change or delete a Memory authored by the other person? | No. Both active partners can read shared Memories; Update/Delete remain exclusively with the immutable author. See decision below / #68. |
+| M2-D02 | BLOCKING | DECIDED | Domain + API | Do Comments receive a `version` field for optimistic concurrency? | Yes. Editable Comments receive `version`; Update/Delete require the same If-Match/409 semantics as other mutable resources. See #68. |
+| M2-D03 | BLOCKING | DECIDED | Domain + Data | How are multiple attachments bound: exclusive ownership, reuse, join entity, and sort order? | Exclusive binding to at most one parent; MemoryAttachment with stable `position`; no cross-space/multiple binding. See #69. |
+| M2-D04 | BLOCKING | DECIDED | Security + Product | Which MIME types, file sizes, pixel limits, and video durations apply per platform? | JPEG/PNG/WebP/HEIC/HEIF ≤25 MiB/40 MP/12k px; MP4/QuickTime ≤250 MiB/180 s/4K; Memory ≤20 attachments/500 MiB. See #69. |
+| M2-D05 | BLOCKING | DECIDED | Backend + Ops | Is media validation synchronous during finalize or asynchronous? Which internal states are required? | Asynchronous; `PENDING/UPLOADING/VALIDATING/READY/FAILED/DELETING/DELETE_FAILED`. See #69. |
+| M2-D06 | BLOCKING | DECIDED | Security + Privacy | Is HeartMoment emotion metadata or ProtectedPayload? | ProtectedPayload. Emotion is sensitive relationship content and must not be used as analytics/event/log metadata. See #68. |
+| M2-D07 | BLOCKING | DECIDED | Domain + Privacy | What happens to Comments when a HeartMoment changes from `SHARED` to `PRIVATE`? | The change is allowed only as an atomic privacy operation; existing Comments are deleted in the same DB transaction. No partner projection may remain afterward. See #68. |
+| M2-D08 | BLOCKING | DECIDED | API + Data | Which Story ordering applies when `happenedOn` is missing, and which tie-breaker stabilizes cursors? | `effectiveDate = happenedOn ?? UTC_DATE(createdAt)`; key `(effectiveDate, createdAt, kindRank, id)`, full keyset pagination; cursor opaque/integrity-protected. See #70. |
+| M2-D09 | BLOCKING | DECIDED | API | Exact routes, nesting, and DTO names? | Space-scoped route catalog and DTOs are frozen in `API-DESIGN.md`/`API-CONTRACT.json`. Parent Comments are nested; Update/Delete use a space-scoped Comment ID. See #70. |
+| M2-D10 | BEFORE_CLIENTS | OPEN | Product + Privacy | What notification preview may a Comment show? | Generic by default; content excerpt only after explicit privacy approval. |
+| M2-D11 | BLOCKING | DECIDED | Data + Privacy | Delete, retention, and cascade rules for entity, relation, blob, event, and audit? | Domain part #68 plus media part #69 decided: domain entity immediately invisible; Comments atomic; last media reference sets `DELETING`; provider cleanup async/idempotent; `DELETE_FAILED` retryable/measurable. |
+| M2-D12 | BLOCKING | DECIDED | Backend + Ops | How long are incomplete/failed uploads retained? | PENDING/UPLOADING/FAILED 24 h; cleanup at least hourly; DELETE_FAILED until success/manual intervention. See #69. |
+| M2-D13 | BLOCKING | DECIDED | Security + Media | Direct upload or server-side stream per local/S3 adapter? | Local: authorized server stream. S3: presigned upload ≤10 min; Read URL ≤5 min. Domain/finalize authorization remains server-controlled. See #69. |
+| M2-D14 | BLOCKING | DECIDED | Privacy + Product | Are EXIF, GPS, and other embedded metadata removed? | Yes, during ingest. The validation job extracts an allowlist of technical fields into ProtectedPayload and then stores only the sanitized file. See #78. |
+| M2-D15 | BLOCKING | DECIDED | Media + Product | Are thumbnailing, transcoding, and poster frames part of M2? | One derived variant each: image thumbnail and video poster frame. Transcoding is not part of M2. See #78. |
+| M2-D16 | BLOCKING | DECIDED | Architecture + Security | Minimal schema for each M2 Domain Event? | Envelope: `eventId`, `eventType`, `occurredAt`, `spaceId`, `actorId`, `resourceType`, `resourceId`, `resourceVersion`; event-specific data only IDs, safe states/categories, and technical timestamps. No ProtectedPayload, filenames, URLs, or emotion. See #68. |
+| M2-D17 | BEFORE_CLIENTS | OPEN | Product + Privacy | Which private data is included in personal export, shared export, or backup? | Strictly separate owner export and partner export; PRIVATE never in partner export. |
+| M2-D18 | BEFORE_CLIENTS | OPEN | Client + Security | What cache/offline retention applies to private content on Web and Android? | Owner/space-bound caches, complete deletion on logout/space change, no Offline Write. |
+| M2-D19 | LATER | PROPOSED | Architecture | How does E2EE remain retrofit-ready without pretending real E2EE exists today? | Keep ProtectedPayload and opaque MediaStore; key management explicitly outside M2. |
+| M2-D20 | BLOCKING | DECIDED | Domain | Can an attachment be `READY` without a parent, and for how long? | Yes, owner only and at most 60 min from `readyAt`; then `DELETING`; bind-vs-cleanup serialized. See #69. |
+| M2-D21 | BEFORE_CLIENTS | OPEN | Search + Privacy | Is M2 search implemented directly in Postgres or through a separate index? | Global full-text search is not required for G2 and generally belongs to M4; if needed earlier, create a new explicit gate decision. |
+| M2-D22 | BLOCKING | DECIDED | Product + UX | Is the owner area for private HeartMoments part of the shared Story route or a separate view? | Separate view. `/timeline` remains a purely shared Read Model with no private variant and no `visibility` parameter; the owner area is served by the existing HeartMoment collection. See #104. |
+| M2-D23 | BLOCKING | DECIDED | Security + Media | In what order are image and video processing delivered, and which parsers enter the project? | Images first with Pillow and pillow-heif; video including ffmpeg follows as a separate slice. Until then, the server rejects MP4/QuickTime fail-closed. See #85. |
+| M2-D24 | BLOCKING | DECIDED | API + Security | How does the owner read a still-unbound attachment when AttachmentReadRequest requires a parent reference? | Add `parentType: "NONE"` to the union for an own unbound upload in the binding window. Owner, `READY`, and window are checked server-side. See #79. |
+| M2-D25 | BLOCKING | DECIDED | Product + Domain | May the partner change or delete the other person's Milestone? | No. Both can read; Update and Delete remain with the immutable author, as with Memory (M2-D01). See #94. |
 
-## Verbindliche Domain-/Privacy-Grundsätze für M2
+## Binding domain/privacy principles for M2
 
-- Öffentliche Domain-/API-Sprache verwendet `visibility = SHARED | PRIVATE`, wo eine Ressource beide Sichtbarkeiten unterstützt.
-- `SPACE_SHARED` und `OWNER_ONLY` bleiben interne Authorization-/Persistenzklassen; Clients schreiben `privacyClass` nicht als zweite Wahrheitsquelle.
-- `PRIVATE` ist keine nachträgliche UI-Filterung. Nichtberechtigte Zeilen werden bereits in der autorisierten Datenabfrage ausgeschlossen.
-- ProtectedPayload ist eine Architektur- und Leckagegrenze, keine Behauptung echter E2EE.
-- Memory und Milestone sind gemeinsamer Space-Inhalt; HeartMoment kann `SHARED` oder `PRIVATE` sein; Comment besitzt keine unabhängige Sichtbarkeit und erbt die Erreichbarkeit des Parents.
-- Autor-/Owner-IDs sind nach Erstellung unveränderlich. Normale Updates dürfen Ownership nicht übertragen.
+- Public domain/API language uses `visibility = SHARED | PRIVATE` where a resource supports both visibility states.
+- `SPACE_SHARED` and `OWNER_ONLY` remain internal authorization/persistence classes; clients do not write `privacyClass` as a second source of truth.
+- `PRIVATE` is not post-hoc UI filtering. Unauthorized rows are excluded by the authorized data query itself.
+- ProtectedPayload is an architecture and leakage boundary, not a claim of real E2EE.
+- Memory and Milestone are shared space content; HeartMoment may be `SHARED` or `PRIVATE`; Comment has no independent visibility and inherits parent reachability.
+- Author/owner IDs are immutable after creation. Normal updates cannot transfer ownership.
 
-## Entschiedene Einträge
+## Decided entries
 
-### M2-D01 – Schreibrechte für Memory
+### M2-D01 – Memory write permissions
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Product + Domain / Projektentscheidung #68  
-Entscheidung: Eine Memory ist gemeinsamer, für beide aktiven Space-Partner lesbarer Inhalt. Update und Delete dürfen ausschließlich durch den unveränderlichen `authorId` erfolgen. Der Partner darf die Memory weder inhaltlich noch über nicht-inhaltliche Felder verändern oder löschen. Eine spätere Kollaborationsfunktion benötigt eine neue explizite Domainentscheidung und darf diese Regel nicht stillschweigend aufweichen.  
-Begründung: Geteilte Lesbarkeit ist keine Schreibvollmacht. Die Autorregel verhindert überraschende Änderungen/Löschungen persönlicher Erinnerungen und liefert eine einfache, testbare Ownership-Grenze.  
-Folgen: Create setzt `authorId` aus dem Authorization Context. Read/List erlauben beide aktiven Space-Mitglieder. Update/Delete benötigen Membership + autorisierte Ressourcenabfrage + Autorprüfung + aktuelle Version. Fremder Space bleibt 404; sichtbare Memory eines Partners mit fehlender Schreibberechtigung folgt der bestehenden 403-vs-404-Konvention für bekannte gemeinsame Ressourcen. Web/Android dürfen Partnern keine aktive Edit/Delete-Aktion anbieten.  
-Tests: Autor CRUD; Partner read/list; Partner update/delete abgelehnt; fremder Space 404; stale author update/delete 409; `authorId` nicht mutierbar.  
-Verweise: #68, `DOMAIN-MODEL.md`, `PROJECT-CONTROL.md`.
+Date: 2026-08-25  
+Decision owner: Product + Domain / project decision #68  
+Decision: A Memory is shared content readable by both active space partners. Update and Delete may be performed exclusively by the immutable `authorId`. The partner may change or delete neither content nor non-content fields. Future collaboration requires a new explicit domain decision and must not silently weaken this rule.  
+Rationale: Shared readability is not write authority. The author rule prevents surprising changes/deletions of personal memories and provides a simple, testable ownership boundary.  
+Consequences: Create sets `authorId` from Authorization Context. Read/List allow both active space members. Update/Delete require membership + authorized resource query + author check + current version. Foreign space remains 404; a visible partner Memory without write permission follows the existing 403-vs-404 convention for known shared resources. Web/Android must not offer active Edit/Delete actions to the partner.  
+Tests: author CRUD; partner read/list; partner update/delete denied; foreign space 404; stale author update/delete 409; `authorId` immutable.  
+References: #68, `DOMAIN-MODEL.md`, `PROJECT-CONTROL.md`.
 
-### M2-D02 – Optimistic Concurrency für Comments
+### M2-D02 – Optimistic concurrency for Comments
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Domain + API / Projektentscheidung #68  
-Entscheidung: Comments sind editierbare Entitäten und erhalten ein persistiertes `version`-Feld. Update und Delete verlangen `If-Match` nach derselben API-Konvention wie andere veränderbare M1/M2-Ressourcen; stale Version ergibt deterministisch `409 RESOURCE_VERSION_CONFLICT`. Nur der unveränderliche Comment-Autor darf Body ändern oder Comment löschen.  
-Begründung: Ohne Versionierung wäre Comment-Edit ein isolierter Last-write-wins-Sonderfall und würde die globale Concurrency-Invariante brechen.  
-Folgen: Comment DTO liefert `version`/ETag; Create startet mit Version 1; jede persistierte Änderung erhöht die Version. Parent-Privacy/Delete kann Comments als serverseitige Domainoperation atomar entfernen und benötigt dabei kein vom Comment-Autor geliefertes If-Match.  
-Tests: author update/delete; partner denied; stale update/delete 409; Parent-Cascade trotz Comment-Ownership; Cross-Space 404.  
-Verweise: #68, `DOMAIN-MODEL.md`, bestehende API-Concurrency-Konvention.
+Date: 2026-08-25  
+Decision owner: Domain + API / project decision #68  
+Decision: Comments are editable entities and receive a persisted `version` field. Update and Delete require `If-Match` according to the same API convention as other mutable M1/M2 resources; stale versions deterministically produce `409 RESOURCE_VERSION_CONFLICT`. Only the immutable Comment author may change the body or delete the Comment.  
+Rationale: Without versioning, Comment editing would be an isolated last-write-wins exception and break the global concurrency invariant.  
+Consequences: Comment DTO exposes `version`/ETag; Create starts at version 1; every persisted change increments the version. Parent privacy/delete can atomically remove Comments as a server-side domain operation without an If-Match supplied by the Comment author.  
+Tests: author update/delete; partner denied; stale update/delete 409; parent cascade despite Comment ownership; cross-space 404.  
+References: #68, `DOMAIN-MODEL.md`, existing API concurrency convention.
 
-### M2-D06 – HeartMoment Emotion ist ProtectedPayload
+### M2-D06 – HeartMoment emotion is ProtectedPayload
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Security + Privacy / Projektentscheidung #68  
-Entscheidung: `emotion` wird zusammen mit HeartMoment-`text` als ProtectedPayload klassifiziert. Der Wert darf über die autorisierte Ressourcen-API an berechtigte Clients geliefert werden, ist aber kein allgemeines Metadatum und darf nicht in Analytics, Logs, Notification-Previews, Domain-Event-Payloads, Metriklabels oder Suchindizes außerhalb der geschützten Inhaltsgrenze kopiert werden.  
-Begründung: Emotion beschreibt sensiblen Beziehungsinhalt und kann unabhängig vom Text private Rückschlüsse ermöglichen. Für Sortierung, Tenant-Isolation oder Routing ist der Klarwert nicht erforderlich.  
-Folgen: Persistenz muss die ProtectedPayload-Abstraktion respektieren; zukünftige Verschlüsselbarkeit darf nicht von Klartext-Emotion in Indizes/Events abhängen. Filter nach Emotion ist nicht Teil des M2-Vertrags.  
-Tests: Events/Logs enthalten Emotion nicht; private HeartMoment bleibt vollständig owner-only; Serialisierung liefert Emotion nur nach erfolgreicher Ressourcenauthorisierung.  
-Verweise: #68, `DOMAIN-MODEL.md`, `SECURITY-TEST-MATRIX.md`.
+Date: 2026-08-25  
+Decision owner: Security + Privacy / project decision #68  
+Decision: `emotion` is classified as ProtectedPayload together with HeartMoment `text`. The value may be returned through the authorized resource API to permitted clients, but is not general metadata and must not be copied into analytics, logs, notification previews, Domain Event payloads, metric labels, or search indexes outside the protected content boundary.  
+Rationale: Emotion describes sensitive relationship content and can enable private inference independently of the text. The plaintext value is unnecessary for sorting, tenant isolation, or routing.  
+Consequences: Persistence must respect the ProtectedPayload abstraction; future encryptability cannot depend on plaintext emotion in indexes/events. Filtering by emotion is not part of the M2 contract.  
+Tests: events/logs contain no emotion; private HeartMoment remains fully owner-only; serialization returns emotion only after successful resource authorization.  
+References: #68, `DOMAIN-MODEL.md`, `SECURITY-TEST-MATRIX.md`.
 
-### M2-D07 – SHARED zu PRIVATE bei HeartMoment
+### M2-D07 – HeartMoment SHARED to PRIVATE
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Domain + Privacy / Projektentscheidung #68  
-Entscheidung: Ein Wechsel `SHARED -> PRIVATE` ist eine atomare Domainoperation. In derselben DB-Transaktion werden die Privacy-Klasse auf `OWNER_ONLY` gesetzt und sämtliche Comments dieses HeartMoments fachlich gelöscht. Nach Commit darf keine Partner-Sichtbarkeit über Comment-, Story-, Activity-, Notification-, Cache- oder Event-Projektionen bestehen. Der API-Response verrät dem Partner nach dem Wechsel weder Comment-Anzahl noch frühere private Zustände. Ein Wechsel `PRIVATE -> SHARED` stellt gelöschte Comments nicht wieder her.  
-Begründung: Comments sind gemeinschaftliche Inhalte auf einem zuvor gemeinsamen Parent. Ein bloßes Verstecken würde Retention-/Wiederfreigabe-Semantik komplizieren und könnte Partnerdaten später unerwartet erneut sichtbar machen. Die Löschung ist die klarste Privacy-Grenze.  
-Folgen: Die UI muss vor `SHARED -> PRIVATE` allgemein warnen, dass vorhandene Kommentare entfernt werden. Sie darf keine fremden privaten Daten offenlegen. Projektionen/Consumer erhalten nur sichere IDs/Zustandsänderungen.  
-Tests: Wechsel und Comment-Delete atomar; Rollback erhält alten Zustand vollständig; Story/Partner-GET nach Commit ohne Leak; PRIVATE->SHARED resurrected nichts; Race mit Comment-Create wird serialisiert/konfliktfrei abgewehrt.  
-Verweise: #68, `DOMAIN-MODEL.md`, `SECURITY-TEST-MATRIX.md`.
+Date: 2026-08-25  
+Decision owner: Domain + Privacy / project decision #68  
+Decision: A `SHARED -> PRIVATE` change is an atomic domain operation. In the same DB transaction, the privacy class becomes `OWNER_ONLY` and all Comments on the HeartMoment are domain-deleted. After commit, no partner visibility may remain through Comment, Story, Activity, Notification, Cache, or Event projections. The API response reveals neither Comment count nor earlier private state to the partner after the change. `PRIVATE -> SHARED` does not restore deleted Comments.  
+Rationale: Comments are shared content on a formerly shared parent. Merely hiding them would complicate retention/re-sharing semantics and could later make partner data unexpectedly visible again. Deletion is the clearest privacy boundary.  
+Consequences: Before `SHARED -> PRIVATE`, the UI must warn generally that existing Comments are removed. It must not disclose another person's private data. Projections/consumers receive only safe IDs/state changes.  
+Tests: change and Comment deletion atomic; rollback preserves old state completely; Story/partner GET after commit without leak; PRIVATE->SHARED resurrects nothing; race with Comment Create is serialized or rejected without inconsistency.  
+References: #68, `DOMAIN-MODEL.md`, `SECURITY-TEST-MATRIX.md`.
 
-### M2-D11 – Fachliche Delete-/Retention-Regeln
-Status: DECIDED (DOMAIN); Media-Anteil siehe Ergänzung unten  
-Datum: 2026-08-25  
-Entscheider: Data + Privacy / Projektentscheidung #68  
-Entscheidung: Fachliches Delete macht die Ressource mit erfolgreichem Commit sofort nicht mehr lesbar. Story ist ein nicht persistiertes Read Model und benötigt keine eigene Löschung. Comments sind abhängige Domainobjekte und werden beim Delete ihres Parents atomar in derselben DB-Transaktion gelöscht. Domain-Events/Audit dürfen die zur technischen Nachvollziehbarkeit notwendigen IDs, Typen, Versionen, Actor-/Space-Bezug, Zeitpunkt und sichere Zustände behalten, aber keine ProtectedPayload. Physische Blob-Löschung, Orphan-Retention und Cleanup-Retry werden separat in #69 entschieden.  
-Begründung: Privacy verlangt sofortige fachliche Unsichtbarkeit; externe Storage-I/O darf gleichzeitig nicht unzuverlässig an die DB-Transaktion gekoppelt werden.  
-Folgen: Parent-Delete und Comment-Cascade sind eine DB-Transaktion. Cleanup wird event-/jobbasiert und idempotent. Historische Events dürfen nicht als Schattenkopie gelöschter Inhalte dienen.  
-Tests: nach Commit 404/keine Listen-/Story-Zeile; Transaktionsrollback stellt Parent+Comments wieder her; Event enthält keine ProtectedPayload; Storage-Cleanup-Fehler macht gelöschte Domainressource nicht wieder sichtbar.  
-Verweise: #68, #69, `DOMAIN-MODEL.md`, `MEDIA-PIPELINE.md`.
+### M2-D11 – Domain delete/retention rules
+Status: DECIDED (DOMAIN); media part below  
+Date: 2026-08-25  
+Decision owner: Data + Privacy / project decision #68  
+Decision: Domain delete makes the resource unreadable immediately when commit succeeds. Story is a non-persisted Read Model and needs no separate deletion. Comments are dependent domain objects and are deleted atomically in the same DB transaction when their parent is deleted. Domain Events/audit may retain IDs, types, versions, actor/space reference, timestamp, and safe states required for technical traceability, but no ProtectedPayload. Physical blob deletion, orphan retention, and cleanup retry are decided separately in #69.  
+Rationale: Privacy requires immediate domain invisibility while external storage I/O must not be unreliably coupled to the DB transaction.  
+Consequences: Parent delete and Comment cascade are one DB transaction. Cleanup is event/job based and idempotent. Historical events must not become a shadow copy of deleted content.  
+Tests: after commit 404/no list or Story row; transaction rollback restores parent+Comments; event contains no ProtectedPayload; storage cleanup failure does not make deleted domain resource visible again.  
+References: #68, #69, `DOMAIN-MODEL.md`, `MEDIA-PIPELINE.md`.
 
-### M2-D16 – Minimales M2-Domain-Event-Schema
+### M2-D16 – Minimal M2 Domain Event schema
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Architecture + Security / Projektentscheidung #68  
-Entscheidung: Jedes M2-Domain-Event verwendet mindestens den Envelope `eventId`, `eventType`, `occurredAt`, `spaceId`, `actorId`, `resourceType`, `resourceId`, `resourceVersion`. Event-spezifische Payload darf ausschließlich weitere IDs, technische Zeitpunkte und explizit als sicher klassifizierte Zustände/Kategorien enthalten. Verboten sind ProtectedPayload-Felder, Comment-Body, Memory-/Milestone-Titel und -Body, HeartMoment-Text/-Emotion, Originaldateinamen, Storage Keys, Download-URLs sowie unnötige personenbezogene Metadaten. Delete-Events dürfen die letzte bekannte Ressourcen-ID/Version und `deletedAt` enthalten, nicht den gelöschten Inhalt.  
-Begründung: Consumer brauchen stabile Routing-/Invalidierungsdaten, nicht den sensiblen Inhalt. Ein kleiner Envelope reduziert Leckage in Outbox, Logs, Retries und Observability und hält spätere Verschlüsselung möglich.  
-Folgen: Notification-/Activity-Consumer laden benötigte Darstellung nach eigener Autorisierung oder verwenden generische Texte; sie dürfen keinen sensiblen Snapshot aus dem Event erwarten. `PRIVATE` HeartMoment erzeugt keine partnergerichtete Activity/Notification.  
-Tests: Schema-/Contract-Test pro Eventtyp; Negativtests gegen verbotene Keys/Werte; private Events erzeugen keine Partnerprojektion; Outbox und Logs enthalten keine ProtectedPayload.  
-Verweise: #68, `DOMAIN-MODEL.md`, `SECURITY-TEST-MATRIX.md`.
+Date: 2026-08-25  
+Decision owner: Architecture + Security / project decision #68  
+Decision: Every M2 Domain Event uses at least the envelope `eventId`, `eventType`, `occurredAt`, `spaceId`, `actorId`, `resourceType`, `resourceId`, `resourceVersion`. Event-specific payload may contain only additional IDs, technical timestamps, and states/categories explicitly classified as safe. Forbidden are ProtectedPayload fields, Comment body, Memory/Milestone title and body, HeartMoment text/emotion, original filenames, storage keys, download URLs, and unnecessary personal metadata. Delete events may contain the last known resource ID/version and `deletedAt`, but not deleted content.  
+Rationale: Consumers need stable routing/invalidation data, not sensitive content. A small envelope reduces leakage in Outbox, logs, retries, and observability and preserves future encryption options.  
+Consequences: Notification/Activity consumers load required presentation under their own authorization or use generic text; they must not expect a sensitive snapshot in the event. A `PRIVATE` HeartMoment creates no partner-directed Activity/Notification.  
+Tests: schema/contract test per event type; negative tests for forbidden keys/values; private events create no partner projection; Outbox and logs contain no ProtectedPayload.  
+References: #68, `DOMAIN-MODEL.md`, `SECURITY-TEST-MATRIX.md`.
 
-### M2-D03 – Attachment-Bindung
+### M2-D03 – Attachment binding
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Domain + Data / Projektentscheidung #69  
-Entscheidung: Ein Attachment gehört genau einem Space und Owner und darf in M2 höchstens an eine Domainressource gebunden werden. Memory verwendet eine explizite `MemoryAttachment`-Relation mit eindeutiger nullbasierter `position`; HeartMoment maximal ein Attachment. Wiederverwendung desselben Attachment-Datensatzes an mehreren Parents sowie Cross-Space-Bindung sind verboten.  
-Begründung: Exklusive Bindung hält Parent-Autorisierung und Cleanup eindeutig und vermeidet Many-to-Many-Privacy-Races.  
-Folgen: Bindung verlangt Owner + schreibbaren Parent im selben Space + READY innerhalb Bindungsfenster und erfolgt atomar.  
-Verweise: #69, `MEDIA-PIPELINE.md`.
+Date: 2026-08-25  
+Decision owner: Domain + Data / project decision #69  
+Decision: An attachment belongs to exactly one space and owner and may be bound to at most one domain resource in M2. Memory uses an explicit `MemoryAttachment` relation with unique zero-based `position`; HeartMoment has at most one attachment. Reuse of the same attachment record across multiple parents and cross-space binding are forbidden.  
+Rationale: Exclusive binding keeps parent authorization and cleanup unambiguous and avoids many-to-many privacy races.  
+Consequences: Binding requires owner + writable parent in the same space + READY within the binding window and is atomic.  
+References: #69, `MEDIA-PIPELINE.md`.
 
-### M2-D04 – Media-Allowlist und Limits
+### M2-D04 – Media allowlist and limits
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Security + Product / Projektentscheidung #69  
-Entscheidung: Bilder JPEG/PNG/WebP/HEIC/HEIF bis 25 MiB, 40 MP und 12.000 px/Kante. Videos MP4/QuickTime bis 250 MiB, 180 Sekunden und 3840×2160. Memory maximal 20 Attachments und 500 MiB; HeartMoment maximal eins. Alle anderen Typen fail-closed.  
-Begründung: Kleine Positivliste deckt typische Smartphone-Medien ab und begrenzt Parser-, Speicher- und DoS-Risiko.  
-Folgen: Server prüft tatsächliche Bytes/MIME/Größe/Dimension/Dauer; Clientwerte sind nur UX.  
-Verweise: #69, `MEDIA-PIPELINE.md`, `SECURITY-TEST-MATRIX.md`.
+Date: 2026-08-25  
+Decision owner: Security + Product / project decision #69  
+Decision: JPEG/PNG/WebP/HEIC/HEIF images up to 25 MiB, 40 MP, and 12,000 px/edge. MP4/QuickTime video up to 250 MiB, 180 seconds, and 3840×2160. Memory at most 20 attachments and 500 MiB; HeartMoment at most one. All other types fail closed.  
+Rationale: A small allowlist covers common smartphone media while limiting parser, storage, and DoS risk.  
+Consequences: The server checks actual bytes/MIME/size/dimensions/duration; client values are UX only.  
+References: #69, `MEDIA-PIPELINE.md`, `SECURITY-TEST-MATRIX.md`.
 
-### M2-D05 – Asynchrone Validierung und Zustände
+### M2-D05 – Asynchronous validation and states
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Backend + Ops / Projektentscheidung #69  
-Entscheidung: `finalizeUpload` setzt atomar `VALIDATING` und reiht einen idempotenten Job ein. Interne Zustände sind `PENDING`, `UPLOADING`, `VALIDATING`, `READY`, `FAILED`, `DELETING`, `DELETE_FAILED`.  
-Begründung: Medienparser und Provider-I/O gehören nicht in eine lange HTTP-/DB-Transaktion; derselbe Contract funktioniert für Local und S3.  
-Folgen: Clients behandeln Finalize nicht als Uploaderfolg und beobachten Status; paralleles Finalize wird serialisiert.  
-Verweise: #69, `MEDIA-PIPELINE.md`.
+Date: 2026-08-25  
+Decision owner: Backend + Ops / project decision #69  
+Decision: `finalizeUpload` atomically sets `VALIDATING` and enqueues an idempotent job. Internal states are `PENDING`, `UPLOADING`, `VALIDATING`, `READY`, `FAILED`, `DELETING`, `DELETE_FAILED`.  
+Rationale: Media parsers and provider I/O do not belong in a long HTTP/DB transaction; the same contract works for local and S3.  
+Consequences: Clients do not treat Finalize as upload success and observe status; concurrent Finalize is serialized.  
+References: #69, `MEDIA-PIPELINE.md`.
 
-### M2-D11 – Media Delete/Cleanup Ergänzung
+### M2-D11 – Media delete/cleanup extension
 Status: DECIDED (MEDIA)  
-Datum: 2026-08-25  
-Entscheider: Data + Privacy / Projektentscheidung #69  
-Entscheidung: Wird die letzte zulässige Parent-Referenz entfernt oder ein Orphan fällig, markiert die DB das Attachment atomar `DELETING`. Providerlöschung erfolgt außerhalb der fachlichen Transaktion idempotent per Job. Fehler führen zu `DELETE_FAILED` und wiederholtem Retry/Alarm; sie machen Domaininhalt nie wieder sichtbar.  
-Begründung: Externes Storage-I/O darf die DB-Transaktion nicht unzuverlässig koppeln.  
-Folgen: Cleanup ist beobachtbar; Metadaten werden erst nach erfolgreichem Providercleanup final entfernt/terminalisiert.  
-Verweise: #69, #68, `MEDIA-PIPELINE.md`.
+Date: 2026-08-25  
+Decision owner: Data + Privacy / project decision #69  
+Decision: When the last allowed parent reference is removed or an orphan becomes due, the DB atomically marks the attachment `DELETING`. Provider deletion happens outside the domain transaction through an idempotent job. Failures produce `DELETE_FAILED` with repeated retry/alerting; they never make domain content visible again.  
+Rationale: External storage I/O must not be unreliably coupled to the DB transaction.  
+Consequences: Cleanup is observable; metadata is finally removed/terminalized only after successful provider cleanup.  
+References: #69, #68, `MEDIA-PIPELINE.md`.
 
-### M2-D12 – Upload-Retention
+### M2-D12 – Upload retention
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Backend + Ops / Projektentscheidung #69  
-Entscheidung: PENDING ohne Abschluss, UPLOADING ohne Finalize und FAILED werden nach 24 Stunden cleanup-fällig. Cleanup läuft mindestens stündlich. `DELETE_FAILED` hat keine automatische Vergessensfrist und bleibt bis Erfolg oder manuellem Eingriff sichtbar/metriciert.  
-Begründung: 24 Stunden tolerieren mobile Unterbrechungen, verhindern aber dauerhafte Orphans.  
-Folgen: Retention basiert auf serverseitigen Zeitpunkten, nie Clientzeit.  
-Verweise: #69, `MEDIA-PIPELINE.md`.
+Date: 2026-08-25  
+Decision owner: Backend + Ops / project decision #69  
+Decision: PENDING without completion, UPLOADING without Finalize, and FAILED become cleanup-eligible after 24 hours. Cleanup runs at least hourly. `DELETE_FAILED` has no automatic forgetting period and remains visible/measured until success or manual intervention.  
+Rationale: 24 hours tolerates mobile interruption while preventing permanent orphans.  
+Consequences: Retention uses server-side timestamps, never client time.  
+References: #69, `MEDIA-PIPELINE.md`.
 
-### M2-D13 – Upload-/Read-Transport
+### M2-D13 – Upload/read transport
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Security + Media / Projektentscheidung #69  
-Entscheidung: LocalMediaStore nimmt Uploads über autorisierte serverseitige Streamingroute entgegen. S3MediaStore darf presigned Upload-URLs mit maximal 10 Minuten TTL verwenden. Reads: Local serverseitig autorisiert streamen; S3 erst nach Parent-Autorisierung als signierte URL mit maximal 5 Minuten TTL. Bucket/Storage bleiben privat.  
-Begründung: Adapter dürfen Transport optimieren, aber nicht Domainautorisierung oder Finalize umgehen.  
-Folgen: URLs/Signaturen nicht loggen/persistieren; Restfenster nach Rechteentzug ist bei S3 auf höchstens 5 Minuten begrenzt und als Trade-off dokumentiert.  
-Verweise: #69, `MEDIA-PIPELINE.md`.
+Date: 2026-08-25  
+Decision owner: Security + Media / project decision #69  
+Decision: LocalMediaStore accepts uploads through an authorized server-side streaming route. S3MediaStore may use presigned Upload URLs with a maximum TTL of 10 minutes. Reads: local streams server-side after authorization; S3 returns a signed URL only after parent authorization with a maximum TTL of 5 minutes. Bucket/storage remain private.  
+Rationale: Adapters may optimize transport but not bypass domain authorization or Finalize.  
+Consequences: Do not log/persist URLs or signatures; residual validity after permission revocation is limited to at most 5 minutes for S3 and documented as a trade-off.  
+References: #69, `MEDIA-PIPELINE.md`.
 
-### M2-D20 – READY ohne Parent
+### M2-D20 – READY without parent
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Domain / Projektentscheidung #69  
-Entscheidung: Ein READY Attachment darf maximal 60 Minuten ab `readyAt` ungebunden bleiben und ist in dieser Zeit nur für seinen Owner verwaltbar. Danach wird es cleanup-fällig. Bindung und Cleanup werden über Statusprüfung/Row Lock serialisiert.  
-Begründung: Ein kurzes Fenster entkoppelt Upload und Parentmutation, ohne dauerhaft lesbare Orphans zu schaffen.  
-Folgen: Nach erfolgreicher Bindung folgt Lebensdauer dem Parent; kein Partnerzugriff allein aufgrund READY.  
-Verweise: #69, `MEDIA-PIPELINE.md`.
+Date: 2026-08-25  
+Decision owner: Domain / project decision #69  
+Decision: A READY attachment may remain unbound for at most 60 minutes from `readyAt` and is manageable only by its owner during that time. It then becomes cleanup-eligible. Binding and cleanup are serialized through state checking/row lock.  
+Rationale: A short window decouples upload from parent mutation without creating durably readable orphans.  
+Consequences: After successful binding, lifetime follows the parent; there is no partner access merely because the attachment is READY.  
+References: #69, `MEDIA-PIPELINE.md`.
 
-### M2-D08 – Story-Sortierung und Cursor
+### M2-D08 – Story sorting and cursor
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: API + Data / Projektentscheidung #70  
-Entscheidung: Story verwendet `effectiveDate = happenedOn ?? UTC_DATE(createdAt)` und den vollständigen Keyset-Schlüssel `(effectiveDate, createdAt, kindRank, id)`. `kindRank` ist `MEMORY=1`, `HEART_MOMENT=2`, `MILESTONE=3`. ASC/DESC wenden dieselbe Richtung auf das vollständige Tupel an. Der Cursor ist opak, versioniert, integritätsgeschützt und an Space sowie `type`/`year`/`order` gebunden.  
-Begründung: Ein vollständiger eindeutiger Schlüssel verhindert Tie-Duplikate/-Lücken ohne Offset-Pagination und bleibt für heterogene Story-Unionen deterministisch.  
-Folgen: `q` bleibt M4. Privacy/Tenant-Filter erfolgen vor Sortierung. Manipulierter oder kontextfremder Cursor liefert `400 INVALID_CURSOR` ohne fremde Metadaten. Bei konkurrierender Änderung eines Sortierfelds wird kein historischer Snapshot versprochen; Clients refreshen.  
-Tests: identische effectiveDate/createdAt über alle Kinds; ASC/DESC; Cursor mit geändertem Space/Filter/order; PRIVATE HeartMoment nie in Union; keine Tie-Duplikate/-Lücken auf unverändertem Datenbestand.  
-Verweise: #70, `API-DESIGN.md`, `API-CONTRACT.json`.
+Date: 2026-08-25  
+Decision owner: API + Data / project decision #70  
+Decision: Story uses `effectiveDate = happenedOn ?? UTC_DATE(createdAt)` and the full keyset key `(effectiveDate, createdAt, kindRank, id)`. `kindRank` is `MEMORY=1`, `HEART_MOMENT=2`, `MILESTONE=3`. ASC/DESC apply the same direction to the entire tuple. The cursor is opaque, versioned, integrity-protected, and bound to space and `type`/`year`/`order`.  
+Rationale: A complete unique key prevents tie duplicates/gaps without offset pagination and remains deterministic for heterogeneous Story unions.  
+Consequences: `q` remains M4. Privacy/tenant filters run before sorting. A manipulated or context-foreign cursor returns `400 INVALID_CURSOR` without foreign metadata. No historical snapshot is promised when a sort field changes concurrently; clients refresh.  
+Tests: identical effectiveDate/createdAt across all kinds; ASC/DESC; cursor with changed space/filter/order; PRIVATE HeartMoment never in union; no tie duplicates/gaps on unchanged data.  
+References: #70, `API-DESIGN.md`, `API-CONTRACT.json`.
 
-### M2-D09 – Routen, Nesting und DTO-Namen
+### M2-D09 – Routes, nesting, and DTO names
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: API / Projektentscheidung #70  
-Entscheidung: M2 bleibt vollständig unter `/api/v1/spaces/{spaceId}`. Memories, HeartMoments, Milestones und Attachments besitzen eigene Collections. Comment Create/List werden am Parent verschachtelt; Comment Update/Delete laufen über `/comments/{commentId}` im Space. Story bleibt `/timeline`. Privacy-Wechsel für HeartMoment ist eine explizite `/visibility`-Mutation. DTO-/operationId-Namen sind in `API-DESIGN.md` und maschinenlesbar in `API-CONTRACT.json` eingefroren.  
-Begründung: Parent-Nesting bei Comment Create/List eliminiert frei wählbare Target-IDs/-Typen im Body; Space-Scoping passt zum bestehenden Tenant-Guard. Ein eigener Privacy-Endpunkt macht die destruktive SHARED->PRIVATE-Semantik explizit.  
-Folgen: Clients schreiben weder `privacyClass` noch Storage-Interna. Alle mutierenden bestehenden Ressourcen verwenden If-Match. `backend/openapi.json` wird erst mit implementierten Runtime-Slices durch den bestehenden Generator aktualisiert; das Manifest ist kein zweiter produktiver OpenAPI-Vertrag.  
-Tests: eindeutige operationIds/Method-Path-Paare; alle Pfade Space-scoped; If-Match-Matrix; keine `privacyClass`-Write-Felder; Attachment-Descriptor ohne Storage Keys/Bucket/Provider.  
-Verweise: #70, `API-DESIGN.md`, `API-CONTRACT.json`, `backend/tests/test_m2_api_contract_manifest.py`.
+Date: 2026-08-25  
+Decision owner: API / project decision #70  
+Decision: M2 remains completely under `/api/v1/spaces/{spaceId}`. Memories, HeartMoments, Milestones, and Attachments have their own collections. Comment Create/List are nested under the parent; Comment Update/Delete use `/comments/{commentId}` within the space. Story remains `/timeline`. Privacy changes for HeartMoment use an explicit `/visibility` mutation. DTO/operationId names are frozen in `API-DESIGN.md` and machine-readably in `API-CONTRACT.json`.  
+Rationale: Parent nesting for Comment Create/List eliminates freely selectable target IDs/types from the body; space scoping matches the existing Tenant Guard. A dedicated privacy endpoint makes destructive SHARED->PRIVATE semantics explicit.  
+Consequences: Clients write neither `privacyClass` nor storage internals. All mutations of existing resources use If-Match. `backend/openapi.json` is updated by the existing generator only when runtime slices are implemented; the manifest is not a second production OpenAPI contract.  
+Tests: unique operationIds/method-path pairs; all paths space-scoped; If-Match matrix; no `privacyClass` write fields; Attachment descriptor without storage keys/bucket/provider.  
+References: #70, `API-DESIGN.md`, `API-CONTRACT.json`, `backend/tests/test_m2_api_contract_manifest.py`.
 
-### M2-D14 – EXIF-/Metadaten-Entfernung beim Ingest
+### M2-D14 – EXIF/metadata removal during ingest
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Privacy + Product / Projektentscheidung #78  
-Entscheidung: Eingebettete Metadaten werden beim Ingest entfernt. Der ohnehin laufende Validierungsjob extrahiert vor dem Strippen eine abschließende Allowlist technischer Felder nach ProtectedPayload: Aufnahmezeitpunkt, Orientierung, Breite, Höhe und bei Video die Dauer. Alles Übrige – GPS/Standort, Geräte- und Seriennummern, Software-, Autor- und Copyrightfelder, Kommentar-/Beschreibungsfelder, Thumbnails im Container sowie unbekannte Segmente – wird verworfen. Gespeichert wird ausschließlich die bereinigte Datei; die hochgeladenen Originalbytes werden nicht dauerhaft aufbewahrt. Die Allowlist ist fail-closed: ein nicht aufgeführtes Feld wird entfernt, nicht behalten.  
-Begründung: Eine Blacklist bekannter Standortfelder ist nicht abschließend – Container transportieren Standort auch in herstellereigenen und neu hinzukommenden Segmenten. Nur eine Allowlist ist dieselbe fail-closed-Linie, die M2 bereits bei MIME- und Formatprüfung fährt. Das Strippen beim Ingest lässt genau ein Objekt entstehen; damit stellt sich bei Export, Backup und jedem künftigen Lesepfad nicht erneut die Frage, welche Kopie nach außen geht. Die Extraktion vor dem Strippen bewahrt das fachlich Wertvolle: der Aufnahmezeitpunkt bleibt als Quelle für `happenedOn` verfügbar.  
-Folgen: Der Validierungsschritt aus M2-D05 schreibt das Objekt neu; `READY` wird erst nach erfolgreichem Strippen gesetzt. Ein Medium, das nicht sicher bereinigt werden kann, ist fail-closed `FAILED` und wird nicht ungestrippt gespeichert. Die extrahierte Allowlist ist ProtectedPayload und wird nicht in Events, Logs, Metriken oder Index projiziert. Eine spätere Funktion "Original mit Metadaten herunterladen" existiert nicht und benötigt eine neue Entscheidung. M2-D17 (Export) kann davon ausgehen, dass kein Standort mehr in den Medienobjekten steckt.  
-Tests: Bild mit GPS-Tag ist nach `READY` frei von Standortdaten; Herstellersegment mit eingebettetem Standort wird ebenfalls entfernt; unbekanntes Metadatensegment überlebt den Ingest nicht; Aufnahmezeitpunkt ist als ProtectedPayload vorhanden und taucht in keiner Outbox-Zeile auf; nicht bereinigbares Medium endet `FAILED` statt `READY`; Video behält Dauer und verliert Standort.  
-Verweise: #78, `MEDIA-PIPELINE.md`, `PRIVACY-THREAT-MODEL.md`, `SECURITY-TEST-MATRIX.md`.
+Date: 2026-08-25  
+Decision owner: Privacy + Product / project decision #78  
+Decision: Embedded metadata is removed during ingest. Before stripping, the existing validation job extracts a closed allowlist of technical fields into ProtectedPayload: capture time, orientation, width, height, and for video duration. Everything else — GPS/location, device and serial numbers, software, author and copyright fields, comment/description fields, container thumbnails, and unknown segments — is discarded. Only the sanitized file is stored; uploaded original bytes are not retained durably. The allowlist is fail-closed: an unlisted field is removed, not retained.  
+Rationale: A blacklist of known location fields is not exhaustive — containers can transport location in vendor-specific and newly introduced segments. Only an allowlist matches M2's existing fail-closed line for MIME and format validation. Stripping during ingest leaves exactly one stored object, so export, backup, and every future read path do not have to decide again which copy may leave the system. Extracting before stripping preserves useful domain data: capture time remains available as a proposal source for `happenedOn`.  
+Consequences: The validation step from M2-D05 rewrites the object; `READY` is set only after successful stripping. Media that cannot be sanitized safely fails closed to `FAILED` and is not stored unstripped. The extracted allowlist is ProtectedPayload and is not projected into events, logs, metrics, or indexes. A future “download original with metadata” feature does not exist and requires a new decision. M2-D17 (Export) may assume that media objects contain no location metadata.  
+Tests: image with GPS tag is location-free after `READY`; vendor segment containing location is removed as well; unknown metadata segment does not survive ingest; capture time exists as ProtectedPayload and appears in no Outbox row; unsanitizable media ends `FAILED` instead of `READY`; video retains duration and loses location.  
+References: #78, `MEDIA-PIPELINE.md`, `PRIVACY-THREAT-MODEL.md`, `SECURITY-TEST-MATRIX.md`.
 
-### M2-D15 – Umfang abgeleiteter Medienvarianten
+### M2-D15 – Scope of derived media variants
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Media + Product / Projektentscheidung #78  
-Entscheidung: M2 erzeugt je Attachment höchstens eine abgeleitete Variante: für Bilder ein verkleinertes Thumbnail, für Video einen einzelnen Posterframe. Video-Transcoding, mehrere Auflösungsstufen, Audioextraktion und adaptives Streaming sind nicht Teil von M2. Varianten entstehen serverseitig im selben Validierungsjob, nachdem M2-D14 angewendet wurde, und tragen selbst keine eingebetteten Metadaten.  
-Begründung: M2 erlaubt Bilder bis 25 MiB und 40 MP. Eine Story-Timeline, die Originale ausliefert, verfehlt jedes Client-Budget und macht aus jeder Listenansicht eine Bandbreitenverstärkung über die autorisierte Leseroute – das ist nicht nur ein Performance-, sondern ein Missbrauchsthema. Der Posterframe kostet kaum zusätzlichen Aufwand, weil die Validierung für Dauer und Auflösung ohnehin eine serverseitige Medienprobe benötigt. Transcoding dagegen zöge eine grosse Abhängigkeit samt Angriffsfläche und langen Joblaufzeiten in den ersten Media-Slice und widerspräche dem Zuschnitt, S1 als beherrschbare Sicherheitsfläche zu halten.  
-Folgen: Der Storage Key erhält kontrollierte serverseitige Varianten-Suffixe gemäß bestehendem Muster; Clients wählen keine Varianten-Keys. Eine Variante hat keine eigene Autorisierung, sondern folgt exakt der ihres Attachments und damit dem Parent. Cleanup entfernt Varianten gemeinsam mit dem Attachment; ein verwaistes Variantenobjekt ist ein Cleanup-Fehler, kein zulässiger Zustand. Fehlgeschlagene Variantenerzeugung setzt das Attachment nicht `FAILED`, sondern liefert das Attachment ohne Variante aus – ein fehlendes Thumbnail ist ein Darstellungs-, kein Sicherheitsproblem. Video ohne erzeugbaren Posterframe wird im Client neutral dargestellt.  
-Tests: Thumbnail und Posterframe sind nach `READY` vorhanden und metadatenfrei; Variante ist ohne Leseberechtigung am Parent nicht abrufbar; Privacy-Wechsel des Parents sperrt auch die Variante; Delete entfernt Original und Varianten; fehlgeschlagene Variantenerzeugung lässt das Attachment nutzbar; kein Client-wählbarer Varianten-Key.  
-Verweise: #78, `MEDIA-PIPELINE.md`, `DELIVERY-PLAN.md`.
+Date: 2026-08-25  
+Decision owner: Media + Product / project decision #78  
+Decision: M2 creates at most one derived variant per attachment: a reduced thumbnail for images and one poster frame for video. Video transcoding, multiple resolution levels, audio extraction, and adaptive streaming are not part of M2. Variants are created server-side in the same validation job after M2-D14 has been applied, and contain no embedded metadata themselves.  
+Rationale: M2 allows images up to 25 MiB and 40 MP. A Story timeline serving originals would miss every client budget and turn each list view into bandwidth amplification through the authorized read route — a misuse issue as well as a performance issue. The poster frame adds little extra work because validation for duration and resolution already requires a server-side media probe. Transcoding, by contrast, would add a large dependency with attack surface and long job runtimes to the first media slice and conflict with the goal of keeping S1 a manageable security surface.  
+Consequences: The storage key receives controlled server-side variant suffixes under the existing pattern; clients cannot select variant keys. A variant has no separate authorization and follows its attachment and parent exactly. Cleanup removes variants with the attachment; an orphaned variant is a cleanup failure, not an allowed state. Failed variant generation does not set the attachment to `FAILED`; it serves the attachment without a variant — a missing thumbnail is a presentation issue, not a security failure. Video without a poster frame is presented neutrally by the client.  
+Tests: thumbnail and poster frame exist after `READY` and contain no metadata; variant cannot be read without parent read permission; parent privacy change also blocks variant; Delete removes original and variants; failed variant generation leaves attachment usable; no client-selectable variant key.  
+References: #78, `MEDIA-PIPELINE.md`, `DELIVERY-PLAN.md`.
 
-### M2-D23 – Reihenfolge und Parser der Medienverarbeitung
+### M2-D23 – Media-processing order and parsers
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Security + Media / Projektentscheidung #85  
-Entscheidung: Die Medienverarbeitung entsteht in zwei Schritten. Der erste Slice bedient ausschließlich Bilder — JPEG, PNG, WebP, HEIC und HEIF — vollständig: Validierung, Metadaten-Entfernung nach M2-D14 und Thumbnail nach M2-D15. Dafür kommen `Pillow` und `pillow-heif` ins Projekt; HEIC/HEIF steht in der D04-Allowlist und ist ohne libheif nicht zu bedienen. Video und Posterframes folgen als eigener Slice zusammen mit ffmpeg. Bis dieser Slice geliefert ist, weist der Server MP4 und QuickTime fail-closed ab, obwohl M2-D04 sie erlaubt.  
-Begründung: Das Parsen fremder Mediendateien ist die riskanteste Codestelle im Produkt. Bild- und Videoparser gleichzeitig aufzunehmen, erzeugt die gesamte Angriffsfläche in einem Zug und macht den ersten Media-Slice zu groß, um ihn sorgfältig zu prüfen. Die beiden Fragen sind zudem nicht gleicher Art: Pillow ist eine Bibliotheksentscheidung, ffmpeg eine Betriebsentscheidung über Container-Image und Self-Hosted-Installation — und ein Systembinary ist für das bestehende `uv audit`-Gate unsichtbar, braucht also einen eigenen Nachweisweg.  
-Folgen: M2-D04 bleibt als Vertrag unverändert; die Lücke zwischen erlaubtem Vertrag und heutiger Serverantwort ist ausdrücklich dokumentiert und kein stiller Unterschied. Ein Video-Upload endet bis dahin mit `ATTACHMENT_TYPE_NOT_ALLOWED`, nicht mit einem Serverfehler oder einem hängenden `PENDING`. Clients dürfen Video in M2 nicht als verfügbar anbieten. Der Video-Slice muss vor seiner Umsetzung die ffmpeg-Frage einschließlich Imagegröße, CVE-Nachverfolgung und Ressourcenlimits beim Transcodieren klären. Der Inventareintrag für `Pillow` und `pillow-heif` entsteht in #79 gemeinsam mit der Deklaration, weil das Dependency-Gate eine dokumentierte Zeile ohne Deklaration als Fehler meldet.  
-Tests: Video-MIME wird abgewiesen, solange der Video-Slice fehlt; die Ablehnung nennt einen stabilen Fehlercode und hinterlässt kein Objekt im Store; HEIC/HEIF erreicht `READY`; die Bildformate der Allowlist durchlaufen Strippen und Thumbnail vollständig.  
-Verweise: #85, #79, `MEDIA-PIPELINE.md`, `DELIVERY-PLAN.md`.
+Date: 2026-08-25  
+Decision owner: Security + Media / project decision #85  
+Decision: Media processing is delivered in two steps. The first slice handles images only — JPEG, PNG, WebP, HEIC, and HEIF — completely: validation, metadata removal under M2-D14, and thumbnail under M2-D15. `Pillow` and `pillow-heif` enter the project for this; HEIC/HEIF is in the D04 allowlist and cannot be supported without libheif. Video and poster frames follow in a separate slice together with ffmpeg. Until that slice is delivered, the server rejects MP4 and QuickTime fail-closed even though M2-D04 allows them.  
+Rationale: Parsing untrusted media is the riskiest code surface in the product. Adding image and video parsers at once creates the entire attack surface in one step and makes the first media slice too large for careful review. The questions also differ in nature: Pillow is a library decision, while ffmpeg is an operational decision affecting container images and self-hosted installation — and a system binary is invisible to the existing `uv audit` gate, so it needs its own evidence path.  
+Consequences: M2-D04 remains unchanged as a contract; the gap between allowed contract and current server response is explicitly documented and not a silent difference. Until then, video upload ends with `ATTACHMENT_TYPE_NOT_ALLOWED`, not a server error or hanging `PENDING`. Clients must not offer video as available in M2. Before implementation, the video slice must resolve the ffmpeg question including image size, CVE tracking, and transcoding resource limits. The inventory entry for `Pillow` and `pillow-heif` is created in #79 together with declaration because the dependency gate treats a documented row without a declaration as an error.  
+Tests: video MIME is rejected while the video slice is absent; rejection uses a stable error code and leaves no object in the store; HEIC/HEIF reaches `READY`; all allowed image formats complete stripping and thumbnailing.  
+References: #85, #79, `MEDIA-PIPELINE.md`, `DELIVERY-PLAN.md`.
 
-### M2-D24 – Lesezugriff auf ungebundene Attachments
+### M2-D24 – Read access to unbound attachments
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: API + Security / Projektentscheidung #79  
-Entscheidung: `AttachmentReadRequest` wird additiv um die Variante `{ parentType: "NONE" }` erweitert. Sie bezeichnet den eigenen, noch nicht gebundenen Upload innerhalb des Bindungsfensters aus M2-D20. Die bestehenden Varianten `MEMORY` und `HEART_MOMENT` bleiben unverändert gültig. Für ein bereits gebundenes Attachment ist `NONE` unzulässig; dort entscheidet ausschließlich die Erreichbarkeit des Parents.  
-Begründung: Abschnitt 8 der Media-Pipeline sieht den Fall bereits vor — ein `READY` Attachment ohne Parent ist für seinen Owner innerhalb des Fensters sichtbar. Der in #70 eingefrorene Requestvertrag konnte ihn nur nicht ausdrücken, weil er als geschlossene Union über zwei Parenttypen formuliert war. Ohne die Variante könnte der Owner ein gerade hochgeladenes Bild nicht ansehen, und der erste Media-Slice könnte seinen autorisierten Lesepfad nicht belegen, sondern nur dessen Abwesenheit.  
-Folgen: Die Variante ist keine Abkürzung an der Autorisierung vorbei. Der Server verlangt Owner-Identität, Status `READY` und ein nicht abgelaufenes Bindungsfenster; danach folgt die Lesbarkeit wieder ausschließlich dem Parent. Ein Partner erhält mit `NONE` niemals Zugriff, auch nicht auf ein ungebundenes Attachment im selben Space. Nach Ablauf des Fensters wird das Attachment ohnehin `DELETING`. Die Erweiterung ist rückwärtskompatibel: bestehende Clients senden weiterhin eine Parentreferenz.  
-Tests: Owner liest eigenen ungebundenen Upload; Partner erhält 404; `NONE` auf einem gebundenen Attachment wird abgewiesen; abgelaufenes Fenster liefert 404; `NONE` auf fremdem oder nicht-`READY` Attachment liefert 404.  
-Verweise: #79, `API-DESIGN.md`, `API-CONTRACT.json`, `MEDIA-PIPELINE.md`.
+Date: 2026-08-25  
+Decision owner: API + Security / project decision #79  
+Decision: `AttachmentReadRequest` is extended additively with `{ parentType: "NONE" }`. It denotes the owner's own still-unbound upload within the M2-D20 binding window. Existing `MEMORY` and `HEART_MOMENT` variants remain valid unchanged. `NONE` is invalid for an already bound attachment; only parent reachability applies there.  
+Rationale: Section 8 of the media pipeline already allows the case — a `READY` attachment without a parent is visible to its owner within the window. The request contract frozen in #70 simply could not express it because it was a closed union over two parent types. Without the variant, the owner could not view a just-uploaded image and the first media slice could prove only the absence, not the authorized read path.  
+Consequences: The variant is not an authorization shortcut. The server requires owner identity, state `READY`, and an unexpired binding window; afterward readability again follows the parent exclusively. A partner never obtains access with `NONE`, even to an unbound attachment in the same space. After the window expires, the attachment becomes `DELETING` anyway. The extension is backward-compatible: existing clients continue to send a parent reference.  
+Tests: owner reads own unbound upload; partner receives 404; `NONE` on a bound attachment is rejected; expired window returns 404; `NONE` on foreign or non-`READY` attachment returns 404.  
+References: #79, `API-DESIGN.md`, `API-CONTRACT.json`, `MEDIA-PIPELINE.md`.
 
-### M2-D25 – Schreibrechte für Milestone
+### M2-D25 – Milestone write permissions
 Status: DECIDED  
-Datum: 2026-08-25  
-Entscheider: Product + Domain / Projektentscheidung #94  
-Entscheidung: Ein Milestone ist gemeinsamer, für beide aktiven Space-Partner lesbarer Inhalt. Update und Delete dürfen ausschließlich durch den unveränderlichen `authorId` erfolgen — dieselbe Regel wie für Memory in M2-D01. Aus geteilter Lesbarkeit wird keine Schreibvollmacht abgeleitet.  
-Begründung: Das Domänenmodell hielt diese Frage ausdrücklich offen und verbot bis zur Klärung jede aus Shared-Lesbarkeit abgeleitete Partnerschreibvollmacht. Für die Entscheidung gab den Ausschlag, dass sie umkehrbar bleibt: gemeinsames Bearbeiten später zu öffnen ist additiv und gefährdet keinen bestehenden Inhalt, es später wieder zu schließen wäre ein Funktionsverlust für Paare, die sich darauf eingerichtet haben. Zudem bleibt die Autorisierung damit auf einer einzigen, bereits getesteten Regel; Milestone wäre sonst die erste Ressource, bei der Lese- und Schreibgrenze auseinanderfallen.  
-Folgen: `authorization.rules` braucht keine neue Regelklasse — `SPACE_SHARED` bleibt lesbar für den Space und schreibbar nur für den Owner. Create setzt `authorId` aus dem Authorization Context; der Partner sieht in `capabilities` weder Edit noch Delete. Ein späteres gemeinsames Bearbeiten benötigt eine neue explizite Entscheidung und eine eigene Regel in der Tabelle, nicht eine Ausnahme im Endpunkt.  
-Tests: Autor CRUD; Partner read/list; Partner update/delete abgelehnt mit 403; fremder Space 404; stale `If-Match` 409; `authorId` nicht mutierbar.  
-Verweise: #94, `DOMAIN-MODEL.md`, `authorization/rules.py`.
+Date: 2026-08-25  
+Decision owner: Product + Domain / project decision #94  
+Decision: A Milestone is shared content readable by both active space partners. Update and Delete may be performed exclusively by the immutable `authorId` — the same rule as Memory under M2-D01. Shared readability does not grant write authority.  
+Rationale: The domain model explicitly left this question open and, until resolved, prohibited deriving partner write permission from shared readability. The decisive factor was reversibility: opening collaborative editing later is additive and endangers no existing content; closing it later would remove functionality from couples who had relied on it. It also keeps authorization on one already-tested rule; otherwise Milestone would be the first resource whose read and write boundaries differ.  
+Consequences: `authorization.rules` needs no new rule class — `SPACE_SHARED` remains readable by the space and writable only by the owner. Create sets `authorId` from Authorization Context; the partner's `capabilities` contains neither Edit nor Delete. Future collaborative editing requires a new explicit decision and a dedicated rule in the table, not an endpoint exception.  
+Tests: author CRUD; partner read/list; partner update/delete denied with 403; foreign space 404; stale `If-Match` 409; `authorId` immutable.  
+References: #94, `DOMAIN-MODEL.md`, `authorization/rules.py`.
 
-### M2-D22 – Owner-Ansicht für private HeartMoments
+### M2-D22 – Owner view for private HeartMoments
 Status: DECIDED  
-Priorität: von `BEFORE_CLIENTS` auf `BLOCKING` gehoben  
-Datum: 2026-08-25  
-Entscheider: Product + UX / Projektentscheidung #104  
-Entscheidung: Der Owner-Bereich für private HeartMoments ist eine getrennte Ansicht und nicht Teil der gemeinsamen Story-Route. `GET /spaces/{spaceId}/timeline` liefert ausschließlich gemeinsamen Inhalt; es gibt dort keine `PRIVATE`-Variante der Story-Union, keinen `visibility`-Parameter, keinen Owner-Modus und keine Zählung privater Einträge. Bedient wird der Owner-Bereich von der bereits vorhandenen Collection `GET /spaces/{spaceId}/heart-moments?visibility=PRIVATE`. M2 erhält dafür keine neue Route. Verworfen wurde die Alternative, `/timeline` um einen Owner-Modus zu erweitern, der private HeartMoments des Aufrufers zusätzlich einmischt.  
-Begründung: Beide Optionen lassen sich korrekt implementieren – der Unterschied liegt darin, wie oft die Privacy-Frage danach erneut beantwortet werden muss. Eine Story-Route mit Owner-Modus hätte zwei Ergebnismengen unter einer `operationId`, und jede spätere Story-Eigenschaft müsste sich einzeln zu ihr verhalten: Monatsgruppen, Zähler, Cursorbindung, Client-Cache, Prefetch, Export und die M4-Read-Models. Jede dieser Stellen wäre eine neue Gelegenheit, den Modus zu verlieren; ein vergessener Modus fällt nicht als Fehler auf, sondern als korrekt aussehende Zeile im gemeinsamen Verlauf. Die getrennte Ansicht macht die Grenze dagegen an der Route selbst sichtbar und lässt Story das bleiben, was M2-D11 bereits festhält: ein abgeleitetes Read Model über gemeinsamen Inhalt. Dazu kommt, dass die getrennte Variante bereits belegt ist – `list_heart_moments` filtert `visibility` erst nach `readable()` und liefert dem Partner deshalb eine leere Seite statt fremder privater Zeilen. Umkehrbar bleibt die Entscheidung ebenfalls: eine zusammengeführte Ansicht später anzubieten ist additiv, eine bestehende gemeinsame Route nachträglich um private Inhalte zu erleichtern wäre ein Funktionsverlust und ein Migrationsthema für Client-Caches.  
-Folgen: Die Story-Union in `API-DESIGN.md` bleibt unverändert bei `MEMORY`, `HEART_MOMENT` (nur `SHARED`) und `MILESTONE`. `/timeline` nimmt keinen `visibility`-Parameter entgegen; ein mitgesendeter Wert ist ein Requestfehler und kein still ignorierter Filter. Die Cursorbindung aus M2-D08 braucht keine Owner-Dimension, weil die Ergebnismenge nicht vom Modus abhängt. Der Privacy-Filter bleibt Teil der autorisierten Abfrage und wird nicht als Story-Parameter modelliert. Web und Android stellen den Owner-Bereich als eigene, klar markierte Ansicht dar, nicht als Filter-Chip in der Story; ein Wechsel dorthin ist ein Navigationsschritt und keine Listenoption. M2-D18 behandelt den Owner-Cache damit als eigenen Cache neben dem Story-Cache. Die M4-A-Read-Models und die M4-B-Activity erben diese Grenze und dürfen private HeartMoments nicht über eine gemeinsame Projektion zurückholen. Für M2-D17 bleibt die Trennung von Owner- und Partnerexport davon unberührt.  
-Tests: `/timeline` enthält für den Owner keinen eigenen privaten HeartMoment; `/timeline` mit `visibility`-Parameter wird abgewiesen statt gefiltert; `SHARED -> PRIVATE` entfernt das Item für beide Seiten aus `/timeline` und lässt es in der Owner-Liste stehen; `heart-moments?visibility=PRIVATE` liefert dem Partner eine leere Seite; ein Story-Cursor kann nicht so umgeschrieben werden, dass er private Zeilen adressiert.  
-Verweise: #104, #70, `API-DESIGN.md`, `API-CONTRACT.json`, `DELIVERY-PLAN.md`.
+Priority: raised from `BEFORE_CLIENTS` to `BLOCKING`  
+Date: 2026-08-25  
+Decision owner: Product + UX / project decision #104  
+Decision: The owner area for private HeartMoments is a separate view and not part of the shared Story route. `GET /spaces/{spaceId}/timeline` returns shared content only; there is no `PRIVATE` variant of the Story union, no `visibility` parameter, no owner mode, and no count of private entries. The owner area is served by the existing collection `GET /spaces/{spaceId}/heart-moments?visibility=PRIVATE`. M2 adds no new route for it. The rejected alternative was to extend `/timeline` with an owner mode that additionally mixes in the caller's private HeartMoments.  
+Rationale: Both options can be implemented correctly — the difference is how often the privacy question must be re-answered later. A Story route with owner mode would have two result sets under one `operationId`, and every later Story property would need to account for it individually: month groups, counters, cursor binding, client cache, prefetch, export, and M4 Read Models. Each would be another opportunity to lose the mode; a missing mode would not look like an error, but like a plausible row in the shared history. A separate view makes the boundary visible at the route itself and lets Story remain what M2-D11 already defines: a derived Read Model over shared content. The separate variant is also already proven — `list_heart_moments` filters `visibility` only after `readable()` and therefore returns the partner an empty page instead of foreign private rows. The decision is reversible as well: offering a combined view later is additive, while enriching an established shared route with private content later would remove assumptions and create a migration problem for client caches.  
+Consequences: The Story union in `API-DESIGN.md` remains unchanged with `MEMORY`, `HEART_MOMENT` (only `SHARED`), and `MILESTONE`. `/timeline` accepts no `visibility` parameter; supplying one is a request error, not a silently ignored filter. Cursor binding from M2-D08 needs no owner dimension because the result set does not depend on a mode. The privacy filter remains part of the authorized query and is not modeled as a Story parameter. Web and Android present the owner area as a separate, clearly marked view rather than a filter chip in Story; switching there is a navigation step, not a list option. M2-D18 therefore treats the owner cache as a separate cache alongside the Story cache. M4-A Read Models and M4-B Activity inherit this boundary and must not reintroduce private HeartMoments through a shared projection. The separation of owner and partner export under M2-D17 remains unaffected.  
+Tests: `/timeline` contains no owner's private HeartMoment; `/timeline` with `visibility` parameter is rejected rather than filtered; `SHARED -> PRIVATE` removes the item for both sides from `/timeline` and leaves it in the owner list; `heart-moments?visibility=PRIVATE` returns an empty page to the partner; a Story cursor cannot be rewritten to address private rows.  
+References: #104, #70, `API-DESIGN.md`, `API-CONTRACT.json`, `DELIVERY-PLAN.md`.
 
-## Entscheidungsformat
+## Decision format
 
-Bei Freigabe wird die Tabellenzeile aktualisiert und darunter ein Eintrag ergänzt:
+When approved, update the table row and add an entry below:
 
 ```text
-### M2-Dxx – Kurztitel
+### M2-Dxx – Short title
 Status: DECIDED
-Datum: YYYY-MM-DD
-Entscheider: Rolle/Name
-Entscheidung: ...
-Begründung: ...
-Folgen: ...
-Verweise: ADR / Spec / Issue / PR
+Date: YYYY-MM-DD
+Decision owner: Role/Name
+Decision: ...
+Rationale: ...
+Consequences: ...
+References: ADR / Spec / Issue / PR
 ```
 
-## Definition „entscheidungsklar“
+## Definition of “decision-ready”
 
-Eine Entscheidung ist erst abgeschlossen, wenn:
+A decision is complete only when:
 
-1. die gewählte Option und bewusst verworfene Alternative erkennbar sind,
-2. Privacy-, Security- und Datenmigrationsfolgen benannt sind,
-3. API-, Web-, Android- und Betriebsfolgen berücksichtigt wurden,
-4. Tests und Akzeptanzkriterien daraus ableitbar sind,
-5. eine verbindliche Quelle verlinkt ist.
+1. the chosen option and consciously rejected alternative are clear,
+2. privacy, security, and data-migration consequences are named,
+3. API, Web, Android, and operational consequences are considered,
+4. tests and acceptance criteria can be derived from it,
+5. a binding source is linked.
