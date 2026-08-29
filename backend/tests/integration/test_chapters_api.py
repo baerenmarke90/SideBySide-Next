@@ -9,6 +9,7 @@ from uuid import UUID
 import pytest
 from sqlalchemy.orm import Session
 
+from sidebyside.authorization import AuthorizationContext
 from sidebyside.places import service as place_service
 from sidebyside.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
@@ -221,11 +222,7 @@ class TestChapterPlaceReference:
     ) -> None:  # type: ignore[no-untyped-def]
         place = place_service.create_place(
             session,
-            relationship_service.authorization_context(
-                session,
-                couple["anna"].id,
-                couple["space"].id,
-            ),
+            AuthorizationContext(couple["anna"].id, couple["space"].id),
             name="Our place",
             description=None,
             address=None,
@@ -245,8 +242,7 @@ class TestChapterPlaceReference:
         assert cleared.json()["placeId"] is None
 
     def test_foreign_place_fails_closed(self, client, session, couple) -> None:  # type: ignore[no-untyped-def]
-        foreign_context = relationship_service.authorization_context(
-            session,
+        foreign_context = AuthorizationContext(
             couple["foreign"].id,
             couple["foreign_space"].id,
         )
