@@ -17,16 +17,26 @@ suspend fun runMemoryMediaStoryFlow(
     title: String,
     body: String,
     happenedOn: LocalDate?,
-    image: SelectedImage,
+    image: SelectedImage?,
 ): ReferenceFlowResult {
-    require(image.mimeType.startsWith("image/")) { "S8 accepts images only." }
-    require(image.bytes.isNotEmpty()) { "The selected image is empty." }
+    if (image != null) {
+        require(image.mimeType.startsWith("image/")) { "S8 accepts images only." }
+        require(image.bytes.isNotEmpty()) { "The selected image is empty." }
+    }
 
     val memory = api.createMemory(
         spaceId,
         accessToken,
         MemoryCreate(body = body, title = title, happenedOn = happenedOn),
     )
+
+    if (image == null) {
+        return ReferenceFlowResult(
+            memory = memory,
+            story = api.getTimeline(spaceId, accessToken),
+            imageBytes = null,
+        )
+    }
 
     val upload = api.createAttachmentUpload(
         spaceId,
