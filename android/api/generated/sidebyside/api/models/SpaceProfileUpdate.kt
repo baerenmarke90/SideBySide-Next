@@ -30,7 +30,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Der vollstaendige neue Stand des Profils.  Alle drei Felder sind Pflicht. Ein weggelassenes Feld waere sonst nicht von \"auf leer setzen\" zu unterscheiden - und der Unterschied entscheidet darueber, ob ein Beziehungsbeginn erhalten bleibt oder verschwindet. `relationshipStartedOn` wird mit `null` ausdruecklich geloescht.
+ * Complete replacement state for a relationship profile.  All three fields are required. Otherwise an omitted field could not be distinguished from clearing it, and that distinction determines whether a relationship start date is preserved or removed. ``relationshipStartedOn`` is explicitly removed by sending ``null``.
  *
  * @param durationDisplayMode 
  * @param relationshipStartedOn 

@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -22,10 +22,10 @@ import {
 } from './DurationDisplayMode';
 
 /**
- * Das Beziehungsprofil eines Space.
+ * Relationship profile of a space.
  * 
- * `version` ist der Stand, den ein spaeterer Schreibzugriff per `If-Match`
- * vorlegen muss. Die Antwort traegt ihn zusaetzlich als ETag.
+ * ``version`` is the state a later write must supply through ``If-Match``.
+ * The response also carries that version as an ETag.
  * @export
  * @interface SpaceProfileView
  */

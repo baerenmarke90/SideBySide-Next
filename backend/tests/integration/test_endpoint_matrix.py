@@ -606,7 +606,7 @@ def _send(scenario, endpoint: Endpoint, path: str, headers: dict[str, str] | Non
     return scenario["client"].request(endpoint.method, path, headers=headers, **request_kwargs)
 
 
-@pytest.mark.parametrize("endpunkt", SPACE_ENDPUNKTE, ids=str)
+@pytest.mark.parametrize("endpoint", SPACE_ENDPUNKTE, ids=str)
 class TestJederSpaceEndpunkt:
     "Vier Fragen to every Endpoint, the to a Space haengt."
 
@@ -650,7 +650,7 @@ class TestJederSpaceEndpunkt:
 DETAIL_ENDPUNKTE = tuple(e for e in SPACE_ENDPUNKTE if e.resource_absence is not None)
 
 
-@pytest.mark.parametrize("endpunkt", DETAIL_ENDPUNKTE, ids=str)
+@pytest.mark.parametrize("endpoint", DETAIL_ENDPUNKTE, ids=str)
 class TestJedeRessourcenId:
     "Within the actor's own space, the resource ID decides and reveals nothing."
 
@@ -702,7 +702,7 @@ def _resources_platzhalter(endpoint: Endpoint) -> tuple[str, ...]:
 SCHREIBENDE_ENDPUNKTE = tuple(e for e in SPACE_ENDPUNKTE if e.if_match)
 
 
-@pytest.mark.parametrize("endpunkt", SCHREIBENDE_ENDPUNKTE, ids=str)
+@pytest.mark.parametrize("endpoint", SCHREIBENDE_ENDPUNKTE, ids=str)
 def test_without_if_match_is_not_geschrieben(scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
     "a missing header is the silent path to disabling conflict protection."
     path = _path(endpoint, scenario["ids"])
@@ -749,7 +749,7 @@ def test_the_contract_is_complete_covered() -> None:
     assert contract == covered
 
 
-@pytest.mark.parametrize(("methode", "pfad"), AUTHENTICATED_ONLY, ids=str)
+@pytest.mark.parametrize(("method", "path"), AUTHENTICATED_ONLY, ids=str)
 def test_account_scoped_endpoints_bleiben_anonymous_closed(
     scenario, methode: str, path: str
 ) -> None:  # type: ignore[no-untyped-def]

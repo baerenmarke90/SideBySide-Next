@@ -29,7 +29,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Die verknuepften Ziele eines Ortes.  Ausschliesslich IDs. Inhalte kommen ueber die Route der jeweiligen Domaene und damit durch deren eigenen Guard; eine Relationsliste, die Inhalte mitliefert, waere ein zweiter Leseweg mit eigener Autorisierung.
+ * Targets linked to a place.  Only IDs are returned. Content is fetched through each target domain's own route and authorization guard; returning content here would create a second read path with separate authorization logic.
  *
  * @param items 
  */

@@ -31,7 +31,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Beide Ressourcen in einer Antwort.  Die Konvertierung veraendert den Wish und erzeugt den Plan. Ein Client, der nur eines von beidem zurueckbekaeme, muesste das andere sofort nachladen - und haette bis dahin einen veralteten Stand angezeigt.
+ * Both resources returned from a conversion.  Conversion modifies the wish and creates the plan. Returning only one would force the client to immediately reload the other and display stale state in the meantime.
  *
  * @param plan 
  * @param wish 

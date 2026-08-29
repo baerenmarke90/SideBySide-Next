@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -96,7 +96,7 @@ export class StoryApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die gemeinsame Zeitleiste aus Memories, Milestones und HeartMoments.  Private HeartMoments erscheinen hier nie - auch nicht fuer ihren Owner.
+     * Return the shared timeline of memories, milestones, and heart moments.  Private heart moments never appear here, including for their owner.
      * Get Story Timeline
      */
     async getStoryTimelineRaw(requestParameters: GetStoryTimelineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StoryPage>> {
@@ -107,7 +107,7 @@ export class StoryApi extends runtime.BaseAPI {
     }
 
     /**
-     * Die gemeinsame Zeitleiste aus Memories, Milestones und HeartMoments.  Private HeartMoments erscheinen hier nie - auch nicht fuer ihren Owner.
+     * Return the shared timeline of memories, milestones, and heart moments.  Private heart moments never appear here, including for their owner.
      * Get Story Timeline
      */
     async getStoryTimeline(requestParameters: GetStoryTimelineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StoryPage> {

@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -43,7 +43,7 @@ import {
 } from './AttachmentSummary';
 
 /**
- * Ein gemeinsamer HeartMoment. Eine private Variante gibt es nicht.
+ * A shared heart moment. There is deliberately no private variant.
  * @export
  * @interface SharedHeartMomentSummary
  */
