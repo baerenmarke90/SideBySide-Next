@@ -263,7 +263,6 @@ IDENTIFIER_COMPONENT_STEMS = (
     "einstell",
     "endpunkt",
     "erneuer",
-    "geräum",
     "geraeum",
     "gezaehl",
     "koordinat",
