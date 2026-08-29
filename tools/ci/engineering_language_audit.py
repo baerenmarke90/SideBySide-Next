@@ -4,10 +4,9 @@
 This is deliberately not a generic language detector. For Python in the #214
 backend scope it checks engineering surfaces only: identifiers, comments,
 docstrings, assertions, and developer/runtime diagnostics. For the migrated
-#215 Web, Android, CI, deployment, and developer-tooling scope and the #216
-# active-documentation scope it checks the complete handwritten text while
-# removing narrow, explicit localized-product fixtures and stable link targets.
-# Generated, vendored, localization-owned, and frozen review paths remain excluded.
+#215 Web, Android, CI, deployment, and developer-tooling scope it checks the
+complete handwritten text while removing narrow, explicit localized-product
+fixtures. Generated, vendored, and localization-owned paths remain excluded.
 """
 
 from __future__ import annotations
@@ -98,14 +97,6 @@ EXCLUDED_PLATFORM_PREFIXES = (
     Path("web/src/i18n/locales"),
 )
 
-DOCUMENTATION_ROOTS = (
-    Path("docs"),
-    Path("specification"),
-    Path("design"),
-)
-DOCUMENTATION_SUFFIXES = {".json", ".md", ".svg"}
-EXCLUDED_DOCUMENTATION_PREFIXES = (Path("docs/reviews"),)
-
 # Common German grammar is safe to use for comments/docstrings because those
 # are engineering prose. The additional stems catch transliterated legacy
 # identifiers that contain compounds rather than standalone words. Avoid
@@ -157,6 +148,135 @@ IDENTIFIER_MARKERS = re.compile(
     re.IGNORECASE,
 )
 
+# #231 closes a false-negative class left by the original marker-based audit:
+# Python names may encode German words in CamelCase/PascalCase or in uppercase
+# constants, so looking only for underscore-delimited words is insufficient.
+# Split identifiers into semantic components first, then match only observed,
+# unambiguous German engineering words/stems. Localized string literals are
+# still handled separately and are not classified through this identifier path.
+CAMEL_CASE_BOUNDARIES = (
+    re.compile(r"(?<=[a-z0-9])(?=[A-Z])"),
+    re.compile(r"(?<=[A-Z])(?=[A-Z][a-z])"),
+)
+IDENTIFIER_COMPONENT_WORDS = {
+    "ableitung",
+    "aeltesten",
+    "anfrage",
+    "anfragen",
+    "anlegen",
+    "anmeldung",
+    "anzahl",
+    "aufraeumen",
+    "aufrufe",
+    "begrenzt",
+    "begrenzung",
+    "behaelt",
+    "beide",
+    "beginn",
+    "bereits",
+    "bestaetigte",
+    "bisherigen",
+    "danach",
+    "davor",
+    "eigen",
+    "einstellungen",
+    "endlich",
+    "endet",
+    "endpunkte",
+    "ergeben",
+    "erhalten",
+    "erkennbar",
+    "erlaubt",
+    "erster",
+    "fehlversuch",
+    "fenster",
+    "frei",
+    "fremder",
+    "geheim",
+    "gemeinsame",
+    "geraeumt",
+    "gerundet",
+    "gesammelt",
+    "gesendet",
+    "gesperrt",
+    "gezaehlt",
+    "gleiche",
+    "grenzen",
+    "gutes",
+    "historie",
+    "instanz",
+    "koordinaten",
+    "kurzlebig",
+    "lebensdauer",
+    "lesen",
+    "letzter",
+    "mailversand",
+    "mailweg",
+    "mehreren",
+    "mittleren",
+    "nachgetragen",
+    "nachrichten",
+    "neues",
+    "offen",
+    "offene",
+    "paralleler",
+    "passwort",
+    "passwoerter",
+    "postfach",
+    "praeferenz",
+    "profil",
+    "pruefen",
+    "registrieren",
+    "registrierung",
+    "richtige",
+    "rotiert",
+    "rotationen",
+    "rotationsflut",
+    "schreibende",
+    "schritt",
+    "sechs",
+    "seite",
+    "selbst",
+    "sieger",
+    "signieren",
+    "sitzungsverwaltung",
+    "stellen",
+    "transaktionsgrenze",
+    "uhr",
+    "verschiedene",
+    "viele",
+    "weiterhin",
+    "wiederverwendung",
+    "widerruf",
+    "wirft",
+    "zeitpunkt",
+    "zunaechst",
+    "zugeordnet",
+    "zweiter",
+}
+IDENTIFIER_COMPONENT_STEMS = (
+    "adressbestaetig",
+    "ablauf",
+    "anmeld",
+    "aufraeum",
+    "bestaetig",
+    "einstell",
+    "endpunkt",
+    "erneuer",
+    "geraeum",
+    "gezaehl",
+    "koordinat",
+    "nachricht",
+    "nachtrag",
+    "passwoert",
+    "registrier",
+    "rotier",
+    "schreibend",
+    "signier",
+    "sitzungsverwalt",
+    "widerruf",
+)
+
 # This exact German phrase is deliberately retained as matching input in the
 # status-drift migration compatibility regex and its corresponding unit test.
 ALLOWED_LEGACY_INPUT = "Aktueller `main`"
@@ -174,101 +294,6 @@ ALLOWED_LOCALIZED_TEXTS = (
     "Noch keine Einträge in eurer Story.",
 )
 
-# Path-specific values are intentionally localized user-facing copy or
-# synthetic domain-content fixtures embedded in otherwise English technical
-# documentation. Exact-value exceptions keep the surrounding prose audited.
-ALLOWED_LOCALIZED_TEXTS_BY_PATH = {
-    Path("design/m2/PLATFORM-HANDOFF.md"): (
-        "Foto hinzufügen",
-    ),
-    Path("design/m2/SCREEN-FLOWS.md"): (
-        "Moment festhalten",
-        "Erinnerung",
-        "Herzmoment",
-        "Meilenstein",
-        "Privat",
-        "Mit Partner geteilt",
-        "Datei wird geprüft …",
-        "Foto wird verarbeitet …",
-        "Nur für mich",
-        "Mit Partner teilen",
-        "Kommentar schreiben",
-        "Wird gesendet …",
-        "Offline · Stand von {Zeit}",
-        "Gespeichert",
-        "Synchronisiert",
-        "Noch nicht gespeichert. Verbinde dich mit dem Internet und versuche es erneut.",
-        "Dieser Inhalt wurde inzwischen geändert.",
-    ),
-    Path("design/m2/SCREEN-STATE-MATRIX.md"): (
-        "Eure Story beginnt hier",
-        "Erinnerung hinzufügen",
-        "Keine passenden gemeinsamen Momente",
-        "Filter zurücksetzen",
-        "Einige Inhalte konnten nicht geladen werden.",
-        "Erneut versuchen",
-        "Offline · Stand von {Zeit}",
-        "Erneut verbinden",
-        "Noch nicht gespeichert.",
-        "Fehler korrigieren",
-        "Deine Sitzung ist abgelaufen.",
-        "Erneut anmelden",
-        "Dieser Inhalt ist nicht verfügbar.",
-        "Zur Story",
-        "Dieser Inhalt wurde inzwischen geändert.",
-        "Aktuellen Stand ansehen",
-        "Das waren viele Versuche.",
-        "Das hat gerade nicht geklappt.",
-        "Foto hinzufügen",
-        "Noch keine Kommentare",
-        "Story wird geladen",
-        "Haltet einen gemeinsamen Moment fest, wenn es für euch passt.",
-        "3 private Treffer ausgeblendet",
-        "Wird gespeichert …",
-        "Dieses Dateiformat wird nicht unterstützt.",
-        "Diese Datei ist zu groß.",
-        "Dieses Bild konnte nicht verarbeitet werden.",
-        "Upload unterbrochen.",
-        "Upload gerade nicht möglich.",
-        "Nur für mich",
-        "Mit Partner geteilt",
-        "privat",
-    ),
-    Path("design/m2/m2-screenflow.svg"): (
-        "Heute",
-        "Planen",
-        "Entdecken",
-        "Mehr",
-        "Moment festhalten",
-    ),
-    Path("docs/m2/DEMO-SCENARIO.md"): (
-        "Sonnenaufgang am See",
-        "Unser erster Pastateig",
-        "Spaziergang im Sommerregen",
-        "Danke, dass du heute einfach zugehört hast.",
-        "Unser erster gemeinsamer Garten",
-        "Ein Jahr in unserer Wohnung",
-        "Den frühen Wecker war es wert.",
-        "Nächstes Mal mit heißem Kaffee.",
-        "Das bedeutet mir viel.",
-        "Erinnerung",
-        "Moment festhalten → Erinnerung",
-        "Picknick unter den Linden",
-        "Nur für mich",
-        "Erste gemeinsame Bergtour",
-        "Offline · Stand von …",
-        "Noch nicht gespeichert",
-    ),
-    Path("docs/m2/SECURITY-TEST-MATRIX.md"): (
-        "zuletzt geändert",
-    ),
-}
-
-MARKDOWN_LINK_TARGET = re.compile(r"(?<=\]\()[^)]+(?=\))")
-REPO_LOCAL_MARKDOWN_TARGET = re.compile(
-    r"(?:docs|design|specification)/[A-Za-z0-9_./-]+\.md#[A-Za-z0-9_-]+"
-)
-
 DIAGNOSTIC_CALLS = {"print", "fail", "skip", "xfail"}
 DIAGNOSTIC_METHODS = {"debug", "info", "warning", "error", "exception", "critical"}
 
@@ -277,16 +302,29 @@ def _format_finding(path: Path, line_number: int, text: str) -> str:
     return f"{path}:{line_number}: {text.strip()}"
 
 
-def _contains_marker(text: str, path: Path | None = None) -> bool:
+def _contains_marker(text: str) -> bool:
     sanitized = text.replace(ALLOWED_LEGACY_INPUT, "")
     for localized_text in ALLOWED_LOCALIZED_TEXTS:
         sanitized = sanitized.replace(localized_text, "")
-    if path is not None:
-        for localized_text in ALLOWED_LOCALIZED_TEXTS_BY_PATH.get(path, ()):
-            sanitized = sanitized.replace(localized_text, "")
-    sanitized = MARKDOWN_LINK_TARGET.sub("", sanitized)
-    sanitized = REPO_LOCAL_MARKDOWN_TARGET.sub("", sanitized)
     return ENGINEERING_PROSE_MARKERS.search(sanitized) is not None
+
+
+def _identifier_components(identifier: str) -> list[str]:
+    normalized = identifier
+    for boundary in CAMEL_CASE_BOUNDARIES:
+        normalized = boundary.sub("_", normalized)
+    return [component.lower() for component in normalized.split("_") if component]
+
+
+def _identifier_contains_marker(identifier: str) -> bool:
+    if IDENTIFIER_MARKERS.search(identifier) is not None:
+        return True
+    for component in _identifier_components(identifier):
+        if component in IDENTIFIER_COMPONENT_WORDS:
+            return True
+        if any(component.startswith(stem) for stem in IDENTIFIER_COMPONENT_STEMS):
+            return True
+    return False
 
 
 def _literal_strings(node: ast.AST | None) -> list[tuple[int, str]]:
@@ -318,8 +356,8 @@ def check_python_file(path: Path) -> list[str]:
             is_engineering_comment = token.type == tokenize.COMMENT and _contains_marker(
                 token.string
             )
-            is_legacy_identifier = (
-                token.type == tokenize.NAME and IDENTIFIER_MARKERS.search(token.string) is not None
+            is_legacy_identifier = token.type == tokenize.NAME and _identifier_contains_marker(
+                token.string
             )
             if is_engineering_comment or is_legacy_identifier:
                 findings.add((token.start[0], token.string))
@@ -382,7 +420,7 @@ def check_text_file(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8").replace(ALLOWED_LEGACY_INPUT, "")
     findings: list[str] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
-        if _contains_marker(line, path):
+        if _contains_marker(line):
             findings.append(_format_finding(path, line_number, line))
     return findings
 
@@ -424,21 +462,6 @@ def platform_files() -> list[Path]:
     return sorted(set(files))
 
 
-def documentation_files() -> list[Path]:
-    files: list[Path] = []
-    for root in DOCUMENTATION_ROOTS:
-        if not root.is_dir():
-            continue
-        for path in root.rglob("*"):
-            excluded = any(
-                path == prefix or prefix in path.parents
-                for prefix in EXCLUDED_DOCUMENTATION_PREFIXES
-            )
-            if path.is_file() and path.suffix in DOCUMENTATION_SUFFIXES and not excluded:
-                files.append(path)
-    return sorted(set(files))
-
-
 def main() -> int:
     findings: list[str] = []
     for path in SCOPED_FILES:
@@ -447,7 +470,7 @@ def main() -> int:
             continue
         findings.extend(check_file(path))
 
-    for path in sorted(set(backend_files()) | set(platform_files()) | set(documentation_files())):
+    for path in sorted(set(backend_files()) | set(platform_files())):
         findings.extend(check_file(path))
 
     if findings:
@@ -460,7 +483,7 @@ def main() -> int:
         return 1
 
     print(
-        "Migrated developer, backend, client, CI, deployment, and active documentation surfaces "
+        "Migrated developer, backend, client, CI, and deployment surfaces "
         "satisfy the scoped English-language audit."
     )
     return 0

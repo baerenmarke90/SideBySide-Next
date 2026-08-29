@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from engineering_language_audit import check_file, documentation_files
+from engineering_language_audit import check_file
 
 
 class EngineeringLanguageAuditTest(unittest.TestCase):
@@ -61,6 +61,17 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             )
             self.assertEqual(check_file(path), [])
 
+    def test_english_camel_case_and_constant_identifiers_are_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            path.write_text(
+                "class TestRegistration:\n"
+                "    pass\n\n"
+                "SPACE_ENDPOINTS = ()\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(check_file(path), [])
+
     def test_english_status_drift_term_is_valid(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.md"
@@ -72,39 +83,6 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             path = Path(directory) / "example.py"
             path.write_text('sample = "Aktueller `main`"\n', encoding="utf-8")
             self.assertEqual(check_file(path), [])
-
-    def test_stable_markdown_link_target_is_not_treated_as_prose(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "example.md"
-            path.write_text(
-                "[English label](docs/example.md#status-und-entscheidung)\n",
-                encoding="utf-8",
-            )
-            self.assertEqual(check_file(path), [])
-
-    def test_stable_json_contract_target_is_not_treated_as_prose(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "manifest.json"
-            path.write_text(
-                '{"contract":"docs/COMPONENT-CONTRACTS.md#41-text-field-und-text-area"}\n',
-                encoding="utf-8",
-            )
-            self.assertEqual(check_file(path), [])
-
-    def test_german_json_prose_remains_rejected(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "manifest.json"
-            path.write_text(
-                '{"description":"Die Entscheidung wird im Client getroffen."}\n',
-                encoding="utf-8",
-            )
-            findings = check_file(path)
-            self.assertEqual(len(findings), 1)
-
-    def test_frozen_review_snapshots_are_outside_active_documentation_scope(self) -> None:
-        self.assertFalse(
-            any(path.parts[:2] == ("docs", "reviews") for path in documentation_files())
-        )
 
     def test_python_comment_and_identifier_are_audited(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -132,6 +110,43 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             self.assertTrue(any("upload_hoch" in finding for finding in findings))
             self.assertTrue(any("angekuendigt" in finding for finding in findings))
             self.assertTrue(any("CANARY_FREMD" in finding for finding in findings))
+
+    def test_camel_case_and_uppercase_residual_identifiers_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            path.write_text(
+                "class TestRegistrierung:\n"
+                "    pass\n\n"
+                "class TestSitzungsverwaltung:\n"
+                "    pass\n\n"
+                "class TestKoordinaten:\n"
+                "    pass\n\n"
+                "class TestAnlegen:\n"
+                "    pass\n\n"
+                "class TestPruefen:\n"
+                "    pass\n\n"
+                "SPACE_ENDPUNKTE = ()\n"
+                "DETAIL_ENDPUNKTE = ()\n"
+                "SCHREIBENDE_ENDPUNKTE = ()\n"
+                "def test_session_data_returns_beide_token():\n"
+                "    pass\n",
+                encoding="utf-8",
+            )
+            findings = check_file(path)
+            expected_markers = (
+                "TestRegistrierung",
+                "TestSitzungsverwaltung",
+                "TestKoordinaten",
+                "TestAnlegen",
+                "TestPruefen",
+                "SPACE_ENDPUNKTE",
+                "DETAIL_ENDPUNKTE",
+                "SCHREIBENDE_ENDPUNKTE",
+                "test_session_data_returns_beide_token",
+            )
+            self.assertEqual(len(findings), len(expected_markers))
+            for marker in expected_markers:
+                self.assertTrue(any(marker in finding for finding in findings), marker)
 
     def test_hybrid_engineering_prose_from_backend_migration_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

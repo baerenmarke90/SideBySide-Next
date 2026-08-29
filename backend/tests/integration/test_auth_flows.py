@@ -28,30 +28,30 @@ from tests.conftest import (
 
 pytestmark = [pytest.mark.integration, requires_database]
 
-GUTES_PASSWORT = "ein-ausreichend-langes-passwort"
+GOOD_PASSWORD = "ein-ausreichend-langes-passwort"
 
 
-class TestRegistrierung:
-    def test_erster_account_requires_bootstrap_proof(self, client, session) -> None:  # type: ignore[no-untyped-def]
+class TestRegistration:
+    def test_first_account_requires_bootstrap_proof(self, client, session) -> None:  # type: ignore[no-untyped-def]
         response = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "Anna@Example.ORG",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         assert response.status_code == 201
         assert response.json()["tokens"]["accessToken"]
 
-    def test_erster_account_without_bootstrap_proof_is_rejected(self, client, session) -> None:  # type: ignore[no-untyped-def]
+    def test_first_account_without_bootstrap_proof_is_rejected(self, client, session) -> None:  # type: ignore[no-untyped-def]
         response = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Fremd",
                 "email": "fremd@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
             },
         )
         assert response.status_code == 403
@@ -65,7 +65,7 @@ class TestRegistrierung:
             json={
                 "displayName": "Fremd",
                 "email": "fremd@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": secret,
             },
         )
@@ -74,9 +74,8 @@ class TestRegistrierung:
         assert secret not in response.text
         assert session.execute(select(func.count()).select_from(Account)).scalar_one() == 0
 
-    def test_zweiter_account_requires_a_invitation(self, client, session) -> None:  # type: ignore[no-untyped-def]
-        """otherwise anyone who can reach a private instance could create to account
-        Address kennt."""
+    def test_second_account_requires_invitation(self, client, session) -> None:  # type: ignore[no-untyped-def]
+        "Otherwise anyone who can reach a private instance could create an account."
         make_account(session, "Vorhanden")
         session.flush()
 
@@ -85,13 +84,13 @@ class TestRegistrierung:
             json={
                 "displayName": "Fremd",
                 "email": "fremd@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
             },
         )
         assert response.status_code == 403
         assert response.json()["code"] == "REGISTRATION_REQUIRES_INVITATION"
 
-    def test_with_invitation_klappt_it(self, client, session) -> None:  # type: ignore[no-untyped-def]
+    def test_registration_with_invitation_succeeds(self, client, session) -> None:  # type: ignore[no-untyped-def]
         anna = make_account(session, "Anna")
         space = make_space(session, anna)
         anna_token = sign_in(session, anna)
@@ -106,7 +105,7 @@ class TestRegistrierung:
             json={
                 "displayName": "Ben",
                 "email": "ben@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "invitationToken": invitation["token"],
             },
         )
@@ -115,24 +114,24 @@ class TestRegistrierung:
         ben_token = response.json()["tokens"]["accessToken"]
         assert client.get(f"/api/v1/spaces/{space.id}", headers=auth(ben_token)).status_code == 200
 
-    def test_address_is_lowercase_geschrieben_abgelegt(self, client, session) -> None:  # type: ignore[no-untyped-def]
+    def test_email_address_is_stored_lowercase(self, client, session) -> None:  # type: ignore[no-untyped-def]
         client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "  Anna@Example.ORG ",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         response = client.post(
             "/api/v1/auth/sign-in",
-            json={"email": "anna@example.org", "password": GUTES_PASSWORT},
+            json={"email": "anna@example.org", "password": GOOD_PASSWORD},
         )
         assert response.status_code == 200
 
     @pytest.mark.parametrize("short", ["", "kurz", "elfzeichen"])
-    def test_to_short_password_is_rejected(self, client, short: str) -> None:  # type: ignore[no-untyped-def]
+    def test_too_short_password_is_rejected(self, client, short: str) -> None:  # type: ignore[no-untyped-def]
         response = client.post(
             "/api/v1/auth/register",
             json={
@@ -152,14 +151,14 @@ class TestRegistrierung:
             json={
                 "displayName": "Anna",
                 "email": malformed,
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         assert response.status_code == 422
 
     def test_no_account_without_valid_password(self, client, session) -> None:  # type: ignore[no-untyped-def]
-        "Otherwise entstuende a Account, dessen Registrierung scheitert."
+        "Otherwise an account could survive a failed registration."
         from sidebyside.identity import service as accounts
 
         client.post(
@@ -174,7 +173,7 @@ class TestRegistrierung:
         assert accounts.find_by_email(session, "a@example.org") is None
 
 
-class TestAnmeldung:
+class TestSignIn:
     @pytest.fixture
     def signed_in(self, client, session):  # type: ignore[no-untyped-def]
         client.post(
@@ -182,16 +181,16 @@ class TestAnmeldung:
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         return "anna@example.org"
 
-    def test_richtige_data(self, client, signed_in) -> None:  # type: ignore[no-untyped-def]
+    def test_valid_credentials(self, client, signed_in) -> None:  # type: ignore[no-untyped-def]
         response = client.post(
             "/api/v1/auth/sign-in",
-            json={"email": signed_in, "password": GUTES_PASSWORT},
+            json={"email": signed_in, "password": GOOD_PASSWORD},
         )
         assert response.status_code == 200
         assert response.json()["account"]["displayName"] == "Anna"
@@ -207,19 +206,19 @@ class TestAnmeldung:
     def test_unknown_address_and_wrong_password_are_indistinguishable(
         self, client, signed_in
     ) -> None:  # type: ignore[no-untyped-def]
-        "a difference would enable account enumeration."
+        "A difference would enable account enumeration."
         wrong = client.post(
             "/api/v1/auth/sign-in",
             json={"email": signed_in, "password": "etwas-ganz-anderes"},
         )
         unknown = client.post(
             "/api/v1/auth/sign-in",
-            json={"email": "gibt-es-nicht@example.org", "password": GUTES_PASSWORT},
+            json={"email": "gibt-es-nicht@example.org", "password": GOOD_PASSWORD},
         )
         assert wrong.status_code == unknown.status_code == 401
         assert wrong.json() == unknown.json()
 
-    def test_disabled_account_gets_not_in(self, client, session, signed_in) -> None:  # type: ignore[no-untyped-def]
+    def test_disabled_account_cannot_sign_in(self, client, session, signed_in) -> None:  # type: ignore[no-untyped-def]
         from sidebyside.core.clock import now
         from sidebyside.identity import service as accounts
 
@@ -230,12 +229,12 @@ class TestAnmeldung:
 
         response = client.post(
             "/api/v1/auth/sign-in",
-            json={"email": signed_in, "password": GUTES_PASSWORT},
+            json={"email": signed_in, "password": GOOD_PASSWORD},
         )
         assert response.status_code == 401
 
 
-class TestSitzungsverwaltung:
+class TestSessionManagement:
     @pytest.fixture
     def session_data(self, client):  # type: ignore[no-untyped-def]
         return client.post(
@@ -243,19 +242,19 @@ class TestSitzungsverwaltung:
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         ).json()
 
-    def test_me_returns_the_account(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
+    def test_me_returns_account(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
         response = client.get(
             "/api/v1/auth/me", headers=auth(session_data["tokens"]["accessToken"])
         )
         assert response.status_code == 200
         assert set(response.json()) == {"id", "displayName"}
 
-    def test_refresh_rotiert(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
+    def test_refresh_rotates(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
         response = client.post(
             "/api/v1/auth/refresh",
             json={"refreshToken": session_data["tokens"]["refreshToken"]},
@@ -263,18 +262,18 @@ class TestSitzungsverwaltung:
         assert response.status_code == 200
         assert response.json()["refreshToken"] != session_data["tokens"]["refreshToken"]
 
-    def test_logout_invalidates_the_token(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
+    def test_logout_invalidates_token(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
         headers = auth(session_data["tokens"]["accessToken"])
         assert client.post("/api/v1/auth/sign-out", headers=headers).status_code == 204
         assert client.get("/api/v1/auth/me", headers=headers).status_code == 401
 
-    def test_password_change_ended_all_sessions(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
-        "a password change often indicates suspected unauthorized access."
+    def test_password_change_ends_all_sessions(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
+        "A password change often indicates suspected unauthorized access."
         headers = auth(session_data["tokens"]["accessToken"])
         response = client.post(
             "/api/v1/auth/password",
             json={
-                "currentPassword": GUTES_PASSWORT,
+                "currentPassword": GOOD_PASSWORD,
                 "newPassword": "ein-ganz-neues-langes-passwort",
             },
             headers=headers,
@@ -282,7 +281,7 @@ class TestSitzungsverwaltung:
         assert response.status_code == 204
         assert client.get("/api/v1/auth/me", headers=headers).status_code == 401
 
-    def test_password_change_requires_the_old(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
+    def test_password_change_requires_old_password(self, client, session_data) -> None:  # type: ignore[no-untyped-def]
         response = client.post(
             "/api/v1/auth/password",
             json={
@@ -294,14 +293,14 @@ class TestSitzungsverwaltung:
         assert response.status_code == 401
 
 
-class TestBegrenzung:
-    def test_to_viele_attempts_werden_rejected(self, client, session) -> None:  # type: ignore[no-untyped-def]
+class TestRateLimiting:
+    def test_too_many_attempts_are_rejected(self, client, session) -> None:  # type: ignore[no-untyped-def]
         client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
@@ -318,14 +317,14 @@ class TestBegrenzung:
         assert 401 in codes
         assert codes[-1] == 429
 
-    def test_enge_loop_successful_rotationen_is_gebremst(self, client, session) -> None:  # type: ignore[no-untyped-def]
-        "Therefore the successful Path has a Budget; it writes History."
+    def test_tight_loop_of_successful_rotations_is_throttled(self, client, session) -> None:  # type: ignore[no-untyped-def]
+        "The successful path has a budget because every rotation writes history."
         signed_in = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         ).json()
@@ -336,18 +335,18 @@ class TestBegrenzung:
             assert response.status_code == 200
             token = response.json()["refreshToken"]
 
-        gebremst = client.post("/api/v1/auth/refresh", json={"refreshToken": token})
-        assert gebremst.status_code == 429
-        assert gebremst.json()["code"] == "RATE_LIMITED"
+        throttled = client.post("/api/v1/auth/refresh", json={"refreshToken": token})
+        assert throttled.status_code == 429
+        assert throttled.json()["code"] == "RATE_LIMITED"
 
     def test_unknown_refresh_token_remains_401(self, client, session) -> None:  # type: ignore[no-untyped-def]
-        "The Rate limit may not reveal, that it the Session exists."
+        "The rate limit must not reveal that a session exists."
         signed_in = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         ).json()
@@ -362,14 +361,14 @@ class TestBegrenzung:
         assert foreign.status_code == 401
         assert foreign.json()["code"] == "AUTHENTICATION_REQUIRED"
 
-    def test_successful_sign_in_cleans_up_the_counter(self, client, session) -> None:  # type: ignore[no-untyped-def]
+    def test_successful_sign_in_cleans_up_counter(self, client, session) -> None:  # type: ignore[no-untyped-def]
         "Otherwise typos would lock out the legitimate user."
         client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
@@ -382,7 +381,7 @@ class TestBegrenzung:
         assert (
             client.post(
                 "/api/v1/auth/sign-in",
-                json={"email": "anna@example.org", "password": GUTES_PASSWORT},
+                json={"email": "anna@example.org", "password": GOOD_PASSWORD},
             ).status_code
             == 200
         )
@@ -395,9 +394,8 @@ class TestBegrenzung:
                 == 401
             )
 
-    def test_the_key_is_stored_only_hashed_there(self, session: Session) -> None:
-        """Who when a Sign-in attempt had, is more Knowledge, as the
-        Begrenzung requires."""
+    def test_key_is_stored_only_hashed(self, session: Session) -> None:
+        "The limiter needs less information than the original sign-in key."
         rate_limit.record_attempt(session, "sign_in", "anna@example.org")
         session.flush()
 
@@ -407,31 +405,31 @@ class TestBegrenzung:
             assert "anna@example.org" not in row.key_hash
 
 
-class TestProduktiveTransaktionsgrenze:
-    def test_bootstrap_proof_is_after_success_permanently_consumed(self, production_client) -> None:  # type: ignore[no-untyped-def]
+class TestProductionTransactionBoundary:
+    def test_bootstrap_proof_is_permanently_consumed_after_success(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         first = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
         assert first.status_code == 201
 
-        wiederverwendung = client.post(
+        reuse_response = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Fremd",
                 "email": "fremd@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
-        assert wiederverwendung.status_code == 403
-        assert wiederverwendung.json()["code"] == "REGISTRATION_REQUIRES_INVITATION"
+        assert reuse_response.status_code == 403
+        assert reuse_response.json()["code"] == "REGISTRATION_REQUIRES_INVITATION"
 
         with maker() as committed:
             assert committed.execute(select(func.count()).select_from(Account)).scalar_one() == 1
@@ -439,24 +437,24 @@ class TestProduktiveTransaktionsgrenze:
             assert state is not None
             assert state.completed_at is not None
 
-    def test_paralleler_bootstrap_hat_exactly_a_owner(self, production_client) -> None:  # type: ignore[no-untyped-def]
+    def test_parallel_bootstrap_has_exactly_one_owner(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         start = Barrier(2)
 
-        def registrieren(index: int):  # type: ignore[no-untyped-def]
+        def register(index: int):  # type: ignore[no-untyped-def]
             start.wait(timeout=5)
             return client.post(
                 "/api/v1/auth/register",
                 json={
                     "displayName": f"Owner {index}",
                     "email": f"owner{index}@example.org",
-                    "password": GUTES_PASSWORT,
+                    "password": GOOD_PASSWORD,
                     "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
                 },
             )
 
         with ThreadPoolExecutor(max_workers=2) as pool:
-            responses = list(pool.map(registrieren, range(2)))
+            responses = list(pool.map(register, range(2)))
 
         assert sorted(response.status_code for response in responses) == [201, 403]
         rejected = next(response for response in responses if response.status_code == 403)
@@ -468,9 +466,7 @@ class TestProduktiveTransaktionsgrenze:
             assert state is not None
             assert state.completed_at is not None
 
-    def test_failed_attempts_bleiben_after_rejected_requests_erhalten(
-        self, production_client
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_failed_attempts_persist_after_rejected_requests(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         email = "anna@example.org"
         assert (
@@ -479,7 +475,7 @@ class TestProduktiveTransaktionsgrenze:
                 json={
                     "displayName": "Anna",
                     "email": email,
-                    "password": GUTES_PASSWORT,
+                    "password": GOOD_PASSWORD,
                     "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
                 },
             ).status_code
@@ -493,12 +489,12 @@ class TestProduktiveTransaktionsgrenze:
             )
             assert response.status_code == 401
 
-        gesperrt = client.post(
+        throttled = client.post(
             "/api/v1/auth/sign-in",
             json={"email": email, "password": "falsch-falsch"},
         )
-        assert gesperrt.status_code == 429
-        assert gesperrt.json()["code"] == "RATE_LIMITED"
+        assert throttled.status_code == 429
+        assert throttled.json()["code"] == "RATE_LIMITED"
 
         with maker() as committed:
             attempts = committed.execute(
@@ -511,7 +507,7 @@ class TestProduktiveTransaktionsgrenze:
             ).scalar_one()
         assert attempts == rate_limit.SIGN_IN.attempts
 
-    def test_parallele_failed_attempts_verlieren_no_counter(self, production_client) -> None:  # type: ignore[no-untyped-def]
+    def test_parallel_failed_attempts_do_not_lose_counter(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         email = "parallel@example.org"
         assert (
@@ -520,24 +516,24 @@ class TestProduktiveTransaktionsgrenze:
                 json={
                     "displayName": "Anna",
                     "email": email,
-                    "password": GUTES_PASSWORT,
+                    "password": GOOD_PASSWORD,
                     "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
                 },
             ).status_code
             == 201
         )
 
-        def fehlversuch(_: int) -> int:
+        def failed_attempt(_: int) -> int:
             return client.post(
                 "/api/v1/auth/sign-in",
                 json={"email": email, "password": "falsch-falsch"},
             ).status_code
 
-        anzahl = 5
-        with ThreadPoolExecutor(max_workers=anzahl) as pool:
-            codes = list(pool.map(fehlversuch, range(anzahl)))
+        count = 5
+        with ThreadPoolExecutor(max_workers=count) as pool:
+            codes = list(pool.map(failed_attempt, range(count)))
 
-        assert codes == [401] * anzahl
+        assert codes == [401] * count
         with maker() as committed:
             attempts = committed.execute(
                 select(func.count())
@@ -547,21 +543,21 @@ class TestProduktiveTransaktionsgrenze:
                     RateLimitEvent.key_hash == hash_token(email),
                 )
             ).scalar_one()
-        assert attempts == anzahl
+        assert attempts == count
 
-    def test_refresh_replay_revokes_the_session_data_permanently(self, production_client) -> None:  # type: ignore[no-untyped-def]
+    def test_refresh_replay_revokes_session_permanently(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
-        registrierung = client.post(
+        registration = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
-        assert registrierung.status_code == 201
-        old_refresh = registrierung.json()["tokens"]["refreshToken"]
+        assert registration.status_code == 201
+        old_refresh = registration.json()["tokens"]["refreshToken"]
 
         rotation = client.post(
             "/api/v1/auth/refresh",
@@ -590,25 +586,25 @@ class TestProduktiveTransaktionsgrenze:
             assert device_session.revoked_at is not None
             assert device_session.access_token_hash is None
 
-    def test_replay_the_aeltesten_generation_revokes_permanently(self, production_client) -> None:  # type: ignore[no-untyped-def]
-        """T0 -> T1 -> T2, danach Replay from T0 through HTTP.
+    def test_replay_of_oldest_generation_revokes_permanently(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        """T0 -> T1 -> T2, then replay T0 through HTTP.
 
-        The produktive Lifecycle rollt the Request wegen the 401 back.
-        The Widerruf must the Rollback nevertheless outlive, otherwise bliebe the
-        kompromittierte Session open.
+        The production lifecycle rolls back the request because it returns 401.
+        The revocation must outlive that rollback or the compromised session
+        would remain open.
         """
         client, maker = production_client
-        registrierung = client.post(
+        registration = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
-        assert registrierung.status_code == 201
-        t0 = registrierung.json()["tokens"]["refreshToken"]
+        assert registration.status_code == 201
+        t0 = registration.json()["tokens"]["refreshToken"]
 
         first = client.post("/api/v1/auth/refresh", json={"refreshToken": t0})
         assert first.status_code == 200
@@ -635,19 +631,19 @@ class TestProduktiveTransaktionsgrenze:
             assert device_session.revoked_at is not None
             assert device_session.access_token_hash is None
 
-    def test_replay_a_mittleren_generation_revokes_permanently(self, production_client) -> None:  # type: ignore[no-untyped-def]
+    def test_replay_of_middle_generation_revokes_permanently(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
-        registrierung = client.post(
+        registration = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
-        assert registrierung.status_code == 201
-        t0 = registrierung.json()["tokens"]["refreshToken"]
+        assert registration.status_code == 201
+        t0 = registration.json()["tokens"]["refreshToken"]
 
         t1 = client.post("/api/v1/auth/refresh", json={"refreshToken": t0}).json()["refreshToken"]
         t2 = client.post("/api/v1/auth/refresh", json={"refreshToken": t1}).json()
@@ -661,20 +657,20 @@ class TestProduktiveTransaktionsgrenze:
             device_session = committed.execute(select(DeviceSession)).scalar_one()
             assert device_session.revoked_at is not None
 
-    def test_unknown_refresh_token_revokes_no_session_data(self, production_client) -> None:  # type: ignore[no-untyped-def]
-        "Otherwise could every a fremde Session with Unfug abschiessen."
+    def test_unknown_refresh_token_revokes_no_session(self, production_client) -> None:  # type: ignore[no-untyped-def]
+        "Otherwise arbitrary garbage could revoke another session."
         client, maker = production_client
-        registrierung = client.post(
+        registration = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
-        assert registrierung.status_code == 201
-        tokens = registrierung.json()["tokens"]
+        assert registration.status_code == 201
+        tokens = registration.json()["tokens"]
 
         rejected = client.post("/api/v1/auth/refresh", json={"refreshToken": "gibt-es-nicht"})
         assert rejected.status_code == 401
@@ -684,19 +680,19 @@ class TestProduktiveTransaktionsgrenze:
             device_session = committed.execute(select(DeviceSession)).scalar_one()
             assert device_session.revoked_at is None
 
-    def test_parallele_refresh_rotation_hat_exactly_a_sieger(self, production_client) -> None:  # type: ignore[no-untyped-def]
+    def test_parallel_refresh_rotation_has_exactly_one_winner(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
-        registrierung = client.post(
+        registration = client.post(
             "/api/v1/auth/register",
             json={
                 "displayName": "Anna",
                 "email": "anna@example.org",
-                "password": GUTES_PASSWORT,
+                "password": GOOD_PASSWORD,
                 "bootstrapToken": TEST_BOOTSTRAP_TOKEN,
             },
         )
-        assert registrierung.status_code == 201
-        refresh_token = registrierung.json()["tokens"]["refreshToken"]
+        assert registration.status_code == 201
+        refresh_token = registration.json()["tokens"]["refreshToken"]
         start = Barrier(2)
 
         def rotation(_: int):  # type: ignore[no-untyped-def]
@@ -730,19 +726,19 @@ class TestProduktiveTransaktionsgrenze:
             assert device_session.access_token_hash is None
 
 
-class TestPasswortAbleitung:
-    def test_hash_exposes_the_password_not_exposed(self) -> None:
-        hashed = passwords.hash_password(GUTES_PASSWORT)
-        assert GUTES_PASSWORT not in hashed
+class TestPasswordHashing:
+    def test_hash_does_not_expose_password(self) -> None:
+        hashed = passwords.hash_password(GOOD_PASSWORD)
+        assert GOOD_PASSWORD not in hashed
 
-    def test_zwei_gleiche_passwoerter_ergeben_verschiedene_hashes(self) -> None:
-        "Argon2 salts; otherwise waeren same Passwords erkennbar."
-        assert passwords.hash_password(GUTES_PASSWORT) != passwords.hash_password(GUTES_PASSWORT)
+    def test_equal_passwords_produce_different_hashes(self) -> None:
+        "Argon2 salts prevent equal passwords from being recognizable by their hashes."
+        assert passwords.hash_password(GOOD_PASSWORD) != passwords.hash_password(GOOD_PASSWORD)
 
     def test_check_matches(self) -> None:
-        hashed = passwords.hash_password(GUTES_PASSWORT)
-        assert passwords.verify_password(hashed, GUTES_PASSWORT)
+        hashed = passwords.hash_password(GOOD_PASSWORD)
+        assert passwords.verify_password(hashed, GOOD_PASSWORD)
         assert not passwords.verify_password(hashed, "etwas-anderes")
 
-    def test_malformed_hash_wirft_not(self) -> None:
-        assert not passwords.verify_password("kein-hash", GUTES_PASSWORT)
+    def test_malformed_hash_does_not_raise(self) -> None:
+        assert not passwords.verify_password("kein-hash", GOOD_PASSWORD)

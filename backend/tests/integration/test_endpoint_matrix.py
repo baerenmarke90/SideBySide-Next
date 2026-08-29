@@ -4,7 +4,7 @@ Domain-specific visibility rules live with their domain. This matrix covers
 the complementary guarantee that every endpoint enforces tenant isolation.
 
 The distinction is completeness: a gap can exist because an endpoint is
-missing from the matrix entirely. `test_the_contract_is_complete_covered`
+missing from the matrix entirely. `test_contract_is_completely_covered`
 therefore compares the table below with the OpenAPI contract. A new operation
 without an entry makes the suite fail before it reaches production.
 """
@@ -29,16 +29,16 @@ SPACE_ABSENCE = "SPACE_NOT_FOUND"
 
 @dataclass(frozen=True)
 class Endpoint:
-    "To endpoint and what a request to it requires."
+    "An endpoint and the requirements for a request to it."
 
     method: str
     template: str
     body: dict[str, Any] | None = None
     if_match: bool = False
     resource_absence: str | None = None
-    """Der Code, mit dem dieser Endpunkt eine unbekannte Ressource verneint.
+    """The code this endpoint uses to deny an unknown resource.
 
-    Nur fuer Endpunkte mit eigener Ressourcen-ID im Pfad.
+    Only set for endpoints with their own resource ID in the path.
     """
 
     placeholders: tuple[str, ...] = field(default=())
@@ -55,20 +55,20 @@ PERSON = {
     "birthdayYearKnown": False,
     "visibility": "SHARED",
 }
-TERMIN = {
+IMPORTANT_DATE = {
     "label": "Jahrestag",
     "type": "ANNIVERSARY",
     "date": "2020-06-13",
     "repeats": "ANNUALLY",
     "visibility": "SHARED",
 }
-PRAEFERENZ = {
+PREFERENCE = {
     "category": "DRINK",
     "topic": "lieblingsgetraenk",
     "sentiment": "LOVE",
     "value": "Wasser",
 }
-PROFIL = {
+PROFILE = {
     "relationshipStartedOn": "2020-06-13",
     "showRelationshipDuration": True,
     "durationDisplayMode": "YEARS_MONTHS",
@@ -100,10 +100,10 @@ WISH = {"title": "Matrix Wish"}
 PLAN = {"title": "Matrix Plan", "description": "Text"}
 PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 
-SPACE_ENDPUNKTE: tuple[Endpoint, ...] = (
+SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("GET", "/api/v1/spaces/{spaceId}"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/profile"),
-    Endpoint("PUT", "/api/v1/spaces/{spaceId}/profile", body=PROFIL, if_match=True),
+    Endpoint("PUT", "/api/v1/spaces/{spaceId}/profile", body=PROFILE, if_match=True),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/invitations"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/invitations", body={}),
     Endpoint(
@@ -120,7 +120,7 @@ SPACE_ENDPUNKTE: tuple[Endpoint, ...] = (
     Endpoint(
         "POST",
         "/api/v1/spaces/{spaceId}/profile-preferences",
-        body={**PRAEFERENZ, "accountId": str(uuid4()), "visibility": "SELF_PROFILE"},
+        body={**PREFERENCE, "accountId": str(uuid4()), "visibility": "SELF_PROFILE"},
     ),
     Endpoint(
         "GET",
@@ -130,7 +130,7 @@ SPACE_ENDPUNKTE: tuple[Endpoint, ...] = (
     Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}",
-        body=PRAEFERENZ,
+        body=PREFERENCE,
         if_match=True,
         resource_absence="PROFILE_PREFERENCE_NOT_FOUND",
     ),
@@ -162,7 +162,7 @@ SPACE_ENDPUNKTE: tuple[Endpoint, ...] = (
         query={"deletePolicy": "preserve"},
     ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/important-dates"),
-    Endpoint("POST", "/api/v1/spaces/{spaceId}/important-dates", body=TERMIN),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/important-dates", body=IMPORTANT_DATE),
     Endpoint(
         "GET",
         "/api/v1/spaces/{spaceId}/important-dates/{dateId}",
@@ -171,7 +171,7 @@ SPACE_ENDPUNKTE: tuple[Endpoint, ...] = (
     Endpoint(
         "PUT",
         "/api/v1/spaces/{spaceId}/important-dates/{dateId}",
-        body=TERMIN,
+        body=IMPORTANT_DATE,
         if_match=True,
         resource_absence="IMPORTANT_DATE_NOT_FOUND",
     ),
@@ -483,15 +483,15 @@ AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/auth/sign-out"),
     ("POST", "/api/v1/auth/password"),
     ("POST", "/api/v1/auth/email/verification/request"),
-    # Verknuepfen setzt voraus, that schon jemand signed in is; exactly
-    # This distinguishes it from sign-in through the same provider.
+    # Linking requires an existing signed-in account, which distinguishes it
+    # from sign-in through the same provider.
     ("POST", "/api/v1/auth/oidc/{connectionId}/link"),
-    # A Passkey is a zusaetzlicher Zugang to a bestehenden Account;
-    # registriert is it from the Sign-in heraus.
+    # A passkey is an additional access method for an existing account and is
+    # registered from an authenticated session.
     ("POST", "/api/v1/auth/passkeys/registration/start"),
     ("POST", "/api/v1/auth/passkeys/registration/finish"),
 )
-"""Kontobezogen, aber nicht an einen Space gebunden. Anonym: 401."""
+"""Account-scoped but not space-scoped. Anonymous requests receive 401."""
 
 PUBLIC_ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/health"),
@@ -500,8 +500,8 @@ PUBLIC_ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/auth/sign-in"),
     ("POST", "/api/v1/auth/refresh"),
     ("POST", "/api/v1/invitations/accept"),
-    # The Paths back into the Account: it start without Session, and their
-    # Proof is the Once-Token from the Mail.
+    # These paths lead back into an account. They start without a session and
+    # use the single-use token delivered by mail as their proof.
     ("POST", "/api/v1/auth/magic-link/request"),
     ("POST", "/api/v1/auth/magic-link/consume"),
     ("POST", "/api/v1/auth/email/verification/confirm"),
@@ -512,10 +512,10 @@ PUBLIC_ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/auth/passkeys/authentication/start"),
     ("POST", "/api/v1/auth/passkeys/authentication/finish"),
 )
-"""Absichtlich ohne Token erreichbar - sie sind der Weg *zu* einem Token.
+"""Intentionally reachable without a bearer token because they lead to a token.
 
-Ihr Missbrauchsschutz sind Rate Limits und Einmal-Tokens, nachgewiesen in
-`test_auth_flows` und `test_invitations`, nicht der Bearer-Kopf.
+Their abuse protection is provided by rate limits and single-use tokens, as
+covered in `test_auth_flows` and `test_invitations`.
 """
 
 
@@ -532,44 +532,48 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
 
     token_a = sign_in(session, anna)
     headers = auth(token_a)
-    basis = f"/api/v1/spaces/{space.id}"
+    base_path = f"/api/v1/spaces/{space.id}"
 
-    # The Einladung is created, while still Platz is: a voller Couple-Space
-    # stellt no more from. Ben kommt same danach dazu.
-    invitation = client.post(f"{basis}/invitations", json={}, headers=headers).json()
+    # Create the invitation while the couple still has a free member slot. A
+    # full couple space issues no new invitation, so Ben joins afterwards.
+    invitation = client.post(f"{base_path}/invitations", json={}, headers=headers).json()
 
     relationship_service.add_member(session, space.id, ben)
     session.flush()
-    praeferenz = client.post(
-        f"{basis}/profile-preferences",
-        json={**PRAEFERENZ, "accountId": str(anna.id), "visibility": "SELF_PROFILE"},
+    preference = client.post(
+        f"{base_path}/profile-preferences",
+        json={**PREFERENCE, "accountId": str(anna.id), "visibility": "SELF_PROFILE"},
         headers=headers,
     ).json()
-    person = client.post(f"{basis}/related-persons", json=PERSON, headers=headers).json()
-    termin = client.post(f"{basis}/important-dates", json=TERMIN, headers=headers).json()
-    memory = client.post(f"{basis}/memories", json=MEMORY, headers=headers).json()
-    heart_moment = client.post(f"{basis}/heart-moments", json=HEART_MOMENT, headers=headers).json()
-    milestone = client.post(f"{basis}/milestones", json=MILESTONE, headers=headers).json()
-    comment = client.post(
-        f"{basis}/memories/{memory['id']}/comments", json=COMMENT, headers=headers
+    person = client.post(f"{base_path}/related-persons", json=PERSON, headers=headers).json()
+    important_date = client.post(
+        f"{base_path}/important-dates", json=IMPORTANT_DATE, headers=headers
     ).json()
-    wish = client.post(f"{basis}/wishes", json=WISH, headers=headers).json()
-    place = client.post(f"{basis}/places", json=PLACE, headers=headers).json()
-    plan = client.post(f"{basis}/plans", json=PLAN, headers=headers).json()
-    attachment = client.post(f"{basis}/attachments", json=ATTACHMENT, headers=headers).json()
+    memory = client.post(f"{base_path}/memories", json=MEMORY, headers=headers).json()
+    heart_moment = client.post(
+        f"{base_path}/heart-moments", json=HEART_MOMENT, headers=headers
+    ).json()
+    milestone = client.post(f"{base_path}/milestones", json=MILESTONE, headers=headers).json()
+    comment = client.post(
+        f"{base_path}/memories/{memory['id']}/comments", json=COMMENT, headers=headers
+    ).json()
+    wish = client.post(f"{base_path}/wishes", json=WISH, headers=headers).json()
+    place = client.post(f"{base_path}/places", json=PLACE, headers=headers).json()
+    plan = client.post(f"{base_path}/plans", json=PLAN, headers=headers).json()
+    attachment = client.post(f"{base_path}/attachments", json=ATTACHMENT, headers=headers).json()
 
     return {
         "client": client,
         "space": space,
-        "kopf_owner": headers,
-        "kopf_fremd": auth(sign_in(session, foreign)),
+        "owner_headers": headers,
+        "foreign_headers": auth(sign_in(session, foreign)),
         "ids": {
             "spaceId": str(space.id),
             "accountId": str(ben.id),
             "invitationId": invitation["id"],
-            "preferenceId": praeferenz["id"],
+            "preferenceId": preference["id"],
             "personId": person["id"],
-            "dateId": termin["id"],
+            "dateId": important_date["id"],
             "memoryId": memory["id"],
             "heartMomentId": heart_moment["id"],
             "milestoneId": milestone["id"],
@@ -577,25 +581,24 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "wishId": wish["id"],
             "planId": plan["id"],
             "placeId": place["id"],
-            # The Target a typed Relation. A Erinnerung is sufficient
-            # for alle drei Relationsarten: the Checks this Matrix
-            # apply before the Zielaufloesung.
+            # The target is a typed relation. A memory is enough for all three
+            # relation types because this matrix checks occur before target resolution.
             "targetId": memory["id"],
             "attachmentId": attachment["attachment"]["id"],
         },
     }
 
 
-def _path(endpoint: Endpoint, ids: dict[str, str], **ersatz: str) -> str:
-    values = {**ids, **ersatz}
+def _path(endpoint: Endpoint, ids: dict[str, str], **replacements: str) -> str:
+    values = {**ids, **replacements}
     return endpoint.template.format(**values)
 
 
 def _send(scenario, endpoint: Endpoint, path: str, headers: dict[str, str] | None):  # type: ignore[no-untyped-def]
     headers = dict(headers or {})
     if endpoint.if_match:
-        # The Konfliktschutz is Pflicht; without the Kopf would check this Test
-        # only still, that it is missing.
+        # Conflict protection is mandatory. Supplying the header ensures these
+        # tests exercise tenant/resource isolation rather than header absence.
         headers["If-Match"] = '"1"'
 
     request_kwargs: dict[str, Any] = {}
@@ -606,77 +609,84 @@ def _send(scenario, endpoint: Endpoint, path: str, headers: dict[str, str] | Non
     return scenario["client"].request(endpoint.method, path, headers=headers, **request_kwargs)
 
 
-@pytest.mark.parametrize("endpoint", SPACE_ENDPUNKTE, ids=str)
-class TestJederSpaceEndpunkt:
-    "Vier Fragen to every Endpoint, the to a Space haengt."
+@pytest.mark.parametrize("endpoint", SPACE_ENDPOINTS, ids=str)
+class TestEverySpaceEndpoint:
+    "Four tenant-isolation questions for every endpoint scoped to a space."
 
     def test_anonymous_remains_401(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
         response = _send(scenario, endpoint, _path(endpoint, scenario["ids"]), None)
         assert response.status_code == 401
         assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
 
-    def test_foreign_gets_404_and_not_403(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
-        "a 403 would confirm that the space exists."
+    def test_foreign_actor_gets_404_not_403(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+        "A 403 would confirm that the space exists."
         response = _send(
-            scenario, endpoint, _path(endpoint, scenario["ids"]), scenario["kopf_fremd"]
+            scenario,
+            endpoint,
+            _path(endpoint, scenario["ids"]),
+            scenario["foreign_headers"],
         )
         assert response.status_code == 404
         assert response.json()["code"] == SPACE_ABSENCE
 
-    def test_foreign_space_and_invented_are_indistinguishable(  # type: ignore[no-untyped-def]
+    def test_foreign_space_and_invented_space_are_indistinguishable(
         self, scenario, endpoint: Endpoint
-    ) -> None:
-        real = _send(scenario, endpoint, _path(endpoint, scenario["ids"]), scenario["kopf_fremd"])
-        erfunden = _send(
+    ) -> None:  # type: ignore[no-untyped-def]
+        real = _send(
+            scenario, endpoint, _path(endpoint, scenario["ids"]), scenario["foreign_headers"]
+        )
+        invented = _send(
             scenario,
             endpoint,
             _path(endpoint, scenario["ids"], spaceId=str(uuid4())),
-            scenario["kopf_fremd"],
+            scenario["foreign_headers"],
         )
-        assert real.status_code == erfunden.status_code == 404
-        assert real.json() == erfunden.json()
+        assert real.status_code == invented.status_code == 404
+        assert real.json() == invented.json()
 
     def test_malformed_space_id_remains_same_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
         response = _send(
             scenario,
             endpoint,
             _path(endpoint, scenario["ids"], spaceId="' OR 1=1 --"),
-            scenario["kopf_owner"],
+            scenario["owner_headers"],
         )
         assert response.status_code == 404
         assert response.json()["code"] == SPACE_ABSENCE
 
 
-DETAIL_ENDPUNKTE = tuple(e for e in SPACE_ENDPUNKTE if e.resource_absence is not None)
+DETAIL_ENDPOINTS = tuple(
+    endpoint for endpoint in SPACE_ENDPOINTS if endpoint.resource_absence is not None
+)
 
 
-@pytest.mark.parametrize("endpoint", DETAIL_ENDPUNKTE, ids=str)
-class TestJedeRessourcenId:
+@pytest.mark.parametrize("endpoint", DETAIL_ENDPOINTS, ids=str)
+class TestEveryResourceId:
     "Within the actor's own space, the resource ID decides and reveals nothing."
 
     def test_unknown_resource_remains_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
         path = endpoint.template.format(
-            **{**scenario["ids"], **dict.fromkeys(_resources_platzhalter(endpoint), str(uuid4()))}
+            **{**scenario["ids"], **dict.fromkeys(_resource_placeholders(endpoint), str(uuid4()))}
         )
-        response = _send(scenario, endpoint, path, scenario["kopf_owner"])
+        response = _send(scenario, endpoint, path, scenario["owner_headers"])
         assert response.status_code == 404
         assert response.json()["code"] == endpoint.resource_absence
 
-    def test_malformed_resources_id_remains_same_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
-        "well-formedness must not disclose existence."
+    def test_malformed_resource_id_remains_same_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+        "Well-formedness must not disclose existence."
         unknown = endpoint.template.format(
-            **{**scenario["ids"], **dict.fromkeys(_resources_platzhalter(endpoint), str(uuid4()))}
+            **{**scenario["ids"], **dict.fromkeys(_resource_placeholders(endpoint), str(uuid4()))}
         )
         malformed = endpoint.template.format(
-            **{**scenario["ids"], **dict.fromkeys(_resources_platzhalter(endpoint), "nicht-echt")}
+            **{**scenario["ids"], **dict.fromkeys(_resource_placeholders(endpoint), "nicht-echt")}
         )
-        first = _send(scenario, endpoint, unknown, scenario["kopf_owner"])
-        second = _send(scenario, endpoint, malformed, scenario["kopf_owner"])
+        first = _send(scenario, endpoint, unknown, scenario["owner_headers"])
+        second = _send(scenario, endpoint, malformed, scenario["owner_headers"])
         assert first.status_code == second.status_code == 404
         assert first.json() == second.json()
 
 
-def _resources_platzhalter(endpoint: Endpoint) -> tuple[str, ...]:
+def _resource_placeholders(endpoint: Endpoint) -> tuple[str, ...]:
     return tuple(
         name
         for name in (
@@ -699,50 +709,50 @@ def _resources_platzhalter(endpoint: Endpoint) -> tuple[str, ...]:
     )
 
 
-SCHREIBENDE_ENDPUNKTE = tuple(e for e in SPACE_ENDPUNKTE if e.if_match)
+WRITING_ENDPOINTS = tuple(endpoint for endpoint in SPACE_ENDPOINTS if endpoint.if_match)
 
 
-@pytest.mark.parametrize("endpoint", SCHREIBENDE_ENDPUNKTE, ids=str)
-def test_without_if_match_is_not_geschrieben(scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
-    "a missing header is the silent path to disabling conflict protection."
+@pytest.mark.parametrize("endpoint", WRITING_ENDPOINTS, ids=str)
+def test_without_if_match_does_not_write(scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
+    "A missing header is the silent path to disabling conflict protection."
     path = _path(endpoint, scenario["ids"])
     request_kwargs: dict[str, Any] = {"json": endpoint.body} if endpoint.body is not None else {}
     if endpoint.query:
         request_kwargs["params"] = endpoint.query
     response = scenario["client"].request(
-        endpoint.method, path, headers=scenario["kopf_owner"], **request_kwargs
+        endpoint.method, path, headers=scenario["owner_headers"], **request_kwargs
     )
     assert response.status_code == 422
 
-    # And the Resource is stored unchanged there; therefore the deleted not.
+    # Verify that a DELETE without the required header did not remove the resource.
     if endpoint.method == "DELETE":
         if "{commentId}" in endpoint.template:
             afterwards = scenario["client"].patch(
                 path,
                 json=COMMENT,
-                headers={**scenario["kopf_owner"], "If-Match": '"1"'},
+                headers={**scenario["owner_headers"], "If-Match": '"1"'},
             )
             assert afterwards.status_code == 200
         else:
-            afterwards = scenario["client"].get(path, headers=scenario["kopf_owner"])
+            afterwards = scenario["client"].get(path, headers=scenario["owner_headers"])
             assert afterwards.status_code == 200
 
 
-def test_the_contract_is_complete_covered() -> None:
-    """a new operation without to entry in this file makes the suite fail.
+def test_contract_is_completely_covered() -> None:
+    """A new operation without an entry in this file makes the suite fail.
 
-    The is the eigentliche Zweck the Matrix. A Regel, the man to jedem
-    new Endpoint from Hand mitschreiben must, is irgendwann vergessen -
-    and a vergessener Mandantenschutz fails in the Betrieb niemandem on.
+    This is the matrix's primary purpose. A rule that developers must remember
+    to copy to every new endpoint will eventually be forgotten; a missing tenant
+    guard can otherwise remain invisible until production.
     """
     schema = create_app().openapi()
     contract = {
-        (methode.upper(), path)
-        for path, operationen in schema["paths"].items()
-        for methode in operationen
+        (method.upper(), path)
+        for path, operations in schema["paths"].items()
+        for method in operations
     }
     covered = (
-        {(e.method, e.template) for e in SPACE_ENDPUNKTE}
+        {(endpoint.method, endpoint.template) for endpoint in SPACE_ENDPOINTS}
         | set(AUTHENTICATED_ONLY)
         | set(PUBLIC_ENDPOINTS)
     )
@@ -750,7 +760,7 @@ def test_the_contract_is_complete_covered() -> None:
 
 
 @pytest.mark.parametrize(("method", "path"), AUTHENTICATED_ONLY, ids=str)
-def test_account_scoped_endpoints_bleiben_anonymous_closed(
+def test_account_scoped_endpoints_remain_closed_to_anonymous(
     scenario, method: str, path: str
 ) -> None:  # type: ignore[no-untyped-def]
     response = scenario["client"].request(method, path, json={})
@@ -758,7 +768,7 @@ def test_account_scoped_endpoints_bleiben_anonymous_closed(
     assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
 
 
-def test_public_endpoints_verlangen_no_token(scenario) -> None:  # type: ignore[no-untyped-def]
-    "the countercheck: these endpoints lead to a token and remain public."
+def test_public_endpoints_require_no_token(scenario) -> None:  # type: ignore[no-untyped-def]
+    "The countercheck: these endpoints lead to a token and remain public."
     for path in ("/api/v1/health", "/api/v1/health/ready"):
         assert scenario["client"].get(path).status_code == 200
