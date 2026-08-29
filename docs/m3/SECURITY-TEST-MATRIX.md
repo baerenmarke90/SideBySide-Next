@@ -102,7 +102,7 @@ After M3-D03, test:
 
 ### Tenant / Write
 
-- Cross-Space CRUD negative.
+- Cross-Space CRUD is rejected.
 - partner write according to M3-D01.
 - no automatic deduplication of similarly named Places if M3-D07 confirms this.
 
@@ -209,7 +209,7 @@ Mandatory matrix:
 | Actor | Operation | Expected result |
 |---|---|---|
 | Owner | create/list/get/update/delete | allowed |
-| Partner in same Space | list | own Notes only; never partner-owner Notes |
+| Partner in same Space | list | own Notes only; never the partner's Notes |
 | Partner with foreign Note ID | get/update/delete | identical 404 |
 | Account without Space Membership | all | 404/Tenant denial |
 | Owner from another Space | get through wrong Space | 404 |
@@ -249,7 +249,7 @@ A test may store an intentionally unreachable/internal URL and confirm that netw
 Use the same Concurrency matrix as Shared Collection, plus:
 
 - no shared position space,
-- no partner-stock IDs in Conflict/Validation details,
+- no IDs from the partner's private data set in Conflict/Validation details,
 - Parent owner condition is part of every Child query.
 
 ## 12. Privacy leak matrix
