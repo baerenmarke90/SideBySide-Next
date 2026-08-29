@@ -76,6 +76,7 @@ def engine() -> Iterator[Engine]:
     # tests pass or fail accidentally depending on prior imports.
     from sidebyside.attachments import binding as _binding  # noqa: F401
     from sidebyside.attachments import models as _attachments  # noqa: F401
+    from sidebyside.chapters import models as _chapters  # noqa: F401
     from sidebyside.comments import models as _comments  # noqa: F401
     from sidebyside.db.base import Base
     from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
@@ -88,6 +89,7 @@ def engine() -> Iterator[Engine]:
     from sidebyside.places import models as _places  # noqa: F401
     from sidebyside.plans import models as _plans  # noqa: F401
     from sidebyside.profiles import models as _profiles  # noqa: F401
+    from sidebyside.relations import models as _relations  # noqa: F401
     from sidebyside.relationship import models as _relationship  # noqa: F401
     from sidebyside.wishes import models as _wishes  # noqa: F401
 
