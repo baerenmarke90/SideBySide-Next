@@ -1,12 +1,11 @@
 """PostgreSQL/HTTP acceptance tests for the M3-S3 place slice.
 
-The Schwerpunkt is on drei Zusicherungen from M3-D06 until M3-D08.
+The focus is on three guarantees from M3-D06 through M3-D08.
 
-Coordinates are a Couple, liegen in ihren Grenzen and are on sechs
-Nachkommastellen persistiert. It exists no Deduplizierung: zwei Places with
-demselben Namen remain zwei Places. And a Place-Delete entfernt exactly the
-Ort; Plans, the on it zeigen, verlieren the Zuordnung and remain
-bestehen.
+Coordinates form a pair, stay within their bounds, and persist at six decimal
+places. There is no deduplication: two places with the same name remain two
+places. Deleting a place removes exactly that place; plans referencing it lose
+the association and continue to exist.
 """
 
 from __future__ import annotations
@@ -28,8 +27,8 @@ from tests.conftest import auth, make_account, make_space, requires_database, si
 
 pytestmark = [pytest.mark.integration, requires_database]
 
-# Intentionally echte Werte in Testdaten; the Punkt mehrerer Tests is, that
-# exactly it nirgends auftauchen, where it not hingehoeren.
+# Intentionally real values in test data. Several tests ensure these values do
+# not appear on surfaces where they do not belong.
 BERLIN_LAT = 52.520008
 BERLIN_LON = 13.404954
 SECRET_ADDRESS = "Eine Adresse, die nicht in Ereignisse gehoert."
@@ -47,21 +46,19 @@ def body(
     latitude: float | None = BERLIN_LAT,
     longitude: float | None = BERLIN_LON,
 ) -> dict[str, Any]:
-    """A create request body.
+    """Build a create request body.
 
-    `description` and `address` are weggelassen instead of on `null`
-    gesetzt; during Create unterscheidet the Contract the both not and
-    rejects an explicit `null` (as with Memory and Milestone).
-    The Coordinates are the bewusste Gegenfall: it duerfen ausdruecklich
-    `null` be, weil it a Couple bilden and a Client it oft as Couple
-    fuehrt.
+    `description` and `address` are omitted instead of being set to `null`.
+    During create, the contract rejects explicit `null` for these fields, as it
+    does for Memory and Milestone. Coordinates are deliberately different: they
+    may explicitly be `null` because clients commonly handle them as a pair.
     """
-    gesendet: dict[str, Any] = {"name": name, "latitude": latitude, "longitude": longitude}
+    payload: dict[str, Any] = {"name": name, "latitude": latitude, "longitude": longitude}
     if description is not None:
-        gesendet["description"] = description
+        payload["description"] = description
     if address is not None:
-        gesendet["address"] = address
-    return gesendet
+        payload["address"] = address
+    return payload
 
 
 def if_match(token: str, version: int) -> dict[str, str]:
@@ -82,10 +79,10 @@ def couple(session: Session):  # type: ignore[no-untyped-def]
         "anna": anna,
         "ben": ben,
         "space": space,
-        "fremder_space": foreign_space,
+        "foreign_space": foreign_space,
         "token_a": sign_in(session, anna),
         "token_b": sign_in(session, ben),
-        "token_fremd": sign_in(session, foreign),
+        "foreign_token": sign_in(session, foreign),
     }
 
 
@@ -102,55 +99,60 @@ def create_place(  # type: ignore[no-untyped-def]
 
 
 class TestCrud:
-    def test_anlegen_lesen_change_delete(  # type: ignore[no-untyped-def]
+    def test_create_read_update_delete(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         created = create_place(client, couple)
         assert created.status_code == 201
-        o = created.json()
-        assert UUID(o["id"]).version == 7
-        assert o["name"] == "Unser Cafe"
-        assert o["description"] == "Ecktisch am Fenster."
-        assert o["address"] == "Beispielstrasse 1"
-        assert o["latitude"] == BERLIN_LAT
-        assert o["longitude"] == BERLIN_LON
-        assert o["createdBy"] == str(couple["anna"].id)
-        assert o["capabilities"] == {"canEdit": True, "canDelete": True, "canComment": False}
-        assert "privacyClass" not in o
+        place = created.json()
+        assert UUID(place["id"]).version == 7
+        assert place["name"] == "Unser Cafe"
+        assert place["description"] == "Ecktisch am Fenster."
+        assert place["address"] == "Beispielstrasse 1"
+        assert place["latitude"] == BERLIN_LAT
+        assert place["longitude"] == BERLIN_LON
+        assert place["createdBy"] == str(couple["anna"].id)
+        assert place["capabilities"] == {
+            "canEdit": True,
+            "canDelete": True,
+            "canComment": False,
+        }
+        assert "privacyClass" not in place
         assert created.headers["ETag"] == '"1"'
 
         updated = client.patch(
-            f"{path(couple['space'].id)}/{o['id']}",
+            f"{path(couple['space'].id)}/{place['id']}",
             json={"name": "  Unser Stammcafe  ", "description": None},
             headers=if_match(couple["token_a"], 1),
         )
         assert updated.status_code == 200
         assert updated.json()["name"] == "Unser Stammcafe"
         assert updated.json()["description"] is None
-        # Unberuehrte Felder remain stehen.
+        # Untouched fields remain unchanged.
         assert updated.json()["latitude"] == BERLIN_LAT
 
         deleted = client.delete(
-            f"{path(couple['space'].id)}/{o['id']}", headers=if_match(couple["token_a"], 2)
+            f"{path(couple['space'].id)}/{place['id']}",
+            headers=if_match(couple["token_a"], 2),
         )
         assert deleted.status_code == 204
-        danach = client.get(
-            f"{path(couple['space'].id)}/{o['id']}", headers=auth(couple["token_a"])
+        afterwards = client.get(
+            f"{path(couple['space'].id)}/{place['id']}", headers=auth(couple["token_a"])
         )
-        assert danach.status_code == 404
-        assert danach.json()["code"] == "PLACE_NOT_FOUND"
+        assert afterwards.status_code == 404
+        assert afterwards.json()["code"] == "PLACE_NOT_FOUND"
 
-    def test_the_partner_may_change_and_createdby_remains(  # type: ignore[no-untyped-def]
+    def test_partner_may_change_place_and_created_by_remains(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         "M3-D01 applies to Place, Wish, and Plan alike."
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         updated = client.patch(
-            f"{path(couple['space'].id)}/{o['id']}",
+            f"{path(couple['space'].id)}/{place['id']}",
             json={"name": "Von Ben umbenannt"},
             headers=if_match(couple["token_b"], 1),
         )
@@ -169,52 +171,52 @@ class TestCrud:
         client,
         couple,
     ) -> None:
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         client.patch(
-            f"{path(couple['space'].id)}/{o['id']}",
+            f"{path(couple['space'].id)}/{place['id']}",
             json={"name": "Erste Aenderung"},
             headers=if_match(couple["token_a"], 1),
         )
         second = client.patch(
-            f"{path(couple['space'].id)}/{o['id']}",
+            f"{path(couple['space'].id)}/{place['id']}",
             json={"name": "Zweite Aenderung"},
             headers=if_match(couple["token_a"], 1),
         )
         assert second.status_code == 409
         assert second.json()["code"] == "RESOURCE_VERSION_CONFLICT"
 
-    def test_the_list_shows_neueste_first(  # type: ignore[no-untyped-def]
+    def test_list_shows_newest_first(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        erster = create_place(client, couple, name="Erster").json()
-        zweiter = create_place(client, couple, name="Zweiter").json()
-        seite = client.get(path(couple["space"].id), headers=auth(couple["token_a"])).json()
-        assert [e["id"] for e in seite["items"]] == [zweiter["id"], erster["id"]]
+        first = create_place(client, couple, name="Erster").json()
+        second = create_place(client, couple, name="Zweiter").json()
+        page = client.get(path(couple["space"].id), headers=auth(couple["token_a"])).json()
+        assert [entry["id"] for entry in page["items"]] == [second["id"], first["id"]]
 
-    def test_the_cursor_applies_only_in_its_space(  # type: ignore[no-untyped-def]
+    def test_cursor_applies_only_in_its_space(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         create_place(client, couple, name="Erster")
         create_place(client, couple, name="Zweiter")
-        seite = client.get(
+        page = client.get(
             f"{path(couple['space'].id)}?limit=1", headers=auth(couple["token_a"])
         ).json()
         response = client.get(
-            f"{path(couple['fremder_space'].id)}?limit=1&cursor={seite['nextCursor']}",
+            f"{path(couple['foreign_space'].id)}?limit=1&cursor={page['nextCursor']}",
             headers=auth(couple["token_b"]),
         )
         assert response.status_code == 400
         assert response.json()["code"] == "INVALID_CURSOR"
 
 
-class TestKoordinaten:
-    "M3-D06: both or no, in ihren Grenzen, sechs Nachkommastellen."
+class TestCoordinates:
+    "M3-D06: both coordinates or neither, bounded and stored at six decimal places."
 
-    def test_a_place_without_coordinates_is_valid(  # type: ignore[no-untyped-def]
+    def test_place_without_coordinates_is_valid(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
@@ -228,16 +230,16 @@ class TestKoordinaten:
         assert response.json()["longitude"] is None
         assert response.json()["address"] is None
 
-    def test_a_explicit_null_couple_is_erlaubt(  # type: ignore[no-untyped-def]
+    def test_explicit_null_coordinate_pair_is_allowed(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        """A client that treats the coordinates as a pair sends both values.
+        """A client that treats coordinates as a pair sends both values.
 
-        For `description` and `address` applies the not: there weist the
-        The create contract rejects an explicit `null`, as with Memory and
-        Milestone therefore.
+        This does not apply to `description` and `address`: the create contract
+        rejects explicit `null` for those fields, as it does for Memory and
+        Milestone.
         """
         response = client.post(
             path(couple["space"].id),
@@ -253,7 +255,7 @@ class TestKoordinaten:
         )
         assert with_null_text.status_code == 422
 
-    def test_a_address_without_coordinates_is_valid(  # type: ignore[no-untyped-def]
+    def test_address_without_coordinates_is_valid(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
@@ -272,7 +274,7 @@ class TestKoordinaten:
         assert response.json()["latitude"] == BERLIN_LAT
 
     @pytest.mark.parametrize("missing", ["latitude", "longitude"])
-    def test_a_halbe_coordinate_is_rejected(  # type: ignore[no-untyped-def]
+    def test_partial_coordinate_pair_is_rejected(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
@@ -291,7 +293,7 @@ class TestKoordinaten:
             (0.0, -180.000001, "PLACE_LONGITUDE_INVALID"),
         ],
     )
-    def test_values_outside_the_grenzen(  # type: ignore[no-untyped-def]
+    def test_values_outside_bounds(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
@@ -307,7 +309,7 @@ class TestKoordinaten:
         ("latitude", "longitude"),
         [(90.0, 180.0), (-90.0, -180.0), (0.0, 0.0)],
     )
-    def test_the_boundary_values_selbst_are_valid(  # type: ignore[no-untyped-def]
+    def test_boundary_values_are_valid(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
@@ -319,15 +321,16 @@ class TestKoordinaten:
         assert response.json()["latitude"] == latitude
         assert response.json()["longitude"] == longitude
 
-    def test_more_stellen_werden_on_sechs_gerundet(  # type: ignore[no-untyped-def]
+    def test_extra_decimal_places_are_rounded_to_six(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        """A Sensor liefert more; stored are sechs Stellen.
+        """A sensor may provide greater precision; storage keeps six places.
 
-        Abweisen would be here wrong; the Client has nothing wrong gemacht.
+        Rejecting extra precision would be incorrect because the client did not
+        provide invalid coordinates.
         """
         response = create_place(client, couple, latitude=52.5200081234, longitude=13.4049544321)
         assert response.status_code == 201
@@ -338,14 +341,14 @@ class TestKoordinaten:
         assert row.latitude == Decimal("52.520008")
         assert row.longitude == Decimal("13.404954")
 
-    def test_coordinates_koennen_nachgetragen_werden(  # type: ignore[no-untyped-def]
+    def test_coordinates_can_be_added_later(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        o = create_place(client, couple, latitude=None, longitude=None).json()
+        place = create_place(client, couple, latitude=None, longitude=None).json()
         response = client.patch(
-            f"{path(couple['space'].id)}/{o['id']}",
+            f"{path(couple['space'].id)}/{place['id']}",
             json={"latitude": BERLIN_LAT, "longitude": BERLIN_LON},
             headers=if_match(couple["token_a"], 1),
         )
@@ -357,9 +360,9 @@ class TestKoordinaten:
         client,
         couple,
     ) -> None:
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         response = client.patch(
-            f"{path(couple['space'].id)}/{o['id']}",
+            f"{path(couple['space'].id)}/{place['id']}",
             json={"latitude": None, "longitude": None},
             headers=if_match(couple["token_a"], 1),
         )
@@ -367,15 +370,15 @@ class TestKoordinaten:
         assert response.json()["latitude"] is None
         assert response.json()["longitude"] is None
 
-    def test_a_patch_on_only_a_coordinate_is_rejected(  # type: ignore[no-untyped-def]
+    def test_patch_of_only_one_coordinate_is_rejected(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        "Otherwise PATCH would provide a path to a partial coordinate."
-        o = create_place(client, couple).json()
+        "Otherwise PATCH would provide a path to a partial coordinate pair."
+        place = create_place(client, couple).json()
         response = client.patch(
-            f"{path(couple['space'].id)}/{o['id']}",
+            f"{path(couple['space'].id)}/{place['id']}",
             json={"latitude": None},
             headers=if_match(couple["token_a"], 1),
         )
@@ -390,66 +393,66 @@ class TestKoordinaten:
             "UPDATE places SET longitude = 181.0 WHERE id = :id",
         ],
     )
-    def test_the_database_keeps_the_invariants_auch_without_the_dienst(
+    def test_database_keeps_invariants_without_service(
         self, client, couple, session, sql: str
     ) -> None:  # type: ignore[no-untyped-def]
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         with pytest.raises(IntegrityError), session.begin_nested():
-            session.execute(text(sql), {"id": o["id"]})
+            session.execute(text(sql), {"id": place["id"]})
 
 
-class TestKeineDeduplizierung:
-    "M3-D07: zwei same Places are zwei Places."
+class TestNoDeduplication:
+    "M3-D07: two identical places are still two places."
 
-    def test_derselbe_name_and_same_coordinates_create_zwei_places(  # type: ignore[no-untyped-def]
+    def test_same_name_and_coordinates_create_two_places(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        erster = create_place(client, couple).json()
-        zweiter = create_place(client, couple).json()
-        assert erster["id"] != zweiter["id"]
+        first = create_place(client, couple).json()
+        second = create_place(client, couple).json()
+        assert first["id"] != second["id"]
 
-        seite = client.get(path(couple["space"].id), headers=auth(couple["token_a"])).json()
-        assert len(seite["items"]) == 2
+        page = client.get(path(couple["space"].id), headers=auth(couple["token_a"])).json()
+        assert len(page["items"]) == 2
 
 
-class TestPlanZuordnung:
-    "M3-D08/D31: `Plan.placeId` is the einzige Plan/Place-Wahrheit."
+class TestPlanAssociation:
+    "M3-D08/D31: `Plan.placeId` is the only source of truth for Plan/Place association."
 
-    def _plan(self, client, couple, **felder):  # type: ignore[no-untyped-def]
+    def _plan(self, client, couple, **fields):  # type: ignore[no-untyped-def]
         return client.post(
             f"/api/v1/spaces/{couple['space'].id}/plans",
-            json={"title": "Abendessen", **felder},
+            json={"title": "Abendessen", **fields},
             headers=auth(couple["token_a"]),
         )
 
-    def test_a_plan_can_directly_with_place_entstehen(  # type: ignore[no-untyped-def]
+    def test_plan_can_be_created_with_place(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        o = create_place(client, couple).json()
-        plan = self._plan(client, couple, placeId=o["id"])
+        place = create_place(client, couple).json()
+        plan = self._plan(client, couple, placeId=place["id"])
         assert plan.status_code == 201
-        assert plan.json()["placeId"] == o["id"]
+        assert plan.json()["placeId"] == place["id"]
 
-    def test_the_place_can_later_gesetzt_and_cleared_werden(  # type: ignore[no-untyped-def]
+    def test_place_can_be_set_later_and_cleared(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         plan = self._plan(client, couple).json()
         assert plan["placeId"] is None
 
-        gesetzt = client.patch(
+        assigned = client.patch(
             f"/api/v1/spaces/{couple['space'].id}/plans/{plan['id']}",
-            json={"placeId": o["id"]},
+            json={"placeId": place["id"]},
             headers=if_match(couple["token_a"], 1),
         )
-        assert gesetzt.status_code == 200
-        assert gesetzt.json()["placeId"] == o["id"]
+        assert assigned.status_code == 200
+        assert assigned.json()["placeId"] == place["id"]
 
         cleared = client.patch(
             f"/api/v1/spaces/{couple['space'].id}/plans/{plan['id']}",
@@ -466,7 +469,7 @@ class TestPlanZuordnung:
         session,
     ) -> None:
         foreign_place = client.post(
-            path(couple["fremder_space"].id), json=body(), headers=auth(couple["token_b"])
+            path(couple["foreign_space"].id), json=body(), headers=auth(couple["token_b"])
         ).json()
 
         response = self._plan(client, couple, placeId=foreign_place["id"])
@@ -474,25 +477,25 @@ class TestPlanZuordnung:
         assert response.json()["code"] == "PLACE_NOT_FOUND"
         assert list(session.execute(select(Plan)).scalars()) == []
 
-    def test_a_unknown_and_a_foreign_id_klingen_gleich(  # type: ignore[no-untyped-def]
+    def test_unknown_and_foreign_ids_look_the_same(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         foreign_place = client.post(
-            path(couple["fremder_space"].id), json=body(), headers=auth(couple["token_b"])
+            path(couple["foreign_space"].id), json=body(), headers=auth(couple["token_b"])
         ).json()
         unknown = self._plan(client, couple, placeId=str(uuid4()))
         foreign = self._plan(client, couple, placeId=foreign_place["id"])
         assert unknown.status_code == foreign.status_code == 404
         assert unknown.json() == foreign.json()
 
-    def test_a_konvertierung_may_the_place_gleich_mitgeben(  # type: ignore[no-untyped-def]
+    def test_conversion_may_include_place_immediately(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         wish = client.post(
             f"/api/v1/spaces/{couple['space'].id}/wishes",
             json={"title": "Essen gehen"},
@@ -501,60 +504,60 @@ class TestPlanZuordnung:
 
         response = client.post(
             f"/api/v1/spaces/{couple['space'].id}/wishes/{wish['id']}/plan",
-            json={"placeId": o["id"]},
+            json={"placeId": place["id"]},
             headers=if_match(couple["token_a"], 1),
         )
         assert response.status_code == 201
-        assert response.json()["plan"]["placeId"] == o["id"]
+        assert response.json()["plan"]["placeId"] == place["id"]
 
 
 class TestDelete:
-    "M3-D06, Abschnitt 9: the Ort works, the Originale remain."
+    "M3-D06, section 9: the place is removed while original resources remain."
 
-    def test_the_plan_survives_its_place_and_gets_a_new_version(
-        self, client, couple, session
-    ) -> None:  # type: ignore[no-untyped-def]
-        o = create_place(client, couple).json()
+    def test_plan_survives_its_place_and_gets_new_version(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        place = create_place(client, couple).json()
         plan = client.post(
             f"/api/v1/spaces/{couple['space'].id}/plans",
-            json={"title": "Abendessen", "placeId": o["id"]},
+            json={"title": "Abendessen", "placeId": place["id"]},
             headers=auth(couple["token_a"]),
         ).json()
         assert plan["version"] == 1
 
         removed = client.delete(
-            f"{path(couple['space'].id)}/{o['id']}", headers=if_match(couple["token_a"], 1)
+            f"{path(couple['space'].id)}/{place['id']}",
+            headers=if_match(couple["token_a"], 1),
         )
         assert removed.status_code == 204
 
-        danach = client.get(
+        afterwards = client.get(
             f"/api/v1/spaces/{couple['space'].id}/plans/{plan['id']}",
             headers=auth(couple["token_a"]),
         ).json()
-        assert danach["placeId"] is None
-        assert danach["title"] == "Abendessen"
-        # The Plan has itself changed; and sagt the therefore.
-        assert danach["version"] == 2
+        assert afterwards["placeId"] is None
+        assert afterwards["title"] == "Abendessen"
+        # The plan changed, so its version communicates that change.
+        assert afterwards["version"] == 2
 
-    def test_a_client_with_altem_stand_gets_a_konflikt(  # type: ignore[no-untyped-def]
+    def test_client_with_stale_state_gets_conflict(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        """The eigentliche Reason for the neue Version.
+        """This is why place deletion increments the plan version.
 
-        A stilles `ON DELETE SET NULL` would the Ort under the Partner
-        wegziehen, without that be naechster Schreibzugriff each auffiele.
+        A silent `ON DELETE SET NULL` would change the place association without
+        allowing the partner's next stale write to detect the change.
         """
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         plan = client.post(
             f"/api/v1/spaces/{couple['space'].id}/plans",
-            json={"title": "Abendessen", "placeId": o["id"]},
+            json={"title": "Abendessen", "placeId": place["id"]},
             headers=auth(couple["token_a"]),
         ).json()
 
         client.delete(
-            f"{path(couple['space'].id)}/{o['id']}", headers=if_match(couple["token_a"], 1)
+            f"{path(couple['space'].id)}/{place['id']}",
+            headers=if_match(couple["token_a"], 1),
         )
 
         response = client.patch(
@@ -565,35 +568,36 @@ class TestDelete:
         assert response.status_code == 409
         assert response.json()["code"] == "RESOURCE_VERSION_CONFLICT"
 
-    def test_mehrere_plans_werden_all_cleared(  # type: ignore[no-untyped-def]
+    def test_multiple_plans_are_all_cleared(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         for title in ("Erster", "Zweiter", "Dritter"):
             client.post(
                 f"/api/v1/spaces/{couple['space'].id}/plans",
-                json={"title": title, "placeId": o["id"]},
+                json={"title": title, "placeId": place["id"]},
                 headers=auth(couple["token_a"]),
             )
 
         client.delete(
-            f"{path(couple['space'].id)}/{o['id']}", headers=if_match(couple["token_a"], 1)
+            f"{path(couple['space'].id)}/{place['id']}",
+            headers=if_match(couple["token_a"], 1),
         )
 
         session.expire_all()
         plans = list(session.execute(select(Plan)).scalars())
         assert len(plans) == 3
-        assert all(p.place_id is None for p in plans)
+        assert all(plan.place_id is None for plan in plans)
 
-    def test_a_plan_without_place_remains_unberuehrt(  # type: ignore[no-untyped-def]
+    def test_plan_without_place_remains_untouched(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         without_place = client.post(
             f"/api/v1/spaces/{couple['space'].id}/plans",
             json={"title": "Ohne Ort"},
@@ -601,27 +605,28 @@ class TestDelete:
         ).json()
 
         client.delete(
-            f"{path(couple['space'].id)}/{o['id']}", headers=if_match(couple["token_a"], 1)
+            f"{path(couple['space'].id)}/{place['id']}",
+            headers=if_match(couple["token_a"], 1),
         )
 
-        danach = client.get(
+        afterwards = client.get(
             f"/api/v1/spaces/{couple['space'].id}/plans/{without_place['id']}",
             headers=auth(couple["token_a"]),
         ).json()
-        assert danach["version"] == 1
+        assert afterwards["version"] == 1
 
-    def test_the_database_allows_no_plan_on_a_deleted_place_zeigen(
+    def test_database_allows_no_plan_to_reference_deleted_place(
         self, client, couple, session
     ) -> None:  # type: ignore[no-untyped-def]
         "The foreign key is the boundary if the service ever fails."
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         client.post(
             f"/api/v1/spaces/{couple['space'].id}/plans",
-            json={"title": "Abendessen", "placeId": o["id"]},
+            json={"title": "Abendessen", "placeId": place["id"]},
             headers=auth(couple["token_a"]),
         )
 
-        session.execute(text("DELETE FROM places WHERE id = :id"), {"id": o["id"]})
+        session.execute(text("DELETE FROM places WHERE id = :id"), {"id": place["id"]})
         session.flush()
         session.expire_all()
 
@@ -630,14 +635,14 @@ class TestDelete:
         assert plan.space_id == couple["space"].id
 
 
-class TestMandant:
-    def test_a_foreign_sees_the_space_not(  # type: ignore[no-untyped-def]
+class TestTenantIsolation:
+    def test_foreign_actor_does_not_see_space(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         create_place(client, couple)
-        response = client.get(path(couple["space"].id), headers=auth(couple["token_fremd"]))
+        response = client.get(path(couple["space"].id), headers=auth(couple["foreign_token"]))
         assert response.status_code == 404
         assert response.json()["code"] == "SPACE_NOT_FOUND"
 
@@ -646,46 +651,48 @@ class TestMandant:
         client,
         couple,
     ) -> None:
-        o = create_place(client, couple).json()
-        gelesen = client.get(
-            f"{path(couple['fremder_space'].id)}/{o['id']}", headers=auth(couple["token_b"])
+        place = create_place(client, couple).json()
+        read_response = client.get(
+            f"{path(couple['foreign_space'].id)}/{place['id']}",
+            headers=auth(couple["token_b"]),
         )
-        assert gelesen.status_code == 404
-        assert gelesen.json()["code"] == "PLACE_NOT_FOUND"
+        assert read_response.status_code == 404
+        assert read_response.json()["code"] == "PLACE_NOT_FOUND"
 
-    def test_a_foreign_write_attempt_changes_nothing(  # type: ignore[no-untyped-def]
+    def test_foreign_write_attempt_changes_nothing(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        o = create_place(client, couple).json()
+        place = create_place(client, couple).json()
         response = client.patch(
-            f"{path(couple['fremder_space'].id)}/{o['id']}",
+            f"{path(couple['foreign_space'].id)}/{place['id']}",
             json={"name": "Uebernommen"},
             headers=if_match(couple["token_b"], 1),
         )
         assert response.status_code == 404
 
         session.expire_all()
-        assert session.get(Place, UUID(o["id"])).payload.name == "Unser Cafe"
+        assert session.get(Place, UUID(place["id"])).payload.name == "Unser Cafe"
 
 
 class TestPrivacy:
-    def test_events_enthalten_weder_address_noch_coordinates(  # type: ignore[no-untyped-def]
+    def test_events_contain_neither_address_nor_coordinates(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        o = create_place(client, couple, address=SECRET_ADDRESS).json()
+        place = create_place(client, couple, address=SECRET_ADDRESS).json()
         client.patch(
-            f"{path(couple['space'].id)}/{o['id']}",
+            f"{path(couple['space'].id)}/{place['id']}",
             json={"name": "Neu benannt"},
             headers=if_match(couple["token_a"], 1),
         )
         client.delete(
-            f"{path(couple['space'].id)}/{o['id']}", headers=if_match(couple["token_a"], 2)
+            f"{path(couple['space'].id)}/{place['id']}",
+            headers=if_match(couple["token_a"], 2),
         )
 
         rows = list(
@@ -693,7 +700,7 @@ class TestPrivacy:
                 select(OutboxEvent).where(OutboxEvent.subject_type == "place")
             ).scalars()
         )
-        assert [z.event_type for z in rows] == [
+        assert [row.event_type for row in rows] == [
             "PLACE_CREATED",
             "PLACE_UPDATED",
             "PLACE_DELETED",
@@ -705,7 +712,7 @@ class TestPrivacy:
             assert "13.404954" not in raw
             assert row.resource_version is not None
 
-    def test_a_error_response_names_no_coordinate(  # type: ignore[no-untyped-def]
+    def test_error_response_names_no_coordinate(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,

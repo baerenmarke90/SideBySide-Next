@@ -61,6 +61,17 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             )
             self.assertEqual(check_file(path), [])
 
+    def test_english_camel_case_and_constant_identifiers_are_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            path.write_text(
+                "class TestRegistration:\n"
+                "    pass\n\n"
+                "SPACE_ENDPOINTS = ()\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(check_file(path), [])
+
     def test_english_status_drift_term_is_valid(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "example.md"
@@ -99,6 +110,43 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             self.assertTrue(any("upload_hoch" in finding for finding in findings))
             self.assertTrue(any("angekuendigt" in finding for finding in findings))
             self.assertTrue(any("CANARY_FREMD" in finding for finding in findings))
+
+    def test_camel_case_and_uppercase_residual_identifiers_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "example.py"
+            path.write_text(
+                "class TestRegistrierung:\n"
+                "    pass\n\n"
+                "class TestSitzungsverwaltung:\n"
+                "    pass\n\n"
+                "class TestKoordinaten:\n"
+                "    pass\n\n"
+                "class TestAnlegen:\n"
+                "    pass\n\n"
+                "class TestPruefen:\n"
+                "    pass\n\n"
+                "SPACE_ENDPUNKTE = ()\n"
+                "DETAIL_ENDPUNKTE = ()\n"
+                "SCHREIBENDE_ENDPUNKTE = ()\n"
+                "def test_session_data_returns_beide_token():\n"
+                "    pass\n",
+                encoding="utf-8",
+            )
+            findings = check_file(path)
+            expected_markers = (
+                "TestRegistrierung",
+                "TestSitzungsverwaltung",
+                "TestKoordinaten",
+                "TestAnlegen",
+                "TestPruefen",
+                "SPACE_ENDPUNKTE",
+                "DETAIL_ENDPUNKTE",
+                "SCHREIBENDE_ENDPUNKTE",
+                "test_session_data_returns_beide_token",
+            )
+            self.assertEqual(len(findings), len(expected_markers))
+            for marker in expected_markers:
+                self.assertTrue(any(marker in finding for finding in findings), marker)
 
     def test_hybrid_engineering_prose_from_backend_migration_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
