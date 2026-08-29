@@ -4,7 +4,7 @@
 This module deliberately complements ``engineering_language_audit.py`` rather
 than duplicating its source-code and identifier logic. Active documentation is
 scanned with the same engineering-prose detector while frozen review snapshots,
-stable repository link targets, and narrowly enumerated localized product copy
+stable repository link targets, and narrowly enumerated product-copy examples
 remain outside the migration boundary.
 """
 
@@ -24,10 +24,11 @@ DOCUMENTATION_ROOTS = (
 DOCUMENTATION_SUFFIXES = {".json", ".md", ".svg"}
 EXCLUDED_DOCUMENTATION_PREFIXES = (Path("docs/reviews"),)
 
-# Path-specific values are intentionally localized user-facing copy or
-# synthetic domain-content fixtures embedded in otherwise English technical
-# documentation. Exact-value exceptions keep the surrounding prose audited.
-ALLOWED_LOCALIZED_TEXTS_BY_PATH = {
+# Path-specific values are intentional localized product copy, synthetic domain
+# fixtures, or a narrowly identified English false-positive. Keeping these
+# exceptions value-based rather than excluding whole files leaves all
+# surrounding engineering prose under the audit.
+ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
     Path("design/m2/PLATFORM-HANDOFF.md"): (
         "Foto hinzufügen",
     ),
@@ -91,6 +92,91 @@ ALLOWED_LOCALIZED_TEXTS_BY_PATH = {
         "Mehr",
         "Moment festhalten",
     ),
+    Path("docs/ACCESSIBILITY-QA-MATRIX.md"): (
+        "Noch nicht gespeichert",
+    ),
+    Path("docs/API-UI-CONTRACTS.md"): (
+        "Nur für mich",
+    ),
+    Path("docs/COMPONENT-CONTRACTS.md"): (
+        "Nur für mich",
+        "Wird gespeichert",
+        "Noch nicht gespeichert",
+    ),
+    Path("docs/CONTENT-PRIVACY-GUIDELINES.md"): (
+        "Nur für mich",
+        "Geteilt",
+        "Mit Partner teilen",
+        "Mit Partner geteilt",
+        "Private Inhalte werden nicht für Produkt-Analytics verwendet.",
+        "Medien sind nicht öffentlich zugänglich.",
+        "SideBySide ist privacy-first gestaltet.",
+        "Ende-zu-Ende verschlüsselt",
+        "Nur ihr könnt das lesen",
+        "Vollständig anonym",
+        "Offline gespeichert und wird später synchronisiert",
+        "Dein Partner sieht diesen Inhalt nicht.",
+        "Für euch beide im gemeinsamen Space sichtbar.",
+        "Zeitlich geteilt",
+        "Erst verwenden, wenn Ablauf und Empfänger fachlich implementiert sind.",
+        "Dein Partner sieht diesen Moment nicht.",
+        "Der Moment erscheint in eurem gemeinsamen Bereich.",
+        "Wird gespeichert …",
+        "Foto wird hochgeladen …",
+        "Offline · Stand von {Zeit}",
+        "Noch nicht gespeichert. Verbinde dich mit dem Internet und versuche es erneut.",
+        "Dieser Inhalt wurde inzwischen geändert.",
+        "Dieser Inhalt ist nicht verfügbar.",
+        "Deine Sitzung ist abgelaufen. Melde dich erneut an.",
+        "Das waren viele Versuche. Probiere es in {Dauer} erneut.",
+        "Etwas ist schiefgelaufen",
+        "Gib der Erinnerung einen kurzen Titel.",
+        "Noch nicht gespeichert",
+        "Dein Entwurf bleibt hier erhalten. Verbinde dich mit dem Internet und versuche es erneut.",
+        "Inzwischen geändert",
+        "Dein Partner hat diesen Inhalt bearbeitet. Sieh dir die aktuelle Version an, bevor du erneut speicherst.",
+        "Inhalt nicht verfügbar",
+        "Er wurde möglicherweise entfernt oder du kannst ihn nicht öffnen.",
+        "Eure Story beginnt hier",
+        "Haltet einen gemeinsamen Moment fest, wenn es für euch passt.",
+        "Wähle ein Foto für diese Erinnerung aus. Ohne Zugriff kannst du die Erinnerung weiterhin ohne Bild speichern.",
+        "Gemeinsame Momente nicht verpassen",
+        "SideBySide kann dich an ausgewählte Termine erinnern. Sensible Inhalte bleiben in der Vorschau standardmäßig verborgen.",
+    ),
+    Path("docs/DESIGN-PRINCIPLES.md"): (
+        "Where am I?",
+        "Nur für mich",
+        "Mit Partner teilen",
+        "Standort aus",
+        "Zurück",
+        "Verschlüsselt übertragen",
+        "Ende-zu-Ende verschlüsselt",
+    ),
+    Path("docs/INFORMATION-ARCHITECTURE.md"): (
+        "Nur für mich",
+        "Mit Partner teilen",
+        "Geteilt",
+    ),
+    Path("docs/SCREEN-TEMPLATES.md"): (
+        "Noch nicht gespeichert",
+    ),
+    Path("docs/USER-FLOWS.md"): (
+        "Mit Partner geteilt",
+        "Noch nicht gespeichert",
+        "Nur für mich",
+        "Mit Partner teilen",
+        "Als Plan weiterführen",
+        "Noch nicht gespeichert. Verbinde dich mit dem Internet und versuche es erneut.",
+        "Offline gespeichert",
+        "wird später synchronisiert",
+        "Dieser Inhalt wurde inzwischen geändert.",
+    ),
+    Path("docs/UX-PATTERNS.md"): (
+        "Wird gespeichert",
+        "Noch nicht gespeichert",
+        "Nur für mich",
+        "Erinnerung endgültig löschen",
+    ),
     Path("docs/m2/DEMO-SCENARIO.md"): (
         "Sonnenaufgang am See",
         "Unser erster Pastateig",
@@ -112,12 +198,23 @@ ALLOWED_LOCALIZED_TEXTS_BY_PATH = {
     Path("docs/m2/SECURITY-TEST-MATRIX.md"): (
         "zuletzt geändert",
     ),
+    Path("specification/CLEAN-ROOM-MASTER-SPEC.md"): (
+        "SideBySide – die Paar-App, die euch gehört.",
+        "Eure Erinnerungen sind Ende-zu-Ende verschlüsselt – selbst SideBySide kann sie nicht lesen.",
+    ),
+    Path("specification/PRODUCT-SPEC.md"): (
+        "Die Paar-App, die euch gehört.",
+    ),
 }
 
 MARKDOWN_LINK_TARGET = re.compile(r"(?<=\]\()[^)]+(?=\))")
 REPO_LOCAL_MARKDOWN_TARGET = re.compile(
     r"(?:docs|design|specification)/[A-Za-z0-9_./-]+\.md#[A-Za-z0-9_-]+"
 )
+# ``mit`` is a German marker in prose, but uppercase MIT is a standard license
+# identifier in dependency tables and specifications. Match the identifier with
+# case sensitivity before running the case-insensitive prose detector.
+STANDARD_LICENSE_TOKEN = re.compile(r"\bMIT(?:-CMU)?\b")
 
 
 def _repo_relative_path(path: Path, repo_root: Path) -> Path:
@@ -129,8 +226,9 @@ def _repo_relative_path(path: Path, repo_root: Path) -> Path:
 
 def _sanitize_documentation_text(text: str, logical_path: Path) -> str:
     sanitized = text
-    for localized_text in ALLOWED_LOCALIZED_TEXTS_BY_PATH.get(logical_path, ()):
-        sanitized = sanitized.replace(localized_text, "")
+    for allowed_text in ALLOWED_DOCUMENTATION_TEXTS_BY_PATH.get(logical_path, ()):
+        sanitized = sanitized.replace(allowed_text, "")
+    sanitized = STANDARD_LICENSE_TOKEN.sub("", sanitized)
     sanitized = MARKDOWN_LINK_TARGET.sub("", sanitized)
     sanitized = REPO_LOCAL_MARKDOWN_TARGET.sub("", sanitized)
     return sanitized
@@ -143,9 +241,7 @@ def check_documentation_file(path: Path, repo_root: Path = Path(".")) -> list[st
     for line_number, line in enumerate(text.splitlines(), start=1):
         sanitized = _sanitize_documentation_text(line, logical_path)
         if _contains_marker(sanitized):
-            finding = _format_finding(logical_path, line_number, line)
-            print(finding, file=sys.stderr)
-            findings.append(finding)
+            findings.append(_format_finding(logical_path, line_number, line))
     return findings
 
 
@@ -176,6 +272,8 @@ def audit_documentation(repo_root: Path = Path(".")) -> list[str]:
 def main() -> int:
     findings = audit_documentation()
     if findings:
+        for finding in findings:
+            print(finding, file=sys.stderr)
         print(
             f"Found {len(findings)} likely non-English active-documentation occurrence(s).",
             file=sys.stderr,
