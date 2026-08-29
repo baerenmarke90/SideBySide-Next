@@ -1,7 +1,8 @@
 """Database connection and transaction boundary.
 
-One request is one transaction. It is committed at the end of the request or
-rolled back completely, never piecemeal during processing.
+One request is one transaction. It is committed at the end of route processing,
+before a successful response is exposed, or rolled back completely, never
+piecemeal during processing.
 
 This is required by the transactional outbox: domain mutation and event must
 become effective together or not at all.
@@ -110,6 +111,11 @@ def unit_of_work() -> Iterator[Session]:
 
 
 def get_session() -> Iterator[Session]:
-    """FastAPI route dependency."""
+    """FastAPI route dependency used with function scope.
+
+    The dependency exit commits through ``unit_of_work``. API declarations must
+    therefore use ``Depends(get_session, scope="function")`` so FastAPI runs
+    that exit before sending a success response.
+    """
     with unit_of_work() as session:
         yield session
