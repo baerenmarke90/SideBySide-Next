@@ -1,4 +1,11 @@
-import { type FormEvent, useCallback, useMemo, useState } from 'react';
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   useMutation,
   useQuery,
@@ -17,10 +24,13 @@ import type { StoryPage as StoryPageData } from './api/generated/models/StoryPag
 import type { TokenView } from './api/generated/models/TokenView';
 import { loadReferenceClientConfig } from './client/config';
 import {
+  createMemoryWithPreparedAttachments,
   createReferenceApis,
   loadAuthorizedImage,
-  runMemoryMediaStoryFlow,
+  prepareAttachment,
   signIn,
+  type AttachmentPreparationPhase,
+  type PreparedAttachment,
 } from './client/referenceFlow';
 import { StoryList } from './components/StoryList';
 import { useTranslation } from './i18n';
@@ -222,6 +232,20 @@ function StoryPage({
   );
 }
 
+type DraftAttachmentStatus =
+  | 'preparing'
+  | AttachmentPreparationPhase
+  | 'failed';
+
+interface DraftAttachment {
+  id: number;
+  file: File;
+  previewUrl: string;
+  status: DraftAttachmentStatus;
+  prepared?: PreparedAttachment;
+  error?: string;
+}
+
 function MemoryCreatePage({
   accessToken,
   apiBaseUrl,
@@ -235,10 +259,126 @@ function MemoryCreatePage({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [file, setFile] = useState<File | null>(null);
+  const [attachments, setAttachments] = useState<DraftAttachment[]>([]);
+  const attachmentsRef = useRef<DraftAttachment[]>([]);
+  const activeAttachmentIds = useRef(new Set<number>());
+  const attachmentSequence = useRef(0);
   const apis = useMemo(
     () => createReferenceApis(apiBaseUrl, accessToken),
     [apiBaseUrl, accessToken],
+  );
+
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+
+  useEffect(
+    () => () => {
+      activeAttachmentIds.current.clear();
+      attachmentsRef.current.forEach(({ previewUrl }) =>
+        URL.revokeObjectURL(previewUrl),
+      );
+    },
+    [],
+  );
+
+  function updateAttachment(
+    id: number,
+    update: (attachment: DraftAttachment) => DraftAttachment,
+  ) {
+    setAttachments((current) =>
+      current.map((attachment) =>
+        attachment.id === id ? update(attachment) : attachment,
+      ),
+    );
+  }
+
+  async function uploadDraft(attachment: DraftAttachment) {
+    activeAttachmentIds.current.add(attachment.id);
+    updateAttachment(attachment.id, (current) => ({
+      ...current,
+      status: 'uploading',
+      prepared: undefined,
+      error: undefined,
+    }));
+
+    try {
+      const prepared = await prepareAttachment(
+        apis,
+        apiBaseUrl,
+        accessToken,
+        spaceId,
+        attachment.file,
+        (phase) => {
+          if (!activeAttachmentIds.current.has(attachment.id)) return;
+          updateAttachment(attachment.id, (current) => ({
+            ...current,
+            status: phase,
+          }));
+        },
+      );
+      if (!activeAttachmentIds.current.has(attachment.id)) return;
+      updateAttachment(attachment.id, (current) => ({
+        ...current,
+        status: 'ready',
+        prepared,
+        error: undefined,
+      }));
+    } catch (error) {
+      if (!activeAttachmentIds.current.has(attachment.id)) return;
+      updateAttachment(attachment.id, (current) => ({
+        ...current,
+        status: 'failed',
+        prepared: undefined,
+        error: readableError(error, t('memory.uploadFailed')),
+      }));
+    }
+  }
+
+  function selectFiles(files: FileList | null) {
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      const attachment: DraftAttachment = {
+        id: ++attachmentSequence.current,
+        file,
+        previewUrl: URL.createObjectURL(file),
+        status: 'preparing',
+      };
+      activeAttachmentIds.current.add(attachment.id);
+      setAttachments((current) => [...current, attachment]);
+      void uploadDraft(attachment);
+    }
+  }
+
+  function removeAttachment(id: number) {
+    activeAttachmentIds.current.delete(id);
+    const attachment = attachmentsRef.current.find((item) => item.id === id);
+    if (attachment) URL.revokeObjectURL(attachment.previewUrl);
+    setAttachments((current) => current.filter((item) => item.id !== id));
+  }
+
+  function retryAttachment(attachment: DraftAttachment) {
+    activeAttachmentIds.current.add(attachment.id);
+    updateAttachment(attachment.id, (current) => ({
+      ...current,
+      status: 'preparing',
+      prepared: undefined,
+      error: undefined,
+    }));
+    void uploadDraft(attachment);
+  }
+
+  function clearDraftAttachments() {
+    activeAttachmentIds.current.clear();
+    attachmentsRef.current.forEach(({ previewUrl }) =>
+      URL.revokeObjectURL(previewUrl),
+    );
+    attachmentsRef.current = [];
+    setAttachments([]);
+  }
+
+  const uploadsPending = attachments.some(
+    (attachment) => attachment.status !== 'ready',
   );
 
   const mutation = useMutation({
@@ -246,20 +386,23 @@ function MemoryCreatePage({
       title,
       body,
       happenedOn,
+      preparedAttachments,
     }: {
       title: string;
       body: string;
       happenedOn?: Date;
+      preparedAttachments: PreparedAttachment[];
     }) =>
-      runMemoryMediaStoryFlow(
+      createMemoryWithPreparedAttachments(
         apis,
         apiBaseUrl,
         accessToken,
         spaceId,
         { title, body, happenedOn },
-        file ?? undefined,
+        preparedAttachments,
       ),
     onSuccess: async (result) => {
+      clearDraftAttachments();
       if (result.imageUrl?.startsWith('blob:')) {
         URL.revokeObjectURL(result.imageUrl);
       }
@@ -270,6 +413,7 @@ function MemoryCreatePage({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (uploadsPending) return;
     const data = new FormData(event.currentTarget);
     const happenedOnValue = String(data.get('happenedOn') || '');
     mutation.mutate({
@@ -278,7 +422,25 @@ function MemoryCreatePage({
       happenedOn: happenedOnValue
         ? new Date(`${happenedOnValue}T00:00:00Z`)
         : undefined,
+      preparedAttachments: attachments.flatMap((attachment) =>
+        attachment.prepared ? [attachment.prepared] : [],
+      ),
     });
+  }
+
+  function statusText(status: DraftAttachmentStatus): string {
+    switch (status) {
+      case 'preparing':
+        return t('memory.uploadPreparing');
+      case 'uploading':
+        return t('memory.uploadUploading');
+      case 'validating':
+        return t('memory.uploadValidating');
+      case 'ready':
+        return t('memory.uploadReady');
+      case 'failed':
+        return t('memory.uploadFailed');
+    }
   }
 
   return (
@@ -333,10 +495,13 @@ function MemoryCreatePage({
               id="image"
               name="image"
               type="file"
+              multiple
+              disabled={mutation.isPending}
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-              onChange={(event) =>
-                setFile(event.currentTarget.files?.[0] ?? null)
-              }
+              onChange={(event) => {
+                selectFiles(event.currentTarget.files);
+                event.currentTarget.value = '';
+              }}
             />
             <label className="file-picker" htmlFor="image">
               <span className="file-picker-icon" aria-hidden="true">
@@ -344,12 +509,67 @@ function MemoryCreatePage({
               </span>
               <span>
                 <strong>
-                  {file ? t('memory.photoSelected') : t('memory.photoSelect')}
+                  {attachments.length > 0
+                    ? t('memory.photoSelected')
+                    : t('memory.photoSelect')}
                 </strong>
-                <small>{file ? file.name : t('memory.photoFormats')}</small>
+                <small>
+                  {attachments.length > 0
+                    ? attachments.map(({ file }) => file.name).join(', ')
+                    : t('memory.photoFormats')}
+                </small>
               </span>
             </label>
           </div>
+
+          {attachments.length > 0 && (
+            <div className="attachment-draft-list" aria-live="polite">
+              {attachments.map((attachment) => (
+                <article className="attachment-draft" key={attachment.id}>
+                  <img
+                    className="attachment-draft-preview"
+                    src={attachment.previewUrl}
+                    alt={t('memory.previewAlt', { name: attachment.file.name })}
+                  />
+                  <div className="attachment-draft-details">
+                    <strong>{attachment.file.name}</strong>
+                    <span
+                      className={`attachment-status attachment-status-${attachment.status}`}
+                      role="status"
+                    >
+                      {statusText(attachment.status)}
+                    </span>
+                    {attachment.error && (
+                      <span className="attachment-error" role="alert">
+                        {attachment.error}
+                      </span>
+                    )}
+                    <div className="attachment-actions">
+                      {attachment.status === 'failed' && (
+                        <button
+                          type="button"
+                          className="secondary compact-action"
+                          onClick={() => retryAttachment(attachment)}
+                          disabled={mutation.isPending}
+                        >
+                          {t('common.retry')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="tertiary compact-action"
+                        onClick={() => removeAttachment(attachment.id)}
+                        disabled={mutation.isPending}
+                      >
+                        {t('common.remove')}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+              <p className="field-help">{t('memory.previewNotice')}</p>
+            </div>
+          )}
 
           <div
             className="sharing-note"
@@ -369,12 +589,20 @@ function MemoryCreatePage({
             <Link className="button-link secondary-link" to="/story">
               {t('common.cancel')}
             </Link>
-            <button type="submit" disabled={mutation.isPending}>
+            <button
+              type="submit"
+              disabled={mutation.isPending || uploadsPending}
+            >
               {mutation.isPending ? t('memory.saving') : t('memory.save')}
             </button>
           </div>
         </form>
 
+        {uploadsPending && attachments.length > 0 && (
+          <p className="status" role="status" aria-live="polite">
+            {t('memory.uploadsPending')}
+          </p>
+        )}
         {mutation.isPending && (
           <p className="status" role="status" aria-live="polite">
             {t('memory.processing')}
