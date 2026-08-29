@@ -21,7 +21,7 @@ from sidebyside.relations.service import RelationKind, TargetType
 router = APIRouter(tags=["chapter-relations"])
 
 
-class RelationTargets(ApiModel):
+class ChapterRelationTargets(ApiModel):
     items: list[UUID]
 
 
@@ -40,7 +40,7 @@ def _register(kind: RelationKind, *, singular: str, plural: str) -> None:
 
     @router.get(
         collection,
-        response_model=RelationTargets,
+        response_model=ChapterRelationTargets,
         operation_id=f"listChapter{plural}",
         responses=problem_responses(401, 404),
         name=f"list_chapter_{kind.slug}",
@@ -49,8 +49,8 @@ def _register(kind: RelationKind, *, singular: str, plural: str) -> None:
         authorization: Authorization,
         session: DbSession,
         chapter_id: Annotated[str, Path(alias="chapterId")],
-    ) -> RelationTargets:
-        return RelationTargets(
+    ) -> ChapterRelationTargets:
+        return ChapterRelationTargets(
             items=list(service.list_targets(session, authorization, chapter_id, kind))
         )
 
