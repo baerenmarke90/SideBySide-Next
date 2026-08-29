@@ -96,18 +96,16 @@ class ReferenceViewModel(
         }
     }
 
-    fun beginImageSelection(): Long? {
-        if (session == null) return null
-        imageEpoch += 1
-        return imageEpoch
-    }
+    fun beginImageSelection(): Long? = session?.let { sessionEpoch }
 
     fun selectImage(image: SelectedImage, selectionEpoch: Long) {
         val api = contract ?: return configurationError()
         val currentSession = session ?: return
         val spaceId = config.spaceId ?: return configurationError()
-        if (!isCurrentImageEpoch(selectionEpoch)) return
+        if (selectionEpoch != sessionEpoch) return
 
+        imageEpoch += 1
+        val draftEpoch = imageEpoch
         selectedImage = image
         preparedAttachment = null
         mutate {
@@ -121,7 +119,7 @@ class ReferenceViewModel(
         }
 
         viewModelScope.launch {
-            if (!isCurrentImageSelection(selectionEpoch, currentSession, image)) return@launch
+            if (!isCurrentImageSelection(draftEpoch, currentSession, image)) return@launch
             runCatching {
                 prepareAttachment(
                     api = api,
@@ -129,25 +127,26 @@ class ReferenceViewModel(
                     accessToken = currentSession.tokens.accessToken,
                     image = image,
                     onPhase = { phase ->
-                        if (!isCurrentImageSelection(selectionEpoch, currentSession, image)) return@prepareAttachment
-                        mutate {
-                            it.copy(
-                                imageUploadState = when (phase) {
-                                    AttachmentPreparationPhase.UPLOADING -> DraftUploadState.UPLOADING
-                                    AttachmentPreparationPhase.VALIDATING -> DraftUploadState.VALIDATING
-                                    AttachmentPreparationPhase.READY -> DraftUploadState.READY
-                                },
-                                status = when (phase) {
-                                    AttachmentPreparationPhase.UPLOADING -> message(R.string.ref_status_image_uploading)
-                                    AttachmentPreparationPhase.VALIDATING -> message(R.string.ref_status_image_validating)
-                                    AttachmentPreparationPhase.READY -> message(R.string.ref_status_image_ready)
-                                },
-                            )
+                        if (isCurrentImageSelection(draftEpoch, currentSession, image)) {
+                            mutate {
+                                it.copy(
+                                    imageUploadState = when (phase) {
+                                        AttachmentPreparationPhase.UPLOADING -> DraftUploadState.UPLOADING
+                                        AttachmentPreparationPhase.VALIDATING -> DraftUploadState.VALIDATING
+                                        AttachmentPreparationPhase.READY -> DraftUploadState.READY
+                                    },
+                                    status = when (phase) {
+                                        AttachmentPreparationPhase.UPLOADING -> message(R.string.ref_status_image_uploading)
+                                        AttachmentPreparationPhase.VALIDATING -> message(R.string.ref_status_image_validating)
+                                        AttachmentPreparationPhase.READY -> message(R.string.ref_status_image_ready)
+                                    },
+                                )
+                            }
                         }
                     },
                 )
             }.onSuccess { prepared ->
-                if (!isCurrentImageSelection(selectionEpoch, currentSession, image)) return@onSuccess
+                if (!isCurrentImageSelection(draftEpoch, currentSession, image)) return@onSuccess
                 preparedAttachment = prepared
                 mutate {
                     it.copy(
@@ -157,7 +156,7 @@ class ReferenceViewModel(
                     )
                 }
             }.onFailure {
-                if (!isCurrentImageSelection(selectionEpoch, currentSession, image)) return@onFailure
+                if (!isCurrentImageSelection(draftEpoch, currentSession, image)) return@onFailure
                 preparedAttachment = null
                 mutate {
                     it.copy(
@@ -171,7 +170,8 @@ class ReferenceViewModel(
     }
 
     fun setImageError(throwable: Throwable, selectionEpoch: Long) {
-        if (!isCurrentImageEpoch(selectionEpoch)) return
+        if (session == null || selectionEpoch != sessionEpoch) return
+        imageEpoch += 1
         selectedImage = null
         preparedAttachment = null
         val error = throwable.message?.takeIf(String::isNotBlank)?.let {
@@ -190,8 +190,7 @@ class ReferenceViewModel(
 
     fun retrySelectedImage() {
         val image = selectedImage ?: return
-        val epoch = beginImageSelection() ?: return
-        selectImage(image, epoch)
+        selectImage(image, sessionEpoch)
     }
 
     fun removeSelectedImage() {
@@ -317,9 +316,6 @@ class ReferenceViewModel(
             status = message(R.string.ref_status_logged_out),
         )
     }
-
-    private fun isCurrentImageEpoch(epoch: Long): Boolean =
-        session != null && imageEpoch == epoch
 
     private fun isCurrentImageSelection(
         epoch: Long,
