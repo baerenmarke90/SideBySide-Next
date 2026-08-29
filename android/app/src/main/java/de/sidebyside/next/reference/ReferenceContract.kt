@@ -21,7 +21,7 @@ data class SelectedImage(
 data class ReferenceFlowResult(
     val memory: MemoryDetail,
     val story: StoryPage,
-    val imageBytes: ByteArray,
+    val imageBytes: ByteArray?,
 )
 
 interface ReferenceContract {
