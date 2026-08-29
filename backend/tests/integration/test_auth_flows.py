@@ -307,7 +307,7 @@ class TestBegrenzung:
         )
 
         codes = []
-        for _ in range(rate_limit.SIGN_in.attempts + 2):
+        for _ in range(rate_limit.SIGN_IN.attempts + 2):
             codes.append(
                 client.post(
                     "/api/v1/auth/sign-in",
@@ -486,7 +486,7 @@ class TestProduktiveTransaktionsgrenze:
             == 201
         )
 
-        for _ in range(rate_limit.SIGN_in.attempts):
+        for _ in range(rate_limit.SIGN_IN.attempts):
             response = client.post(
                 "/api/v1/auth/sign-in",
                 json={"email": email, "password": "falsch-falsch"},
@@ -509,7 +509,7 @@ class TestProduktiveTransaktionsgrenze:
                     RateLimitEvent.key_hash == hash_token(email),
                 )
             ).scalar_one()
-        assert attempts == rate_limit.SIGN_in.attempts
+        assert attempts == rate_limit.SIGN_IN.attempts
 
     def test_parallele_failed_attempts_verlieren_no_counter(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
