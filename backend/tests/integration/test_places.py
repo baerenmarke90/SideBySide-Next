@@ -514,9 +514,7 @@ class TestPlanAssociation:
 class TestDelete:
     "M3-D06, section 9: the place is removed while original resources remain."
 
-    def test_plan_survives_its_place_and_gets_new_version(
-        self, client, couple, session
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_plan_survives_its_place_and_gets_new_version(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
         place = create_place(client, couple).json()
         plan = client.post(
             f"/api/v1/spaces/{couple['space'].id}/plans",
