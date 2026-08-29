@@ -2,6 +2,8 @@
 /* eslint-disable */
 export * from './AttachmentsApi';
 export * from './AuthApi';
+export * from './ChapterRelationsApi';
+export * from './ChaptersApi';
 export * from './CommentsApi';
 export * from './HealthApi';
 export * from './HeartMomentsApi';

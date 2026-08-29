@@ -1,7 +1,7 @@
 # M3 Delivery Plan
 
-**Status:** S0 complete; runtime released; S1 through S4 delivered  
-**As of:** August 26, 2026
+**Status:** S0 complete; runtime released; S1 through S5 delivered  
+**As of:** August 30, 2026
 
 ## 1. Gate before runtime
 
@@ -190,7 +190,7 @@ Implemented. Three execution details:
 - Excluding private HeartMoments also lives in the schema. `place_heart_moments` carries the target Privacy class as part of the foreign key, with `ON UPDATE CASCADE` and a CHECK for `SPACE_SHARED`. If a moment changes to `OWNER_ONLY` without first removing its Relations, the transaction fails. The service removes them in the same transaction and therefore never hits the guard; the guard protects code paths that do not yet exist.
 - `change_visibility` now locks the HeartMoment exclusively instead of merely authorizing it. Without the lock, there was a window between removing Relations and changing the class in which a concurrent Relation Create could still insert its row as shared.
 
-## 8. S5 – Chapter
+## 8. S5 – Chapter – delivered
 
 Scope:
 
@@ -211,6 +211,8 @@ Chapter + Memory + SHARED HeartMoment + Milestone
 -> Relations gone
 -> all originals remain readable unchanged
 ```
+
+Implemented. Chapter CRUD/List is exposed through the versioned REST/OpenAPI contract with `If-Match`/409 semantics; all four decided date shapes and the invalid-range error are covered. `Chapter.placeId` is canonical and Same-Space, Place deletion detaches it versionedly, and the three typed relation families reuse the S4 integrity/privacy/locking model. Derived content ordering is computed from original resources without a persisted position. Chapter deletion removes relation rows only and preserves Memory, SHARED HeartMoment, Milestone, and Place originals.
 
 ## 9. S6 – Shared Collections
 

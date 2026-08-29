@@ -1,15 +1,21 @@
 """The Relations slice must mirror the contract decided in M3-D08/D09.
 
-Two guarantees exist exclusively in the shape of the contract.
+Two guarantees exist exclusively in the shape of the relation contract.
 
-The target type is encoded in the path, not the body. No operation accepts a
-`targetType`, and no component union exists. That is exactly what separates
-Option A in `docs/m3/API-DESIGN.md` from the `(targetType,targetId)`
-polymorphism excluded by M3-D08.
+For relation operations, the target type is encoded in the path, not the body
+or a selector parameter. No typed relation operation accepts a `targetType`,
+and no relation-target list schema contains such a discriminator. That is what
+separates Option A in `docs/m3/API-DESIGN.md` from the
+`(targetType,targetId)` polymorphism excluded by M3-D08.
 
-None of these operations has a request body. A relation consists exclusively
-of the two IDs in the path; a body would create room for a field that names one
-of the sides differently again.
+A derived read model may still identify the type of an item it returns. In
+particular, the Chapter content projection needs `targetType` to distinguish
+Memory, HeartMoment, and Milestone entries without turning relation writes into
+a polymorphic API.
+
+None of the relation write operations has a request body. A relation consists
+exclusively of the two IDs in the path; a body would create room for a field
+that names one of the sides differently again.
 """
 
 from __future__ import annotations
@@ -77,18 +83,24 @@ def test_relation_writes_answer_204(slug: str) -> None:
         assert "201" not in item[method]["responses"], method
 
 
-def test_no_operation_takes_a_target_type_discriminator() -> None:
+def test_no_relation_operation_takes_a_target_type_discriminator() -> None:
     """Counter-check for Option B in `docs/m3/API-DESIGN.md`.
 
-    No path, parameter, or schema field names a target type. If a `targetType`
-    were allowed here, the allowlist would no longer be the contract but merely
-    a runtime check behind it.
+    Place and Chapter relation routes are typed by their URL. The Chapter
+    `/content` endpoint is deliberately excluded because it is a derived,
+    read-only projection and does not create or remove a relation.
     """
     schema = _schema()
     relation_paths = {
         path: operations
         for path, operations in schema["paths"].items()  # type: ignore[union-attr]
-        if "/places/{placeId}/" in path
+        if (
+            "/places/{placeId}/" in path
+            or (
+                "/chapters/{chapterId}/" in path
+                and not path.endswith("/chapters/{chapterId}/content")
+            )
+        )
     }
     assert relation_paths, "no relation routes in contract"
 
@@ -97,8 +109,17 @@ def test_no_operation_takes_a_target_type_discriminator() -> None:
             names = {parameter["name"] for parameter in operation.get("parameters", [])}
             assert "targetType" not in names, f"{method} {path}"
             assert "relation" not in names, f"{method} {path}"
+            assert "requestBody" not in operation, f"{method} {path}"
 
-    assert "targetType" not in str(schema["components"])
+    schemas = schema["components"]["schemas"]  # type: ignore[index]
+    for schema_name in ("RelationTargets", "ChapterRelationTargets"):
+        properties = schemas[schema_name]["properties"]
+        assert set(properties) == {"items"}, schema_name
+        assert "targetType" not in properties, schema_name
+
+    # A read-only combined projection must identify which resource type each
+    # returned ID belongs to; this is not a relation selector.
+    assert set(schemas["ChapterContentItem"]["properties"]) == {"targetType", "targetId"}
 
 
 def test_relation_reads_return_ids_only() -> None:
@@ -108,6 +129,7 @@ def test_relation_reads_return_ids_only() -> None:
     path with separate authorization, and two read paths can drift.
     """
     components = _schema()["components"]["schemas"]  # type: ignore[index]
-    targets = components["RelationTargets"]
-    assert set(targets["properties"]) == {"items"}
-    assert targets["properties"]["items"]["items"]["format"] == "uuid"
+    for schema_name in ("RelationTargets", "ChapterRelationTargets"):
+        targets = components[schema_name]
+        assert set(targets["properties"]) == {"items"}
+        assert targets["properties"]["items"]["items"]["format"] == "uuid"
