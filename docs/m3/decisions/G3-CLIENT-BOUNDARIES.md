@@ -1,13 +1,13 @@
-# M3 G3-, Client-, Export- und Cache-Grenzen
+# M3 G3, Client, Export, and Cache Boundaries
 
-**Status:** `DECIDED` – wirksam mit Merge dieses Decision-PRs  
-**Datum:** 26.08.2026  
+**Status:** `DECIDED` – effective when this decision PR is merged  
+**Date:** August 26, 2026  
 **Tracking:** #165  
-**Betrifft:** M3-D21, D22, D24, D25, D27, D29
+**Affects:** M3-D21, D22, D24, D25, D27, D29
 
-Dieses Dokument legt frueh fest, welche Evidenz G3 braucht und was bewusst erst M5/G4 implementiert wird. Es enthaelt keinen Runtime- oder Client-Code und aendert die bestehende M3-Startbedingung nicht.
+This document defines early which evidence G3 requires and what is intentionally deferred until M5/G4. It contains no runtime or client code and does not change the existing M3 start condition.
 
-## 1. Verbindliche Quellen
+## 1. Authoritative sources
 
 - `specification/CLEAN-ROOM-MASTER-SPEC.md`
 - `specification/PRODUCT-SPEC.md`
@@ -16,216 +16,216 @@ Dieses Dokument legt frueh fest, welche Evidenz G3 braucht und was bewusst erst 
 - `docs/m3/README.md`
 - `docs/m3/DELIVERY-PLAN.md`
 
-Roadmap-Grenze:
+Roadmap boundary:
 
-- G3 prueft konsistente Wishes/Plans/Places/Chapters/Collections, vollstaendige Private-Area-Isolation und verstaendliche Delete-/409-Wirkungen.
-- M5/G4 liefern vollstaendige Web-/Android-Produktisierung, Paritaet, Read Cache, Export/Import, Accessibility und Performance.
+- G3 verifies consistent Wishes/Plans/Places/Chapters/Collections, complete Private Area isolation, and understandable Delete/409 effects.
+- M5/G4 deliver complete Web/Android productization, parity, Read Cache, Export/Import, accessibility, and performance.
 
-Daraus folgt: M3 muss echte Runtime-/API-/PostgreSQL-Evidenz liefern, aber keine vorgezogene vollstaendige Client-Paritaet.
+Therefore M3 must provide real runtime/API/PostgreSQL evidence, but does not pull forward complete client parity.
 
 ## 2. M3-D24 – G3 Evidence
 
-### Entscheidung
+### Decision
 
-G3 ist ein **Domain/API/PostgreSQL-Gate**. Fuer G3 sind keine duennen Web-/Android-Referenzflows zusaetzlich verpflichtend. Client-Paritaet und systematische Accessibility bleiben M5/G4.
+G3 is a **Domain/API/PostgreSQL gate**. Thin Web/Android reference flows are not additionally mandatory for G3. Client parity and systematic accessibility remain M5/G4 scope.
 
-G3 benoetigt jedoch reale HTTP-E2E-Flows gegen den produktionsnahen FastAPI/PostgreSQL-Stack, nicht nur Unit-Tests oder Mock-Repository-Tests.
+G3 does, however, require real HTTP E2E flows against the production-like FastAPI/PostgreSQL stack, not only unit tests or mocked repository tests.
 
-### Verbindliche G3-E2E-Flows
+### Mandatory G3 E2E flows
 
-Mindestens diese fuenf Flows muessen auf dem finalen G3-Commit nachweisbar gruen sein:
+At least these five flows must demonstrably pass on the final G3 commit:
 
-1. **Wish -> Plan -> Complete**
-   - Wish OPEN anlegen;
-   - atomar zu Plan konvertieren;
-   - Plan terminieren oder spontan abschliessen;
-   - source Wish und Plan konsistent COMPLETED;
-   - Retry/Race/Versionkonflikt mit abdecken.
+1. **Wish → Plan → Complete**
+   - create an OPEN Wish;
+   - atomically convert it to a Plan;
+   - schedule or spontaneously complete the Plan;
+   - source Wish and Plan consistently become COMPLETED;
+   - cover retry/race/version-conflict paths.
 
 2. **Place + Relation**
-   - Place ohne und mit Koordinaten;
-   - mindestens eine typisierte Place-Relation auf bestehenden Shared Content;
-   - Cross-Space/private Target Negativpfad;
-   - Place-Delete behaelt fachliche Originale.
+   - Place without and with coordinates;
+   - at least one typed Place relation to existing shared content;
+   - negative cross-space/private-target path;
+   - deleting the Place preserves the domain originals.
 
 3. **Chapter + Relation + Delete**
-   - Chapter anlegen;
-   - Memory/SHARED HeartMoment/Milestone verbinden;
-   - deterministische abgeleitete Reihenfolge pruefen;
-   - Chapter loeschen;
-   - Originalinhalte bleiben lesbar.
+   - create a Chapter;
+   - link Memory/SHARED HeartMoment/Milestone;
+   - verify deterministic derived order;
+   - delete the Chapter;
+   - original content remains readable.
 
 4. **Shared Collection**
-   - Collection + mehrere Items;
-   - Completion;
-   - atomarer Reorder;
-   - stale/concurrent Reorder -> deterministischer 409;
-   - Delete-Cascade nur auf Items.
+   - Collection + multiple items;
+   - completion;
+   - atomic reorder;
+   - stale/concurrent reorder → deterministic 409;
+   - delete cascade affects only items.
 
-5. **Private Area Owner/Partner Negativpfad**
-   - Owner erstellt PrivateNote, GiftIdea und PrivateCollection mit Item;
-   - Owner kann lesen/aendern;
-   - Partner sieht weder GET noch LIST/Count/Item;
-   - Partner-Mutation liefert privacy-sichere Nicht-Existenzsemantik;
-   - Logout/Sessionwechsel erzeugt keinen serverseitigen Leak.
+5. **Private Area owner/partner negative path**
+   - owner creates PrivateNote, GiftIdea, and PrivateCollection with an item;
+   - owner can read/change them;
+   - partner sees neither GET nor LIST/count/item;
+   - partner mutation returns privacy-safe non-existence semantics;
+   - logout/session change creates no server-side leak.
 
-### Pflicht-Negativtests
+### Mandatory negative tests
 
-G3 blockiert bei Fehlern in:
+G3 is blocked by failures in:
 
-- Cross-Tenant Isolation;
-- OWNER_ONLY Isolation;
-- Relation zu private/non-readable Targets;
-- Wish->Plan Double-Submit/halben Transaktionen;
-- Relation-/Privacy-Races;
-- Collection-Reorder-Konsistenz;
-- Delete-Cascades auf fachliche Originale;
-- Event-/Log-Leaks geschuetzter Inhalte.
+- cross-tenant isolation;
+- OWNER_ONLY isolation;
+- relation to private/non-readable targets;
+- Wish→Plan double-submit/partial transactions;
+- relation/privacy races;
+- Collection reorder consistency;
+- delete cascades affecting domain originals;
+- event/log leaks of protected content.
 
-### Gate-blockierende Findings
+### Gate-blocking findings
 
-G3 kann nicht bestanden werden, wenn offen ist:
+G3 cannot pass while any of the following remains open:
 
-- `Critical` oder `High` Security-/Privacy-/Tenant Finding;
-- **irgendein tatsaechlicher Tenant- oder OWNER_ONLY-Leak**, unabhaengig von einer sonst vergebenen Severity;
-- Datenverlust/Cascade eines fachlichen Originals ausserhalb der dokumentierten Parent-Child-Semantik;
-- reproduzierbarer Race, der einen ungueltigen Domainzustand erzeugt;
-- fehlende reale PostgreSQL-/HTTP-Evidenz fuer einen der fuenf Pflichtflows.
+- `Critical` or `High` security/privacy/tenant finding;
+- **any actual tenant or OWNER_ONLY leak**, regardless of an otherwise assigned severity;
+- data loss/cascade of a domain original outside documented parent-child semantics;
+- reproducible race that creates an invalid domain state;
+- missing real PostgreSQL/HTTP evidence for one of the five mandatory flows.
 
-Medium/Low Findings ohne Tenant-/Privacy-Leak duerfen nur mit eigenem Follow-up-Issue und ausdruecklicher Risikoannahme im G3-Review offen bleiben.
+Medium/Low findings without a tenant/privacy leak may remain open only with a dedicated follow-up issue and explicit risk acceptance in the G3 review.
 
-### Nachweisformat
+### Evidence format
 
-Der finale G3-Review ist ein **neues datiertes Dokument** unter:
+The final G3 review is a **new dated document** under:
 
 ```text
 docs/reviews/YYYY-MM-DD-g3-gate-review.md
 ```
 
-Es nennt mindestens:
+It names at least:
 
-- finalen `main`-Commit SHA;
-- relevante PRs/Issues;
-- Workflow-Run-IDs;
-- OpenAPI-/Backend-/PostgreSQL-Teststatus;
-- die fuenf E2E-Flows mit Ergebnis;
-- offene Findings mit Severity;
-- explizit `G3: BESTANDEN` oder `G3: NICHT BESTANDEN`.
+- final `main` commit SHA;
+- relevant PRs/issues;
+- workflow run IDs;
+- OpenAPI/backend/PostgreSQL test status;
+- the five E2E flows with results;
+- open findings with severity;
+- explicitly `G3: BESTANDEN` or `G3: NICHT BESTANDEN`.
 
-Historische Gate-Reviews werden nicht umgeschrieben.
+Historical gate reviews are not rewritten.
 
 ## 3. G3 vs. M5/G4
 
-G3 ist bewusst ein **Milestone-Gate**, nicht die abschliessende projektweite Definition of Done einer M3-Funktion. Die in der Produktspezifikation geforderten Web-/Android-Anteile, Export-Unterstuetzung und vollstaendige Client-Produktreife werden gemaess Roadmap in M5/G4 vervollstaendigt. `G3: BESTANDEN` bedeutet daher nicht „M3 ist bereits als vollstaendig produktreifes Client-Feature fertig“, sondern „M3-Domain, API, Persistenz, Autorisierung und Gate-Evidenz sind belastbar genug fuer den naechsten Milestone“. Die projektweite DoD ist fuer diese Funktionen erst mit den spaeteren Client-/Export-Anteilen vollstaendig erfuellt.
+G3 is intentionally a **milestone gate**, not the final project-wide Definition of Done for an M3 feature. The Web/Android portions, Export support, and complete client product maturity required by the Product Specification are completed in M5/G4 according to the Roadmap. `G3: BESTANDEN` therefore does not mean “M3 is already a fully production-ready client feature”; it means “the M3 domain, API, persistence, authorization, and gate evidence are robust enough for the next milestone”. The project-wide DoD for these features is complete only after the later client/export portions.
 
-### In G3 verpflichtend
+### Mandatory in G3
 
-- Domainmodell/Migration/API fuer M3;
-- Tenant-/Owner-Autorisierung;
-- Optimistic Concurrency/Races;
-- reale HTTP/PostgreSQL-E2E-Evidenz;
-- Privacy-/Security-Negativtests;
-- OpenAPI aktuell;
-- dokumentierte Delete-/409-Semantik.
+- domain model/migration/API for M3;
+- tenant/owner authorization;
+- optimistic concurrency/races;
+- real HTTP/PostgreSQL E2E evidence;
+- privacy/security negative tests;
+- current OpenAPI;
+- documented Delete/409 semantics.
 
-### Erst M5/G4 verpflichtend
+### Mandatory only in M5/G4
 
-- vollstaendige Web-UI aller M3-Funktionen;
-- vollstaendige Android-UI aller M3-Funktionen;
-- systematische Web-/Android-Paritaet;
+- complete Web UI for all M3 features;
+- complete Android UI for all M3 features;
+- systematic Web/Android parity;
 - Offline Read Cache;
-- Export/Import-Implementierung;
+- Export/Import implementation;
 - Deep Links;
-- umfassende Accessibility-Abnahme;
-- Client-Performance-Gate.
+- comprehensive accessibility acceptance;
+- client performance gate.
 
-M3 darf spaeter kleine technische Referenzflaechen bauen, wenn sie fuer Entwicklung hilfreich sind; sie sind aber **keine G3-Pflicht** und duerfen M5 nicht als fertig darstellen.
+M3 may later build small technical reference surfaces when useful for development, but they are **not a G3 requirement** and must not represent M5 as complete.
 
-## 4. M3-D21 – Export-Grenze
+## 4. M3-D21 – Export boundary
 
-### Entscheidung
+### Decision
 
-M3 implementiert **keinen Export**. Die folgende Privacy-Semantik ist jedoch fuer M5 bereits bindend.
+M3 implements **no Export**. The following privacy semantics are already binding for M5.
 
-Es gibt konzeptionell zwei Exportkontexte:
+Conceptually there are two export contexts:
 
-### Gemeinsamer Space-Export
+### Shared space export
 
-Enthaelt:
+Contains:
 
-- `SPACE_SHARED`-Daten des Spaces;
-- gemeinsam autorisierte Attachments/Relations gemaess Exportvertrag.
+- `SPACE_SHARED` data from the space;
+- jointly authorized attachments/relations according to the export contract.
 
-Enthaelt **nie**:
+Never contains:
 
 - PrivateNote;
 - GiftIdea;
-- PrivateCollection/Items;
-- private HeartMoments des Partners;
-- private Counts/Manifest-Eintraege, die deren Existenz verraten.
+- PrivateCollection/items;
+- the partner's private HeartMoments;
+- private counts/manifest entries that reveal their existence.
 
-### Persoenlicher Export
+### Personal export
 
-Ein authentifizierter Account darf im persoenlichen Export zusaetzlich **seine eigenen** `OWNER_ONLY`-Daten erhalten.
+An authenticated account may additionally receive **its own** `OWNER_ONLY` data in a personal export.
 
-- eigene PrivateNote/GiftIdea/PrivateCollection duerfen enthalten sein;
-- private Daten des Partners sind ausgeschlossen;
-- Owner-Zuordnung muss im neutralen Transferformat erhalten bleiben;
-- Manifest/Checksums duerfen fuer den Partner nicht indirekt private Ressourcen des anderen beweisen.
+- own PrivateNote/GiftIdea/PrivateCollection may be included;
+- the partner's private data is excluded;
+- owner association must remain intact in the neutral transfer format;
+- manifest/checksums must not indirectly prove the partner's private resources.
 
-Die technische Bundle-/Import-Implementierung bleibt M5.
+The technical bundle/import implementation remains M5 scope.
 
 ## 5. M3-D22 – Client Cache
 
-### Entscheidung
+### Decision
 
-M3 fuehrt fuer die Private Area **keinen persistenten Offline-/Read-Cache** ein. Bis M5 bleiben private Daten in technischen Referenzclients nur im Prozess-/Memory-State, soweit ein Client ueberhaupt vorhanden ist.
+M3 introduces **no persistent Offline/Read Cache** for the Private Area. Until M5, private data remains only in process/memory state in technical reference clients, where such a client exists at all.
 
-Fuer M5 ist folgende Namespace-Grenze verbindlich:
+For M5, the following namespace boundary is binding:
 
 ```text
 accountId + spaceId + privacyContext
 ```
 
-Fuer `OWNER_ONLY` mindestens:
+For `OWNER_ONLY`, at minimum:
 
 ```text
 accountId + spaceId + ownerId
 ```
 
-### Clear-/Isolation-Regeln
+### Clear/isolation rules
 
-Private Cache-Daten muessen bei mindestens folgenden Ereignissen aus dem aktiven Clientkontext entfernt werden:
+Private cache data must be removed from the active client context on at least:
 
-- Logout;
-- Session-Revoke / erneute Authentifizierung;
-- Accountwechsel;
-- Space-Wechsel;
-- Owner-Kontextwechsel;
-- lokale Datenloeschung/Reset.
+- logout;
+- session revocation / re-authentication;
+- account change;
+- space change;
+- owner-context change;
+- local data deletion/reset.
 
 ### Web
 
-Bis zum expliziten M5-Cache-Design:
+Until the explicit M5 cache design:
 
-- keine Private-Area-Payloads in `localStorage`;
-- keine unkontrollierte Persistenz in IndexedDB;
-- keine Tokens/signed URLs als persistenter Cache-Key;
-- Query-Caches muessen Account/Space/Owner sauber namespacen und bei Logout entfernt werden.
+- no Private Area payloads in `localStorage`;
+- no uncontrolled persistence in IndexedDB;
+- no tokens/signed URLs as persistent cache keys;
+- query caches must namespace account/space/owner correctly and be cleared on logout.
 
 ### Android
 
-Persistenter Room-Read-Cache fuer Private Area ist M5-Scope. Vorher keine ad-hoc SharedPreferences-/Datei-Persistenz von Private Payloads.
+A persistent Room Read Cache for the Private Area is M5 scope. Before then, no ad-hoc SharedPreferences/file persistence of private payloads.
 
-Die endgueltige Verschluesselungs-/Retention-Strategie ist Teil des M5 Security-/Cache-Reviews.
+The final encryption/retention strategy is part of the M5 security/cache review.
 
 ## 6. M3-D25 – Private Area Information Architecture
 
-### Entscheidung
+### Decision
 
-Die Private Area ist ein **sekundaerer persoenlicher Bereich**, keine gemeinsame Hauptnavigation.
+The Private Area is a **secondary personal area**, not shared primary navigation.
 
-Kanonische Client-Idee fuer M5:
+Canonical client idea for M5:
 
 ```text
 Mehr / Mein Bereich
@@ -234,7 +234,7 @@ Mehr / Mein Bereich
   -> Private Listen
 ```
 
-Routen koennen intern unter einem klaren persoenlichen Namespace liegen, z. B.:
+Routes may internally live under a clearly personal namespace, for example:
 
 ```text
 /private/notes
@@ -242,23 +242,23 @@ Routen koennen intern unter einem klaren persoenlichen Namespace liegen, z. B.:
 /private/collections
 ```
 
-Regeln:
+Rules:
 
-- die UI bezeichnet diesen Bereich als persoenlich/nur fuer den aktuellen Nutzer;
-- gemeinsame Space-Flachen zeigen keine privaten Counts/Badges;
-- ein Deep Link auf private Resource autorisiert serverseitig erneut;
-- Ausblenden im Client ist niemals die Security-Grenze;
-- ein Partner darf aus Navigation, Badges oder Fehlern nicht erkennen, wie viele private Ressourcen existieren.
+- the UI identifies this area as personal/for the current user only;
+- shared space surfaces show no private counts/badges;
+- a Deep Link to a private resource re-authorizes server-side;
+- hiding something in the client is never the security boundary;
+- a partner must not infer the number of private resources from navigation, badges, or errors.
 
-Die genaue visuelle Navigation/Label-Politur bleibt M5, die Sicherheits- und IA-Grenze ist hiermit entschieden.
+Exact visual navigation/label polish remains M5 scope; the security and IA boundary is decided here.
 
 ## 7. M3-D27 – Plan Richness
 
-### Entscheidung
+### Decision
 
-**Checklist, Plan-Medien und weitere strukturierte Plan-Notizen werden nicht in M3 vorgezogen.**
+**Checklist, Plan media, and additional structured Plan notes are not pulled forward into M3.**
 
-M3-Plan bleibt beim source-bound Kern:
+The M3 Plan remains the source-bound core:
 
 ```text
 title
@@ -270,40 +270,40 @@ experiencedOn?
 placeId?
 ```
 
-Damit gilt:
+Therefore:
 
-- keine versteckte Checklist als `Collection`;
-- keine `PlanChecklistItem`-Tabelle in M3;
-- keine Plan-Attachment-Relation in M3;
-- `description` ist der einzige allgemeine Freitext im Plan-Kern;
-- eine spaetere Richness-Erweiterung braucht eigenen Scope, Datenmodell, API-, Privacy-, Media- und Reuse-Review.
+- no hidden checklist modeled as a `Collection`;
+- no `PlanChecklistItem` table in M3;
+- no Plan Attachment relation in M3;
+- `description` is the only general free-text field in the Plan core;
+- a later richness extension requires dedicated scope plus data-model, API, privacy, media, and reuse review.
 
-M3-D27 ist damit als **bewusst spaeter** entschieden und blockiert keinen M3-Runtime-Slice.
+M3-D27 is therefore intentionally decided as **later** and does not block an M3 runtime slice.
 
-## 8. M3-D29 – Collection Multi-select
+## 8. M3-D29 – Collection multi-select
 
-### Entscheidung
+### Decision
 
-„Mehrfachauswahl“ ist in M3 **reiner Client-Interaktionszustand**, keine persistierte Domainsemantik.
+`Mehrfachauswahl` is **client interaction state only** in M3, not persisted domain semantics.
 
-- keine `selected`-Spalte;
-- keine Selection-Tabelle;
-- Selection verschwindet beim Verlassen/Reload nach Clientkonvention;
-- Batch-Aktionen duerfen spaeter mehrere normale Domainoperationen oder einen expliziten Batch-Endpunkt verwenden;
-- der Server speichert nur fachliche Endzustaende wie `completed`, nicht UI-Selektion.
+- no `selected` column;
+- no selection table;
+- selection disappears on leaving/reload according to client convention;
+- later batch actions may use multiple normal domain operations or an explicit batch endpoint;
+- the server stores only domain end states such as `completed`, not UI selection.
 
-Damit entsteht kein zusaetzlicher Sync-/Privacy-Zustand nur fuer eine UI-Interaktion.
+This avoids an additional sync/privacy state solely for a UI interaction.
 
-## 9. G3-Vorbereitung fuer M4
+## 9. G3 preparation for M4
 
-G3 verlangt nur, dass M4-Read-Model-Grenzen **vorbereitet** sind:
+G3 requires only that M4 Read Model boundaries are **prepared**:
 
-- M3-Events transportieren keine ProtectedPayloads;
-- OWNER_ONLY Events koennen nicht versehentlich in Shared Activity/Dashboard gelangen;
-- globale Volltextsuche bleibt M4-A;
-- M3 baut keinen privaten Suchindex als Vorgriff;
-- IDs/Status/Privacy-Klassen reichen fuer spaetere kontrollierte Read Models, soweit fachlich benoetigt.
+- M3 events carry no ProtectedPayload;
+- OWNER_ONLY events cannot accidentally enter shared Activity/Dashboard;
+- global full-text search remains M4-A;
+- M3 does not pre-build a private search index;
+- IDs/status/privacy classes are sufficient for later controlled Read Models where functionally needed.
 
 ## 10. Reuse-before-build
 
-Fuer diese reine Gate-/Clientgrenzen-Entscheidung nicht relevant. Spaetere Export-, Cache-, Deep-Link- oder Clienttechnik muss im jeweiligen Implementierungs-PR erneut auf vorhandene Libraries/Plattformmechanismen und Security-Eigenschaften geprueft werden.
+Not relevant for this pure gate/client-boundary decision. Later Export, Cache, Deep-Link, or client implementation must again review existing libraries/platform mechanisms and security properties in the corresponding implementation PR.
