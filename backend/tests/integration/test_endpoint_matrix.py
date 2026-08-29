@@ -99,6 +99,7 @@ COMMENT = {"body": "Matrix Comment"}
 WISH = {"title": "Matrix Wish"}
 PLAN = {"title": "Matrix Plan", "description": "Text"}
 PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
+CHAPTER = {"title": "Matrix Chapter", "description": "Text"}
 
 SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("GET", "/api/v1/spaces/{spaceId}"),
@@ -394,6 +395,76 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         "/api/v1/spaces/{spaceId}/places/{placeId}/milestones/{targetId}",
         resource_absence="PLACE_NOT_FOUND",
     ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/chapters"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/chapters", body=CHAPTER),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}",
+        body={"title": "Matrix Chapter updated"},
+        if_match=True,
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}",
+        if_match=True,
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/content",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/memories",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/memories/{targetId}",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/memories/{targetId}",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/heart-moments",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/heart-moments/{targetId}",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/heart-moments/{targetId}",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/milestones",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/milestones/{targetId}",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/chapters/{chapterId}/milestones/{targetId}",
+        resource_absence="CHAPTER_NOT_FOUND",
+    ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/plans"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/plans", body=PLAN),
     Endpoint(
@@ -560,6 +631,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
     wish = client.post(f"{base_path}/wishes", json=WISH, headers=headers).json()
     place = client.post(f"{base_path}/places", json=PLACE, headers=headers).json()
     plan = client.post(f"{base_path}/plans", json=PLAN, headers=headers).json()
+    chapter = client.post(f"{base_path}/chapters", json=CHAPTER, headers=headers).json()
     attachment = client.post(f"{base_path}/attachments", json=ATTACHMENT, headers=headers).json()
 
     return {
@@ -581,6 +653,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "wishId": wish["id"],
             "planId": plan["id"],
             "placeId": place["id"],
+            "chapterId": chapter["id"],
             # The target is a typed relation. A memory is enough for all three
             # relation types because this matrix checks occur before target resolution.
             "targetId": memory["id"],
@@ -703,6 +776,7 @@ def _resource_placeholders(endpoint: Endpoint) -> tuple[str, ...]:
             "wishId",
             "planId",
             "placeId",
+            "chapterId",
             "targetId",
         )
         if "{" + name + "}" in endpoint.template
