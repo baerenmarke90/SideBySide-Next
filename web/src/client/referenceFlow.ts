@@ -17,7 +17,7 @@ import { i18n } from '../i18n';
 export interface FlowResult {
   memory: MemoryDetail;
   story: StoryPage;
-  imageUrl: string;
+  imageUrl: string | null;
 }
 
 export interface ReferenceApis {
@@ -197,14 +197,20 @@ export async function runMemoryMediaStoryFlow(
   accessToken: string,
   spaceId: string,
   memoryCreate: MemoryCreate,
-  file: File,
+  file?: File,
   fetchApi: typeof fetch = fetch,
 ): Promise<FlowResult> {
-  if (!file.type.startsWith('image/'))
+  if (file && !file.type.startsWith('image/'))
     throw new ReferenceFlowError(i18n.t('flow.imageOnly'));
 
   try {
     const memory = await apis.memories.createMemory({ spaceId, memoryCreate });
+
+    if (!file) {
+      const story = await apis.story.getStoryTimeline({ spaceId, limit: 25 });
+      return { memory, story, imageUrl: null };
+    }
+
     const upload = await apis.attachments.createAttachmentUpload({
       spaceId,
       attachmentUploadCreate: {
