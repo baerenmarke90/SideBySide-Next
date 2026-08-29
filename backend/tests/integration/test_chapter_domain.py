@@ -105,8 +105,7 @@ def test_database_keeps_date_invariant_without_service(  # type: ignore[no-untyp
     with pytest.raises(IntegrityError), session.begin_nested():
         session.execute(
             text(
-                "UPDATE chapters SET start_on = :start_on, end_on = :end_on "
-                "WHERE id = :chapter_id"
+                "UPDATE chapters SET start_on = :start_on, end_on = :end_on WHERE id = :chapter_id"
             ),
             {
                 "start_on": date(2026, 5, 2),
