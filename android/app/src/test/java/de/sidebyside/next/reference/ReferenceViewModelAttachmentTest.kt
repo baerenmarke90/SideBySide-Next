@@ -5,6 +5,7 @@ import java.util.UUID
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -103,7 +104,7 @@ class ReferenceViewModelAttachmentTest {
         api = api,
     )
 
-    private suspend fun signIn(viewModel: ReferenceViewModel) {
+    private fun TestScope.signIn(viewModel: ReferenceViewModel) {
         viewModel.signIn("person@example.com", "secret")
         advanceUntilIdle()
     }
