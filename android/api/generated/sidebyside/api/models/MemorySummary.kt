@@ -32,7 +32,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Eine Memory als Karte der Zeitleiste.  Ohne `body`: die Karte braucht eine Ueberschrift und ihre Bilder, und eine Seite mit hundert vollstaendigen Texten waere die Antwort, die niemand angefordert hat. Der Text steht in der Detailansicht.
+ * Memory projection used as a timeline card.  The body is intentionally omitted: the card needs a heading and images, while returning one hundred full texts would produce data nobody requested. The body remains available on the detail route.
  *
  * @param attachments 
  * @param author 

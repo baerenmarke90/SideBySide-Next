@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from datetime import timedelta
 from pathlib import Path
@@ -16,13 +17,13 @@ class LocalMediaStore(MediaStore):
         self._root.mkdir(parents=True, exist_ok=True)
 
     def _path(self, storage_key: str) -> Path:
-        target = (self._root / storage_key).resolve()
-        # Reject keys escaping the storage root. build_storage_key does not
-        # create them, but this class does not rely on that because it is the
-        # final boundary before the filesystem.
-        if not target.is_relative_to(self._root):
+        root = os.path.realpath(self._root)
+        target = os.path.realpath(os.path.join(root, storage_key))
+        # Normalize through realpath before checking containment so both parent
+        # traversal and symlink escapes remain outside the trusted root.
+        if target != root and not target.startswith(root + os.sep):
             raise ValueError("Storage key escapes the storage root.")
-        return target
+        return Path(target)
 
     def put(self, storage_key: str, data: ByteSource, content_type: str) -> StoredObject:
         target = self._path(storage_key)

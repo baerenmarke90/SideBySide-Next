@@ -13,6 +13,14 @@ Contributions are welcome through GitHub Pull Requests.
 
 A Pull Request submission does not guarantee inclusion in the project.
 
+## Security issues
+
+Do not report security vulnerabilities through public issues or pull requests.
+
+Follow the repository security policy in [`.github/SECURITY.md`](.github/SECURITY.md) and use GitHub Private Vulnerability Reporting when the repository provides the **Report a vulnerability** action.
+
+Never include secrets, private user data, production data, or exploit details that would materially enable abuse in public contributions.
+
 ## Engineering language
 
 English is the mandatory engineering language for repository work. Follow `docs/ENGINEERING-LANGUAGE.md`.

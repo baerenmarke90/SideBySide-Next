@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -14,11 +14,11 @@
 
 import { mapValues } from '../runtime';
 /**
- * Direct Plan Create nach M3-D30.
+ * Direct plan creation defined by M3-D30.
  * 
- * `status`, `sourceWishId` und alle Termine fehlen bewusst. Ein Plan
- * beginnt als Idee; terminiert wird er ueber `/schedule`, abgeschlossen
- * ueber `/complete`.
+ * ``status``, ``sourceWishId``, and all schedule fields are intentionally
+ * absent. A plan starts as an idea; ``/schedule`` schedules it and
+ * ``/complete`` completes it.
  * @export
  * @interface PlanCreate
  */

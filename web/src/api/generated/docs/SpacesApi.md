@@ -71,8 +71,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -137,9 +137,9 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  * ETag - Die Version der Ressource. Gehoert unveraendert in das &#x60;If-Match&#x60; des naechsten Schreibzugriffs. <br>  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
+| **200** | Successful Response |  * ETag - Resource version. Send it unchanged in the next write request\&#39;s &#x60;If-Match&#x60; header. <br>  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -150,7 +150,7 @@ No authorization required
 
 Update Space Profile
 
-Das Beziehungsprofil ersetzen.  Der Aufrufer legt mit &#x60;If-Match&#x60; die Version vor, die er gelesen hat. Hat der Partner inzwischen geschrieben, antwortet der Endpunkt mit 409 und aendert nichts - ein stilles Ueberschreiben gaebe es sonst genau dann, wenn beide gleichzeitig am selben Profil arbeiten.
+Replace the relationship profile.  The caller supplies the version it read through &#x60;&#x60;If-Match&#x60;&#x60;. If the partner has written in the meantime, the endpoint returns 409 and changes nothing; otherwise simultaneous edits could silently overwrite each other.
 
 ### Example
 
@@ -168,7 +168,7 @@ async function example() {
   const body = {
     // string
     spaceId: spaceId_example,
-    // string | Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.
+    // string | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.
     ifMatch: ifMatch_example,
     // SpaceProfileUpdate
     spaceProfileUpdate: ...,
@@ -192,7 +192,7 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **spaceId** | `string` |  | [Defaults to `undefined`] |
-| **ifMatch** | `string` | Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben. | [Defaults to `undefined`] |
+| **ifMatch** | `string` | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header. | [Defaults to `undefined`] |
 | **spaceProfileUpdate** | [SpaceProfileUpdate](SpaceProfileUpdate.md) |  | |
 
 ### Return type
@@ -212,11 +212,11 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  * ETag - Die Version der Ressource. Gehoert unveraendert in das &#x60;If-Match&#x60; des naechsten Schreibzugriffs. <br>  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **409** | Die vorgelegte Version ist nicht mehr aktuell. Es wurde nichts geaendert; der aktuelle Stand ist neu zu laden. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **200** | Successful Response |  * ETag - Resource version. Send it unchanged in the next write request\&#39;s &#x60;If-Match&#x60; header. <br>  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **409** | The supplied version is no longer current. Nothing was changed; reload the latest state before retrying. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

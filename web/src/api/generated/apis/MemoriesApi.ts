@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
  * SideBySide Next
- * Application Core. OpenAPI ist der verbindliche Vertrag.
+ * Application Core. OpenAPI is the authoritative contract.
  *
  * The version of the OpenAPI document: 0.1.0
  * 
@@ -371,7 +371,7 @@ export class MemoriesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Menge und Reihenfolge in einem Zug setzen.  Ein PUT, kein Hinzufuegen und Entfernen: der Client schickt den Zustand, den er gesehen hat, und `If-Match` sorgt dafuer, dass er ihn noch hat.
+     * Replace the attachment set and ordering in one operation.  This is a PUT rather than an add/remove sequence: the client submits the state it observed, while ``If-Match`` verifies that state is still current.
      * Replace Memory Attachments
      */
     async replaceMemoryAttachmentsRaw(requestParameters: ReplaceMemoryAttachmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MemoryDetail>> {
@@ -382,7 +382,7 @@ export class MemoriesApi extends runtime.BaseAPI {
     }
 
     /**
-     * Menge und Reihenfolge in einem Zug setzen.  Ein PUT, kein Hinzufuegen und Entfernen: der Client schickt den Zustand, den er gesehen hat, und `If-Match` sorgt dafuer, dass er ihn noch hat.
+     * Replace the attachment set and ordering in one operation.  This is a PUT rather than an add/remove sequence: the client submits the state it observed, while ``If-Match`` verifies that state is still current.
      * Replace Memory Attachments
      */
     async replaceMemoryAttachments(requestParameters: ReplaceMemoryAttachmentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MemoryDetail> {

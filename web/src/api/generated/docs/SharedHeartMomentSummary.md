@@ -1,7 +1,7 @@
 
 # SharedHeartMomentSummary
 
-Ein gemeinsamer HeartMoment. Eine private Variante gibt es nicht.
+A shared heart moment. There is deliberately no private variant.
 
 ## Properties
 

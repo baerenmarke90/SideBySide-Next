@@ -81,10 +81,10 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **201** | Successful Response |  * ETag - Version der Ressource fuer den naechsten If-Match-Schreibzugriff. <br>  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **201** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -155,10 +155,10 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **201** | Successful Response |  * ETag - Version der Ressource fuer den naechsten If-Match-Schreibzugriff. <br>  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **201** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -229,10 +229,10 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **201** | Successful Response |  * ETag - Version der Ressource fuer den naechsten If-Match-Schreibzugriff. <br>  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **201** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -261,7 +261,7 @@ async function example() {
     commentId: commentId_example,
     // string
     spaceId: spaceId_example,
-    // string | Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.
+    // string | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.
     ifMatch: ifMatch_example,
   } satisfies DeleteCommentRequest;
 
@@ -284,7 +284,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **commentId** | `string` |  | [Defaults to `undefined`] |
 | **spaceId** | `string` |  | [Defaults to `undefined`] |
-| **ifMatch** | `string` | Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben. | [Defaults to `undefined`] |
+| **ifMatch** | `string` | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header. | [Defaults to `undefined`] |
 
 ### Return type
 
@@ -304,11 +304,11 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **204** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **403** | Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **409** | Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **409** | The request conflicts with the current state of the resource. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -383,10 +383,10 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
-| **400** | Die Anfrage ist syntaktisch gueltig, kann aber so nicht verarbeitet werden. |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **400** | The request is syntactically valid but cannot be processed in this form. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -461,10 +461,10 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
-| **400** | Die Anfrage ist syntaktisch gueltig, kann aber so nicht verarbeitet werden. |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **400** | The request is syntactically valid but cannot be processed in this form. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -539,10 +539,10 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
-| **400** | Die Anfrage ist syntaktisch gueltig, kann aber so nicht verarbeitet werden. |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **400** | The request is syntactically valid but cannot be processed in this form. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -571,7 +571,7 @@ async function example() {
     commentId: commentId_example,
     // string
     spaceId: spaceId_example,
-    // string | Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben.
+    // string | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.
     ifMatch: ifMatch_example,
     // CommentUpdate
     commentUpdate: ...,
@@ -596,7 +596,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **commentId** | `string` |  | [Defaults to `undefined`] |
 | **spaceId** | `string` |  | [Defaults to `undefined`] |
-| **ifMatch** | `string` | Die zuletzt gelesene Version der Ressource, als starkes ETag. Ohne diesen Kopf wird nicht geschrieben. | [Defaults to `undefined`] |
+| **ifMatch** | `string` | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header. | [Defaults to `undefined`] |
 | **commentUpdate** | [CommentUpdate](CommentUpdate.md) |  | |
 
 ### Return type
@@ -616,12 +616,12 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  * ETag - Version der Ressource fuer den naechsten If-Match-Schreibzugriff. <br>  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **403** | Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt. |  -  |
-| **404** | Die Ressource existiert nicht oder ist fuer den Aufrufer nicht sichtbar. |  -  |
-| **409** | Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **409** | The request conflicts with the current state of the resource. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

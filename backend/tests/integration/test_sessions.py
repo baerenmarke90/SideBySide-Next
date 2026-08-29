@@ -65,7 +65,7 @@ class TestPruefen:
 
         assert sessions.authenticate(session, tokens.access_token).id == account.id
 
-    @pytest.mark.parametrize("unfug", ["", "   ", "nicht-echt", "a" * 200])
+    @pytest.mark.parametrize("malformed", ["", "   ", "nicht-echt", "a" * 200])
     def test_unknown_token_is_rejected(self, session: Session, malformed: str) -> None:
         with pytest.raises(UnauthenticatedError):
             sessions.authenticate(session, malformed)

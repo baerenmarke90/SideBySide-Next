@@ -19,6 +19,20 @@ Bei Konflikten gilt diese Reihenfolge:
 5. Markenwirkung
 6. visuelle Neuheit
 
+## Semantic design tokens
+
+Reusable visual values MUST use semantic design tokens rather than repeated component-level literals.
+
+- Define reusable colors, spacing, radii, typography, shadows, and similar visual constants at the token-definition boundary.
+- Name tokens by interface meaning, not by the current literal value; prefer `--color-text-inverse-muted` over names such as `--white-90`.
+- Component styles consume tokens through `var(...)` instead of repeating raw values.
+- Theme-, branding-, and accessibility-sensitive values are strong token candidates because they must remain centrally adjustable.
+- A genuinely one-off implementation value may remain local when introducing a token would provide neither reusable nor semantic value.
+- Reuse the existing CSS custom-property structure in `web/src/styles.css` before introducing parallel abstractions.
+- User-facing localized content remains in i18n resources and is unrelated to design-token policy.
+
+Issue #221 is the concrete application that motivated this rule. See `docs/DESIGN-TOKEN-POLICY.md` for the complete naming and exception guidance.
+
 ## 1. Gestaltungsziel
 
 SideBySide soll sich wie ein ruhiger, privater Raum für zwei Menschen anfühlen:

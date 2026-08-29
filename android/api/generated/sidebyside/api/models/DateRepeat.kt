@@ -29,7 +29,7 @@ import kotlinx.serialization.Serializable
 
 
 /**
- * Wie oft ein Termin wiederkehrt.  Bewusst nur zwei Werte. Eine vollstaendige Wiederholungsregel gehoert zur spaeteren Erinnerungslogik; ein Geburtstag und ein Jahrestag brauchen sie nicht.
+ * How often an important date recurs.  Deliberately limited to two values. A full recurrence rule belongs to later reminder logic; birthdays and anniversaries do not need it.
  *
  * Values: NONE,ANNUALLY
  */

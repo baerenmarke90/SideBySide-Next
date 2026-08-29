@@ -131,7 +131,7 @@ class TestRegistrierung:
         )
         assert response.status_code == 200
 
-    @pytest.mark.parametrize("kurz", ["", "kurz", "elfzeichen"])
+    @pytest.mark.parametrize("short", ["", "kurz", "elfzeichen"])
     def test_to_short_password_is_rejected(self, client, short: str) -> None:  # type: ignore[no-untyped-def]
         response = client.post(
             "/api/v1/auth/register",
@@ -145,7 +145,7 @@ class TestRegistrierung:
         assert response.status_code == 422
         assert response.json()["code"] == "PASSWORD_TOO_SHORT"
 
-    @pytest.mark.parametrize("krumm", ["", "keine-adresse", "a@b", "@example.org", "a@.de"])
+    @pytest.mark.parametrize("malformed", ["", "keine-adresse", "a@b", "@example.org", "a@.de"])
     def test_malformed_address_is_rejected(self, client, malformed: str) -> None:  # type: ignore[no-untyped-def]
         response = client.post(
             "/api/v1/auth/register",
@@ -307,7 +307,7 @@ class TestBegrenzung:
         )
 
         codes = []
-        for _ in range(rate_limit.SIGN_in.attempts + 2):
+        for _ in range(rate_limit.SIGN_IN.attempts + 2):
             codes.append(
                 client.post(
                     "/api/v1/auth/sign-in",
@@ -486,7 +486,7 @@ class TestProduktiveTransaktionsgrenze:
             == 201
         )
 
-        for _ in range(rate_limit.SIGN_in.attempts):
+        for _ in range(rate_limit.SIGN_IN.attempts):
             response = client.post(
                 "/api/v1/auth/sign-in",
                 json={"email": email, "password": "falsch-falsch"},
@@ -509,7 +509,7 @@ class TestProduktiveTransaktionsgrenze:
                     RateLimitEvent.key_hash == hash_token(email),
                 )
             ).scalar_one()
-        assert attempts == rate_limit.SIGN_in.attempts
+        assert attempts == rate_limit.SIGN_IN.attempts
 
     def test_parallele_failed_attempts_verlieren_no_counter(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client

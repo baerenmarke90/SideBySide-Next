@@ -271,7 +271,7 @@ class TestKoordinaten:
         assert response.status_code == 201
         assert response.json()["latitude"] == BERLIN_LAT
 
-    @pytest.mark.parametrize("fehlend", ["latitude", "longitude"])
+    @pytest.mark.parametrize("missing", ["latitude", "longitude"])
     def test_a_halbe_coordinate_is_rejected(  # type: ignore[no-untyped-def]
         self,
         client,

@@ -29,7 +29,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Direct Plan Create nach M3-D30.  `status`, `sourceWishId` und alle Termine fehlen bewusst. Ein Plan beginnt als Idee; terminiert wird er ueber `/schedule`, abgeschlossen ueber `/complete`.
+ * Direct plan creation defined by M3-D30.  ``status``, ``sourceWishId``, and all schedule fields are intentionally absent. A plan starts as an idea; ``/schedule`` schedules it and ``/complete`` completes it.
  *
  * @param title 
  * @param description 

@@ -29,7 +29,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Die Titelkorrektur.  Es gibt bewusst kein `status`-Feld. Der Wish-Status folgt ausschliesslich dem Wish->Plan-Vertrag (M3-D02/D03/D04); ein freier Status-PATCH waere der Weg, an ihm vorbeizukommen.
+ * Wish title correction.  There is deliberately no ``status`` field. Wish status is controlled only by the Wish-to-Plan contract (M3-D02/D03/D04); an arbitrary status PATCH would provide a way around that lifecycle.
  *
  * @param title 
  */

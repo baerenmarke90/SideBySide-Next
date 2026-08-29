@@ -32,7 +32,7 @@ All URIs are relative to *http://localhost*
 
 Change Password
 
-Passwort aendern und alle Sitzungen beenden.  Auch die eigene: wer sein Passwort aendert, vermutet oft einen fremden Zugriff - dann darf kein Geraet angemeldet bleiben.
+Change the password and revoke every session.  This includes the current session. A password change often follows a suspected compromise, in which case no device should remain authenticated.
 
 ### Example
 
@@ -89,8 +89,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **204** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -101,7 +101,7 @@ No authorization required
 
 Complete Oidc
 
-Den Rueckweg vom Anbieter abschliessen.
+Complete the callback from the external identity provider.
 
 ### Example
 
@@ -161,9 +161,9 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **409** | Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **409** | The request conflicts with the current state of the resource. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -174,7 +174,7 @@ No authorization required
 
 Confirm Email
 
-Die Adresse bestaetigen.  Ohne Anmeldung: der Link wird oft in einem anderen Programm geoeffnet als dem, in dem die Sitzung liegt.
+Confirm the email address without requiring authentication.  Verification links are frequently opened in a different application from the one that holds the current session.
 
 ### Example
 
@@ -231,7 +231,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **204** | Successful Response |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -297,7 +297,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -308,7 +308,7 @@ No authorization required
 
 Consume Recovery
 
-Ein neues Passwort setzen; alle bisherigen Sitzungen enden.
+Set a new password and terminate all previous sessions.
 
 ### Example
 
@@ -365,7 +365,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -431,8 +431,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -498,8 +498,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -510,7 +510,7 @@ No authorization required
 
 Link Oidc
 
-Eine externe Identitaet mit dem angemeldeten Konto verknuepfen.
+Link an external identity to the authenticated account.
 
 ### Example
 
@@ -567,9 +567,9 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -627,7 +627,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -693,9 +693,9 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -706,7 +706,7 @@ No authorization required
 
 Register
 
-Einen Account anlegen.  Der erste Account braucht den einmaligen Bootstrap-Nachweis. Danach braucht jede Registrierung eine gueltige Einladung.
+Create an account.  The first account requires the one-time bootstrap proof. Every later registration requires a valid invitation.
 
 ### Example
 
@@ -763,10 +763,10 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **403** | Der Aufrufer ist authentifiziert, aber fuer diesen Vorgang nicht berechtigt. |  -  |
-| **409** | Die Anfrage kollidiert mit dem aktuellen Zustand der Ressource. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **409** | The request conflicts with the current state of the resource. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -777,7 +777,7 @@ No authorization required
 
 Request Email Verification
 
-Die Bestaetigung der eigenen Adresse anfordern.
+Request verification of the authenticated account\&#39;s own email address.
 
 ### Example
 
@@ -826,9 +826,9 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **202** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
-| **503** | Eine fuer diesen Vorgang noetige Faehigkeit ist auf dieser Instanz nicht eingerichtet. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
+| **503** | A capability required for this operation is not configured on this instance. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -839,7 +839,7 @@ No authorization required
 
 Request Magic Link
 
-Einen passwortlosen Anmeldelink anfordern.  Antwortet immer gleich - ob es die Adresse gibt, steht nicht in der Antwort. Sonst waere dieser Endpunkt ein Verzeichnis aller Konten.
+Request a passwordless sign-in link.  The response is identical whether or not the address exists. Otherwise this endpoint would become an account directory.
 
 ### Example
 
@@ -896,9 +896,9 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **202** | Successful Response |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
-| **503** | Eine fuer diesen Vorgang noetige Faehigkeit ist auf dieser Instanz nicht eingerichtet. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
+| **503** | A capability required for this operation is not configured on this instance. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -909,7 +909,7 @@ No authorization required
 
 Request Recovery
 
-Das Zuruecksetzen des Passworts anfordern. Antwortet immer gleich.
+Request a password reset while always returning the same response.
 
 ### Example
 
@@ -966,9 +966,9 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **202** | Successful Response |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
-| **503** | Eine fuer diesen Vorgang noetige Faehigkeit ist auf dieser Instanz nicht eingerichtet. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
+| **503** | A capability required for this operation is not configured on this instance. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1034,9 +1034,9 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1047,7 +1047,7 @@ No authorization required
 
 Sign Out
 
-Diese Sitzung beenden. Andere Geraete bleiben angemeldet.
+End this session while leaving other devices signed in.
 
 ### Example
 
@@ -1096,7 +1096,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **204** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1107,7 +1107,7 @@ No authorization required
 
 Start Oidc
 
-Eine Anmeldung ueber einen externen Anbieter beginnen.  State, Nonce und PKCE-Verifier entstehen serverseitig. Der Client bekommt nur die Adresse und den State. Eine Einladung bleibt dabei serverseitig gebunden und wird nie an den Anbieter weitergegeben.
+Begin authentication through an external identity provider.  State, nonce, and PKCE verifier are created server-side. The client receives only the authorization URL and state. Any invitation remains bound server-side and is never forwarded to the provider.
 
 ### Example
 
@@ -1167,8 +1167,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1179,7 +1179,7 @@ No authorization required
 
 Start Passkey Authentication
 
-Eine Anmeldung mit Passkey beginnen.  Ohne Kontobezug: der Authenticator waehlt selbst, welches auffindbare Credential er anbietet. Ein Endpunkt, der zu einer Adresse die passenden Credentials nennt, waere ein Verzeichnis der Konten.
+Begin passkey authentication without binding it to an account.  The authenticator selects which discoverable credential to offer. An endpoint that returned credentials for a given address would be an account directory.
 
 ### Example
 
@@ -1228,8 +1228,8 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **422** | Anfrageparameter oder fachliche Eingaben sind ungueltig. |  -  |
-| **429** | Zu viele Versuche innerhalb des erlaubten Zeitfensters. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **429** | Too many attempts occurred within the allowed time window. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1240,7 +1240,7 @@ No authorization required
 
 Start Passkey Registration
 
-Die Registrierung eines Passkeys beginnen.  Nur aus einer bestehenden Anmeldung heraus: ein Passkey ist ein zusaetzlicher Zugang zu einem Konto, das es schon gibt.
+Begin passkey registration for an existing authenticated account.  A passkey is an additional access method for an account that already exists, so registration starts only from an authenticated session.
 
 ### Example
 
@@ -1289,7 +1289,7 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Successful Response |  -  |
-| **401** | Authentifizierung fehlt, ist ungueltig oder die Sitzung ist abgelaufen. |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

@@ -29,7 +29,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * Der Rumpf jeder Fehlerantwort.  Dasselbe Modell erzeugt die Antwort und beschreibt sie im OpenAPI- Vertrag. Getrennt gepflegt wuerden beide irgendwann auseinanderlaufen, und der Vertrag beschriebe dann einen Fehler, den es so nicht gibt.
+ * Body of every API error response.  The same model produces the runtime response and describes it in the OpenAPI contract. Maintaining those separately would eventually make the contract describe an error shape that the runtime does not return.
  *
  * @param code 
  * @param detail 

@@ -88,7 +88,7 @@ def test_discovery_rejects_non_https_endpoints(monkeypatch, field: str) -> None:
     }
     document[field] = "http://provider.example/insecure"
 
-    monkeypatch.setattr(oidc, "_get_json", lambda _url, *, was: document)
+    monkeypatch.setattr(oidc, "_get_json", lambda _url, *, kind: document)
 
     with pytest.raises(ValidationError) as error:
         oidc.discover(connection())
@@ -97,7 +97,7 @@ def test_discovery_rejects_non_https_endpoints(monkeypatch, field: str) -> None:
 
 
 def test_single_expected_audience_is_accepted(monkeypatch, private_key) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.setattr(oidc, "_get_json", lambda _url, *, was: jwks_for(private_key))
+    monkeypatch.setattr(oidc, "_get_json", lambda _url, *, kind: jwks_for(private_key))
 
     claims = oidc._verified_claims(
         connection(),
@@ -110,7 +110,7 @@ def test_single_expected_audience_is_accepted(monkeypatch, private_key) -> None:
 
 
 def test_untrusted_additional_audience_is_rejected(monkeypatch, private_key) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.setattr(oidc, "_get_json", lambda _url, *, was: jwks_for(private_key))
+    monkeypatch.setattr(oidc, "_get_json", lambda _url, *, kind: jwks_for(private_key))
 
     with pytest.raises(ValidationError) as error:
         oidc._verified_claims(
@@ -128,7 +128,7 @@ def test_untrusted_additional_audience_is_rejected(monkeypatch, private_key) -> 
 
 
 def test_multiple_audiences_require_matching_azp(monkeypatch, private_key) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.setattr(oidc, "_get_json", lambda _url, *, was: jwks_for(private_key))
+    monkeypatch.setattr(oidc, "_get_json", lambda _url, *, kind: jwks_for(private_key))
 
     with pytest.raises(ValidationError) as error:
         oidc._verified_claims(
