@@ -190,9 +190,7 @@ class TestReplay:
         with pytest.raises(UnauthenticatedError):
             sessions.authenticate(session, second.access_token)
 
-    def test_oldest_generation_is_detected_after_multiple_rotations(
-        self, session: Session
-    ) -> None:
+    def test_oldest_generation_is_detected_after_multiple_rotations(self, session: Session) -> None:
         """T0 -> T1 -> T2, then replay T0.
 
         A two-slot window containing only the current and previous token would
@@ -217,7 +215,6 @@ class TestReplay:
             sessions.authenticate(session, t2.access_token)
         with pytest.raises(UnauthenticatedError):
             sessions.refresh_session(session, t2.refresh_token)
-
     def test_middle_generation_is_detected_after_next_rotation(self, session: Session) -> None:
         "Replay T1 after T2 has been issued."
         account = make_account(session)
@@ -438,7 +435,6 @@ class TestAbsoluteLifetime:
         assert refreshed.refresh_expires_at == device.absolute_expires_at
         assert refreshed.refresh_expires_at < shortly_before + REFRESH_TOKEN_LIFETIME
         assert refreshed.access_expires_at <= device.absolute_expires_at
-
     def test_access_token_ends_with_family(
         self, session: Session, monkeypatch: pytest.MonkeyPatch
     ) -> None:
