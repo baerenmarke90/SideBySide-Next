@@ -143,7 +143,9 @@ def check_documentation_file(path: Path, repo_root: Path = Path(".")) -> list[st
     for line_number, line in enumerate(text.splitlines(), start=1):
         sanitized = _sanitize_documentation_text(line, logical_path)
         if _contains_marker(sanitized):
-            findings.append(_format_finding(logical_path, line_number, line))
+            finding = _format_finding(logical_path, line_number, line)
+            print(finding, file=sys.stderr)
+            findings.append(finding)
     return findings
 
 
@@ -174,8 +176,6 @@ def audit_documentation(repo_root: Path = Path(".")) -> list[str]:
 def main() -> int:
     findings = audit_documentation()
     if findings:
-        for finding in findings:
-            print(finding, file=sys.stderr)
         print(
             f"Found {len(findings)} likely non-English active-documentation occurrence(s).",
             file=sys.stderr,
