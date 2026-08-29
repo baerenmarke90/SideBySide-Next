@@ -174,9 +174,66 @@ ALLOWED_LOCALIZED_TEXTS = (
     "Noch keine Einträge in eurer Story.",
 )
 
-# These values are user-visible German product copy embedded in the M2 design
-# handoff mockup. The engineering annotations around them remain audited.
+# Path-specific values are intentionally localized user-facing copy or
+# synthetic domain-content fixtures embedded in otherwise English technical
+# documentation. Exact-value exceptions keep the surrounding prose audited.
 ALLOWED_LOCALIZED_TEXTS_BY_PATH = {
+    Path("design/m2/PLATFORM-HANDOFF.md"): (
+        "Foto hinzufügen",
+    ),
+    Path("design/m2/SCREEN-FLOWS.md"): (
+        "Moment festhalten",
+        "Erinnerung",
+        "Herzmoment",
+        "Meilenstein",
+        "Privat",
+        "Mit Partner geteilt",
+        "Datei wird geprüft …",
+        "Foto wird verarbeitet …",
+        "Nur für mich",
+        "Mit Partner teilen",
+        "Kommentar schreiben",
+        "Wird gesendet …",
+        "Offline · Stand von {Zeit}",
+        "Gespeichert",
+        "Synchronisiert",
+        "Noch nicht gespeichert. Verbinde dich mit dem Internet und versuche es erneut.",
+        "Dieser Inhalt wurde inzwischen geändert.",
+    ),
+    Path("design/m2/SCREEN-STATE-MATRIX.md"): (
+        "Eure Story beginnt hier",
+        "Erinnerung hinzufügen",
+        "Keine passenden gemeinsamen Momente",
+        "Filter zurücksetzen",
+        "Einige Inhalte konnten nicht geladen werden.",
+        "Erneut versuchen",
+        "Offline · Stand von {Zeit}",
+        "Erneut verbinden",
+        "Noch nicht gespeichert.",
+        "Fehler korrigieren",
+        "Deine Sitzung ist abgelaufen.",
+        "Erneut anmelden",
+        "Dieser Inhalt ist nicht verfügbar.",
+        "Zur Story",
+        "Dieser Inhalt wurde inzwischen geändert.",
+        "Aktuellen Stand ansehen",
+        "Das waren viele Versuche.",
+        "Das hat gerade nicht geklappt.",
+        "Foto hinzufügen",
+        "Noch keine Kommentare",
+        "Story wird geladen",
+        "Haltet einen gemeinsamen Moment fest, wenn es für euch passt.",
+        "3 private Treffer ausgeblendet",
+        "Wird gespeichert …",
+        "Dieses Dateiformat wird nicht unterstützt.",
+        "Diese Datei ist zu groß.",
+        "Dieses Bild konnte nicht verarbeitet werden.",
+        "Upload unterbrochen.",
+        "Upload gerade nicht möglich.",
+        "Nur für mich",
+        "Mit Partner geteilt",
+        "privat",
+    ),
     Path("design/m2/m2-screenflow.svg"): (
         "Heute",
         "Planen",
@@ -184,9 +241,33 @@ ALLOWED_LOCALIZED_TEXTS_BY_PATH = {
         "Mehr",
         "Moment festhalten",
     ),
+    Path("docs/m2/DEMO-SCENARIO.md"): (
+        "Sonnenaufgang am See",
+        "Unser erster Pastateig",
+        "Spaziergang im Sommerregen",
+        "Danke, dass du heute einfach zugehört hast.",
+        "Unser erster gemeinsamer Garten",
+        "Ein Jahr in unserer Wohnung",
+        "Den frühen Wecker war es wert.",
+        "Nächstes Mal mit heißem Kaffee.",
+        "Das bedeutet mir viel.",
+        "Erinnerung",
+        "Moment festhalten → Erinnerung",
+        "Picknick unter den Linden",
+        "Nur für mich",
+        "Erste gemeinsame Bergtour",
+        "Offline · Stand von …",
+        "Noch nicht gespeichert",
+    ),
+    Path("docs/m2/SECURITY-TEST-MATRIX.md"): (
+        "zuletzt geändert",
+    ),
 }
 
 MARKDOWN_LINK_TARGET = re.compile(r"(?<=\]\()[^)]+(?=\))")
+REPO_LOCAL_MARKDOWN_TARGET = re.compile(
+    r"(?:docs|design|specification)/[A-Za-z0-9_./-]+\.md#[A-Za-z0-9_-]+"
+)
 
 DIAGNOSTIC_CALLS = {"print", "fail", "skip", "xfail"}
 DIAGNOSTIC_METHODS = {"debug", "info", "warning", "error", "exception", "critical"}
@@ -204,6 +285,7 @@ def _contains_marker(text: str, path: Path | None = None) -> bool:
         for localized_text in ALLOWED_LOCALIZED_TEXTS_BY_PATH.get(path, ()):
             sanitized = sanitized.replace(localized_text, "")
     sanitized = MARKDOWN_LINK_TARGET.sub("", sanitized)
+    sanitized = REPO_LOCAL_MARKDOWN_TARGET.sub("", sanitized)
     return ENGINEERING_PROSE_MARKERS.search(sanitized) is not None
 
 
