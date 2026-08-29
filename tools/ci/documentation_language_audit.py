@@ -221,9 +221,9 @@ MARKDOWN_LINK_TARGET = re.compile(r"(?<=\]\()[^)]+(?=\))")
 REPO_LOCAL_MARKDOWN_TARGET = re.compile(
     r"(?:docs|design|specification)/[A-Za-z0-9_./-]+\.md#[A-Za-z0-9_-]+"
 )
-# ``mit`` is a German marker in prose, but uppercase MIT is a standard license
-# identifier in dependency tables and specifications. Match the identifier with
-# case sensitivity before running the case-insensitive prose detector.
+# The prose detector contains a lowercase token that overlaps a standard
+# dependency-license identifier. Remove that identifier case-sensitively before
+# running the case-insensitive prose detector.
 STANDARD_LICENSE_TOKEN = re.compile(r"\bMIT(?:-CMU)?\b")
 
 
