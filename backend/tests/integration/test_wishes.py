@@ -670,9 +670,7 @@ class TestTenantIsolation:
         couple,
     ) -> None:
         create_wish(client, couple)
-        page = client.get(
-            path(couple["foreign_space"].id), headers=auth(couple["token_b"])
-        ).json()
+        page = client.get(path(couple["foreign_space"].id), headers=auth(couple["token_b"])).json()
         assert page["items"] == []
 
     def test_cursor_applies_only_in_its_space(  # type: ignore[no-untyped-def]
