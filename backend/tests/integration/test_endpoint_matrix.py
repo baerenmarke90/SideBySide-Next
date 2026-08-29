@@ -657,7 +657,9 @@ class TestEverySpaceEndpoint:
         assert response.json()["code"] == SPACE_ABSENCE
 
 
-DETAIL_ENDPOINTS = tuple(endpoint for endpoint in SPACE_ENDPOINTS if endpoint.resource_absence is not None)
+DETAIL_ENDPOINTS = tuple(
+    endpoint for endpoint in SPACE_ENDPOINTS if endpoint.resource_absence is not None
+)
 
 
 @pytest.mark.parametrize("endpoint", DETAIL_ENDPOINTS, ids=str)
