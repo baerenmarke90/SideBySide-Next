@@ -1,226 +1,167 @@
-# SideBySide Next — Produktspezifikation
+# SideBySide Next — Product Specification
 
-Verbindliche fachliche Vorgabe. Diese Datei ist die Implementierungsquelle;
-eine Vorgängeranwendung wird dafür nicht herangezogen.
+Binding product requirement. This file is the implementation source; a predecessor application is not consulted for it.
 
 | | |
 |---|---|
 | Version | 1.0 |
-| Stand | 2026-08-23 |
+| As of | 2026-08-23 |
 
-## 1. Produkt
+## 1. Product
 
-Ein privater digitaler Begleiter für das gemeinsame Leben eines Paares, in
-zwei Betriebsformen: betriebener Cloud-Dienst und Self-Hosted-Installation.
+A private digital companion for a couple's shared life, offered in two operating models: managed Cloud service and Self-Hosted installation.
 
-Positionierung: *Die Paar-App, die euch gehört.*
+Positioning, intentional de-DE product copy: *Die Paar-App, die euch gehört.*
 
-Verwaltet werden — soweit die Nutzer die Funktionen aktivieren —
-Erinnerungen, emotionale Momente, Meilensteine, gemeinsame Geschichte,
-Wünsche, Pläne, Orte, Listen, private Inhalte, Termine,
-Partnerpräferenzen, Geburtstage und wichtige Personen, Paarfragen,
-gemeinsames Befinden, Einkaufslisten, Rezeptideen, Freizeitvorschläge,
-externe Fotos und optionale Standortinformationen.
+Where users enable the corresponding functions, the product manages Memories, emotional moments, Milestones, shared history, Wishes, Plans, Places, Lists, private content, appointments, partner preferences, birthdays and important people, couple questions, shared well-being, Shopping Lists, recipe ideas, leisure suggestions, external photos, and optional location information.
 
-## 2. Mandantenmodell
+## 2. Tenant model
 
-```
+```text
 Account A ──┐
             ├── Membership ── Space
 Account B ──┘
 ```
 
-Ein **Space** ist der private gemeinsame Raum eines Paares; ein normaler
-Paar-Space hat höchstens zwei aktive Partner. Ein Account darf technisch
-mehreren Spaces angehören.
+A **Space** is the private shared area of a couple; a normal couple Space has at most two active partners. An Account may technically belong to multiple Spaces.
 
-Jeder gemeinsame Datensatz gehört genau einem Space. Zugriffsregeln siehe
-[docs/SECURITY.md](../docs/SECURITY.md).
+Every shared record belongs to exactly one Space. See [docs/SECURITY.md](../docs/SECURITY.md) for access rules.
 
-## 3. Domänen
+## 3. Domains
 
 ### Identity
 `Account`, `AccountEmail`, `AuthIdentity`, `DeviceSession`
 
-Account trägt Profilidentität, keine vermischten Auth-Geheimnisse.
-Auth-Identitäten liegen getrennt.
+Account stores profile identity, not mixed Auth secrets. Auth identities are kept separately.
 
 ### Relationship
 `Space`, `Membership`, `Invitation`, `SpaceProfile`
 
-`SpaceProfile` hält `relationship_started_on`,
-`show_relationship_duration`, `duration_display_mode`. Die Anzeige der
-Beziehungsdauer gehört zum MVP und ist abschaltbar.
+`SpaceProfile` stores `relationship_started_on`, `show_relationship_duration`, and `duration_display_mode`. Relationship-duration display is part of the MVP and can be disabled.
 
 ### Profiles
 `PartnerProfile`, `ProfilePreference`, `RelatedPerson`, `ImportantDate`
 
-`ProfilePreference`: `account_id`, `space_id`, `category`, `topic`,
-`sentiment`, `value`, `visibility`.
+`ProfilePreference`: `account_id`, `space_id`, `category`, `topic`, `sentiment`, `value`, `visibility`.
 
-Kategorien: FOOD, DRINK, FLOWERS, MOVIES, SERIES, MUSIC, HOBBIES,
-ACTIVITIES, TRAVEL, RESTAURANTS, COLORS, OTHER.
+Categories: FOOD, DRINK, FLOWERS, MOVIES, SERIES, MUSIC, HOBBIES, ACTIVITIES, TRAVEL, RESTAURANTS, COLORS, OTHER.
 Sentiment: LOVE, LIKE, NEUTRAL, DISLIKE, AVOID.
 
-`RelatedPerson`: Anzeigename, Beziehung (CHILD, PARENT, SIBLING, FRIEND,
-OTHER), optional Geburtstag mit `birthday_year_known`.
-`ImportantDate`: Typ BIRTHDAY, ANNIVERSARY, CUSTOM, mit Wiederholung.
+`RelatedPerson`: display name, relationship (CHILD, PARENT, SIBLING, FRIEND, OTHER), optional birthday with `birthday_year_known`.
+`ImportantDate`: type BIRTHDAY, ANNIVERSARY, CUSTOM, with recurrence.
 
 ### Memories
 `Memory`, `Attachment`, `HeartMoment`, `Milestone`, `Comment`
 
-`Memory`: Titel, Text, `happened_on` getrennt von `created_at`, Autor,
-mehrere Medien, Kommentare.
+`Memory`: title, text, `happened_on` distinct from `created_at`, author, multiple media, comments.
 
-`HeartMoment`: Text, Emotion (LOVED, SEEN, APPRECIATED, SUPPORTED,
-GRATEFUL, HAPPY), Sichtbarkeit SHARED oder PRIVATE. PRIVATE ist
-`OWNER_ONLY` ohne Ausnahme.
+`HeartMoment`: text, emotion (LOVED, SEEN, APPRECIATED, SUPPORTED, GRATEFUL, HAPPY), visibility SHARED or PRIVATE. PRIVATE is `OWNER_ONLY` without exception.
 
-`Milestone` ist ein eigenes Modell, kein Listentyp.
+`Milestone` is its own model, not a list type.
 
-`Comment`: Ziele in Version 1 kontrolliert aufgezählt — geteilte Memory,
-Milestone, geteilter HeartMoment. Keine Kommentare auf privaten Inhalten.
+`Comment`: version-1 targets are strictly enumerated — shared Memory, Milestone, shared HeartMoment. No comments on private content.
 
 ### Planning
-`Wish` (OPEN, PLANNED, COMPLETED), `Plan` (IDEA, PLANNED, COMPLETED),
-`Place`, `Chapter`
+`Wish` (OPEN, PLANNED, COMPLETED), `Plan` (IDEA, PLANNED, COMPLETED), `Place`, `Chapter`
 
-Ablauf: Wunsch → Plan → erlebt → optional Kapitel. Ein nicht
-abgeschlossener Plan kann in den Wunschzustand zurück.
+Flow: Wish → Plan → experienced → optional Chapter. A non-completed Plan can return to the Wish state.
 
-`Place` mit optionalen Koordinaten; ein Ort ohne Koordinaten ist gültig.
+`Place` has optional coordinates; a Place without coordinates is valid.
 
-`Chapter` bündelt Erinnerungen, Herzmomente, Meilensteine. Löschen entfernt
-Verknüpfungen, nicht die Originale.
+`Chapter` groups Memories, HeartMoments, and Milestones. Deleting a Chapter removes links, not the originals.
 
 ### Collections
-`Collection`, `CollectionItem` — frei definierbare gemeinsame Listen mit
-Abhaken, Sortierung, Mehrfachauswahl. Die Einkaufsliste ist später eine
-eigene Domäne, keine Collection.
+`Collection`, `CollectionItem` — freely definable shared Lists with completion, ordering, and multi-select. The Shopping List is a separate later Domain, not a Collection.
 
 ### Private
-`PrivateNote`, `GiftIdea`, `PrivateCollection`, `PrivateCollectionItem` —
-sämtlich `OWNER_ONLY`.
+`PrivateNote`, `GiftIdea`, `PrivateCollection`, `PrivateCollectionItem` — all `OWNER_ONLY`.
 
 ### Engagement
-`Reminder`, `ReminderSchedule` (ONCE, ANNUAL, RELATIONSHIP_DAY_COUNT),
-`ReminderOffset` (eigene Zeilen, keine CSV-Strings),
-`ReminderPreference`, `Activity`, `Notification`, `PushDelivery`,
-`Suggestion`, `RulePreference`
+`Reminder`, `ReminderSchedule` (ONCE, ANNUAL, RELATIONSHIP_DAY_COUNT), `ReminderOffset` (dedicated rows, no CSV strings), `ReminderPreference`, `Activity`, `Notification`, `PushDelivery`, `Suggestion`, `RulePreference`
 
-Automatisch erzeugte Reminder kennen ihre Quelle und sind nicht wie
-manuelle frei editierbar.
+Automatically generated Reminders know their source and are not freely editable like manual ones.
 
 ### Platform
-`FeatureConfiguration` (technische Aktivierung) und `Entitlement`
-(tarifliche Berechtigung) sind strikt getrennt. `Job`, `OutboxEvent`,
-`AuditEvent`, `IntegrationConnection`.
+`FeatureConfiguration` (technical activation) and `Entitlement` (commercial eligibility) are strictly separate. `Job`, `OutboxEvent`, `AuditEvent`, `IntegrationConnection`.
 
-### Später
-`Question`, `QuestionAssignment`, `QuestionAnswer`, `QuestionFavorite`,
-`DailyCheckIn`, `ShoppingList`, `ShoppingItem`
+### Later
+`Question`, `QuestionAssignment`, `QuestionAnswer`, `QuestionFavorite`, `DailyCheckIn`, `ShoppingList`, `ShoppingItem`
 
-Reveal-Regel der Fragen: beide antworten unabhängig; vor dem Reveal sieht
-niemand die Antwort des anderen, und möglichst auch nicht, ob schon
-geantwortet wurde. Der Fragenkatalog wird redaktionell neu erstellt.
+Question reveal rule: both people answer independently; before reveal, neither sees the other's answer and, where possible, not even whether the other has already answered. The question catalog is created editorially from scratch.
 
-## 4. Abgeleitete Sichten
+## 4. Derived views
 
-Nicht persistiert, sondern berechnet:
+Calculated rather than persisted:
 
-- **Story** aus Memory, geteiltem HeartMoment und Milestone, angereichert
-  um Autor, Medien, Kapitel, Ort. Cursor-Pagination, Filter nach Typ und
-  Jahr, Suche, Sortierung, Monatsgruppen. Private Inhalte niemals.
-- **"Weißt du noch?"** referenziert Originalinhalte, dupliziert nichts.
-- **Dashboard** — Space-Übersicht, Partner, optionale Beziehungsdauer,
-  "Ich denke an dich", Rückblick, Demnächst, Zuletzt.
-- **Jahresrückblick** — Zahlen, Monatsgruppen, Highlights. Leere
-  Statistiken müssen nicht erscheinen.
+- **Story** from Memory, shared HeartMoment, and Milestone, enriched with author, media, Chapter, Place. Cursor pagination, filtering by type and year, Search, ordering, month groups. Never private content.
+- **"Weißt du noch?"** references original content and duplicates nothing.
+- **Dashboard** — Space overview, partner, optional relationship duration, intentional de-DE product copy "Ich denke an dich", retrospective, upcoming items, recent items.
+- **Year in Review** — metrics, month groups, highlights. Empty statistics need not be shown.
 
-## 5. Suche
+## 5. Search
 
-PostgreSQL Full Text Search in Version 1, hinter einer Abstraktion.
-Sicherheitsfilter serverseitig in der Abfrage.
+PostgreSQL Full Text Search in version 1, behind an abstraction. Security filtering is enforced server-side in the query.
 
-Umfasst Memories, HeartMoments, Milestones, Chapters, Plans, Places,
-Collections, eigene private Inhalte, später Questions.
+Includes Memories, HeartMoments, Milestones, Chapters, Plans, Places, Collections, the current user's private content, and later Questions.
 
 ## 6. Export
 
-Versioniertes eigenes Transfer Bundle mit `manifest.json`
-(`formatVersion`, `exportedAt`, `applicationVersion`, `checksums`),
-Domänen-Dateien und Medien.
+Versioned neutral Transfer Bundle with `manifest.json` (`formatVersion`, `exportedAt`, `applicationVersion`, `checksums`), Domain files, and media.
 
-Nicht enthalten: Passwörter, Passkeys, Refresh Tokens, Sitzungen, Push
-Tokens, Sicherheitsprotokolle.
+Excluded: passwords, Passkeys, Refresh Tokens, Sessions, Push Tokens, security logs.
 
-Migration aus der Vorgängeranwendung läuft später über dasselbe neutrale
-Format — kein Direktimport einer Fremddatenbank in dieses ORM.
+Migration from a predecessor application later uses the same neutral format — no direct import of a foreign database into this ORM.
 
-## 7. Regeln und Vorschläge
+## 7. Rules and suggestions
 
-Deterministisch: Trigger + Bedingungen + Aktion. Kontrollierter Katalog,
-keine frei ausführbaren Nutzerskripte, keine KI erforderlich.
+Deterministic: trigger + conditions + action. Controlled catalog, no freely executable user scripts, no AI required.
 
-`RulePreference` je Account und Space mit `rule_key`, `enabled`,
-`parameters`.
+`RulePreference` per Account and Space with `rule_key`, `enabled`, `parameters`.
 
 ## 8. Clients
 
-Web (React/TypeScript) und Android (Kotlin/Compose). Eine Kernfunktion ist
-produktreif, wenn beide dasselbe fachliche Verhalten zeigen — bei Create,
-Read, Update, Delete, Autorisierung, Sichtbarkeit, Validierung und
-Fehlern. Die Oberfläche darf sich unterscheiden.
+Web (React/TypeScript) and Android (Kotlin/Compose). A Core function is production-ready when both clients exhibit the same Domain behavior for Create, Read, Update, Delete, Authorization, visibility, validation, and errors. Presentation may differ.
 
-Android: Offline-Lesecache ja, Offline-Schreiben nein. Ohne Verbindung
-folgt eine klare Meldung, dass nichts gespeichert wurde.
+Android: Offline Read Cache yes, offline writes no. Without connectivity, the client clearly states that nothing was saved.
 
-## 9. Meilensteine
+## 9. Milestones
 
-| | Inhalt |
+| | Scope |
 |---|---|
-| M0 | Technische Plattform, Outbox, Jobs, Fehlerformat, CI, Provenance |
-| M1 | Identity, Spaces, Memberships, Invitations, Profile, Präferenzen |
-| M2 | MediaStore, Attachments, Memories, HeartMoments, Milestones, Kommentare, Story |
-| M3 | Wishes, Plans, Places, Relations, Chapters, Collections, private Ablage |
-| M4 | Reminders, Activity, Notifications, "Ich denke an dich", Dashboard, Suche, Regeln |
-| M5 | Export, Import, Web-Client, Android-Client, Read Cache, Parität |
-| M6 | Unsere Fragen, neuer Fragenpool, Jahres- und Monatsrückblick, Check-in |
-| M7 | Integrationen: Discovery, Shopping, Rezepte, Unterhaltung, externe Medien, Standortverlauf, Karten |
-| M8 | Opt-in-Standortkontext, Geofencing, kontextbezogene Vorschläge, Presence |
-| M9 | Self-Hosted-Compose, Backup, Cloud-Deployment, Entitlements, Billing-Adapter, Härtung, Release |
-| MX | Echte Ende-zu-Ende-Verschlüsselung |
+| M0 | technical platform, Outbox, Jobs, error format, CI, Provenance |
+| M1 | Identity, Spaces, Memberships, Invitations, Profile, preferences |
+| M2 | MediaStore, Attachments, Memories, HeartMoments, Milestones, Comments, Story |
+| M3 | Wishes, Plans, Places, Relations, Chapters, Collections, Private Area |
+| M4 | Reminders, Activity, Notifications, "Ich denke an dich", Dashboard, Search, Rules |
+| M5 | Export, Import, Web client, Android client, Read Cache, parity |
+| M6 | "Unsere Fragen", new question pool, yearly and monthly recaps, Check-in |
+| M7 | Integrations: Discovery, Shopping, Recipes, Entertainment, external media, location history, Maps |
+| M8 | opt-in location context, Geofencing, contextual suggestions, Presence |
+| M9 | Self-Hosted Compose, Backup, Cloud deployment, Entitlements, Billing adapter, hardening, Release |
+| MX | real end-to-end encryption |
 
-## 10. Nicht im ersten MVP
+## 10. Not in the first MVP
 
-Echte E2EE, Offline-Schreib-Sync, KI, öffentliche Freigabelinks,
-Filmempfehlungen, Event Discovery, Rezeptintegration, Shopping-Automation,
-externe Medien- und Standortintegrationen, Karten-Integration, Geofencing,
-Partnerentfernung, Daily Check-in, Unsere Fragen, Jahresrückblick.
+Real E2EE, offline write sync, AI, public share links, movie recommendations, Event Discovery, recipe integration, Shopping automation, external media and location integrations, Maps integration, Geofencing, partner removal, Daily Check-in, "Unsere Fragen", Year in Review.
 
-Der Aufbau muss die Erweiterung tragen; der Core wird zuerst sauber und
-sicher.
+The architecture must support these extensions; the Core is built cleanly and securely first.
 
-## 11. Definition of Done je Domänen-Feature
+## 11. Definition of Done per Domain feature
 
-Datenmodell, Migration, Domain Service, Autorisierung, API, OpenAPI,
-Validierung, Fehlercodes, Unit-Tests, Integrationstests,
-Cross-Tenant-Tests, Privacy-Tests sofern einschlägig,
-Export-Unterstützung bei persistenten Nutzerdaten, Web-UI, Android-UI,
-Fehlerbehandlung, Dokumentation.
+Data model, migration, Domain Service, Authorization, API, OpenAPI, validation, error codes, Unit tests, Integration tests, Cross-Tenant tests, Privacy tests where applicable, Export support for persistent user data, Web UI, Android UI, error handling, documentation.
 
-Ein funktionierender Knopf allein ist nicht fertig.
+A working button alone is not done.
 
-## 12. Priorität bei Zielkonflikten
+## 12. Priority when goals conflict
 
-1. Clean-Room-Trennung
-2. Sicherheit und Tenant Isolation
-3. sauberes Domainmodell
-4. stabile API
-5. Tests
-6. Portabilität
-7. Web- und Android-UX
-8. Erweiterungen
-9. Monetarisierung
+1. Clean-Room separation
+2. Security and Tenant Isolation
+3. clean Domain model
+4. stable API
+5. tests
+6. portability
+7. Web and Android UX
+8. extensions
+9. monetization
 
-Keine Abkürzung darf Tenant Isolation oder Privatsphäre schwächen.
+No shortcut may weaken Tenant Isolation or Privacy.

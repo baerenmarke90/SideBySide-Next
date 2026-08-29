@@ -1,96 +1,96 @@
-# SideBySide Next – Produkt- und Geschäftsmodell
+# SideBySide Next – Product and Business Model
 
-## Ziel
+## Goal
 
-SideBySide Next soll zwei Dinge miteinander verbinden:
+SideBySide Next is intended to combine two models:
 
-1. technisch versierte Privatnutzer können die Anwendung selbst betreiben;
-2. Privatnutzer, die keinen eigenen Server administrieren möchten, können den offiziell betriebenen SideBySide-Cloud-Dienst nutzen.
+1. technically proficient private users can operate the application themselves;
+2. private users who do not want to administer their own server can use the officially operated SideBySide Cloud service.
 
-Die Monetarisierung der Cloud basiert auf Betrieb, Komfort und Service – nicht darauf, den Self-Hosted-Build künstlich funktional zu verschlechtern.
+Cloud monetization is based on operations, convenience, and service — not on artificially degrading the functionality of the Self-Hosted build.
 
-## Betriebsmodelle
+## Operating models
 
 ### SideBySide Self-Hosted
 
-SideBySide Self-Hosted richtet sich an Privatnutzer, die SideBySide Next selbst installieren und betreiben möchten.
+SideBySide Self-Hosted is intended for private users who want to install and operate SideBySide Next themselves.
 
-Für persönliche und sonstige nichtkommerzielle Nutzung gelten die Bedingungen der [PolyForm Noncommercial License 1.0.0](../LICENSE).
+Personal and other noncommercial use is governed by the [PolyForm Noncommercial License 1.0.0](../LICENSE).
 
-Self-Hosted-Nutzer übernehmen insbesondere selbst:
+Self-Hosted users are responsible in particular for:
 
-- Installation und Aktualisierung;
-- Server- und Datenbankbetrieb;
-- TLS, Domain und Reverse Proxy;
-- Backups und Wiederherstellung;
-- Monitoring und Verfügbarkeit;
-- E-Mail- und Push-Infrastruktur, soweit diese Funktionen eine externe Infrastruktur benötigen;
-- Speicher- und Betriebskosten.
+- installation and updates;
+- server and database operations;
+- TLS, domain, and reverse proxy;
+- backups and recovery;
+- monitoring and availability;
+- email and push infrastructure where those functions require external infrastructure;
+- storage and operating costs.
 
-Self-Hosted soll den gemeinsamen Application Core verwenden und nicht allein zur Verkaufsförderung der Cloud künstlich um Kernfunktionen beschnitten werden. Unterschiede dürfen sich aus der Betriebsform ergeben, zum Beispiel durch verwaltete Infrastruktur, verfügbare Integrationen, Speicher- oder Serviceleistungen.
+Self-Hosted should use the shared Application Core and must not be artificially stripped of Core functionality solely to promote the Cloud. Differences may result from the operating model, for example managed infrastructure, available integrations, storage, or service offerings.
 
 ### SideBySide Cloud
 
-SideBySide Cloud ist der offiziell betriebene Managed Service für Nutzer, die SideBySide verwenden möchten, ohne selbst Infrastruktur zu administrieren.
+SideBySide Cloud is the officially operated Managed Service for users who want to use SideBySide without administering infrastructure themselves.
 
-Die Nutzer bezahlen dabei insbesondere für den Betrieb und die damit verbundenen Leistungen, zum Beispiel:
+Users primarily pay for operations and the associated services, for example:
 
-- bereitgestellte und gewartete Infrastruktur;
-- automatische Updates und Migrationen;
-- Backups und Wiederherstellungsprozesse;
-- Monitoring und Verfügbarkeit;
-- Sicherheitswartung;
-- verwalteten Speicher;
-- E-Mail-, Push- und vergleichbare Betriebsdienste;
-- eine direkt nutzbare Web- und App-Erfahrung ohne eigene Serveradministration.
+- provisioned and maintained infrastructure;
+- automatic updates and migrations;
+- backups and recovery processes;
+- monitoring and availability;
+- security maintenance;
+- managed storage;
+- email, push, and comparable operational services;
+- an immediately usable Web and app experience without self-administered servers.
 
-Die Cloud darf in unterschiedlichen Tarifen angeboten werden, beispielsweise anhand von Speicher, Serviceumfang oder zusätzlichen verwalteten Leistungen. Konkrete Preise und Limits werden erst nach einer Kosten- und Marktbetrachtung verbindlich festgelegt.
+The Cloud may be offered in different plans, for example based on storage, service scope, or additional managed services. Specific prices and limits will be defined only after cost and market analysis.
 
-## Offizielle Apps und Clients
+## Official apps and clients
 
-Offizielle Web-, Android- und gegebenenfalls weitere Clients sind Teil des SideBySide-Produktes.
+Official Web, Android, and potentially additional clients are part of the SideBySide product.
 
-Der kommerzielle Nutzen der offiziellen Cloud entsteht nicht dadurch, Self-Hosted-Nutzer technisch aus den offiziellen Clients auszuschließen, sondern durch den komfortablen, fertig betriebenen Dienst. Wo es technisch und sicherheitlich sinnvoll ist, sollen die offiziellen Clients daher sowohl mit SideBySide Cloud als auch mit kompatiblen Self-Hosted-Instanzen funktionieren können.
+The commercial value of the official Cloud does not come from technically excluding Self-Hosted users from the official clients, but from the convenience of a fully operated service. Where technically and securely appropriate, the official clients should therefore be able to work with both SideBySide Cloud and compatible Self-Hosted instances.
 
-App-Store-Veröffentlichung, Signierung, Updatekanäle, Push-Infrastruktur und andere vom Projektbetreiber bereitgestellte Distributions- oder Plattformdienste können separat an den offiziellen Betrieb gebunden sein, sofern dies technisch, sicherheitlich oder wirtschaftlich erforderlich ist.
+App-store publication, signing, update channels, push infrastructure, and other distribution or platform services provided by the project operator may be tied separately to the official operation where this is required for technical, security, or economic reasons.
 
-## Kommerzielle Nutzung durch Dritte
+## Commercial use by third parties
 
-Die Veröffentlichung des Quellcodes erteilt keine allgemeine Erlaubnis zur kommerziellen Nutzung.
+Publishing the source code does not grant general permission for commercial use.
 
-Dritte benötigen eine separate kommerzielle Lizenz insbesondere für:
+Third parties require a separate commercial license in particular for:
 
-- einen kostenpflichtigen SideBySide-Hosting- oder SaaS-Dienst;
-- die Integration in ein kommerzielles Produkt;
-- White-Label- oder OEM-Angebote;
-- kommerzielle Weitergabe oder Vermarktung.
+- a paid SideBySide hosting or SaaS service;
+- integration into a commercial product;
+- White-Label or OEM offerings;
+- commercial redistribution or marketing.
 
-Die maßgebliche Projektpolicy steht in [COMMERCIAL-LICENSE.md](../COMMERCIAL-LICENSE.md).
+The authoritative project policy is documented in [COMMERCIAL-LICENSE.md](../COMMERCIAL-LICENSE.md).
 
-## Beiträge aus der Community
+## Community contributions
 
-Community-Forks und Pull Requests sind ausdrücklich erwünscht. Änderungen können nach Review in den Hauptzweig übernommen werden, wenn sie fachlich, technisch und strategisch zum Projekt passen.
+Community forks and Pull Requests are explicitly welcome. Changes may be merged into the main branch after review when they fit the project functionally, technically, and strategically.
 
-Die Entscheidung über die Aufnahme eines Beitrags liegt bei den Maintainers. Für Beiträge gelten [CONTRIBUTING.md](../CONTRIBUTING.md) und das [Contributor License Agreement](../CLA.md), damit akzeptierte Contributions sowohl im nichtkommerziellen Modell als auch bei einer späteren kommerziellen Lizenzierung rechtssicher weiterverwendet werden können.
+The Maintainers decide whether to accept a contribution. Contributions are governed by [CONTRIBUTING.md](../CONTRIBUTING.md) and the [Contributor License Agreement](../CLA.md), so accepted Contributions can be reused with legal clarity both in the noncommercial model and under later commercial licensing.
 
-## Produktprinzipien
+## Product principles
 
-Das Geschäftsmodell folgt diesen Grundsätzen:
+The business model follows these principles:
 
-- **Self-Hosting bleibt ein echtes Produkt.** Es dient nicht nur als Demo für die Cloud.
-- **Die Cloud verkauft Bequemlichkeit und Betrieb.** Der Mehrwert besteht in einem verwalteten Dienst.
-- **Ein gemeinsamer Application Core.** Cloud und Self-Hosted sollen nicht unnötig auseinanderentwickelt werden.
-- **Keine künstliche Verschlechterung.** Kernfunktionen werden nicht allein zur Monetarisierung aus Self-Hosted entfernt.
-- **Kommerzielle Nutzung bleibt kontrolliert.** Dritte benötigen dafür eine separate Lizenz.
-- **Community-Beiträge können zurückfließen.** Die Maintainers entscheiden über die Aufnahme in `main`.
-- **Datenschutz bleibt Produktmerkmal.** Monetarisierung soll nicht auf Werbung, Verkauf persönlicher Daten oder unnötigem Tracking beruhen.
+- **Self-Hosting remains a real product.** It is not merely a demo for the Cloud.
+- **The Cloud sells convenience and operations.** Its added value is a managed service.
+- **One shared Application Core.** Cloud and Self-Hosted should not diverge unnecessarily.
+- **No artificial degradation.** Core functionality is not removed from Self-Hosted solely for monetization.
+- **Commercial use remains controlled.** Third parties require a separate license for it.
+- **Community contributions can flow back.** The Maintainers decide whether they are accepted into `main`.
+- **Privacy remains a product characteristic.** Monetization must not rely on advertising, selling personal data, or unnecessary tracking.
 
-## Positionierung
+## Positioning
 
-Die spätere Kommunikation kann das Modell sinngemäß so erklären:
+Future communication may explain the model along these lines:
 
-> SideBySide Next kannst du für persönliche, nichtkommerzielle Nutzung selbst hosten. Wenn du keinen eigenen Server betreiben, keine Updates einspielen und keine Backups verwalten möchtest, kannst du stattdessen SideBySide Cloud als fertig betriebenen Dienst nutzen.
+> You can self-host SideBySide Next for personal, noncommercial use. If you do not want to operate your own server, install updates, or manage backups, you can instead use SideBySide Cloud as a fully operated service.
 
-## Noch nicht festgelegt
+## Not yet defined
 
-Dieses Dokument legt die strategische Produktstruktur fest, aber bewusst noch keine endgültigen Preise, Speichergrenzen, SLA-Zusagen oder Tarifnamen. Diese Punkte werden vor dem kommerziellen Start anhand der tatsächlichen Infrastrukturkosten, Zahlungsgebühren, App-Store-Kosten, Supportaufwände und Marktpositionierung festgelegt.
+This document defines the strategic product structure but deliberately does not yet set final prices, storage limits, SLA commitments, or plan names. Those points will be defined before commercial launch based on actual infrastructure costs, payment fees, app-store costs, support effort, and market positioning.

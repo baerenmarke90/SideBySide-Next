@@ -1,115 +1,115 @@
 # SideBySide Next Roadmap
 
-**Status:** Menschenlesbare Orientierungs- und Priorisierungsansicht  
+**Status:** Human-readable orientation and prioritization view  
 **Version:** 1.8  
-**Stand:** 27.08.2026  
-**Zeitmodell:** Phasen und Release Gates, keine zugesagten Kalendertermine
+**As of:** August 27, 2026  
+**Time model:** phases and Release Gates, no committed calendar dates
 
-Diese Roadmap übersetzt die verbindliche Produktspezifikation in eine verständliche Reihenfolge. Sie zeigt Ziel, Abhängigkeiten und Freigabepunkte. Der tatsächliche Arbeitsstand steht im [Implementation Status](./IMPLEMENTATION-STATUS.md); die Regeln für laufende Statusquellen stehen in [Statusquellen und Drift-Regeln](./STATUS-SOURCES.md); die präzisierten M2-Grenzen stehen im [M2 Project Control](./m2/PROJECT-CONTROL.md), die M3-Readiness im [M3 Technical Readiness Package](./m3/README.md).
+This roadmap translates the binding product specification into an understandable sequence. It shows goals, dependencies, and release points. The actual implementation state is tracked in [Implementation Status](./IMPLEMENTATION-STATUS.md); rules for living status sources are defined in [Status Sources and Drift Rules](./STATUS-SOURCES.md); the refined M2 boundaries are documented in [M2 Project Control](./m2/PROJECT-CONTROL.md), and M3 readiness in the [M3 Technical Readiness Package](./m3/README.md).
 
-## Roadmap auf einen Blick
+## Roadmap at a glance
 
-![Grafische Roadmap von M0 Foundation bis M9 Release und der strategischen E2EE-Spur](./assets/roadmap/roadmap-overview.svg)
+![Roadmap from M0 Foundation through M9 Release and the strategic E2EE track](./assets/roadmap/roadmap-overview.svg)
 
-**Aktuell:** M0, M1 und M2 sind für ihren vorgesehenen Umfang abgeschlossen. **G1 und G2 sind bestanden. M3 ist freigegeben; S1 bis S4 sind geliefert. Der nächste Runtime-Slice ist M3-S5 — Chapter.** Der verbindliche aktuelle Gate-Nachweis ist der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).
+**Current:** M0, M1, and M2 are complete for their intended scope. **G1 and G2 have passed. M3 is released for implementation; S1 through S4 are delivered. The next runtime slice is M3-S5 — Chapter.** The binding current gate evidence is the [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).
 
-Die früheren Pre-Exposure-Härtungen #59 und #60 sowie das Repository-Hardening #25 sind abgeschlossen. Der aktive `main`-Ruleset erzwingt Pull Request, Merge Commit und die definierten Pflichtchecks.
+The earlier Pre-Exposure hardening items #59 and #60 and Repository Hardening #25 are complete. The active `main` ruleset enforces Pull Requests, Merge Commits, and the defined required checks.
 
-## Dokumentenrollen
+## Document roles
 
-| Dokument | beantwortet |
+| Document | Answers |
 |---|---|
-| diese Roadmap | Wohin gehen wir, in welcher Reihenfolge und warum? |
-| [Implementation Status](./IMPLEMENTATION-STATUS.md) | Was ist auf `main` tatsächlich umgesetzt oder noch offen? |
-| [Statusquellen und Drift-Regeln](./STATUS-SOURCES.md) | Welche Statusdateien sind living und welche historische Snapshots? |
-| [M2 Project Control](./m2/PROJECT-CONTROL.md) | Welche M2/M5-Grenzen und G2-Kriterien galten? |
-| [M3 Technical Readiness Package](./m3/README.md) | Welche M3-Entscheidungen, Gate-Regeln und Runtime-Voraussetzungen gelten? |
-| [Finaler G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) | aktuelle Gate-Entscheidung |
-| datierte ältere Reviews | historische Prüfsnapshots, die nicht umgeschrieben werden |
-| GitHub Issues/PRs | Welche konkreten Arbeitspakete werden bearbeitet? |
-| [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | Was ist fachlich und technisch verbindlich? |
+| this Roadmap | Where are we going, in which order, and why? |
+| [Implementation Status](./IMPLEMENTATION-STATUS.md) | What is actually implemented on `main`, and what remains open? |
+| [Status Sources and Drift Rules](./STATUS-SOURCES.md) | Which status files are living documents and which are historical snapshots? |
+| [M2 Project Control](./m2/PROJECT-CONTROL.md) | Which M2/M5 boundaries and G2 criteria applied? |
+| [M3 Technical Readiness Package](./m3/README.md) | Which M3 decisions, gate rules, and runtime prerequisites apply? |
+| [Final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) | current gate decision |
+| older dated reviews | historical review snapshots that are never rewritten |
+| GitHub Issues/PRs | Which concrete work packages are being handled? |
+| [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | What is binding from a product and technical perspective? |
 
-## Aktueller Snapshot
+## Current snapshot
 
-### M0 — Foundation: abgeschlossen
+### M0 — Foundation: complete
 
-API-/DB-Konventionen, Migrationen, Outbox, Jobs, MediaStore-Grundlage, ProtectedPayload-Grenze, versioniertes OpenAPI, PostgreSQL-Integrationstests, Supply-Chain-Prüfungen, Secret Scan und Provenance sind für den Foundation-Umfang vorhanden.
+API/DB conventions, migrations, Outbox, jobs, MediaStore foundation, ProtectedPayload boundary, versioned OpenAPI, PostgreSQL integration tests, Supply Chain checks, Secret Scan, and Provenance are present for the Foundation scope.
 
-### M1 — Identity & Relationship: abgeschlossen, G1 bestanden
+### M1 — Identity & Relationship: complete, G1 passed
 
-Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, E-Mail-Verifikation und Recovery sind implementiert. PR #64 hat #61 mit expliziter `preserve`-/`cascade`-Semantik ohne destruktiven Default geschlossen; der folgende Gate-Review hat G1 ausdrücklich bestanden erklärt. Die nachgelagerten Härtungen #59 und #60 sowie Repository-Hardening #25 sind ebenfalls abgeschlossen.
+Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, email verification, and Recovery are implemented. PR #64 closed #61 with explicit `preserve`/`cascade` semantics and no destructive default; the following Gate Review explicitly declared G1 passed. The later hardening items #59 and #60 and Repository Hardening #25 are also complete.
 
-### M2 — Erinnern / Story Alpha: abgeschlossen, G2 bestanden
+### M2 — Memories / Story Alpha: complete, G2 passed
 
-Die blockierenden Domain-, Privacy-, Media- und API-Entscheidungen sind geschlossen. Geliefert sind:
+The blocking Domain, Privacy, Media, and API decisions are closed. Delivered:
 
-1. #71 — Memory CRUD ohne Medien: **geliefert**.
-2. #80 — HeartMoment mit Owner-only-Privacy: **geliefert**.
-3. #79 — Attachment-Lifecycle für Bilder: **geliefert**. Video ist nicht Teil von M2/G2 und als zukünftige Entwicklung in #88 vorgemerkt.
-4. #90 — Attachments an Memory und HeartMoment binden: **geliefert**.
-5. #94 — Milestone-Domain und API: **geliefert**.
-6. #97 — Comments, Outbox und Notification Hook: **geliefert**.
-7. #87 — S3-kompatibler MediaStore-Adapter: **geliefert**.
-8. #113 — Story Read Model und `/timeline`: **geliefert**.
-9. S8 — dünne Web-/Android-Referenzflows: **geliefert**.
-10. Realer Web-/Android-Memory/Media/Story-E2E gegen API, Worker, PostgreSQL und LocalMediaStore: **nachgewiesen**.
+1. #71 — Memory CRUD without media: **delivered**.
+2. #80 — HeartMoment with owner-only Privacy: **delivered**.
+3. #79 — Attachment lifecycle for images: **delivered**. Video is not part of M2/G2 and is tracked for future development in #88.
+4. #90 — Bind Attachments to Memory and HeartMoment: **delivered**.
+5. #94 — Milestone Domain and API: **delivered**.
+6. #97 — Comments, Outbox, and Notification Hook: **delivered**.
+7. #87 — S3-compatible MediaStore adapter: **delivered**.
+8. #113 — Story Read Model and `/timeline`: **delivered**.
+9. S8 — thin Web/Android reference flows: **delivered**.
+10. Real Web/Android Memory/Media/Story E2E against API, Worker, PostgreSQL, and LocalMediaStore: **demonstrated**.
 
-Der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) bewertet den Stand ausdrücklich mit **G2: BESTANDEN**. Die manuelle Accessibility-Abnahme wurde dabei nicht als bestanden gewertet; sie bleibt Teil der finalen Client-/Release-QA in M5/G4.
+The [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) explicitly evaluates the state as **G2: PASSED**. Manual Accessibility acceptance was not counted as passed; it remains part of final client/release QA in M5/G4.
 
-Future-Backlog: #88 hält Video-Uploads und Posterframes für eine spätere Neubewertung fest. Der Prototyp #109 wurde wegen eines Produktions-Images von rund 755 MiB und des zusätzlichen ffmpeg-Betriebs-, Supply-Chain- und Security-Aufwands bewusst ohne Merge geschlossen; `main` bleibt für Video fail-closed.
+Future backlog: #88 retains video uploads and poster frames for later reevaluation. Prototype #109 was deliberately closed without merge because of a production image of roughly 755 MiB and the additional ffmpeg operational, Supply Chain, and Security burden; `main` remains fail-closed for video.
 
-### M3 — Planen & Private Area: freigegeben, S1 bis S4 geliefert
+### M3 — Planning & Private Area: released, S1 through S4 delivered
 
-Das [M3 Technical Readiness Package](./m3/README.md) ist vorbereitet; M3-D01 bis M3-D32 stehen auf `DECIDED`. Damit ist die fachliche S0-Readiness abgeschlossen. Runtime-Slices werden gemäß [M3 Delivery Plan](./m3/DELIVERY-PLAN.md) umgesetzt, sobald der produktive REST-/OpenAPI-Vertrag des jeweiligen Slices contract-testbar konkretisiert ist und die normalen Reuse-/PR-/CI-Regeln erfüllt sind.
+The [M3 Technical Readiness Package](./m3/README.md) is prepared; M3-D01 through M3-D32 are `DECIDED`. Domain-level S0 readiness is therefore complete. Runtime slices are implemented according to the [M3 Delivery Plan](./m3/DELIVERY-PLAN.md) once the production REST/OpenAPI contract for the respective slice is concretely contract-testable and the normal Reuse/PR/CI rules are satisfied.
 
-Geliefert sind **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation** und **M3-S4 typisierte Content Relations**. Nächster Runtime-Slice ist **M3-S5 — Chapter**.
+Delivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, and **M3-S4 typed Content Relations**. The next runtime slice is **M3-S5 — Chapter**.
 
 ## Milestones
 
-| Phase | Menschliches Ziel | Fachlicher Umfang | Ergebnis |
+| Phase | Human goal | Domain scope | Outcome |
 |---|---|---|---|
-| **M0 · Foundation** | verlässliche technische Basis | API, DB, Outbox, Jobs, MediaStore, CI, Provenance | sicher erweiterbarer Core |
-| **M1 · Verbinden** | zwei Personen bilden einen privaten Space | Identity, Auth, Membership, Invitation, Profile | sicherer Account- und Beziehungsrahmen |
-| **M2 · Erinnern / Story Alpha** | gemeinsame Geschichte funktioniert als erster vertikaler Kern | Attachments, Memories, HeartMoments, Milestones, Comments, Story plus minimale Web-/Android-Referenzflows | Domain/API vollständig und kritischer E2E-Flow technisch bewiesen |
-| **M3 · Planen & Private Area** | Ideen werden gemeinsame Vorhaben | Wishes, Plans, Places, Chapters, Collections, Private Area | Planung und private Ablage mit eigener Privacy-Grenze |
-| **M4 · Begleiten** | hilfreiche, kontrollierte Aktivierung | Search/Dashboard, Activity/Notifications, Reminders/Rules | Read Models und Aktivierung ohne unnötiges Tracking |
-| **M5 · Client Completion & Parity** | Web und Android sind vollständig nutzbar | vollständige Clientintegration, Export/Import, Read Cache, Deep Links, Accessibility, Performance, Parität | produktfähiger Core auf beiden Clients |
-| **M6 · Vertiefen** | freiwillige gemeinsame Reflexion | Questions, Check-in, Monats-/Jahresrückblicke | Rich Features nach stabilem Core |
-| **M7 · Entdecken** | externe Inspiration bleibt optional | Shopping, Rezepte, Events, Unterhaltung, Provideradapter | Integrationen ohne Core-Abhängigkeit |
-| **M8 · Kontext** | freiwilliger Ortskontext | Location, Karten, Geofencing, Presence | explizit aktivierbare Kontextfunktionen |
-| **M9 · Veröffentlichen** | sicher betreibbares Produkt | Self-Hosted, Cloud, Backup, Entitlements, Hardening, Release | launchfähiger Betrieb |
-| **MX · E2EE** | echter kryptografischer Schutz | Schlüsselmodell, Migration, Client-Crypto, Recovery | separat bewertete E2EE-Version |
+| **M0 · Foundation** | reliable technical foundation | API, DB, Outbox, Jobs, MediaStore, CI, Provenance | safely extensible Core |
+| **M1 · Connect** | two people form a private Space | Identity, Auth, Membership, Invitation, Profile | secure Account and relationship foundation |
+| **M2 · Memories / Story Alpha** | shared history works as the first vertical Core | Attachments, Memories, HeartMoments, Milestones, Comments, Story plus minimal Web/Android reference flows | Domain/API complete and critical E2E flow technically demonstrated |
+| **M3 · Planning & Private Area** | ideas become shared plans | Wishes, Plans, Places, Chapters, Collections, Private Area | planning and private storage with its own Privacy boundary |
+| **M4 · Engage** | helpful, controlled activation | Search/Dashboard, Activity/Notifications, Reminders/Rules | Read Models and activation without unnecessary tracking |
+| **M5 · Client Completion & Parity** | Web and Android are fully usable | complete client integration, Export/Import, Read Cache, Deep Links, Accessibility, Performance, parity | production-ready Core on both clients |
+| **M6 · Deepen** | optional shared reflection | Questions, Check-in, monthly/yearly recaps | Rich Features after a stable Core |
+| **M7 · Discover** | external inspiration remains optional | Shopping, Recipes, Events, Entertainment, Provider adapters | integrations without Core dependency |
+| **M8 · Context** | optional location context | Location, Maps, Geofencing, Presence | explicitly enabled context features |
+| **M9 · Release** | safely operable product | Self-Hosted, Cloud, Backup, Entitlements, Hardening, Release | launch-ready operation |
+| **MX · E2EE** | real cryptographic protection | key model, migration, client crypto, Recovery | separately evaluated E2EE version |
 
-## Präzisierte Milestone-Grenzen
+## Refined milestone boundaries
 
 ### M2 vs. M5
 
-M2 ist **nicht backend-only**. M2 enthält dünne Web-/Android-Referenzflows, um den kritischen Memory/Media/Story-Flow Ende-zu-Ende zu beweisen. M2 verspricht aber keine vollständige Client-Parität.
+M2 is **not backend-only**. M2 contains thin Web/Android reference flows to demonstrate the critical Memory/Media/Story flow end to end. M2 does not promise full client parity.
 
-M5 ist die vollständige Client-Produktisierung: vollständige Screens und Navigation, Deep Links, Read Cache, Export/Import, systematische Web-/Android-Parität, Accessibility, Performance und Release-Hardening.
+M5 is complete client productization: complete screens and navigation, Deep Links, Read Cache, Export/Import, systematic Web/Android parity, Accessibility, Performance, and Release Hardening.
 
-### M4 interne Slices
+### Internal M4 slices
 
-M4 wird intern in drei getrennte Risikoklassen geschnitten:
+M4 is internally split into three separate risk classes:
 
 - **M4-A:** Search + Dashboard Read Models,
 - **M4-B:** Activity + Notifications,
 - **M4-C:** Reminders + Rules.
 
-Diese Aufteilung ist eine Delivery-Grenze, keine fachliche Scope-Erweiterung.
+This split is a delivery boundary, not a domain scope expansion.
 
-### Privacy-Sprache
+### Privacy terminology
 
-- `SHARED` / `PRIVATE` sind öffentliche fachliche Domainwerte.
-- `SPACE_SHARED` / `OWNER_ONLY` sind interne Authorization-/Privacy-Klassen.
-- Clients schreiben `privacyClass` nicht redundant als zweite Wahrheitsquelle.
+- `SHARED` / `PRIVATE` are public domain values.
+- `SPACE_SHARED` / `OWNER_ONLY` are internal Authorization/Privacy classes.
+- Clients do not redundantly write `privacyClass` as a second source of truth.
 
-## M2 Lieferfolge
+## M2 delivery sequence
 
 ```text
 S0 Readiness
    │
-   ├── Memory CRUD ohne Medien
+   ├── Memory CRUD without media
    │        │
    │        ├──────────────┐
    │        │              │
@@ -128,13 +128,13 @@ S0 Readiness
              G2 ✓
 ```
 
-Diese Lieferfolge ist abgeschlossen. Sie validierte zuerst M2-Migrationstil, ProtectedPayload, Tenant Guard, Autorregel und Concurrency auf einer kleineren Sicherheitsfläche und führte anschließend bis zum realen Client-E2E-Nachweis.
+This delivery sequence is complete. It first validated the M2 migration style, ProtectedPayload, Tenant Guard, author rule, and Concurrency on a smaller security surface, then continued through the real client E2E evidence.
 
-## Search-Abgrenzung
+## Search boundary
 
-Globale Volltextsuche war kein G2-Bestandteil. Der Story-Mindestvertrag umfasst `type`, `year`, `order`, `cursor` und `limit`; globale Volltextsuche liegt in M4-A.
+Global full-text Search was not part of G2. The minimum Story contract includes `type`, `year`, `order`, `cursor`, and `limit`; global full-text Search belongs to M4-A.
 
-## Abhängigkeiten
+## Dependencies
 
 ```mermaid
 flowchart LR
@@ -155,96 +155,96 @@ flowchart LR
 
 ## Release Gates
 
-### G0 — Foundation prüfbar
+### G0 — Foundation verifiable
 
-**Bestanden.**
+**Passed.**
 
-### G1 — Sicherer Paar-Space
+### G1 — Secure couple Space
 
-- Auth- und Recovery-Wege,
-- race-sichere Invitations,
-- Tenant Guard und Owner-only-Autorisierung,
-- Profile/SpaceProfile mit Versionskonflikten,
-- Cross-Tenant-, Session- und Privacy-Tests.
+- Auth and Recovery paths,
+- race-safe Invitations,
+- Tenant Guard and owner-only Authorization,
+- Profile/SpaceProfile with version conflicts,
+- cross-tenant, session, and Privacy tests.
 
-**Aktueller Stand: BESTANDEN.** Der datierte [G1 Gate Review nach Abschluss von #61](./reviews/2026-08-25-g1-gate-review-after-61.md) bleibt der historische G1-Nachweis.
+**Current state: PASSED.** The dated [G1 Gate Review after completion of #61](./reviews/2026-08-25-g1-gate-review-after-61.md) remains the historical G1 evidence.
 
 ### G2 — Story Alpha
 
-**Aktueller Stand: BESTANDEN.** Der [finale G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) ist die aktuelle Gate-Entscheidung.
+**Current state: PASSED.** The [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) is the current gate decision.
 
-Nachgewiesen sind insbesondere:
+Demonstrated in particular:
 
-- vollständige M2-Domain/API für Memory, Bild-Attachments, HeartMoment, Milestone, Comments und Story,
-- serverseitiger Ausschluss von `OWNER_ONLY` vor Story-Projektion/Pagination,
-- Media-/Upload-Abuse, Parent-Autorisierung, Tenant- und Race-/Datenintegritätspfade,
-- OpenAPI, Migrationen und PostgreSQL-Integration,
-- realer kritischer Memory/Media/Story-Flow in Web und Android gegen denselben SideBySide-Stack,
-- aktuelle CI-, Secret-Scan-, Supply-Chain- und Deployment-Gates.
+- complete M2 Domain/API for Memory, image Attachments, HeartMoment, Milestone, Comments, and Story,
+- server-side exclusion of `OWNER_ONLY` before Story projection/pagination,
+- Media/upload abuse, parent Authorization, tenant, race, and data-integrity paths,
+- OpenAPI, migrations, and PostgreSQL integration,
+- real critical Memory/Media/Story flow in Web and Android against the same SideBySide stack,
+- current CI, Secret Scan, Supply Chain, and Deployment gates.
 
-Die manuelle Accessibility-Abnahme ist bewusst **kein G2-Blocker mehr** und wird in M5/G4 als finale Client-/Release-QA durchgeführt. Vollständige Client-Parität bleibt ebenfalls M5/G4.
+Manual Accessibility acceptance is deliberately **no longer a G2 blocker** and is performed in M5/G4 as final client/release QA. Full client parity likewise remains M5/G4.
 
-### G3 — Gemeinsamer Alltag
+### G3 — Shared everyday use
 
-- Wishes/Plans/Places/Chapters/Collections konsistent,
-- Private Area vollständig isoliert,
-- Delete-/409-Wirkungen verständlich,
-- M4-Read-Model-Grenzen vorbereitet.
+- Wishes/Plans/Places/Chapters/Collections consistent,
+- Private Area fully isolated,
+- Delete/409 effects understandable,
+- M4 Read Model boundaries prepared.
 
 ### G4 — Core Release Candidate
 
-- Web und Android fachlich gleichwertig,
-- Offline Read Cache ohne vorgetäuschten Write Sync,
-- Export/Import versioniert und getestet,
-- Design-System und Accessibility verifiziert,
-- Performance-, Privacy- und Security-Gates bestanden.
+- Web and Android domain-equivalent,
+- Offline Read Cache without pretending Write Sync exists,
+- Export/Import versioned and tested,
+- Design System and Accessibility verified,
+- Performance, Privacy, and Security gates passed.
 
-### G5 — Launchfähig
+### G5 — Launch-ready
 
-- Cloud und Self-Hosted dokumentiert, update- und backupfähig,
-- serverseitige Auth-/Provider-Policy je Betriebsform durchgesetzt,
-- die Pre-Exposure-Härtungen #59 und #60 sind abgeschlossen,
-- Retention, vollständige Löschung und Supportprozesse geklärt,
-- Entitlements/Billing ohne Domainkopplung,
-- Monitoring ohne sensible Inhalte,
-- Release-, Incident- und Recovery-Prozess getestet.
+- Cloud and Self-Hosted documented, updatable, and backup-capable,
+- server-side Auth/Provider policy enforced per operating model,
+- Pre-Exposure hardening #59 and #60 complete,
+- Retention, complete deletion, and support processes resolved,
+- Entitlements/Billing without Domain coupling,
+- Monitoring without sensitive content,
+- Release, Incident, and Recovery process tested.
 
-## Was bewusst nicht vorgezogen wird
+## Deliberately not pulled forward
 
-- globale Volltextsuche vor geklärter M4-Privacy-/Indexstrategie,
-- Shopping, Event Discovery und Providerintegrationen vor stabilem Core,
-- Offline Write Sync im MVP,
-- öffentliche Share Links,
-- KI-Funktionen,
-- Location/Geofencing ohne separaten Opt-in- und Privacy-Flow,
-- E2EE-Marketing vor echter Implementierung und Review.
+- global full-text Search before the M4 Privacy/index strategy is resolved,
+- Shopping, Event Discovery, and Provider integrations before a stable Core,
+- Offline Write Sync in the MVP,
+- public Share Links,
+- AI features,
+- Location/Geofencing without a separate opt-in and Privacy flow,
+- E2EE marketing before real implementation and review.
 
-## Roadmap-Risiken
+## Roadmap risks
 
-| Risiko | Schutzmaßnahme |
+| Risk | Safeguard |
 |---|---|
-| Runtime beginnt vor geklärtem Vertrag | relevante M3-Decisions + contract-testbarer OpenAPI-Vertrag vor jedem Runtime-Slice |
-| Web und Android driften auseinander | gemeinsamer OpenAPI-Vertrag und M5-Paritätsgate |
-| Privacy-Klassen werden Client-Domain | klare Trennung `SHARED/PRIVATE` vs. `SPACE_SHARED/OWNER_ONLY` |
-| Media erzeugt indirekte Leaks | Parent-Autorisierung, Adapter-Contract und Abuse-/Race-Tests |
-| Repository-Gates werden umgangen | aktives `main`-Ruleset erzwingt Pull Request, Merge Commit und Pflichtchecks |
-| öffentlicher Betrieb erfolgt zu früh | G5 bleibt Pre-Exposure-/Launch-Pflicht |
+| Runtime starts before the contract is resolved | relevant M3 Decisions + contract-testable OpenAPI contract before every runtime slice |
+| Web and Android drift apart | shared OpenAPI contract and M5 parity gate |
+| Privacy classes become Client Domain | clear separation of `SHARED/PRIVATE` vs. `SPACE_SHARED/OWNER_ONLY` |
+| Media creates indirect leaks | parent Authorization, adapter contract, and abuse/race tests |
+| Repository gates are bypassed | active `main` ruleset enforces Pull Request, Merge Commit, and required checks |
+| public operation starts too early | G5 remains a mandatory Pre-Exposure/launch gate |
 
-## Pflege
+## Maintenance
 
-- Datierte Reviews werden nie nachträglich umgeschrieben.
-- Fachliche Current-Marker werden nach abgeschlossenen Gate-/Milestone-/Slice-Änderungen aktualisiert; statische angeblich aktuelle `main`-SHAs werden in Living-Status-Dateien nicht geführt.
-- Offene Aufgaben stehen im Implementation Status und in GitHub Issues; explizit offene Issue-Tasks werden automatisiert gegen GitHub geprüft.
-- Roadmap-Updates nennen Grund und Auswirkung, nicht nur eine neue Reihenfolge.
+- Dated reviews are never rewritten retroactively.
+- Domain current markers are updated after completed gate/milestone/slice changes; static supposedly current `main` SHAs are not kept in living status files.
+- Open tasks live in Implementation Status and GitHub Issues; explicitly open Issue tasks are checked automatically against GitHub.
+- Roadmap updates state the reason and impact, not merely a new sequence.
 
-## Verwandte Dokumente
+## Related documents
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
-- [Statusquellen und Drift-Regeln](./STATUS-SOURCES.md)
+- [Status Sources and Drift Rules](./STATUS-SOURCES.md)
 - [M2 Project Control](./m2/PROJECT-CONTROL.md)
 - [M3 Technical Readiness Package](./m3/README.md)
 - [M3 Decision Log](./m3/DECISION-LOG.md)
 - [M3 Delivery Plan](./m3/DELIVERY-PLAN.md)
-- [Finaler G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md)
-- [Produktspezifikation](../specification/PRODUCT-SPEC.md)
+- [Final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md)
+- [Product Specification](../specification/PRODUCT-SPEC.md)
 - [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)

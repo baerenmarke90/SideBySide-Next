@@ -1,196 +1,196 @@
-# Umsetzungsstand
+# Implementation Status
 
-Stand: 27. August 2026  
-Aktueller Repository-Stand: GitHub `main` ist die kanonische SHA-Quelle; dieses Living-Status-Dokument speichert bewusst keinen statischen Current-SHA.  
-Aktueller Gate-Status: **G2 bestanden; M2 abgeschlossen; M3 freigegeben**
+As of: August 27, 2026  
+Current repository state: GitHub `main` is the canonical SHA source; this living status document deliberately stores no static current SHA.  
+Current gate status: **G2 passed; M2 complete; M3 released**
 
-## Dokumentenrollen
+## Document roles
 
-- **Verbindliche Quelle:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
-- **Kompakte Produktübersicht:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
-- **Aktuelle Gate-Entscheidung:** [2026-08-26-g2-final-gate-review.md](reviews/2026-08-26-g2-final-gate-review.md)
-- **Statusquellen und Drift-Regeln:** [STATUS-SOURCES.md](STATUS-SOURCES.md)
-- **Verbindliche Entwicklungsregel:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) und [AGENTS.md](../AGENTS.md)
-- **Architektur-/Betriebsentscheidungen:** datierte ADRs unter [docs/decisions](decisions)
-- **M2-Steuerung:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
-- **M3-Readiness und Delivery:** [m3/README.md](m3/README.md) und [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md)
-- **Historische Reviews:** datierte Dateien unter `docs/reviews/`; sie werden nicht nachträglich geändert.
-- **Dieses Dokument:** laufende Arbeits- und Fortschrittsliste.
+- **Binding source:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
+- **Compact product overview:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
+- **Current gate decision:** [2026-08-26-g2-final-gate-review.md](reviews/2026-08-26-g2-final-gate-review.md)
+- **Status sources and drift rules:** [STATUS-SOURCES.md](STATUS-SOURCES.md)
+- **Binding development rule:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) and [AGENTS.md](../AGENTS.md)
+- **Architecture/operations decisions:** dated ADRs under [docs/decisions](decisions)
+- **M2 project control:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
+- **M3 readiness and delivery:** [m3/README.md](m3/README.md) and [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md)
+- **Historical reviews:** dated files under `docs/reviews/`; they are never modified retroactively.
+- **This document:** living work and progress list.
 
-Bei Widersprüchen gilt die Master-Spezifikation. Eine neue Gate-Entscheidung erhält immer einen neuen datierten Review.
+If sources conflict, the Master Specification takes precedence. A new gate decision always receives a new dated review.
 
-## Arbeitsregeln
+## Working rules
 
-1. Nur dieses Repository bearbeiten.
-2. Vor jeder Umsetzung einschlägige Spezifikation, Decision Log und aktuelle Issues lesen.
-3. Ein Issue = ein klarer Scope = eigener Branch/PR.
-4. Keine direkten Änderungen auf `main`, kein Rebase, kein Force Push.
-5. Vor Merge aktuellen `main`, PR-HEAD, vollständigen Diff, Mergeability und CI frisch prüfen.
-6. Findings außerhalb des Scopes als eigenes Issue erfassen.
-7. Historische Reviews nicht umschreiben.
-8. Vor Eigenbau technischer Commodity-Funktionalität die Reuse-Prüfung nach [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) durchführen und im Issue oder PR dokumentieren. Ein relevanter PR ohne nachvollziehbare Prüfung ist nicht merge-ready; CI erzwingt die Entscheidung.
+1. Modify only this repository.
+2. Before implementation, read the relevant specification, Decision Log, and current Issues.
+3. One Issue = one clear scope = its own branch/PR.
+4. No direct changes to `main`, no rebase, no force push.
+5. Before merge, freshly check current `main`, PR HEAD, complete diff, mergeability, and CI.
+6. Record findings outside scope as a separate Issue.
+7. Do not rewrite historical reviews.
+8. Before building technical commodity functionality in-house, perform the Reuse review defined in [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) and document it in the Issue or PR. A relevant PR without a traceable review is not merge-ready; CI enforces the decision.
 
 ## M0 — Foundation
 
-**Status: abgeschlossen.**
+**Status: complete.**
 
 - [x] FastAPI, SQLAlchemy 2, PostgreSQL, Alembic
 - [x] REST API v1, camelCase, Problem Details
-- [x] UUIDv7 und Zeit-/Datums-Konventionen
-- [x] Transactional Outbox und PostgreSQL-Job-Queue
-- [x] MediaStore-/Provider-Abstraktionen
-- [x] ProtectedPayload-Grundabstraktion
-- [x] reproduzierbare Dependencies und Lockfile
-- [x] OpenAPI-Contract + Contract-Check
-- [x] PostgreSQL-Integrationstests
-- [x] Dependency-/Vulnerability-Scan, Container-Build, Secret Scan, Provenance
+- [x] UUIDv7 and time/date conventions
+- [x] Transactional Outbox and PostgreSQL Job Queue
+- [x] MediaStore/Provider abstractions
+- [x] ProtectedPayload base abstraction
+- [x] reproducible dependencies and Lockfile
+- [x] OpenAPI contract + contract check
+- [x] PostgreSQL integration tests
+- [x] dependency/vulnerability scan, container build, Secret Scan, Provenance
 
 ## M1 — Identity & Relationship
 
-**Status: Runtimeumfang abgeschlossen; G1 bestanden.**
+**Status: runtime scope complete; G1 passed.**
 
 - [x] Account, AccountEmail, AuthIdentity
-- [x] lokaler Passwortlogin mit Argon2
-- [x] Device Sessions und rotierende Tokens
-- [x] Space, Membership, zentraler Tenant Guard
-- [x] race-sichere Invitations
-- [x] SpaceProfile mit ETag/If-Match und 409
-- [x] PartnerProfile und ProfilePreference
-- [x] RelatedPerson und ImportantDate
-- [x] zentrale SQL-seitige `SPACE_SHARED`-/`OWNER_ONLY`-Autorisierung
+- [x] local password login with Argon2
+- [x] Device Sessions and rotating tokens
+- [x] Space, Membership, central Tenant Guard
+- [x] race-safe Invitations
+- [x] SpaceProfile with ETag/If-Match and 409
+- [x] PartnerProfile and ProfilePreference
+- [x] RelatedPerson and ImportantDate
+- [x] central SQL-side `SPACE_SHARED`/`OWNER_ONLY` Authorization
 - [x] OIDC Authorization Code + PKCE/State/Nonce/Discovery/JWKS
-- [x] OIDC-Invite-Onboarding ohne E-Mail-Merge
-- [x] Passkey/WebAuthn Registration und Authentication
-- [x] Magic Link, E-Mail-Verifikation und Recovery
-- [x] Refresh-Replay-Schutz
-- [x] #61: RelatedPerson-Löschung mit expliziter `preserve`-/`cascade`-Policy ohne destruktiven Default
-- [x] G1 Gate Review nach #61: **BESTANDEN**
+- [x] OIDC Invitation onboarding without email merge
+- [x] Passkey/WebAuthn Registration and Authentication
+- [x] Magic Link, email verification, and Recovery
+- [x] Refresh replay protection
+- [x] #61: RelatedPerson deletion with explicit `preserve`/`cascade` policy and no destructive default
+- [x] G1 Gate Review after #61: **PASSED**
 
-### Abgeschlossene M1-/Repository-Härtungen
+### Completed M1/repository hardening
 
-- [x] **#59 — Pre-Exposure:** Passkey-Authentication-Start gegen Challenge-Flooding abgesichert.
-- [x] **#60 — Pre-Exposure:** Rate-Limit-Schwellen werden unter Parallelität atomar erzwungen.
-- [x] **#25 — Repository-Hardening:** aktives Ruleset für `main` erzwingt Pull Request, Merge Commit, aktuelle Pflichtchecks, keine Force Pushes und keine Branch-Löschung.
+- [x] **#59 — Pre-Exposure:** Passkey Authentication start protected against challenge flooding.
+- [x] **#60 — Pre-Exposure:** Rate Limit thresholds are enforced atomically under concurrency.
+- [x] **#25 — Repository Hardening:** active ruleset for `main` enforces Pull Request, Merge Commit, current required checks, no force pushes, and no branch deletion.
 
-Damit sind die zuvor im Living Status als offen geführten Pre-Exposure-/Repository-Härtungen abgeschlossen. GitHub bleibt für den jeweiligen Issue-Zustand die operative Quelle.
+The Pre-Exposure/repository hardening items that were previously listed as open in the Living Status are therefore complete. GitHub remains the operational source for each Issue state.
 
-### Betrieb: Self-Hosted-Startpfad
+### Operations: Self-Hosted startup path
 
-- [x] **#110 — Startpfad und Migration entkoppelt** (PR #111): `alembic upgrade head` hängt nicht mehr an Cursor-Signing-Key, SMTP und öffentlicher Adresse; Compose trennt Migrations- von Runtime-Konfiguration; CI fährt den realen Startpfad statt ihn nur zu parsen.
-- [x] **#115 — Netzwerk- und Portbereitschaft gehärtet** (PR #118): ein belegter API-Port und ein fehlender Netzwerkpfad hinterlassen die Instanz nicht mehr als scheinbar funktionsfähig; eigener Deployment-Guard in CI.
+- [x] **#110 — Startup path and migration decoupled** (PR #111): `alembic upgrade head` no longer depends on Cursor Signing Key, SMTP, and public address; Compose separates migration from runtime configuration; CI exercises the real startup path instead of merely parsing it.
+- [x] **#115 — Network and port readiness hardened** (PR #118): an occupied API port or missing network path no longer leaves the instance appearing healthy; dedicated Deployment Guard in CI.
 
-Zwei Betriebszusagen daraus sind verbindlich und stehen in [ADR 0002](decisions/0002-self-hosted-first-start-mode.md):
+Two operational commitments resulting from this are binding and documented in [ADR 0002](decisions/0002-self-hosted-first-start-mode.md):
 
-- Der mitgelieferte Compose-Stack startet als **klar markierter lokaler Testbetrieb**. Echter Betrieb verlangt `SBS_ENVIRONMENT=production` in `.env`; die Anwendung meldet ihren Betriebsmodus bei jedem Start.
-- Ein SMTP-Zugang ist **keine Startvoraussetzung**. `SBS_MAIL_TRANSPORT=none` ist in Produktion zulässig; die mailabhängigen Anmeldewege antworten dann `503 MAIL_TRANSPORT_UNAVAILABLE`, Anmeldung läuft über Passwort, Passkey und OIDC. `log` bleibt in Produktion verboten.
+- The provided Compose stack starts as a **clearly marked local test mode**. Real operation requires `SBS_ENVIRONMENT=production` in `.env`; the application reports its operating mode on every startup.
+- SMTP access is **not a startup prerequisite**. `SBS_MAIL_TRANSPORT=none` is allowed in production; mail-dependent sign-in paths then return `503 MAIL_TRANSPORT_UNAVAILABLE`, while sign-in remains available through password, Passkey, and OIDC. `log` remains forbidden in production.
 
-## M2-S0 — Readiness & Vertragsentscheidungen
+## M2-S0 — Readiness & contract decisions
 
-**Status: abgeschlossen.** Alle `BLOCKING`-Entscheidungen im [Decision Log](m2/DECISION-LOG.md) sind `DECIDED`.
+**Status: complete.** All `BLOCKING` decisions in the [Decision Log](m2/DECISION-LOG.md) are `DECIDED`.
 
-- [x] **#67 — Planning:** G1-Status, Roadmap und Milestone-Grenzen synchronisiert.
-- [x] **#68 — Domain/Privacy:** Memory-, Comment- und Privacy-Entscheidungen geschlossen.
-- [x] **#69 — Media:** Attachment-Lifecycle, Limits, Validation und Retention entschieden.
-- [x] **#70 — API:** Routen, DTOs, Concurrency, Pagination und Story-Sortierung festgelegt.
-- [x] **#78 — Media-Metadaten:** EXIF-/GPS-Strippen beim Ingest und Variantenumfang entschieden (M2-D14/D15).
+- [x] **#67 — Planning:** synchronized G1 status, Roadmap, and milestone boundaries.
+- [x] **#68 — Domain/Privacy:** closed Memory, Comment, and Privacy decisions.
+- [x] **#69 — Media:** decided Attachment lifecycle, limits, validation, and Retention.
+- [x] **#70 — API:** defined routes, DTOs, Concurrency, Pagination, and Story sorting.
+- [x] **#78 — Media metadata:** decided EXIF/GPS stripping during ingest and variant scope (M2-D14/D15).
 
-Offen bleiben ausschließlich `BEFORE_CLIENTS`-Entscheidungen, die vor stabiler Vollintegration relevant werden: M2-D10 (Notification Preview), M2-D17 (Export/Backup), M2-D18 (Client-Cache) und M2-D21 (Suchindex). Sie blockierten G2 nicht und werden in den zuständigen späteren Milestones behandelt.
+Only `BEFORE_CLIENTS` decisions that become relevant before stable full integration remain open: M2-D10 (Notification Preview), M2-D17 (Export/Backup), M2-D18 (Client Cache), and M2-D21 (Search Index). They did not block G2 and are handled in their respective later milestones.
 
-M2-D22 (Owner-Ansicht) gehört nicht mehr dazu: die Frage formt die Story-Route und wurde deshalb mit #104 auf `BLOCKING` gehoben und entschieden — genau wie zuvor M2-D14 und M2-D15 in #78.
+M2-D22 (owner view) is no longer in that category: the question shapes the Story route and was therefore promoted to `BLOCKING` and decided in #104 — just as M2-D14 and M2-D15 had previously been in #78.
 
-## M2 — Runtime und G2
+## M2 — Runtime and G2
 
-**Status: abgeschlossen; G2 bestanden.**
+**Status: complete; G2 passed.**
 
-- [x] **#71 — Memory CRUD ohne Medien** (PR #77): Memory-Domain mit ProtectedPayload für Titel/Body, author-only writes bei gemeinsamer Lesbarkeit, `If-Match`/409, signierter Keyset-Cursor und `resourceVersion` im Outbox-Envelope.
-- [x] **#80 — HeartMoment mit Owner-only-Privacy** (PR #84): erster Typ mit echter Nutzerentscheidung zur Sichtbarkeit; `SHARED -> PRIVATE` als eigene atomare Operation, Emotion als ProtectedPayload.
-- [x] **#79 — Attachment-Lifecycle für Bilder** (PR #89): Statusautomat, LocalMediaStore, asynchrone Validierung mit Metadaten-Entfernung und Thumbnail, autorisiertes Lesen, Retention und Cleanup.
-- [x] **#90 — Attachments an Memory und HeartMoment binden** (PR #93): `MemoryAttachment` mit stabiler `position`, HeartMoment mit höchstens einem Attachment, atomares Bind/Unbind gegen das Bindungsfenster aus M2-D20 und keine Cross-Space-Bindung.
-- [x] **#94 — Milestone-Domain und API** (PR #95): eigenständiges Modell statt Typflag auf Memory, Autorregel nach M2-D25, `If-Match`/409 und Story-taugliche Felder.
-- [x] **#97 — Comments, Outbox und Notification Hook** (PR #98): Create/List am Parent verschachtelt, Update/Delete space-scoped, enumerierte Targets `MEMORY`/`MILESTONE`/`HEART_MOMENT`, atomarer Outbox-Eintrag und idempotenter Retry.
-- [x] **#87 — S3-kompatibler MediaStore-Adapter** (PR #100): presigned Upload und Read-URL mit den TTLs aus M2-D13, geprüft gegen denselben Contract-Test wie der lokale Adapter.
-- [x] **#113 — Story Read Model und `/timeline`** (PR #114): abgeleitete Zeitleiste über Memory, Milestone und ausschließlich gemeinsame HeartMoments; Sortierschlüssel und Keyset-Cursor nach M2-D08, private HeartMoments nie im Ergebnis — auch nicht für ihren Owner (M2-D22). Keine Story-Tabelle.
-- [x] **S8 — dünne Web-/Android-Referenzflows:** Web und Android liefern den kritischen Memory/Media/Story-Referenzpfad.
-- [x] **#144 — realer G2-Client-E2E-Nachweis:** Web und Android laufen gegen denselben realen SideBySide-Stack aus API, Worker, PostgreSQL und LocalMediaStore.
-- [x] **#147 / PR #170 — finaler G2 Gate Review:** **G2: BESTANDEN**.
+- [x] **#71 — Memory CRUD without media** (PR #77): Memory Domain with ProtectedPayload for title/body, author-only writes with shared readability, `If-Match`/409, signed Keyset Cursor, and `resourceVersion` in the Outbox envelope.
+- [x] **#80 — HeartMoment with owner-only Privacy** (PR #84): first type with a real user visibility choice; `SHARED -> PRIVATE` as a dedicated atomic operation, emotion in ProtectedPayload.
+- [x] **#79 — Attachment lifecycle for images** (PR #89): state machine, LocalMediaStore, asynchronous validation with metadata stripping and Thumbnail, authorized reads, Retention, and Cleanup.
+- [x] **#90 — Bind Attachments to Memory and HeartMoment** (PR #93): `MemoryAttachment` with stable `position`, HeartMoment with at most one Attachment, atomic Bind/Unbind against the binding window from M2-D20, and no Cross-Space binding.
+- [x] **#94 — Milestone Domain and API** (PR #95): dedicated model instead of a type flag on Memory, author rule from M2-D25, `If-Match`/409, and Story-ready fields.
+- [x] **#97 — Comments, Outbox, and Notification Hook** (PR #98): Create/List nested under the parent, Update/Delete space-scoped, enumerated targets `MEMORY`/`MILESTONE`/`HEART_MOMENT`, atomic Outbox entry, and idempotent Retry.
+- [x] **#87 — S3-compatible MediaStore adapter** (PR #100): presigned Upload and Read URL with the TTLs from M2-D13, tested against the same contract test as the local adapter.
+- [x] **#113 — Story Read Model and `/timeline`** (PR #114): derived Timeline over Memory, Milestone, and shared HeartMoments only; sort key and Keyset Cursor per M2-D08, private HeartMoments never in the result — not even for their owner (M2-D22). No Story table.
+- [x] **S8 — thin Web/Android reference flows:** Web and Android deliver the critical Memory/Media/Story reference path.
+- [x] **#144 — real G2 client E2E evidence:** Web and Android run against the same real SideBySide stack of API, Worker, PostgreSQL, and LocalMediaStore.
+- [x] **#147 / PR #170 — final G2 Gate Review:** **G2: PASSED**.
 
-### Future-Backlog außerhalb von M2/G2
+### Future backlog outside M2/G2
 
-- [ ] **#88 — Video-Uploads und Posterframes:** zukünftige Entwicklung, nicht jetzt implementieren. Der Prototyp #109 wurde wegen eines Produktions-Images von rund 755 MiB sowie des zusätzlichen ffmpeg-Betriebs-, Supply-Chain- und Security-Aufwands bewusst ohne Merge geschlossen.
+- [ ] **#88 — Video uploads and poster frames:** future development, do not implement now. Prototype #109 was deliberately closed without merge because of a production image of roughly 755 MiB and the additional ffmpeg operational, Supply Chain, and Security burden.
 
-Video bleibt bis zu einer neuen Produktentscheidung fail-closed: M2-D04 erlaubt MP4 und QuickTime im Zielvertrag, der aktuelle Server weist sie mit `ATTACHMENT_TYPE_NOT_ALLOWED` ab. Clients dürfen Video nicht als verfügbar anbieten.
+Video remains fail-closed until a new product decision: M2-D04 allows MP4 and QuickTime in the target contract, while the current server rejects them with `ATTACHMENT_TYPE_NOT_ALLOWED`. Clients must not present video as available.
 
-Die historische M2-Steuerung und verbindlichen Milestone-Grenzen stehen in [M2 Project Control](m2/PROJECT-CONTROL.md). Die aktuelle Gate-Entscheidung steht im [finalen G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
+Historical M2 project control and binding milestone boundaries are documented in [M2 Project Control](m2/PROJECT-CONTROL.md). The current gate decision is documented in the [final G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
 
-### Verbindliche M2/M5-Grenze
+### Binding M2/M5 boundary
 
-M2 ist **Domain + API + minimale vertikale Web-/Android-Referenzflows**. Diese Referenzflows dienen dem technischen E2E-Nachweis des kritischen Memory/Media/Story-Kerns und bedeuten keine vollständige Client-Parität.
+M2 is **Domain + API + minimal vertical Web/Android reference flows**. These reference flows provide technical E2E evidence for the critical Memory/Media/Story Core and do not imply full client parity.
 
-M5 ist **Client Completion & Parity**: vollständige Clientintegration, Deep Links, Read Cache, Export/Import, systematische Web-/Android-Parität, Accessibility und Performance.
+M5 is **Client Completion & Parity**: complete client integration, Deep Links, Read Cache, Export/Import, systematic Web/Android parity, Accessibility, and Performance.
 
-### Privacy-Begriffe
+### Privacy terminology
 
-- `SHARED` / `PRIVATE`: öffentliche fachliche Domainwerte.
-- `SPACE_SHARED` / `OWNER_ONLY`: interne Authorization-/Privacy-Klassen.
-- Clients schreiben `privacyClass` nicht redundant.
+- `SHARED` / `PRIVATE`: public domain values.
+- `SPACE_SHARED` / `OWNER_ONLY`: internal Authorization/Privacy classes.
+- Clients do not redundantly write `privacyClass`.
 
-### M4-Abgrenzung
+### M4 boundary
 
-M4 wird intern in drei Delivery-Slices geteilt:
+M4 is internally split into three delivery slices:
 
 - M4-A Search + Dashboard Read Models
 - M4-B Activity + Notifications
 - M4-C Reminders + Rules
 
-Globale Volltextsuche war nicht Teil von G2. Der Story-Mindestvertrag umfasst `type`, `year`, `order`, `cursor` und `limit`; globale Volltextsuche liegt in M4-A.
+Global full-text Search was not part of G2. The minimum Story contract includes `type`, `year`, `order`, `cursor`, and `limit`; global full-text Search belongs to M4-A.
 
-## M2-Runtime-Reihenfolge nach S0
+## M2 runtime sequence after S0
 
-1. ~~Memory CRUD ohne Medien (#71)~~ — geliefert
-2. ~~Attachment Foundation / MediaStore Contract (#79)~~ — geliefert, Bilder
-3. ~~HeartMoment Privacy (#80)~~ — geliefert
-4. ~~Memory + mehrere Medien (#90)~~ — geliefert
-5. ~~Milestone (#94)~~ — geliefert
-6. ~~Comments + Outbox/Notification Hook (#97)~~ — geliefert
-7. ~~Story Read Model (#113)~~ — geliefert
-8. ~~dünne Web-/Android-Referenzflows~~ — geliefert
-9. ~~G2 Review~~ — **BESTANDEN**
+1. ~~Memory CRUD without media (#71)~~ — delivered
+2. ~~Attachment Foundation / MediaStore Contract (#79)~~ — delivered, images
+3. ~~HeartMoment Privacy (#80)~~ — delivered
+4. ~~Memory + multiple media (#90)~~ — delivered
+5. ~~Milestone (#94)~~ — delivered
+6. ~~Comments + Outbox/Notification Hook (#97)~~ — delivered
+7. ~~Story Read Model (#113)~~ — delivered
+8. ~~thin Web/Android reference flows~~ — delivered
+9. ~~G2 Review~~ — **PASSED**
 
-Der S3-Adapter (#87) lief daneben und ist geliefert. Video (#88) ist nicht Teil dieser Kette oder von M2/G2, sondern Future-Backlog.
+The S3 adapter (#87) ran in parallel and is delivered. Video (#88) is not part of this chain or M2/G2; it is Future Backlog.
 
 ## G2 — Story Alpha
 
-**Status: BESTANDEN.** Verbindliche Entscheidungsquelle ist der [finale G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
+**Status: PASSED.** The binding decision source is the [final G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
 
-Nachgewiesen sind M2-Domain/API, Story-Privacy, Media-/Parent-Autorisierung, Cross-Tenant-/Race-/Datenintegrität, OpenAPI, Migrationen, PostgreSQL-Integration sowie ein realer kritischer Memory/Media/Story-Flow in Web und Android gegen denselben SideBySide-Stack.
+Demonstrated are M2 Domain/API, Story Privacy, Media/parent Authorization, Cross-Tenant/race/data integrity, OpenAPI, migrations, PostgreSQL integration, and a real critical Memory/Media/Story flow in Web and Android against the same SideBySide stack.
 
-Die manuelle Accessibility-Abnahme wurde bewusst aus G2 in die finale Client-/Release-QA verschoben. Sie gilt **nicht** als bestanden und bleibt Bestandteil von M5/G4. Vollständige Client-Parität ist ebenfalls M5/G4.
+Manual Accessibility acceptance was deliberately moved from G2 into final client/release QA. It is **not** considered passed and remains part of M5/G4. Full client parity likewise remains M5/G4.
 
-## M3 — Planen & Private Area
+## M3 — Planning & Private Area
 
-**Status: freigegeben.** Das [M3 Technical Readiness Package](m3/README.md) ist vorbereitet; alle M3-D01 bis M3-D32 stehen auf `DECIDED`.
+**Status: released.** The [M3 Technical Readiness Package](m3/README.md) is prepared; all M3-D01 through M3-D32 are `DECIDED`.
 
-Die Runtime-Reihenfolge folgt dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Ein konkreter Slice startet erst, wenn sein produktiver Request/Response-/OpenAPI-Vertrag eindeutig contract-testbar ist und Reuse-before-build sowie die normalen PR-/CI-Gates erfüllt sind.
+The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A concrete slice starts only when its production Request/Response/OpenAPI contract is unambiguously contract-testable and Reuse-before-build plus the normal PR/CI gates are satisfied.
 
-- [x] **M3-S1 — Wish Foundation:** Wish-Domain mit ProtectedPayload für den Titel, collaborative write nach M3-D01, `status` ausschließlich serverseitig, `If-Match`/409, Statusfilter über einen space- und filtergebundenen Cursor sowie redigierte `WISH_*`-Events. Die Wish->Plan-Operation und die planabhängigen Zeilen der Delete-Matrix folgen in S2.
-- [x] **M3-S2 — Plan + Wish->Plan:** Plan-Domain mit Direct Create nach M3-D30, Statusautomat `IDEA | PLANNED | COMPLETED` mit Datumsinvarianten als Service- **und** DB-Constraints, `sourceWishId` mit `UNIQUE` und zusammengesetztem Same-Space-Fremdschlüssel, atomare und idempotente Wish->Plan-Konvertierung, `return-to-wish`, `schedule`/`unschedule`/`complete` sowie die kanonische Lock-Reihenfolge `Wish -> Plan` mit echten PostgreSQL-Race- und Rollback-Tests. Die Wish-Delete-Matrix aus M3-D05 ist damit vollständig.
-- [x] **M3-S3 — Place Foundation:** Place-Domain mit Name, Beschreibung und Adresse hinter der ProtectedPayload-Grenze, Koordinaten als typisierte `NUMERIC`-Spalten mit Paar-, Bereichs- und Genauigkeitsinvarianten in Dienst **und** Schema, CRUD/List ohne Deduplizierung, kein Geocoding- oder Maps-Provider. `Plan.placeId` ist nachgezogen (kanonisch und einspaltig, mit zusammengesetztem Same-Space-Fremdschlüssel). Place-Delete löst zugeordnete Plans versioniert und lässt sie bestehen. Zusätzlich: gebundene DB-Parameter erscheinen nicht mehr in Fehlermeldungen und damit nicht mehr im Anwendungslog.
-- [x] **M3-S4 — typisierte Content Relations:** `place_memories`, `place_heart_moments` und `place_milestones` mit echten zusammengesetzten Fremdschlüsseln über `(id, space_id)`, Primärschlüssel `(place_id, target_id)` und typisierten REST-Routen statt freier `(targetType,targetId)`-Polymorphie. Same-Space ist eine Schemaeigenschaft, keine Dienstregel: beide Fremdschlüssel teilen sich dieselbe `space_id`-Spalte. Unbekanntes, gelöschtes, fremdes und privates Ziel enden ununterscheidbar in `RELATION_TARGET_NOT_FOUND`. Der Privacy-Wechsel `SHARED -> PRIVATE` entfernt die Relationen in derselben Transaktion; darunter liegt ein Schema-Riegel, der den Zustand „privat mit gemeinsamer Relation" unformulierbar macht. Lock-Reihenfolge `Place -> Target` mit PostgreSQL-Race-Tests gegen Parent-Delete, Target-Delete und Privacy-Wechsel.
-- [ ] **M3-S5 — Chapter:** nächster Runtime-Slice. Bringt `Chapter.placeId` und die drei `chapter_*`-Relationen nach.
-- [ ] M3-S6+ — Collections und Private Area gemäß Delivery Plan.
+- [x] **M3-S1 — Wish Foundation:** Wish Domain with ProtectedPayload for title, collaborative write per M3-D01, `status` exclusively server-controlled, `If-Match`/409, status filtering through a Space- and filter-bound Cursor, and redacted `WISH_*` events. The Wish->Plan operation and Plan-dependent rows of the Delete Matrix follow in S2.
+- [x] **M3-S2 — Plan + Wish->Plan:** Plan Domain with Direct Create per M3-D30, state machine `IDEA | PLANNED | COMPLETED` with date invariants as both service and DB constraints, `sourceWishId` with `UNIQUE` and a composite Same-Space foreign key, atomic and idempotent Wish->Plan conversion, `return-to-wish`, `schedule`/`unschedule`/`complete`, and canonical lock order `Wish -> Plan` with real PostgreSQL race and rollback tests. The Wish Delete Matrix from M3-D05 is therefore complete.
+- [x] **M3-S3 — Place Foundation:** Place Domain with name, description, and address behind the ProtectedPayload boundary; coordinates as typed `NUMERIC` columns with pair, range, and precision invariants in both service and schema; CRUD/List without deduplication; no Geocoding or Maps Provider. `Plan.placeId` was added (canonical and single-column, with composite Same-Space foreign key). Place deletion versionedly unlinks assigned Plans while preserving them. Additionally, bound DB parameters no longer appear in error messages and therefore no longer appear in application logs.
+- [x] **M3-S4 — typed Content Relations:** `place_memories`, `place_heart_moments`, and `place_milestones` with real composite foreign keys over `(id, space_id)`, primary key `(place_id, target_id)`, and typed REST routes instead of free `(targetType,targetId)` polymorphism. Same-Space is a schema property rather than a service rule: both foreign keys share the same `space_id` column. Unknown, deleted, foreign, and private targets all resolve indistinguishably to `RELATION_TARGET_NOT_FOUND`. The Privacy transition `SHARED -> PRIVATE` removes relations in the same transaction; beneath it, a schema guard makes the state "private with shared relation" unrepresentable. Lock order `Place -> Target` is verified with PostgreSQL race tests against parent deletion, target deletion, and Privacy transition.
+- [ ] **M3-S5 — Chapter:** next runtime slice. Adds `Chapter.placeId` and the three `chapter_*` relations.
+- [ ] M3-S6+ — Collections and Private Area according to the Delivery Plan.
 
-## Spätere Milestones
+## Later milestones
 
 - [ ] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules
-- [ ] M5 — Client Completion & Parity, Export/Import, Read Cache, finale Accessibility-QA
-- [ ] M6 — Questions, Check-in, Monats-/Jahresrückblicke
-- [ ] M7 — Integrationen/Provider
-- [ ] M8 — Location/Context mit explizitem Opt-in
-- [ ] M9 — Productization, Managed-/Self-Hosted-Policy, Backup, Entitlements, Launch-Hardening
-- [ ] MX — echte E2EE als eigener späterer Security-Milestone
+- [ ] M5 — Client Completion & Parity, Export/Import, Read Cache, final Accessibility QA
+- [ ] M6 — Questions, Check-in, monthly/yearly recaps
+- [ ] M7 — Integrations/Providers
+- [ ] M8 — Location/Context with explicit opt-in
+- [ ] M9 — Productization, Managed/Self-Hosted policy, Backup, Entitlements, Launch Hardening
+- [ ] MX — real E2EE as a separate later Security milestone
 
-## Nächster Prüfpunkt
+## Next checkpoint
 
-M3-S5 **Chapter** nach dem [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Der Slice bringt das Chapter-Modell mit `startOn`/`endOn` nach M3-D11, die abgeleitete chronologische Darstellung nach M3-D10 sowie `Chapter.placeId` und die drei `chapter_*`-Relationen — letztere auf derselben Join-Form, die S4 für Places geliefert hat.
+M3-S5 **Chapter** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). The slice adds the Chapter model with `startOn`/`endOn` per M3-D11, derived chronological presentation per M3-D10, plus `Chapter.placeId` and the three `chapter_*` relations — the latter using the same join shape that S4 delivered for Places.
 
-Chapter-Delete entfernt nach M3-D12 ausschließlich das Chapter und seine Relationen; kein Memory, HeartMoment oder Milestone darf dabei verschwinden.
+Per M3-D12, Chapter deletion removes only the Chapter and its relations; no Memory, HeartMoment, or Milestone may disappear with it.

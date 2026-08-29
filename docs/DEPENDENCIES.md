@@ -1,61 +1,56 @@
-# Abhängigkeiten und Assets
+# Dependencies and Assets
 
-Jede Abhängigkeit wird mit Name, Version, Quelle und Lizenz geführt. Jedes
-Asset mit Ursprung, Lizenz und Ersteller. Was hier nicht steht, gehört
-nicht ins Projekt.
+Every dependency is recorded with its name, version, source, and license. Every
+asset is recorded with its origin, license, and creator. Anything not listed
+here does not belong in the project.
 
-Stand: 2026-08-26
+As of: 2026-08-26
 
-## Reproduzierbarkeit und Prüfung
+## Reproducibility and verification
 
-`backend/uv.lock` ist die verbindliche, plattformübergreifende Auflösung
-aller direkten und transitiven Python-Abhängigkeiten. Die verwendete
-uv-Version `0.12.5`, Python `3.13.7`, das Build-Backend und das
-Python-Container-Image sind exakt gepinnt. Installationen in CI und Container
-laufen ausschließlich im Frozen-/Locked-Modus; `uv lock --check` verhindert
-eine veraltete Lockdatei.
+`backend/uv.lock` is the binding, cross-platform resolution of all direct and
+transitive Python dependencies. The uv version `0.12.5`, Python `3.13.7`, the
+build backend, and the Python container image are pinned exactly. CI and
+container installations run exclusively in frozen/locked mode;
+`uv lock --check` prevents a stale lock file.
 
-`web/package-lock.json` ist die verbindliche npm-Auflösung für den dünnen
-M2-S8-Web-Referenzflow. Direkte Versionen sind in `web/package.json` exakt
-gepinnt, CI installiert ausschließlich mit `npm ci`, und `npm audit
---audit-level=high` blockiert bekannte Schwachstellen ab hoher Kritikalität.
-Das Node-CI- und Web-Build-Image ist zusätzlich per Digest gepinnt. Der
-statische Produktionsbuild läuft in einem ebenfalls per Digest gepinnten
-unprivilegierten Nginx-Image.
+`web/package-lock.json` is the binding npm resolution for the thin M2-S8 Web
+reference flow. Direct versions are pinned exactly in `web/package.json`, CI
+installs exclusively with `npm ci`, and `npm audit --audit-level=high` blocks
+known vulnerabilities at high severity and above. The Node CI and Web build
+image is additionally pinned by digest. The static production build runs in
+an unprivileged Nginx image that is also pinned by digest.
 
-Der dünne M2-S8-Android-Referenzflow verwendet ausschließlich exakt
-versionierte Gradle-/Maven-Koordinaten und die feste Compose-BOM
-`2026.08.00`. Sein eigener CI-Nachweis pinnt JDK 17, Gradle 9.5.0,
-Android Gradle Plugin 9.3.0, compileSdk 37 und Build Tools 36.0.0. Damit sind
-Werkzeugkette und direkte Dependency-Auswahl nicht von lokalen Android-Studio-
-Defaults abhängig.
+The thin M2-S8 Android reference flow uses only exactly versioned Gradle/Maven
+coordinates and the fixed Compose BOM `2026.08.00`. Its own CI evidence pins
+JDK 17, Gradle 9.5.0, Android Gradle Plugin 9.3.0, compileSdk 37, and Build
+Tools 36.0.0. The toolchain and direct dependency selection therefore do not
+depend on local Android Studio defaults.
 
-Die Backend-CI führt `uv audit --preview --frozen` gegen OSV aus. Die Policy
-erlaubt keinen bekannten Sicherheitsfund und keinen nachteiligen Paketstatus.
-Eine Ausnahme dürfte nur mit Advisory-ID, Begründung, Ablaufdatum und
-verlinktem Issue unter `[tool.uv.audit]` eingetragen werden; derzeit gibt es
-keine.
+Backend CI runs `uv audit --preview --frozen` against OSV. Policy permits no
+known security finding and no adverse package status. An exception could only
+be recorded under `[tool.uv.audit]` with an advisory ID, rationale, expiration
+date, and linked Issue; there are currently none.
 
-Der dokumentierte Backend-Stand wird nach der gesperrten Installation
-automatisch mit den tatsächlich installierten Versionen und den
-`License-Expression`- beziehungsweise `License`-Metadaten der Pakete
-verglichen. Für Web stehen die direkten Abhängigkeiten unten; der vollständige
-transitive npm-Graph einschließlich Integritäts-Hashes steht in
-`web/package-lock.json`. Für Android stehen direkte Laufzeit-, Test- und
-Build-Abhängigkeiten unten; die CI löst sie ausschließlich aus Google Maven
-und Maven Central mit den dort fest angegebenen Versionen auf.
+After the locked installation, the documented Backend state is automatically
+compared with the actually installed versions and the packages'
+`License-Expression` or `License` metadata. Direct Web dependencies are listed
+below; the complete transitive npm graph including integrity hashes is in
+`web/package-lock.json`. Direct Android runtime, test, and build dependencies
+are listed below; CI resolves them exclusively from Google Maven and Maven
+Central at the versions specified there.
 
-`.github/dependabot.yml` lässt uv-, npm-, Gradle-, Docker- und GitHub-Actions-
-Abhängigkeiten wöchentlich aktualisieren. Bei einem neuen Fork oder Repository
-müssen unter **Settings → Security and analysis** zusätzlich „Dependabot
-alerts“ und „Dependabot security updates“ aktiviert werden; die normalen
-Versionsupdates starten bereits durch die Konfigurationsdatei.
+`.github/dependabot.yml` schedules weekly updates for uv, npm, Gradle, Docker,
+and GitHub Actions dependencies. On a new fork or repository, **Dependabot
+alerts** and **Dependabot security updates** must additionally be enabled under
+**Settings → Security and analysis**; normal version updates already start from
+the configuration file.
 
-### Dokumentierter Policy-Dry-Run
+### Documented policy dry run
 
-Der folgende Test legt nur in einem temporären Verzeichnis einen absichtlich
-verwundbaren Lockstand an. Er muss mit einem Fund und einem von null
-verschiedenen Exit-Code enden; die echte Projekt-Lockdatei bleibt unverändert.
+The following test creates an intentionally vulnerable lock state only in a
+temporary directory. It must end with a finding and a non-zero exit code; the
+actual project lock file remains unchanged.
 
 ```bash
 probe=$(mktemp -d)
@@ -64,48 +59,47 @@ uv lock --directory "$probe"
 uv audit --preview --frozen --directory "$probe"
 ```
 
-`argon2-cffi` deckt genau einen Zweck ab: die Ableitung von Passwoertern.
-Eigene Tokens kommen mit `secrets` und `hashlib` aus der Standardbibliothek
-aus - fuer einen Wert mit voller Entropie waere ein absichtlich langsames
-Verfahren nur eine Bremse bei jeder Anfrage.
+`argon2-cffi` serves exactly one purpose: password derivation. Project-owned
+tokens use `secrets` and `hashlib` from the standard library; for a value with
+full entropy, an intentionally slow algorithm would only impose unnecessary
+cost on every request.
 
-Dazu kommt mit OIDC `pyjwt[crypto]` und damit `cryptography`: die Signatur
-eines fremden ID Tokens laesst sich nicht mit `hashlib` pruefen, und ein
-selbst geschriebener RSA-/ECDSA-Verifizierer waere im Auth-Pfad genau der
-falsche Ort fuer Eigenbau. `httpx` wird von der Entwicklungs- zur
-Laufzeitabhaengigkeit, weil Discovery, JWKS-Abruf und Token-Endpunkt
-ausgehendes HTTP brauchen.
+OIDC adds `pyjwt[crypto]` and therefore `cryptography`: the signature of an
+external ID Token cannot be verified with `hashlib`, and a custom RSA/ECDSA
+verifier would be exactly the wrong kind of in-house implementation in the
+Auth path. `httpx` moves from a development dependency to a runtime dependency
+because Discovery, JWKS retrieval, and the Token endpoint require outbound
+HTTP.
 
-`webauthn` (py_webauthn) kommt aus demselben Grund dazu: eine Passkey-
-Registrierung bringt CBOR, COSE-Schluessel und Attestation mit, und diese
-Formate von Hand zu lesen waere Eigenbau an der empfindlichsten Stelle.
+`webauthn` (py_webauthn) is added for the same reason: Passkey registration
+involves CBOR, COSE keys, and Attestation, and reading these formats by hand
+would be custom implementation at the most sensitive boundary.
 
-`cbor2` steht nur in der Entwicklung: der virtuelle Authenticator in den
-Tests baut `attestationObject` und COSE-Schluessel selbst, damit die Suite
-echte Signaturen prueft statt aufgezeichneter Beispieldaten.
+`cbor2` is development-only: the virtual Authenticator in tests constructs
+`attestationObject` and COSE keys itself so the suite verifies real signatures
+instead of recorded example data.
 
-`Pillow` und `pillow-heif` kommen mit der Medienverarbeitung dazu. Bilder zu
-dekodieren, ihre Masse zu bestimmen, eingebettete Metadaten zu entfernen und
-ein Thumbnail zu erzeugen, ist nichts, was sich sinnvoll selbst schreiben
-laesst - ein eigener JPEG-, PNG- oder WebP-Dekoder waere Eigenbau an der
-groessten Angriffsflaeche des Produkts. `pillow-heif` bringt libheif und
-damit HEIC/HEIF, die in der M2-D04-Allowlist stehen; es registriert sich als
-Plugin in Pillow und wird nicht getrennt aufgerufen.
+`Pillow` and `pillow-heif` are added with media processing. Decoding images,
+determining their dimensions, removing embedded metadata, and generating a
+Thumbnail is not functionality that is reasonable to implement from scratch;
+a custom JPEG, PNG, or WebP decoder would be in-house implementation at one of
+the product's largest attack surfaces. `pillow-heif` brings libheif and thus
+HEIC/HEIF, which are part of the M2-D04 allowlist; it registers as a Pillow
+plugin and is not called separately.
 
-Beide sind bewusst der einzige Zuwachs dieses Slices. Video und der dafuer
-noetige ffmpeg-Aufruf sind nach M2-D23 ein eigener spaeterer Schritt, weil
-ein Systembinary Container-Image und Installationsanleitung betrifft und
-sich dem `uv audit`-Gate entzieht.
+Both are deliberately the only additions in this slice. Video and the ffmpeg
+invocation it requires are a separate later step under M2-D23 because a system
+binary affects the container image and installation instructions and falls
+outside the `uv audit` gate.
 
-Medienparser sind erklaerte Angriffsflaeche. Deshalb gilt fuer sie
-besonders, was ohnehin Policy ist: kein bekannter Sicherheitsfund im Lock,
-Dependabot-Updates werden nicht liegengelassen, und die Verarbeitung laeuft
-ausschliesslich im Hintergrundjob unter Ressourcengrenzen - nie im
-Requestpfad.
+Media parsers are an explicit attack surface. They therefore receive special
+attention under the existing policy: no known security finding in the lock,
+Dependabot updates are not left unresolved, and processing runs exclusively
+in a background job under resource limits — never in the request path.
 
-## Backend — Laufzeit
+## Backend — Runtime
 
-| Paket | Version | Quelle | Lizenz |
+| Package | Version | Source | License |
 |---|---|---|---|
 | fastapi | 0.141.1 | PyPI | MIT |
 | uvicorn[standard] | 0.52.4 | PyPI | BSD-3-Clause |
@@ -122,9 +116,9 @@ Requestpfad.
 | pillow | 12.3.0 | PyPI | MIT-CMU |
 | pillow-heif | 1.5.0 | PyPI | BSD-3-Clause |
 
-## Backend — Entwicklung
+## Backend — Development
 
-| Paket | Version | Quelle | Lizenz |
+| Package | Version | Source | License |
 |---|---|---|---|
 | pytest | 9.1.1 | PyPI | MIT |
 | pytest-asyncio | 1.4.0 | PyPI | Apache-2.0 |
@@ -133,9 +127,9 @@ Requestpfad.
 | ruff | 0.16.4 | PyPI | MIT |
 | mypy | 2.3.1 | PyPI | MIT |
 
-## Web — M2-S8 Laufzeit
+## Web — M2-S8 Runtime
 
-| Paket | Version | Quelle | Lizenz |
+| Package | Version | Source | License |
 |---|---|---|---|
 | @tanstack/react-query | 5.85.5 | npm | MIT |
 | i18next | 26.4.0 | npm | MIT |
@@ -144,9 +138,9 @@ Requestpfad.
 | react-dom | 19.1.1 | npm | MIT |
 | react-router-dom | 7.18.2 | npm | MIT |
 
-## Web — M2-S8 Entwicklung
+## Web — M2-S8 Development
 
-| Paket | Version | Quelle | Lizenz |
+| Package | Version | Source | License |
 |---|---|---|---|
 | @types/react | 19.1.12 | npm | MIT |
 | @types/react-dom | 19.1.9 | npm | MIT |
@@ -154,54 +148,52 @@ Requestpfad.
 | vite | 7.3.6 | npm | MIT |
 | vitest | 3.2.7 | npm | MIT |
 
-Diese Web-Abhängigkeiten dienen ausschließlich dem dünnen S8-Referenzflow.
-Sie ziehen keine M5-Funktionen wie persistente Offline-Caches, vollständige
-Navigation oder Client-Parität vor. Der generierte `typescript-fetch`-Code
-bleibt ohne zusätzliche Runtime-Abhängigkeit und nutzt die Browser-Fetch-API.
+These Web dependencies serve only the thin S8 reference flow. They do not
+pull M5 functionality such as persistent Offline Caches, complete navigation,
+or Client Parity forward. The generated `typescript-fetch` code remains free
+of additional runtime dependencies and uses the browser Fetch API.
 
-## Web — Container-Werkzeugkette
+## Web — Container toolchain
 
-| Komponente | Version | Quelle | Lizenz |
+| Component | Version | Source | License |
 |---|---|---|---|
-| Node.js Build-Image | 22.19.0-bookworm-slim, `sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90` | Docker Hub / nodejs/docker-node | MIT (Node.js und Image-Definition) |
-| nginx-unprivileged | 1.31.4, `sha256:197f252f060ed357f2ab98d4256762d7d107c76f18ad8f0b9d5178854611566d` | GHCR / nginx/docker-nginx-unprivileged | BSD-2-Clause (NGINX), Apache-2.0 (Image-Definition) |
+| Node.js build image | 22.19.0-bookworm-slim, `sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90` | Docker Hub / nodejs/docker-node | MIT (Node.js and image definition) |
+| nginx-unprivileged | 1.31.4, `sha256:197f252f060ed357f2ab98d4256762d7d107c76f18ad8f0b9d5178854611566d` | GHCR / nginx/docker-nginx-unprivileged | BSD-2-Clause (NGINX), Apache-2.0 (image definition) |
 
-Beide Images werden ausschließlich beim Build beziehungsweise als lokaler
-statischer Webserver verwendet. Es fließen keine SideBySide-Nutzerdaten an
-Node.js, NGINX oder deren Registries; Registries sehen nur den normalen
-Image-Abruf des Hosters. Es gibt keine laufenden Providerkosten, Accounts oder
-Rate-Limits. Fällt eine Registry aus, kann ein bereits gebautes lokales Image
-weiterlaufen; ein neuer Build wartet auf die Registry oder verwendet einen
-vom Hoster kontrollierten Spiegel.
+Both images are used only during the build or as a local static Web server.
+No SideBySide user data is sent to Node.js, NGINX, or their registries;
+registries see only the hoster's normal image pull. There are no recurring
+Provider costs, Accounts, or Rate Limits. If a registry is unavailable, an
+already built local image can continue running; a new build waits for the
+registry or uses a hoster-controlled mirror.
 
-## Android — M2-S8 Laufzeit
+## Android — M2-S8 Runtime
 
-| Paket / Plattformbaustein | Version | Quelle | Lizenz |
+| Package / platform component | Version | Source | License |
 |---|---|---|---|
 | Jetpack Compose BOM | 2026.08.00 | Google Maven | Apache-2.0 |
-| Compose UI / Material 3 | über BOM (Compose 1.12 / Material 3 1.4) | Google Maven | Apache-2.0 |
+| Compose UI / Material 3 | via BOM (Compose 1.12 / Material 3 1.4) | Google Maven | Apache-2.0 |
 | androidx.activity:activity-compose | 1.13.0 | Google Maven | Apache-2.0 |
 | androidx.lifecycle:lifecycle-viewmodel-compose | 2.11.0 | Google Maven | Apache-2.0 |
 | com.squareup.okhttp3:okhttp | 5.4.0 | Maven Central | Apache-2.0 |
 | org.jetbrains.kotlinx:kotlinx-coroutines-android | 1.11.0 | Maven Central | Apache-2.0 |
 | org.jetbrains.kotlinx:kotlinx-serialization-json | 1.11.0 | Maven Central | Apache-2.0 |
-| Android Photo Picker | Plattform / Activity Result Contract | Android | Plattform-API; kein zusätzliches Paket |
+| Android Photo Picker | platform / Activity Result Contract | Android | platform API; no additional package |
 
-`android/api/generated` bleibt generator-owned. Seine `@Serializable`-
-Modelle werden direkt als Source-Root eingebunden; insbesondere gibt es keine
-zweite DTO-/Union-Schicht. OkHttp ist ausschließlich die kleine Transportstufe
-für die veröffentlichten Endpunkte und die serverseitig ausgestellten
-Upload-/Read-Deskriptoren. `STREAM` erhält Bearer-Auth; Signed URLs erhalten
-sie absichtlich nicht.
+`android/api/generated` remains generator-owned. Its `@Serializable` models
+are included directly as a Source Root; in particular, there is no second
+DTO/Union layer. OkHttp is only the small transport layer for published
+endpoints and server-issued upload/read descriptors. `STREAM` receives Bearer
+Auth; Signed URLs deliberately do not.
 
-Der S8-Client führt bewusst **kein** Room, Paging, WorkManager, DataStore oder
-Bildcache-Framework ein. Tokens, Ergebnis und Bild leben nur im flüchtigen
-Prozess-/ViewModel-State. Damit wird die offene M2-D18-Cacheentscheidung nicht
-vorweggenommen.
+The S8 client deliberately introduces **no** Room, Paging, WorkManager,
+DataStore, or image-cache framework. Tokens, result, and image live only in
+volatile process/ViewModel state. This does not preempt the open M2-D18 Cache
+decision.
 
-## Android — M2-S8 Test und Build
+## Android — M2-S8 Test and Build
 
-| Paket / Werkzeug | Version | Quelle | Lizenz |
+| Package / tool | Version | Source | License |
 |---|---|---|---|
 | Android Gradle Plugin | 9.3.0 | Google Maven | Apache-2.0 |
 | Gradle | 9.5.0 | gradle.org / CI setup-gradle | Apache-2.0 |
@@ -209,99 +201,95 @@ vorweggenommen.
 | Kotlin Serialization Gradle Plugin | 2.3.21 | Gradle Plugin Portal / Maven Central | Apache-2.0 |
 | JUnit 4 | 4.13.2 | Maven Central | EPL-1.0 |
 | androidx.test:core | 1.7.0 | Google Maven | Apache-2.0 |
-| Compose UI Test JUnit4 | über BOM | Google Maven | Apache-2.0 |
+| Compose UI Test JUnit4 | via BOM | Google Maven | Apache-2.0 |
 | kotlinx-coroutines-test | 1.11.0 | Maven Central | Apache-2.0 |
 | Robolectric | 4.16.1 | Maven Central | MIT |
 
-Der Android-S8-CI-Job nutzt JDK 17, installiert SDK Platform 37 sowie Build
-Tools 36.0.0 und führt JVM-/Robolectric-/Compose-Semantics-Tests, Android Lint
-und `assembleDebug` aus. Die GitHub Actions selbst sind auf Commit-SHAs
-gepinnt.
+The Android S8 CI job uses JDK 17, installs SDK Platform 37 and Build Tools
+36.0.0, and runs JVM/Robolectric/Compose Semantics tests, Android Lint, and
+`assembleDebug`. The GitHub Actions themselves are pinned to commit SHAs.
 
-## Container-Basisimages
+## Container base images
 
-| Image | Version | Quelle | Lizenz |
+| Image | Version | Source | License |
 |---|---|---|---|
-| python | 3.13.7-slim@sha256:5f55cdf0c5d9dc1a415637a5ccc4a9e18663ad203673173b8cda8f8dcacef689 | Docker Hub | PSF-2.0 (Python), Debian-Pakete je eigene Lizenz |
+| python | 3.13.7-slim@sha256:5f55cdf0c5d9dc1a415637a5ccc4a9e18663ad203673173b8cda8f8dcacef689 | Docker Hub | PSF-2.0 (Python), Debian packages under their respective licenses |
 | postgres | 17-alpine | Docker Hub | PostgreSQL License |
-| node | 22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90 | Docker Hub | MIT (Node.js), Debian-Pakete je eigene Lizenz |
+| node | 22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90 | Docker Hub | MIT (Node.js), Debian packages under their respective licenses |
 
-## Werkzeuge zur Bauzeit
+## Build-time tools
 
-| Werkzeug | Version | Quelle | Lizenz |
+| Tool | Version | Source | License |
 |---|---|---|---|
 | openapi-generator-cli | v7.16.0@sha256:e56372add5e038753fb91aa1bbb470724ef58382fdfc35082bf1b3e079ce353c | Docker Hub | Apache-2.0 |
 
-Der Generator erzeugt die Client-API-Schichten aus `backend/openapi.json`. Er
-läuft ausschließlich zur Bauzeit und wird nicht ausgeliefert; Apache-2.0
-stellt an den erzeugten Code keine Bedingungen. Version und Digest stehen in
-`tools/openapi/generator.env`, Details in
+The generator creates the Client API layers from `backend/openapi.json`. It
+runs only at build time and is not shipped; Apache-2.0 imposes no conditions
+on generated code. Version and digest are stored in
+`tools/openapi/generator.env`; details are in
 [`tools/openapi/README.md`](../tools/openapi/README.md).
 
-## Zu prüfen: psycopg unter LGPL
+## To review: psycopg under LGPL
 
-`psycopg` steht unter **LGPL-3.0-only** und ist damit die einzige
-Abhängigkeit, deren Lizenz nicht permissiv ist.
+`psycopg` is licensed under **LGPL-3.0-only** and is therefore the only
+dependency whose license is not permissive.
 
-Die praktische Lage:
+Practical situation:
 
-- Der Treiber wird als eigenständiges Paket dynamisch geladen, nicht in
-  eigenen Code hineinkompiliert.
-- Für den betriebenen Cloud-Dienst liegt keine Weitergabe vor; die LGPL
-  greift dort typischerweise nicht.
-- Für die Self-Hosted-Auslieferung als Container-Image liegt eine
-  Weitergabe vor. Die LGPL verlangt dann unter anderem, dass Empfänger den
-  Treiber durch eine eigene Fassung ersetzen können und dass Lizenztext
-  und Quellenhinweis beiliegen.
+- The driver is loaded dynamically as a standalone package and is not
+  compiled into project-owned code.
+- For the operated Cloud service, there is no distribution; the LGPL
+  typically does not apply there.
+- For Self-Hosted distribution as a container image, distribution occurs.
+  The LGPL then requires, among other things, that recipients can replace the
+  driver with their own version and that the license text and source notice
+  are provided.
 
-Das ist bei einem separat installierten Python-Paket erfüllbar, aber es
-ist eine bewusste Auflage und keine Formalie. Vor dem kommerziellen Start
-gehört sie geprüft — gegebenenfalls durch Wechsel auf einen permissiv
-lizenzierten Treiber.
+This is achievable for a separately installed Python package, but it is a
+deliberate obligation rather than a formality. It must be reviewed before
+commercial launch — potentially by switching to a permissively licensed
+driver.
 
-Diese Einschätzung ist keine Rechtsberatung.
+This assessment is not legal advice.
 
 ## Assets
 
-Das Repository enthält inzwischen projektspezifische Bild- und SVG-Assets.
-Sie wurden für SideBySide Next bzw. dessen Roadmap und M2-Handoff erstellt;
-Assets ungeklärter Drittanbieter- oder Vorgängerherkunft werden weiterhin
-nicht aufgenommen. Die Produktbilder sind ausdrücklich Mockups und keine
-Screenshots einer bereits fertigen App.
+The repository now contains project-specific image and SVG assets. They were
+created for SideBySide Next or its Roadmap and M2 handoff; assets of unclear
+third-party or predecessor origin continue to be excluded. The product images
+are explicitly mockups, not screenshots of an already finished application.
 
-Für die unten als **Projektasset** gekennzeichneten Dateien wird derzeit keine
-separate öffentliche Lizenz eingeräumt. Diese Einordnung ändert nichts an
-der noch offenen Lizenzentscheidung für den eigenen Quellcode.
+No separate public license is currently granted for files marked below as
+**project assets**. This classification does not change the still-open license
+decision for the project's own source code.
 
-| Asset | Ursprung | Ersteller | Lizenz |
+| Asset | Origin | Creator | License |
 |---|---|---|---|
-| `docs/assets/playstore/app-icon.png` | SideBySide Next Produktvorschau | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/feature-graphic.png` | SideBySide Next Produktvorschau | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/screen-01-onboarding.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/screen-02-heute.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/screen-03-story.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/screen-04-wuensche.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/screen-05-plan.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/screen-06-discovery.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/screen-07-einkauf.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/playstore/screen-08-privacy.png` | SideBySide Next Produkt-Mockup | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/roadmap/roadmap-overview.svg` | SideBySide Next Roadmap | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/assets/roadmap/roadmap-tracks.svg` | SideBySide Next Roadmap | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `design/m2/m2-screenflow.svg` | M2 Client-Handoff | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
-| `docs/m2/m2-privacy-flow.svg` | M2 Privacy-/Acceptance-Handoff | SideBySide Next Projektworkflow, AI-assistiert und menschlich geprüft | Projektasset; keine separate öffentliche Lizenzfreigabe |
+| `docs/assets/playstore/app-icon.png` | SideBySide Next product preview | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/feature-graphic.png` | SideBySide Next product preview | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-01-onboarding.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-02-heute.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-03-story.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-04-wuensche.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-05-plan.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-06-discovery.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-07-einkauf.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/playstore/screen-08-privacy.png` | SideBySide Next product mockup | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/roadmap/roadmap-overview.svg` | SideBySide Next Roadmap | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/assets/roadmap/roadmap-tracks.svg` | SideBySide Next Roadmap | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `design/m2/m2-screenflow.svg` | M2 Client handoff | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
+| `docs/m2/m2-privacy-flow.svg` | M2 Privacy/Acceptance handoff | SideBySide Next project workflow, AI-assisted and human-reviewed | project asset; no separate public license grant |
 
-Derzeit sind keine Schrift- oder Audio-Assets im Repository dokumentiert.
+No font or audio assets are currently documented in the repository.
 
-## Pflege
+## Maintenance
 
-Eine neue direkte Abhängigkeit wird zusammen mit ihrem Eintrag hier
-hinzugefügt. Die CI prüft die Backend-Dokumentation gegen die gesperrte,
-installierte Umgebung. Transitive Python-Versionen stehen vollständig in
-`backend/uv.lock`; transitive Web-Versionen und Integritäts-Hashes vollständig
-in `web/package-lock.json`. Android hält alle direkten Koordinaten und die
-Compose-BOM im Gradle-Build exakt fest; Dependabot beobachtet den
-`/android`-Build separat.
+A new direct dependency is added here together with its entry. CI checks the
+Backend documentation against the locked, installed environment. Transitive
+Python versions are fully recorded in `backend/uv.lock`; transitive Web
+versions and integrity hashes are fully recorded in `web/package-lock.json`.
+Android keeps all direct coordinates and the Compose BOM pinned exactly in the
+Gradle build; Dependabot monitors the `/android` build separately.
 
-Neue Assets werden in derselben Änderung hier dokumentiert. Bei unklarer
-Herkunft, Lizenz oder Erstellerschaft wird das Asset nicht aufgenommen, bis
-die Provenienz geklärt ist.
+New assets are documented here in the same change. If origin, license, or
+creator is unclear, the asset is not admitted until Provenance is resolved.

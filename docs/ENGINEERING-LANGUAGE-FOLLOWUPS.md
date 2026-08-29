@@ -34,6 +34,8 @@ Constraints:
 
 ## #216 - Active technical documentation and specifications
 
+Delivery tracking: #214 and #215 landed through PR #219. #216 is implemented separately on the current `main` baseline.
+
 Scope:
 
 - active architecture, security, privacy, operations, design, milestone, decision, roadmap/status, and specification documents;
@@ -44,5 +46,9 @@ Constraints:
 - dated historical review/audit snapshots remain immutable under the policy exception;
 - translation must not silently alter product scope, privacy rules, release gates, or architectural decisions;
 - documents that are active inputs to implementation should be migrated before adding substantial new sections to them.
+
+The #216 migration also extends the automated language audit to active files under
+`docs/`, `specification/`, and `design/`. Dated snapshots under `docs/reviews/`
+remain explicitly excluded; new review snapshots are still required to use English.
 
 These issues remain linked from #212 as the tracking issue. This file keeps the migration boundary visible in the repository after the tracker is closed.

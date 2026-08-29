@@ -1,240 +1,238 @@
-# Informationsarchitektur für SideBySide Next
+# Information Architecture for SideBySide Next
 
-**Status:** Verbindliche Grundlage für Web und App  
+**Status:** Binding foundation for Web and App  
 **Version:** 1.1  
-**Gültig ab:** 24. August 2026
+**Effective from:** August 24, 2026
 
-Dieses Dokument definiert Navigation, Benennung, Routen und die Zuordnung der
-Produktfunktionen. Web und Android verwenden dieselbe fachliche Architektur,
-passen ihre Navigation aber an Fenstergröße und Plattformkonventionen an.
+This document defines navigation, naming, routes, and product-function
+assignment. Web and Android use the same domain architecture while adapting
+navigation to window size and platform conventions.
 
-## 1. Grundregeln
+## 1. Core rules
 
-- Der gemeinsame **Space** ist der konstante Produktkontext.
-- Die Hauptnavigation enthält höchstens fünf Ziele.
-- Ein Inhalt hat genau einen fachlichen Hauptort; Querverweise sind Deep Links.
-- Routen spiegeln Aufgaben und Inhalte, nicht technische Module.
-- Privacy-Klassen verändern nicht die Hauptnavigation; wo eine Domain mehrere
-  Klassen unterstützt, steht der Status direkt am Inhalt.
-- Navigation darf keine ungespeicherten Eingaben ohne Warnung verwerfen.
-- Web und App verwenden dieselben Begriffe und stabilen Route-IDs.
+- The shared **Space** is the constant product context.
+- Primary navigation contains no more than five destinations.
+- A piece of content has exactly one domain home; cross-references are Deep
+  Links.
+- Routes represent tasks and content, not technical modules.
+- Privacy classes do not change primary navigation; where a domain supports
+  multiple classes, the status is shown directly on the content.
+- Navigation must not discard unsaved input without warning.
+- Web and App use the same terminology and stable route IDs.
 
-## 2. Verbindliche Hauptnavigation
+## 2. Mandatory primary navigation
 
-| Route-ID | Deutscher Name | Zweck |
+| Route ID | de-DE product name | Purpose |
 |---|---|---|
-| `today` | Heute | gemeinsamer Überblick und nächste sinnvolle Schritte |
-| `story` | Story | nicht öffentliche gemeinsame Timeline der Erinnerungen |
-| `plan` | Planen | Wünsche und konkrete Pläne; später Einkauf |
-| `discover` | Entdecken | kuratierte Inspiration für gemeinsame Zeit |
-| `more` | Mehr | Space, Privacy, Profil und Einstellungen |
+| `today` | Heute | shared overview and next meaningful actions |
+| `story` | Story | non-public shared timeline of memories |
+| `plan` | Planen | wishes and concrete plans; shopping later |
+| `discover` | Entdecken | curated inspiration for shared time |
+| `more` | Mehr | Space, privacy, profile, and settings |
 
-### Plattformdarstellung
+### Platform representation
 
-- **Kompakte Fenster:** Bottom Navigation mit Icon und Textlabel.
-- **Mittlere Fenster:** Navigation Rail.
-- **Große Webfenster:** feste Sidebar mit Textlabel; sekundäre Ziele dürfen
-  eingerückt sichtbar sein.
-- Die Reihenfolge bleibt auf allen Plattformen identisch.
-- Der aktuelle Bereich ist mit Farbe, Icon und Textzustand erkennbar.
+- **Compact windows:** Bottom Navigation with icon and text label.
+- **Medium windows:** Navigation Rail.
+- **Large Web windows:** fixed sidebar with text labels; secondary targets may
+  appear indented.
+- Order remains identical on all platforms.
+- Current area is recognizable through color, icon, and text state.
 
-## 3. Strukturbaum
+## 3. Structure tree
 
 ```text
 SideBySide Next
 ├── Heute
-│   ├── nächster gemeinsamer Moment
-│   ├── persönliche und gemeinsame Empfehlungen
-│   ├── Rückblicke
-│   └── offene Aufgaben und Hinweise
+│   ├── next shared moment
+│   ├── personal and shared recommendations
+│   ├── recaps
+│   └── open tasks and notices
 ├── Story
 │   ├── Timeline
 │   ├── Erinnerung
-│   │   ├── Medien
-│   │   ├── Ort und Datum
-│   │   ├── Status „Geteilt“
-│   │   └── Bearbeitung
-│   └── neue Erinnerung
+│   │   ├── media
+│   │   ├── place and date
+│   │   ├── status "Geteilt"
+│   │   └── editing
+│   └── new memory
 ├── Planen
 │   ├── Wünsche
-│   │   ├── offen
-│   │   ├── geplant
-│   │   ├── abgeschlossen
-│   │   └── Wunschdetail
+│   │   ├── open
+│   │   ├── planned
+│   │   ├── completed
+│   │   └── wish detail
 │   ├── Pläne
-│   │   ├── Status
-│   │   ├── Termin
-│   │   ├── Checkliste
-│   │   └── Medien und Notizen
-│   └── Einkauf (später, feature-gesteuert)
-│       ├── gemeinsame Liste
-│       ├── Zuständigkeiten
-│       └── Rezeptideen
+│   │   ├── status
+│   │   ├── date
+│   │   ├── checklist
+│   │   └── media and notes
+│   └── Einkauf (later, feature-controlled)
 ├── Entdecken
-│   ├── Feed
-│   ├── Filter
-│   ├── Empfehlung
-│   └── in Wunsch oder Plan übernehmen
+│   ├── feed
+│   ├── filters
+│   ├── recommendation
+│   └── convert into wish or plan
 └── Mehr
-    ├── Space und Partner
-    ├── Privatsphäre und Berechtigungen
-    ├── Benachrichtigungen
-    ├── Profil und Präferenzen
-    ├── Datenexport und Account-Löschung
-    └── Hilfe, Rechtliches und App-Informationen
+    ├── Space and partner
+    ├── privacy and permissions
+    ├── notifications
+    ├── profile and preferences
+    ├── data export and account deletion
+    └── help, legal, and app information
 ```
 
-## 4. Planen als gemeinsamer Hub
+## 4. Planen as shared hub
 
-`Planen` bündelt im Core zwei eng verbundene Zustände und hält einen späteren
-Bereich architektonisch frei:
+`Planen` combines two closely related states in Core and keeps a future area
+architecturally open:
 
-1. **Wunsch:** eine Idee ohne verbindlichen Termin.
-2. **Plan:** eine konkretisierte Idee mit Status, Termin oder Aufgaben.
-3. **Einkauf (später):** eine eigenständige Shopping-Domäne, nicht bloß eine
-   generische Collection.
+1. **Wish:** an idea without a binding date.
+2. **Plan:** a concretized idea with status, date, or tasks.
+3. **Shopping (later):** an independent shopping domain, not a generic
+   collection.
 
-Wünsche und Pläne dürfen nicht als voneinander isolierte Datenwelten wirken.
-Eine Umwandlung von Wunsch zu Plan ist ein sichtbarer, nachvollziehbarer
-Statuswechsel. Entdecken erzeugt keine vierte Kopie eines Inhalts, sondern kann
-eine Empfehlung als Wunsch oder Plan übernehmen.
+Wishes and plans must not appear as isolated data worlds. Converting a wish
+into a plan is a visible, understandable state transition. Discover does not
+create a fourth copy of content; it can adopt a recommendation as a wish or
+plan.
 
-### Sekundärnavigation
+### Secondary navigation
 
-- Smartphone: zunächst Segmented Control oder Tabs `Wünsche | Pläne`; Einkauf
-  wird erst bei implementierter und aktivierter Shopping-Domäne ergänzt.
-- Web: dieselben Tabs innerhalb des Planen-Bereichs; auf großen Fenstern kann
-  eine Liste mit Detail-Pane verwendet werden.
-- Der zuletzt gewählte Unterbereich darf lokal wiederhergestellt werden.
-- Deep Links öffnen immer den konkreten Unterbereich und Inhalt.
+- Smartphone: initially segmented control or tabs **Wünsche | Pläne**; Shopping
+  is added only with an implemented and enabled shopping domain.
+- Web: same tabs inside the Planen area; large windows may use list plus detail
+  pane.
+- The last selected sub-area may be restored locally.
+- Deep Links always open the concrete sub-area and content.
 
-## 5. Routenmodell
+## 5. Route model
 
-Die folgenden Pfade sind die kanonischen Webpfade und zugleich Grundlage für
-App-Deep-Links. IDs sind undurchsichtige, stabile Bezeichner.
+The following paths are canonical Web paths and the foundation for App Deep
+Links. IDs are opaque, stable identifiers.
 
-| Aufgabe | Kanonischer Pfad |
+| Task | Canonical path |
 |---|---|
-| Heute öffnen | `/today` |
-| Story öffnen | `/story` |
-| Erinnerung öffnen | `/story/memories/:memoryId` |
-| Erinnerung erstellen | `/story/memories/new` |
-| Planen-Hub | `/plan` |
-| Wünsche | `/plan/wishes` |
-| Wunsch öffnen | `/plan/wishes/:wishId` |
-| Pläne | `/plan/plans` |
-| Plan öffnen | `/plan/plans/:planId` |
-| Einkauf, reserviert für spätere Domain | `/plan/shopping` |
-| Entdecken | `/discover` |
-| Empfehlung öffnen | `/discover/:recommendationId` |
-| Mehr | `/more` |
-| Space und Partner | `/more/space` |
+| Open Heute | `/today` |
+| Open Story | `/story` |
+| Open memory | `/story/memories/:memoryId` |
+| Create memory | `/story/memories/new` |
+| Planen hub | `/plan` |
+| Wishes | `/plan/wishes` |
+| Open wish | `/plan/wishes/:wishId` |
+| Plans | `/plan/plans` |
+| Open plan | `/plan/plans/:planId` |
+| Shopping reserved for later domain | `/plan/shopping` |
+| Discover | `/discover` |
+| Open recommendation | `/discover/:recommendationId` |
+| More | `/more` |
+| Space and partner | `/more/space` |
 | Privacy | `/more/privacy` |
-| Benachrichtigungen | `/more/notifications` |
-| Profil | `/more/profile` |
-| Einstellungen | `/more/settings` |
-| Daten und Account | `/more/data-account` |
+| Notifications | `/more/notifications` |
+| Profile | `/more/profile` |
+| Settings | `/more/settings` |
+| Data and account | `/more/data-account` |
 
-### Deep-Link-Regeln
+### Deep-Link rules
 
-- Jeder Detailinhalt besitzt einen teilbaren internen Deep Link.
-- Ein Deep Link prüft Authentifizierung und Space-Mitgliedschaft, bevor Daten
-  geladen werden.
-- Nicht berechtigte Inhalte werden nicht als vorhandene Ressource bestätigt.
-- Nach Login oder Einladung wird zum ursprünglich angeforderten Ziel
-  zurückgekehrt.
-- Gelöschte Inhalte erhalten einen verständlichen Zustand statt einer
-  generischen leeren Seite.
+- Every detail item has a shareable internal Deep Link.
+- A Deep Link validates authentication and Space membership before loading data.
+- Unauthorized content is not confirmed as an existing resource.
+- After login or invitation, the user returns to the originally requested
+  destination.
+- Deleted content receives an understandable state instead of a generic empty
+  page.
 
-## 6. Screen- und Pane-Verhalten
+## 6. Screen and pane behavior
 
-| Inhalt | Kompakt | Mittel | Erweitert |
+| Content | Compact | Medium | Expanded |
 |---|---|---|---|
-| Story | Liste oder Detail | Liste oder Detail | Timeline + Detail |
-| Wünsche | Liste oder Detail | Liste oder Detail | Liste + Detail |
-| Pläne | Liste oder Detail | Liste oder Detail | Liste + Detail + optionale Unterstützung |
-| Einkauf, später | eine Liste | Liste + optionale Rezeptkarte | Liste + Rezept-/Detail-Pane |
-| Entdecken | Feed + Detail-Screen | Feed + Detail | Grid/Feed + Detail-Pane |
-| Einstellungen | gestapelte Seiten | Seite mit Kategorien | Kategorien + Einstellungsdetail |
+| Story | list or detail | list or detail | timeline + detail |
+| Wishes | list or detail | list or detail | list + detail |
+| Plans | list or detail | list or detail | list + detail + optional support |
+| Shopping, later | one list | list + optional recipe card | list + recipe/detail pane |
+| Discover | feed + detail screen | feed + detail | grid/feed + detail pane |
+| Settings | stacked pages | categorized page | categories + setting detail |
 
-Das Detail ersetzt auf kleinen Fenstern die Liste. Auf großen Fenstern bleibt
-die Liste sichtbar und der ausgewählte Inhalt erscheint daneben. Der
-Zurück-Zustand muss beim Wechsel zwischen Fenstergrößen erhalten bleiben.
+On small windows, detail replaces the list. On large windows, the list remains
+visible and selected content appears beside it. Back state must survive window
+size changes.
 
-## 7. Benennung und Sprache
+## 7. Naming and language
 
-### Verbindliche Begriffe
+### Binding terms
 
-| Fachbegriff | UI-Name | Nicht verwenden |
+| Domain term | UI name | Do not use |
 |---|---|---|
-| gemeinsamer Mandant | Space | Workspace, Tenant |
-| Beziehungspartner | Partner | Kontakt, Nutzer 2 |
-| Erinnerung | Erinnerung | Post, Beitrag |
-| Wunsch | Wunsch | Bookmark, Favorite |
-| konkreter gemeinsamer Vorgang | Plan | Projekt, Task-Liste |
-| Sichtbarkeit nur für Eigentümer | Nur für mich | Owner-only |
-| Sichtbarkeit im Space | Mit Partner teilen | Public, freigeben für alle |
+| shared tenant | Space | Workspace, Tenant |
+| relationship partner | Partner | Contact, User 2 |
+| memory | Erinnerung | Post, Beitrag |
+| wish | Wunsch | Bookmark, Favorite |
+| concrete shared activity | Plan | Project, Task List |
+| owner-only visibility | Nur für mich | Owner-only |
+| Space visibility | Mit Partner teilen | Public, share with everyone |
 
-- Technische Begriffe bleiben aus der Endnutzeroberfläche fern.
-- Buttons verwenden Verben: `Speichern`, `Teilen`, `Planen`, `Entfernen`.
-- Navigationslabels verwenden Substantive oder etablierte Produktnamen.
-- Deutsch und Englisch müssen ohne abweichende Navigationsstruktur funktionieren.
+- Technical terms remain outside end-user UI.
+- Buttons use verbs: `Speichern`, `Teilen`, `Planen`, `Entfernen`.
+- Navigation labels use nouns or established product names.
+- German and English must work without different navigation structures.
 
-## 8. Rollen und Sichtbarkeit
+## 8. Roles and visibility
 
-Navigation ist nicht gleich Berechtigung. Ein sichtbarer Navigationsbereich
-garantiert keinen Zugriff auf jedes Objekt darin.
+Navigation is not permission. A visible area does not guarantee access to every
+object within it.
 
-### Privacy-Klassen
+### Privacy classes
 
-| API-Wert | Bedeutung | UI-Label |
+| API value | Meaning | UI label |
 |---|---|---|
-| `OWNER_ONLY` | nur die Eigentümerperson | Nur für mich |
-| `SPACE_SHARED` | beide aktiven Space-Mitglieder | Geteilt / Mit Partner teilen |
-| `TEMPORARY_SHARED` | zeitlich begrenzte Freigabe | erst bei implementierter Domain |
-| `EPHEMERAL_CONTEXT` | kurzlebiger Kontext mit Ablauf | kontextabhängig |
-| `SYSTEM_METADATA` | technische Metadaten | kein reguläres UI-Label |
+| `OWNER_ONLY` | owner only | Nur für mich |
+| `SPACE_SHARED` | both active Space members | Geteilt / Mit Partner teilen |
+| `TEMPORARY_SHARED` | limited-time sharing | only after domain implementation |
+| `EPHEMERAL_CONTEXT` | short-lived context with expiry | context-dependent |
+| `SYSTEM_METADATA` | technical metadata | no regular UI label |
 
-Die UI darf `private` und `shared` als interne Präsentationszustände verwenden,
-sendet aber die fachlichen API-Werte. Nicht jede Domain unterstützt eine Wahl:
-Memory, Wish und Plan sind im aktuellen Core `SPACE_SHARED`; HeartMoment kann
-`OWNER_ONLY` oder `SPACE_SHARED` sein. `public` ist kein zulässiger Wert.
+The UI may use `private` and `shared` as internal presentation states but sends
+the domain API values. Not every domain supports selection: Memory, Wish, and
+Plan are `SPACE_SHARED` in the current Core; HeartMoment may use `OWNER_ONLY`
+or `SPACE_SHARED`. `public` is not a valid value.
 
-## 9. URL-, Verlauf- und Zurück-Verhalten
+## 9. URL, history, and back behavior
 
-- Auswahl, Filter und relevante Tabs werden im URL- oder Navigationszustand
-  abgebildet, wenn sie einen wiederherstellbaren Kontext darstellen.
-- Modale Kurzinteraktionen erzeugen nur dann einen Verlaufseintrag, wenn sie
-  per Deep Link geöffnet werden können.
-- Android System Back und Browser Back verhalten sich fachlich gleich.
-- Schließen beendet einen Dialog; Zurück navigiert im Verlauf.
-- Ein Wechsel der Hauptnavigation erzeugt keinen gestapelten Detailverlauf.
+- Selection, filters, and relevant tabs are represented in URL or navigation
+  state when they describe a restorable context.
+- Short modal interactions create history entries only when they can be opened
+  by Deep Link.
+- Android System Back and Browser Back have the same domain behavior.
+- Close ends a dialog; Back navigates history.
+- Switching primary navigation does not create stacked detail history.
 
-## 10. Offene Produktentscheidungen
+## 10. Open product decisions
 
-Vor M1 müssen diese Punkte entschieden werden:
+Before M1, decide:
 
-- Welche Inhalte erscheinen in Benachrichtigungsvorschauen?
-- Darf eine Empfehlung direkt als Plan übernommen werden oder zunächst nur als Wunsch?
-- Welche Filter werden zwischen Sitzungen gespeichert?
-- Welche Retention-Fristen gelten vor dem Cloud-Launch für Account- und Space-Löschung?
-- Wie wird eine später eingeführte Partnerentfernung dargestellt? Sie ist nicht Teil des MVP.
+- Which content appears in notification previews?
+- Can a recommendation become a plan directly, or only a wish first?
+- Which filters persist between sessions?
+- Which retention periods apply before Cloud launch for account and Space
+  deletion?
+- How is future partner removal represented? It is not part of MVP.
 
-## 11. Akzeptanzkriterien
+## 11. Acceptance criteria
 
-- [ ] Jede Funktion ist genau einem Hauptbereich zugeordnet.
-- [ ] Web und App verwenden identische Route-IDs und Labels.
-- [ ] Bottom Bar, Rail und Sidebar besitzen dieselbe Reihenfolge.
-- [ ] Detailrouten sind deep-link-fähig.
-- [ ] Auth-, Membership- und Löschzustände sind definiert.
-- [ ] Zurück-Verhalten funktioniert bei Ein- und Mehrfensterlayouts.
-- [ ] Navigation bleibt mit Tastatur, Screenreader und Textskalierung bedienbar.
+- [ ] Every feature belongs to exactly one primary area.
+- [ ] Web and App use identical route IDs and labels.
+- [ ] Bottom Bar, Rail, and Sidebar use the same order.
+- [ ] Detail routes support Deep Links.
+- [ ] Authentication, membership, and deletion states are defined.
+- [ ] Back behavior works across single- and multi-window layouts.
+- [ ] Navigation remains operable with keyboard, screen reader, and text scaling.
 
-## Verwandte Dokumente
+## Related documents
 
-- [Design-Prinzipien](DESIGN-PRINCIPLES.md)
-- [UX-Patterns](UX-PATTERNS.md)
+- [Design Principles](DESIGN-PRINCIPLES.md)
+- [UX Patterns](UX-PATTERNS.md)
 - [Component Contracts](COMPONENT-CONTRACTS.md)
-- [Screen-Templates](SCREEN-TEMPLATES.md)
+- [Screen Templates](SCREEN-TEMPLATES.md)
 - [Critical User Flows](USER-FLOWS.md)
-- [API-/UI-Verträge](API-UI-CONTRACTS.md)
+- [API/UI Contracts](API-UI-CONTRACTS.md)
