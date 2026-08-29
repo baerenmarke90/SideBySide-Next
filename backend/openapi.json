@@ -320,6 +320,295 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "ChapterContent": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterContentItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ChapterContent",
+        "type": "object"
+      },
+      "ChapterContentItem": {
+        "properties": {
+          "targetId": {
+            "format": "uuid",
+            "title": "Targetid",
+            "type": "string"
+          },
+          "targetType": {
+            "enum": [
+              "MEMORY",
+              "HEART_MOMENT",
+              "MILESTONE"
+            ],
+            "title": "Targettype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId"
+        ],
+        "title": "ChapterContentItem",
+        "type": "object"
+      },
+      "ChapterCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "endOn": {
+            "format": "date",
+            "title": "Endon",
+            "type": "string"
+          },
+          "placeId": {
+            "format": "uuid",
+            "title": "Placeid",
+            "type": "string"
+          },
+          "startOn": {
+            "format": "date",
+            "title": "Starton",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "ChapterCreate",
+        "type": "object"
+      },
+      "ChapterDetail": {
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/ResourceCapabilities"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "createdBy": {
+            "format": "uuid",
+            "title": "Createdby",
+            "type": "string"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/AuthorSummary"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "endOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endon"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "placeId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placeid"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "startOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starton"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "spaceId",
+          "createdBy",
+          "title",
+          "description",
+          "startOn",
+          "endOn",
+          "placeId",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "creator",
+          "capabilities"
+        ],
+        "title": "ChapterDetail",
+        "type": "object"
+      },
+      "ChapterPage": {
+        "properties": {
+          "hasMore": {
+            "title": "Hasmore",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterDetail"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore"
+        ],
+        "title": "ChapterPage",
+        "type": "object"
+      },
+      "ChapterRelationTargets": {
+        "properties": {
+          "items": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ChapterRelationTargets",
+        "type": "object"
+      },
+      "ChapterUpdate": {
+        "additionalProperties": false,
+        "description": "Partial correction of Chapter metadata and its canonical Place reference.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "endOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endon"
+          },
+          "placeId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placeid"
+          },
+          "startOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starton"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "ChapterUpdate",
+        "type": "object"
+      },
       "CommentCreate": {
         "additionalProperties": false,
         "properties": {
@@ -5188,6 +5477,1060 @@
         "summary": "Create Attachment Read Access",
         "tags": [
           "attachments"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters": {
+      "get": {
+        "operationId": "listChapters",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request is syntactically valid but cannot be processed in this form."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "List Chapters",
+        "tags": [
+          "chapters"
+        ]
+      },
+      "post": {
+        "operationId": "createChapter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChapterCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterDetail"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Create Chapter",
+        "tags": [
+          "chapters"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters/{chapterId}": {
+      "delete": {
+        "operationId": "deleteChapter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request conflicts with the current state of the resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Delete Chapter",
+        "tags": [
+          "chapters"
+        ]
+      },
+      "get": {
+        "operationId": "getChapter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterDetail"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Chapter",
+        "tags": [
+          "chapters"
+        ]
+      },
+      "patch": {
+        "operationId": "updateChapter",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChapterUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterDetail"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request conflicts with the current state of the resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Update Chapter",
+        "tags": [
+          "chapters"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters/{chapterId}/content": {
+      "get": {
+        "operationId": "listChapterContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterContent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "List Chapter Content",
+        "tags": [
+          "chapter-relations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters/{chapterId}/heart-moments": {
+      "get": {
+        "operationId": "listChapterHeartMoments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterRelationTargets"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "List Chapter Heart-Moments",
+        "tags": [
+          "chapter-relations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters/{chapterId}/heart-moments/{targetId}": {
+      "delete": {
+        "operationId": "unlinkChapterHeartMoment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "targetId",
+            "required": true,
+            "schema": {
+              "title": "Targetid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Unlink Chapter Heart-Moments",
+        "tags": [
+          "chapter-relations"
+        ]
+      },
+      "put": {
+        "operationId": "linkChapterHeartMoment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "targetId",
+            "required": true,
+            "schema": {
+              "title": "Targetid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Link Chapter Heart-Moments",
+        "tags": [
+          "chapter-relations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters/{chapterId}/memories": {
+      "get": {
+        "operationId": "listChapterMemories",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterRelationTargets"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "List Chapter Memories",
+        "tags": [
+          "chapter-relations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters/{chapterId}/memories/{targetId}": {
+      "delete": {
+        "operationId": "unlinkChapterMemory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "targetId",
+            "required": true,
+            "schema": {
+              "title": "Targetid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Unlink Chapter Memories",
+        "tags": [
+          "chapter-relations"
+        ]
+      },
+      "put": {
+        "operationId": "linkChapterMemory",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "targetId",
+            "required": true,
+            "schema": {
+              "title": "Targetid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Link Chapter Memories",
+        "tags": [
+          "chapter-relations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters/{chapterId}/milestones": {
+      "get": {
+        "operationId": "listChapterMilestones",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChapterRelationTargets"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "List Chapter Milestones",
+        "tags": [
+          "chapter-relations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/chapters/{chapterId}/milestones/{targetId}": {
+      "delete": {
+        "operationId": "unlinkChapterMilestone",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "targetId",
+            "required": true,
+            "schema": {
+              "title": "Targetid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Unlink Chapter Milestones",
+        "tags": [
+          "chapter-relations"
+        ]
+      },
+      "put": {
+        "operationId": "linkChapterMilestone",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chapterId",
+            "required": true,
+            "schema": {
+              "title": "Chapterid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "targetId",
+            "required": true,
+            "schema": {
+              "title": "Targetid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Link Chapter Milestones",
+        "tags": [
+          "chapter-relations"
         ]
       }
     },
