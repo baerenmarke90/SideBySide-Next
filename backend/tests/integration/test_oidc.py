@@ -259,9 +259,7 @@ class TestSignIn:
         )
         assert len(session.execute(select(DeviceSession)).scalars().all()) == before + 1
 
-    def test_unknown_identity_does_not_create_account(
-        self, client, session, provider, key
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_unknown_identity_does_not_create_account(self, client, session, provider, key) -> None:  # type: ignore[no-untyped-def]
         "Otherwise the external provider would bypass the invitation boundary."
         before = len(session.execute(select(Account)).scalars().all())
         started = started_sign_in(client)
@@ -277,9 +275,7 @@ class TestSignIn:
 
 
 class TestLinking:
-    def test_signed_in_account_gets_identity(
-        self, client, session, provider, key
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_signed_in_account_gets_identity(self, client, session, provider, key) -> None:  # type: ignore[no-untyped-def]
         account = make_account(session, "Ben")
         session.flush()
         headers = auth(sign_in(session, account))
@@ -375,9 +371,7 @@ class TestRejectedTokens:
         )
         assert response.status_code == 422
 
-    def test_no_id_token_in_response(
-        self, client, session, provider, anna_with_identity
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_no_id_token_in_response(self, client, session, provider, anna_with_identity) -> None:  # type: ignore[no-untyped-def]
         response = self._attempt(client, session, provider, lambda nonce: None)
         assert response.status_code == 422
 
