@@ -34,14 +34,26 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var imageSelectionEpoch by remember { mutableStateOf<Long?>(null) }
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
         val selectionEpoch = imageSelectionEpoch
         imageSelectionEpoch = null
-        if (uri != null && selectionEpoch != null) {
+        if (uris.isNotEmpty() && selectionEpoch != null) {
             scope.launch {
-                runCatching { loadSelectedImage(context, uri) }
-                    .onSuccess { image -> referenceViewModel.selectImage(image, selectionEpoch) }
-                    .onFailure { throwable -> referenceViewModel.setImageError(throwable, selectionEpoch) }
+                val images = mutableListOf<SelectedImage>()
+                var firstFailure: Throwable? = null
+                uris.forEach { uri ->
+                    runCatching { loadSelectedImage(context, uri) }
+                        .onSuccess(images::add)
+                        .onFailure { throwable ->
+                            if (firstFailure == null) firstFailure = throwable
+                        }
+                }
+                if (images.isNotEmpty()) {
+                    referenceViewModel.selectImages(images, selectionEpoch)
+                }
+                firstFailure?.let { throwable ->
+                    referenceViewModel.setImageSelectionError(throwable, selectionEpoch)
+                }
             }
         }
     }
@@ -57,13 +69,16 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
             referenceViewModel.beginImageSelection()?.let { selectionEpoch ->
                 imageSelectionEpoch = selectionEpoch
                 imagePicker.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                    PickVisualMediaRequest.Builder()
+                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        .setOrderedSelection(true)
+                        .build(),
                 )
             }
         },
         onCreateMemory = referenceViewModel::createMemory,
         onRefreshStory = referenceViewModel::refreshStory,
-        onRetryImage = referenceViewModel::retrySelectedImage,
-        onRemoveImage = referenceViewModel::removeSelectedImage,
+        onRetryImage = referenceViewModel::retryImage,
+        onRemoveImage = referenceViewModel::removeImage,
     )
 }

@@ -122,17 +122,17 @@ class ReferenceViewModelTest {
 
         releaseSecondTimeline.complete(Unit)
         advanceUntilIdle()
-        viewModel.selectImage(
-            SelectedImage(byteArrayOf(1, 2, 3), "late.jpg", "image/jpeg"),
+        viewModel.selectImages(
+            listOf(SelectedImage(byteArrayOf(1, 2, 3), "late.jpg", "image/jpeg")),
             selectionEpoch,
         )
-        viewModel.setImageError(IllegalStateException("late picker failure"), selectionEpoch)
+        viewModel.setImageSelectionError(IllegalStateException("late picker failure"), selectionEpoch)
 
         val state = viewModel.uiState.value
         assertFalse(state.loggedIn)
         assertEquals(UiMessage(R.string.ref_status_logged_out), state.status)
         assertNull(state.error)
-        assertNull(state.selectedImageName)
+        assertEquals(emptyList<DraftImageUiItem>(), state.draftImages)
         assertEquals(emptyList<Any>(), state.storyItems)
     }
 
