@@ -116,12 +116,9 @@ class ReferenceViewModel(
             setError(message(R.string.ref_error_login_required))
             return
         }
-        val image = selectedImage ?: run {
-            setError(message(R.string.ref_error_image_required))
-            return
-        }
+        val image = selectedImage
         val spaceId = config.spaceId ?: return configurationError()
-        if (title.isBlank() || body.isBlank()) {
+        if (title.isBlank()) {
             setError(message(R.string.ref_error_memory_fields_required))
             return
         }
