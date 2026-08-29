@@ -189,9 +189,7 @@ class TestPartnerInSameSpace:
         assert malformed.json() == real.json()
 
     @pytest.mark.parametrize("malformed_id", ["../../etc/passwd", "a/b"])
-    def test_broken_path_also_remains_404(
-        self, probe_client, scenario, malformed_id: str
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_broken_path_also_remains_404(self, probe_client, scenario, malformed_id: str) -> None:  # type: ignore[no-untyped-def]
         """A slash no longer matches the route and receives the generic 404 response.
 
         This is not an existence oracle: the response difference depends on the
@@ -325,9 +323,7 @@ class TestFilterInQuery:
         finally:
             event.remove(engine, "before_cursor_execute", _record)
 
-    def test_private_row_is_not_loaded_initially(
-        self, probe_client, scenario, queries
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_private_row_is_not_loaded_initially(self, probe_client, scenario, queries) -> None:  # type: ignore[no-untyped-def]
         queries.clear()
         response = probe_client.get(
             _path(scenario, "private_anna"), headers=auth(scenario["token_ben"])
