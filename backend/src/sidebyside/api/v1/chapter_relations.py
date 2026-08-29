@@ -1,8 +1,10 @@
 """HTTP contract for typed Chapter content relations.
 
 The route shape mirrors Place relations so generated clients keep one explicit
-operation per target type. Combined Chapter content is a read-only derived view
-of the typed relations; no manual relation position exists.
+operation per target type. Chapter response schemas remain explicitly named so
+adding this surface cannot rename the already versioned Place relation schema.
+Combined Chapter content is a read-only derived view of the typed relations; no
+manual relation position exists.
 """
 
 from __future__ import annotations
