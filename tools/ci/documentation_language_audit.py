@@ -207,6 +207,16 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
     ),
 }
 
+# A few active documents carry fully localized copy examples on an explicitly
+# labelled locale line. Prefix-scoped exceptions are intentionally narrower than
+# excluding a file or a section: only the localized payload after this exact
+# English engineering label is outside the audit.
+ALLOWED_LOCALIZED_LINE_PREFIXES_BY_PATH = {
+    Path("docs/USER-FLOWS.md"): (
+        "3. Intentional de-DE message:",
+    ),
+}
+
 MARKDOWN_LINK_TARGET = re.compile(r"(?<=\]\()[^)]+(?=\))")
 REPO_LOCAL_MARKDOWN_TARGET = re.compile(
     r"(?:docs|design|specification)/[A-Za-z0-9_./-]+\.md#[A-Za-z0-9_-]+"
@@ -225,6 +235,11 @@ def _repo_relative_path(path: Path, repo_root: Path) -> Path:
 
 
 def _sanitize_documentation_text(text: str, logical_path: Path) -> str:
+    stripped = text.lstrip()
+    for prefix in ALLOWED_LOCALIZED_LINE_PREFIXES_BY_PATH.get(logical_path, ()):
+        if stripped.startswith(prefix):
+            return prefix
+
     sanitized = text
     for allowed_text in ALLOWED_DOCUMENTATION_TEXTS_BY_PATH.get(logical_path, ()):
         sanitized = sanitized.replace(allowed_text, "")
