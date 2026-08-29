@@ -24,7 +24,7 @@ export interface MemoryCreate {
      * @type {string}
      * @memberof MemoryCreate
      */
-    body: string;
+    body?: string;
     /**
      * 
      * @type {Date}
@@ -43,7 +43,6 @@ export interface MemoryCreate {
  * Check if a given object implements the MemoryCreate interface.
  */
 export function instanceOfMemoryCreate(value: object): value is MemoryCreate {
-    if (!('body' in value) || value['body'] === undefined) return false;
     if (!('title' in value) || value['title'] === undefined) return false;
     return true;
 }
@@ -58,7 +57,7 @@ export function MemoryCreateFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
         
-        'body': json['body'],
+        'body': json['body'] == null ? undefined : json['body'],
         'happenedOn': json['happenedOn'] === undefined ? undefined : json['happenedOn'] === null ? null : (new Date(json['happenedOn'])),
         'title': json['title'],
     };
