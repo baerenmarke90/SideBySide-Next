@@ -90,13 +90,13 @@ class ReferenceFlowTest {
             api = api,
             spaceId = spaceId,
             accessToken = "token",
-            title = "Nur ein Titel",
+            title = "Title only",
             body = "",
             happenedOn = null,
             image = null,
         )
 
-        assertEquals("Nur ein Titel", createdRequest!!.title)
+        assertEquals("Title only", createdRequest!!.title)
         assertEquals("", createdRequest!!.body)
         assertSame(createdMemory, result.memory)
         assertSame(story, result.story)
@@ -203,10 +203,10 @@ class ReferenceFlowTest {
             api = api,
             spaceId = spaceId,
             accessToken = "token",
-            title = "Am See",
-            body = "Zusammen unterwegs.",
+            title = "Lakeside",
+            body = "A day together.",
             happenedOn = null,
-            image = SelectedImage(byteArrayOf(9, 8, 7), "see.jpg", "image/jpeg"),
+            image = SelectedImage(byteArrayOf(9, 8, 7), "lakeside.jpg", "image/jpeg"),
         )
 
         assertEquals(
@@ -247,7 +247,7 @@ class ReferenceFlowTest {
         width = null,
     )
 
-    private fun memory(version: Int, body: String = "Zusammen unterwegs.") = MemoryDetail(
+    private fun memory(version: Int, body: String = "A day together.") = MemoryDetail(
         attachments = emptyList(),
         author = AuthorSummary(displayName = "A", id = authorId),
         authorId = authorId,
@@ -257,7 +257,7 @@ class ReferenceFlowTest {
         happenedOn = null,
         id = memoryId,
         spaceId = spaceId,
-        title = if (body.isEmpty()) "Nur ein Titel" else "Am See",
+        title = if (body.isEmpty()) "Title only" else "Lakeside",
         updatedAt = OffsetDateTime.parse("2026-08-26T08:00:00Z"),
         version = version,
     )
