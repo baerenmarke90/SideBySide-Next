@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from documentation_language_audit import check_documentation_file, documentation_files
 from engineering_language_audit import check_file
 
 
@@ -83,6 +84,70 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             path = Path(directory) / "example.py"
             path.write_text('sample = "Aktueller `main`"\n', encoding="utf-8")
             self.assertEqual(check_file(path), [])
+
+    def test_stable_markdown_link_target_is_not_treated_as_documentation_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "docs" / "example.md"
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                "[English label](docs/example.md#status-und-entscheidung)\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(check_documentation_file(path, root), [])
+
+    def test_stable_json_contract_target_is_not_treated_as_documentation_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "docs" / "manifest.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                '{"contract":"docs/COMPONENT-CONTRACTS.md#41-text-field-und-text-area"}\n',
+                encoding="utf-8",
+            )
+            self.assertEqual(check_documentation_file(path, root), [])
+
+    def test_german_json_documentation_prose_remains_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "docs" / "manifest.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                '{"description":"Die Entscheidung wird im Client getroffen."}\n',
+                encoding="utf-8",
+            )
+            findings = check_documentation_file(path, root)
+            self.assertEqual(len(findings), 1)
+
+    def test_frozen_review_snapshots_are_outside_active_documentation_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            frozen = root / "docs" / "reviews" / "snapshot.md"
+            active = root / "docs" / "active.md"
+            frozen.parent.mkdir(parents=True)
+            active.parent.mkdir(parents=True, exist_ok=True)
+            frozen.write_text("## Zusammenfassung\n", encoding="utf-8")
+            active.write_text("## Summary\n", encoding="utf-8")
+            paths = documentation_files(root)
+            self.assertIn(active, paths)
+            self.assertNotIn(frozen, paths)
+
+    def test_localized_product_copy_is_allowed_in_migrated_documentation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "design" / "m2" / "SCREEN-FLOWS.md"
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                'Button copy: "Nur für mich"\n',
+                encoding="utf-8",
+            )
+            self.assertEqual(check_documentation_file(path, root), [])
+
+    def test_active_documentation_tree_satisfies_language_policy(self) -> None:
+        findings: list[str] = []
+        for path in documentation_files():
+            findings.extend(check_documentation_file(path))
+        self.assertEqual(findings, [])
 
     def test_python_comment_and_identifier_are_audited(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
