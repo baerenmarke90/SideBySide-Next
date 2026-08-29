@@ -1,169 +1,169 @@
 # M2 Security & Privacy Test Matrix
 
-**Status:** verbindliche Abnahmematrix für M2  
-**Stand:** 25.08.2026
+**Status:** binding acceptance matrix for M2  
+**As of:** August 25, 2026
 
-Diese Matrix ergänzt die allgemeinen Security- und HTTP-Tests um die fachlichen Risiken von Memories, HeartMoments, Milestones, Kommentaren, Story und Attachments. Tests sind grundsätzlich über die öffentliche API auszuführen; reine Repository-Tests reichen für Autorisierung nicht aus.
+This matrix supplements the general security and HTTP tests with domain risks for Memories, HeartMoments, Milestones, comments, Story, and attachments. Tests must generally run through the public API; repository-only tests are insufficient for authorization.
 
-## Testidentitäten
+## Test identities
 
-| Kürzel | Rolle |
+| Key | Role |
 |---|---|
-| `A` | Autor und aktives Mitglied von Space Alpha |
-| `B` | Partner und aktives Mitglied von Space Alpha |
-| `C` | aktives Mitglied eines anderen Space Beta |
-| `R` | ehemaliges/widerrufenes Mitglied von Space Alpha |
-| `X` | authentifiziert, aber ohne Mitgliedschaft |
-| `ANON` | nicht authentifiziert |
+| `A` | author and active member of Space Alpha |
+| `B` | partner and active member of Space Alpha |
+| `C` | active member of another Space Beta |
+| `R` | former/revoked member of Space Alpha |
+| `X` | authenticated but without membership |
+| `ANON` | unauthenticated |
 
-Alle IDs werden zusätzlich mit zufälligen, existierenden fremden und formal ungültigen Werten getestet. Eine bekannte UUID darf keine Berechtigung ersetzen.
+All IDs are additionally tested with random, existing foreign, and syntactically invalid values. A known UUID must never replace authorization.
 
-## Erwartete Offenlegung
+## Expected disclosure behavior
 
-- `401` nur bei fehlender oder ungültiger Authentifizierung.
-- `404` für nicht sichtbare oder fremde Ressourcen, wenn `403` deren Existenz offenlegen würde.
-- `403` nur dort, wo die Existenz der Ressource für den Aufrufer bereits legitim bekannt ist.
-- Fehlertexte, Timing, Header und Response-Größe dürfen private oder fremde Inhalte nicht verraten.
-- Autorisierung wird serverseitig vor Projektion, Zählung, Pagination und URL-Erzeugung angewandt.
+- `401` only for missing or invalid authentication.
+- `404` for invisible or foreign resources when `403` would disclose their existence.
+- `403` only where the resource's existence is already legitimately known to the caller.
+- Error text, timing, headers, and response size must not reveal private or foreign content.
+- Authorization is applied server-side before projection, counting, pagination, and URL generation.
 
-## Medienmissbrauch – verbindliche M2-Werte
+## Media abuse – binding M2 values
 
-| ID | Fall | Erwartung |
+| ID | Case | Expectation |
 |---|---|---|
-| MED-01 | erlaubte Dateiendung, Magic Bytes/MIME nicht in Allowlist | `FAILED`, kein regulär lesbarer Blob |
-| MED-02 | deklarierter MIME weicht vom serverseitig erkannten Typ ab | `FAILED`, sicherer Fehlercode, kein Client-MIME als Wahrheit |
-| MED-03A | Bild >25 MiB | vor `READY` `FAILED` |
-| MED-03B | Bild >40 MP oder >12.000 px Kante | vor `READY` `FAILED` |
-| MED-03C | Video >250 MiB, >180 s oder >3840×2160 | vor `READY` `FAILED` |
-| MED-03D | Memory >20 Attachments oder >500 MiB validierte Gesamtgröße | Bindung atomar abweisen, bestehende Relationen unverändert |
-| MED-04 | Dekompressionsbombe/extreme Dimension | Ressourcenlimit greift, Worker bleibt stabil, `FAILED` |
-| MED-05 | manipulierter/kaputter Container | Parserfehler isoliert, `FAILED` |
-| MED-06 | Originalname mit Pfad-/Unicode-Steuerzeichen | niemals Storage Key/Autorisierung; nicht in Standardlogs |
-| MED-07 | doppeltes/paralleles Finalize | genau ein wirksamer Validierungsjob; idempotentes Ergebnis |
-| MED-08 | S3 Upload URL älter als 10 min / manipuliert | Providerzugriff verweigert; kein frei wählbarer Key |
-| MED-09 | S3 Read URL älter als 5 min / manipuliert | Zugriff verweigert |
-| MED-10 | Read URL nach Membership-/Privacy-Entzug | keine neue URL; bereits ausgestellte URL höchstens bis 5-min-TTL |
-| MED-11 | fremder `storageKey` im Request | Feld nicht clientseitig setzbar bzw. abweisen |
-| MED-12 | PENDING/UPLOADING/FAILED >24 h | stündlicher Cleanup markiert/löscht idempotent |
-| MED-13 | READY ungebunden >60 min | `DELETING`; Owner kann nicht mehr nachträglich binden |
-| MED-14 | Bindung Attachment Alpha → Parent Beta | atomar 404/abweisen, kein Leak/keine Relation |
-| MED-15 | zweiter Parent für bereits gebundenes Attachment | abweisen; exklusive Bindung bleibt unverändert |
-| MED-16 | Bind vs. Orphan-Cleanup parallel | genau eine Operation gewinnt; nie gebundener gelöschter Blob |
-| MED-17 | Parent-Delete vs. Finalize/Bind parallel | keine Relation zu gelöschtem Parent; kein sichtbarer Orphan |
-| MED-18 | Providerdelete Timeout | Domaininhalt bleibt unsichtbar; `DELETE_FAILED`, Retry/Metrik |
-| MED-19 | Local-/S3-Adapter | identischer Lifecycle-/Autorisierungscontract |
-| MED-20 | EXIF/GPS vorhanden | nach `READY` standortfrei gespeichert; kein ungestripptes Original abrufbar |
-| MED-20a | herstellereigenes/unbekanntes Metadatensegment | überlebt den Ingest nicht; Allowlist ist fail-closed |
-| MED-20b | Medium nicht sicher bereinigbar | `FAILED`; niemals ungestrippt gespeichert |
-| MED-20c | extrahierter Aufnahmezeitpunkt | ProtectedPayload; in keiner Outbox-Zeile, keinem Log, keiner Metrik |
-| MED-20d | Variante ohne Leseberechtigung am Parent | nicht abrufbar; Privacy-Wechsel sperrt auch die Variante |
-| MED-20e | Variantenerzeugung schlägt fehl | Attachment bleibt nutzbar; kein `FAILED`, kein verwaistes Variantenobjekt |
-| MED-21 | unbekannter Typ/GIF/RAW/WebM/MKV/Dokument | fail-closed `FAILED` |
-| MED-22 | HEIC/HEIF/JPEG/PNG/WebP innerhalb Limits | Validierung kann READY erreichen |
-| MED-23 | MP4/QuickTime innerhalb Limits | Validierung kann READY erreichen |
-| MED-24 | S3 Bucket/Public ACL | Deployment-/Contract-Test bestätigt nicht öffentlich |
+| MED-01 | allowed filename extension, Magic Bytes/MIME not in allowlist | `FAILED`, no normally readable blob |
+| MED-02 | declared MIME differs from server-detected type | `FAILED`, safe error code, client MIME is not trusted as truth |
+| MED-03A | image >25 MiB | `FAILED` before `READY` |
+| MED-03B | image >40 MP or >12,000 px edge | `FAILED` before `READY` |
+| MED-03C | video >250 MiB, >180 s, or >3840×2160 | `FAILED` before `READY` |
+| MED-03D | Memory >20 attachments or >500 MiB validated total size | reject binding atomically; existing relations unchanged |
+| MED-04 | decompression bomb/extreme dimensions | resource limit applies, worker remains stable, `FAILED` |
+| MED-05 | manipulated/broken container | parser failure isolated, `FAILED` |
+| MED-06 | original name with path/Unicode control characters | never used as storage key/authorization input; absent from standard logs |
+| MED-07 | duplicate/concurrent finalize | exactly one effective validation job; idempotent outcome |
+| MED-08 | S3 Upload URL older than 10 min / manipulated | provider access denied; no freely selectable key |
+| MED-09 | S3 Read URL older than 5 min / manipulated | access denied |
+| MED-10 | Read URL after membership/privacy revocation | no new URL; already issued URL valid at most until 5-minute TTL |
+| MED-11 | foreign `storageKey` in request | field not client-settable or request rejected |
+| MED-12 | PENDING/UPLOADING/FAILED >24 h | hourly cleanup marks/deletes idempotently |
+| MED-13 | READY unbound >60 min | `DELETING`; owner can no longer bind afterward |
+| MED-14 | bind Attachment Alpha → Parent Beta | atomically return 404/reject; no leak/relation |
+| MED-15 | second parent for already bound attachment | reject; exclusive binding remains unchanged |
+| MED-16 | bind vs. orphan cleanup concurrently | exactly one operation wins; never a bound deleted blob |
+| MED-17 | parent delete vs. finalize/bind concurrently | no relation to deleted parent; no visible orphan |
+| MED-18 | provider delete timeout | domain content remains invisible; `DELETE_FAILED`, retry/metric |
+| MED-19 | local/S3 adapter | identical lifecycle/authorization contract |
+| MED-20 | EXIF/GPS present | location-free after `READY`; no unstripped original retrievable |
+| MED-20a | vendor-specific/unknown metadata segment | does not survive ingest; allowlist is fail-closed |
+| MED-20b | media cannot be sanitized safely | `FAILED`; never stored unstripped |
+| MED-20c | extracted capture timestamp | ProtectedPayload; absent from every Outbox row, log, and metric |
+| MED-20d | variant without parent read permission | not retrievable; privacy change also blocks variant |
+| MED-20e | variant generation fails | attachment remains usable; no `FAILED`, no orphaned variant object |
+| MED-21 | unknown type/GIF/RAW/WebM/MKV/document | fail-closed `FAILED` |
+| MED-22 | HEIC/HEIF/JPEG/PNG/WebP within limits | validation can reach READY |
+| MED-23 | MP4/QuickTime within limits | validation can reach READY |
+| MED-24 | S3 Bucket/Public ACL | deployment/contract test confirms it is not public |
 
-## Attachment-Autorisierung
+## Attachment authorization
 
-Für jedes Attachment werden mindestens folgende Pfade getestet:
+For every attachment, test at least these paths:
 
-1. Owner kann eigenen ungebundenen Upload nur in PENDING/UPLOADING/VALIDATING/FAILED bzw. READY innerhalb 60 Minuten verwalten.
-2. Partner kann ungebundenes Attachment niemals lesen, zählen oder über Fehler unterscheiden.
-3. Nach Bindung folgt Read ausschließlich dem Parent.
-4. Owner-ID allein umgeht eine spätere Parent-Privacy-Sperre nicht.
-5. Owner-only HeartMoment leakt weder Metadaten noch Stream/Read URL an Partner.
-6. Cross-Space Attachment/Parent-Kombination wird vor Relation/URL-Erzeugung abgewiesen.
-7. Nach letzter Referenz/Parent-Delete wird keine neue Read URL ausgestellt.
-8. Storage Key, Bucket und Providerdetails erscheinen nicht in nutzerexponierten Responses.
+1. Owner may manage an own unbound upload only while PENDING/UPLOADING/VALIDATING/FAILED or READY within 60 minutes.
+2. Partner can never read, count, or distinguish an unbound attachment through errors.
+3. After binding, read access follows the parent exclusively.
+4. Owner ID alone does not bypass a later parent privacy restriction.
+5. Owner-only HeartMoment leaks neither metadata nor stream/Read URL to the partner.
+6. Cross-space attachment/parent combinations are rejected before relation/URL generation.
+7. After the last reference/parent delete, no new Read URL is issued.
+8. Storage key, bucket, and provider details do not appear in user-exposed responses.
 
-## IDOR- und Tenant-Isolation
+## IDOR and tenant isolation
 
-| ID | Angriff | Erwartung |
+| ID | Attack | Expectation |
 |---|---|---|
-| TEN-01 | `C` liest/ändert/löscht Alpha-Entity über UUID | `404`, keine Mutation |
-| TEN-02 | `A` setzt `spaceId=Beta` in Body, Query oder Route | Request abweisen, keine implizite Umschreibung |
-| TEN-03 | Comment aus Alpha referenziert Target aus Beta | atomar abweisen, kein Event |
-| TEN-04 | Attachment aus Alpha an Parent in Beta binden | atomar abweisen |
-| TEN-05 | Cursor aus Alpha für Beta verwenden | neutraler Fehler oder leeres Ergebnis gemäß Vertrag, keine Daten |
-| TEN-06 | signierte URL/Read-Token zwischen Spaces wiederverwenden | Zugriff verweigern bzw. ausschließlich exakt gebundener Key innerhalb TTL |
-| TEN-07 | widerrufenes Mitglied fordert neuen Media-Read an | verweigern; keine neue signierte URL |
-| TEN-08 | Groß-/Kleinschreibung, Encoding und doppelte Parameter | kanonisch und fail-closed |
+| TEN-01 | `C` reads/changes/deletes Alpha entity by UUID | `404`, no mutation |
+| TEN-02 | `A` sets `spaceId=Beta` in body, query, or route | reject request, no implicit rewriting |
+| TEN-03 | Comment from Alpha references target in Beta | atomically reject, no event |
+| TEN-04 | bind Attachment from Alpha to parent in Beta | atomically reject |
+| TEN-05 | use cursor from Alpha for Beta | neutral error or empty result according to contract, no data |
+| TEN-06 | reuse signed URL/read token across spaces | deny access or permit only the exactly bound key within TTL |
+| TEN-07 | revoked member requests new media read | deny; no new signed URL |
+| TEN-08 | casing, encoding, and duplicate parameters | canonical and fail-closed |
 
-## Concurrency und Transaktionen
+## Concurrency and transactions
 
-- Zwei Updates mit derselben Version: genau eines gewinnt, das andere erhält `409`.
-- Update parallel zu Delete: kein Wiederauftauchen, konsistentes Fehlerbild.
-- Parent-Delete parallel zu Attachment-Finalize/Bind: kein sichtbarer Orphan und keine Relation zu gelöschtem Parent.
-- Comment-Create parallel zu Target-Privatisierung oder Delete: Transaktion verhindert unzulässigen Kommentar.
-- Doppelter Create mit Idempotency-Key: eine fachliche Entity und höchstens ein Outbox-Event.
-- Domainänderung plus Outbox: entweder beides committed oder beides verworfen.
-- Zwei Finalize-Requests: genau ein Validierungsjob/terminal konsistenter Status.
-- Bindung parallel zu READY-Orphan-Cleanup: Status-/Row-Lock verhindert Bindung an gelöschten Blob.
-- Letzte Referenz entfernen parallel zu Read-Descriptor: keine neue Autorisierung nach fachlichem Delete.
+- Two updates with the same version: exactly one wins; the other receives `409`.
+- Update concurrent with delete: no reappearance, consistent failure behavior.
+- Parent delete concurrent with attachment finalize/bind: no visible orphan and no relation to deleted parent.
+- Comment create concurrent with target privatization or delete: transaction prevents an unauthorized comment.
+- Duplicate create with idempotency key: one domain entity and at most one Outbox event.
+- Domain change plus Outbox: either both commit or both roll back.
+- Two finalize requests: exactly one validation job / terminally consistent state.
+- Binding concurrent with READY-orphan cleanup: status/row lock prevents binding to a deleted blob.
+- Removing last reference concurrent with Read Descriptor: no new authorization after domain delete.
 
-## Owner-only: Pflichtpfade
+## Owner-only: required paths
 
-Für ein `PRIVATE` HeartMoment von `A` muss `B` in jedem folgenden Pfad exakt keinen Hinweis erhalten:
+For a `PRIVATE` HeartMoment by `A`, `B` must receive exactly no signal through any of these paths:
 
-1. Direktabruf und Update/Delete-Versuch.
-2. Listen, spätere Suche/Filter und Autocomplete.
-3. Story, Monatsgruppen, Counts und Cursor.
-4. Dashboard, Activity Feed, Recap und „zuletzt geändert“.
-5. Kommentar-Target-Auflösung und Comment-Listen.
-6. Attachment-Metadaten, Dateiabruf, Vorschaubild und signierte URL.
-7. Domain Events, Notifications, Push Preview und Badge Count.
-8. Partnerexport, geteiltes Backup und Diagnoseausgabe.
-9. Cache Keys, ETags, Logs, Traces, Metriken und Analytics Properties.
-10. Fehlerverhalten bei bekannter ID und indirekten Relations-IDs.
+1. Direct read and update/delete attempt.
+2. Lists, later search/filter, and autocomplete.
+3. Story, month groups, counts, and cursor.
+4. Dashboard, Activity Feed, Recap, and “zuletzt geändert”.
+5. Comment target resolution and comment lists.
+6. Attachment metadata, file retrieval, preview image, and signed URL.
+7. Domain events, notifications, Push Preview, and badge count.
+8. Partner export, shared backup, and diagnostic output.
+9. Cache keys, ETags, logs, traces, metrics, and analytics properties.
+10. Error behavior for a known ID and indirect relation IDs.
 
-Ein Testdatensatz enthält eindeutig erkennbare Canary-Werte in Text, Emotion, Dateiname und Attachment-Metadaten. Kein Canary darf außerhalb des Owner-Kontexts auftauchen.
+A test data set contains clearly recognizable canary values in text, emotion, filename, and attachment metadata. No canary may appear outside the owner context.
 
-## Logging, Telemetrie und Events
+## Logging, telemetry, and events
 
-- Keine Titel, Bodies, Kommentare, Originaldateien, Originaldateinamen, Read-/Upload-URLs oder privaten Emotionen in Standardlogs.
-- IDs werden nur soweit für Betrieb nötig geloggt; keine Tokens, Signaturen oder Storage Credentials.
-- Fehlertracking erhält bereinigte Payloads und keine kompletten Request Bodies/Providerantworten.
-- Domain Events enthalten minimale Referenzen statt geschützter Inhalte.
-- Metriken haben begrenzte Kardinalität und keine Nutzertexte/Dateinamen als Labels.
-- Media-Metriken erfassen mindestens Statusalter/-anzahl für PENDING, FAILED, READY-ungebunden, DELETE_FAILED sowie Cleanup-Erfolg/-Fehler.
+- No titles, bodies, comments, original files, original filenames, Read/Upload URLs, or private emotions in standard logs.
+- IDs are logged only as operationally necessary; no tokens, signatures, or storage credentials.
+- Error tracking receives sanitized payloads and no complete request bodies/provider responses.
+- Domain events contain minimal references instead of protected content.
+- Metrics have bounded cardinality and no user text/filenames as labels.
+- Media metrics capture at least state age/count for PENDING, FAILED, READY-unbound, DELETE_FAILED, plus cleanup success/failure.
 
-## Adapter-Contract-Tests
+## Adapter contract tests
 
-Jede `MediaStore`-Implementierung muss denselben fachlichen Testkatalog bestehen:
+Every `MediaStore` implementation must pass the same domain-level test catalog:
 
-- `createUpload` erzeugt nicht erratbare, Space-gebundene serverseitige Keys.
-- Local Upload streamt autorisiert über Server; S3 Upload Descriptor läuft nach ≤10 min ab.
-- `finalizeUpload` ist idempotent und führt nicht direkt ohne Validierung zu READY.
-- `open`/`createReadUrl` ist ohne unmittelbar vorherige Domainautorisierung nicht erreichbar.
-- S3 Read URL läuft nach ≤5 min ab; Bucket bleibt privat.
-- `delete` ist idempotent und löscht nur den exakt adressierten Blob.
-- Teilfehler verändern den fachlichen Status nicht irreführend.
-- Ein zukünftiger verschlüsselter Blob kann gespeichert/übertragen werden; M2 behauptet nicht, dass serverseitige Validation mit echter E2EE bereits gelöst ist.
+- `createUpload` creates non-guessable, space-bound server-side keys.
+- Local Upload streams through the server with authorization; S3 Upload Descriptor expires after ≤10 min.
+- `finalizeUpload` is idempotent and does not transition directly to READY without validation.
+- `open`/`createReadUrl` cannot be reached without immediately preceding domain authorization.
+- S3 Read URL expires after ≤5 min; bucket remains private.
+- `delete` is idempotent and deletes only the exactly addressed blob.
+- Partial failures do not misleadingly change domain state.
+- A future encrypted blob can be stored/transferred; M2 does not claim that server-side validation with real E2EE is already solved.
 
-## Retention-/Job-Tests
+## Retention/job tests
 
-- Cleanup-Clock wird mit serverseitigen Zeitpunkten getestet, nicht Clientzeit.
-- 23:59 h alte PENDING/FAILED bleiben, >24 h werden fällig.
-- 59 min altes READY-ungebunden bleibt bindbar, >60 min wird fällig.
-- wiederholter Cleanup ist idempotent.
-- Providerfehler erzeugt keinen Domain-Rollback und kein Wiederauftauchen.
-- `DELETE_FAILED` bleibt sichtbar für Ops/Metrik und wird retryt.
-- Cleanup-Logs enthalten Attachment-ID/Status/Adapter/Versuch, aber keine URL/Dateinamen/Inhalte.
+- Cleanup clock uses server-side timestamps, not client time.
+- PENDING/FAILED at 23:59 h remain; >24 h become due.
+- READY-unbound at 59 min remains bindable; >60 min becomes due.
+- Repeated cleanup is idempotent.
+- Provider failure causes no domain rollback and no reappearance.
+- `DELETE_FAILED` remains visible to operations/metrics and is retried.
+- Cleanup logs contain attachment ID/state/adapter/attempt, but no URLs/filenames/content.
 
-## Story/Pagination
+## Story/pagination
 
-Globale Volltextsuche `q` ist nach M2-S0-Projektsteuerung nicht G2-pflichtig und grundsätzlich M4. Story-Privacy wird trotzdem vor Sortierung, Count und Cursorbildung durchgesetzt. Sortierung/Cursor werden in #70/D08 verbindlich entschieden.
+Global full-text search `q` is not required for G2 according to M2-S0 project control and is generally M4. Story privacy is still enforced before sorting, counting, and cursor construction. Sorting/cursor behavior is decided authoritatively in #70/D08.
 
-## Client- und Cache-Prüfungen
+## Client and cache checks
 
-| Bereich | Web | Android |
+| Area | Web | Android |
 |---|---|---|
-| Logout / Space-Wechsel | Query- und Mediencache vollständig leeren | lokale Projektionen und Bildcache leeren |
-| PRIVATE-Daten | nie in gemeinsamem Browser-/Service-Worker-Cache | owner-gebunden, nicht in Backup/Share Sheet |
-| Offline | letzte autorisierte Ansicht gemäß späterem Cache-Vertrag | letzte autorisierte Ansicht gemäß späterem Cache-Vertrag |
-| Offline Write | deaktiviert oder klar blockiert | deaktiviert oder klar blockiert |
-| Read URL | nicht dauerhaft persistieren | nicht dauerhaft persistieren |
+| Logout / space change | fully clear query and media caches | clear local projections and image cache |
+| PRIVATE data | never in shared browser/service-worker cache | owner-bound, not in backup/Share Sheet |
+| Offline | last authorized view according to later cache contract | last authorized view according to later cache contract |
+| Offline Write | disabled or clearly blocked | disabled or clearly blocked |
+| Read URL | never persist durably | never persist durably |
 
-## Abnahmekriterium
+## Acceptance criterion
 
-M2 ist sicherheitsseitig nicht fertig, solange ein Pflichtpfad fehlt, ein Cross-Tenant-Test nur auf Repository-Ebene existiert oder ein privater HeartMoment indirekt sichtbar werden kann. Media-Runtime ist zusätzlich blockiert, bis die #69-Werte in API, Adapter-Contract-Tests und PostgreSQL-Integrationstests reproduzierbar umgesetzt sind.
+M2 is not security-complete while a required path is missing, a cross-tenant test exists only at repository level, or a private HeartMoment can become indirectly visible. Media runtime is additionally blocked until the #69 values are implemented reproducibly in the API, adapter contract tests, and PostgreSQL integration tests.
