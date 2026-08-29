@@ -1,44 +1,44 @@
 # M3 Domain Model
 
-**Status:** Readiness-Entwurf; source-bound Aussagen und offene Entscheidungen sind getrennt  
-**Stand:** 26.08.2026
+**Status:** readiness draft; source-bound statements and open decisions are separated  
+**As of:** August 26, 2026
 
-## 1. Grundsätze
+## 1. Principles
 
-M3 erweitert den modularen Monolithen um klar getrennte Fachdomänen. Es entsteht **keine** gemeinsame `items`-/`content`-Tabelle.
+M3 extends the modular monolith with clearly separated domain areas. It does **not** create a shared `items`/`content` table.
 
-Gemeinsame Invarianten:
+Shared invariants:
 
-- gemeinsame Ressourcen gehören genau einem `space_id`;
-- jeder Zugriff beginnt mit aktiver Membership in diesem Space;
-- veränderbare Ressourcen besitzen eine `version` für Optimistic Concurrency;
-- Ersteller-/Owner-IDs werden serverseitig aus dem Authorization Context gesetzt und nicht durch normale Updates übertragen;
-- fachliche Inhalte werden nicht in Logs, Analytics oder Domain-Event-Payloads dupliziert;
-- `OWNER_ONLY` wird in der Datenabfrage erzwungen, nicht durch Clientfilter;
-- Relationen dürfen die Authorization des Targets niemals umgehen;
-- Cross-Space-Relationen sind unzulässig;
-- Shared und Private bleiben getrennte Domänen. Eine private Ablage wird nicht durch ein `visibility`-Flag auf Wish/Plan/Collection modelliert.
+- shared resources belong to exactly one `space_id`;
+- every access starts with active membership in that space;
+- mutable resources have a `version` for optimistic concurrency;
+- creator/owner IDs are set server-side from the Authorization Context and are not transferred through normal updates;
+- domain content is not duplicated into logs, analytics, or Domain Event payloads;
+- `OWNER_ONLY` is enforced in the data query, not through client filters;
+- relations must never bypass authorization of the target;
+- cross-space relations are invalid;
+- Shared and Private remain separate domains. Private storage is not modeled through a `visibility` flag on Wish/Plan/Collection.
 
-## 2. Privacy- und Ownership-Matrix
+## 2. Privacy and ownership matrix
 
-| Domain | Source-bound Sichtbarkeit | Owner/Author-Feld | Schreibregel |
+| Domain | Source-bound visibility | Owner/author field | Write rule |
 |---|---|---|---|
 | Wish | `SPACE_SHARED` | `createdBy` | **OPEN – M3-D01** |
 | Plan | `SPACE_SHARED` | `createdBy` | **OPEN – M3-D01** |
 | Place | `SPACE_SHARED` | `createdBy` | **OPEN – M3-D01** |
-| Chapter | gemeinsamer Space-Inhalt | `createdBy` | **OPEN – M3-D01** |
-| Collection | `SPACE_SHARED` | ggf. `createdBy` ergänzen? **OPEN – M3-D13** | **OPEN – M3-D13** |
-| CollectionItem | erbt Collection | `createdBy` laut Master Spec | **OPEN – M3-D13** |
-| PrivateNote | `OWNER_ONLY` | `ownerId` | Owner-only, serverseitig |
-| GiftIdea | `OWNER_ONLY` | `ownerId` | Owner-only, serverseitig |
-| PrivateCollection | `OWNER_ONLY` | `ownerId` | Owner-only, serverseitig |
-| PrivateCollectionItem | erbt PrivateCollection / Owner | nicht vollständig spezifiziert | Owner-only; genaue Persistenz **OPEN – M3-D18** |
+| Chapter | shared space content | `createdBy` | **OPEN – M3-D01** |
+| Collection | `SPACE_SHARED` | add `createdBy`? **OPEN – M3-D13** | **OPEN – M3-D13** |
+| CollectionItem | inherits Collection | `createdBy` according to Master Spec | **OPEN – M3-D13** |
+| PrivateNote | `OWNER_ONLY` | `ownerId` | owner-only, server-side |
+| GiftIdea | `OWNER_ONLY` | `ownerId` | owner-only, server-side |
+| PrivateCollection | `OWNER_ONLY` | `ownerId` | owner-only, server-side |
+| PrivateCollectionItem | inherits PrivateCollection / owner | not fully specified | owner-only; exact persistence **OPEN – M3-D18** |
 
-Für Private-Area-Modelle soll die vorhandene zentrale Owner-/Privacy-Autorisierung wiederverwendet werden. Ob jedes Modell direkt `PrivateResourceMixin` trägt oder Child-Items ausschließlich über den autorisierten Parent geladen werden, wird pro Tabelle entschieden; es darf aber keine zweite, schwächere Privatlogik entstehen.
+Private Area models should reuse the existing central owner/privacy authorization. Whether every model directly carries `PrivateResourceMixin` or child items are loaded exclusively through the authorized parent is decided per table; there must not be a second, weaker private-authorization path.
 
 ## 3. Wish
 
-### Source-bound Modell
+### Source-bound model
 
 ```text
 Wish
@@ -52,25 +52,25 @@ Wish
 - status: OPEN | PLANNED | COMPLETED
 ```
 
-Die Quelle nennt kein freies `description`-/`body`-Feld. Ein solches Feld wird deshalb in M3 nicht stillschweigend vorausgesetzt.
+The source defines no free `description`/`body` field. M3 therefore does not silently assume one.
 
-### Source-bound Verhalten
+### Source-bound behavior
 
-- Wish ist gemeinsamer Space-Inhalt.
-- Nutzer können Wishes suchen, filtern, sortieren und ihren Fortschritt sehen; globale Volltextsuche selbst liegt jedoch im späteren Search-Milestone.
-- Ein Wish kann Ausgangspunkt eines Plans werden.
+- Wish is shared space content.
+- Users can search, filter, sort, and see progress of Wishes; global full-text search itself belongs to the later Search milestone.
+- A Wish can become the starting point for a Plan.
 
-### Noch zu entscheiden
+### Still to decide
 
-- Schreib-/Löschrechte des Partners gegenüber dem Ersteller.
-- Ob `PLANNED` ausschließlich aus einer erfolgreichen Wish->Plan-Transaktion entstehen darf.
-- Ob `COMPLETED` ohne Plan zulässig ist oder nur über einen abgeschlossenen Plan erreicht wird.
-- Delete eines Wishes mit existierendem `sourceWishId`-Plan.
-- ob ein Wish nach Plan-Konvertierung weiter editierbar ist und welche Felder synchron bleiben – bevorzugt **keine automatische Inhaltskopplung** nach der Konvertierung.
+- partner write/delete rights relative to the creator.
+- whether `PLANNED` may arise only from a successful Wish->Plan transaction.
+- whether `COMPLETED` without a Plan is valid or may be reached only through a completed Plan.
+- deleting a Wish with an existing `sourceWishId` Plan.
+- whether a Wish remains editable after Plan conversion and which fields stay synchronized — preferably **no automatic content coupling** after conversion.
 
 ## 4. Plan
 
-### Source-bound Modell
+### Source-bound model
 
 ```text
 Plan
@@ -90,44 +90,44 @@ Plan
 - version
 ```
 
-### Source-bound Workflow
+### Source-bound workflow
 
 ```text
 Wish
   -> Plan
-  -> COMPLETED / erlebt
+  -> COMPLETED / experienced
   -> optional Chapter
 ```
 
-Ein nicht abgeschlossener Plan darf grundsätzlich wieder in einen Wunschzustand zurückgeführt werden. Die genaue Semantik ist noch offen.
+A non-completed Plan may generally be returned to a Wish state. Exact semantics are still open in this readiness draft.
 
-### Statusautomat – vorgeschlagene Form
+### State machine – proposed form
 
 ```text
 IDEA --------> PLANNED --------> COMPLETED
   \               |
    \--------------/
-        vor Abschluss
-        kontrollierte Rückführung zu Wish
+        before completion
+        controlled return to Wish
 ```
 
-Das Diagramm ist `PROPOSED`. Insbesondere bleibt zu entscheiden:
+The diagram is `PROPOSED`. In particular, it remains to decide:
 
-- ob `PLANNED -> IDEA` als normaler Planstatuswechsel zulässig ist,
-- ob „zurück zu Wish“ den Plan löscht, archiviert oder als Historie erhält,
-- ob ein `COMPLETED` Plan wieder geöffnet werden darf,
-- welche Kombinationen aus `plannedStart`, `plannedEnd`, `experiencedOn` und Status gültig sind.
+- whether `PLANNED -> IDEA` is allowed as a normal Plan state transition,
+- whether “return to Wish” deletes, archives, or preserves the Plan as history,
+- whether a `COMPLETED` Plan can be reopened,
+- which combinations of `plannedStart`, `plannedEnd`, `experiencedOn`, and status are valid.
 
-### Datumsinvarianten – Vorschlag, noch nicht bindend
+### Date invariants – proposal, not yet binding
 
-- `plannedEnd >= plannedStart`, wenn beide gesetzt sind;
-- `COMPLETED` verlangt `experiencedOn` oder eine explizite Entscheidung, warum es ohne Datum zulässig ist;
-- `IDEA` darf ohne Termin existieren;
-- `PLANNED` kann mindestens einen fachlichen Planungsindikator verlangen – Terminpflicht ist noch nicht entschieden.
+- `plannedEnd >= plannedStart` when both are set;
+- `COMPLETED` requires `experiencedOn` or an explicit decision why it is valid without a date;
+- `IDEA` may exist without a schedule;
+- `PLANNED` may require at least one domain planning indicator — a mandatory schedule has not yet been decided in this draft.
 
-## 5. Atomare Wish -> Plan-Konvertierung
+## 5. Atomic Wish -> Plan conversion
 
-Die User-Flow-Spezifikation verlangt, dass die Konvertierung nachvollziehbar und fachlich transaktional erfolgt. Daraus folgt als Readiness-Anforderung:
+The User Flow specification requires conversion to be understandable and domain-transactional. This yields the following readiness requirement:
 
 ```text
 lock/read Wish in space
@@ -139,28 +139,28 @@ lock/read Wish in space
   -> commit once
 ```
 
-Offen bleibt die genaue Idempotenzstrategie. Mögliche Ansätze:
+The exact idempotency strategy remains open in this readiness draft. Possible approaches:
 
-1. Unique Constraint auf `(space_id, source_wish_id)` – einfach, wenn ein Wish höchstens einen aktiven/ursprünglichen Plan besitzen darf.
-2. expliziter Idempotency-Key – allgemeiner, aber zusätzliche Infrastruktur/Semantik.
-3. serialisierte Row-Lock-Transaktion plus Unique Constraint – bevorzugter Kandidat, falls die Kardinalität 1:1 beschlossen wird.
+1. Unique Constraint on `(space_id, source_wish_id)` – simple if a Wish may have at most one active/originating Plan.
+2. explicit Idempotency Key – more general, but additional infrastructure/semantics.
+3. serialized row-lock transaction plus Unique Constraint – preferred candidate if 1:1 cardinality is approved.
 
-Die Entscheidung steht in M3-D02. Doppelte Bestätigung darf niemals zwei fachlich identische Plans erzeugen.
+The decision is M3-D02. Duplicate confirmation must never create two domain-equivalent Plans.
 
-## 6. Rückführung Plan -> Wish
+## 6. Plan -> Wish return
 
-Die Produktspezifikation erlaubt die Rückführung eines nicht abgeschlossenen Plans. **Nicht spezifiziert** ist, ob dabei:
+The Product Specification allows a non-completed Plan to be returned. It is **not specified** in this readiness draft whether:
 
-- der ursprüngliche Wish reaktiviert wird,
-- ein neuer Wish entsteht,
-- der Plan erhalten/archiviert/gelöscht wird,
-- bereits vorgenommene Planänderungen in den Wish zurückkopiert werden.
+- the original Wish is reactivated,
+- a new Wish is created,
+- the Plan is preserved/archived/deleted,
+- Plan changes already made are copied back into the Wish.
 
-Diese Semantik ist BLOCKING (M3-D03). Eine Implementierung darf nicht per `DELETE Plan + PATCH Wish` improvisieren.
+This semantic is BLOCKING (M3-D03). An implementation must not improvise it as `DELETE Plan + PATCH Wish`.
 
 ## 7. Place
 
-### Source-bound Modell
+### Source-bound model
 
 ```text
 Place
@@ -176,40 +176,40 @@ Place
 - version
 ```
 
-### Invarianten
+### Invariants
 
-- Koordinaten sind optional.
-- Ein Ort ohne Koordinaten ist gültig.
-- M3 braucht keinen Karten-/Geocoding-Provider, um Place fachlich zu liefern.
-- Places können mit Memories, HeartMoments, Milestones, Plans und Chapters verbunden werden.
+- coordinates are optional.
+- a Place without coordinates is valid.
+- M3 does not require a Maps/Geocoding provider to deliver Place as a domain feature.
+- Places can be linked to Memories, HeartMoments, Milestones, Plans, and Chapters.
 
-### Sensible Ortsdaten
+### Sensitive location data
 
-`latitude`, `longitude`, freie Beschreibung und ggf. Adresse können sensible Rückschlüsse auf Aufenthaltsorte zulassen. Für M3 gilt deshalb bereits:
+`latitude`, `longitude`, free description, and potentially address can reveal sensitive information about whereabouts. Therefore M3 already requires:
 
-- keine präzisen Ortsdaten in Logs, Analytics, Event-Payloads oder Metriklabels;
-- keine serverseitige URL-/Provideranreicherung in diesem Milestone;
-- Partnerzugriff nur über normale Space-Autorisierung;
-- Klassifizierung als ProtectedPayload oder gesondert geschütztes Feld ist **BLOCKING – M3-D06/M3-D28**.
+- no precise location data in logs, analytics, event payloads, or metric labels;
+- no server-side URL/provider enrichment in this milestone;
+- partner access only through normal space authorization;
+- classification as ProtectedPayload or another specifically protected field is **BLOCKING – M3-D06/M3-D28**.
 
-### Deduplizierung
+### Deduplication
 
-Automatische Place-Deduplizierung ist nicht source-bound. Ein Name oder eine Koordinate ist kein stabiler globaler Identifikator. Der bevorzugte sichere Start ist **keine implizite Zusammenführung**; eine endgültige Entscheidung steht in M3-D07.
+Automatic Place deduplication is not source-bound. A name or coordinate is not a stable global identifier. The preferred safe starting point is **no implicit merging**; a final decision is M3-D07.
 
 ## 8. Content Relations
 
-### Source-bound Architektur
+### Source-bound architecture
 
-Nach außen darf ein gemeinsamer Relation Service existieren. Intern sollen echte FKs und typisierte Relationstabellen verwendet werden. Eine Universalrelation
+A shared Relation Service may exist externally. Internally, real foreign keys and typed relation tables should be used. A universal relation
 
 ```text
 targetType
 targetId
 ```
 
-ohne referentielle Integrität ist ausgeschlossen.
+without referential integrity is excluded.
 
-Die Master Spec nennt insbesondere:
+The Master Spec names in particular:
 
 ```text
 chapter_memories
@@ -223,34 +223,34 @@ place_plans
 place_chapters
 ```
 
-### Sicherheitsinvarianten
+### Security invariants
 
-Eine Relation darf nur entstehen, wenn:
+A relation may be created only when:
 
-1. Actor aktive Membership im Space besitzt,
-2. Relation-Parent und Target demselben Space angehören,
-3. Actor das Target lesen darf,
-4. Actor die Relation am Parent ändern darf,
-5. die Zielkombination fachlich erlaubt ist.
+1. the actor has active membership in the space,
+2. relation parent and target belong to the same space,
+3. the actor may read the target,
+4. the actor may change the relation on the parent,
+5. the target combination is allowed by the domain.
 
-Ein gemeinsamer Chapter oder Place darf **keine OWNER_ONLY-Existenz verraten**. Ein privater HeartMoment ist deshalb nicht über einen gemeinsamen Chapter/Place sichtbar oder relational beweisbar. Relation-Create gegen ein nicht lesbares Target antwortet privacy-sicher wie „nicht vorhanden“.
+A shared Chapter or Place must **not reveal OWNER_ONLY existence**. A private HeartMoment therefore must not be visible or relationally provable through a shared Chapter/Place. Relation Create against an unreadable target responds privacy-safely as “not found”.
 
-### Relation-Lifecycle
+### Relation lifecycle
 
-Für jede Relationstabelle müssen feststehen:
+For every relation table, define:
 
 - Unique Constraint,
-- Sortier-/Positionsfeld, falls fachlich nötig,
-- `ON DELETE`-Semantik,
-- Concurrency/Reorder-Verhalten,
-- Event-Payload,
-- Verhalten bei Privacy-Wechsel des Targets.
+- sorting/position field if required by the domain,
+- `ON DELETE` semantics,
+- concurrency/reorder behavior,
+- event payload,
+- behavior when target privacy changes.
 
-Die konkrete M3-Relationfläche ist M3-D08/M3-D09/M3-D26.
+The concrete M3 relation surface is M3-D08/M3-D09/M3-D26.
 
 ## 9. Chapter
 
-### Source-bound Modell
+### Source-bound model
 
 ```text
 Chapter
@@ -266,33 +266,33 @@ Chapter
 - version
 ```
 
-Chapter bündelt:
+Chapter groups:
 
 - Memories,
-- geteilte HeartMoments,
+- shared HeartMoments,
 - Milestones.
 
-### Source-bound Delete-Regel
+### Source-bound Delete rule
 
 ```text
 DELETE Chapter
-  -> Chapter-Relationen entfernen
-  -> Original-Memory/HeartMoment/Milestone NICHT löschen
+  -> remove Chapter relations
+  -> DO NOT delete original Memory/HeartMoment/Milestone
 ```
 
-Diese Regel ist bereits entschieden und wird im Decision Log als source-bound `DECIDED` geführt.
+This rule is already decided and is tracked in the Decision Log as source-bound `DECIDED`.
 
-### Offene Punkte
+### Open points
 
-- Partner-Schreibrechte.
-- `startOn <= endOn` und Umgang mit leeren Grenzen.
-- Reihenfolge der Chapter-Inhalte: chronologisch abgeleitet oder manuell positionierbar?
-- direkte `placeId`-Spalte plus `place_chapters` wirkt in der Master Spec teilweise redundant; die genaue kanonische Relation ist vor Migration zu entscheiden.
-- darf ein Target gleichzeitig mehreren Chapters angehören? Die Quelle verbietet es nicht.
+- partner write rights.
+- `startOn <= endOn` and handling empty boundaries.
+- ordering of Chapter content: chronologically derived or manually positionable?
+- direct `placeId` column plus `place_chapters` appears partly redundant in the Master Spec; the canonical relation must be decided before migration.
+- may a target belong to multiple Chapters? The source does not forbid it.
 
 ## 10. Collection / CollectionItem
 
-### Source-bound Modell
+### Source-bound model
 
 ```text
 Collection
@@ -312,24 +312,24 @@ CollectionItem
 - createdAt/updatedAt
 ```
 
-Die Produktspezifikation beschreibt frei definierbare gemeinsame Listen mit Abhaken, Sortierung und Mehrfachauswahl. Die Einkaufsliste ist ausdrücklich **keine** Collection.
+The Product Specification describes freely definable shared lists with completion, ordering, and multi-selection. The Shopping List is explicitly **not** a Collection.
 
-### Readiness-Lücken
+### Readiness gaps
 
-Die globalen Projektkonventionen verlangen Versionierung für veränderbare Objekte, während die Master-Feldliste für Collection/Item kein `version` nennt. Dieser Konflikt wird nicht ignoriert: M3-D14/M3-D18 entscheiden die Concurrency-Fläche.
+Global project conventions require versioning for mutable objects, while the Master field list for Collection/Item names no `version`. This conflict is not ignored: M3-D14/M3-D18 decide the concurrency surface.
 
-Weiter offen:
+Still open in this readiness draft:
 
-- Ersteller/Ownership der Collection selbst,
-- wer Collection und Items ändern/löschen darf,
-- Positionsstrategie (dense integer, fractional rank o. ä.),
-- atomarer Reorder und Concurrent Reorder,
-- ob Mehrfachauswahl eine reine UI-Batchaktion oder zusätzliche Domainsemantik ist,
-- Delete Collection -> Items: bevorzugt Parent-Cascade, aber noch BLOCKING.
+- creator/ownership of the Collection itself,
+- who may change/delete Collection and items,
+- position strategy (dense integer, fractional rank, etc.),
+- atomic reorder and concurrent reorder,
+- whether multi-selection is a pure UI batch action or additional domain semantics,
+- Delete Collection -> Items: parent cascade is preferred but still BLOCKING in this draft.
 
 ## 11. PrivateNote
 
-### Source-bound Modell
+### Source-bound model
 
 ```text
 PrivateNote
@@ -343,16 +343,16 @@ PrivateNote
 - version
 ```
 
-### Harte Invarianten
+### Hard invariants
 
-- `OWNER_ONLY` ohne Partner-Ausnahme.
-- Partner erhält kein positives Signal über ID, Listen, Counts, Suche, Dashboard, Deep Link oder Fehlerdetail.
-- `title` und `body` sind sensible Nutzerinhalte und gehören in die ProtectedPayload-Grenze bzw. deren spätere E2EE-fähige Struktur.
-- `ownerId` ist unveränderlich.
+- `OWNER_ONLY` without a partner exception.
+- the partner receives no positive signal through ID, lists, counts, search, Dashboard, Deep Link, or error detail.
+- `title` and `body` are sensitive user content and belong within the ProtectedPayload boundary or its later E2EE-ready structure.
+- `ownerId` is immutable.
 
 ## 12. GiftIdea
 
-### Source-bound Modell
+### Source-bound model
 
 ```text
 GiftIdea
@@ -372,17 +372,17 @@ GiftIdea
 - version
 ```
 
-**Die Spezifikation nennt keinen Enum für `status`.** Kein Code darf Werte dafür erfinden. M3-D17 ist BLOCKING.
+**The specification defines no enum for `status`.** No code may invent values for it. M3-D17 is BLOCKING in this readiness draft.
 
-Sicherheitsgrenzen:
+Security boundaries:
 
-- gesamter fachlicher Inhalt owner-only;
-- `url` wird in M3 nur als Nutzerinhalt gespeichert; keine serverseitige Preview/Fetch-Auflösung ohne separates SSRF-/Provider-Design und Reuse-Review;
-- `priceText` bleibt Freitext, solange keine monetäre Domainentscheidung getroffen wurde; keine Währungslogik stillschweigend ableiten.
+- all domain content is owner-only;
+- `url` is stored only as user content in M3; no server-side preview/fetch resolution without a separate SSRF/provider design and reuse review;
+- `priceText` remains free text until a monetary domain decision exists; do not silently infer currency logic.
 
 ## 13. PrivateCollection / PrivateCollectionItem
 
-### Source-bound Kern
+### Source-bound core
 
 ```text
 PrivateCollection
@@ -397,32 +397,32 @@ PrivateCollectionItem
 - position
 ```
 
-Beide sind `OWNER_ONLY`.
+Both are `OWNER_ONLY`.
 
-Die Feldliste ist bewusst unvollständiger als bei anderen Modellen (z. B. IDs/Timestamps/Version am Item). M3-D18 muss die Persistenz- und Concurrency-Konvention vervollständigen, bevor Migrationen entstehen.
+The field list is intentionally less complete than for other models (for example IDs/timestamps/version on the item). M3-D18 must complete the persistence and concurrency convention before migrations are created.
 
-## 14. ProtectedPayload-Kandidaten
+## 14. ProtectedPayload candidates
 
-Source-bound ist die Architekturgrenze, nicht jede einzelne M3-Spalte. Für die Entscheidung werden folgende Kandidaten geprüft:
+The architecture boundary is source-bound, not every individual M3 column. The following candidates are reviewed in the decisions:
 
-| Domain | Kandidaten |
+| Domain | Candidates |
 |---|---|
-| Wish | `title` und mögliche spätere Freitextfelder |
+| Wish | `title` and possible later free-text fields |
 | Plan | `title`, `description` |
-| Place | `name`, `description`, `address`, präzise Koordinaten |
+| Place | `name`, `description`, `address`, precise coordinates |
 | Chapter | `title`, `description` |
-| Collection | `title`; Item `title` |
+| Collection | `title`; item `title` |
 | PrivateNote | `title`, `body` |
-| GiftIdea | alle inhaltlichen Felder einschließlich URL/Preistext |
-| PrivateCollection | `title`; Item `title` |
+| GiftIdea | all content fields including URL/price text |
+| PrivateCollection | `title`; item `title` |
 
-Status, technische IDs, Versionen und sichere enumartige Zustände können außerhalb des Payloads liegen, sofern sie keine unnötige sensitive Information erzeugen. Die endgültige Klassifizierung gehört in die jeweiligen Decisions.
+Status, technical IDs, versions, and safe enum-like states may live outside the payload where they do not create unnecessary sensitive information. Final classification belongs in the corresponding decisions.
 
 ## 15. Domain Events
 
-M3 folgt der bestehenden M2-Regel: Events transportieren IDs und sichere Zustandsmetadaten, keine geschützten Inhalte.
+M3 follows the existing M2 rule: events carry IDs and safe state metadata, not protected content.
 
-Proposed Minimal Envelope:
+Proposed minimal envelope:
 
 ```text
 eventId
@@ -436,46 +436,46 @@ resourceVersion
 safeState?
 ```
 
-Nicht in Events:
+Not in events:
 
-- Wish-/Plan-/Chapter-/Collection-Titel,
-- PrivateNote/GiftIdea-Inhalt,
-- URL einer GiftIdea,
-- Adresse oder Koordinaten,
-- private Relation-Counts,
-- beliebige Partner-private Metadaten.
+- Wish/Plan/Chapter/Collection titles,
+- PrivateNote/GiftIdea content,
+- GiftIdea URL,
+- address or coordinates,
+- private relation counts,
+- any partner-private metadata.
 
-M3-D23 friert den Eventvertrag vor dem ersten Event-produzierenden Slice ein.
+M3-D23 freezes the event contract before the first event-producing slice.
 
-## 16. Delete-/Cascade-Matrix
+## 16. Delete/cascade matrix
 
-| Operation | Source-bound | Noch zu entscheiden |
+| Operation | Source-bound | Still to decide in this draft |
 |---|---|---|
-| Delete Wish ohne Plan | nein | Hard delete/Retention/Event |
-| Delete Wish mit source Plan | nein | verbieten, entkoppeln oder Plan erhalten |
-| Delete Plan | nein | Auswirkung auf source Wish/Place/Chapter |
-| Delete Place | nein | Relationen entfernen vs. Delete blockieren |
-| Delete Chapter | **ja** | Relationen entfernen, Originalinhalte erhalten |
-| Delete Collection | nein | bevorzugt Items mit Parent löschen |
-| Delete CollectionItem | nein | Position/Reorder danach |
-| Delete PrivateNote/GiftIdea | owner-only source-bound | Retention/Audit/Event |
-| Delete PrivateCollection | nein | bevorzugt private Items mit Parent löschen |
+| Delete Wish without Plan | no | hard delete/retention/event |
+| Delete Wish with source Plan | no | forbid, detach, or preserve Plan |
+| Delete Plan | no | effect on source Wish/Place/Chapter |
+| Delete Place | no | remove relations vs. block Delete |
+| Delete Chapter | **yes** | remove relations, preserve original content |
+| Delete Collection | no | preferably delete items with parent |
+| Delete CollectionItem | no | position/reorder afterward |
+| Delete PrivateNote/GiftIdea | owner-only source-bound | retention/audit/event |
+| Delete PrivateCollection | no | preferably delete private items with parent |
 
-DB-Cascade darf niemals fachliche Originalinhalte außerhalb des Parent-Aggregats mitreißen.
+A DB cascade must never remove domain original content outside the parent aggregate.
 
-## 17. Zentrale Race-Szenarien
+## 17. Central race scenarios
 
-Vor Runtime müssen mindestens diese Races im Testdesign stehen:
+Before runtime, at least these races must exist in the test design:
 
-- zwei parallele Wish->Plan-Konvertierungen,
-- Wish-Delete gegen Wish->Plan,
-- Plan-Completion gegen Plan->Wish-Rückführung,
-- Relation-Create gegen Target-Delete,
-- Relation-Create gegen HeartMoment `SHARED -> PRIVATE`,
-- Chapter-Delete gegen Relation-Create,
-- Place-Delete gegen Relation-Create,
-- Collection-Reorder gegen Item-Delete/Completion,
-- PrivateCollection-Reorder gegen Item-Delete,
-- Owner-Read gegen Logout/Membership-Verlust in Client-Caches (später M5).
+- two concurrent Wish->Plan conversions,
+- Wish Delete vs. Wish->Plan,
+- Plan Completion vs. Plan->Wish return,
+- Relation Create vs. target Delete,
+- Relation Create vs. HeartMoment `SHARED -> PRIVATE`,
+- Chapter Delete vs. Relation Create,
+- Place Delete vs. Relation Create,
+- Collection Reorder vs. item Delete/Completion,
+- PrivateCollection Reorder vs. item Delete,
+- owner Read vs. logout/membership loss in client caches (later M5).
 
-Die DB-/Service-Lösung muss so gewählt werden, dass ein Race nicht nur zufällig in Tests funktioniert, sondern durch Constraints/Locks/Transactions deterministisch entschieden wird.
+The DB/service solution must make races deterministic through constraints/locks/transactions rather than merely passing tests by chance.
