@@ -15,6 +15,19 @@ function draft(id: string): AttachmentDraft {
 }
 
 describe('attachmentDraftReducer', () => {
+  it('keeps the local preview available immediately while upload is pending', () => {
+    const state = attachmentDraftReducer([], {
+      type: 'add',
+      draft: draft('one'),
+    });
+
+    expect(state[0]).toMatchObject({
+      previewUrl: 'blob:one',
+      status: 'uploading',
+      attempt: 0,
+    });
+  });
+
   it('ignores a late READY result after the draft was removed', () => {
     let state = attachmentDraftReducer([], {
       type: 'add',
@@ -36,7 +49,7 @@ describe('attachmentDraftReducer', () => {
     expect(state).toEqual([]);
   });
 
-  it('ignores a stale retry result and keeps the latest attempt authoritative', () => {
+  it('retries a failed draft and ignores stale results from the previous attempt', () => {
     let state = attachmentDraftReducer([], {
       type: 'add',
       draft: draft('one'),
@@ -47,10 +60,28 @@ describe('attachmentDraftReducer', () => {
       attempt: 1,
     });
     state = attachmentDraftReducer(state, {
+      type: 'failed',
+      id: 'one',
+      attempt: 1,
+      error: 'validation failed',
+    });
+    expect(state[0]).toMatchObject({
+      status: 'failed',
+      attempt: 1,
+      error: 'validation failed',
+    });
+
+    state = attachmentDraftReducer(state, {
       type: 'start',
       id: 'one',
       attempt: 2,
     });
+    expect(state[0]).toMatchObject({
+      status: 'uploading',
+      attempt: 2,
+      error: undefined,
+    });
+
     state = attachmentDraftReducer(state, {
       type: 'ready',
       id: 'one',

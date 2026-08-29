@@ -5,22 +5,26 @@ import {
 } from './memoryAttachmentDraft';
 import type { ReferenceApis } from './referenceFlow';
 
+function uploadingAttachment() {
+  return {
+    id: 'attachment-1',
+    createdAt: new Date('2026-08-29T20:00:00Z'),
+    durationSeconds: null,
+    hasThumbnail: false,
+    height: null,
+    mediaType: 'IMAGE',
+    mimeType: 'image/jpeg',
+    size: 5,
+    status: 'UPLOADING',
+    version: 1,
+    width: null,
+  };
+}
+
 describe('uploadMemoryDraftAttachment', () => {
   it('starts upload immediately, exposes validation, and resolves only after READY', async () => {
     const phases: string[] = [];
-    const attachment = {
-      id: 'attachment-1',
-      createdAt: new Date('2026-08-29T20:00:00Z'),
-      durationSeconds: null,
-      hasThumbnail: false,
-      height: null,
-      mediaType: 'IMAGE',
-      mimeType: 'image/jpeg',
-      size: 5,
-      status: 'UPLOADING',
-      version: 1,
-      width: null,
-    };
+    const attachment = uploadingAttachment();
     const apis = {
       auth: {},
       memories: {},
@@ -64,6 +68,47 @@ describe('uploadMemoryDraftAttachment', () => {
       spaceId: 'space-1',
       attachmentId: 'attachment-1',
     });
+  });
+
+  it('fails when server-side validation rejects the uploaded image', async () => {
+    const phases: string[] = [];
+    const attachment = uploadingAttachment();
+    const apis = {
+      auth: {},
+      memories: {},
+      attachments: {
+        createAttachmentUpload: vi.fn(async () => ({
+          attachment,
+          method: UploadDescriptorMethodEnum.STREAM,
+          requiredHeaders: { 'Content-Type': 'image/jpeg' },
+          uploadUrl: '/api/v1/spaces/space-1/attachments/attachment-1/content',
+        })),
+        finalizeAttachmentUpload: vi.fn(async () => ({
+          ...attachment,
+          status: 'PROCESSING',
+        })),
+        getAttachment: vi.fn(async () => ({ ...attachment, status: 'FAILED' })),
+      },
+      story: {},
+    } as unknown as ReferenceApis;
+    const fetchApi = vi.fn(
+      async () => new Response(null, { status: 204 }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      uploadMemoryDraftAttachment(
+        apis,
+        'https://api.example.invalid',
+        'token',
+        'space-1',
+        new File(['image'], 'invalid.jpg', { type: 'image/jpeg' }),
+        (phase) => phases.push(phase),
+        fetchApi,
+      ),
+    ).rejects.toThrow();
+
+    expect(phases).toEqual(['uploading', 'validating']);
+    expect(apis.attachments.getAttachment).toHaveBeenCalledTimes(1);
   });
 });
 
