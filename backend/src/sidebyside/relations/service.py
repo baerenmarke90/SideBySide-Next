@@ -378,7 +378,9 @@ def list_chapter_content(
         .where(ChapterMemory.chapter_id == chapter.id)
     ):
         ref = ChapterContentReference("MEMORY", target_id)
-        sortable.append((_sort_instant(happened_on, created_at), ref.target_type, str(target_id), ref))
+        sortable.append(
+            (_sort_instant(happened_on, created_at), ref.target_type, str(target_id), ref)
+        )
 
     for target_id, happened_on, created_at in session.execute(
         select(HeartMoment.id, HeartMoment.happened_on, HeartMoment.created_at)
@@ -386,7 +388,9 @@ def list_chapter_content(
         .where(ChapterHeartMoment.chapter_id == chapter.id)
     ):
         ref = ChapterContentReference("HEART_MOMENT", target_id)
-        sortable.append((_sort_instant(happened_on, created_at), ref.target_type, str(target_id), ref))
+        sortable.append(
+            (_sort_instant(happened_on, created_at), ref.target_type, str(target_id), ref)
+        )
 
     for target_id, happened_on, created_at in session.execute(
         select(Milestone.id, Milestone.happened_on, Milestone.created_at)
@@ -394,7 +398,9 @@ def list_chapter_content(
         .where(ChapterMilestone.chapter_id == chapter.id)
     ):
         ref = ChapterContentReference("MILESTONE", target_id)
-        sortable.append((_sort_instant(happened_on, created_at), ref.target_type, str(target_id), ref))
+        sortable.append(
+            (_sort_instant(happened_on, created_at), ref.target_type, str(target_id), ref)
+        )
 
     sortable.sort(key=lambda item: item[:3])
     return [item[3] for item in sortable]
