@@ -45,9 +45,9 @@ class EventType(StrEnum):
     PLACE_CREATED = "PLACE_CREATED"
     PLACE_UPDATED = "PLACE_UPDATED"
     PLACE_DELETED = "PLACE_DELETED"
-    # Typed content relations from M3-D08. Separate types instead of
-    # `PLACE_UPDATED`: linking does not change the place, it establishes a
-    # relation, and a consumer mirroring places need not reload anything.
+    # Typed content relations from M3-D08. Separate types instead of parent
+    # update events: linking establishes a relation but does not mutate the
+    # parent content itself.
     PLACE_MEMORY_LINKED = "PLACE_MEMORY_LINKED"
     PLACE_MEMORY_UNLINKED = "PLACE_MEMORY_UNLINKED"
     PLACE_HEART_MOMENT_LINKED = "PLACE_HEART_MOMENT_LINKED"
@@ -57,6 +57,12 @@ class EventType(StrEnum):
     CHAPTER_CREATED = "CHAPTER_CREATED"
     CHAPTER_UPDATED = "CHAPTER_UPDATED"
     CHAPTER_DELETED = "CHAPTER_DELETED"
+    CHAPTER_MEMORY_LINKED = "CHAPTER_MEMORY_LINKED"
+    CHAPTER_MEMORY_UNLINKED = "CHAPTER_MEMORY_UNLINKED"
+    CHAPTER_HEART_MOMENT_LINKED = "CHAPTER_HEART_MOMENT_LINKED"
+    CHAPTER_HEART_MOMENT_UNLINKED = "CHAPTER_HEART_MOMENT_UNLINKED"
+    CHAPTER_MILESTONE_LINKED = "CHAPTER_MILESTONE_LINKED"
+    CHAPTER_MILESTONE_UNLINKED = "CHAPTER_MILESTONE_UNLINKED"
     PLAN_CREATED = "PLAN_CREATED"
     PLAN_UPDATED = "PLAN_UPDATED"
     PLAN_DELETED = "PLAN_DELETED"
@@ -87,10 +93,10 @@ class PublicEventPayload(BaseModel):
     target_type: Literal["MEMORY", "HEART_MOMENT", "MILESTONE"] | None = None
     target_id: UUID | None = None
     recipient_id: UUID | None = None
-    """Safe comment references for a later notification consumer.
+    """Safe comment/relation references for a later consumer.
 
-    IDs and the closed target category only. Comment body, parent title/text,
-    and HeartMoment emotion must never appear here.
+    IDs and the closed target category only. User content must never appear
+    here.
     """
 
 
