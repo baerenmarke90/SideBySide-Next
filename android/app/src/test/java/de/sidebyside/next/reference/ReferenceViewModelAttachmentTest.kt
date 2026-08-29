@@ -12,20 +12,21 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import sidebyside.api.models.AccountView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
+import sidebyside.api.models.AuthorSummary
 import sidebyside.api.models.MediaType
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.ReadDescriptor
+import sidebyside.api.models.ResourceCapabilities
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.TokenView
@@ -35,7 +36,6 @@ import sidebyside.api.models.UploadDescriptor
 class ReferenceViewModelAttachmentTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val spaceId = UUID.fromString("00000000-0000-0000-0000-000000000010")
-    private val attachmentId = UUID.fromString("00000000-0000-0000-0000-000000000030")
 
     @Before
     fun setUp() {
@@ -48,55 +48,138 @@ class ReferenceViewModelAttachmentTest {
     }
 
     @Test
-    fun selectionShowsLocalBytesImmediatelyAndRemovalIgnoresLateUploadCompletion() = runTest(dispatcher) {
-        val releaseUpload = CompletableDeferred<Unit>()
-        val api = AttachmentContract {
-            releaseUpload.await()
+    fun multipleImagesUploadIndependentlyAndKeepSelectionOrder() = runTest(dispatcher) {
+        val firstUpload = CompletableDeferred<Unit>()
+        val secondUpload = CompletableDeferred<Unit>()
+        val api = AttachmentContract { image ->
+            when (image.displayName) {
+                "first.jpg" -> firstUpload.await()
+                "second.jpg" -> secondUpload.await()
+            }
         }
         val viewModel = viewModel(api)
         signIn(viewModel)
         val selectionEpoch = checkNotNull(viewModel.beginImageSelection())
-        val image = SelectedImage(byteArrayOf(1, 2, 3), "draft.jpg", "image/jpeg")
 
-        viewModel.selectImage(image, selectionEpoch)
+        viewModel.selectImages(
+            listOf(
+                SelectedImage(byteArrayOf(1, 2, 3), "first.jpg", "image/jpeg"),
+                SelectedImage(byteArrayOf(4, 5, 6), "second.jpg", "image/jpeg"),
+            ),
+            selectionEpoch,
+        )
 
-        assertEquals("draft.jpg", viewModel.uiState.value.selectedImageName)
-        assertArrayEquals(image.bytes, viewModel.uiState.value.selectedImageBytes)
-        assertEquals(DraftUploadState.UPLOADING, viewModel.uiState.value.imageUploadState)
+        assertEquals(listOf("first.jpg", "second.jpg"), viewModel.uiState.value.draftImages.map { it.displayName })
+        assertEquals(
+            listOf(DraftUploadState.UPLOADING, DraftUploadState.UPLOADING),
+            viewModel.uiState.value.draftImages.map { it.uploadState },
+        )
 
-        viewModel.removeSelectedImage()
-        releaseUpload.complete(Unit)
+        secondUpload.complete(Unit)
         advanceUntilIdle()
+        assertEquals(
+            listOf(DraftUploadState.UPLOADING, DraftUploadState.READY),
+            viewModel.uiState.value.draftImages.map { it.uploadState },
+        )
 
-        assertNull(viewModel.uiState.value.selectedImageName)
-        assertNull(viewModel.uiState.value.selectedImageBytes)
-        assertNull(viewModel.uiState.value.imageUploadState)
+        firstUpload.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(
+            listOf(DraftUploadState.READY, DraftUploadState.READY),
+            viewModel.uiState.value.draftImages.map { it.uploadState },
+        )
+        assertEquals(listOf("first.jpg", "second.jpg"), viewModel.uiState.value.draftImages.map { it.displayName })
     }
 
     @Test
-    fun failedUploadCanRetryWithoutSelectingTheImageAgain() = runTest(dispatcher) {
-        var attempts = 0
-        val api = AttachmentContract {
-            attempts += 1
-            if (attempts == 1) error("first upload failed")
+    fun removingOneImageIgnoresItsLateCompletionWithoutAffectingSibling() = runTest(dispatcher) {
+        val firstUpload = CompletableDeferred<Unit>()
+        val api = AttachmentContract { image ->
+            if (image.displayName == "first.jpg") firstUpload.await()
         }
         val viewModel = viewModel(api)
         signIn(viewModel)
         val selectionEpoch = checkNotNull(viewModel.beginImageSelection())
-        val image = SelectedImage(byteArrayOf(4, 5, 6), "retry.jpg", "image/jpeg")
 
-        viewModel.selectImage(image, selectionEpoch)
+        viewModel.selectImages(
+            listOf(
+                SelectedImage(byteArrayOf(1), "first.jpg", "image/jpeg"),
+                SelectedImage(byteArrayOf(2), "second.jpg", "image/jpeg"),
+            ),
+            selectionEpoch,
+        )
         advanceUntilIdle()
-        assertEquals(DraftUploadState.FAILED, viewModel.uiState.value.imageUploadState)
-        assertEquals("retry.jpg", viewModel.uiState.value.selectedImageName)
+        val removedId = viewModel.uiState.value.draftImages.first().id
+        assertEquals(DraftUploadState.READY, viewModel.uiState.value.draftImages[1].uploadState)
 
-        viewModel.retrySelectedImage()
+        viewModel.removeImage(removedId)
+        firstUpload.complete(Unit)
         advanceUntilIdle()
 
-        assertEquals(2, attempts)
-        assertEquals(DraftUploadState.READY, viewModel.uiState.value.imageUploadState)
-        assertEquals("retry.jpg", viewModel.uiState.value.selectedImageName)
-        assertArrayEquals(image.bytes, viewModel.uiState.value.selectedImageBytes)
+        assertEquals(listOf("second.jpg"), viewModel.uiState.value.draftImages.map { it.displayName })
+        assertEquals(DraftUploadState.READY, viewModel.uiState.value.draftImages.single().uploadState)
+    }
+
+    @Test
+    fun failedImageCanRetryWithoutResettingReadySibling() = runTest(dispatcher) {
+        var retryAttempts = 0
+        val api = AttachmentContract { image ->
+            if (image.displayName == "retry.jpg") {
+                retryAttempts += 1
+                if (retryAttempts == 1) error("first upload failed")
+            }
+        }
+        val viewModel = viewModel(api)
+        signIn(viewModel)
+        val selectionEpoch = checkNotNull(viewModel.beginImageSelection())
+
+        viewModel.selectImages(
+            listOf(
+                SelectedImage(byteArrayOf(4, 5, 6), "retry.jpg", "image/jpeg"),
+                SelectedImage(byteArrayOf(7, 8, 9), "stable.jpg", "image/jpeg"),
+            ),
+            selectionEpoch,
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(DraftUploadState.FAILED, DraftUploadState.READY),
+            viewModel.uiState.value.draftImages.map { it.uploadState },
+        )
+        val retryId = viewModel.uiState.value.draftImages.first().id
+
+        viewModel.retryImage(retryId)
+        advanceUntilIdle()
+
+        assertEquals(2, retryAttempts)
+        assertEquals(
+            listOf(DraftUploadState.READY, DraftUploadState.READY),
+            viewModel.uiState.value.draftImages.map { it.uploadState },
+        )
+        assertEquals(listOf("retry.jpg", "stable.jpg"), viewModel.uiState.value.draftImages.map { it.displayName })
+    }
+
+    @Test
+    fun saveBindsReadyImagesInStableDraftOrder() = runTest(dispatcher) {
+        val api = AttachmentContract { }
+        val viewModel = viewModel(api)
+        signIn(viewModel)
+        val selectionEpoch = checkNotNull(viewModel.beginImageSelection())
+
+        viewModel.selectImages(
+            listOf(
+                SelectedImage(byteArrayOf(1), "first.jpg", "image/jpeg"),
+                SelectedImage(byteArrayOf(2), "second.jpg", "image/jpeg"),
+            ),
+            selectionEpoch,
+        )
+        advanceUntilIdle()
+        viewModel.createMemory("Two photos", "", "")
+        advanceUntilIdle()
+
+        val bound = assertNotNull(api.boundAttachments) as MemoryAttachmentSet
+        assertEquals(listOf(0, 1), bound.attachments.map { it.position })
+        assertEquals(api.createdAttachmentIds, bound.attachments.map { it.attachmentId })
     }
 
     private fun viewModel(api: ReferenceContract) = ReferenceViewModel(
@@ -110,44 +193,52 @@ class ReferenceViewModelAttachmentTest {
     }
 
     private inner class AttachmentContract(
-        private val upload: suspend () -> Unit,
+        private val upload: suspend (SelectedImage) -> Unit,
     ) : ReferenceContract {
+        private var nextAttachmentValue = 30L
+        val createdAttachmentIds = mutableListOf<UUID>()
+        var boundAttachments: MemoryAttachmentSet? = null
+
         override suspend fun signIn(email: String, password: String): SessionView = session()
 
         override suspend fun createMemory(
             spaceId: UUID,
             accessToken: String,
             memory: MemoryCreate,
-        ): MemoryDetail = error("not used")
+        ): MemoryDetail = memory()
 
         override suspend fun createAttachmentUpload(
             spaceId: UUID,
             accessToken: String,
             request: AttachmentUploadCreate,
-        ): UploadDescriptor = UploadDescriptor(
-            attachment = attachment("UPLOADING"),
-            method = UploadDescriptor.Method.STREAM,
-            requiredHeaders = mapOf("Content-Type" to request.expectedMimeType),
-            uploadUrl = "/content",
-        )
+        ): UploadDescriptor {
+            val id = UUID(0L, nextAttachmentValue++)
+            createdAttachmentIds += id
+            return UploadDescriptor(
+                attachment = attachment(id, "UPLOADING"),
+                method = UploadDescriptor.Method.STREAM,
+                requiredHeaders = mapOf("Content-Type" to request.expectedMimeType),
+                uploadUrl = "/content",
+            )
+        }
 
         override suspend fun uploadAttachmentBytes(
             accessToken: String,
             descriptor: UploadDescriptor,
             image: SelectedImage,
-        ) = upload()
+        ) = upload(image)
 
         override suspend fun finalizeAttachment(
             spaceId: UUID,
             accessToken: String,
             attachmentId: UUID,
-        ): AttachmentDetail = attachment("VALIDATING")
+        ): AttachmentDetail = attachment(attachmentId, "VALIDATING")
 
         override suspend fun getAttachment(
             spaceId: UUID,
             accessToken: String,
             attachmentId: UUID,
-        ): AttachmentDetail = attachment("READY")
+        ): AttachmentDetail = attachment(attachmentId, "READY")
 
         override suspend fun replaceMemoryAttachments(
             spaceId: UUID,
@@ -155,7 +246,10 @@ class ReferenceViewModelAttachmentTest {
             memoryId: UUID,
             ifMatch: Int,
             attachments: MemoryAttachmentSet,
-        ): MemoryDetail = error("not used")
+        ): MemoryDetail {
+            boundAttachments = attachments
+            return memory(version = 2)
+        }
 
         override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage =
             StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
@@ -165,24 +259,42 @@ class ReferenceViewModelAttachmentTest {
             accessToken: String,
             attachmentId: UUID,
             request: AttachmentReadRequest,
-        ): ReadDescriptor = error("not used")
+        ): ReadDescriptor = ReadDescriptor(ReadDescriptor.Method.SIGNED_URL, "https://storage.invalid/read")
 
         override suspend fun readImageBytes(accessToken: String, descriptor: ReadDescriptor): ByteArray =
-            error("not used")
+            byteArrayOf(1, 2, 3)
     }
 
-    private fun attachment(status: String) = AttachmentDetail(
+    private fun attachment(id: UUID, status: String) = AttachmentDetail(
         createdAt = OffsetDateTime.parse("2026-08-29T20:00:00Z"),
         durationSeconds = null,
         hasThumbnail = false,
         height = null,
-        id = attachmentId,
+        id = id,
         mediaType = MediaType.IMAGE,
         mimeType = "image/jpeg",
         propertySize = 3,
         status = status,
         version = 1,
         width = null,
+    )
+
+    private fun memory(version: Int = 1) = MemoryDetail(
+        attachments = emptyList(),
+        author = AuthorSummary(
+            displayName = "Test Person",
+            id = UUID.fromString("00000000-0000-0000-0000-000000000020"),
+        ),
+        authorId = UUID.fromString("00000000-0000-0000-0000-000000000020"),
+        body = "",
+        capabilities = ResourceCapabilities(canComment = true, canDelete = true, canEdit = true),
+        createdAt = OffsetDateTime.parse("2026-08-29T20:00:00Z"),
+        happenedOn = null,
+        id = UUID.fromString("00000000-0000-0000-0000-000000000040"),
+        spaceId = spaceId,
+        title = "Two photos",
+        updatedAt = OffsetDateTime.parse("2026-08-29T20:00:00Z"),
+        version = version,
     )
 
     private fun session(): SessionView {

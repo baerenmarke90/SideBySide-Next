@@ -34,7 +34,6 @@ class ReferenceFlowScreenSemanticsTest {
                         state = ReferenceUiState(
                             configured = true,
                             loggedIn = true,
-                            selectedImageName = null,
                             storyItems = emptyList(),
                         ),
                         onLogin = { _, _ -> },
@@ -50,7 +49,7 @@ class ReferenceFlowScreenSemanticsTest {
         val storyList = composeRule.onNode(hasScrollToIndexAction())
         storyList.performScrollToIndex(2)
         composeRule.onNodeWithText("Erinnerung festhalten").performScrollTo().assertIsDisplayed()
-        composeRule.onNode(hasText("Bild auswählen") and hasClickAction())
+        composeRule.onNode(hasText("Bilder auswählen") and hasClickAction())
             .performScrollTo()
             .assertIsDisplayed()
             .assertHasClickAction()
@@ -63,6 +62,46 @@ class ReferenceFlowScreenSemanticsTest {
         composeRule.onNodeWithText("Gemeinsame Story").assertIsDisplayed()
         storyList.performScrollToIndex(4)
         composeRule.onNodeWithText("Noch keine Einträge in eurer Story.").assertIsDisplayed()
+    }
+
+    @Test
+    fun multipleDraftImagesExposeStableOrderAndFailureAction() {
+        composeRule.setContent {
+            MaterialTheme {
+                ReferenceFlowScreen(
+                    state = ReferenceUiState(
+                        configured = true,
+                        loggedIn = true,
+                        draftImages = listOf(
+                            DraftImageUiItem(
+                                id = 11,
+                                displayName = "first.jpg",
+                                bytes = byteArrayOf(1),
+                                uploadState = DraftUploadState.READY,
+                            ),
+                            DraftImageUiItem(
+                                id = 12,
+                                displayName = "second.jpg",
+                                bytes = byteArrayOf(2),
+                                uploadState = DraftUploadState.FAILED,
+                            ),
+                        ),
+                    ),
+                    onLogin = { _, _ -> },
+                    onLogout = {},
+                    onPickImage = {},
+                    onCreateMemory = { _, _, _ -> },
+                    onRefreshStory = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Bild 1: first.jpg").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Bild 2: second.jpg").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Upload oder Prüfung fehlgeschlagen").performScrollTo().assertIsDisplayed()
+        composeRule.onNode(hasText("Erneut versuchen") and hasClickAction())
+            .performScrollTo()
+            .assertHasClickAction()
     }
 
     @Test

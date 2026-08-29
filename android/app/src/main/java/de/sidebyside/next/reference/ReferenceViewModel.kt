@@ -22,19 +22,32 @@ enum class DraftUploadState {
     FAILED,
 }
 
+data class DraftImageUiItem(
+    val id: Long,
+    val displayName: String,
+    val bytes: ByteArray,
+    val uploadState: DraftUploadState,
+)
+
 data class ReferenceUiState(
     val configured: Boolean = false,
     val loggedIn: Boolean = false,
     val busy: Boolean = false,
     val status: UiMessage? = null,
     val error: UiMessage? = null,
-    val selectedImageName: String? = null,
-    val selectedImageBytes: ByteArray? = null,
-    val imageUploadState: DraftUploadState? = null,
+    val draftImages: List<DraftImageUiItem> = emptyList(),
     val lastMemoryTitle: String? = null,
     val lastMemoryBody: String? = null,
     val lastImageBytes: ByteArray? = null,
     val storyItems: List<StoryItem> = emptyList(),
+)
+
+private data class ImageDraft(
+    val id: Long,
+    val image: SelectedImage,
+    val attemptId: Long,
+    val uploadState: DraftUploadState,
+    val preparedAttachment: PreparedAttachment? = null,
 )
 
 class ReferenceViewModel(
@@ -43,10 +56,10 @@ class ReferenceViewModel(
 ) : ViewModel() {
     private val contract: ReferenceContract? = api ?: config.apiBaseUrl.takeIf(String::isNotBlank)?.let(::OkHttpReferenceApi)
     private var session: SessionView? = null
-    private var selectedImage: SelectedImage? = null
-    private var preparedAttachment: PreparedAttachment? = null
+    private var imageDrafts: List<ImageDraft> = emptyList()
     private var sessionEpoch: Long = 0
-    private var imageEpoch: Long = 0
+    private var nextDraftId: Long = 1
+    private var nextAttemptId: Long = 1
 
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
     val uiState: StateFlow<ReferenceUiState> = _uiState.asStateFlow()
@@ -60,7 +73,6 @@ class ReferenceViewModel(
         }
 
         sessionEpoch += 1
-        imageEpoch += 1
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -69,17 +81,14 @@ class ReferenceViewModel(
                 .onSuccess { signedIn ->
                     if (attemptEpoch != sessionEpoch) return@onSuccess
                     session = signedIn
-                    selectedImage = null
-                    preparedAttachment = null
+                    imageDrafts = emptyList()
                     mutate {
                         it.copy(
                             loggedIn = true,
                             busy = false,
                             status = message(R.string.ref_status_logged_in),
                             error = null,
-                            selectedImageName = null,
-                            selectedImageBytes = null,
-                            imageUploadState = null,
+                            draftImages = emptyList(),
                             lastMemoryTitle = null,
                             lastMemoryBody = null,
                             lastImageBytes = null,
@@ -98,114 +107,58 @@ class ReferenceViewModel(
 
     fun beginImageSelection(): Long? = session?.let { sessionEpoch }
 
-    fun selectImage(image: SelectedImage, selectionEpoch: Long) {
+    fun selectImages(images: List<SelectedImage>, selectionEpoch: Long) {
         val api = contract ?: return configurationError()
         val currentSession = session ?: return
         val spaceId = config.spaceId ?: return configurationError()
-        if (selectionEpoch != sessionEpoch) return
+        if (selectionEpoch != sessionEpoch || images.isEmpty()) return
 
-        imageEpoch += 1
-        val draftEpoch = imageEpoch
-        selectedImage = image
-        preparedAttachment = null
-        mutate {
-            it.copy(
-                selectedImageName = image.displayName,
-                selectedImageBytes = image.bytes,
-                imageUploadState = DraftUploadState.UPLOADING,
-                error = null,
-                status = message(R.string.ref_status_image_uploading),
+        val newDrafts = images.map { image ->
+            ImageDraft(
+                id = nextDraftId++,
+                image = image,
+                attemptId = nextAttemptId++,
+                uploadState = DraftUploadState.UPLOADING,
             )
         }
-
-        viewModelScope.launch {
-            if (!isCurrentImageSelection(draftEpoch, currentSession, image)) return@launch
-            runCatching {
-                prepareAttachment(
-                    api = api,
-                    spaceId = spaceId,
-                    accessToken = currentSession.tokens.accessToken,
-                    image = image,
-                    onPhase = { phase ->
-                        if (isCurrentImageSelection(draftEpoch, currentSession, image)) {
-                            mutate {
-                                it.copy(
-                                    imageUploadState = when (phase) {
-                                        AttachmentPreparationPhase.UPLOADING -> DraftUploadState.UPLOADING
-                                        AttachmentPreparationPhase.VALIDATING -> DraftUploadState.VALIDATING
-                                        AttachmentPreparationPhase.READY -> DraftUploadState.READY
-                                    },
-                                    status = when (phase) {
-                                        AttachmentPreparationPhase.UPLOADING -> message(R.string.ref_status_image_uploading)
-                                        AttachmentPreparationPhase.VALIDATING -> message(R.string.ref_status_image_validating)
-                                        AttachmentPreparationPhase.READY -> message(R.string.ref_status_image_ready)
-                                    },
-                                )
-                            }
-                        }
-                    },
-                )
-            }.onSuccess { prepared ->
-                if (!isCurrentImageSelection(draftEpoch, currentSession, image)) return@onSuccess
-                preparedAttachment = prepared
-                mutate {
-                    it.copy(
-                        imageUploadState = DraftUploadState.READY,
-                        status = message(R.string.ref_status_image_ready),
-                        error = null,
-                    )
-                }
-            }.onFailure {
-                if (!isCurrentImageSelection(draftEpoch, currentSession, image)) return@onFailure
-                preparedAttachment = null
-                mutate {
-                    it.copy(
-                        imageUploadState = DraftUploadState.FAILED,
-                        status = null,
-                        error = message(R.string.ref_error_image_upload_failed),
-                    )
-                }
-            }
+        imageDrafts = imageDrafts + newDrafts
+        publishDrafts()
+        newDrafts.forEach { draft ->
+            startAttachmentPreparation(api, spaceId, currentSession, draft)
         }
     }
 
-    fun setImageError(throwable: Throwable, selectionEpoch: Long) {
+    fun setImageSelectionError(throwable: Throwable, selectionEpoch: Long) {
         if (session == null || selectionEpoch != sessionEpoch) return
-        imageEpoch += 1
-        selectedImage = null
-        preparedAttachment = null
         val error = throwable.message?.takeIf(String::isNotBlank)?.let {
             message(R.string.ref_error_image_selection_detail, it)
         } ?: message(R.string.ref_error_image_selection_failed)
-        mutate {
-            it.copy(
-                selectedImageName = null,
-                selectedImageBytes = null,
-                imageUploadState = null,
-                error = error,
-                status = null,
-            )
-        }
+        mutate { it.copy(error = error, status = null) }
     }
 
-    fun retrySelectedImage() {
-        val image = selectedImage ?: return
-        selectImage(image, sessionEpoch)
+    fun retryImage(draftId: Long) {
+        val api = contract ?: return configurationError()
+        val currentSession = session ?: return
+        val spaceId = config.spaceId ?: return configurationError()
+        val index = imageDrafts.indexOfFirst { it.id == draftId }
+        if (index < 0) return
+
+        val draft = imageDrafts[index].copy(
+            attemptId = nextAttemptId++,
+            uploadState = DraftUploadState.UPLOADING,
+            preparedAttachment = null,
+        )
+        imageDrafts = imageDrafts.toMutableList().also { it[index] = draft }
+        publishDrafts()
+        startAttachmentPreparation(api, spaceId, currentSession, draft)
     }
 
-    fun removeSelectedImage() {
-        imageEpoch += 1
-        selectedImage = null
-        preparedAttachment = null
-        mutate {
-            it.copy(
-                selectedImageName = null,
-                selectedImageBytes = null,
-                imageUploadState = null,
-                error = null,
-                status = message(R.string.ref_status_image_removed),
-            )
-        }
+    fun removeImage(draftId: Long) {
+        val previousSize = imageDrafts.size
+        imageDrafts = imageDrafts.filterNot { it.id == draftId }
+        if (imageDrafts.size == previousSize) return
+        val nextStatus = draftStatus() ?: message(R.string.ref_status_image_removed)
+        publishDrafts(status = nextStatus)
     }
 
     fun createMemory(title: String, body: String, happenedOnText: String) {
@@ -214,15 +167,14 @@ class ReferenceViewModel(
             setError(message(R.string.ref_error_login_required))
             return
         }
-        val image = selectedImage
-        val attachment = preparedAttachment
+        val drafts = imageDrafts.toList()
         val spaceId = config.spaceId ?: return configurationError()
         if (title.isBlank()) {
             setError(message(R.string.ref_error_memory_fields_required))
             return
         }
-        if (image != null && attachment == null) {
-            setError(message(R.string.ref_error_image_not_ready))
+        if (drafts.any { it.uploadState != DraftUploadState.READY || it.preparedAttachment == null }) {
+            setError(message(R.string.ref_error_images_not_ready))
             return
         }
         val happenedOn = if (happenedOnText.isBlank()) {
@@ -234,6 +186,7 @@ class ReferenceViewModel(
             }
         }
         val operationEpoch = sessionEpoch
+        val attachments = drafts.map { checkNotNull(it.preparedAttachment) }
 
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
@@ -255,21 +208,17 @@ class ReferenceViewModel(
                     title = title.trim(),
                     body = body.trim(),
                     happenedOn = happenedOn,
-                    attachments = attachment?.let(::listOf).orEmpty(),
+                    attachments = attachments,
                 )
             }.onSuccess { result ->
                 if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                imageEpoch += 1
-                selectedImage = null
-                preparedAttachment = null
+                imageDrafts = emptyList()
                 mutate {
                     it.copy(
                         busy = false,
                         status = message(R.string.ref_status_save_success),
                         error = null,
-                        selectedImageName = null,
-                        selectedImageBytes = null,
-                        imageUploadState = null,
+                        draftImages = emptyList(),
                         lastMemoryTitle = result.memory.title,
                         lastMemoryBody = result.memory.body,
                         lastImageBytes = result.imageBytes,
@@ -307,25 +256,119 @@ class ReferenceViewModel(
 
     fun logout() {
         sessionEpoch += 1
-        imageEpoch += 1
         session = null
-        selectedImage = null
-        preparedAttachment = null
+        imageDrafts = emptyList()
         _uiState.value = ReferenceUiState(
             configured = config.isConfigured,
             status = message(R.string.ref_status_logged_out),
         )
     }
 
-    private fun isCurrentImageSelection(
-        epoch: Long,
+    private fun startAttachmentPreparation(
+        api: ReferenceContract,
+        spaceId: java.util.UUID,
         currentSession: SessionView,
-        image: SelectedImage,
+        draft: ImageDraft,
+    ) {
+        viewModelScope.launch {
+            if (!isCurrentDraft(draft.id, draft.attemptId, currentSession)) return@launch
+            runCatching {
+                prepareAttachment(
+                    api = api,
+                    spaceId = spaceId,
+                    accessToken = currentSession.tokens.accessToken,
+                    image = draft.image,
+                    onPhase = { phase ->
+                        val state = when (phase) {
+                            AttachmentPreparationPhase.UPLOADING -> DraftUploadState.UPLOADING
+                            AttachmentPreparationPhase.VALIDATING -> DraftUploadState.VALIDATING
+                            AttachmentPreparationPhase.READY -> DraftUploadState.VALIDATING
+                        }
+                        updateDraft(draft.id, draft.attemptId, currentSession) {
+                            it.copy(uploadState = state)
+                        }
+                    },
+                )
+            }.onSuccess { prepared ->
+                updateDraft(draft.id, draft.attemptId, currentSession) {
+                    it.copy(
+                        uploadState = DraftUploadState.READY,
+                        preparedAttachment = prepared,
+                    )
+                }
+            }.onFailure {
+                updateDraft(draft.id, draft.attemptId, currentSession) {
+                    it.copy(
+                        uploadState = DraftUploadState.FAILED,
+                        preparedAttachment = null,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun updateDraft(
+        draftId: Long,
+        attemptId: Long,
+        currentSession: SessionView,
+        update: (ImageDraft) -> ImageDraft,
+    ): Boolean {
+        if (!isCurrentSession(sessionEpoch, currentSession)) return false
+        val index = imageDrafts.indexOfFirst { it.id == draftId && it.attemptId == attemptId }
+        if (index < 0) return false
+        imageDrafts = imageDrafts.toMutableList().also { drafts ->
+            drafts[index] = update(drafts[index])
+        }
+        publishDrafts()
+        return true
+    }
+
+    private fun isCurrentDraft(
+        draftId: Long,
+        attemptId: Long,
+        currentSession: SessionView,
     ): Boolean =
-        imageEpoch == epoch && session === currentSession && selectedImage === image
+        session === currentSession && imageDrafts.any { it.id == draftId && it.attemptId == attemptId }
 
     private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
         sessionEpoch == epoch && session === currentSession
+
+    private fun publishDrafts(
+        status: UiMessage? = draftStatus(),
+        error: UiMessage? = draftError(),
+    ) {
+        mutate {
+            it.copy(
+                draftImages = imageDrafts.map { draft ->
+                    DraftImageUiItem(
+                        id = draft.id,
+                        displayName = draft.image.displayName,
+                        bytes = draft.image.bytes,
+                        uploadState = draft.uploadState,
+                    )
+                },
+                status = status,
+                error = error,
+            )
+        }
+    }
+
+    private fun draftStatus(): UiMessage? = when {
+        imageDrafts.any { it.uploadState == DraftUploadState.UPLOADING } ->
+            message(R.string.ref_status_images_uploading)
+        imageDrafts.any { it.uploadState == DraftUploadState.VALIDATING } ->
+            message(R.string.ref_status_images_validating)
+        imageDrafts.isNotEmpty() && imageDrafts.all { it.uploadState == DraftUploadState.READY } ->
+            message(R.string.ref_status_images_ready)
+        else -> null
+    }
+
+    private fun draftError(): UiMessage? =
+        if (imageDrafts.any { it.uploadState == DraftUploadState.FAILED }) {
+            message(R.string.ref_error_image_upload_failed)
+        } else {
+            null
+        }
 
     private fun configurationError() {
         setError(message(R.string.ref_not_configured))

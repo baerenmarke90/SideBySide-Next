@@ -44,8 +44,8 @@ fun ReferenceFlowScreen(
     onCreateMemory: (String, String, String) -> Unit,
     onRefreshStory: () -> Unit,
     modifier: Modifier = Modifier,
-    onRetryImage: () -> Unit = {},
-    onRemoveImage: () -> Unit = {},
+    onRetryImage: (Long) -> Unit = { _ -> },
+    onRemoveImage: (Long) -> Unit = { _ -> },
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -158,66 +158,87 @@ fun ReferenceFlowScreen(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     ) {
                         Text(
-                            state.selectedImageName?.let {
-                                stringResource(R.string.ref_image_selected, it)
-                            } ?: stringResource(R.string.ref_image_select),
+                            stringResource(
+                                if (state.draftImages.isEmpty()) {
+                                    R.string.ref_images_select
+                                } else {
+                                    R.string.ref_images_add
+                                },
+                            ),
                         )
                     }
 
-                    if (state.selectedImageName != null && state.selectedImageBytes != null) {
-                        val selectedBitmap = remember(state.selectedImageBytes) {
-                            BitmapFactory.decodeByteArray(
-                                state.selectedImageBytes,
-                                0,
-                                state.selectedImageBytes.size,
-                            )
-                        }
-                        if (selectedBitmap != null) {
-                            Image(
-                                bitmap = selectedBitmap.asImageBitmap(),
-                                contentDescription = stringResource(
-                                    R.string.ref_image_preview_description,
-                                    state.selectedImageName,
-                                ),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
+                    if (state.draftImages.isNotEmpty()) {
+                        Text(stringResource(R.string.ref_images_selected_count, state.draftImages.size))
                         Text(stringResource(R.string.ref_image_preview_notice))
-                        state.imageUploadState?.let { uploadState ->
-                            Text(
-                                text = stringResource(
-                                    when (uploadState) {
-                                        DraftUploadState.UPLOADING -> R.string.ref_image_uploading
-                                        DraftUploadState.VALIDATING -> R.string.ref_image_validating
-                                        DraftUploadState.READY -> R.string.ref_image_ready
-                                        DraftUploadState.FAILED -> R.string.ref_image_failed
-                                    },
-                                ),
-                                color = if (uploadState == DraftUploadState.FAILED) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (state.imageUploadState == DraftUploadState.FAILED) {
-                                TextButton(onClick = onRetryImage, enabled = !state.busy) {
-                                    Text(stringResource(R.string.ref_image_retry))
+                        state.draftImages.forEachIndexed { index, draft ->
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.ref_image_item_title,
+                                        index + 1,
+                                        draft.displayName,
+                                    ),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                val selectedBitmap = remember(draft.id, draft.bytes) {
+                                    BitmapFactory.decodeByteArray(draft.bytes, 0, draft.bytes.size)
                                 }
-                            }
-                            TextButton(onClick = onRemoveImage, enabled = !state.busy) {
-                                Text(stringResource(R.string.ref_image_remove))
+                                if (selectedBitmap != null) {
+                                    Image(
+                                        bitmap = selectedBitmap.asImageBitmap(),
+                                        contentDescription = stringResource(
+                                            R.string.ref_image_preview_description,
+                                            draft.displayName,
+                                        ),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                                Text(
+                                    text = stringResource(
+                                        when (draft.uploadState) {
+                                            DraftUploadState.UPLOADING -> R.string.ref_image_uploading
+                                            DraftUploadState.VALIDATING -> R.string.ref_image_validating
+                                            DraftUploadState.READY -> R.string.ref_image_ready
+                                            DraftUploadState.FAILED -> R.string.ref_image_failed
+                                        },
+                                    ),
+                                    color = if (draft.uploadState == DraftUploadState.FAILED) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (draft.uploadState == DraftUploadState.FAILED) {
+                                        TextButton(
+                                            onClick = { onRetryImage(draft.id) },
+                                            enabled = !state.busy,
+                                        ) {
+                                            Text(stringResource(R.string.ref_image_retry))
+                                        }
+                                    }
+                                    TextButton(
+                                        onClick = { onRemoveImage(draft.id) },
+                                        enabled = !state.busy,
+                                    ) {
+                                        Text(stringResource(R.string.ref_image_remove))
+                                    }
+                                }
                             }
                         }
                     }
 
-                    val imageReadyToSave = state.selectedImageName == null ||
-                        state.imageUploadState == DraftUploadState.READY
+                    val imagesReadyToSave = state.draftImages.all {
+                        it.uploadState == DraftUploadState.READY
+                    }
                     Button(
                         onClick = { onCreateMemory(title, body, happenedOn) },
-                        enabled = !state.busy && title.isNotBlank() && imageReadyToSave,
+                        enabled = !state.busy && title.isNotBlank() && imagesReadyToSave,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     ) {
                         Text(

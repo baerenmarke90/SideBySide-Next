@@ -18,8 +18,12 @@
     <string name="ref_date_optional">Datum (JJJJ-MM-TT, optional)</string>
     <string name="ref_image_select">Bild auswählen</string>
     <string name="ref_image_selected">Bild ausgewählt: %1$s</string>
+    <string name="ref_images_select">Bilder auswählen</string>
+    <string name="ref_images_add">Weitere Bilder auswählen</string>
+    <string name="ref_images_selected_count">Ausgewählte Bilder: %1$d</string>
+    <string name="ref_image_item_title">Bild %1$d: %2$s</string>
     <string name="ref_image_preview_description">Lokale Vorschau für %1$s</string>
-    <string name="ref_image_preview_notice">Die Vorschau zeigt nur deine lokale Auswahl. Gespeichert ist das Bild erst nach erfolgreicher Prüfung und dem Speichern der Erinnerung.</string>
+    <string name="ref_image_preview_notice">Die Vorschau zeigt nur deine lokale Auswahl. Gespeichert sind die Bilder erst nach erfolgreicher Prüfung und dem Speichern der Erinnerung.</string>
     <string name="ref_image_uploading">Wird hochgeladen …</string>
     <string name="ref_image_validating">Wird geprüft …</string>
     <string name="ref_image_ready">Bereit zum Speichern</string>
@@ -39,14 +43,18 @@
 
     <string name="ref_error_credentials_required">E-Mail und Passwort werden benötigt.</string>
     <string name="ref_status_logged_in">Angemeldet.</string>
-    <string name="ref_error_image_selection_failed">Das Bild konnte nicht ausgewählt werden.</string>
-    <string name="ref_error_image_selection_detail">Das Bild konnte nicht ausgewählt werden: %1$s</string>
+    <string name="ref_error_image_selection_failed">Mindestens ein Bild konnte nicht ausgewählt werden.</string>
+    <string name="ref_error_image_selection_detail">Mindestens ein Bild konnte nicht ausgewählt werden: %1$s</string>
     <string name="ref_status_image_uploading">Bild wird hochgeladen …</string>
     <string name="ref_status_image_validating">Bild wird geprüft …</string>
     <string name="ref_status_image_ready">Bild ist geprüft und bereit zum Speichern.</string>
+    <string name="ref_status_images_uploading">Ausgewählte Bilder werden hochgeladen …</string>
+    <string name="ref_status_images_validating">Ausgewählte Bilder werden geprüft …</string>
+    <string name="ref_status_images_ready">Alle ausgewählten Bilder sind geprüft und bereit zum Speichern.</string>
     <string name="ref_status_image_removed">Bild aus dem Entwurf entfernt.</string>
-    <string name="ref_error_image_upload_failed">Bild-Upload oder Prüfung fehlgeschlagen.</string>
+    <string name="ref_error_image_upload_failed">Mindestens ein Bild-Upload oder eine Prüfung ist fehlgeschlagen.</string>
     <string name="ref_error_image_not_ready">Bitte warte auf die Bildprüfung, versuche den Upload erneut oder entferne das Bild.</string>
+    <string name="ref_error_images_not_ready">Bitte warte, bis alle Bilder geprüft sind, versuche fehlgeschlagene Uploads erneut oder entferne sie.</string>
     <string name="ref_error_login_required">Bitte zuerst anmelden.</string>
     <string name="ref_error_image_required">Bitte zuerst ein Bild auswählen.</string>
     <string name="ref_error_memory_fields_required">Ein Titel wird benötigt.</string>
