@@ -42,7 +42,9 @@ describe('prepareAttachment', () => {
       },
       story: {},
     } as unknown as ReferenceApis;
-    const fetchApi = vi.fn(async () => new Response(null, { status: 204 })) as unknown as typeof fetch;
+    const fetchApi = vi.fn(
+      async () => new Response(null, { status: 204 }),
+    ) as unknown as typeof fetch;
 
     const result = await prepareAttachment(
       apis,
