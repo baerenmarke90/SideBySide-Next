@@ -1,9 +1,11 @@
 # M2 Security & Privacy Test Matrix
 
-**Status:** binding acceptance matrix for M2  
-**As of:** August 25, 2026
+**Status:** binding acceptance matrix for the implemented M2/G2 runtime  
+**As of:** August 29, 2026
 
 This matrix supplements the general Security and HTTP tests with the domain risks of Memories, HeartMoments, Milestones, Comments, Story, and Attachments. Tests are generally executed through the public API; Repository-only tests are insufficient for Authorization.
+
+The implemented M2/G2 media boundary is **image-only**. MP4 and QuickTime are intentionally rejected fail-closed with `ATTACHMENT_TYPE_NOT_ALLOWED` and cannot reach `READY`. The video parameters recorded in M2-D04/M2-D15 are retained only as earlier target-design input; they are not current M2/G2 acceptance criteria. Issue #88 is the authoritative tracker for any future video implementation and requires a fresh Architecture/Security slice before those target parameters can become runtime acceptance criteria.
 
 ## Test identities
 
@@ -26,7 +28,7 @@ All IDs are additionally tested with random existing foreign values and formally
 - Error text, timing, headers, and Response size must not reveal private or foreign content.
 - Authorization is applied server-side before projection, counting, Pagination, and URL generation.
 
-## Media abuse — binding M2 values
+## Media abuse — binding M2/G2 runtime values
 
 | ID | Case | Expectation |
 |---|---|---|
@@ -34,7 +36,7 @@ All IDs are additionally tested with random existing foreign values and formally
 | MED-02 | declared MIME differs from server-recognized type | `FAILED`, safe error code, client MIME is not truth |
 | MED-03A | image >25 MiB | `FAILED` before `READY` |
 | MED-03B | image >40 MP or >12,000 px edge | `FAILED` before `READY` |
-| MED-03C | video >250 MiB, >180 s, or >3840×2160 | `FAILED` before `READY` |
+| MED-03C | MP4/QuickTime supplied to the current image-only runtime, including files above the earlier 250 MiB / 180 s / 3840×2160 target parameters | reject fail-closed with `ATTACHMENT_TYPE_NOT_ALLOWED`; current runtime does not evaluate video target limits as an acceptance path and never reaches `READY` |
 | MED-03D | Memory >20 Attachments or >500 MiB validated total size | reject binding atomically, existing relations unchanged |
 | MED-04 | decompression bomb/extreme dimensions | resource limit applies, Worker remains stable, `FAILED` |
 | MED-05 | manipulated/broken container | parser failure isolated, `FAILED` |
@@ -59,9 +61,11 @@ All IDs are additionally tested with random existing foreign values and formally
 | MED-20d | variant without parent read permission | not readable; Privacy transition also blocks variant |
 | MED-20e | variant generation fails | Attachment remains usable; no `FAILED`, no orphaned variant object |
 | MED-21 | unknown type/GIF/RAW/WebM/MKV/document | fail-closed `FAILED` |
-| MED-22 | HEIC/HEIF/JPEG/PNG/WebP within limits | validation can reach READY |
-| MED-23 | MP4/QuickTime within limits | validation can reach READY |
+| MED-22 | HEIC/HEIF/JPEG/PNG/WebP within limits | validation can reach `READY` |
+| MED-23 | MP4/QuickTime within the earlier M2-D04 target parameters | **future/target-only design input:** current runtime rejects with `ATTACHMENT_TYPE_NOT_ALLOWED` and cannot reach `READY`; #88 owns any future implementation |
 | MED-24 | S3 Bucket/Public ACL | Deployment/contract test confirms not public |
+
+`MED-03C` and `MED-23` deliberately verify the **current fail-closed boundary**, not video support. The earlier target parameters remain useful only as design history and must be revalidated if #88 is resumed; they do not constitute evidence that G2 includes video.
 
 ## Attachment Authorization
 
@@ -166,4 +170,4 @@ Global full-text Search `q` is not required for G2 according to M2-S0 project co
 
 ## Acceptance criterion
 
-M2 is not Security-complete while a mandatory path is missing, a Cross-Tenant test exists only at Repository level, or a private HeartMoment can be indirectly observed. Media Runtime is additionally blocked until the #69 values are reproducibly implemented in API, adapter contract tests, and PostgreSQL Integration Tests.
+M2 is not Security-complete while a mandatory path for the implemented G2 scope is missing, a Cross-Tenant test exists only at Repository level, or a private HeartMoment can be indirectly observed. Media Runtime acceptance for G2 is limited to the delivered image-only scope: the applicable #69 values must be reproducibly implemented in API, adapter contract tests, and PostgreSQL Integration Tests. Video target parameters are excluded from current G2 acceptance and remain future work under #88.
