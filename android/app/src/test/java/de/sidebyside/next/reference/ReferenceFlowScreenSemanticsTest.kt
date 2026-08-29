@@ -1,5 +1,6 @@
 package de.sidebyside.next.reference
 
+import android.content.Context
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.Density
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,6 +29,7 @@ class ReferenceFlowScreenSemanticsTest {
 
     @Test
     fun loggedInControlsRemainSemanticAtLargeFontScale() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 2f)) {
                 MaterialTheme {
@@ -49,7 +52,7 @@ class ReferenceFlowScreenSemanticsTest {
         val storyList = composeRule.onNode(hasScrollToIndexAction())
         storyList.performScrollToIndex(2)
         composeRule.onNodeWithText("Erinnerung festhalten").performScrollTo().assertIsDisplayed()
-        composeRule.onNode(hasText("Bilder auswählen") and hasClickAction())
+        composeRule.onNode(hasText(context.getString(R.string.ref_images_select)) and hasClickAction())
             .performScrollTo()
             .assertIsDisplayed()
             .assertHasClickAction()
@@ -66,6 +69,7 @@ class ReferenceFlowScreenSemanticsTest {
 
     @Test
     fun multipleDraftImagesExposeStableOrderAndFailureAction() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             MaterialTheme {
                 ReferenceFlowScreen(
@@ -96,10 +100,16 @@ class ReferenceFlowScreenSemanticsTest {
             }
         }
 
-        composeRule.onNodeWithText("Bild 1: first.jpg").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Bild 2: second.jpg").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Upload oder Prüfung fehlgeschlagen").performScrollTo().assertIsDisplayed()
-        composeRule.onNode(hasText("Erneut versuchen") and hasClickAction())
+        composeRule.onNodeWithText(
+            context.getString(R.string.ref_image_item_title, 1, "first.jpg"),
+        ).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(
+            context.getString(R.string.ref_image_item_title, 2, "second.jpg"),
+        ).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.ref_image_failed))
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNode(hasText(context.getString(R.string.ref_image_retry)) and hasClickAction())
             .performScrollTo()
             .assertHasClickAction()
     }
