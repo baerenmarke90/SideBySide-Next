@@ -262,7 +262,9 @@ class TestMagicLink:
         "Otherwise behavioral differences would disclose address existence."
         for _ in range(rate_limit.MAGIC_LINK.attempts):
             client.post("/api/v1/auth/magic-link/request", json={"email": "wer@example.org"})
-        throttled = client.post("/api/v1/auth/magic-link/request", json={"email": "wer@example.org"})
+        throttled = client.post(
+            "/api/v1/auth/magic-link/request", json={"email": "wer@example.org"}
+        )
         assert throttled.status_code == 429
 
 
