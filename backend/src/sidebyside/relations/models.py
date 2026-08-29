@@ -6,9 +6,8 @@ both sides. Therefore none of these tables carries `PrivateResourceMixin`: a
 third source of truth beside parent and target would be exactly where the
 three could diverge.
 
-What these tables carry instead is `space_id`, once and shared by both foreign
-keys. A cross-space relation is therefore not merely forbidden but impossible
-to express (M3-D08).
+Every row carries one `space_id`, shared by parent and target composite foreign
+keys. Cross-space relations are therefore impossible to express (M3-D08).
 """
 
 from __future__ import annotations
@@ -24,10 +23,9 @@ from sidebyside.authorization import PrivacyClass, privacy_class_type
 from sidebyside.db.base import Base
 
 
-class _RelationColumns:
-    """Columns shared by every relation join table."""
+class _RelationAuditColumns:
+    """Audit columns shared by every relation join table."""
 
-    place_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
     space_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
     created_by: Mapped[UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
@@ -41,11 +39,19 @@ class _RelationColumns:
 
     There is no `updated_at`: a relation either exists or does not. There is
     nothing to update and therefore no version. A second `PUT` for the same
-    relation is not a conflict but the same final state (M3-D26).
+    relation is the same final state (M3-D26).
     """
 
 
-class PlaceMemory(_RelationColumns, Base):
+class _PlaceRelationColumns(_RelationAuditColumns):
+    place_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+
+
+class _ChapterRelationColumns(_RelationAuditColumns):
+    chapter_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+
+
+class PlaceMemory(_PlaceRelationColumns, Base):
     """A memory that took place at a location."""
 
     __tablename__ = "place_memories"
@@ -71,7 +77,7 @@ class PlaceMemory(_RelationColumns, Base):
     )
 
 
-class PlaceMilestone(_RelationColumns, Base):
+class PlaceMilestone(_PlaceRelationColumns, Base):
     """A milestone that took place at a location."""
 
     __tablename__ = "place_milestones"
@@ -102,21 +108,8 @@ class PlaceMilestone(_RelationColumns, Base):
     )
 
 
-class PlaceHeartMoment(_RelationColumns, Base):
-    """A shared HeartMoment that took place at a location.
-
-    This is the only relation whose validity depends on target state: only
-    `SHARED` HeartMoments may be linked (M3-D09).
-
-    This condition is not enforced only in the service. `target_privacy_class`
-    participates in the foreign key, the foreign key cascades updates, and a
-    CHECK pins the column to `SPACE_SHARED`. If a HeartMoment changes to
-    `OWNER_ONLY` without first removing its relations, the transaction fails.
-
-    The service removes them in the same transaction and therefore never runs
-    into that constraint. The constraint is the safety rail for code paths
-    that do not exist yet.
-    """
+class PlaceHeartMoment(_PlaceRelationColumns, Base):
+    """A shared HeartMoment that took place at a location."""
 
     __tablename__ = "place_heart_moments"
 
@@ -150,6 +143,114 @@ class PlaceHeartMoment(_RelationColumns, Base):
         Index(
             "ix_place_heart_moments_place_id_created_at",
             "place_id",
+            "created_at",
+            "heart_moment_id",
+        ),
+    )
+
+
+class ChapterMemory(_ChapterRelationColumns, Base):
+    """A Memory referenced by a Chapter."""
+
+    __tablename__ = "chapter_memories"
+
+    memory_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["chapter_id", "space_id"],
+            ["chapters.id", "chapters.space_id"],
+            name="fk_chapter_memories_chapter_id_chapters",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["memory_id", "space_id"],
+            ["memories.id", "memories.space_id"],
+            name="fk_chapter_memories_memory_id_memories",
+            ondelete="CASCADE",
+        ),
+        Index("ix_chapter_memories_memory_id", "memory_id"),
+        Index("ix_chapter_memories_space_id", "space_id"),
+        Index(
+            "ix_chapter_memories_chapter_id_created_at",
+            "chapter_id",
+            "created_at",
+            "memory_id",
+        ),
+    )
+
+
+class ChapterMilestone(_ChapterRelationColumns, Base):
+    """A Milestone referenced by a Chapter."""
+
+    __tablename__ = "chapter_milestones"
+
+    milestone_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["chapter_id", "space_id"],
+            ["chapters.id", "chapters.space_id"],
+            name="fk_chapter_milestones_chapter_id_chapters",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["milestone_id", "space_id"],
+            ["milestones.id", "milestones.space_id"],
+            name="fk_chapter_milestones_milestone_id_milestones",
+            ondelete="CASCADE",
+        ),
+        Index("ix_chapter_milestones_milestone_id", "milestone_id"),
+        Index("ix_chapter_milestones_space_id", "space_id"),
+        Index(
+            "ix_chapter_milestones_chapter_id_created_at",
+            "chapter_id",
+            "created_at",
+            "milestone_id",
+        ),
+    )
+
+
+class ChapterHeartMoment(_ChapterRelationColumns, Base):
+    """A shared HeartMoment referenced by a Chapter.
+
+    The privacy class participates in the target foreign key and is pinned to
+    `SPACE_SHARED`. This mirrors the Place relation safety rail: a missed
+    cleanup on SHARED -> PRIVATE fails closed at the database boundary.
+    """
+
+    __tablename__ = "chapter_heart_moments"
+
+    heart_moment_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), primary_key=True)
+    target_privacy_class: Mapped[str] = mapped_column(
+        privacy_class_type(),
+        nullable=False,
+        default=PrivacyClass.SPACE_SHARED.value,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "target_privacy_class = 'SPACE_SHARED'",
+            name="relation_target_is_shared",
+        ),
+        ForeignKeyConstraint(
+            ["chapter_id", "space_id"],
+            ["chapters.id", "chapters.space_id"],
+            name="fk_chapter_heart_moments_chapter_id_chapters",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["heart_moment_id", "space_id", "target_privacy_class"],
+            ["heart_moments.id", "heart_moments.space_id", "heart_moments.privacy_class"],
+            name="fk_chapter_heart_moments_heart_moment_id_heart_moments",
+            ondelete="CASCADE",
+            onupdate="CASCADE",
+        ),
+        Index("ix_chapter_heart_moments_heart_moment_id", "heart_moment_id"),
+        Index("ix_chapter_heart_moments_space_id", "space_id"),
+        Index(
+            "ix_chapter_heart_moments_chapter_id_created_at",
+            "chapter_id",
             "created_at",
             "heart_moment_id",
         ),
