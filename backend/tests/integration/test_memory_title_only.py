@@ -18,13 +18,13 @@ def test_memory_can_be_created_with_title_only(client, session: Session) -> None
 
     response = client.post(
         f"/api/v1/spaces/{space.id}/memories",
-        json={"title": "Nur ein Titel"},
+        json={"title": "Title only"},
         headers=auth(token),
     )
 
     assert response.status_code == 201
     body = response.json()
-    assert body["title"] == "Nur ein Titel"
+    assert body["title"] == "Title only"
     assert body["body"] == ""
     assert body["happenedOn"] is None
     assert body["attachments"] == []
