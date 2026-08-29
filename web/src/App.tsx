@@ -250,19 +250,19 @@ function MemoryCreatePage({
       title: string;
       body: string;
       happenedOn?: Date;
-    }) => {
-      if (!file) throw new Error(t('memory.imageRequired'));
-      return runMemoryMediaStoryFlow(
+    }) =>
+      runMemoryMediaStoryFlow(
         apis,
         apiBaseUrl,
         accessToken,
         spaceId,
         { title, body, happenedOn },
-        file,
-      );
-    },
+        file ?? undefined,
+      ),
     onSuccess: async (result) => {
-      URL.revokeObjectURL(result.imageUrl);
+      if (result.imageUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(result.imageUrl);
+      }
       await onSaved();
       navigate('/story', { replace: true, state: { saved: true } });
     },
@@ -315,7 +315,6 @@ function MemoryCreatePage({
             <textarea
               id="body"
               name="body"
-              required
               rows={5}
               placeholder={t('memory.bodyPlaceholder')}
             />
@@ -335,7 +334,6 @@ function MemoryCreatePage({
               name="image"
               type="file"
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-              required
               onChange={(event) =>
                 setFile(event.currentTarget.files?.[0] ?? null)
               }
@@ -371,7 +369,7 @@ function MemoryCreatePage({
             <Link className="button-link secondary-link" to="/story">
               {t('common.cancel')}
             </Link>
-            <button type="submit" disabled={mutation.isPending || !file}>
+            <button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? t('memory.saving') : t('memory.save')}
             </button>
           </div>

@@ -54,7 +54,7 @@ class ReferenceFlowScreenSemanticsTest {
             .performScrollTo()
             .assertIsDisplayed()
             .assertHasClickAction()
-        composeRule.onNode(hasText("Erinnerung mit Bild speichern") and hasClickAction())
+        composeRule.onNode(hasText("Erinnerung speichern") and hasClickAction())
             .performScrollTo()
             .assertIsDisplayed()
             .assertHasClickAction()

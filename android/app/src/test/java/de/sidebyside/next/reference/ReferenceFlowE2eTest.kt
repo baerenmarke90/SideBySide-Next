@@ -52,10 +52,11 @@ class ReferenceFlowE2eTest {
         assertNotNull(storyMemory)
         assertEquals("G2 Android E2E", storyMemory!!.value.memory.title)
 
-        assertTrue(result.imageBytes.size >= 8)
+        val imageBytes = requireNotNull(result.imageBytes)
+        assertTrue(imageBytes.size >= 8)
         assertEquals(
             listOf<Byte>(-119, 80, 78, 71, 13, 10, 26, 10),
-            result.imageBytes.take(8),
+            imageBytes.take(8),
         )
     }
 

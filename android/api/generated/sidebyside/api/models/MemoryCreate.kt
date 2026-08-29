@@ -31,19 +31,19 @@ import kotlinx.serialization.Contextual
 /**
  * 
  *
- * @param body 
  * @param title 
+ * @param body 
  * @param happenedOn 
  */
 @Serializable
 
 data class MemoryCreate (
 
-    @SerialName(value = "body")
-    val body: kotlin.String,
-
     @SerialName(value = "title")
     val title: kotlin.String,
+
+    @SerialName(value = "body")
+    val body: kotlin.String? = "",
 
     @Contextual @SerialName(value = "happenedOn")
     val happenedOn: java.time.LocalDate? = null

@@ -163,7 +163,7 @@ fun ReferenceFlowScreen(
                     }
                     Button(
                         onClick = { onCreateMemory(title, body, happenedOn) },
-                        enabled = !state.busy && state.selectedImageName != null,
+                        enabled = !state.busy && title.isNotBlank(),
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                     ) {
                         Text(
@@ -175,7 +175,7 @@ fun ReferenceFlowScreen(
                 }
             }
 
-            if (state.lastMemoryTitle != null && state.lastImageBytes != null) {
+            if (state.lastMemoryTitle != null) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
@@ -183,15 +183,17 @@ fun ReferenceFlowScreen(
                             style = MaterialTheme.typography.headlineSmall,
                             modifier = Modifier.semantics { heading() },
                         )
-                        val bitmap = remember(state.lastImageBytes) {
-                            BitmapFactory.decodeByteArray(state.lastImageBytes, 0, state.lastImageBytes.size)
-                        }
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = stringResource(R.string.ref_last_saved_image_description),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                        state.lastImageBytes?.let { imageBytes ->
+                            val bitmap = remember(imageBytes) {
+                                BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                            }
+                            if (bitmap != null) {
+                                Image(
+                                    bitmap = bitmap.asImageBitmap(),
+                                    contentDescription = stringResource(R.string.ref_last_saved_image_description),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
                         Text(state.lastMemoryTitle, style = MaterialTheme.typography.titleMedium)
                         state.lastMemoryBody?.let { Text(it) }

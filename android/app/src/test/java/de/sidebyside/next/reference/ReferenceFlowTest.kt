@@ -4,6 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test
 import sidebyside.api.models.AttachmentDetail
@@ -25,6 +26,82 @@ class ReferenceFlowTest {
     private val memoryId = UUID.fromString("00000000-0000-0000-0000-000000000020")
     private val attachmentId = UUID.fromString("00000000-0000-0000-0000-000000000030")
     private val authorId = UUID.fromString("00000000-0000-0000-0000-000000000040")
+
+    @Test
+    fun createsTitleOnlyMemoryWithoutAttachmentCalls() = runTest {
+        var createdRequest: MemoryCreate? = null
+        val createdMemory = memory(version = 1, body = "")
+        val story = StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
+
+        val api = object : ReferenceContract {
+            override suspend fun signIn(email: String, password: String): SessionView = error("not used")
+
+            override suspend fun createMemory(spaceId: UUID, accessToken: String, memory: MemoryCreate): MemoryDetail {
+                createdRequest = memory
+                return createdMemory
+            }
+
+            override suspend fun createAttachmentUpload(
+                spaceId: UUID,
+                accessToken: String,
+                request: AttachmentUploadCreate,
+            ): UploadDescriptor = error("attachment upload must not start")
+
+            override suspend fun uploadAttachmentBytes(
+                accessToken: String,
+                descriptor: UploadDescriptor,
+                image: SelectedImage,
+            ): Unit = error("attachment bytes must not upload")
+
+            override suspend fun finalizeAttachment(
+                spaceId: UUID,
+                accessToken: String,
+                attachmentId: UUID,
+            ): AttachmentDetail = error("attachment must not finalize")
+
+            override suspend fun getAttachment(
+                spaceId: UUID,
+                accessToken: String,
+                attachmentId: UUID,
+            ): AttachmentDetail = error("attachment must not be polled")
+
+            override suspend fun replaceMemoryAttachments(
+                spaceId: UUID,
+                accessToken: String,
+                memoryId: UUID,
+                ifMatch: Int,
+                attachments: MemoryAttachmentSet,
+            ): MemoryDetail = error("attachment must not be bound")
+
+            override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage = story
+
+            override suspend fun createReadAccess(
+                spaceId: UUID,
+                accessToken: String,
+                attachmentId: UUID,
+                request: AttachmentReadRequest,
+            ): ReadDescriptor = error("attachment read access must not be created")
+
+            override suspend fun readImageBytes(accessToken: String, descriptor: ReadDescriptor): ByteArray =
+                error("image bytes must not be read")
+        }
+
+        val result = runMemoryMediaStoryFlow(
+            api = api,
+            spaceId = spaceId,
+            accessToken = "token",
+            title = "Title only",
+            body = "",
+            happenedOn = null,
+            image = null,
+        )
+
+        assertEquals("Title only", createdRequest!!.title)
+        assertEquals("", createdRequest!!.body)
+        assertSame(createdMemory, result.memory)
+        assertSame(story, result.story)
+        assertNull(result.imageBytes)
+    }
 
     @Test
     fun orchestratesMemoryImageTimelineAndAuthorizedReadInOrder() = runTest {
@@ -126,10 +203,10 @@ class ReferenceFlowTest {
             api = api,
             spaceId = spaceId,
             accessToken = "token",
-            title = "Am See",
-            body = "Zusammen unterwegs.",
+            title = "Lakeside",
+            body = "A day together.",
             happenedOn = null,
-            image = SelectedImage(byteArrayOf(9, 8, 7), "see.jpg", "image/jpeg"),
+            image = SelectedImage(byteArrayOf(9, 8, 7), "lakeside.jpg", "image/jpeg"),
         )
 
         assertEquals(
@@ -153,7 +230,7 @@ class ReferenceFlowTest {
         assertEquals(memoryId, api.readRequest!!.parentId)
         assertSame(boundMemory, result.memory)
         assertSame(story, result.story)
-        assertEquals(listOf<Byte>(1, 2, 3), result.imageBytes.toList())
+        assertEquals(listOf<Byte>(1, 2, 3), result.imageBytes!!.toList())
     }
 
     private fun attachment(status: String) = AttachmentDetail(
@@ -170,17 +247,17 @@ class ReferenceFlowTest {
         width = null,
     )
 
-    private fun memory(version: Int) = MemoryDetail(
+    private fun memory(version: Int, body: String = "A day together.") = MemoryDetail(
         attachments = emptyList(),
         author = AuthorSummary(displayName = "A", id = authorId),
         authorId = authorId,
-        body = "Zusammen unterwegs.",
+        body = body,
         capabilities = ResourceCapabilities(canComment = true, canDelete = true, canEdit = true),
         createdAt = OffsetDateTime.parse("2026-08-26T08:00:00Z"),
         happenedOn = null,
         id = memoryId,
         spaceId = spaceId,
-        title = "Am See",
+        title = if (body.isEmpty()) "Title only" else "Lakeside",
         updatedAt = OffsetDateTime.parse("2026-08-26T08:00:00Z"),
         version = version,
     )

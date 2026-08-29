@@ -34,7 +34,7 @@ class MemoryCreate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str
-    body: str
+    body: str = ""
     happened_on: date | None = None
 
     @field_validator("title")
