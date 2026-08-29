@@ -29,7 +29,7 @@ from tests.conftest import auth, make_account, make_space, requires_database, si
 
 pytestmark = [pytest.mark.integration, requires_database]
 
-GEHEIM = "Ein Wunsch, der nicht in Ereignisse gehoert."
+SECRET_WISH_TITLE = "Ein Wunsch, der nicht in Ereignisse gehoert."
 
 
 def path(space_id: object) -> str:
@@ -52,18 +52,18 @@ def couple(session: Session):  # type: ignore[no-untyped-def]
     space = make_space(session, anna)
     relationship_service.add_member(session, space.id, ben)
     foreign_space = make_space(session, foreign)
-    # Ben is intentionally a member of both spaces. This lets the cursor binding
-    # itself tested are, instead of beforehand to the Membership to end.
+    # Ben is intentionally a member of both spaces. This tests cursor binding
+    # itself instead of failing earlier at the membership boundary.
     relationship_service.add_member(session, foreign_space.id, ben)
     session.flush()
     return {
         "anna": anna,
         "ben": ben,
         "space": space,
-        "fremder_space": foreign_space,
+        "foreign_space": foreign_space,
         "token_a": sign_in(session, anna),
         "token_b": sign_in(session, ben),
-        "token_fremd": sign_in(session, foreign),
+        "foreign_token": sign_in(session, foreign),
     }
 
 
@@ -80,31 +80,35 @@ def create_wish(  # type: ignore[no-untyped-def]
 
 
 class TestCrud:
-    def test_anlegen_lesen_change_delete(  # type: ignore[no-untyped-def]
+    def test_create_read_update_delete(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         created = create_wish(client, couple)
         assert created.status_code == 201
-        w = created.json()
-        assert UUID(w["id"]).version == 7
-        assert w["title"] == "Nordlichter sehen"
-        assert w["status"] == "OPEN"
-        assert w["createdBy"] == str(couple["anna"].id)
-        assert w["creator"]["displayName"] == "Anna"
-        assert w["capabilities"] == {"canEdit": True, "canDelete": True, "canComment": False}
-        assert "privacyClass" not in w
+        wish = created.json()
+        assert UUID(wish["id"]).version == 7
+        assert wish["title"] == "Nordlichter sehen"
+        assert wish["status"] == "OPEN"
+        assert wish["createdBy"] == str(couple["anna"].id)
+        assert wish["creator"]["displayName"] == "Anna"
+        assert wish["capabilities"] == {
+            "canEdit": True,
+            "canDelete": True,
+            "canComment": False,
+        }
+        assert "privacyClass" not in wish
         assert created.headers["ETag"] == '"1"'
 
-        gelesen = client.get(
-            f"{path(couple['space'].id)}/{w['id']}", headers=auth(couple["token_a"])
+        read_response = client.get(
+            f"{path(couple['space'].id)}/{wish['id']}", headers=auth(couple["token_a"])
         )
-        assert gelesen.status_code == 200
-        assert gelesen.headers["ETag"] == '"1"'
+        assert read_response.status_code == 200
+        assert read_response.headers["ETag"] == '"1"'
 
         updated = client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "  Nordlichter in Tromsoe sehen  "},
             headers=if_match(couple["token_a"], 1),
         )
@@ -114,14 +118,15 @@ class TestCrud:
         assert updated.headers["ETag"] == '"2"'
 
         deleted = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=if_match(couple["token_a"], 2)
+            f"{path(couple['space'].id)}/{wish['id']}",
+            headers=if_match(couple["token_a"], 2),
         )
         assert deleted.status_code == 204
-        danach = client.get(
-            f"{path(couple['space'].id)}/{w['id']}", headers=auth(couple["token_a"])
+        afterwards = client.get(
+            f"{path(couple['space'].id)}/{wish['id']}", headers=auth(couple["token_a"])
         )
-        assert danach.status_code == 404
-        assert danach.json()["code"] == "WISH_NOT_FOUND"
+        assert afterwards.status_code == 404
+        assert afterwards.json()["code"] == "WISH_NOT_FOUND"
 
     def test_empty_title_is_rejected(  # type: ignore[no-untyped-def]
         self,
@@ -130,120 +135,119 @@ class TestCrud:
     ) -> None:
         assert create_wish(client, couple, title="   ").status_code == 422
 
-    def test_list_shows_neueste_first(self, client, couple) -> None:  # type: ignore[no-untyped-def]
-        erster = create_wish(client, couple, title="Erster").json()
-        zweiter = create_wish(client, couple, title="Zweiter").json()
+    def test_list_shows_newest_first(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+        first = create_wish(client, couple, title="Erster").json()
+        second = create_wish(client, couple, title="Zweiter").json()
 
-        seite = client.get(path(couple["space"].id), headers=auth(couple["token_a"])).json()
-        assert [entry["id"] for entry in seite["items"]] == [zweiter["id"], erster["id"]]
-        assert seite["hasMore"] is False
-        assert seite["nextCursor"] is None
+        page = client.get(path(couple["space"].id), headers=auth(couple["token_a"])).json()
+        assert [entry["id"] for entry in page["items"]] == [second["id"], first["id"]]
+        assert page["hasMore"] is False
+        assert page["nextCursor"] is None
 
-    def test_the_seite_continues_via_the_cursor_weiter(  # type: ignore[no-untyped-def]
+    def test_page_continues_via_cursor(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        erster = create_wish(client, couple, title="Erster").json()
-        zweiter = create_wish(client, couple, title="Zweiter").json()
+        first = create_wish(client, couple, title="Erster").json()
+        second = create_wish(client, couple, title="Zweiter").json()
 
-        first_seite = client.get(
+        first_page = client.get(
             f"{path(couple['space'].id)}?limit=1", headers=auth(couple["token_a"])
         ).json()
-        assert [entry["id"] for entry in first_seite["items"]] == [zweiter["id"]]
-        assert first_seite["hasMore"] is True
+        assert [entry["id"] for entry in first_page["items"]] == [second["id"]]
+        assert first_page["hasMore"] is True
 
-        second_seite = client.get(
-            f"{path(couple['space'].id)}?limit=1&cursor={first_seite['nextCursor']}",
+        second_page = client.get(
+            f"{path(couple['space'].id)}?limit=1&cursor={first_page['nextCursor']}",
             headers=auth(couple["token_a"]),
         ).json()
-        assert [entry["id"] for entry in second_seite["items"]] == [erster["id"]]
-        assert second_seite["hasMore"] is False
+        assert [entry["id"] for entry in second_page["items"]] == [first["id"]]
+        assert second_page["hasMore"] is False
 
-    def test_the_status_filter_matches_only_existing_states(  # type: ignore[no-untyped-def]
+    def test_status_filter_matches_only_existing_states(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         create_wish(client, couple)
 
-        offen = client.get(
+        open_response = client.get(
             f"{path(couple['space'].id)}?status=OPEN", headers=auth(couple["token_a"])
         ).json()
-        assert len(offen["items"]) == 1
+        assert len(open_response["items"]) == 1
 
-        # Without Konvertierung exists it no geplanten Wish.
+        # Without conversion there is no planned wish.
         planned = client.get(
             f"{path(couple['space'].id)}?status=PLANNED", headers=auth(couple["token_a"])
         ).json()
         assert planned["items"] == []
 
-    def test_a_unknown_status_is_no_filter_sondern_a_error(  # type: ignore[no-untyped-def]
+    def test_unknown_status_is_error_not_filter(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        "otherwise a typo would silently produce to unfiltered list."
+        "Otherwise a typo would silently produce an unfiltered list."
         response = client.get(
             f"{path(couple['space'].id)}?status=ERFUNDEN", headers=auth(couple["token_a"])
         )
         assert response.status_code == 422
 
 
-class TestGemeinsamesSchreiben:
-    "M3-D01: both Partner, not only the Creator."
+class TestSharedWriting:
+    "M3-D01: both partners may write, not only the creator."
 
-    def test_the_partner_may_change_and_createdby_remains(  # type: ignore[no-untyped-def]
+    def test_partner_may_change_wish_and_created_by_remains(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        w = create_wish(client, couple).json()
+        wish = create_wish(client, couple).json()
 
         updated = client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Nordlichter im Winter sehen"},
             headers=if_match(couple["token_b"], 1),
         )
         assert updated.status_code == 200
-        # Attribution, no ACL: Ben has geschrieben, Anna remains Creator.
+        # Attribution, not ACL: Ben wrote the change while Anna remains creator.
         assert updated.json()["createdBy"] == str(couple["anna"].id)
         assert updated.json()["creator"]["displayName"] == "Anna"
 
-    def test_the_partner_may_delete(self, client, couple) -> None:  # type: ignore[no-untyped-def]
-        w = create_wish(client, couple).json()
+    def test_partner_may_delete(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+        wish = create_wish(client, couple).json()
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=if_match(couple["token_b"], 1)
+            f"{path(couple['space'].id)}/{wish['id']}",
+            headers=if_match(couple["token_b"], 1),
         )
         assert response.status_code == 204
 
-    def test_the_partner_sees_same_capabilities(  # type: ignore[no-untyped-def]
+    def test_partner_sees_same_capabilities(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        "A `canEdit: false` would be here a falsche Disclosure to the UI."
-        w = create_wish(client, couple).json()
-        gelesen = client.get(
-            f"{path(couple['space'].id)}/{w['id']}", headers=auth(couple["token_b"])
+        "A `canEdit: false` would incorrectly describe the domain rule to the UI."
+        wish = create_wish(client, couple).json()
+        read_response = client.get(
+            f"{path(couple['space'].id)}/{wish['id']}", headers=auth(couple["token_b"])
         ).json()
-        assert gelesen["capabilities"] == {
+        assert read_response["capabilities"] == {
             "canEdit": True,
             "canDelete": True,
             "canComment": False,
         }
 
-    def test_memory_remains_trotzdem_author_only(  # type: ignore[no-untyped-def]
+    def test_memory_remains_author_only(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        """The countercheck for the new write rule.
+        """Countercheck the new write rule.
 
-        Collaborative write is a property of the M3 planning domains,
-        no neue Voreinstellung. Would be it a, haette this Slice
-        stillschweigend the Memory-Regel from Abschnitt 14 the
-        Spezifikation aufgeweicht.
+        Collaborative writing is a property of the M3 planning domains, not a
+        new default. Memory author-only behavior must remain unchanged.
         """
         memory = client.post(
             f"/api/v1/spaces/{couple['space'].id}/memories",
@@ -262,17 +266,17 @@ class TestGemeinsamesSchreiben:
 class TestStatus:
     "M3-D02/D04: no path bypasses the Wish-to-Plan contract."
 
-    def test_a_new_wish_is_offen(  # type: ignore[no-untyped-def]
+    def test_new_wish_is_open(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        w = create_wish(client, couple).json()
-        row = session.get(Wish, UUID(w["id"]))
+        wish = create_wish(client, couple).json()
+        row = session.get(Wish, UUID(wish["id"]))
         assert row.status == WishStatus.OPEN.value
 
-    def test_create_can_the_status_not_mitschicken(  # type: ignore[no-untyped-def]
+    def test_create_cannot_supply_status(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
@@ -284,96 +288,93 @@ class TestStatus:
         )
         assert response.status_code == 422
 
-    def test_patch_can_the_status_not_setzen(  # type: ignore[no-untyped-def]
+    def test_patch_cannot_set_status(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        w = create_wish(client, couple).json()
+        wish = create_wish(client, couple).json()
 
         response = client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"status": "COMPLETED"},
             headers=if_match(couple["token_a"], 1),
         )
         assert response.status_code == 422
 
         session.expire_all()
-        assert session.get(Wish, UUID(w["id"])).status == WishStatus.OPEN.value
+        assert session.get(Wish, UUID(wish["id"])).status == WishStatus.OPEN.value
 
-    def test_auch_title_plus_status_geht_not_durch(  # type: ignore[no-untyped-def]
+    def test_title_plus_status_still_fails(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        "A valid field must not carry a forbidden value."
-        w = create_wish(client, couple).json()
+        "A valid field must not carry a forbidden field through validation."
+        wish = create_wish(client, couple).json()
 
         response = client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Neuer Titel", "status": "COMPLETED"},
             headers=if_match(couple["token_a"], 1),
         )
         assert response.status_code == 422
 
         session.expire_all()
-        row = session.get(Wish, UUID(w["id"]))
+        row = session.get(Wish, UUID(wish["id"]))
         assert row.status == WishStatus.OPEN.value
         assert row.payload.title == "Nordlichter sehen"
 
-    def test_a_title_correction_allows_the_status_stehen(  # type: ignore[no-untyped-def]
+    def test_title_correction_leaves_status_unchanged(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        w = create_wish(client, couple).json()
+        wish = create_wish(client, couple).json()
         updated = client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Andere Formulierung"},
             headers=if_match(couple["token_a"], 1),
         )
         assert updated.json()["status"] == "OPEN"
 
-    def test_the_database_allows_no_invented_status_to(  # type: ignore[no-untyped-def]
+    def test_database_rejects_invented_status(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        """the final boundary is enforced by the schema, not only by the service.
+        """The final boundary is enforced by the schema, not only the service.
 
-        Absichtlich as rohes SQL: through the ORM catches schon the
-        Spaltentyp the Wert ab. Tested are soll here aber the CHECK in
-        PostgreSQL; it is it, the therefore a Wartungsskript or a
-        spaetere Migration aufhaelt.
+        Raw SQL deliberately bypasses ORM enum validation so this test exercises
+        the PostgreSQL CHECK that also protects maintenance scripts and future
+        migrations.
         """
-        w = create_wish(client, couple).json()
-        # The Savepoint catches the Failure: without it bliebe the
-        # Testtransaktion after the verletzten CHECK unusable.
+        wish = create_wish(client, couple).json()
+        # The savepoint contains the expected CHECK failure so the surrounding
+        # test transaction remains usable.
         with pytest.raises(IntegrityError), session.begin_nested():
             session.execute(
                 text("UPDATE wishes SET status = 'ERFUNDEN' WHERE id = :id"),
-                {"id": w["id"]},
+                {"id": wish["id"]},
             )
 
 
 class TestDeleteMatrix:
-    """The Wish-Rows from M3-D05; now with real Plans.
+    """The M3-D05 wish rows, exercised with real plans.
 
-    The drei erreichbaren Zustaende entstehen through the regulaeren Path:
-    Convert makes `PLANNED`, Plan-Completion makes `COMPLETED`. Only the
-    both Rows, the a widerspruechlichen State beschreiben,
-    must it from Hand herstellen; it sollen laut Contract gar not
-    entstehen can, and the Response darauf is nevertheless festgelegt.
+    The three reachable states arise through regular paths: conversion creates
+    `PLANNED` and plan completion creates `COMPLETED`. Only contradictory states
+    are constructed directly because the contract says they must never arise,
+    while their defensive response behavior is still specified.
 
-    The complete conversion and completion paths are covered in
-    `test_wish_to_plan`; here interessiert only, what `DELETE Wish` daraus
-    makes.
+    Full conversion and completion paths are covered in `test_wish_to_plan`;
+    this matrix focuses only on what `DELETE Wish` does in each state.
     """
 
-    def _konvertiere(self, client, couple, wish_id: str, version: int = 1) -> dict[str, Any]:
+    def _convert(self, client, couple, wish_id: str, version: int = 1) -> dict[str, Any]:
         response = client.post(
             f"{path(couple['space'].id)}/{wish_id}/plan",
             json={},
@@ -382,7 +383,7 @@ class TestDeleteMatrix:
         assert response.status_code == 201
         return response.json()["plan"]
 
-    def _schliesse_ab(self, client, couple, plan_id: str, version: int = 1) -> None:
+    def _complete(self, client, couple, plan_id: str, version: int = 1) -> None:
         response = client.post(
             f"/api/v1/spaces/{couple['space'].id}/plans/{plan_id}/complete",
             json={"experiencedOn": "2026-08-20"},
@@ -390,63 +391,66 @@ class TestDeleteMatrix:
         )
         assert response.status_code == 200
 
-    def test_offen_without_plan_may_deleted_werden(  # type: ignore[no-untyped-def]
+    def test_open_without_plan_may_be_deleted(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        w = create_wish(client, couple).json()
+        wish = create_wish(client, couple).json()
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=if_match(couple["token_a"], 1)
+            f"{path(couple['space'].id)}/{wish['id']}",
+            headers=if_match(couple["token_a"], 1),
         )
         assert response.status_code == 204
 
-    def test_planned_with_plan_is_blockiert(  # type: ignore[no-untyped-def]
+    def test_planned_with_plan_is_blocked(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        w = create_wish(client, couple).json()
-        self._konvertiere(client, couple, w["id"])
+        wish = create_wish(client, couple).json()
+        self._convert(client, couple, wish["id"])
 
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=if_match(couple["token_a"], 2)
+            f"{path(couple['space'].id)}/{wish['id']}",
+            headers=if_match(couple["token_a"], 2),
         )
         assert response.status_code == 409
         assert response.json()["code"] == "WISH_HAS_ACTIVE_PLAN"
 
         session.expire_all()
-        assert session.get(Wish, UUID(w["id"])) is not None
+        assert session.get(Wish, UUID(wish["id"])) is not None
 
-    def test_completed_with_plan_is_blockiert(  # type: ignore[no-untyped-def]
+    def test_completed_with_plan_is_blocked(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        w = create_wish(client, couple).json()
-        plan = self._konvertiere(client, couple, w["id"])
-        self._schliesse_ab(client, couple, plan["id"])
+        wish = create_wish(client, couple).json()
+        plan = self._convert(client, couple, wish["id"])
+        self._complete(client, couple, plan["id"])
 
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=if_match(couple["token_a"], 3)
+            f"{path(couple['space'].id)}/{wish['id']}",
+            headers=if_match(couple["token_a"], 3),
         )
         assert response.status_code == 409
         assert response.json()["code"] == "WISH_HAS_COMPLETED_PLAN"
 
-    def test_completed_without_plan_may_deleted_werden(  # type: ignore[no-untyped-def]
+    def test_completed_without_plan_may_be_deleted(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        """The complete Cleanup of a completed Lifecycle.
+        """Clean up a completed lifecycle in two explicit steps.
 
-        Erst the completed Plan, then the verbleibende completed Wish. It
-        exists intentionally no Cascade, the the in a Schritt taete.
+        Delete the completed plan first, then the remaining completed wish.
+        There is intentionally no cascade that performs both at once.
         """
-        w = create_wish(client, couple).json()
-        plan = self._konvertiere(client, couple, w["id"])
-        self._schliesse_ab(client, couple, plan["id"])
+        wish = create_wish(client, couple).json()
+        plan = self._convert(client, couple, wish["id"])
+        self._complete(client, couple, plan["id"])
 
         removed = client.delete(
             f"/api/v1/spaces/{couple['space'].id}/plans/{plan['id']}",
@@ -454,175 +458,176 @@ class TestDeleteMatrix:
         )
         assert removed.status_code == 204
 
-        # The Wish survives the Plan and remains completed.
-        verbleibend = client.get(
-            f"{path(couple['space'].id)}/{w['id']}", headers=auth(couple["token_a"])
+        # The wish survives the plan and remains completed.
+        remaining = client.get(
+            f"{path(couple['space'].id)}/{wish['id']}", headers=auth(couple["token_a"])
         ).json()
-        assert verbleibend["status"] == "COMPLETED"
+        assert remaining["status"] == "COMPLETED"
 
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=if_match(couple["token_a"], 3)
+            f"{path(couple['space'].id)}/{wish['id']}",
+            headers=if_match(couple["token_a"], 3),
         )
         assert response.status_code == 204
 
-    def test_planned_without_plan_is_a_widerspruch(  # type: ignore[no-untyped-def]
+    def test_planned_without_plan_is_conflict(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
         "A state that must not exist still must not produce a 500 response."
-        w = create_wish(client, couple).json()
-        row = session.get(Wish, UUID(w["id"]))
+        wish = create_wish(client, couple).json()
+        row = session.get(Wish, UUID(wish["id"]))
         row.status = WishStatus.PLANNED.value
         session.flush()
 
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             headers=if_match(couple["token_a"], row.version),
         )
         assert response.status_code == 409
         assert response.json()["code"] == "WISH_PLAN_STATE_CONFLICT"
 
-    def test_offen_with_plan_is_a_widerspruch(  # type: ignore[no-untyped-def]
+    def test_open_with_plan_is_conflict(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        w = create_wish(client, couple).json()
-        self._konvertiere(client, couple, w["id"])
+        wish = create_wish(client, couple).json()
+        self._convert(client, couple, wish["id"])
 
-        row = session.get(Wish, UUID(w["id"]))
+        row = session.get(Wish, UUID(wish["id"]))
         row.status = WishStatus.OPEN.value
         session.flush()
 
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             headers=if_match(couple["token_a"], row.version),
         )
         assert response.status_code == 409
         assert response.json()["code"] == "WISH_PLAN_STATE_CONFLICT"
 
-    def test_planned_reports_the_auch_in_the_capabilities(  # type: ignore[no-untyped-def]
+    def test_planned_state_is_reflected_in_capabilities(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        w = create_wish(client, couple).json()
-        self._konvertiere(client, couple, w["id"])
+        wish = create_wish(client, couple).json()
+        self._convert(client, couple, wish["id"])
 
-        gelesen = client.get(
-            f"{path(couple['space'].id)}/{w['id']}", headers=auth(couple["token_a"])
+        read_response = client.get(
+            f"{path(couple['space'].id)}/{wish['id']}", headers=auth(couple["token_a"])
         ).json()
-        assert gelesen["status"] == "PLANNED"
-        assert gelesen["capabilities"]["canDelete"] is False
-        # The Titel remains editable: it is a Inhaltsupdate, no
-        # Statusmutation (M3-D02).
-        assert gelesen["capabilities"]["canEdit"] is True
+        assert read_response["status"] == "PLANNED"
+        assert read_response["capabilities"]["canDelete"] is False
+        # The title remains editable because it is a content update, not a
+        # status mutation (M3-D02).
+        assert read_response["capabilities"]["canEdit"] is True
 
-    def test_the_version_check_runs_before_the_status_check(  # type: ignore[no-untyped-def]
+    def test_version_check_runs_before_status_check(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        "a stale version must not reveal domain state."
-        w = create_wish(client, couple).json()
-        self._konvertiere(client, couple, w["id"])
+        "A stale version must not reveal domain state."
+        wish = create_wish(client, couple).json()
+        self._convert(client, couple, wish["id"])
 
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=if_match(couple["token_a"], 99)
+            f"{path(couple['space'].id)}/{wish['id']}",
+            headers=if_match(couple["token_a"], 99),
         )
         assert response.status_code == 409
         assert response.json()["code"] == "RESOURCE_VERSION_CONFLICT"
 
-    def test_the_database_keeps_the_wish_under_its_plan_fest(  # type: ignore[no-untyped-def]
+    def test_database_keeps_wish_under_its_plan(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        """the final boundary is enforced by the foreign key, not only by the service.
+        """The final boundary is enforced by the foreign key, not only the service.
 
-        The Service weist the Fall beforehand with 409 ab. Fails it once from -
-        a Wartungsskript, a spaetere Migration -, verhindert the
-        zusammengesetzte Foreign key nevertheless, that a Plan without
-        its Wish zurueckbleibt.
+        The service rejects this case with 409 first. If service protection is
+        ever bypassed by a maintenance script or migration, the composite
+        foreign key still prevents a plan from surviving without its wish.
         """
-        w = create_wish(client, couple).json()
-        self._konvertiere(client, couple, w["id"])
+        wish = create_wish(client, couple).json()
+        self._convert(client, couple, wish["id"])
 
         with pytest.raises(IntegrityError), session.begin_nested():
-            session.execute(text("DELETE FROM wishes WHERE id = :id"), {"id": w["id"]})
+            session.execute(text("DELETE FROM wishes WHERE id = :id"), {"id": wish["id"]})
 
 
-class TestNebenlaeufigkeit:
+class TestConcurrency:
     def test_stale_version_is_rejected(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        w = create_wish(client, couple).json()
+        wish = create_wish(client, couple).json()
         client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Erste Aenderung"},
             headers=if_match(couple["token_a"], 1),
         )
 
         second = client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Zweite Aenderung"},
             headers=if_match(couple["token_a"], 1),
         )
         assert second.status_code == 409
         assert second.json()["code"] == "RESOURCE_VERSION_CONFLICT"
 
-    def test_beide_partner_teilen_sich_same_version(  # type: ignore[no-untyped-def]
+    def test_both_partners_share_same_version(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        "shared writes do not create separate version histories."
-        w = create_wish(client, couple).json()
+        "Shared writes do not create separate version histories."
+        wish = create_wish(client, couple).json()
         client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Von Anna"},
             headers=if_match(couple["token_a"], 1),
         )
 
         bens_attempt = client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Von Ben"},
             headers=if_match(couple["token_b"], 1),
         )
         assert bens_attempt.status_code == 409
 
-    def test_delete_without_if_match_is_not_ausgefuehrt(  # type: ignore[no-untyped-def]
+    def test_delete_without_if_match_is_not_executed(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
-        w = create_wish(client, couple).json()
+        wish = create_wish(client, couple).json()
         response = client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=auth(couple["token_a"])
+            f"{path(couple['space'].id)}/{wish['id']}", headers=auth(couple["token_a"])
         )
         assert response.status_code == 422
         assert (
             client.get(
-                f"{path(couple['space'].id)}/{w['id']}", headers=auth(couple["token_a"])
+                f"{path(couple['space'].id)}/{wish['id']}", headers=auth(couple["token_a"])
             ).status_code
             == 200
         )
 
 
-class TestMandant:
-    def test_a_foreign_sees_the_space_not(  # type: ignore[no-untyped-def]
+class TestTenantIsolation:
+    def test_foreign_actor_does_not_see_space(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         create_wish(client, couple)
-        response = client.get(path(couple["space"].id), headers=auth(couple["token_fremd"]))
+        response = client.get(path(couple["space"].id), headers=auth(couple["foreign_token"]))
         assert response.status_code == 404
         assert response.json()["code"] == "SPACE_NOT_FOUND"
 
@@ -631,78 +636,81 @@ class TestMandant:
         client,
         couple,
     ) -> None:
-        "Ben is in both Spaces; the ID trennt it, not the Membership."
-        w = create_wish(client, couple).json()
+        "Ben is in both spaces; the ID boundary, not membership, separates them."
+        wish = create_wish(client, couple).json()
 
-        gelesen = client.get(
-            f"{path(couple['fremder_space'].id)}/{w['id']}", headers=auth(couple["token_b"])
+        read_response = client.get(
+            f"{path(couple['foreign_space'].id)}/{wish['id']}",
+            headers=auth(couple["token_b"]),
         )
-        assert gelesen.status_code == 404
-        assert gelesen.json()["code"] == "WISH_NOT_FOUND"
+        assert read_response.status_code == 404
+        assert read_response.json()["code"] == "WISH_NOT_FOUND"
 
-    def test_a_foreign_write_attempt_changes_nothing(  # type: ignore[no-untyped-def]
+    def test_foreign_write_attempt_changes_nothing(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        w = create_wish(client, couple).json()
+        wish = create_wish(client, couple).json()
 
         response = client.patch(
-            f"{path(couple['fremder_space'].id)}/{w['id']}",
+            f"{path(couple['foreign_space'].id)}/{wish['id']}",
             json={"title": "Uebernommen"},
             headers=if_match(couple["token_b"], 1),
         )
         assert response.status_code == 404
 
         session.expire_all()
-        assert session.get(Wish, UUID(w["id"])).payload.title == "Nordlichter sehen"
+        assert session.get(Wish, UUID(wish["id"])).payload.title == "Nordlichter sehen"
 
-    def test_the_list_the_other_space_remains_leer(  # type: ignore[no-untyped-def]
+    def test_list_of_other_space_remains_empty(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         create_wish(client, couple)
-        seite = client.get(path(couple["fremder_space"].id), headers=auth(couple["token_b"])).json()
-        assert seite["items"] == []
+        page = client.get(
+            path(couple["foreign_space"].id), headers=auth(couple["token_b"])
+        ).json()
+        assert page["items"] == []
 
-    def test_a_cursor_applies_only_in_its_space(  # type: ignore[no-untyped-def]
+    def test_cursor_applies_only_in_its_space(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         create_wish(client, couple, title="Erster")
         create_wish(client, couple, title="Zweiter")
-        seite = client.get(
+        page = client.get(
             f"{path(couple['space'].id)}?limit=1", headers=auth(couple["token_a"])
         ).json()
 
         response = client.get(
-            f"{path(couple['fremder_space'].id)}?limit=1&cursor={seite['nextCursor']}",
+            f"{path(couple['foreign_space'].id)}?limit=1&cursor={page['nextCursor']}",
             headers=auth(couple["token_b"]),
         )
         assert response.status_code == 400
         assert response.json()["code"] == "INVALID_CURSOR"
 
-    def test_a_cursor_applies_only_for_its_filter(  # type: ignore[no-untyped-def]
+    def test_cursor_applies_only_for_its_filter(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
     ) -> None:
         create_wish(client, couple, title="Erster")
         create_wish(client, couple, title="Zweiter")
-        seite = client.get(
+        page = client.get(
             f"{path(couple['space'].id)}?limit=1&status=OPEN", headers=auth(couple["token_a"])
         ).json()
 
         response = client.get(
-            f"{path(couple['space'].id)}?limit=1&cursor={seite['nextCursor']}",
+            f"{path(couple['space'].id)}?limit=1&cursor={page['nextCursor']}",
             headers=auth(couple["token_a"]),
         )
         assert response.status_code == 400
 
-    def test_a_invented_id_and_a_malformed_klingen_gleich(  # type: ignore[no-untyped-def]
+    def test_invented_and_malformed_ids_look_the_same(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
@@ -717,42 +725,43 @@ class TestMandant:
         assert unknown.json() == malformed.json()
 
 
-class TestEreignisse:
-    def test_events_enthalten_no_wunschtitel(  # type: ignore[no-untyped-def]
+class TestEvents:
+    def test_events_contain_no_wish_title(  # type: ignore[no-untyped-def]
         self,
         client,
         couple,
         session,
     ) -> None:
-        w = create_wish(client, couple, title=GEHEIM).json()
+        wish = create_wish(client, couple, title=SECRET_WISH_TITLE).json()
         client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Neu formuliert"},
             headers=if_match(couple["token_a"], 1),
         )
         client.delete(
-            f"{path(couple['space'].id)}/{w['id']}", headers=if_match(couple["token_a"], 2)
+            f"{path(couple['space'].id)}/{wish['id']}",
+            headers=if_match(couple["token_a"], 2),
         )
 
         rows = list(
             session.execute(select(OutboxEvent).where(OutboxEvent.subject_type == "wish")).scalars()
         )
-        assert [z.event_type for z in rows] == [
+        assert [row.event_type for row in rows] == [
             "WISH_CREATED",
             "WISH_UPDATED",
             "WISH_DELETED",
         ]
         for row in rows:
             raw = repr(row.payload.model_dump())
-            assert GEHEIM not in raw
+            assert SECRET_WISH_TITLE not in raw
             assert "Neu formuliert" not in raw
             assert row.resource_version is not None
 
-    def test_the_event_names_the_actor_and_not_the_creator(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        "Audit after M3-D01: who changed has, not wem it zugeschrieben is."
-        w = create_wish(client, couple).json()
+    def test_event_names_actor_not_creator(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        "Audit the actor who changed the wish, not the account to which it is attributed."
+        wish = create_wish(client, couple).json()
         client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Von Ben"},
             headers=if_match(couple["token_b"], 1),
         )
@@ -762,10 +771,10 @@ class TestEreignisse:
         ).scalar_one()
         assert change.actor_id == couple["ben"].id
 
-    def test_a_abgewiesener_schreibversuch_creates_no_event(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
-        w = create_wish(client, couple).json()
+    def test_rejected_write_attempt_creates_no_event(self, client, couple, session) -> None:  # type: ignore[no-untyped-def]
+        wish = create_wish(client, couple).json()
         client.patch(
-            f"{path(couple['space'].id)}/{w['id']}",
+            f"{path(couple['space'].id)}/{wish['id']}",
             json={"title": "Kollision"},
             headers=if_match(couple["token_a"], 99),
         )
@@ -773,4 +782,4 @@ class TestEreignisse:
         rows = list(
             session.execute(select(OutboxEvent).where(OutboxEvent.subject_type == "wish")).scalars()
         )
-        assert [z.event_type for z in rows] == ["WISH_CREATED"]
+        assert [row.event_type for row in rows] == ["WISH_CREATED"]
