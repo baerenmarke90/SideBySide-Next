@@ -751,9 +751,9 @@ def test_the_contract_is_complete_covered() -> None:
 
 @pytest.mark.parametrize(("method", "path"), AUTHENTICATED_ONLY, ids=str)
 def test_account_scoped_endpoints_bleiben_anonymous_closed(
-    scenario, methode: str, path: str
+    scenario, method: str, path: str
 ) -> None:  # type: ignore[no-untyped-def]
-    response = scenario["client"].request(methode, path, json={})
+    response = scenario["client"].request(method, path, json={})
     assert response.status_code == 401
     assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
 
