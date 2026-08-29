@@ -82,6 +82,25 @@ class EngineeringLanguageAuditTest(unittest.TestCase):
             )
             self.assertEqual(check_file(path), [])
 
+    def test_stable_json_contract_target_is_not_treated_as_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "manifest.json"
+            path.write_text(
+                '{"contract":"docs/COMPONENT-CONTRACTS.md#41-text-field-und-text-area"}\n',
+                encoding="utf-8",
+            )
+            self.assertEqual(check_file(path), [])
+
+    def test_german_json_prose_remains_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "manifest.json"
+            path.write_text(
+                '{"description":"Die Entscheidung wird im Client getroffen."}\n',
+                encoding="utf-8",
+            )
+            findings = check_file(path)
+            self.assertEqual(len(findings), 1)
+
     def test_frozen_review_snapshots_are_outside_active_documentation_scope(self) -> None:
         self.assertFalse(
             any(path.parts[:2] == ("docs", "reviews") for path in documentation_files())
