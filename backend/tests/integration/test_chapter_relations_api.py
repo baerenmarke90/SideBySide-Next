@@ -111,11 +111,14 @@ def test_typed_relation_routes_are_idempotent_and_preserve_targets(
         headers=auth(world["token_b"]),
     )
     assert removed.status_code == 204
-    assert memory_service.get_memory(
-        session,
-        world["ben_context"],
-        world["memory"].id,
-    ).id == world["memory"].id
+    assert (
+        memory_service.get_memory(
+            session,
+            world["ben_context"],
+            world["memory"].id,
+        ).id
+        == world["memory"].id
+    )
 
 
 def test_private_heart_moment_relation_fails_closed(client, world) -> None:  # type: ignore[no-untyped-def]
@@ -133,10 +136,13 @@ def test_combined_content_endpoint_uses_derived_cross_type_order(client, world) 
         ("memories", world["memory"]),
         ("heart-moments", world["heart"]),
     ):
-        assert client.put(
-            f"{base(world)}/{slug}/{target.id}",
-            headers=auth(world["token_a"]),
-        ).status_code == 204
+        assert (
+            client.put(
+                f"{base(world)}/{slug}/{target.id}",
+                headers=auth(world["token_a"]),
+            ).status_code
+            == 204
+        )
 
     response = client.get(
         f"{base(world)}/content",
