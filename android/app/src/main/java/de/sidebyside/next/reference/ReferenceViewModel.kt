@@ -15,6 +15,13 @@ data class UiMessage(
     val args: List<Any> = emptyList(),
 )
 
+enum class DraftUploadState {
+    UPLOADING,
+    VALIDATING,
+    READY,
+    FAILED,
+}
+
 data class ReferenceUiState(
     val configured: Boolean = false,
     val loggedIn: Boolean = false,
@@ -22,6 +29,8 @@ data class ReferenceUiState(
     val status: UiMessage? = null,
     val error: UiMessage? = null,
     val selectedImageName: String? = null,
+    val selectedImageBytes: ByteArray? = null,
+    val imageUploadState: DraftUploadState? = null,
     val lastMemoryTitle: String? = null,
     val lastMemoryBody: String? = null,
     val lastImageBytes: ByteArray? = null,
@@ -35,7 +44,9 @@ class ReferenceViewModel(
     private val contract: ReferenceContract? = api ?: config.apiBaseUrl.takeIf(String::isNotBlank)?.let(::OkHttpReferenceApi)
     private var session: SessionView? = null
     private var selectedImage: SelectedImage? = null
+    private var preparedAttachment: PreparedAttachment? = null
     private var sessionEpoch: Long = 0
+    private var imageEpoch: Long = 0
 
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
     val uiState: StateFlow<ReferenceUiState> = _uiState.asStateFlow()
@@ -49,6 +60,7 @@ class ReferenceViewModel(
         }
 
         sessionEpoch += 1
+        imageEpoch += 1
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -58,6 +70,7 @@ class ReferenceViewModel(
                     if (attemptEpoch != sessionEpoch) return@onSuccess
                     session = signedIn
                     selectedImage = null
+                    preparedAttachment = null
                     mutate {
                         it.copy(
                             loggedIn = true,
@@ -65,6 +78,8 @@ class ReferenceViewModel(
                             status = message(R.string.ref_status_logged_in),
                             error = null,
                             selectedImageName = null,
+                            selectedImageBytes = null,
+                            imageUploadState = null,
                             lastMemoryTitle = null,
                             lastMemoryBody = null,
                             lastImageBytes = null,
@@ -81,31 +96,115 @@ class ReferenceViewModel(
         }
     }
 
-    fun beginImageSelection(): Long? = session?.let { sessionEpoch }
+    fun beginImageSelection(): Long? {
+        if (session == null) return null
+        imageEpoch += 1
+        return imageEpoch
+    }
 
     fun selectImage(image: SelectedImage, selectionEpoch: Long) {
-        if (!isCurrentSessionEpoch(selectionEpoch)) return
+        val api = contract ?: return configurationError()
+        val currentSession = session ?: return
+        val spaceId = config.spaceId ?: return configurationError()
+        if (!isCurrentImageEpoch(selectionEpoch)) return
+
         selectedImage = image
+        preparedAttachment = null
         mutate {
             it.copy(
                 selectedImageName = image.displayName,
+                selectedImageBytes = image.bytes,
+                imageUploadState = DraftUploadState.UPLOADING,
                 error = null,
-                status = message(R.string.ref_image_selected, image.displayName),
+                status = message(R.string.ref_status_image_uploading),
             )
+        }
+
+        viewModelScope.launch {
+            if (!isCurrentImageSelection(selectionEpoch, currentSession, image)) return@launch
+            runCatching {
+                prepareAttachment(
+                    api = api,
+                    spaceId = spaceId,
+                    accessToken = currentSession.tokens.accessToken,
+                    image = image,
+                    onPhase = { phase ->
+                        if (!isCurrentImageSelection(selectionEpoch, currentSession, image)) return@prepareAttachment
+                        mutate {
+                            it.copy(
+                                imageUploadState = when (phase) {
+                                    AttachmentPreparationPhase.UPLOADING -> DraftUploadState.UPLOADING
+                                    AttachmentPreparationPhase.VALIDATING -> DraftUploadState.VALIDATING
+                                    AttachmentPreparationPhase.READY -> DraftUploadState.READY
+                                },
+                                status = when (phase) {
+                                    AttachmentPreparationPhase.UPLOADING -> message(R.string.ref_status_image_uploading)
+                                    AttachmentPreparationPhase.VALIDATING -> message(R.string.ref_status_image_validating)
+                                    AttachmentPreparationPhase.READY -> message(R.string.ref_status_image_ready)
+                                },
+                            )
+                        }
+                    },
+                )
+            }.onSuccess { prepared ->
+                if (!isCurrentImageSelection(selectionEpoch, currentSession, image)) return@onSuccess
+                preparedAttachment = prepared
+                mutate {
+                    it.copy(
+                        imageUploadState = DraftUploadState.READY,
+                        status = message(R.string.ref_status_image_ready),
+                        error = null,
+                    )
+                }
+            }.onFailure {
+                if (!isCurrentImageSelection(selectionEpoch, currentSession, image)) return@onFailure
+                preparedAttachment = null
+                mutate {
+                    it.copy(
+                        imageUploadState = DraftUploadState.FAILED,
+                        status = null,
+                        error = message(R.string.ref_error_image_upload_failed),
+                    )
+                }
+            }
         }
     }
 
     fun setImageError(throwable: Throwable, selectionEpoch: Long) {
-        if (!isCurrentSessionEpoch(selectionEpoch)) return
+        if (!isCurrentImageEpoch(selectionEpoch)) return
         selectedImage = null
+        preparedAttachment = null
         val error = throwable.message?.takeIf(String::isNotBlank)?.let {
             message(R.string.ref_error_image_selection_detail, it)
         } ?: message(R.string.ref_error_image_selection_failed)
         mutate {
             it.copy(
                 selectedImageName = null,
+                selectedImageBytes = null,
+                imageUploadState = null,
                 error = error,
                 status = null,
+            )
+        }
+    }
+
+    fun retrySelectedImage() {
+        val image = selectedImage ?: return
+        val epoch = beginImageSelection() ?: return
+        selectImage(image, epoch)
+    }
+
+    fun removeSelectedImage() {
+        imageEpoch += 1
+        selectedImage = null
+        preparedAttachment = null
+        mutate {
+            it.copy(
+                selectedImageName = null,
+                selectedImageBytes = null,
+                imageUploadState = null,
+                error = null,
+                status = message(R.string.ref_status_image_removed),
             )
         }
     }
@@ -117,9 +216,14 @@ class ReferenceViewModel(
             return
         }
         val image = selectedImage
+        val attachment = preparedAttachment
         val spaceId = config.spaceId ?: return configurationError()
         if (title.isBlank()) {
             setError(message(R.string.ref_error_memory_fields_required))
+            return
+        }
+        if (image != null && attachment == null) {
+            setError(message(R.string.ref_error_image_not_ready))
             return
         }
         val happenedOn = if (happenedOnText.isBlank()) {
@@ -145,22 +249,28 @@ class ReferenceViewModel(
                 )
             }
             runCatching {
-                runMemoryMediaStoryFlow(
+                createMemoryWithPreparedAttachments(
                     api = api,
                     spaceId = spaceId,
                     accessToken = currentSession.tokens.accessToken,
                     title = title.trim(),
                     body = body.trim(),
                     happenedOn = happenedOn,
-                    image = image,
+                    attachments = attachment?.let(::listOf).orEmpty(),
                 )
             }.onSuccess { result ->
                 if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                imageEpoch += 1
+                selectedImage = null
+                preparedAttachment = null
                 mutate {
                     it.copy(
                         busy = false,
                         status = message(R.string.ref_status_save_success),
                         error = null,
+                        selectedImageName = null,
+                        selectedImageBytes = null,
+                        imageUploadState = null,
                         lastMemoryTitle = result.memory.title,
                         lastMemoryBody = result.memory.body,
                         lastImageBytes = result.imageBytes,
@@ -198,16 +308,25 @@ class ReferenceViewModel(
 
     fun logout() {
         sessionEpoch += 1
+        imageEpoch += 1
         session = null
         selectedImage = null
+        preparedAttachment = null
         _uiState.value = ReferenceUiState(
             configured = config.isConfigured,
             status = message(R.string.ref_status_logged_out),
         )
     }
 
-    private fun isCurrentSessionEpoch(epoch: Long): Boolean =
-        session != null && sessionEpoch == epoch
+    private fun isCurrentImageEpoch(epoch: Long): Boolean =
+        session != null && imageEpoch == epoch
+
+    private fun isCurrentImageSelection(
+        epoch: Long,
+        currentSession: SessionView,
+        image: SelectedImage,
+    ): Boolean =
+        imageEpoch == epoch && session === currentSession && selectedImage === image
 
     private fun isCurrentSession(epoch: Long, currentSession: SessionView): Boolean =
         sessionEpoch == epoch && session === currentSession
