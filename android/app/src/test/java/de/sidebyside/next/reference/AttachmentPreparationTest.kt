@@ -94,7 +94,7 @@ class AttachmentPreparationTest {
             memory: MemoryCreate,
         ): MemoryDetail {
             onCreateMemory()
-            return memory()
+            return this@AttachmentPreparationTest.memory()
         }
 
         override suspend fun createAttachmentUpload(
