@@ -1,49 +1,49 @@
 # M2 Media Pipeline
 
-**Status:** Verbindlicher M2-S0 Media-Vertrag nach #69, ergänzt um M2-D14/D15 nach #78 und M2-D23 nach #85  
+**Status:** binding M2-S0 media contract after #69, extended with M2-D14/D15 after #78 and M2-D23 after #85  
 **Version:** 1.3
 
-Ziel ist ein sicherer, adapterunabhängiger Medienfluss für LocalMediaStore und S3MediaStore. Cloud-Medien sind nie öffentlich; lokale Dateipfade und Storage Keys werden nicht zu Autorisierungsmechanismen.
+The goal is a secure, adapter-independent media flow for LocalMediaStore and S3MediaStore. Cloud media is never public; local filesystem paths and storage keys are not authorization mechanisms.
 
-## 1. Verbindlicher Lifecycle
+## 1. Binding lifecycle
 
 ```mermaid
 stateDiagram-v2
   [*] --> PENDING: createUpload
-  PENDING --> UPLOADING: erster Byte-Transfer / Uploadziel genutzt
+  PENDING --> UPLOADING: first byte transferred / upload target used
   UPLOADING --> VALIDATING: finalizeUpload
-  VALIDATING --> READY: serverseitige Validierung bestanden
-  VALIDATING --> FAILED: Validierung fehlgeschlagen
-  PENDING --> FAILED: Uploadziel abgelaufen
-  UPLOADING --> FAILED: abgebrochen / abgelaufen
-  FAILED --> PENDING: bewusster Retry mit neuem Uploadziel
-  READY --> DELETING: letzte Domainreferenz entfernt / Ready-Orphan abgelaufen
-  DELETING --> [*]: Providerobjekt und Metadaten bereinigt
-  DELETING --> DELETE_FAILED: Providerfehler
-  DELETE_FAILED --> DELETING: Job-Retry
+  VALIDATING --> READY: server-side validation passed
+  VALIDATING --> FAILED: validation failed
+  PENDING --> FAILED: upload target expired
+  UPLOADING --> FAILED: cancelled / expired
+  FAILED --> PENDING: explicit retry with new upload target
+  READY --> DELETING: last domain reference removed / READY orphan expired
+  DELETING --> [*]: provider object and metadata cleaned up
+  DELETING --> DELETE_FAILED: provider failure
+  DELETE_FAILED --> DELETING: job retry
 ```
 
-`PENDING`, `UPLOADING`, `VALIDATING`, `READY`, `FAILED`, `DELETING` und `DELETE_FAILED` sind verbindliche interne Zustände. Clients dürfen `UPLOADING`, `VALIDATING`, `DELETING` und `DELETE_FAILED` auf stabilere öffentliche Zustände/Progressdarstellung abbilden; sie dürfen daraus keine zusätzlichen Schreibrechte ableiten.
+`PENDING`, `UPLOADING`, `VALIDATING`, `READY`, `FAILED`, `DELETING`, and `DELETE_FAILED` are binding internal states. Clients may map `UPLOADING`, `VALIDATING`, `DELETING`, and `DELETE_FAILED` to more stable public states/progress presentation; they must not infer additional write permissions from those mappings.
 
-`finalizeUpload` ist idempotent. Zwei parallele Finalize-Requests dürfen genau einen wirksamen Validierungslauf erzeugen. Statuswechsel werden mit Row Lock bzw. bestehender Serialisierungskonvention geschützt.
+`finalizeUpload` is idempotent. Two concurrent finalize requests may create exactly one effective validation run. State transitions are protected by a row lock or the existing serialization convention.
 
-## 2. Attachment-Bindung
+## 2. Attachment binding
 
-M2 verwendet **exklusive Attachment-Ownership pro Domainziel**:
+M2 uses **exclusive attachment ownership per domain target**:
 
-- Ein Attachment gehört genau einem `spaceId` und einem unveränderlichen `ownerId`.
-- Ein `READY` Attachment darf höchstens an **eine** Domainressource gebunden sein.
-- Wiederverwendung desselben Attachment-Datensatzes an mehreren Parents ist in M2 verboten. Soll dasselbe Medium an mehreren Stellen erscheinen, entsteht ein neuer Attachment-Datensatz/Upload; Content-Deduplication ist kein M2-Feature.
-- Memory besitzt eine explizite Relation `MemoryAttachment` mit `memoryId`, `attachmentId`, `position`.
-- `position` ist innerhalb einer Memory eindeutig, nullbasiert und wird serverseitig validiert; normale Darstellung sortiert aufsteigend nach `position`, danach stabil nach Attachment-ID.
-- HeartMoment besitzt maximal ein Attachment; die konkrete Persistenz darf FK oder Relation sein, muss aber dieselben Autorisierungs-/Cleanup-Regeln erfüllen.
-- Cross-Space-Bindung ist immer verboten.
-- Ein Attachment darf nur vom eigenen Owner gebunden werden. Die Zielressource muss für diesen Account schreibbar sein.
-- Nach erfolgreicher Bindung folgt die Leseberechtigung ausschließlich dem Parent. Attachment-Owner allein ist kein alternativer Lesepfad für einen Parent, den er nicht mehr lesen darf.
+- An attachment belongs to exactly one `spaceId` and one immutable `ownerId`.
+- A `READY` attachment may be bound to at most **one** domain resource.
+- Reuse of the same attachment record across multiple parents is forbidden in M2. If the same media should appear in multiple places, a new attachment record/upload is created; content deduplication is not an M2 feature.
+- Memory has an explicit `MemoryAttachment` relation with `memoryId`, `attachmentId`, and `position`.
+- `position` is unique within a Memory, zero-based, and validated server-side; normal presentation sorts ascending by `position`, then stably by attachment ID.
+- HeartMoment has at most one attachment; the concrete persistence form may be an FK or relation but must satisfy the same authorization/cleanup rules.
+- Cross-space binding is always forbidden.
+- An attachment may be bound only by its own owner. The target resource must be writable for that account.
+- After successful binding, read permission follows the parent exclusively. Attachment ownership alone is not an alternate read path to a parent the owner can no longer read.
 
-Diese exklusive Bindung macht Cleanup und Privacy deterministisch und vermeidet eine implizite Many-to-Many-Autorisierung.
+Exclusive binding makes cleanup and privacy deterministic and avoids implicit many-to-many authorization.
 
-## 3. Komponenten
+## 3. Components
 
 ```text
 Client
@@ -60,262 +60,262 @@ MediaStore Interface                    │
   └── S3MediaStore
 ```
 
-Domaincode kennt keinen Bucket, lokalen Pfad oder konkreten Cloudanbieter.
+Domain code knows neither bucket, local path, nor concrete cloud provider.
 
-## 4. Upload-Transport
+## 4. Upload transport
 
-Ein Domainvertrag, zwei zulässige Adaptertransporte:
+One domain contract, two allowed adapter transports:
 
 ### LocalMediaStore
 
-- Bytes laufen über eine autorisierte serverseitige Streaming-Uploadroute.
-- Request ist an Account, Space und Attachment-ID gebunden.
-- Server erzwingt Streaming-Byte-Limit; kein vollständiges unlimitiertes Puffern im RAM.
+- Bytes flow through an authorized server-side streaming upload route.
+- The request is bound to account, space, and attachment ID.
+- The server enforces a streaming byte limit; it does not buffer an unlimited body fully in RAM.
 
 ### S3MediaStore
 
-- `createUpload` darf eine kurzlebige presigned Upload-URL ausstellen.
-- TTL: **10 Minuten**.
-- URL ist an exakt einen servergenerierten Storage Key gebunden und erlaubt keinen frei wählbaren Bucket/Key.
-- Bucket bleibt privat; Public ACLs sind verboten.
-- Presigned URL, Signatur und Credentials werden nicht geloggt oder dauerhaft im Client gespeichert.
+- `createUpload` may issue a short-lived presigned upload URL.
+- TTL: **10 minutes**.
+- The URL is bound to exactly one server-generated storage key and cannot select an arbitrary bucket/key.
+- The bucket remains private; public ACLs are forbidden.
+- Presigned URL, signature, and credentials are not logged or stored durably on the client.
 
-Für beide Adapter bleiben `createUpload`, `finalizeUpload`, Autorisierung, Statusautomat und Validierungsentscheidung serverkontrolliert. Ein erfolgreicher Providerupload ist niemals gleichbedeutend mit `READY`.
+For both adapters, `createUpload`, `finalizeUpload`, authorization, the state machine, and the validation decision remain server-controlled. A successful provider upload never means `READY`.
 
-## 5. Storage Key
+## 5. Storage key
 
-Verbindliches Muster:
+Binding pattern:
 
 ```text
 spaces/{spaceUuid}/attachments/{attachmentUuid}/original
 ```
 
-- Kein Benutzerdateiname im Key.
-- Keine hochzählbare ID.
-- Kein MIME-Type oder Privacy-Text im Pfad.
-- Varianten erhalten nur kontrollierte serverseitige Suffixe.
-- `originalName` ist reine Protected-/Support-Metadaten und wird nie für Pfad, Autorisierung oder Content-Type vertraut.
+- No user filename in the key.
+- No sequential ID.
+- No MIME type or privacy text in the path.
+- Variants use only controlled server-side suffixes.
+- `originalName` is protected/support metadata only and is never trusted for path, authorization, or content type.
 
-## 6. Verbindliche M2-Medienlimits
+## 6. Binding M2 media limits
 
-M2 unterstützt bewusst eine kleine Positivliste:
+M2 intentionally supports a small allowlist:
 
-| Kategorie | MIME | Max. Einzelgröße | weitere Grenze |
+| Category | MIME | Max. individual size | Additional limit |
 |---|---|---:|---|
-| JPEG | `image/jpeg` | 25 MiB | max. 40 MP, max. 12.000 px je Kante |
-| PNG | `image/png` | 25 MiB | max. 40 MP, max. 12.000 px je Kante |
-| WebP | `image/webp` | 25 MiB | max. 40 MP, max. 12.000 px je Kante |
-| HEIC/HEIF | `image/heic`, `image/heif` | 25 MiB | max. 40 MP, max. 12.000 px je Kante |
+| JPEG | `image/jpeg` | 25 MiB | max. 40 MP, max. 12,000 px per edge |
+| PNG | `image/png` | 25 MiB | max. 40 MP, max. 12,000 px per edge |
+| WebP | `image/webp` | 25 MiB | max. 40 MP, max. 12,000 px per edge |
+| HEIC/HEIF | `image/heic`, `image/heif` | 25 MiB | max. 40 MP, max. 12,000 px per edge |
 | MP4 Video | `video/mp4` | 250 MiB | max. 180 s, max. 3840×2160 |
 | QuickTime Video | `video/quicktime` | 250 MiB | max. 180 s, max. 3840×2160 |
 
-Weitere Formate, Audio-only, RAW, GIF-Animation, MKV/WebM und Dokumente sind nicht Teil des M2-Vertrags und werden fail-closed abgewiesen, bis sie explizit freigegeben werden.
+Additional formats, audio-only, RAW, GIF animation, MKV/WebM, and documents are outside the M2 contract and are rejected fail-closed until explicitly approved.
 
-> **Lieferstand (M2-D23):** Der erste Media-Slice bedient ausschließlich die Bildzeilen dieser Tabelle. MP4 und QuickTime bleiben Teil des Vertrags, werden bis zum Video-Slice aber ebenfalls fail-closed mit `ATTACHMENT_TYPE_NOT_ALLOWED` abgewiesen. Clients dürfen Video in M2 solange nicht als verfügbar anbieten.
+> **Delivery state (M2-D23):** the first media slice serves only the image rows in this table. MP4 and QuickTime remain part of the contract but are also rejected fail-closed with `ATTACHMENT_TYPE_NOT_ALLOWED` until the video slice. Clients must not offer video as available in M2 until then.
 
-Zusätzlich:
+Additionally:
 
-- Memory: maximal **20 Attachments** und maximal **500 MiB deklarierte/validierte Gesamtgröße**.
-- HeartMoment: maximal **1 Attachment**.
-- Serverwerte sind verbindlich; Clientlimits dienen nur UX.
-- Größe wird aus dem tatsächlich gespeicherten Objekt bestimmt, nicht aus Clientmetadata.
-- Bilddimensionen und Videodauer werden aus serverseitig erkannten Medieninformationen bestimmt.
-- Deklarierter MIME, Dateiendung und Originalname sind keine Vertrauensquelle.
+- Memory: at most **20 attachments** and at most **500 MiB declared/validated total size**.
+- HeartMoment: at most **1 attachment**.
+- Server values are binding; client limits are UX only.
+- Size is determined from the actually stored object, not client metadata.
+- Image dimensions and video duration are determined from server-detected media information.
+- Declared MIME, filename extension, and original name are not trust sources.
 
-## 7. Validierung
+## 7. Validation
 
-Validierung erfolgt **asynchron nach `finalizeUpload`** über den bestehenden Job-/Outbox-Stil. `finalizeUpload` setzt atomar `VALIDATING` und reiht genau einen idempotenten Validierungsjob ein; der Client pollt/refresh't den Status.
+Validation runs **asynchronously after `finalizeUpload`** using the existing job/Outbox style. `finalizeUpload` atomically sets `VALIDATING` and enqueues exactly one idempotent validation job; the client polls/refreshes the state.
 
-Serverseitig prüfen:
+Server-side checks:
 
-1. Objekt existiert exakt am servergenerierten Key.
-2. tatsächliche Größe innerhalb Limit.
-3. Magic Bytes / erkannter MIME sind in der Allowlist und kompatibel mit erwarteter Kategorie.
-4. Bilddimensionen/Megapixel bzw. Videodauer/Auflösung innerhalb Limit.
-5. Parser kann das Medium unter Ressourcenlimits sicher öffnen.
-6. Attachment gehört zum erwarteten Space/Owner und Statusübergang ist zulässig.
-7. Provider-/Objektintegrität ist ausreichend für den Adapter bestätigt.
-8. Metadaten-Allowlist wird extrahiert und das Objekt anschließend bereinigt gespeichert (M2-D14).
+1. The object exists exactly at the server-generated key.
+2. Actual size is within the limit.
+3. Magic Bytes / detected MIME are in the allowlist and compatible with the expected category.
+4. Image dimensions/megapixels or video duration/resolution are within limits.
+5. The parser can open the media safely under resource limits.
+6. The attachment belongs to the expected space/owner and the state transition is allowed.
+7. Provider/object integrity is sufficiently confirmed for the adapter.
+8. The metadata allowlist is extracted and the object is then stored in sanitized form (M2-D14).
 
-Erst nach allen acht Schritten wird `READY` gesetzt. Ein Providerupload oder eine bestandene Formatprüfung allein bedeuten kein `READY`.
+`READY` is set only after all eight steps pass. A provider upload or successful format check alone does not mean `READY`.
 
-Die Erzeugung der abgeleiteten Variante (M2-D15) folgt danach und gehört bewusst **nicht** zu dieser Kette: ihr Fehlschlag führt nicht zu `FAILED`, siehe Abschnitt 7.2.
+Derived variant generation (M2-D15) happens afterward and intentionally does **not** belong to this chain: its failure does not cause `FAILED`; see section 7.2.
 
-Bei Fehler: `FAILED` mit einem stabilen, nicht sensitiven Fehlercode; Objekt wird für Cleanup markiert. Parserfehler oder unbekannte Typen führen fail-closed zu `FAILED`.
+On failure: `FAILED` with a stable, non-sensitive error code; the object is marked for cleanup. Parser failures or unknown types fail closed to `FAILED`.
 
-Ein Malware-Scanner ist für M2 nicht als universelle Sicherheitsgarantie definiert. Uploads werden ausschließlich als Medien behandelt und nie serverseitig ausgeführt. Eine spätere AV-/Content-Scan-Erweiterung darf den Statusautomaten erweitern, aber `READY` weiterhin erst nach allen verpflichtenden Prüfungen setzen.
+A malware scanner is not defined as a universal security guarantee for M2. Uploads are handled only as media and are never executed server-side. A later AV/content-scan extension may extend the state machine, but must still set `READY` only after all mandatory checks pass.
 
-### 7.1 Metadaten-Entfernung (M2-D14)
+### 7.1 Metadata removal (M2-D14)
 
-Vor dem Strippen wird genau diese Allowlist extrahiert und als ProtectedPayload abgelegt:
+Before stripping, exactly this allowlist is extracted and stored as ProtectedPayload:
 
-| Feld | Zweck |
+| Field | Purpose |
 |---|---|
-| Aufnahmezeitpunkt | Vorschlagsquelle für `happenedOn` |
-| Orientierung | korrekte Darstellung ohne Neucodierung im Client |
-| Breite, Höhe | bereits für die Limitprüfung ermittelt |
-| Dauer (nur Video) | bereits für die Limitprüfung ermittelt |
+| capture time | proposal source for `happenedOn` |
+| orientation | correct presentation without client-side recoding |
+| width, height | already determined for limit checking |
+| duration (video only) | already determined for limit checking |
 
-Alles Übrige wird verworfen: GPS und sonstige Standortangaben, Geräte- und Seriennummern, Software-, Autor- und Copyrightfelder, Kommentar- und Beschreibungsfelder, im Container eingebettete Vorschaubilder sowie **jedes nicht aufgeführte oder unbekannte Segment**. Die Regel ist eine Allowlist, keine Blacklist bekannter Standortfelder — Container transportieren Position auch in herstellereigenen und künftig hinzukommenden Segmenten.
+Everything else is discarded: GPS and other location information, device and serial numbers, software, author and copyright fields, comment and description fields, previews embedded in the container, and **every unlisted or unknown segment**. This is an allowlist, not a blacklist of known location fields — containers may carry position in vendor-specific and future segments.
 
-Gespeichert wird ausschließlich die bereinigte Datei. Die hochgeladenen Originalbytes werden nicht dauerhaft aufbewahrt; es gibt in M2 keinen Pfad, der ein Medium mit eingebetteten Metadaten ausliefert. Ein Medium, das nicht sicher bereinigt werden kann, wird fail-closed `FAILED` und niemals ungestrippt gespeichert.
+Only the sanitized file is stored. Uploaded original bytes are not retained durably; M2 has no path that serves media with embedded metadata. Media that cannot be sanitized safely fails closed to `FAILED` and is never stored unstripped.
 
-Die extrahierte Allowlist ist ProtectedPayload und wird nicht in API-Metadaten außerhalb des Parent-Kontexts, Logs, Events, Metriken oder Suchindizes projiziert.
+The extracted allowlist is ProtectedPayload and is not projected into API metadata outside the parent context, logs, events, metrics, or search indexes.
 
-### 7.2 Abgeleitete Varianten (M2-D15)
+### 7.2 Derived variants (M2-D15)
 
-M2 erzeugt je Attachment höchstens **eine** Variante:
+M2 creates at most **one** variant per attachment:
 
-| Kategorie | Variante | Lieferstand |
+| Category | Variant | Delivery state |
 |---|---|---|
-| Bild | verkleinertes Thumbnail | erster Media-Slice |
-| Video | einzelner Posterframe | Video-Slice (M2-D23) |
+| Image | reduced thumbnail | first media slice |
+| Video | single poster frame | video slice (M2-D23) |
 
-Transcoding, mehrere Auflösungsstufen, Audioextraktion und adaptives Streaming sind **nicht** Teil von M2.
+Transcoding, multiple resolution levels, audio extraction, and adaptive streaming are **not** part of M2.
 
-- Varianten entstehen serverseitig im selben Validierungsjob, **nach** Anwendung von M2-D14, und tragen daher selbst keine eingebetteten Metadaten.
-- Eine Variante besitzt keine eigene Autorisierung. Sie folgt exakt der ihres Attachments und damit dem Parent; ein Privacy-Wechsel des Parents sperrt auch die Variante.
-- Clients wählen keine Varianten-Keys. Der Server benennt Varianten über kontrollierte Suffixe nach dem Muster aus Abschnitt 5.
-- Schlägt die Variantenerzeugung fehl, bleibt das Attachment nutzbar und wird ohne Variante ausgeliefert. Ein fehlendes Thumbnail ist ein Darstellungs-, kein Sicherheitsproblem und setzt das Attachment nicht `FAILED`.
-- Cleanup entfernt Varianten gemeinsam mit dem Attachment. Ein verwaistes Variantenobjekt ist ein Cleanup-Fehler, kein zulässiger Zustand.
+- Variants are created server-side in the same validation job, **after** M2-D14 is applied, so they contain no embedded metadata themselves.
+- A variant has no independent authorization. It follows the attachment and therefore the parent exactly; a parent privacy change also blocks the variant.
+- Clients do not select variant keys. The server names variants using controlled suffixes under the pattern in section 5.
+- If variant generation fails, the attachment remains usable and is served without the variant. A missing thumbnail is a presentation issue, not a security failure, and does not set the attachment to `FAILED`.
+- Cleanup removes variants together with the attachment. An orphaned variant object is a cleanup failure, not an allowed state.
 
-## 8. Autorisierung
+## 8. Authorization
 
-Attachmentzugriff wird in zwei Stufen geprüft:
+Attachment access is checked in two stages:
 
-1. aktive Membership im `spaceId`,
-2. Zugriff auf die zulässige Zielressource oder einen noch nicht verknüpften eigenen Upload innerhalb seines Bindungsfensters.
+1. active membership in `spaceId`,
+2. access to the allowed target resource or to an own still-unbound upload within its binding window.
 
 ```text
-Account B fragt Attachment X an
-  ├── Membership in Space?             nein → 404/401 gemäß Kontext
-  ├── Attachment gehört zu Space?      nein → 404
-  ├── gebunden?
-  │     ├── ja: Zielressource erreichbar? nein → 404
-  │     └── nein: Owner + Bindungsfenster? nein → 404
-  ├── Ziel OWNER_ONLY von Account A?   ja → 404
-  └── sichere Read URL/Stream          erlaubt
+Account B requests Attachment X
+  ├── Membership in Space?             no → 404/401 according to context
+  ├── Attachment belongs to Space?     no → 404
+  ├── bound?
+  │     ├── yes: target reachable?     no → 404
+  │     └── no: owner + binding window? no → 404
+  ├── Target OWNER_ONLY of Account A?  yes → 404
+  └── safe Read URL/stream             allowed
 ```
 
-- Ein Attachment darf nicht allein über seine ID gelesen werden.
-- Eine frühere Shared-Verknüpfung berechtigt nicht weiter, wenn die Zielressource private wird.
-- PENDING/UPLOADING/VALIDATING/FAILED sind nur für den Owner verwaltbar und nicht als regulärer Parent-Inhalt lesbar.
-- READY ohne Parent ist nur für den Owner innerhalb des Bindungsfensters sichtbar.
-- Bindung und Parent-Autorisierung erfolgen in einer DB-Transaktion mit Race-Schutz.
+- An attachment cannot be read solely by its ID.
+- A previous shared binding grants no continuing access if the target resource becomes private.
+- PENDING/UPLOADING/VALIDATING/FAILED are manageable only by the owner and are not readable as regular parent content.
+- READY without parent is visible only to the owner within the binding window.
+- Binding and parent authorization occur in one DB transaction with race protection.
 
-## 9. Read Access
+## 9. Read access
 
-### LocalMediaStore: autorisierte Streamingroute
+### LocalMediaStore: authorized streaming route
 
-- API prüft jeden Zugriff unmittelbar vor `open()`.
-- Range Requests, Content-Type, Cache-Header und Downloadname werden serverseitig kontrolliert.
-- keine Dateisystempfade im Response.
+- The API checks every access immediately before `open()`.
+- Range Requests, Content-Type, cache headers, and download name are controlled server-side.
+- No filesystem paths in the response.
 
-### S3MediaStore: kurzlebige signierte Read URL
+### S3MediaStore: short-lived signed Read URL
 
-- API prüft unmittelbar vorher Membership und Parent.
-- TTL: **5 Minuten**.
-- URL besitzt minimalen Scope auf genau ein Objekt.
-- Bucket bleibt privat.
-- URL wird nicht in Analytics, Logs, Referrer oder dauerhaften Clientcaches gespeichert.
-- Nach Membership-/Privacy-Entzug kann eine bereits ausgestellte URL technisch höchstens bis TTL-Ende gültig bleiben; diese begrenzte Restzeit ist akzeptierter M2-Adapter-Trade-off und wird mit 5 Minuten minimiert.
+- The API checks membership and parent immediately beforehand.
+- TTL: **5 minutes**.
+- The URL has minimal scope to exactly one object.
+- The bucket remains private.
+- The URL is not stored in analytics, logs, Referrer, or durable client caches.
+- After membership/privacy revocation, an already issued URL may technically remain valid only until its TTL ends; this limited residual period is an accepted M2 adapter trade-off and is minimized to 5 minutes.
 
-## 10. READY-Bindungsfenster
+## 10. READY binding window
 
-Ein Attachment darf nach erfolgreicher Validierung vorübergehend `READY` und noch ungebunden sein, damit Upload und Parent-Mutation entkoppelt bleiben.
+An attachment may temporarily be `READY` and unbound after successful validation so upload and parent mutation remain decoupled.
 
-- Bindungsfenster: **60 Minuten ab `readyAt`**.
-- Innerhalb dieses Fensters darf nur der Owner das Attachment an einen zulässigen Parent im selben Space binden.
-- Nach Bindung entfällt die Orphan-Frist; Lebensdauer folgt dem Parent.
-- Ungebundenes READY nach 60 Minuten wird atomar `DELETING` markiert und vom Cleanup entfernt.
-- Ein Bind-Versuch parallel zum Cleanup wird über Row Lock/Statusprüfung serialisiert: entweder Bind gewinnt vollständig oder Cleanup; kein gebundener Blob darf gelöscht werden.
+- Binding window: **60 minutes from `readyAt`**.
+- Within this window, only the owner may bind the attachment to an allowed parent in the same space.
+- After binding, the orphan deadline no longer applies; lifetime follows the parent.
+- Unbound READY after 60 minutes is atomically marked `DELETING` and removed by cleanup.
+- A bind attempt concurrent with cleanup is serialized through row lock/state checking: either binding wins completely or cleanup does; no bound blob may be deleted.
 
-## 11. Retention und Cleanup
+## 11. Retention and cleanup
 
-| Zustand / Anlass | Retention | Aktion |
+| State / trigger | Retention | Action |
 |---|---:|---|
-| PENDING ohne Upload/Finalize | 24 h ab `createdAt` | `DELETING` + Cleanup |
-| UPLOADING ohne Finalize | 24 h ab letzter serverbekannter Aktivität, sonst `createdAt` | `DELETING` + Cleanup |
-| FAILED | 24 h ab `failedAt` | `DELETING` + Cleanup |
-| READY ungebunden | 60 min ab `readyAt` | `DELETING` + Cleanup |
-| letzte Parent-Referenz entfernt / Parent gelöscht | sofort fachlich unreferenziert | `DELETING` atomar markieren; Providercleanup async |
-| DELETE_FAILED | kein automatisches Vergessen | exponentieller Retry + Alarm/Metrik bis Erfolg oder manueller Eingriff |
+| PENDING without upload/finalize | 24 h from `createdAt` | `DELETING` + cleanup |
+| UPLOADING without finalize | 24 h from last server-known activity, otherwise `createdAt` | `DELETING` + cleanup |
+| FAILED | 24 h from `failedAt` | `DELETING` + cleanup |
+| READY unbound | 60 min from `readyAt` | `DELETING` + cleanup |
+| last parent reference removed / parent deleted | immediately unreferenced in domain | atomically mark `DELETING`; provider cleanup async |
+| DELETE_FAILED | no automatic forgetting | exponential retry + alert/metric until success or manual intervention |
 
-Cleanup entfernt Original und abgeleitete Variante gemeinsam. Er läuft mindestens **stündlich** und ist idempotent. Produktionsbetrieb benötigt Metriken für Anzahl/Alter von PENDING, FAILED, ungebunden READY und DELETE_FAILED sowie Cleanup-Erfolg/-Fehler. Keine Metrik enthält Dateinamen oder ProtectedPayload.
+Cleanup removes original and derived variant together. It runs at least **hourly** and is idempotent. Production operation requires metrics for count/age of PENDING, FAILED, unbound READY, and DELETE_FAILED plus cleanup success/failure. No metric contains filenames or ProtectedPayload.
 
-Providerlöschung erfolgt außerhalb der fachlichen DB-Transaktion. Ein Storagefehler darf einen bereits gelöschten/private gewordenen Parent nicht wieder sichtbar machen.
+Provider deletion happens outside the domain DB transaction. A storage failure must not make an already deleted/private parent visible again.
 
-## 12. Verknüpfung mit Domainressourcen
+## 12. Binding to domain resources
 
 ### Memory
 
-- mehrere Attachments über `MemoryAttachment(position)`,
-- maximal 20 / 500 MiB,
-- nur READY innerhalb Bindungsfenster bindbar,
-- Relation und Statusprüfung atomar,
-- partieller Uploadfehler verändert bestehende Memory nicht automatisch.
+- multiple attachments through `MemoryAttachment(position)`,
+- maximum 20 / 500 MiB,
+- only READY within the binding window is bindable,
+- relation and state check are atomic,
+- partial upload failure does not automatically modify an existing Memory.
 
 ### HeartMoment
 
-- maximal ein optionales Attachment,
-- Attachment folgt der Parent-Autorisierung,
-- Privacy-Wechsel invalidiert neue Read-Descriptor-Ausstellung; bestehende S3-Read-URL kann höchstens ihre 5-Minuten-TTL auslaufen.
+- at most one optional attachment,
+- attachment follows parent authorization,
+- privacy change invalidates issuance of new Read Descriptors; an existing S3 Read URL may remain usable only until its 5-minute TTL ends.
 
 ### Milestone/Comment
 
-Attachment-Unterstützung ist in M2 nicht vorgesehen und wird nicht still ergänzt.
+Attachment support is not part of M2 and is not added silently.
 
-## 13. Idempotenz und Concurrency
+## 13. Idempotency and concurrency
 
-- `createUpload` mit demselben Idempotency-Key erzeugt höchstens ein Attachment.
-- `finalizeUpload` ist idempotent; READY bleibt READY, FAILED benötigt bewussten Retry.
-- Retry aus FAILED erzeugt ein neues Uploadziel für denselben Attachment-Datensatz nur solange keine Bindung existiert; Status/Versuch werden serverseitig versioniert/serialisiert.
-- Parent-Delete parallel zu Bind/Finalize kann keine Relation zu einem gelöschten Parent erzeugen.
-- Letzte-Referenz-Delete parallel zu Read-Descriptor-Ausstellung prüft Parent/Status unmittelbar vor Ausstellung.
-- Cleanup parallel zu Bind wird durch Row Lock/Statusprüfung serialisiert.
+- `createUpload` with the same idempotency key creates at most one attachment.
+- `finalizeUpload` is idempotent; READY remains READY, FAILED requires explicit retry.
+- Retry from FAILED creates a new upload target for the same attachment record only while no binding exists; state/attempt is versioned/serialized server-side.
+- Parent delete concurrent with bind/finalize cannot create a relation to a deleted parent.
+- Last-reference delete concurrent with Read Descriptor issuance checks parent/state immediately before issuance.
+- Cleanup concurrent with bind is serialized through row lock/state checking.
 
-## 14. Crypto Readiness
+## 14. Crypto readiness
 
-Attachment trägt `cryptoVersion` und `encrypted`. MediaStore behandelt Bytes als opak. M2 behauptet keine echte E2EE. Die verpflichtende M2-Validierung benötigt für unterstützte Medien serverseitig lesbaren Inhalt; eine spätere echte E2EE-Variante benötigt einen neu entschiedenen Client-/Validation-Contract und darf nicht als bereits gelöst gelten.
+Attachment carries `cryptoVersion` and `encrypted`. MediaStore treats bytes as opaque. M2 does not claim real E2EE. Mandatory M2 validation requires server-readable content for supported media; a later real E2EE variant needs a newly decided client/validation contract and must not be treated as already solved.
 
-## 15. Observability ohne Leak
+## 15. Observability without leaks
 
-Erlaubt:
+Allowed:
 
-- Attachment-ID,
-- notwendige Space-/Accountreferenz gemäß Logging-Policy,
-- Adaptername,
-- Statusübergang,
-- grobe Byteklasse,
-- Dauer,
-- sicherer Fehlercode,
-- Jobversuche.
+- attachment ID,
+- necessary space/account reference according to logging policy,
+- adapter name,
+- state transition,
+- coarse byte class,
+- duration,
+- safe error code,
+- job attempts.
 
-Nicht loggen:
+Do not log:
 
-- signierte URL oder Uploaddescriptor,
-- Originaldateiname,
-- EXIF-/Standortdaten,
-- Bild-/Videoinhalt,
-- Authorization Header,
-- Storage Credentials,
-- Storage Key in nutzerexponierten Fehlern,
-- vollständige Providerantworten mit sensiblen Daten.
+- signed URL or Upload Descriptor,
+- original filename,
+- EXIF/location data,
+- image/video content,
+- Authorization header,
+- storage credentials,
+- storage key in user-exposed errors,
+- complete provider responses containing sensitive data.
 
-## 16. Abnahmekriterien
+## 16. Acceptance criteria
 
-- LocalMediaStore und S3MediaStore bestehen denselben Domain-/Lifecycle-Contract.
-- Upload-Lifecycle ist idempotent und race-sicher.
-- MIME, Größe, Dimensionen, Dauer und Space werden serverseitig geprüft.
-- Cross-Tenant- und Owner-only-Abruf liefern keine Leaks.
-- S3 Upload URL ≤10 min; Read URL ≤5 min; Bucket nicht öffentlich.
-- PENDING/UPLOADING/FAILED ≤24 h; ungebunden READY ≤60 min.
-- Orphans und fehlgeschlagene Deletes werden retry-fähig bereinigt und gemessen.
-- Memory-Galerie und HeartMoment-Attachment respektieren Kardinalität/Größenlimits.
-- Logs, Analytics und Events enthalten keine Medieninhalte, Dateinamen oder signierten URLs.
-- Offline-Write wird nicht vorgetäuscht.
+- LocalMediaStore and S3MediaStore pass the same domain/lifecycle contract.
+- Upload lifecycle is idempotent and race-safe.
+- MIME, size, dimensions, duration, and space are checked server-side.
+- Cross-tenant and owner-only retrieval produces no leaks.
+- S3 Upload URL ≤10 min; Read URL ≤5 min; bucket is not public.
+- PENDING/UPLOADING/FAILED ≤24 h; unbound READY ≤60 min.
+- Orphans and failed deletes are cleaned up retryably and measured.
+- Memory gallery and HeartMoment attachment respect cardinality/size limits.
+- Logs, analytics, and events contain no media content, filenames, or signed URLs.
+- Offline Write is not simulated.
 
-## Verwandte Dokumente
+## Related documents
 
 - [Domain Model](./DOMAIN-MODEL.md)
 - [API Design](./API-DESIGN.md)
