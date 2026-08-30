@@ -67,6 +67,11 @@ const de = {
     emptyTitle: 'Noch kein gemeinsamer Bereich',
     emptyBody:
       'Für dieses Konto ist noch kein aktiver gemeinsamer Bereich verbunden. Nimm eine Einladung an oder richte euren gemeinsamen Bereich ein.',
+    pickerTitle: 'Welchen Bereich möchtest du öffnen?',
+    pickerBody:
+      'Wähle den gemeinsamen Bereich, mit dem du fortfahren möchtest.',
+    pickerAria: 'Gemeinsamen Bereich auswählen',
+    spaceFallback: 'Gemeinsamer Bereich {{index}}',
   },
   login: {
     introHeading: 'Euer gemeinsamer Raum für die Dinge, die bleiben.',
