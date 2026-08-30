@@ -1,12 +1,14 @@
 # M4 Delivery Plan
 
-**Status:** M4-A and M4-B S0 decisions ready; M4-C readiness pending #277  
+**Status:** M4-A, M4-B and M4-C S0 decisions ready; runtime slices remain separate  
 **As of:** August 30, 2026  
 **M4-A readiness:** #272  
 **M4-B readiness:** #276  
 **M4-C readiness:** #277
 
 This plan sequences M4 after G3 while keeping Search/Dashboard, Activity/Notifications and Reminders/Rules in separate risk classes.
+
+# M4-A — Search + Dashboard
 
 ## M4-A sequence
 
@@ -58,7 +60,7 @@ Deliverables:
 ## M4-A-S1 — Search Foundation
 
 **Owner:** #274  
-**Runtime PR:** #275 at the time of the M4-B readiness decision
+**Runtime PR:** #275 at the time of the M4-C readiness decision
 
 Scope:
 
@@ -144,7 +146,7 @@ S3 is evidence/status work, not a feature-expansion opportunity.
 
 # M4-B — Activity + Notifications
 
-M4-B readiness is owned by #276.
+M4-B readiness was delivered through #276/#278.
 
 Binding design:
 
@@ -155,7 +157,7 @@ Binding design:
 ## M4-B sequence
 
 ```text
-S0 Readiness / Contract (#276)
+S0 Readiness / Contract (#276) ✓
         |
         +--> S1 Activity + in-app Notification Foundation
         |       |
@@ -189,9 +191,9 @@ M4-B runtime must not be combined into one oversized PR merely because Activity 
 
 ## M4-B-S0 — readiness and contracts
 
-**Owner:** #276  
+**Owner:** #276 / PR #278  
 **Runtime changes:** none  
-**Status:** ready when the owning documentation PR merges
+**Status:** delivered
 
 Deliverables:
 
@@ -208,7 +210,7 @@ Deliverables:
 
 ## M4-B-S1 — Activity + in-app Notification foundation
 
-Create a dedicated issue only after M4-B-S0 merges.
+Create a dedicated issue before runtime implementation.
 
 Scope:
 
@@ -240,7 +242,7 @@ Reuse result:
 
 ## M4-B-S2 — `Ich denke an dich` + PushDelivery boundary
 
-Create a dedicated issue after S1 or in parallel only if migration/API overlap remains low and main is synchronized.
+Create a dedicated issue after S1 or in parallel only if migration/API overlap remains low and `main` is synchronized.
 
 Scope:
 
@@ -298,19 +300,170 @@ S3 is evidence/status work, not a feature-expansion opportunity.
 
 # M4-C — Reminders + Rules
 
-M4-C readiness is owned separately by #277.
+M4-C readiness is delivered by #277 when its documentation PR merges.
 
-No M4-C runtime may start until #277 freezes at least:
+Binding design:
 
-- Reminder shared/personal ownership decision;
-- `ONCE`/`ANNUAL`/`RELATIONSHIP_DAY_COUNT` schedule parameters;
-- timezone/DST/leap-day behavior;
-- offset validation;
-- manual vs generated Reminder edit/source semantics;
-- Rule catalog/`RulePreference` contract;
-- scheduling/occurrence/idempotency model;
-- M4-C-to-M4-B Notification handoff;
-- business/freemium split between basic and advanced automation.
+- `REMINDERS-RULES-DESIGN.md`;
+- `REMINDERS-RULES-PRIVACY-TIME-TEST-MATRIX.md`;
+- `DECISION-LOG.md` M4-D47 through M4-D66.
+
+## M4-C sequence
+
+```text
+S0 Readiness / Contract (#277)
+        |
+        +--> S1 Reminder Domain + Schedule API
+        |       |
+        |       +--> Reminder/Schedule/Offset/Preference persistence
+        |       +--> shared/manual/generated invariants
+        |       +--> ONCE/ANNUAL/RELATIONSHIP_DAY_COUNT evaluation
+        |       +--> timezone/DST/leap-day semantics
+        |       +--> Reminder CRUD/preference APIs
+        |       +--> OpenAPI/generated clients
+        |
+        +--> S2 Rule Catalog + Occurrence Planner + M4-B Handoff
+        |       |
+        |       +--> controlled Rule catalog + RulePreference API
+        |       +--> source reconciliation/generated Reminders
+        |       +--> durable occurrence ledger
+        |       +--> PostgreSQL Job Queue planning/reconciliation
+        |       +--> retry/stale-generation/catch-up behavior
+        |       +--> content-minimized REMINDER_DUE handoff
+        |
+        +--> S3 Integrated M4-C Evidence
+                |
+                +--> Cross-Tenant/private-source regression
+                +--> DST/timezone/leap-day matrix
+                +--> source/preference/timezone race evidence
+                +--> restart/restore/stale-job reconciliation
+                +--> M4-B Notification integration
+                +--> status synchronization
+```
+
+## M4-C-S0 — readiness and contracts
+
+**Owner:** #277  
+**Runtime changes:** none  
+**Status:** ready when the owning documentation PR merges
+
+Deliverables:
+
+- shared-v1 Reminder scope and manual/generated mutation semantics;
+- `ReminderPreference` behavior;
+- typed schedule contracts;
+- DST/timezone/leap-day rules;
+- dedicated offset contract;
+- deterministic controlled Rule catalog/RulePreference contract;
+- generated Reminder identity and source reconciliation;
+- occurrence ledger and PostgreSQL Job Queue strategy;
+- M4-C-to-M4-B handoff;
+- Reuse-before-build and business/freemium decisions;
+- dedicated privacy/time/test matrix;
+- concrete runtime sequence.
+
+## M4-C-S1 — Reminder Domain + Schedule API
+
+Create a dedicated issue only after M4-C-S0 merges.
+
+Scope:
+
+- Reminder, ReminderSchedule, ReminderOffset and ReminderPreference persistence/migrations;
+- shared Space authorization and manual/generated invariants;
+- manual Reminder CRUD;
+- generated Reminder read-only mutation boundary;
+- per-account mute preference;
+- `ONCE`, `ANNUAL` and `RELATIONSHIP_DAY_COUNT` evaluation;
+- Account-timezone/DST/Feb-29/start-date semantics;
+- offset validation/uniqueness;
+- next-occurrence projection;
+- OpenAPI and regenerated TypeScript/Kotlin clients;
+- unit/PostgreSQL/HTTP privacy/time/concurrency evidence.
+
+Explicitly out:
+
+- Rule catalog runtime;
+- occurrence jobs/delivery;
+- M4-B Notification handoff;
+- full Reminder client productization (M5).
+
+Business classification:
+
+- manual shared Reminders and per-account mute = Free/Core.
+
+Reuse result:
+
+- existing Account timezone/clock/concurrency patterns;
+- no scheduler/message infrastructure required for S1 domain semantics.
+
+## M4-C-S2 — Rule Catalog + Occurrence Planner + M4-B handoff
+
+Runtime dependency:
+
+- the Reminder Domain from S1 is required;
+- final user-visible delivery integration requires the M4-B in-app Notification foundation rather than creating a parallel notification stack.
+
+Scope:
+
+- controlled v1 Rule catalog;
+- RulePreference API/validation;
+- shared source reconciliation/generated Reminders;
+- technical ReminderOccurrence/equivalent ledger;
+- next-occurrence planning and bounded reconciliation;
+- existing PostgreSQL Job Queue `run_after`/lease/retry reuse;
+- stale-generation cancellation/no-op behavior;
+- 24-hour missed-occurrence catch-up window;
+- content-minimized `REMINDER_DUE` handoff to M4-B;
+- PostgreSQL race/restart/idempotency tests.
+
+Explicitly out:
+
+- arbitrary scripts/expression language;
+- general workflow engine;
+- AI automation;
+- external integration triggers;
+- separate Notification/Push implementation;
+- entitlement runtime.
+
+Business classification:
+
+- initial deterministic ImportantDate/birthday/anniversary/Plan rules = Free/Core;
+- advanced automation remains future Mixed/Premium candidate.
+
+Reuse result:
+
+- PostgreSQL Job Queue + Outbox + existing retry/lease primitives;
+- no Redis/Celery/Quartz/Kafka/RabbitMQ/new scheduler stack.
+
+## M4-C-S3 — integrated evidence and status sync
+
+Goal:
+
+Prove date/time automation stays deterministic and cannot leak private/cross-tenant data or create duplicate user-visible effects under retry/restart/race conditions.
+
+Evidence includes at minimum:
+
+- real HTTP + PostgreSQL manual/generated Reminder flows;
+- Cross-Tenant isolation;
+- private-source non-generation/non-influence;
+- all schedule validation boundaries;
+- Europe/Berlin plus another DST pattern;
+- February 29 fallback;
+- Account timezone change recomputation;
+- relationship start change recomputation;
+- offset mutation/uniqueness;
+- RulePreference account isolation;
+- generated Reminder source-event replay/idempotency;
+- concurrent planner/worker behavior;
+- stale job suppression;
+- 24-hour catch-up and no stale burst;
+- M4-B Notification handoff idempotency/privacy;
+- published OpenAPI/generated-client consistency;
+- representative query/performance evidence;
+- business/freemium traceability;
+- normal CI/CodeQL/Supply Chain/Self-Hosted gates.
+
+S3 is evidence/status work, not a feature-expansion opportunity.
 
 ## Parallelism rule
 
@@ -318,10 +471,11 @@ Parallel work is allowed only when branches do not compete for the same authorit
 
 Examples:
 
-- M4-A Search code and docs-only M4-B/M4-C readiness may proceed in parallel;
-- M4-B-S1 and a later M4-A runtime slice may proceed only when migration/router/OpenAPI/client-generation overlap is coordinated;
+- docs-only readiness work may coexist with M4-A Search runtime;
+- M4-C-S1 may proceed independently from M4-B runtime if migration/router/OpenAPI/client-generation overlap is coordinated;
+- M4-C-S2 can implement planning/rule internals, but its user-visible delivery integration must target the delivered M4-B Notification foundation;
 - two branches that both edit the same generated OpenAPI/client surfaces should normally serialize or synchronize through merge commits rather than rely on rebase;
-- M4-C runtime must not begin from unresolved schedule/time/privacy semantics merely to increase parallelism.
+- no runtime slice may silently change a DECIDED contract merely to increase parallelism.
 
 ## Definition of Done per runtime slice
 
@@ -333,6 +487,7 @@ A runtime slice is not done until:
 - API/OpenAPI/generated clients are synchronized;
 - Tenant/Privacy negative tests pass;
 - PostgreSQL integration evidence exists for persistence/concurrency/query semantics;
+- time/DST behavior is tested where relevant;
 - cross-cutting review is complete;
 - branch is current enough for repository rules;
 - all required CI checks are green before Merge Commit.
