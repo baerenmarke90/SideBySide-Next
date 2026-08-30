@@ -72,10 +72,7 @@ export async function normalizeClientError(
     );
   }
 
-  if (
-    typeof navigator !== 'undefined' &&
-    navigator.onLine === false
-  ) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return new ClientProblemError('offline');
   }
 
@@ -95,10 +92,7 @@ export async function normalizeClientError(
 
 export function clientProblemKind(error: unknown): ClientProblemKind {
   if (error instanceof ClientProblemError) return error.kind;
-  if (
-    typeof navigator !== 'undefined' &&
-    navigator.onLine === false
-  ) {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return 'offline';
   }
   return 'unknown';
