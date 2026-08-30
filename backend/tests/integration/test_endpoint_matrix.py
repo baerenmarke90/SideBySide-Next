@@ -875,9 +875,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
     wish = client.post(f"{base_path}/wishes", json=WISH, headers=headers).json()
     place = client.post(f"{base_path}/places", json=PLACE, headers=headers).json()
     plan = client.post(f"{base_path}/plans", json=PLAN, headers=headers).json()
-    reminder = client.post(
-        f"{base_path}/reminders", json=REMINDER, headers=headers
-    ).json()
+    reminder = client.post(f"{base_path}/reminders", json=REMINDER, headers=headers).json()
     chapter = client.post(f"{base_path}/chapters", json=CHAPTER, headers=headers).json()
     collection = client.post(f"{base_path}/collections", json=COLLECTION, headers=headers).json()
     collection_item = client.post(
