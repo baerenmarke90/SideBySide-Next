@@ -46,9 +46,7 @@ function personFields(form: FormData): RelatedPersonFields {
     visibility: String(
       form.get('visibility'),
     ) as RelatedPersonFields['visibility'],
-    birthday: birthdayValue
-      ? new Date(`${birthdayValue}T00:00:00.000Z`)
-      : null,
+    birthday: birthdayValue ? new Date(`${birthdayValue}T00:00:00.000Z`) : null,
     birthdayYearKnown: birthdayValue
       ? form.get('birthdayYearKnown') === 'on'
       : false,
@@ -223,9 +221,7 @@ export function DeleteRelatedPersonDialogContent({
             name="deletePolicy"
             value={RelatedPersonDeletePolicy.preserve}
             checked={choice.policy === RelatedPersonDeletePolicy.preserve}
-            onChange={() =>
-              onSelectPolicy(RelatedPersonDeletePolicy.preserve)
-            }
+            onChange={() => onSelectPolicy(RelatedPersonDeletePolicy.preserve)}
           />
           <span>
             <strong>{t('people.deletePreserveTitle')}</strong>
