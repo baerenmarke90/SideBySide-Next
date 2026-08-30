@@ -25,14 +25,9 @@ const de = {
     operatorSuffix: 'gesetzt sein.',
   },
   login: {
-    introEyebrow: 'Gemeinsam leben. Privat verbunden.',
     introHeading: 'Euer gemeinsamer Raum für die Dinge, die bleiben.',
     introBody:
-      'Erinnerungen, Wünsche und Pläne an einem ruhigen Ort – für zwei Menschen gedacht, nicht für ein soziales Netzwerk.',
-    trustAria: 'Was SideBySide auszeichnet',
-    trustPrivacy: 'Privacy-first',
-    trustTwo: 'Für zwei gedacht',
-    trustAds: 'Ohne Werbung',
+      'Erinnerungen, Wünsche und Pläne an einem ruhigen Ort – nur für euch zwei.',
     eyebrow: 'Willkommen zurück',
     heading: 'Anmelden',
     body: 'Melde dich mit deinem SideBySide-Konto an.',
