@@ -184,12 +184,12 @@ def _reconcile_generated_reminders(session: Session, space_id: UUID) -> None:
             ImportantDate.repeats == DateRepeat.ANNUALLY.value,
         )
     ).scalars()
-    for source in important_dates:
-        desired[("IMPORTANT_DATE", source.id, IMPORTANT_DATE_RULE)] = {
-            "owner_id": source.owner_id,
+    for important_date in important_dates:
+        desired[("IMPORTANT_DATE", important_date.id, IMPORTANT_DATE_RULE)] = {
+            "owner_id": important_date.owner_id,
             "schedule_type": ReminderScheduleType.ANNUAL,
-            "annual_month": source.date.month,
-            "annual_day": source.date.day,
+            "annual_month": important_date.date.month,
+            "annual_day": important_date.date.day,
             "local_time": time(9, 0),
         }
 
@@ -200,14 +200,14 @@ def _reconcile_generated_reminders(session: Session, space_id: UUID) -> None:
             RelatedPerson.birthday.is_not(None),
         )
     ).scalars()
-    for source in people:
-        if source.birthday is None:
+    for person in people:
+        if person.birthday is None:
             continue
-        desired[("RELATED_PERSON", source.id, RELATED_PERSON_BIRTHDAY_RULE)] = {
-            "owner_id": source.owner_id,
+        desired[("RELATED_PERSON", person.id, RELATED_PERSON_BIRTHDAY_RULE)] = {
+            "owner_id": person.owner_id,
             "schedule_type": ReminderScheduleType.ANNUAL,
-            "annual_month": source.birthday.month,
-            "annual_day": source.birthday.day,
+            "annual_month": person.birthday.month,
+            "annual_day": person.birthday.day,
             "local_time": time(9, 0),
         }
 
@@ -234,13 +234,13 @@ def _reconcile_generated_reminders(session: Session, space_id: UUID) -> None:
             Plan.planned_start.is_not(None),
         )
     ).scalars()
-    for source in plans:
-        if source.planned_start is None:
+    for plan in plans:
+        if plan.planned_start is None:
             continue
-        desired[("PLAN", source.id, PLAN_START_RULE)] = {
-            "owner_id": source.owner_id,
+        desired[("PLAN", plan.id, PLAN_START_RULE)] = {
+            "owner_id": plan.owner_id,
             "schedule_type": ReminderScheduleType.ONCE,
-            "once_at": clock.ensure_utc(source.planned_start),
+            "once_at": clock.ensure_utc(plan.planned_start),
         }
 
     existing = list(
