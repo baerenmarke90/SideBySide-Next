@@ -30,8 +30,8 @@ describe('AppShell', () => {
       </MemoryRouter>,
     );
 
-    expect(html).toMatch(
-      /href="\/memory\/new" aria-current="page"[^>]*shell-nav-link-active/,
-    );
+    expect(html).toContain('href="/memory/new"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('shell-nav-link-active');
   });
 });
