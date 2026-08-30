@@ -20,6 +20,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom';
+import type { AccountView } from './api/generated/models/AccountView';
 import type { SpaceView } from './api/generated/models/SpaceView';
 import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';
 import type { TokenView } from './api/generated/models/TokenView';
@@ -48,6 +49,7 @@ import { Brand } from './components/Brand';
 import { IdentityEntry } from './components/IdentityEntry';
 import { PageHeader } from './components/PageHeader';
 import { ProblemState } from './components/ProblemState';
+import { ProfilePage } from './components/ProfilePage';
 import { RelatedPeoplePage } from './components/RelatedPeoplePage';
 import { StoryList } from './components/StoryList';
 import { ThemeControl } from './components/ThemeControl';
@@ -473,11 +475,13 @@ function MemoryCreatePage({
 
 function AuthenticatedApp({
   tokens,
+  account,
   logout,
   apiBaseUrl,
   spaceId,
 }: {
   tokens: TokenView;
+  account: AccountView;
   logout: () => void;
   apiBaseUrl: string;
   spaceId: string;
@@ -570,6 +574,17 @@ function AuthenticatedApp({
             }
           />
           <Route
+            path={appRoutePath('profile')}
+            element={
+              <ProfilePage
+                apiBaseUrl={apiBaseUrl}
+                accessToken={tokens.accessToken}
+                account={account}
+                spaceId={spaceId}
+              />
+            }
+          />
+          <Route
             path={appRoutePath('memoryCreate')}
             element={
               <MemoryCreatePage
@@ -594,6 +609,7 @@ export function App() {
   const config = useMemo(loadReferenceClientConfig, []);
   const queryClient = useQueryClient();
   const [tokens, setTokens] = useState<TokenView | null>(null);
+  const [account, setAccount] = useState<AccountView | null>(null);
   const [spaceId, setSpaceId] = useState<string | null>(null);
   const [entryToken] = useState(() =>
     readSensitiveEntryToken(window.location.pathname, window.location.search),
@@ -647,11 +663,12 @@ export function App() {
 
   function logout() {
     setSpaceId(null);
+    setAccount(null);
     setTokens(null);
     queryClient.clear();
   }
 
-  if (!tokens) {
+  if (!tokens || !account) {
     return (
       <>
         <ThemeControl />
@@ -660,6 +677,7 @@ export function App() {
           entryToken={entryToken}
           onSession={(session) => {
             setSpaceId(null);
+            setAccount(session.account);
             setTokens(session.tokens);
             queryClient.clear();
           }}
@@ -724,6 +742,7 @@ export function App() {
   return (
     <AuthenticatedApp
       tokens={tokens}
+      account={account}
       logout={logout}
       apiBaseUrl={config.apiBaseUrl}
       spaceId={activeSpaceId}
