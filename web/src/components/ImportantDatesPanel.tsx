@@ -281,11 +281,14 @@ export function ImportantDatesPanel({
   });
 
   return (
-    <section className="important-dates-section" aria-labelledby="important-dates-title">
+    <section
+      className="important-dates-section"
+      aria-labelledby="important-dates-title"
+    >
       <div className="section-head">
         <div>
           <h2 id="important-dates-title">{t('importantDates.heading')}</h2>
-          <p>{t('importantDates.intro')}</p>
+          <p className="important-dates-intro">{t('importantDates.intro')}</p>
         </div>
         <button
           type="button"
@@ -326,7 +329,10 @@ export function ImportantDatesPanel({
         />
       ) : null}
 
-      <div className="story-surface" aria-labelledby="important-dates-list-title">
+      <section
+        className="story-surface"
+        aria-labelledby="important-dates-list-title"
+      >
         <div className="section-head">
           <h3 id="important-dates-list-title">{t('importantDates.listTitle')}</h3>
         </div>
@@ -440,7 +446,7 @@ export function ImportantDatesPanel({
             })}
           </ul>
         ) : null}
-      </div>
+      </section>
     </section>
   );
 }
