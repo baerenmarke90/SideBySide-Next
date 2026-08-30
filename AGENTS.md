@@ -10,8 +10,9 @@ Before relevant work, read at least these documents:
 2. `specification/CLEAN-ROOM-MASTER-SPEC.md`
 3. `docs/REUSE-BEFORE-BUILD.md`
 4. `docs/CROSS-CUTTING-QUALITY.md`
-5. `docs/EXTERNAL-PROVIDER-CANDIDATES.md` when providers, infrastructure, or platform components are affected
-6. `docs/ROADMAP.md` and the relevant milestone/project-control documentation
+5. `docs/BUSINESS-MODEL.md`
+6. `docs/EXTERNAL-PROVIDER-CANDIDATES.md` when providers, infrastructure, or platform components are affected
+7. `docs/ROADMAP.md` and the relevant milestone/project-control documentation
 
 ## Engineering language
 
@@ -46,6 +47,42 @@ When the change is relevant, the issue or pull request must document:
 - for third-party components: license/ToS, Cloud/Self-Hosted support, privacy, cost, fallback, and user effort
 
 `docs/EXTERNAL-PROVIDER-CANDIDATES.md` is a starting list; it does not replace a current search for better or newer options.
+
+## Business / freemium model consistency
+
+Consistency with `docs/BUSINESS-MODEL.md` is a mandatory development invariant, not a launch-only or monetization-only review.
+
+Every development issue and pull request must explicitly assess whether the change is consistent with the current SideBySide Next business/freemium model. The review is mandatory even when the conclusion is that the change has no business-model impact.
+
+Until the detailed Free/Premium decisions from #262 are promoted into authoritative repository documentation, #262 is the current working source for those pending product-tier decisions. It must not become a permanent substitute for versioned repository documentation.
+
+### Required before implementation starts
+
+Assess at least the following when relevant:
+
+- Free, Premium, Mixed, or explicitly non-paywallable capability classification;
+- entitlement/capability boundaries and relationship/couple ownership semantics;
+- Self-Hosted versus SideBySide Cloud/Managed behavior;
+- managed infrastructure, storage, compute, rendering, provider/API, inference, email/push, or support cost;
+- quotas, storage limits, fair-use rules, retention, or other managed-resource constraints;
+- downgrade, trial, grandfathering, restore, export, and existing-data behavior;
+- whether the change would artificially degrade Self-Hosted solely to promote Cloud;
+- whether the authoritative feature/plan matrix or business-model documentation must be updated.
+
+The issue or pull request must record one of:
+
+- **Business/freemium impact reviewed** — with the relevant decision or link to the owning product decision; or
+- **No business/freemium impact** — with a short rationale.
+
+A generic unchecked statement such as `not relevant` without rationale is insufficient.
+
+### Required before merge
+
+Re-evaluate the business/freemium result when implementation decisions changed the product surface, entitlement model, Self-Hosted/Cloud behavior, managed-resource usage, storage/quota behavior, operating cost, or downgrade/data semantics.
+
+A pull request is not merge-ready when it introduces or changes a recognizable monetization, entitlement, Premium, Cloud/Self-Hosted, managed-resource, storage/quota, or downgrade behavior that conflicts with the current model or lacks an explicit owning decision.
+
+Business-model consistency does not replace security, privacy, architecture, accessibility, reuse, or cross-cutting-quality review. All applicable gates remain cumulative.
 
 ## Semantic design tokens
 
@@ -104,11 +141,13 @@ Normal couples must not need to configure technical infrastructure. API keys, te
 
 ## Do not weaken existing gates
 
-Reuse or cross-cutting decisions must never weaken Clean-Room, security, privacy, tenant-isolation, provenance, licensing, or engineering-language rules.
+Reuse, business-model, or cross-cutting decisions must never weaken Clean-Room, security, privacy, tenant-isolation, provenance, licensing, or engineering-language rules.
 
 ## Pull requests
 
 A relevant pull request without a traceable reuse review is not merge-ready. Pure domain changes may mark the review as `not relevant` with a short rationale.
+
+Every development pull request must contain a traceable Business/Freemium Model Consistency result. `No business/freemium impact` is acceptable only with a short rationale. A recognizable conflict with `docs/BUSINESS-MODEL.md` or the current authoritative/working feature-tier decisions must be resolved before merge or routed through an explicit owning product decision.
 
 Larger runtime slices, client features, and production user flows must document their relevant cross-cutting consequences in the pull request. The pull-request template is the minimum review surface; deeper decisions belong in the owning issue, decision document, or ADR.
 
