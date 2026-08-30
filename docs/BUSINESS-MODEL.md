@@ -46,6 +46,19 @@ Users primarily pay for operations and the associated services, for example:
 
 The Cloud may be offered in different plans, for example based on storage, service scope, or additional managed services. Specific prices and limits will be defined only after cost and market analysis.
 
+## Product tiers
+
+The operating model and the product tier are separate axes.
+
+- **Self-Hosted vs. Cloud/Managed** answers who operates the infrastructure, storage, backups, updates, monitoring, and comparable services.
+- **Free vs. Premium** answers which product capabilities are commercially eligible.
+
+The authoritative classification of capabilities already implemented on the M0-M3 baseline is recorded in [`FREEMIUM-FEATURE-MATRIX.md`](./FREEMIUM-FEATURE-MATRIX.md).
+
+The current baseline deliberately keeps the implemented M0-M3 relationship Core available as Free/Core or as the Free side of a Mixed capability. Premium is primarily expected to add richer presentation, automation, advanced organization, insights, personalization, integrations, and justified managed-resource services rather than revoke access to users' existing relationship history.
+
+For future/unimplemented capabilities whose final classification is not yet promoted into versioned repository documentation, issue #262 remains the working product-decision source.
+
 ## Official apps and clients
 
 Official Web, Android, and potentially additional clients are part of the SideBySide product.
@@ -77,7 +90,7 @@ The Maintainers decide whether to accept a contribution. Contributions are gover
 
 This business model is an active development constraint, not only a commercialization or launch document.
 
-Every human- or AI-assisted development change must review its consistency with this model before implementation and record the result in the pull request. The review may conclude that a change has no business/freemium impact, but that conclusion requires a short rationale.
+Every human- or AI-assisted development change must review its consistency with this model and the current [`FREEMIUM-FEATURE-MATRIX.md`](./FREEMIUM-FEATURE-MATRIX.md) before implementation and record the result in the pull request. The review may conclude that a change has no business/freemium impact, but that conclusion requires a short rationale.
 
 The review must be revisited before merge if implementation decisions changed any of the following:
 
@@ -91,7 +104,7 @@ The review must be revisited before merge if implementation decisions changed an
 
 A change must not silently introduce a business-model contradiction. If a development decision requires changing this model or the authoritative Free/Premium feature matrix, the product decision and documentation change must be explicit and traceable before merge.
 
-Until the detailed freemium/Premium decisions tracked in issue #262 are promoted into authoritative versioned repository documentation, #262 is the current working decision source for those pending feature-tier questions. This temporary reference does not replace the requirement to move finalized decisions into repository documentation.
+For capabilities already covered by `FREEMIUM-FEATURE-MATRIX.md`, that versioned matrix is authoritative. Until remaining future/unimplemented decisions tracked in issue #262 are promoted into repository documentation, #262 remains the working source only for those pending decisions.
 
 The concrete implementation and pull-request rules are defined in [`AGENTS.md`](../AGENTS.md).
 
@@ -101,6 +114,7 @@ The business model follows these principles:
 
 - **Self-Hosting remains a real product.** It is not merely a demo for the Cloud.
 - **The Cloud sells convenience and operations.** Its added value is a managed service.
+- **Product tier and operating model are separate.** Cloud does not mean Premium, and Self-Hosted does not automatically mean Free.
 - **One shared Application Core.** Cloud and Self-Hosted should not diverge unnecessarily.
 - **No artificial degradation.** Core functionality is not removed from Self-Hosted solely for monetization.
 - **Commercial use remains controlled.** Third parties require a separate license for it.
@@ -110,10 +124,16 @@ The business model follows these principles:
 
 ## Positioning
 
-Future communication may explain the model along these lines:
+Future communication may explain the operating model along these lines:
 
 > You can self-host SideBySide Next for personal, noncommercial use. If you do not want to operate your own server, install updates, or manage backups, you can instead use SideBySide Cloud as a fully operated service.
+
+A compatible product-tier message is:
+
+> Free lets a couple meaningfully use SideBySide. Premium helps them turn their shared data into richer experiences through presentation, automation, insights, personalization, and integrations.
 
 ## Not yet defined
 
 This document defines the strategic product structure but deliberately does not yet set final prices, storage limits, SLA commitments, or plan names. Those points will be defined before commercial launch based on actual infrastructure costs, payment fees, app-store costs, support effort, and market positioning.
+
+The 5 GB Cloud Free / 50 GB Cloud Premium values currently discussed in #262 remain working hypotheses until that cost/market validation is complete; they are not runtime constants or final commercial commitments in this document.
