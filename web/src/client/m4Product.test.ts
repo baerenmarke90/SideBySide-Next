@@ -19,7 +19,9 @@ describe('M5 S5 product navigation', () => {
   });
 
   it('does not invent direct engagement routes for unsupported target types', () => {
-    expect(engagementTargetPath('MEMORY', 'memory-id')).toBe('/memory/memory-id');
+    expect(engagementTargetPath('MEMORY', 'memory-id')).toBe(
+      '/memory/memory-id',
+    );
     expect(engagementTargetPath('HEART_MOMENT', 'heart-id')).toBe('/story');
     expect(engagementTargetPath('MILESTONE', 'milestone-id')).toBe('/story');
 
