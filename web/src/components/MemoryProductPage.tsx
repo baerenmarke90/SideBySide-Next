@@ -326,11 +326,7 @@ export function MemoryProductPage({
             </div>
           </div>
           {imageAttachments.length > 0 ? (
-            <div
-              className="memory-gallery"
-              role="group"
-              aria-label={t('memoryProduct.galleryAria')}
-            >
+            <div className="memory-gallery">
               {imageAttachments.map((attachment) => (
                 <MemoryPreview
                   key={attachment.id}
