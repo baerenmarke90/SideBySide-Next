@@ -61,14 +61,12 @@ const de = {
     suffix: 'Next',
     storyAria: 'SideBySide – zur Story',
   },
-  setup: {
-    eyebrow: 'Fast bereit',
-    heading: 'Diese Installation ist noch nicht vollständig eingerichtet.',
-    body: 'Bitte wende dich an die Person, die diese SideBySide-Instanz betreibt.',
-    operatorSummary: 'Hinweis für Betreiber',
-    operatorPrefix:
-      'Für den aktuellen Story-Flow muss beim Web-Build eine vorhandene Space-ID als',
-    operatorSuffix: 'gesetzt sein.',
+  spaceContext: {
+    eyebrow: 'Gemeinsamer Bereich',
+    loading: 'Euer gemeinsamer Bereich wird geladen …',
+    emptyTitle: 'Noch kein gemeinsamer Bereich',
+    emptyBody:
+      'Für dieses Konto ist noch kein aktiver gemeinsamer Bereich verbunden. Nimm eine Einladung an oder richte euren gemeinsamen Bereich ein.',
   },
   login: {
     introHeading: 'Euer gemeinsamer Raum für die Dinge, die bleiben.',
