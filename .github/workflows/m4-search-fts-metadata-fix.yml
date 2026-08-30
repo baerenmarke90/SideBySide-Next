@@ -111,8 +111,20 @@ jobs:
                       raise SystemExit(f"Missing AST source span for {index_name}")
                   start = line_offsets[text_call.lineno - 1] + text_call.col_offset
                   end = line_offsets[text_call.end_lineno - 1] + text_call.end_col_offset
-                  wrapped = f"({expressions[index_name]})"
-                  replacements.append((start, end, f"text({json.dumps(wrapped)})"))
+                  parts = expressions[index_name].split(" || ")
+                  chunks = []
+                  for position, part in enumerate(parts):
+                      prefix = "(" if position == 0 else ""
+                      suffix = ")" if position == len(parts) - 1 else " || "
+                      chunks.append(prefix + part + suffix)
+                  inner_indent = " " * (text_call.col_offset + 4)
+                  closing_indent = " " * text_call.col_offset
+                  replacement = "text(\n"
+                  replacement += "".join(
+                      f"{inner_indent}{json.dumps(chunk)}\n" for chunk in chunks
+                  )
+                  replacement += f"{closing_indent})"
+                  replacements.append((start, end, replacement))
 
               if replacements:
                   updated = source
