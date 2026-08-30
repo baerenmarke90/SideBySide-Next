@@ -1,4 +1,4 @@
-"""Regression tests for PostgreSQL M4 Search index metadata."""
+"""Regression tests for PostgreSQL M4 Search compound index metadata."""
 
 from __future__ import annotations
 
