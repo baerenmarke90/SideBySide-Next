@@ -18,7 +18,10 @@ const person: RelatedPersonView = {
 };
 
 function renderChoice(
-  policy: typeof RelatedPersonDeletePolicy.preserve | typeof RelatedPersonDeletePolicy.cascade | null,
+  policy:
+    | typeof RelatedPersonDeletePolicy.preserve
+    | typeof RelatedPersonDeletePolicy.cascade
+    | null,
   cascadeConfirmed = false,
 ): string {
   return renderToStaticMarkup(
