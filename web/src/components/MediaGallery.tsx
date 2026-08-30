@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { MediaType, type MediaType as MediaTypeValue } from '../api/generated/models/MediaType';
+import { useEffect, useRef, useState } from 'react';
+import {
+  MediaType,
+  type MediaType as MediaTypeValue,
+} from '../api/generated/models/MediaType';
 import { useTranslation } from '../i18n';
 
 export interface GalleryMediaItem {
@@ -21,8 +24,6 @@ export function MediaGallery({
   const closeButton = useRef<HTMLButtonElement | null>(null);
   const touchStartX = useRef<number | null>(null);
 
-  const itemKey = useMemo(() => items.map((item) => item.id).join('|'), [items]);
-
   useEffect(() => {
     let active = true;
     const loadedUrls: string[] = [];
@@ -30,6 +31,7 @@ export function MediaGallery({
     setFailed(new Set());
 
     for (const item of items) {
+      if (item.mediaType === MediaType.VIDEO) continue;
       void loadMedia(item.id)
         .then((url) => {
           if (!active) {
@@ -49,7 +51,7 @@ export function MediaGallery({
       active = false;
       for (const url of loadedUrls) URL.revokeObjectURL(url);
     };
-  }, [itemKey, items, loadMedia]);
+  }, [items, loadMedia]);
 
   useEffect(() => {
     if (activeIndex === null) return;
@@ -82,8 +84,12 @@ export function MediaGallery({
   }
 
   function renderMedia(item: GalleryMediaItem, className: string) {
-    if (failed.has(item.id)) {
-      return <div className="media-gallery-unavailable">{t('media.unavailable')}</div>;
+    if (item.mediaType === MediaType.VIDEO || failed.has(item.id)) {
+      return (
+        <div className="media-gallery-unavailable">
+          {t('media.unavailable')}
+        </div>
+      );
     }
     const url = urls[item.id];
     if (!url) {
@@ -95,17 +101,6 @@ export function MediaGallery({
         />
       );
     }
-    if (item.mediaType === MediaType.VIDEO) {
-      return (
-        <video
-          className={className}
-          src={url}
-          controls
-          preload="metadata"
-          aria-label={t('gallery.videoLabel')}
-        />
-      );
-    }
     return <img className={className} src={url} alt={t('gallery.imageAlt')} />;
   }
 
@@ -113,14 +108,21 @@ export function MediaGallery({
 
   return (
     <>
-      <div className="media-gallery-grid" aria-label={t('gallery.aria')}>
+      <div
+        className="media-gallery-grid"
+        role="region"
+        aria-label={t('gallery.aria')}
+      >
         {items.map((item, index) => (
           <button
             key={item.id}
             type="button"
             className="media-gallery-thumb"
             onClick={() => setActiveIndex(index)}
-            aria-label={t('gallery.openItem', { index: index + 1, count: items.length })}
+            aria-label={t('gallery.openItem', {
+              index: index + 1,
+              count: items.length,
+            })}
           >
             {renderMedia(item, 'media-gallery-thumb-content')}
           </button>
@@ -133,9 +135,6 @@ export function MediaGallery({
           role="dialog"
           aria-modal="true"
           aria-label={t('gallery.dialogAria')}
-          onClick={(event) => {
-            if (event.currentTarget === event.target) setActiveIndex(null);
-          }}
           onTouchStart={(event) => {
             touchStartX.current = event.touches[0]?.clientX ?? null;
           }}
