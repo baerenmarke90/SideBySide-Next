@@ -565,7 +565,9 @@ function AuthenticatedApp({
           />
           <Route
             path={appRoutePath('people')}
-            element={<RelatedPeoplePage peopleApi={peopleApi} spaceId={spaceId} />}
+            element={
+              <RelatedPeoplePage peopleApi={peopleApi} spaceId={spaceId} />
+            }
           />
           <Route
             path={appRoutePath('memoryCreate')}
