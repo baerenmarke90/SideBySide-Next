@@ -80,11 +80,10 @@ class HeartMoment(
         "Heart moment not found.", "RESOURCE_NOT_FOUND"
     )
 
-    happened_on: Mapped[date] = mapped_column(Date, nullable=False)
-
     # At most one attachment (M2-D03). Model this as a foreign key rather than
     # a relation table so cardinality lives in the schema instead of a rule
     # that application code could forget.
+    happened_on: Mapped[date] = mapped_column(Date, nullable=False)
     attachment_id: Mapped[UUID | None] = mapped_column(
         postgresql.UUID(as_uuid=True),
         ForeignKey("attachments.id", ondelete="RESTRICT"),
@@ -126,5 +125,10 @@ class HeartMoment(
             "ix_heart_moments_space_id_privacy_class",
             "space_id",
             "privacy_class",
+        ),
+        Index(
+            "ix_heart_moments_search_fts",
+            text("setweight(to_tsvector('simple', coalesce(payload->>'text', '')), 'A')"),
+            postgresql_using="gin",
         ),
     )

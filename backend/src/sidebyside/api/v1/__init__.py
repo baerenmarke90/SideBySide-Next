@@ -28,6 +28,7 @@ from sidebyside.api.v1 import (
     private_area,
     private_collections,
     profiles,
+    search,
     spaces,
     story,
     wishes,
@@ -39,6 +40,7 @@ router.include_router(health.router)
 router.include_router(invitations.router)
 router.include_router(attachments.router)
 router.include_router(story.router)
+router.include_router(search.router)
 router.include_router(memories.router)
 router.include_router(milestones.router)
 router.include_router(heart_moments.router)
