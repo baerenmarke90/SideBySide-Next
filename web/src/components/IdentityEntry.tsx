@@ -46,7 +46,9 @@ export function IdentityEntry({
   const [verificationSucceeded, setVerificationSucceeded] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [activeError, setActiveError] = useState<unknown>(null);
-  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
+    null,
+  );
   const processedEntryToken = useRef<string | null>(null);
 
   async function runAction<T>(
@@ -126,12 +128,7 @@ export function IdentityEntry({
     void runAction(
       'signIn',
       () =>
-        signInAndJoinInvitation(
-          apiBaseUrl,
-          email,
-          password,
-          invitationToken,
-        ),
+        signInAndJoinInvitation(apiBaseUrl, email, password, invitationToken),
       onSession,
     );
   }
@@ -230,9 +227,7 @@ export function IdentityEntry({
                   ? t('identity.magicLinkFailedTitle')
                   : t('identity.magicLinkOpening')
               }
-              body={
-                activeError ? t('identity.magicLinkFailedBody') : undefined
-              }
+              body={activeError ? t('identity.magicLinkFailedBody') : undefined}
             />
           ) : showsVerification ? (
             verificationSucceeded ? (
