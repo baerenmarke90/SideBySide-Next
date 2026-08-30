@@ -1,7 +1,7 @@
 # M3 Security Test Matrix
 
 **Status:** binding readiness matrix; concrete expected values follow decisions  
-**As of:** August 26, 2026
+**As of:** August 30, 2026
 
 This matrix defines the minimum test classes required for an M3 slice. It does not replace slice-specific tests, but prevents Tenant, owner-only, Relation, or race cases from first surfacing at the gate.
 
@@ -299,6 +299,10 @@ Mandatory races:
 
 Tests must use real independent PostgreSQL transactions, not only sequential service calls.
 
+M3-S9 closes the final Collection Parent-Delete race gap through
+`backend/tests/integration/test_collection_parent_delete_races.py`, covering
+both shared and private Collection aggregates against Item Create and Reorder.
+
 ## 15. API/OpenAPI tests
 
 Every M3 API slice:
@@ -313,19 +317,23 @@ Every M3 API slice:
 
 ## 16. G3 evidence checklist
 
-The exact gate form is decided by M3-D24. Regardless, the following server evidence should exist:
+The exact gate form is decided by M3-D24. The executable evidence map is
+[`G3-EVIDENCE.md`](./G3-EVIDENCE.md). The S9 evidence pass demonstrates:
 
-- [ ] Wish->Plan real HTTP/PostgreSQL flow including race.
-- [ ] Plan lifecycle with all allowed/forbidden transitions.
-- [ ] Place + at least one approved Relation type through the real API.
-- [ ] Chapter Delete preserves all original targets.
-- [ ] Collection Reorder/Completion concurrency.
-- [ ] PrivateNote/GiftIdea/PrivateCollection owner-only negative matrix.
-- [ ] Cross-Space Relation tests.
-- [ ] Private HeartMoment cannot leak through M3 Relation.
-- [ ] Events/logs contain no sensitive M3 payloads.
-- [ ] OpenAPI/PostgreSQL/CI fully green.
-- [ ] additional Client/Accessibility evidence according to M3-D24.
+- [x] Wish->Plan real HTTP/PostgreSQL flow including race.
+- [x] Plan lifecycle with all allowed/forbidden transitions.
+- [x] Place + approved Relation types through the real API.
+- [x] Chapter Delete preserves all original targets.
+- [x] Collection Reorder/Completion concurrency.
+- [x] PrivateNote/GiftIdea/PrivateCollection owner-only negative matrix.
+- [x] Cross-Space Relation tests.
+- [x] Private HeartMoment cannot leak through M3 Relation.
+- [x] Events/logs contain no sensitive M3 payloads.
+- [x] OpenAPI/PostgreSQL/CI evidence is green for the S9 implementation head; S10 revalidates the final `main` gate state.
+- [x] M3-D24 requires no additional Client/Accessibility evidence for G3; systematic client parity and Accessibility remain M5/G4.
+
+The checklist records available evidence only. It does **not** declare G3 passed;
+that decision belongs to the new dated S10 gate review.
 
 ## 17. Merge rule
 
