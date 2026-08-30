@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import de from './locales/de';
+import importantDates from './locales/importantDates';
 import people from './locales/people';
 
 export const DEFAULT_LOCALE = 'de';
@@ -24,6 +25,7 @@ if (!i18n.isInitialized) {
             ...de.navigation,
             people: 'Menschen',
           },
+          importantDates,
           people,
         },
       },
