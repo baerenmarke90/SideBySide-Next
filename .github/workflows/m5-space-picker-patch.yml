@@ -1,0 +1,380 @@
+name: M5 Space Picker Patch
+
+on:
+  push:
+    branches:
+      - feat/298-m5-web-space-picker
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    name: Implement Space picker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/298-m5-web-space-picker
+          fetch-depth: 0
+
+      - name: Implement authorized Space picker
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          space_context = '''import { SpacesApi } from '../api/generated/apis/SpacesApi';
+          import type { AccountMembershipView } from '../api/generated/models/AccountMembershipView';
+          import type { SpaceView } from '../api/generated/models/SpaceView';
+          import { Configuration } from '../api/generated/runtime';
+          import { normalizeClientError } from './problemDetails';
+          import { createReferenceApis } from './referenceFlow';
+
+          export async function loadAuthorizedMemberships(
+            apiBaseUrl: string,
+            accessToken: string,
+          ): Promise<AccountMembershipView[]> {
+            try {
+              return await createReferenceApis(
+                apiBaseUrl,
+                accessToken,
+              ).auth.listAccountMembershipsApiV1AuthMembershipsGet();
+            } catch (error) {
+              throw await normalizeClientError(error);
+            }
+          }
+
+          export async function loadAuthorizedSpaces(
+            apiBaseUrl: string,
+            accessToken: string,
+            memberships: AccountMembershipView[],
+          ): Promise<SpaceView[]> {
+            const spaces = new SpacesApi(
+              new Configuration({
+                basePath: apiBaseUrl,
+                headers: { Authorization: `Bearer ${accessToken}` },
+              }),
+            );
+
+            try {
+              return await Promise.all(
+                memberships.map((membership) =>
+                  spaces.getSpaceApiV1SpacesSpaceIdGet({
+                    spaceId: membership.spaceId,
+                  }),
+                ),
+              );
+            } catch (error) {
+              throw await normalizeClientError(error);
+            }
+          }
+
+          /**
+           * Resolve an active Space exclusively from the server-authorized Membership set.
+           * A single Membership can enter directly; multiple Spaces require an explicit choice.
+           */
+          export function resolveActiveSpaceId(
+            memberships: AccountMembershipView[],
+            currentSpaceId: string | null,
+          ): string | null {
+            if (
+              currentSpaceId &&
+              memberships.some((membership) => membership.spaceId === currentSpaceId)
+            ) {
+              return currentSpaceId;
+            }
+
+            return memberships.length === 1 ? memberships[0].spaceId : null;
+          }
+          '''
+          Path('web/src/client/spaceContext.ts').write_text(
+              '\n'.join(line[10:] if line.startswith('          ') else line for line in space_context.splitlines()) + '\n',
+              encoding='utf-8',
+          )
+
+          tests = '''import type { AccountMembershipView } from '../api/generated/models/AccountMembershipView';
+          import { resolveActiveSpaceId } from './spaceContext';
+
+          function membership(spaceId: string): AccountMembershipView {
+            return { spaceId, role: 'PARTNER', status: 'ACTIVE' };
+          }
+
+          describe('authorized Space context', () => {
+            it('enters directly when exactly one server-authorized Space exists', () => {
+              expect(resolveActiveSpaceId([membership('space-a')], null)).toBe('space-a');
+            });
+
+            it('requires an explicit choice when multiple authorized Spaces exist', () => {
+              expect(
+                resolveActiveSpaceId(
+                  [membership('space-a'), membership('space-b')],
+                  null,
+                ),
+              ).toBeNull();
+            });
+
+            it('keeps the current Space while it remains authorized', () => {
+              expect(
+                resolveActiveSpaceId(
+                  [membership('space-a'), membership('space-b')],
+                  'space-b',
+                ),
+              ).toBe('space-b');
+            });
+
+            it('drops stale client state and never returns an unauthorized Space', () => {
+              expect(resolveActiveSpaceId([membership('space-a')], 'space-removed')).toBe(
+                'space-a',
+              );
+              expect(
+                resolveActiveSpaceId(
+                  [membership('space-a'), membership('space-b')],
+                  'space-removed',
+                ),
+              ).toBeNull();
+              expect(resolveActiveSpaceId([], 'space-removed')).toBeNull();
+            });
+          });
+          '''
+          Path('web/src/client/spaceContext.test.ts').write_text(
+              '\n'.join(line[10:] if line.startswith('          ') else line for line in tests.splitlines()) + '\n',
+              encoding='utf-8',
+          )
+
+          app_path = Path('web/src/App.tsx')
+          app = app_path.read_text(encoding='utf-8')
+          app = app.replace(
+              "import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';\n",
+              "import type { SpaceView } from './api/generated/models/SpaceView';\nimport type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';\n",
+              1,
+          )
+          app = app.replace(
+              "  loadAuthorizedMemberships,\n  resolveActiveSpaceId,\n",
+              "  loadAuthorizedMemberships,\n  loadAuthorizedSpaces,\n  resolveActiveSpaceId,\n",
+              1,
+          )
+          picker = '''
+
+          function SpacePicker({
+            spaces,
+            onSelect,
+          }: {
+            spaces: SpaceView[];
+            onSelect: (spaceId: string) => void;
+          }) {
+            const { t } = useTranslation();
+            return (
+              <main className="setup-shell">
+                <div className="entry-aura entry-aura-start" aria-hidden="true" />
+                <div className="entry-aura entry-aura-end" aria-hidden="true" />
+                <section className="setup-card" aria-labelledby="space-picker-heading">
+                  <Brand
+                    suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
+                  />
+                  <div className="setup-content">
+                    <p className="eyebrow">{t('spaceContext.eyebrow')}</p>
+                    <h1 id="space-picker-heading">{t('spaceContext.pickerTitle')}</h1>
+                    <p>{t('spaceContext.pickerBody')}</p>
+                    <div
+                      className="form-grid"
+                      role="group"
+                      aria-label={t('spaceContext.pickerAria')}
+                    >
+                      {spaces.map((space, index) => {
+                        const names = space.partners
+                          .map((partner) => partner.displayName.trim())
+                          .filter(Boolean)
+                          .join(' & ');
+                        return (
+                          <button
+                            key={space.id}
+                            type="button"
+                            onClick={() => onSelect(space.id)}
+                          >
+                            {names ||
+                              t('spaceContext.spaceFallback', { index: index + 1 })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </section>
+              </main>
+            );
+          }
+          '''
+          anchor = '\n\nfunction LoginScreen'
+          if anchor not in app:
+              raise SystemExit('LoginScreen anchor not found')
+          app = app.replace(anchor, picker + anchor, 1)
+
+          app = app.replace(
+              "queryKey: ['account-memberships', tokens?.accessToken ?? 'signed-out'],",
+              "queryKey: ['account-memberships'],",
+              1,
+          )
+          membership_query_end = '''    retry: false,
+            });
+
+            useEffect(() => {'''
+          spaces_query = '''    retry: false,
+            });
+
+            const spacesQuery = useQuery({
+              queryKey: [
+                'authorized-spaces',
+                (membershipsQuery.data ?? []).map((membership) => membership.spaceId),
+              ],
+              queryFn: async () => {
+                if (!tokens || !membershipsQuery.data) return [];
+                return loadAuthorizedSpaces(
+                  config.apiBaseUrl,
+                  tokens.accessToken,
+                  membershipsQuery.data,
+                );
+              },
+              enabled: tokens !== null && (membershipsQuery.data?.length ?? 0) > 1,
+              retry: false,
+            });
+
+            useEffect(() => {'''
+          if membership_query_end not in app:
+              raise SystemExit('Membership query end anchor not found')
+          app = app.replace(membership_query_end, spaces_query, 1)
+
+          old_render = '''  if (membershipsQuery.isPending || membershipsQuery.error || !spaceId) {
+              return (
+                <>
+                  <ThemeControl />
+                  <SpaceContextGate
+                    loading={membershipsQuery.isPending}
+                    error={membershipsQuery.error}
+                    onRetry={() => void membershipsQuery.refetch()}
+                  />
+                </>
+              );
+            }
+
+            return (
+              <AuthenticatedApp
+                tokens={tokens}
+                logout={logout}
+                apiBaseUrl={config.apiBaseUrl}
+                spaceId={spaceId}
+              />
+            );'''
+          new_render = '''  const memberships = membershipsQuery.data ?? [];
+            if (
+              membershipsQuery.isPending ||
+              membershipsQuery.error ||
+              memberships.length === 0
+            ) {
+              return (
+                <>
+                  <ThemeControl />
+                  <SpaceContextGate
+                    loading={membershipsQuery.isPending}
+                    error={membershipsQuery.error}
+                    onRetry={() => void membershipsQuery.refetch()}
+                  />
+                </>
+              );
+            }
+
+            const activeSpaceId = resolveActiveSpaceId(memberships, spaceId);
+            if (!activeSpaceId && memberships.length > 1) {
+              if (spacesQuery.isPending || spacesQuery.error || !spacesQuery.data) {
+                return (
+                  <>
+                    <ThemeControl />
+                    <SpaceContextGate
+                      loading={spacesQuery.isPending}
+                      error={spacesQuery.error}
+                      onRetry={() => {
+                        void membershipsQuery.refetch();
+                        void spacesQuery.refetch();
+                      }}
+                    />
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  <ThemeControl />
+                  <SpacePicker spaces={spacesQuery.data} onSelect={setSpaceId} />
+                </>
+              );
+            }
+
+            if (!activeSpaceId) {
+              return (
+                <>
+                  <ThemeControl />
+                  <SpaceContextGate loading error={null} onRetry={() => undefined} />
+                </>
+              );
+            }
+
+            return (
+              <AuthenticatedApp
+                tokens={tokens}
+                logout={logout}
+                apiBaseUrl={config.apiBaseUrl}
+                spaceId={activeSpaceId}
+              />
+            );'''
+          if old_render not in app:
+              raise SystemExit('Authenticated render anchor not found')
+          app = app.replace(old_render, new_render, 1)
+          app_path.write_text(app, encoding='utf-8')
+
+          locale_path = Path('web/src/i18n/locales/de.ts')
+          locale = locale_path.read_text(encoding='utf-8')
+          old_locale = '''  spaceContext: {
+              eyebrow: 'Gemeinsamer Bereich',
+              loading: 'Euer gemeinsamer Bereich wird geladen …',
+              emptyTitle: 'Noch kein gemeinsamer Bereich',
+              emptyBody:
+                'Für dieses Konto ist noch kein aktiver gemeinsamer Bereich verbunden. Nimm eine Einladung an oder richte euren gemeinsamen Bereich ein.',
+            },'''
+          new_locale = '''  spaceContext: {
+              eyebrow: 'Gemeinsamer Bereich',
+              loading: 'Euer gemeinsamer Bereich wird geladen …',
+              emptyTitle: 'Noch kein gemeinsamer Bereich',
+              emptyBody:
+                'Für dieses Konto ist noch kein aktiver gemeinsamer Bereich verbunden. Nimm eine Einladung an oder richte euren gemeinsamen Bereich ein.',
+              pickerTitle: 'Welchen Bereich möchtest du öffnen?',
+              pickerBody: 'Wähle den gemeinsamen Bereich, mit dem du fortfahren möchtest.',
+              pickerAria: 'Gemeinsamen Bereich auswählen',
+              spaceFallback: 'Gemeinsamer Bereich {{index}}',
+            },'''
+          if old_locale not in locale:
+              raise SystemExit('Space context locale anchor not found')
+          locale_path.write_text(locale.replace(old_locale, new_locale, 1), encoding='utf-8')
+          PY
+
+      - name: Install locked Web dependencies
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Format and validate
+        working-directory: web
+        run: |
+          npm run format
+          npm run typecheck
+          npm run lint
+          npm test
+          npm run build
+
+      - name: Commit implementation and remove this one-off workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/m5-space-picker-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src/App.tsx web/src/client/spaceContext.ts web/src/client/spaceContext.test.ts web/src/i18n/locales/de.ts
+          git commit -m "feat(web): require explicit choice between authorized Spaces"
+          git push origin HEAD:feat/298-m5-web-space-picker
