@@ -1,4 +1,4 @@
-name: M4 Finalize R5
+name: M4 Finalize R6
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
       - name: Apply bounded M4-C-S2 completion
         run: python3 tools/m4_finalize.py
 
-      - name: Apply final runtime corrections
+      - name: Apply prior runtime corrections
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -60,6 +60,115 @@ jobs:
           Path('/tmp/m4_runtime_corrections.py').write_text(script + '\n', encoding='utf-8')
           PY
           python3 /tmp/m4_runtime_corrections.py
+
+      - name: Make timezone replanning explicit and fix catch-up evidence
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              if old not in text:
+                  raise RuntimeError(f"Missing R6 patch anchor in {path}: {old[:120]!r}")
+              target.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          runtime_path = "backend/src/sidebyside/reminders/runtime.py"
+          replace_once(
+              runtime_path,
+              "def reconcile_account(session: Session, account: Account) -> None:\n"
+              "    \"\"\"Replan current Reminder occurrences for one Account after timezone changes.\"\"\"\n",
+              "def reconcile_account(\n"
+              "    session: Session,\n"
+              "    account: Account,\n"
+              "    *,\n"
+              "    timezone_name: str | None = None,\n"
+              ") -> None:\n"
+              "    \"\"\"Replan current Reminder occurrences for one Account after timezone changes.\"\"\"\n",
+          )
+          replace_once(
+              runtime_path,
+              "    for reminder in reminders:\n"
+              "        _plan_for_recipient(session, reminder, account)\n\n\n"
+              "def _active_owner",
+              "    for reminder in reminders:\n"
+              "        _plan_for_recipient(\n"
+              "            session, reminder, account, timezone_name=timezone_name\n"
+              "        )\n\n\n"
+              "def _active_owner",
+          )
+          replace_once(
+              runtime_path,
+              "def _plan_for_recipient(session: Session, reminder: Reminder, account: Account) -> None:\n",
+              "def _plan_for_recipient(\n"
+              "    session: Session,\n"
+              "    reminder: Reminder,\n"
+              "    account: Account,\n"
+              "    *,\n"
+              "    timezone_name: str | None = None,\n"
+              ") -> None:\n",
+          )
+          replace_once(
+              runtime_path,
+              "    desired = _desired_occurrences(session, reminder, account, parameters)\n",
+              "    desired = _desired_occurrences(\n"
+              "        session, reminder, account, parameters, timezone_name=timezone_name\n"
+              "    )\n",
+          )
+          replace_once(
+              runtime_path,
+              "def _desired_occurrences(\n"
+              "    session: Session,\n"
+              "    reminder: Reminder,\n"
+              "    account: Account,\n"
+              "    parameters: RuleParameters,\n"
+              ") -> list[tuple[str, int, datetime]]:\n",
+              "def _desired_occurrences(\n"
+              "    session: Session,\n"
+              "    reminder: Reminder,\n"
+              "    account: Account,\n"
+              "    parameters: RuleParameters,\n"
+              "    *,\n"
+              "    timezone_name: str | None = None,\n"
+              ") -> list[tuple[str, int, datetime]]:\n",
+          )
+          replace_once(
+              runtime_path,
+              "    timezone = _timezone(account.timezone)\n",
+              "    timezone = _timezone(timezone_name or account.timezone)\n",
+          )
+
+          preference_path = "backend/src/sidebyside/identity/preferences.py"
+          replace_once(
+              preference_path,
+              "    if timezone_changed:\n"
+              "        reminder_runtime.reconcile_account(session, account)\n",
+              "    if timezone_changed:\n"
+              "        reminder_runtime.reconcile_account(\n"
+              "            session, account, timezone_name=validated_zone\n"
+              "        )\n",
+          )
+
+          test_path = "backend/tests/integration/test_reminder_runtime.py"
+          replace_once(
+              test_path,
+              "    occurrence.state = OccurrenceState.PENDING.value\n"
+              "    occurrence.generation += 1\n"
+              "    occurrence.due_at = runtime.clock.now() - timedelta(hours=25)\n"
+              "    stale_payload = {\"occurrenceId\": str(occurrence.id), \"generation\": occurrence.generation}\n"
+              "    runtime.handle_occurrence(session, stale_payload)\n",
+              "    stale_now = occurrence.due_at + timedelta(hours=25)\n"
+              "    occurrence.state = OccurrenceState.PENDING.value\n"
+              "    occurrence.generation += 1\n"
+              "    occurrence.due_at = stale_now - timedelta(hours=25)\n"
+              "    monkeypatch.setattr(runtime.clock, \"now\", lambda: stale_now)\n"
+              "    stale_payload = {\n"
+              "        \"occurrenceId\": str(occurrence.id),\n"
+              "        \"generation\": occurrence.generation,\n"
+              "    }\n"
+              "    runtime.handle_occurrence(session, stale_payload)\n",
+          )
+          PY
 
       - name: Install locked backend dependencies
         working-directory: backend
