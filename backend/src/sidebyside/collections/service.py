@@ -223,7 +223,12 @@ def _cursor_binding(context: AuthorizationContext) -> dict[str, Any]:
     return {"collection": "collections", "spaceId": str(context.space_id)}
 
 
-def _encode_cursor(*, context: AuthorizationContext, created_at: datetime, collection_id: UUID) -> str:
+def _encode_cursor(
+    *,
+    context: AuthorizationContext,
+    created_at: datetime,
+    collection_id: UUID,
+) -> str:
     return cursor_codec.encode(
         binding=_cursor_binding(context),
         position={
