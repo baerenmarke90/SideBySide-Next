@@ -625,10 +625,7 @@ export function App() {
     queryKey: ['account-memberships', tokens?.accessToken ?? 'signed-out'],
     queryFn: async () => {
       if (!tokens) return [];
-      return loadAuthorizedMemberships(
-        config.apiBaseUrl,
-        tokens.accessToken,
-      );
+      return loadAuthorizedMemberships(config.apiBaseUrl, tokens.accessToken);
     },
     enabled: tokens !== null,
     retry: false,
