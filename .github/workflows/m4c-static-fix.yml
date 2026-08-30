@@ -1,0 +1,64 @@
+name: M4-C Static Fix
+
+on:
+  push:
+    branches:
+      - ops/m4c-static-fix
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Reminder branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/285-m4c-reminders
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: 3.13.7
+
+      - name: Install uv and backend dependencies
+        run: |
+          python -m pip install "uv==0.12.5"
+          cd backend
+          uv sync --frozen
+
+      - name: Apply deterministic static fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          for filename in (
+              "backend/src/sidebyside/reminders/models.py",
+              "backend/alembic/versions/0029_m4_reminders.py",
+          ):
+              path = Path(filename)
+              text = path.read_text(encoding="utf-8")
+              text = text.replace(
+                  '            "(source = \'MANUAL\' AND source_type IS NULL AND source_id IS NULL AND rule_key IS NULL) "\n',
+                  '            "(source = \'MANUAL\' AND source_type IS NULL AND source_id IS NULL "\n'
+                  '            "AND rule_key IS NULL) "\n',
+              )
+              path.write_text(text, encoding="utf-8")
+          PY
+          cd backend
+          uv run --frozen ruff check --fix src/sidebyside/reminders tests/integration/test_reminders.py alembic/versions/0029_m4_reminders.py
+          uv run --frozen ruff format src/sidebyside/reminders tests/integration/test_reminders.py alembic/versions/0029_m4_reminders.py
+
+      - name: Commit static fixes
+        run: |
+          git add backend/src/sidebyside/reminders backend/tests/integration/test_reminders.py backend/alembic/versions/0029_m4_reminders.py
+          if git diff --cached --quiet; then
+            echo "No static fixes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "style(reminders): satisfy backend static checks"
+          git push origin HEAD:feat/285-m4c-reminders
