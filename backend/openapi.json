@@ -14,6 +14,31 @@
         "title": "AcceptRequest",
         "type": "object"
       },
+      "AccountMembershipView": {
+        "description": "Active Space membership belonging to the authenticated account.",
+        "properties": {
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spaceId",
+          "role",
+          "status"
+        ],
+        "title": "AccountMembershipView",
+        "type": "object"
+      },
       "AccountView": {
         "properties": {
           "displayName": {
@@ -6081,6 +6106,42 @@
           }
         },
         "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/memberships": {
+      "get": {
+        "description": "Return the caller's active Space memberships.\n\nReturning this small authorization projection lets official clients select\nan authorized Space without a build-time Space identifier or ID probing.\nIt intentionally contains no partner or Space content; clients load the\nselected Space through the normal tenant-guarded endpoint afterward.",
+        "operationId": "list_account_memberships_api_v1_auth_memberships_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountMembershipView"
+                  },
+                  "title": "Response List Account Memberships Api V1 Auth Memberships Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          }
+        },
+        "summary": "List Account Memberships",
         "tags": [
           "auth"
         ]
