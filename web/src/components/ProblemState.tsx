@@ -2,7 +2,10 @@ import { clientProblemKind } from '../client/problemDetails';
 import { useTranslation } from '../i18n';
 import { UiState, type UiStateKind } from './UiState';
 
-const KIND_TO_STATE: Record<ReturnType<typeof clientProblemKind>, UiStateKind> = {
+const KIND_TO_STATE: Record<
+  ReturnType<typeof clientProblemKind>,
+  UiStateKind
+> = {
   validation: 'error',
   unauthorized: 'permission',
   permission: 'permission',
