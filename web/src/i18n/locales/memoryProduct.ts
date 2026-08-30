@@ -28,8 +28,15 @@ const memoryProduct = {
   formAria: 'Erinnerung bearbeiten',
   save: 'Änderungen speichern',
   saving: 'Wird gespeichert …',
+  existingPhotosHeading: 'Vorhandene Fotos',
+  existingPhotosHelp:
+    'Markierte Fotos werden erst entfernt, wenn du die Änderungen speicherst.',
+  markPhotoForRemoval: 'Foto beim Speichern entfernen',
+  keepPhoto: 'Foto behalten',
+  photoMarkedForRemoval: 'Wird beim Speichern entfernt',
+  newPhotosHeading: 'Neue Fotos',
   editPhotosPreserved:
-    'Vorhandene Fotos bleiben erhalten. Neu hochgeladene Fotos werden hinten an die Galerie angefügt.',
+    'Nicht entfernte Fotos bleiben in ihrer Reihenfolge erhalten. Neue Fotos werden hinten an die Galerie angefügt.',
   editNotAllowedTitle: 'Diese Erinnerung kann nicht bearbeitet werden.',
   editNotAllowedBody:
     'Dein aktueller Zugriff erlaubt keine Änderungen an dieser Erinnerung.',
