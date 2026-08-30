@@ -19,32 +19,78 @@ depends_on = None
 UUID = postgresql.UUID(as_uuid=True)
 
 
+def _privacy_class() -> sa.Enum:
+    return sa.Enum(
+        "SPACE_SHARED",
+        "OWNER_ONLY",
+        name="privacy_class",
+        native_enum=False,
+        create_constraint=True,
+    )
+
+
+def _reminder_source() -> sa.Enum:
+    return sa.Enum(
+        "MANUAL",
+        "GENERATED",
+        name="reminder_source",
+        native_enum=False,
+        create_constraint=True,
+    )
+
+
+def _reminder_schedule_type() -> sa.Enum:
+    return sa.Enum(
+        "ONCE",
+        "ANNUAL",
+        "RELATIONSHIP_DAY_COUNT",
+        name="reminder_schedule_type",
+        native_enum=False,
+        create_constraint=True,
+    )
+
+
 def upgrade() -> None:
     op.create_table(
         "reminders",
         sa.Column("id", UUID, nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.Column("version", sa.Integer(), server_default="1", nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("space_id", UUID, nullable=False),
         sa.Column("owner_id", UUID, nullable=False),
-        sa.Column("privacy_class", sa.String(length=32), nullable=False),
-        sa.Column("source", sa.String(length=16), server_default="MANUAL", nullable=False),
+        sa.Column("privacy_class", _privacy_class(), nullable=False),
+        sa.Column(
+            "source",
+            _reminder_source(),
+            server_default=sa.text("'MANUAL'"),
+            nullable=False,
+        ),
         sa.Column("source_type", sa.String(length=64), nullable=True),
         sa.Column("source_id", UUID, nullable=True),
         sa.Column("rule_key", sa.String(length=96), nullable=True),
-        sa.Column("schedule_type", sa.String(length=32), nullable=False),
+        sa.Column("schedule_type", _reminder_schedule_type(), nullable=False),
         sa.Column("once_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("annual_month", sa.SmallInteger(), nullable=True),
         sa.Column("annual_day", sa.SmallInteger(), nullable=True),
         sa.Column("local_time", sa.Time(timezone=False), nullable=True),
         sa.Column("relationship_day_count", sa.Integer(), nullable=True),
-        sa.Column("crypto_version", sa.SmallInteger(), server_default="0", nullable=False),
+        sa.Column(
+            "crypto_version",
+            sa.SmallInteger(),
+            server_default=sa.text("0"),
+            nullable=False,
+        ),
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.PrimaryKeyConstraint("id", name="pk_reminders"),
         sa.ForeignKeyConstraint(
@@ -57,7 +103,7 @@ def upgrade() -> None:
             ["owner_id"],
             ["accounts.id"],
             name="fk_reminders_owner_id_accounts",
-            ondelete="RESTRICT",
+            ondelete="CASCADE",
         ),
         sa.CheckConstraint(
             "privacy_class = 'SPACE_SHARED'",
@@ -66,14 +112,6 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "crypto_version >= 0",
             name="reminder_crypto_version_non_negative",
-        ),
-        sa.CheckConstraint(
-            "source IN ('MANUAL', 'GENERATED')",
-            name="reminder_source",
-        ),
-        sa.CheckConstraint(
-            "schedule_type IN ('ONCE', 'ANNUAL', 'RELATIONSHIP_DAY_COUNT')",
-            name="reminder_schedule_type",
         ),
         sa.CheckConstraint(
             "(source = 'MANUAL' AND source_type IS NULL AND source_id IS NULL AND rule_key IS NULL) "
@@ -113,6 +151,7 @@ def upgrade() -> None:
             name="uq_reminders_generated_identity",
         ),
     )
+    op.create_index("ix_reminders_space_id", "reminders", ["space_id"])
     op.create_index(
         "ix_reminders_space_created_id",
         "reminders",
@@ -155,7 +194,12 @@ def upgrade() -> None:
     op.create_table(
         "reminder_preferences",
         sa.Column("id", UUID, nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.Column(
             "updated_at",
             sa.DateTime(timezone=True),
@@ -198,4 +242,5 @@ def downgrade() -> None:
     op.drop_table("reminder_offsets")
     op.drop_index("ix_reminders_space_source", table_name="reminders")
     op.drop_index("ix_reminders_space_created_id", table_name="reminders")
+    op.drop_index("ix_reminders_space_id", table_name="reminders")
     op.drop_table("reminders")
