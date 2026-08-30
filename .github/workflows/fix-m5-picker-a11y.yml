@@ -1,0 +1,53 @@
+name: Fix M5 Space Picker A11y
+
+on:
+  push:
+    branches:
+      - feat/298-m5-web-space-picker
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    name: Fix semantic Space picker grouping
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/298-m5-web-space-picker
+          fetch-depth: 0
+
+      - name: Use fieldset and legend
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/m5-space-picker-patch.yml')
+          text = path.read_text(encoding='utf-8')
+          old = '''                    <div
+                      className="form-grid"
+                      role="group"
+                      aria-label={t('spaceContext.pickerAria')}
+                    >
+'''
+          new = '''                    <fieldset className="form-grid">
+                      <legend>{t('spaceContext.pickerAria')}</legend>
+'''
+          if old not in text:
+              raise SystemExit('Space picker group anchor not found')
+          text = text.replace(old, new, 1).replace('                    </div>\n                  </div>\n                </section>', '                    </fieldset>\n                  </div>\n                </section>', 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit fix and remove this helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/fix-m5-picker-a11y.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/m5-space-picker-patch.yml
+          git commit -m "fix(web): use semantic Space picker grouping"
+          git push origin HEAD:feat/298-m5-web-space-picker
