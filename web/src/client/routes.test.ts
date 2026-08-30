@@ -5,6 +5,7 @@ describe('app route registry', () => {
     expect(APP_ROUTES.map((route) => route.path)).toEqual([
       '/story',
       '/people',
+      '/profile',
       '/memory/new',
     ]);
     expect(DEFAULT_APP_ROUTE).toBe('/story');
@@ -13,6 +14,7 @@ describe('app route registry', () => {
   it('resolves route paths from stable ids', () => {
     expect(appRoutePath('story')).toBe('/story');
     expect(appRoutePath('people')).toBe('/people');
+    expect(appRoutePath('profile')).toBe('/profile');
     expect(appRoutePath('memoryCreate')).toBe('/memory/new');
   });
 });
