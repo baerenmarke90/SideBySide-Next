@@ -45,7 +45,8 @@ export const MEMORY_DETAIL_ROUTE_PATTERN = '/memory/:memoryId';
 export const MEMORY_EDIT_ROUTE_PATTERN = '/memory/:memoryId/edit';
 export const HEART_MOMENT_CREATE_ROUTE = '/heart-moment/new';
 export const HEART_MOMENT_DETAIL_ROUTE_PATTERN = '/heart-moment/:heartMomentId';
-export const HEART_MOMENT_EDIT_ROUTE_PATTERN = '/heart-moment/:heartMomentId/edit';
+export const HEART_MOMENT_EDIT_ROUTE_PATTERN =
+  '/heart-moment/:heartMomentId/edit';
 export const MILESTONE_CREATE_ROUTE = '/milestone/new';
 export const MILESTONE_DETAIL_ROUTE_PATTERN = '/milestone/:milestoneId';
 export const MILESTONE_EDIT_ROUTE_PATTERN = '/milestone/:milestoneId/edit';
