@@ -14,11 +14,6 @@
 
 import * as runtime from '../runtime';
 import {
-    type ActivityPage,
-    ActivityPageFromJSON,
-    ActivityPageToJSON,
-} from '../models/ActivityPage';
-import {
     type NotificationItem,
     NotificationItemFromJSON,
     NotificationItemToJSON,
@@ -44,12 +39,6 @@ import {
     ProblemDetailsToJSON,
 } from '../models/ProblemDetails';
 
-export interface GetActivityRequest {
-    spaceId: string;
-    cursor?: string | null;
-    limit?: number;
-}
-
 export interface GetNotificationUnreadCountRequest {
     spaceId: string;
 }
@@ -73,59 +62,6 @@ export interface MarkNotificationReadRequest {
  * 
  */
 export class NotificationsApi extends runtime.BaseAPI {
-
-    /**
-     * Creates request options for getActivity without sending the request
-     */
-    async getActivityRequestOpts(requestParameters: GetActivityRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['spaceId'] == null) {
-            throw new runtime.RequiredError(
-                'spaceId',
-                'Required parameter "spaceId" was null or undefined when calling getActivity().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        if (requestParameters['cursor'] != null) {
-            queryParameters['cursor'] = requestParameters['cursor'];
-        }
-
-        if (requestParameters['limit'] != null) {
-            queryParameters['limit'] = requestParameters['limit'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-
-        let urlPath = `/api/v1/spaces/{spaceId}/activity`;
-        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
-
-        return {
-            path: urlPath,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     * Get Activity
-     */
-    async getActivityRaw(requestParameters: GetActivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ActivityPage>> {
-        const requestOptions = await this.getActivityRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => ActivityPageFromJSON(jsonValue));
-    }
-
-    /**
-     * Get Activity
-     */
-    async getActivity(requestParameters: GetActivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ActivityPage> {
-        const response = await this.getActivityRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
 
     /**
      * Creates request options for getNotificationUnreadCount without sending the request

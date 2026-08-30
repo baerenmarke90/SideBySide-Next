@@ -6375,8 +6375,7 @@
         },
         "summary": "Get Activity",
         "tags": [
-          "activity",
-          "notifications"
+          "activity"
         ]
       }
     },
@@ -12084,7 +12083,6 @@
         },
         "summary": "Get Notifications",
         "tags": [
-          "activity",
           "notifications"
         ]
       }
@@ -12147,7 +12145,6 @@
         },
         "summary": "Mark All Notifications Read",
         "tags": [
-          "activity",
           "notifications"
         ]
       }
@@ -12210,7 +12207,6 @@
         },
         "summary": "Get Notification Unread Count",
         "tags": [
-          "activity",
           "notifications"
         ]
       }
@@ -12283,7 +12279,6 @@
         },
         "summary": "Mark Notification Read",
         "tags": [
-          "activity",
           "notifications"
         ]
       }
