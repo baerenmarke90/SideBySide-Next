@@ -6,6 +6,7 @@ import memoryProduct from './locales/memoryProduct';
 import partnerConnection from './locales/partnerConnection';
 import people from './locales/people';
 import profiles from './locales/profiles';
+import storyProducts from './locales/storyProducts';
 
 export const DEFAULT_LOCALE = 'de';
 
@@ -34,6 +35,7 @@ if (!i18n.isInitialized) {
           partnerConnection,
           people,
           profiles,
+          ...storyProducts,
         },
       },
     },

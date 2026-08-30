@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import type { StoryItem } from '../api/generated/models/StoryItem';
-import { memoryDetailPath } from '../client/routes';
+import {
+  heartMomentDetailPath,
+  memoryDetailPath,
+  milestoneDetailPath,
+} from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { MemoryPreview } from './MemoryPreview';
 import {
@@ -10,6 +14,26 @@ import {
   storyItemPresentation,
 } from './storyPresentation';
 import { UiState } from './UiState';
+
+function storyProductLink(item: StoryItem): { path: string; labelKey: string } {
+  switch (item.kind) {
+    case 'MEMORY':
+      return {
+        path: memoryDetailPath(item.memory.id),
+        labelKey: 'memoryProduct.open',
+      };
+    case 'HEART_MOMENT':
+      return {
+        path: heartMomentDetailPath(item.heartMoment.id),
+        labelKey: 'heartMomentProduct.open',
+      };
+    case 'MILESTONE':
+      return {
+        path: milestoneDetailPath(item.milestone.id),
+        labelKey: 'milestoneProduct.open',
+      };
+  }
+}
 
 export function StoryList({
   items,
@@ -50,6 +74,7 @@ export function StoryList({
               const presentation = storyItemPresentation(item, t);
               const firstMemoryAttachment =
                 item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
+              const productLink = storyProductLink(item);
               return (
                 <li key={storyItemKey(item)}>
                   <article
@@ -59,46 +84,41 @@ export function StoryList({
                       <span className="kind-badge">
                         {presentation.kindLabel}
                       </span>
-                      {presentation.sharedLabel && (
+                      {presentation.sharedLabel ? (
                         <span className="shared-badge">
                           {presentation.sharedLabel}
                         </span>
-                      )}
+                      ) : null}
                       <time
                         dateTime={item.effectiveDate.toISOString().slice(0, 10)}
                       >
                         {formatStoryDate(item.effectiveDate, locale)}
                       </time>
                     </div>
-                    {item.kind === 'MEMORY' && firstMemoryAttachment && (
+                    {item.kind === 'MEMORY' && firstMemoryAttachment ? (
                       <MemoryPreview
                         memoryId={item.memory.id}
                         attachmentId={firstMemoryAttachment.id}
                         loadImage={loadMemoryImage}
                       />
-                    )}
+                    ) : null}
                     <h4>{presentation.title}</h4>
-                    {presentation.preview && (
+                    {presentation.preview ? (
                       <p className="story-preview">{presentation.preview}</p>
-                    )}
+                    ) : null}
                     <div className="story-card-footer">
                       <span>
                         {t('story.byAuthor', { author: presentation.author })}
                       </span>
                       <div className="story-card-footer-actions">
-                        {presentation.mediaLabel && (
+                        {presentation.mediaLabel ? (
                           <span className="media-label">
                             ▧ {presentation.mediaLabel}
                           </span>
-                        )}
-                        {item.kind === 'MEMORY' ? (
-                          <Link
-                            className="story-memory-link"
-                            to={memoryDetailPath(item.memory.id)}
-                          >
-                            {t('memoryProduct.open')}
-                          </Link>
                         ) : null}
+                        <Link className="story-memory-link" to={productLink.path}>
+                          {t(productLink.labelKey)}
+                        </Link>
                       </div>
                     </div>
                   </article>

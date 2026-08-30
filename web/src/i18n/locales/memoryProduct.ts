@@ -24,10 +24,12 @@ const memoryProduct = {
   editEyebrow: 'Erinnerung bearbeiten',
   editHeading: 'Erinnerung bearbeiten',
   editIntro:
-    'Passe Titel, Text oder Datum an. Änderungen werden nur auf dem aktuellen Stand gespeichert.',
+    'Passe Titel, Text, Datum oder Fotos an. Änderungen werden nur auf dem aktuellen Stand gespeichert.',
   formAria: 'Erinnerung bearbeiten',
   save: 'Änderungen speichern',
   saving: 'Wird gespeichert …',
+  editPhotosPreserved:
+    'Vorhandene Fotos bleiben erhalten. Neu hochgeladene Fotos werden hinten an die Galerie angefügt.',
   editNotAllowedTitle: 'Diese Erinnerung kann nicht bearbeitet werden.',
   editNotAllowedBody:
     'Dein aktueller Zugriff erlaubt keine Änderungen an dieser Erinnerung.',
