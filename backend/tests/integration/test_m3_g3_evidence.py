@@ -274,9 +274,7 @@ def test_g3_private_area_owner_partner_owner_session_switch_is_isolated(client, 
     owner_headers = auth(couple["token_a"])
     note_after = client.get(f"{note_path}/{note['id']}", headers=owner_headers)
     gift_after = client.get(f"{gift_path}/{gift['id']}", headers=owner_headers)
-    collection_after = client.get(
-        f"{collection_path}/{collection['id']}", headers=owner_headers
-    )
+    collection_after = client.get(f"{collection_path}/{collection['id']}", headers=owner_headers)
     item_after = client.get(f"{item_path}/{item['id']}", headers=owner_headers)
     assert note_after.status_code == gift_after.status_code == 200
     assert collection_after.status_code == item_after.status_code == 200
