@@ -21,6 +21,7 @@ from sqlalchemy.orm.exc import StaleDataError
 from sidebyside.core.errors import ConflictError, ErrorCode, NotFoundError, ValidationError
 from sidebyside.relationship.models import DurationDisplayMode, Space, SpaceProfile
 from sidebyside.relationship.service import SpaceErrorCode
+from sidebyside.reminders import runtime as reminder_runtime
 
 EARLIEST_RELATIONSHIP_START = date(1900, 1, 1)
 """Lower bound for a relationship start date.
@@ -119,6 +120,7 @@ def update(
             ErrorCode.VERSION_CONFLICT,
         )
 
+    start_changed = profile.relationship_started_on != relationship_started_on
     _validate_start(relationship_started_on, today)
 
     profile.relationship_started_on = relationship_started_on
@@ -139,4 +141,6 @@ def update(
             ErrorCode.VERSION_CONFLICT,
         ) from stale
 
+    if start_changed:
+        reminder_runtime.reconcile_space(session, space_id)
     return profile

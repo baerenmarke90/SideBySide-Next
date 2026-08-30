@@ -162,6 +162,29 @@ def reconcile_reminder(session: Session, reminder_id: UUID) -> None:
         _plan_for_recipient(session, reminder, account)
 
 
+def reconcile_account(
+    session: Session,
+    account: Account,
+    *,
+    timezone_name: str | None = None,
+) -> None:
+    """Replan current Reminder occurrences for one Account after timezone changes."""
+    space_ids = list(
+        session.execute(
+            select(Membership.space_id).where(
+                Membership.account_id == account.id,
+                Membership.status == MembershipStatus.ACTIVE.value,
+            )
+        ).scalars()
+    )
+    if not space_ids:
+        return
+    reminders = session.execute(select(Reminder).where(Reminder.space_id.in_(space_ids))).scalars()
+    for reminder in reminders:
+        _plan_for_recipient(session, reminder, account, timezone_name=timezone_name)
+    session.flush()
+
+
 def _active_owner(session: Session, space_id: UUID) -> UUID | None:
     return session.execute(
         select(Membership.account_id)
@@ -397,7 +420,13 @@ def _manual_parameters(session: Session, reminder: Reminder) -> RuleParameters:
     return RuleParameters(days_before=offsets, local_time=reminder.local_time)
 
 
-def _plan_for_recipient(session: Session, reminder: Reminder, account: Account) -> None:
+def _plan_for_recipient(
+    session: Session,
+    reminder: Reminder,
+    account: Account,
+    *,
+    timezone_name: str | None = None,
+) -> None:
     if _is_muted(session, reminder.id, account.id):
         _supersede_pending(session, reminder.id, account.id, set())
         return
@@ -418,7 +447,9 @@ def _plan_for_recipient(session: Session, reminder: Reminder, account: Account) 
             _supersede_pending(session, reminder.id, account.id, set())
             return
 
-    desired = _desired_occurrences(session, reminder, account, parameters)
+    desired = _desired_occurrences(
+        session, reminder, account, parameters, timezone_name=timezone_name
+    )
     desired_keys = {(key, days) for key, days, _ in desired}
     _supersede_pending(session, reminder.id, account.id, desired_keys)
     for occurrence_key, days_before, due_at in desired:
@@ -506,6 +537,8 @@ def _desired_occurrences(
     reminder: Reminder,
     account: Account,
     parameters: RuleParameters,
+    *,
+    timezone_name: str | None = None,
 ) -> list[tuple[str, int, datetime]]:
     now = clock.now()
     cutoff = now - CATCH_UP_WINDOW
@@ -523,7 +556,7 @@ def _desired_occurrences(
                 result.append((key, days_before, due_at))
         return result
 
-    timezone = _timezone(account.timezone)
+    timezone = _timezone(timezone_name or account.timezone)
     local_time = parameters.local_time or reminder.local_time
     if local_time is None:
         return result

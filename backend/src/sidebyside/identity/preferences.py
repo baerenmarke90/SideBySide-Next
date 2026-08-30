@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.core.errors import ValidationError
 from sidebyside.identity.models import Account
+from sidebyside.reminders import runtime as reminder_runtime
 
 MAX_TIMEZONE = 64
 MAX_LOCALE = 16
@@ -117,6 +118,7 @@ def set_preferences(
     """
     validated_zone = validate_timezone(timezone) if timezone is not None else None
     validated_locale = normalize_locale(locale) if locale is not None else None
+    timezone_changed = validated_zone is not None and validated_zone != account.timezone
 
     if validated_zone is not None:
         account.timezone = validated_zone
@@ -124,4 +126,6 @@ def set_preferences(
         account.locale = validated_locale
 
     session.flush()
+    if timezone_changed:
+        reminder_runtime.reconcile_account(session, account, timezone_name=validated_zone)
     return account

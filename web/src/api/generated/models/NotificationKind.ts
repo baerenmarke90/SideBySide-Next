@@ -19,7 +19,8 @@
  */
 export const NotificationKind = {
     COMMENT_CREATED: 'COMMENT_CREATED',
-    THINKING_OF_YOU: 'THINKING_OF_YOU'
+    THINKING_OF_YOU: 'THINKING_OF_YOU',
+    REMINDER_DUE: 'REMINDER_DUE'
 } as const;
 export type NotificationKind = typeof NotificationKind[keyof typeof NotificationKind];
 

@@ -111,6 +111,10 @@ REMINDER = {
     },
     "offsets": [7, 1],
 }
+RULE_PREFERENCE = {
+    "enabled": True,
+    "parameters": {"daysBefore": [7, 1], "localTime": "09:00:00"},
+}
 PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 CHAPTER = {"title": "Matrix Chapter", "description": "Text"}
 COLLECTION = {"title": "Matrix Collection", "icon": "list"}
@@ -305,6 +309,16 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         "/api/v1/spaces/{spaceId}/reminders/{reminderId}/preference",
         body={"muted": True},
         resource_absence="REMINDER_NOT_FOUND",
+    ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/rules"),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/rules/{ruleKey}/preference",
+    ),
+    Endpoint(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/rules/{ruleKey}/preference",
+        body=RULE_PREFERENCE,
     ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/milestones"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
@@ -875,9 +889,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
     wish = client.post(f"{base_path}/wishes", json=WISH, headers=headers).json()
     place = client.post(f"{base_path}/places", json=PLACE, headers=headers).json()
     plan = client.post(f"{base_path}/plans", json=PLAN, headers=headers).json()
-    reminder = client.post(
-        f"{base_path}/reminders", json=REMINDER, headers=headers
-    ).json()
+    reminder = client.post(f"{base_path}/reminders", json=REMINDER, headers=headers).json()
     chapter = client.post(f"{base_path}/chapters", json=CHAPTER, headers=headers).json()
     collection = client.post(f"{base_path}/collections", json=COLLECTION, headers=headers).json()
     collection_item = client.post(
@@ -923,6 +935,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "wishId": wish["id"],
             "planId": plan["id"],
             "reminderId": reminder["id"],
+            "ruleKey": "important_date_reminder",
             "placeId": place["id"],
             "chapterId": chapter["id"],
             "collectionId": collection["id"],

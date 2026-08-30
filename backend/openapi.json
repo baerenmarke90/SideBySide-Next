@@ -2875,7 +2875,8 @@
       "NotificationKind": {
         "enum": [
           "COMMENT_CREATED",
-          "THINKING_OF_YOU"
+          "THINKING_OF_YOU",
+          "REMINDER_DUE"
         ],
         "title": "NotificationKind",
         "type": "string"
@@ -4869,6 +4870,128 @@
           "canComment"
         ],
         "title": "ResourceCapabilities",
+        "type": "object"
+      },
+      "RuleList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RuleView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "RuleList",
+        "type": "object"
+      },
+      "RuleParametersView": {
+        "properties": {
+          "daysBefore": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Daysbefore",
+            "type": "array"
+          },
+          "localTime": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Localtime"
+          }
+        },
+        "required": [
+          "daysBefore"
+        ],
+        "title": "RuleParametersView",
+        "type": "object"
+      },
+      "RulePreferenceUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "RulePreferenceUpdate",
+        "type": "object"
+      },
+      "RulePreferenceView": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/RuleParametersView"
+          },
+          "ruleKey": {
+            "title": "Rulekey",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ruleKey",
+          "enabled",
+          "parameters"
+        ],
+        "title": "RulePreferenceView",
+        "type": "object"
+      },
+      "RuleView": {
+        "properties": {
+          "actionKind": {
+            "title": "Actionkind",
+            "type": "string"
+          },
+          "catalogVersion": {
+            "title": "Catalogversion",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/RuleParametersView"
+          },
+          "ruleKey": {
+            "title": "Rulekey",
+            "type": "string"
+          },
+          "sourceType": {
+            "title": "Sourcetype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ruleKey",
+          "catalogVersion",
+          "sourceType",
+          "actionKind",
+          "enabled",
+          "parameters"
+        ],
+        "title": "RuleView",
         "type": "object"
       },
       "SearchKind": {
@@ -18124,6 +18247,208 @@
         "summary": "Set Reminder Preference",
         "tags": [
           "reminders"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/rules": {
+      "get": {
+        "operationId": "listRules",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "List Rules",
+        "tags": [
+          "rules"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/rules/{ruleKey}/preference": {
+      "get": {
+        "operationId": "getRulePreference",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ruleKey",
+            "required": true,
+            "schema": {
+              "title": "Rulekey",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePreferenceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Get Rule Preference",
+        "tags": [
+          "rules"
+        ]
+      },
+      "put": {
+        "operationId": "setRulePreference",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ruleKey",
+            "required": true,
+            "schema": {
+              "title": "Rulekey",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RulePreferenceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePreferenceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Set Rule Preference",
+        "tags": [
+          "rules"
         ]
       }
     },

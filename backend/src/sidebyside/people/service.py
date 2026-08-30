@@ -41,6 +41,7 @@ from sidebyside.people.models import (
     RelatedPerson,
     RelatedPersonPayload,
 )
+from sidebyside.reminders import runtime as reminder_runtime
 
 
 class PeopleErrorCode:
@@ -126,6 +127,7 @@ def create_person(
     )
     session.add(person)
     session.flush()
+    reminder_runtime.reconcile_space(session, context.space_id)
     return person
 
 
@@ -186,6 +188,7 @@ def update_person(
         display_name=_clean_text(display_name, PeopleErrorCode.DISPLAY_NAME_REQUIRED)
     )
     _flush(session)
+    reminder_runtime.reconcile_space(session, context.space_id)
     return person
 
 
@@ -235,6 +238,7 @@ def delete_person(
 
     session.delete(person)
     _flush(session)
+    reminder_runtime.reconcile_space(session, context.space_id)
 
 
 def _person_link(
@@ -308,6 +312,7 @@ def create_date(
     )
     session.add(important_date)
     session.flush()
+    reminder_runtime.reconcile_space(session, context.space_id)
     return important_date
 
 
@@ -340,6 +345,7 @@ def update_date(
         label=_clean_text(label, PeopleErrorCode.LABEL_REQUIRED)
     )
     _flush(session)
+    reminder_runtime.reconcile_space(session, context.space_id)
     return important_date
 
 
@@ -354,6 +360,7 @@ def delete_date(
     _ensure_expected_version(important_date.version, expected_version, "important date")
     session.delete(important_date)
     _flush(session)
+    reminder_runtime.reconcile_space(session, context.space_id)
 
 
 def _ensure_expected_version(current: int, expected: int, subject: str) -> None:

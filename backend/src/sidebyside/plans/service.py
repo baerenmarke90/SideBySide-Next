@@ -53,6 +53,7 @@ from sidebyside.identity.models import Account
 from sidebyside.outbox import service as outbox_service
 from sidebyside.places.models import Place
 from sidebyside.plans.models import Plan, PlanPayload, PlanStatus, shared_privacy
+from sidebyside.reminders import runtime as reminder_runtime
 from sidebyside.wishes import service as wish_service
 from sidebyside.wishes.models import Wish, WishStatus
 
@@ -350,6 +351,7 @@ def schedule_plan(
     _flush(session)
     _record(session, plan, context.account_id, EventType.PLAN_UPDATED)
     _flush(session)
+    reminder_runtime.reconcile_space(session, context.space_id)
     return plan
 
 
@@ -377,6 +379,7 @@ def unschedule_plan(
     _flush(session)
     _record(session, plan, context.account_id, EventType.PLAN_UPDATED)
     _flush(session)
+    reminder_runtime.reconcile_space(session, context.space_id)
     return plan
 
 
@@ -416,6 +419,7 @@ def complete_plan(
     if wish is not None:
         wish_service.plan_completed(session, wish, context.account_id)
 
+    reminder_runtime.reconcile_space(session, context.space_id)
     return plan, wish
 
 
@@ -454,6 +458,7 @@ def return_to_wish(
     _flush(session)
 
     wish_service.plan_returned(session, wish, actor_id)
+    reminder_runtime.reconcile_space(session, context.space_id)
     return ReturnToWishResult(wish=wish, removed_plan_id=removed_plan_id)
 
 
@@ -491,6 +496,7 @@ def delete_plan(
     _flush(session)
     _record(session, plan, actor_id, EventType.PLAN_DELETED)
     _flush(session)
+    reminder_runtime.reconcile_space(session, context.space_id)
 
 
 def convert_wish_to_plan(
