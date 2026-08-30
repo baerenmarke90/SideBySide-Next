@@ -1,6 +1,7 @@
 const memoryProduct = {
   open: 'Erinnerung öffnen',
   backToStory: '← Zurück zur Story',
+  backToMemory: '← Zurück zur Erinnerung',
   detailEyebrow: 'Erinnerung',
   detailIntro: 'Alle Details zu diesem gemeinsamen Moment.',
   loading: 'Erinnerung wird geladen …',

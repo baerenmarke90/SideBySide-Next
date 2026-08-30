@@ -41,12 +41,18 @@ import {
   createReferenceApis,
   loadAuthorizedImage,
 } from './client/referenceFlow';
-import { appRoutePath, DEFAULT_APP_ROUTE } from './client/routes';
+import {
+  appRoutePath,
+  DEFAULT_APP_ROUTE,
+  MEMORY_DETAIL_ROUTE_PATTERN,
+  MEMORY_EDIT_ROUTE_PATTERN,
+} from './client/routes';
 import { useAttachmentDrafts } from './client/useAttachmentDrafts';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppShell } from './components/AppShell';
 import { Brand } from './components/Brand';
 import { IdentityEntry } from './components/IdentityEntry';
+import { MemoryProductPage } from './components/MemoryProductPage';
 import { PageHeader } from './components/PageHeader';
 import { ProblemState } from './components/ProblemState';
 import { ProfilePage } from './components/ProfilePage';
@@ -592,6 +598,28 @@ function AuthenticatedApp({
                 apiBaseUrl={apiBaseUrl}
                 spaceId={spaceId}
                 onSaved={refreshStory}
+              />
+            }
+          />
+          <Route
+            path={MEMORY_EDIT_ROUTE_PATTERN}
+            element={
+              <MemoryProductPage
+                mode="edit"
+                memoriesApi={apis.memories}
+                spaceId={spaceId}
+                loadMemoryImage={loadMemoryImage}
+              />
+            }
+          />
+          <Route
+            path={MEMORY_DETAIL_ROUTE_PATTERN}
+            element={
+              <MemoryProductPage
+                mode="detail"
+                memoriesApi={apis.memories}
+                spaceId={spaceId}
+                loadMemoryImage={loadMemoryImage}
               />
             }
           />

@@ -155,7 +155,7 @@ export function MemoryProductPage({
           <PageHeader
             before={
               <Link className="back-link" to={memoryDetailPath(memory.id)}>
-                {t('memoryProduct.detailEyebrow')}
+                {t('memoryProduct.backToMemory')}
               </Link>
             }
             eyebrow={t('memoryProduct.editEyebrow')}
@@ -189,7 +189,7 @@ export function MemoryProductPage({
         <PageHeader
           before={
             <Link className="back-link" to={memoryDetailPath(memory.id)}>
-              {t('memoryProduct.backToStory')}
+              {t('memoryProduct.backToMemory')}
             </Link>
           }
           eyebrow={t('memoryProduct.editEyebrow')}
@@ -280,7 +280,10 @@ export function MemoryProductPage({
         description={t('memoryProduct.detailIntro')}
         action={
           memory.capabilities.canEdit ? (
-            <Link className="button-link secondary-link" to={memoryEditPath(memory.id)}>
+            <Link
+              className="button-link secondary-link"
+              to={memoryEditPath(memory.id)}
+            >
               {t('memoryProduct.edit')}
             </Link>
           ) : undefined
@@ -315,11 +318,16 @@ export function MemoryProductPage({
           <div className="section-head memory-section-head">
             <div>
               <p className="section-kicker">{t('memory.photoLabel')}</p>
-              <h2 id="memory-photos-heading">{t('memoryProduct.photosHeading')}</h2>
+              <h2 id="memory-photos-heading">
+                {t('memoryProduct.photosHeading')}
+              </h2>
             </div>
           </div>
           {imageAttachments.length > 0 ? (
-            <div className="memory-gallery" aria-label={t('memoryProduct.galleryAria')}>
+            <div
+              className="memory-gallery"
+              aria-label={t('memoryProduct.galleryAria')}
+            >
               {imageAttachments.map((attachment) => (
                 <MemoryPreview
                   key={attachment.id}
@@ -335,7 +343,10 @@ export function MemoryProductPage({
         </section>
 
         {memory.capabilities.canDelete ? (
-          <section className="memory-danger-zone" aria-labelledby="memory-delete-heading">
+          <section
+            className="memory-danger-zone"
+            aria-label={t('memoryProduct.delete')}
+          >
             {!confirmDelete ? (
               <button
                 type="button"
@@ -347,9 +358,7 @@ export function MemoryProductPage({
             ) : (
               <div className="memory-delete-confirmation" role="alert">
                 <div>
-                  <h2 id="memory-delete-heading">
-                    {t('memoryProduct.deleteConfirmTitle')}
-                  </h2>
+                  <h2>{t('memoryProduct.deleteConfirmTitle')}</h2>
                   <p>{t('memoryProduct.deleteConfirmBody')}</p>
                 </div>
                 <div className="memory-actions">
