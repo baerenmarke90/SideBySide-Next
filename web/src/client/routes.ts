@@ -1,5 +1,5 @@
-export type AppRouteId = 'story' | 'memoryCreate';
-export type AppRouteIcon = 'story' | 'add';
+export type AppRouteId = 'story' | 'people' | 'memoryCreate';
+export type AppRouteIcon = 'story' | 'people' | 'add';
 
 export interface AppRouteDefinition {
   id: AppRouteId;
@@ -15,6 +15,13 @@ export const APP_ROUTES = [
     path: '/story',
     labelKey: 'navigation.story',
     icon: 'story',
+    end: true,
+  },
+  {
+    id: 'people',
+    path: '/people',
+    labelKey: 'navigation.people',
+    icon: 'people',
     end: true,
   },
   {
