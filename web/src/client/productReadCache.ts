@@ -3,11 +3,7 @@ import {
   normalizeClientError,
 } from './problemDetails';
 
-export type ProductCacheKind =
-  | 'memory'
-  | 'heartMoment'
-  | 'milestone'
-  | 'story';
+export type ProductCacheKind = 'memory' | 'heartMoment' | 'milestone' | 'story';
 export type ProductReadSource = 'network' | 'cache';
 
 interface ProductCacheRecord {
