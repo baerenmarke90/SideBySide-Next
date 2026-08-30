@@ -1,4 +1,11 @@
-import { type FormEvent, useCallback, useMemo, useState } from 'react';
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   useMutation,
   useQuery,
@@ -17,15 +24,22 @@ import type { StoryPage as StoryPageData } from './api/generated/models/StoryPag
 import type { TokenView } from './api/generated/models/TokenView';
 import { loadReferenceClientConfig } from './client/config';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
+import { normalizeClientError } from './client/problemDetails';
 import {
   createReferenceApis,
   loadAuthorizedImage,
   signIn,
 } from './client/referenceFlow';
+import { appRoutePath, DEFAULT_APP_ROUTE } from './client/routes';
 import { useAttachmentDrafts } from './client/useAttachmentDrafts';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
+import { AppShell } from './components/AppShell';
 import { Brand } from './components/Brand';
+import { PageHeader } from './components/PageHeader';
+import { ProblemState } from './components/ProblemState';
 import { StoryList } from './components/StoryList';
 import { ThemeControl } from './components/ThemeControl';
+import { UiState } from './components/UiState';
 import { useTranslation } from './i18n';
 
 function readableError(error: unknown, fallback: string): string {
@@ -181,16 +195,20 @@ function StoryPage({
         </div>
       )}
 
-      <header className="page-heading story-heading">
-        <div>
-          <p className="eyebrow">{t('story.eyebrow')}</p>
-          <h1>{t('story.title')}</h1>
-          <p>{t('story.intro')}</p>
-        </div>
-        <Link className="button-link primary-action" to="/memory/new">
-          {t('story.addMemory')}
-        </Link>
-      </header>
+      <PageHeader
+        eyebrow={t('story.eyebrow')}
+        title={t('story.title')}
+        description={t('story.intro')}
+        className="story-heading"
+        action={
+          <Link
+            className="button-link primary-action"
+            to={appRoutePath('memoryCreate')}
+          >
+            {t('story.addMemory')}
+          </Link>
+        }
+      />
 
       <section className="story-surface" aria-labelledby="timeline-heading">
         <div className="section-head">
@@ -210,38 +228,21 @@ function StoryPage({
           </button>
         </div>
 
-        {storyQuery.isLoading && (
-          <div
-            className="story-loading"
-            role="status"
-            aria-label={t('story.loadingAria')}
-          >
-            <span />
-            <span />
-            <span />
-          </div>
-        )}
-        {storyQuery.error instanceof Error && (
-          <div className="inline-message inline-message-error" role="alert">
-            <strong>{t('story.loadErrorTitle')}</strong>
-            <span>
-              {readableError(storyQuery.error, t('story.loadErrorFallback'))}
-            </span>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => storyQuery.refetch()}
-            >
-              {t('common.retry')}
-            </button>
-          </div>
-        )}
-        {storyQuery.data && (
+        {storyQuery.isLoading ? (
+          <UiState kind="loading" title={t('story.loadingAria')} />
+        ) : null}
+        {storyQuery.error ? (
+          <ProblemState
+            error={storyQuery.error}
+            onRetry={() => void storyQuery.refetch()}
+          />
+        ) : null}
+        {storyQuery.data ? (
           <StoryList
             items={storyQuery.data.items}
             loadMemoryImage={loadMemoryImage}
           />
-        )}
+        ) : null}
       </section>
     </div>
   );
@@ -272,7 +273,7 @@ function MemoryCreatePage({
   });
 
   const mutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       title,
       body,
       happenedOn,
@@ -280,17 +281,25 @@ function MemoryCreatePage({
       title: string;
       body: string;
       happenedOn?: Date;
-    }) =>
-      createMemoryWithReadyAttachments(
-        apis,
-        spaceId,
-        { title, body, happenedOn },
-        attachments.readyIds,
-      ),
+    }) => {
+      try {
+        return await createMemoryWithReadyAttachments(
+          apis,
+          spaceId,
+          { title, body, happenedOn },
+          attachments.readyIds,
+        );
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
     onSuccess: async () => {
       attachments.clear();
       await onSaved();
-      navigate('/story', { replace: true, state: { saved: true } });
+      navigate(appRoutePath('story'), {
+        replace: true,
+        state: { saved: true },
+      });
     },
   });
 
@@ -310,16 +319,17 @@ function MemoryCreatePage({
 
   return (
     <div className="page create-page">
-      <Link className="back-link" to="/story">
-        {t('memory.backToStory')}
-      </Link>
-      <header className="page-heading create-heading">
-        <div>
-          <p className="eyebrow">{t('memory.eyebrow')}</p>
-          <h1>{t('memory.heading')}</h1>
-          <p>{t('memory.intro')}</p>
-        </div>
-      </header>
+      <PageHeader
+        before={
+          <Link className="back-link" to={appRoutePath('story')}>
+            {t('memory.backToStory')}
+          </Link>
+        }
+        eyebrow={t('memory.eyebrow')}
+        title={t('memory.heading')}
+        description={t('memory.intro')}
+        className="create-heading"
+      />
 
       <section className="form-card" aria-labelledby="memory-form-heading">
         <h2 id="memory-form-heading" className="sr-only">
@@ -475,7 +485,10 @@ function MemoryCreatePage({
           </div>
 
           <div className="form-actions">
-            <Link className="button-link secondary-link" to="/story">
+            <Link
+              className="button-link secondary-link"
+              to={appRoutePath('story')}
+            >
               {t('common.cancel')}
             </Link>
             <button
@@ -492,17 +505,7 @@ function MemoryCreatePage({
             {t('memory.processing')}
           </p>
         )}
-        {mutation.error && (
-          <div
-            className="inline-message inline-message-error form-error"
-            role="alert"
-          >
-            <strong>{t('memory.saveErrorTitle')}</strong>
-            <span>
-              {readableError(mutation.error, t('memory.saveErrorFallback'))}
-            </span>
-          </div>
-        )}
+        {mutation.error ? <ProblemState error={mutation.error} /> : null}
       </section>
     </div>
   );
@@ -520,14 +523,29 @@ function AuthenticatedApp({
   spaceId: string;
 }) {
   const { t } = useTranslation();
+  const location = useLocation();
   const queryClient = useQueryClient();
+  const previousSpaceId = useRef(spaceId);
   const apis = useMemo(
     () => createReferenceApis(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
   );
+
+  useEffect(() => {
+    if (previousSpaceId.current === spaceId) return;
+    queryClient.clear();
+    previousSpaceId.current = spaceId;
+  }, [queryClient, spaceId]);
+
   const storyQuery = useQuery({
-    queryKey: ['story', spaceId, tokens.accessToken],
-    queryFn: () => apis.story.getStoryTimeline({ spaceId, limit: 25 }),
+    queryKey: ['story', spaceId],
+    queryFn: async () => {
+      try {
+        return await apis.story.getStoryTimeline({ spaceId, limit: 25 });
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
     retry: false,
   });
   const loadMemoryImage = useCallback(
@@ -548,25 +566,26 @@ function AuthenticatedApp({
   }
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <Brand to="/story" ariaLabel={t('brand.storyAria')} />
-        <div className="header-actions">
-          <span className="shared-context">
-            <span aria-hidden="true">♥</span> {t('header.sharedArea')}
-          </span>
-          <ThemeControl variant="inline" />
-          <button type="button" className="tertiary" onClick={logout}>
-            {t('header.logout')}
-          </button>
-        </div>
-      </header>
-
-      <main className="app-main">
+    <AppShell onLogout={logout}>
+      <AppErrorBoundary
+        resetKey={location.pathname}
+        fallback={
+          <UiState
+            kind="error"
+            title={t('states.unexpected.title')}
+            body={t('states.unexpected.body')}
+            action={
+              <Link className="button-link secondary-link" to={DEFAULT_APP_ROUTE}>
+                {t('navigation.story')}
+              </Link>
+            }
+          />
+        }
+      >
         <Routes>
-          <Route path="/" element={<Navigate replace to="/story" />} />
+          <Route path="/" element={<Navigate replace to={DEFAULT_APP_ROUTE} />} />
           <Route
-            path="/story"
+            path={appRoutePath('story')}
             element={
               <StoryPage
                 storyQuery={storyQuery}
@@ -575,7 +594,7 @@ function AuthenticatedApp({
             }
           />
           <Route
-            path="/memory/new"
+            path={appRoutePath('memoryCreate')}
             element={
               <MemoryCreatePage
                 accessToken={tokens.accessToken}
@@ -585,10 +604,10 @@ function AuthenticatedApp({
               />
             }
           />
-          <Route path="*" element={<Navigate replace to="/story" />} />
+          <Route path="*" element={<Navigate replace to={DEFAULT_APP_ROUTE} />} />
         </Routes>
-      </main>
-    </div>
+      </AppErrorBoundary>
+    </AppShell>
   );
 }
 
