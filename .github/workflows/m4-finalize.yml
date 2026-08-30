@@ -54,7 +54,9 @@ jobs:
 
       - name: Format backend and tests
         working-directory: backend
-        run: uv run --frozen ruff format src tests scripts alembic
+        run: |
+          uv run --frozen ruff check src tests scripts alembic --fix
+          uv run --frozen ruff format src tests scripts alembic
 
       - name: Regenerate authoritative OpenAPI contract
         working-directory: backend
