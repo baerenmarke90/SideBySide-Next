@@ -1,6 +1,10 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import de from './locales/de';
+import importantDates from './locales/importantDates';
+import partnerConnection from './locales/partnerConnection';
+import people from './locales/people';
+import profiles from './locales/profiles';
 
 export const DEFAULT_LOCALE = 'de';
 
@@ -16,7 +20,20 @@ function syncDocumentLanguage(): void {
 if (!i18n.isInitialized) {
   void i18n.use(initReactI18next).init({
     resources: {
-      de: { translation: de },
+      de: {
+        translation: {
+          ...de,
+          navigation: {
+            ...de.navigation,
+            people: 'Menschen',
+            profile: 'Profil',
+          },
+          importantDates,
+          partnerConnection,
+          people,
+          profiles,
+        },
+      },
     },
     lng: DEFAULT_LOCALE,
     fallbackLng: DEFAULT_LOCALE,

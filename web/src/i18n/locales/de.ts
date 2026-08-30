@@ -73,6 +73,61 @@ const de = {
     pickerAria: 'Gemeinsamen Bereich auswählen',
     spaceFallback: 'Gemeinsamer Bereich {{index}}',
   },
+  identity: {
+    entryAria: 'Zugang zu SideBySide',
+    invitationEyebrow: 'Einladung zu SideBySide',
+    invitationTitle: 'Ihr möchtet SideBySide gemeinsam nutzen',
+    invitationBody:
+      'Melde dich mit deinem bestehenden Konto an oder erstelle über diese Einladung ein neues Konto.',
+    createAccount: 'Neues Konto erstellen',
+    registerTitle: 'Dein Konto erstellen',
+    registerBody:
+      'Dein neues Konto wird direkt mit dem eingeladenen gemeinsamen Bereich verbunden.',
+    displayName: 'Anzeigename',
+    registerSubmit: 'Konto erstellen und beitreten',
+    registerPending: 'Konto wird erstellt …',
+    haveAccount: 'Ich habe bereits ein Konto',
+    invitationMissing: 'Diese Einladung ist nicht mehr verfügbar.',
+    forgotPassword: 'Passwort vergessen?',
+    newPassword: 'Neues Passwort',
+    passwordConfirmation: 'Passwort wiederholen',
+    passwordMismatch: 'Die beiden Passwörter stimmen nicht überein.',
+    recoveryEyebrow: 'Kontozugang wiederherstellen',
+    recoveryTitle: 'Neues Passwort festlegen',
+    recoveryBody:
+      'Lege ein neues Passwort fest. Aus Sicherheitsgründen werden deine bisherigen Sitzungen beendet.',
+    recoverySave: 'Passwort speichern und anmelden',
+    recoverySaving: 'Passwort wird gespeichert …',
+    recoveryMissing: 'Dieser Wiederherstellungslink ist nicht mehr verfügbar.',
+    recoveryRequestEyebrow: 'Kontozugang wiederherstellen',
+    recoveryRequestTitle: 'Passwort zurücksetzen',
+    recoveryRequestBody:
+      'Gib deine E-Mail-Adresse ein. Wenn dafür ein lokales SideBySide-Konto existiert, erhältst du einen zeitlich begrenzten Link.',
+    recoveryRequestSubmit: 'Wiederherstellungslink anfordern',
+    recoveryRequestPending: 'Anfrage wird gesendet …',
+    mailRequestedTitle: 'Prüfe dein Postfach',
+    mailRequestedBody:
+      'Wenn die Adresse für diesen Zugang verwendet werden kann, wurde ein zeitlich begrenzter Link gesendet.',
+    backToSignIn: 'Zur Anmeldung',
+    useMagicLink: 'Anmeldelink per E-Mail',
+    magicLinkEyebrow: 'Anmelden ohne Passwort',
+    magicLinkTitle: 'Anmeldelink anfordern',
+    magicLinkBody:
+      'Wir senden dir einen einmal verwendbaren, zeitlich begrenzten Link, sofern die Adresse für diese Anmeldeart verwendet werden kann.',
+    magicLinkRequestSubmit: 'Anmeldelink anfordern',
+    magicLinkRequestPending: 'Anfrage wird gesendet …',
+    magicLinkOpening: 'Anmeldelink wird geprüft …',
+    magicLinkFailedTitle: 'Dieser Anmeldelink funktioniert nicht mehr.',
+    magicLinkFailedBody:
+      'Fordere bei Bedarf einen neuen Anmeldelink an oder melde dich mit deinem Passwort an.',
+    verificationOpening: 'E-Mail-Adresse wird bestätigt …',
+    verificationCompleteTitle: 'E-Mail-Adresse bestätigt',
+    verificationCompleteBody: 'Deine E-Mail-Adresse ist jetzt bestätigt.',
+    verificationFailedTitle:
+      'Die E-Mail-Adresse konnte nicht bestätigt werden.',
+    verificationFailedBody:
+      'Der Bestätigungslink ist möglicherweise abgelaufen oder wurde bereits verwendet.',
+  },
   login: {
     introHeading: 'Euer gemeinsamer Raum für die Dinge, die bleiben.',
     introBody:
