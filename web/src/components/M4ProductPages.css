@@ -1,0 +1,140 @@
+.m4-product-page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.m4-toolbar,
+.m4-section,
+.m4-summary-card {
+  display: grid;
+  gap: var(--space-4);
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.m4-toolbar-row,
+.m4-section-head,
+.m4-item-actions,
+.m4-notification-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.m4-toolbar-row > .field-group {
+  flex: 1 1 14rem;
+}
+
+.m4-section-head,
+.m4-notification-summary {
+  justify-content: space-between;
+}
+
+.m4-section-head h2,
+.m4-summary-card h2,
+.m4-summary-card p,
+.m4-section p {
+  margin-top: 0;
+}
+
+.m4-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.m4-item {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+}
+
+.m4-item-unread {
+  border-color: var(--color-accent);
+}
+
+.m4-item-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.m4-item-heading h3,
+.m4-item-heading p,
+.m4-item > p {
+  margin: 0;
+}
+
+.m4-item-kind,
+.m4-item-meta,
+.m4-item-excerpt,
+.m4-muted {
+  color: var(--color-text-secondary);
+}
+
+.m4-item-kind {
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.m4-item-excerpt {
+  white-space: pre-wrap;
+}
+
+.m4-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.m4-dashboard-grid > .m4-section-wide {
+  grid-column: 1 / -1;
+}
+
+.m4-summary-value {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 700;
+}
+
+.m4-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  font-weight: 650;
+}
+
+@media (max-width: 760px) {
+  .m4-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .m4-dashboard-grid > .m4-section-wide {
+    grid-column: auto;
+  }
+
+  .m4-toolbar-row,
+  .m4-section-head,
+  .m4-notification-summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .m4-toolbar-row > .field-group {
+    flex-basis: auto;
+  }
+}
