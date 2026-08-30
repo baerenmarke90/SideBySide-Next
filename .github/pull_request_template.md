@@ -8,7 +8,7 @@
 
 ## Business / Freemium Model Consistency
 
-Details: `docs/BUSINESS-MODEL.md`. The review itself is mandatory for every development PR.
+Details: `docs/BUSINESS-MODEL.md` and `docs/FREEMIUM-FEATURE-MATRIX.md`. The review itself is mandatory for every development PR.
 
 Exactly one of the following options must be checked:
 
@@ -31,7 +31,7 @@ When relevant, explicitly assess:
 - [ ] downgrade / trial / grandfathering / restore / export / existing-data behavior
 - [ ] authoritative business-model or feature-matrix documentation updated or confirmed unchanged
 
-Until the detailed Free/Premium decisions from #262 are promoted into authoritative repository documentation, use #262 as the current working source for those pending product-tier decisions.
+For capabilities already classified in `docs/FREEMIUM-FEATURE-MATRIX.md`, use that versioned matrix. Until remaining future/unimplemented decisions from #262 are promoted into authoritative repository documentation, use #262 as the working source for those pending product-tier decisions.
 
 ## Reuse-before-build
 
