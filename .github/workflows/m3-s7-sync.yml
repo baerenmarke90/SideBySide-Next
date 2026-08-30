@@ -1,0 +1,162 @@
+name: M3 S7 Contract Sync
+
+on:
+  push:
+    branches:
+      - feat/257-m3-s7-private-note-gift-idea
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+
+jobs:
+  synchronize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/257-m3-s7-private-note-gift-idea
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv sync --frozen
+
+      - name: Add private endpoints to the cross-cutting endpoint matrix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("backend/tests/integration/test_endpoint_matrix.py")
+          text = path.read_text(encoding="utf-8")
+
+          constants_anchor = 'COLLECTION_ITEM = {"title": "Matrix Collection Item"}\n'
+          constants = constants_anchor + 'PRIVATE_NOTE = {"title": "Matrix Private Note", "body": "Private body"}\nGIFT_IDEA = {"title": "Matrix Gift Idea"}\n'
+          if "PRIVATE_NOTE =" not in text:
+              text = text.replace(constants_anchor, constants, 1)
+
+          endpoint_anchor = '''    Endpoint(
+              "PUT",
+              "/api/v1/spaces/{spaceId}/collections/{collectionId}/order",
+              body={"itemIds": []},
+              if_match=True,
+              resource_absence="COLLECTION_NOT_FOUND",
+              placeholders=("collectionId",),
+          ),
+          '''
+          private_endpoints = endpoint_anchor + '''    Endpoint("GET", "/api/v1/spaces/{spaceId}/private/notes"),
+              Endpoint("POST", "/api/v1/spaces/{spaceId}/private/notes", body=PRIVATE_NOTE),
+              Endpoint(
+                  "GET",
+                  "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+                  resource_absence="PRIVATE_NOTE_NOT_FOUND",
+                  placeholders=("noteId",),
+              ),
+              Endpoint(
+                  "PATCH",
+                  "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+                  body={"pinned": True},
+                  if_match=True,
+                  resource_absence="PRIVATE_NOTE_NOT_FOUND",
+                  placeholders=("noteId",),
+              ),
+              Endpoint(
+                  "DELETE",
+                  "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+                  if_match=True,
+                  resource_absence="PRIVATE_NOTE_NOT_FOUND",
+                  placeholders=("noteId",),
+              ),
+              Endpoint("GET", "/api/v1/spaces/{spaceId}/private/gift-ideas"),
+              Endpoint("POST", "/api/v1/spaces/{spaceId}/private/gift-ideas", body=GIFT_IDEA),
+              Endpoint(
+                  "GET",
+                  "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+                  resource_absence="GIFT_IDEA_NOT_FOUND",
+                  placeholders=("giftIdeaId",),
+              ),
+              Endpoint(
+                  "PATCH",
+                  "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+                  body={"pinned": True},
+                  if_match=True,
+                  resource_absence="GIFT_IDEA_NOT_FOUND",
+                  placeholders=("giftIdeaId",),
+              ),
+              Endpoint(
+                  "DELETE",
+                  "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+                  if_match=True,
+                  resource_absence="GIFT_IDEA_NOT_FOUND",
+                  placeholders=("giftIdeaId",),
+              ),
+          '''
+          if "/private/notes" not in text:
+              if endpoint_anchor not in text:
+                  raise SystemExit("Collection endpoint anchor not found")
+              text = text.replace(endpoint_anchor, private_endpoints, 1)
+
+          create_anchor = '''    collection_item = client.post(
+              f"{base_path}/collections/{collection['id']}/items",
+              json=COLLECTION_ITEM,
+              headers=headers,
+          ).json()
+          '''
+          create_private = create_anchor + '''    private_note = client.post(
+              f"{base_path}/private/notes", json=PRIVATE_NOTE, headers=headers
+          ).json()
+              gift_idea = client.post(
+                  f"{base_path}/private/gift-ideas", json=GIFT_IDEA, headers=headers
+              ).json()
+          '''
+          if "private_note = client.post" not in text:
+              if create_anchor not in text:
+                  raise SystemExit("Resource creation anchor not found")
+              text = text.replace(create_anchor, create_private, 1)
+
+          id_anchor = '''            "collectionId": collection["id"],
+              "itemId": collection_item["id"],
+          '''
+          private_ids = id_anchor + '''            "noteId": private_note["id"],
+              "giftIdeaId": gift_idea["id"],
+          '''
+          if '"noteId": private_note["id"]' not in text:
+              if id_anchor not in text:
+                  raise SystemExit("Resource ID anchor not found")
+              text = text.replace(id_anchor, private_ids, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Format backend changes
+        working-directory: backend
+        run: uv run --frozen ruff format src tests scripts alembic
+
+      - name: Write OpenAPI contract
+        working-directory: backend
+        run: uv run --frozen python scripts/openapi_contract.py write
+
+      - name: Regenerate API clients
+        run: tools/openapi/generate.sh
+
+      - name: Commit synchronized outputs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/openapi.json backend/src backend/tests backend/alembic web/src/api/generated android/api/generated
+          if git diff --cached --quiet; then
+            echo "Nothing to synchronize."
+            exit 0
+          fi
+          git commit -m "chore(api): synchronize M3-S7 contract (#257)"
+          git push origin HEAD:feat/257-m3-s7-private-note-gift-idea
