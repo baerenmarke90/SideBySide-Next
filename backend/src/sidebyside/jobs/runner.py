@@ -18,6 +18,7 @@ from types import FrameType
 
 from sidebyside.attachments import cleanup as media_cleanup
 from sidebyside.db.session import unit_of_work
+from sidebyside.engagement import service as engagement_service
 from sidebyside.jobs import maintenance
 from sidebyside.jobs.worker import run_once
 
@@ -39,7 +40,7 @@ def _request_shutdown(signum: int, frame: FrameType | None) -> None:
     """Stop on SIGTERM after allowing the current round to finish.
 
     Interrupting a job mid-run would leave it RUNNING with an active lease;
-    it would not become available again until that lease expired.
+    it would not become available again until its lease expired.
     """
     global _shutdown
     _shutdown = True
@@ -54,6 +55,12 @@ def _ensure_maintenance() -> None:
             media_cleanup.ensure_scheduled(session)
     except Exception:
         log.exception("could not schedule maintenance")
+
+
+def _run_engagement_projection() -> int:
+    """Project one committed Outbox batch through the existing DB worker."""
+    with unit_of_work() as session:
+        return engagement_service.project_pending(session)
 
 
 def main() -> None:
@@ -79,7 +86,8 @@ def main() -> None:
             last_checked = time.monotonic()
 
         try:
-            completed = run_once(name)
+            projected = _run_engagement_projection()
+            completed = projected + run_once(name)
         except Exception:
             # A failure while polling must not terminate the process; otherwise
             # any brief database connection disruption would take down the
