@@ -29,6 +29,7 @@ from sidebyside.collections import models as _collections  # noqa: F401
 from sidebyside.comments import models as _comments  # noqa: F401
 from sidebyside.config import DatabaseSettings
 from sidebyside.db.base import Base
+from sidebyside.engagement import models as _engagement  # noqa: F401
 from sidebyside.gift_ideas import models as _gift_ideas  # noqa: F401
 from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
 from sidebyside.identity import models as _identity  # noqa: F401
