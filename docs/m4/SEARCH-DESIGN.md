@@ -200,11 +200,13 @@ For stable keyset pagination, normalize rank to a deterministic SQL value suitab
 Order contract:
 
 1. normalized rank descending;
-2. domain sort timestamp/date descending where available, otherwise `created_at` descending;
+2. `created_at` descending;
 3. result type ascending;
 4. resource ID ascending.
 
-Child items use the child `created_at` for the secondary key.
+Using `created_at` for every result type deliberately avoids mixing `DATE` and `TIMESTAMPTZ` semantics in one cross-domain keyset. Domain event dates may still be returned for presentation but do not drive Search pagination.
+
+Child items use their own `created_at` for the secondary key.
 
 The rank value is **not** returned to clients.
 
@@ -224,7 +226,14 @@ sortContractVersion = search-v1
 
 `accountId` is mandatory because the authorized private result set differs between partners in the same Space.
 
-Position contains only server-derived order keys needed to continue the keyset.
+Position contains only server-derived order keys needed to continue the keyset:
+
+```text
+normalizedRank
+createdAt
+resultType
+resourceId
+```
 
 A cursor from:
 
