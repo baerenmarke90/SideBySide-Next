@@ -37,6 +37,8 @@ export function PartnerConnectionPanel({
   const [issuedInvitation, setIssuedInvitation] =
     useState<IssuedInvitationView | null>(null);
   const [copyState, setCopyState] = useState<CopyState>('idle');
+  const [createPending, setCreatePending] = useState(false);
+  const [createError, setCreateError] = useState<unknown>(null);
 
   const configuration = useMemo(
     () =>
@@ -88,25 +90,6 @@ export function PartnerConnectionPanel({
     retry: false,
   });
 
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      try {
-        return await invitationsApi.createInvitationApiV1SpacesSpaceIdInvitationsPost(
-          { spaceId },
-        );
-      } catch (error) {
-        throw await normalizeClientError(error);
-      }
-    },
-    onSuccess: async (invitation) => {
-      setIssuedInvitation(invitation);
-      setCopyState('idle');
-      await queryClient.invalidateQueries({
-        queryKey: ['space-invitations', spaceId],
-      });
-    },
-  });
-
   const revokeMutation = useMutation({
     mutationFn: async (invitation: InvitationView) => {
       try {
@@ -124,7 +107,6 @@ export function PartnerConnectionPanel({
       if (issuedInvitation?.id === invitation.id) {
         setIssuedInvitation(null);
         setCopyState('idle');
-        createMutation.reset();
       }
       await queryClient.invalidateQueries({
         queryKey: ['space-invitations', spaceId],
@@ -135,6 +117,26 @@ export function PartnerConnectionPanel({
   const issuedLink = issuedInvitation
     ? buildInvitationLink(window.location.origin, issuedInvitation.token)
     : null;
+
+  async function createInvitation() {
+    setCreatePending(true);
+    setCreateError(null);
+    try {
+      const invitation =
+        await invitationsApi.createInvitationApiV1SpacesSpaceIdInvitationsPost({
+          spaceId,
+        });
+      setIssuedInvitation(invitation);
+      setCopyState('idle');
+      await queryClient.invalidateQueries({
+        queryKey: ['space-invitations', spaceId],
+      });
+    } catch (error) {
+      setCreateError(await normalizeClientError(error));
+    } finally {
+      setCreatePending(false);
+    }
+  }
 
   async function copyIssuedLink() {
     if (!issuedLink) return;
@@ -151,7 +153,6 @@ export function PartnerConnectionPanel({
   function hideIssuedLink() {
     setIssuedInvitation(null);
     setCopyState('idle');
-    createMutation.reset();
   }
 
   if (spaceQuery.isLoading) {
@@ -159,7 +160,7 @@ export function PartnerConnectionPanel({
       <div className="page profile-page">
         <section
           className="profile-section"
-          aria-labelledby="partner-connection-title"
+          aria-label={t('partnerConnection.title')}
         >
           <UiState kind="loading" title={t('partnerConnection.checking')} />
         </section>
@@ -172,7 +173,7 @@ export function PartnerConnectionPanel({
       <div className="page profile-page">
         <section
           className="profile-section"
-          aria-labelledby="partner-connection-title"
+          aria-label={t('partnerConnection.title')}
         >
           <ProblemState
             error={spaceQuery.error}
@@ -208,11 +209,11 @@ export function PartnerConnectionPanel({
         <div className="form-actions">
           <button
             type="button"
-            onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending}
-            aria-busy={createMutation.isPending}
+            onClick={() => void createInvitation()}
+            disabled={createPending}
+            aria-busy={createPending}
           >
-            {createMutation.isPending
+            {createPending
               ? t('partnerConnection.creating')
               : t('partnerConnection.create')}
           </button>
@@ -231,9 +232,7 @@ export function PartnerConnectionPanel({
           {t('partnerConnection.refreshHelp')}
         </p>
 
-        {createMutation.error ? (
-          <ProblemState error={createMutation.error} />
-        ) : null}
+        {createError ? <ProblemState error={createError} /> : null}
 
         {issuedInvitation && issuedLink ? (
           <div className="inline-message inline-message-success" role="status">
