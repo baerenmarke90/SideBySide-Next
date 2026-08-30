@@ -159,7 +159,8 @@ export function MemoryProductPage({
       return { previous };
     },
     onError: (_error, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(memoryKey, context.previous);
+      if (context?.previous)
+        queryClient.setQueryData(memoryKey, context.previous);
       void queryClient.invalidateQueries({ queryKey: memoryKey });
     },
     onSuccess: async (memory) => {
@@ -319,7 +320,9 @@ export function MemoryProductPage({
             className="form-grid memory-form"
           >
             <div className="field-group">
-              <label htmlFor="memory-edit-title">{t('memory.titleLabel')}</label>
+              <label htmlFor="memory-edit-title">
+                {t('memory.titleLabel')}
+              </label>
               <input
                 id="memory-edit-title"
                 name="title"
@@ -377,7 +380,9 @@ export function MemoryProductPage({
                           <button
                             type="button"
                             className="tertiary"
-                            onClick={() => toggleAttachmentRemoval(attachment.id)}
+                            onClick={() =>
+                              toggleAttachmentRemoval(attachment.id)
+                            }
                           >
                             {removed
                               ? t('memoryProduct.keepPhoto')
