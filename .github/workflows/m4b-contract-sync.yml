@@ -1,5 +1,6 @@
 name: M4-B Contract Sync
 
+# Re-run after splitting Activity and Notification OpenAPI tags.
 on:
   push:
     branches:
