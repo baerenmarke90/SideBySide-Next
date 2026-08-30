@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from sidebyside.authorization import PrivacyClass
+from sidebyside.relationship import service as relationship_service
 from sidebyside.reminders import service
 from sidebyside.reminders.models import (
     Reminder,
@@ -15,7 +16,6 @@ from sidebyside.reminders.models import (
     ReminderScheduleType,
     ReminderSource,
 )
-from sidebyside.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -143,7 +143,9 @@ def test_partner_can_update_and_offset_only_change_advances_parent_version(
     assert stale.json()["code"] == "RESOURCE_VERSION_CONFLICT"
 
 
-def test_once_requires_offset_aware_future_instant(client, session: Session, couple, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_once_requires_offset_aware_future_instant(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setattr(service.clock, "now", lambda: NOW)
 
     naive = client.post(
@@ -306,7 +308,9 @@ def test_generated_reminder_is_not_manually_mutable(client, session: Session, co
     assert response.json()["code"] == service.REMINDER_GENERATED_IMMUTABLE
 
 
-def test_foreign_space_preference_does_not_reveal_reminder(client, session: Session, couple) -> None:  # type: ignore[no-untyped-def]
+def test_foreign_space_preference_does_not_reveal_reminder(
+    client, session: Session, couple
+) -> None:  # type: ignore[no-untyped-def]
     created = _create(client, couple)
     assert created.status_code == 201
     reminder_id = created.json()["id"]

@@ -120,7 +120,8 @@ class Reminder(
         CheckConstraint("privacy_class = 'SPACE_SHARED'", name="reminder_privacy_is_shared"),
         CheckConstraint("crypto_version >= 0", name="reminder_crypto_version_non_negative"),
         CheckConstraint(
-            "(source = 'MANUAL' AND source_type IS NULL AND source_id IS NULL AND rule_key IS NULL) "
+            "(source = 'MANUAL' AND source_type IS NULL AND source_id IS NULL "
+            "AND rule_key IS NULL) "
             "OR (source = 'GENERATED' AND source_type IS NOT NULL AND source_id IS NOT NULL "
             "AND rule_key IS NOT NULL)",
             name="reminder_source_fields_valid",

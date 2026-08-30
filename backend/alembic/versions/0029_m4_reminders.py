@@ -114,7 +114,8 @@ def upgrade() -> None:
             name="reminder_crypto_version_non_negative",
         ),
         sa.CheckConstraint(
-            "(source = 'MANUAL' AND source_type IS NULL AND source_id IS NULL AND rule_key IS NULL) "
+            "(source = 'MANUAL' AND source_type IS NULL AND source_id IS NULL "
+            "AND rule_key IS NULL) "
             "OR (source = 'GENERATED' AND source_type IS NOT NULL AND source_id IS NOT NULL "
             "AND rule_key IS NOT NULL)",
             name="reminder_source_fields_valid",

@@ -183,10 +183,7 @@ def _apply_schedule(reminder: Reminder, schedule: ScheduleDefinition) -> None:
 
 def _replace_offsets(session: Session, reminder: Reminder, values: list[int]) -> None:
     session.execute(delete(ReminderOffset).where(ReminderOffset.reminder_id == reminder.id))
-    session.add_all(
-        ReminderOffset(reminder_id=reminder.id, days_before=value)
-        for value in values
-    )
+    session.add_all(ReminderOffset(reminder_id=reminder.id, days_before=value) for value in values)
 
 
 def _offsets(session: Session, reminder_id: UUID) -> list[int]:
