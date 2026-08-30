@@ -13,11 +13,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.orm import Session
 
+from sidebyside.engagement.models import Notification, NotificationKind
 from sidebyside.main import create_app
 from sidebyside.relationship import service as relationship_service
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
@@ -248,6 +249,15 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         resource_absence="RESOURCE_NOT_FOUND",
     ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/timeline"),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/activity"),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/notifications"),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/notifications/unread-count"),
+    Endpoint(
+        "POST",
+        "/api/v1/spaces/{spaceId}/notifications/{notificationId}/read",
+        resource_absence="NOTIFICATION_NOT_FOUND",
+    ),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/notifications/read-all"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/milestones"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
     Endpoint(
@@ -796,6 +806,17 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
         f"{base_path}/important-dates", json=IMPORTANT_DATE, headers=headers
     ).json()
     memory = client.post(f"{base_path}/memories", json=MEMORY, headers=headers).json()
+    notification = Notification(
+        space_id=space.id,
+        recipient_account_id=anna.id,
+        source_event_id=uuid4(),
+        kind=NotificationKind.COMMENT_CREATED.value,
+        actor_id=ben.id,
+        target_type="MEMORY",
+        target_id=UUID(memory["id"]),
+    )
+    session.add(notification)
+    session.flush()
     heart_moment = client.post(
         f"{base_path}/heart-moments", json=HEART_MOMENT, headers=headers
     ).json()
@@ -844,6 +865,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "personId": person["id"],
             "dateId": important_date["id"],
             "memoryId": memory["id"],
+            "notificationId": str(notification.id),
             "heartMomentId": heart_moment["id"],
             "milestoneId": milestone["id"],
             "commentId": comment["id"],
@@ -983,6 +1005,7 @@ def _resource_placeholders(endpoint: Endpoint) -> tuple[str, ...]:
             "dateId",
             "accountId",
             "memoryId",
+            "notificationId",
             "heartMomentId",
             "attachmentId",
             "milestoneId",
