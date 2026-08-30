@@ -168,7 +168,10 @@ export function CommentsPanel({
     commentsQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <section className="comments-panel" aria-labelledby={`${parentKind}-comments-heading`}>
+    <section
+      className="comments-panel"
+      aria-labelledby={`${parentKind}-comments-heading`}
+    >
       <div className="section-head">
         <div>
           <p className="section-kicker">{t('comments.kicker')}</p>
@@ -192,7 +195,8 @@ export function CommentsPanel({
       ) : (
         <ol className="comment-list">
           {comments.map((comment) => {
-            const edited = comment.updatedAt.getTime() !== comment.createdAt.getTime();
+            const edited =
+              comment.updatedAt.getTime() !== comment.createdAt.getTime();
             const own = comment.authorId === currentAccountId;
             return (
               <li key={comment.id} className="comment-card">
@@ -256,8 +260,12 @@ export function CommentsPanel({
         </form>
       ) : null}
 
-      {createMutation.error ? <ProblemState error={createMutation.error} /> : null}
-      {deleteMutation.error ? <ProblemState error={deleteMutation.error} /> : null}
+      {createMutation.error ? (
+        <ProblemState error={createMutation.error} />
+      ) : null}
+      {deleteMutation.error ? (
+        <ProblemState error={deleteMutation.error} />
+      ) : null}
     </section>
   );
 }
