@@ -191,11 +191,12 @@ export function MilestoneProductPage({
         />
       );
     }
+    const editableMilestone = milestone;
     function submit(event: FormEvent<HTMLFormElement>) {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       updateMutation.mutate({
-        milestone,
+        milestone: editableMilestone,
         title: String(data.get('title') || '').trim(),
         body: String(data.get('body') || '').trim(),
         happenedOn: new Date(`${String(data.get('happenedOn'))}T00:00:00Z`),
