@@ -100,6 +100,8 @@ WISH = {"title": "Matrix Wish"}
 PLAN = {"title": "Matrix Plan", "description": "Text"}
 PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 CHAPTER = {"title": "Matrix Chapter", "description": "Text"}
+COLLECTION = {"title": "Matrix Collection", "icon": "list"}
+COLLECTION_ITEM = {"title": "Matrix Collection Item"}
 
 SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("GET", "/api/v1/spaces/{spaceId}"),
@@ -465,6 +467,56 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         "/api/v1/spaces/{spaceId}/chapters/{chapterId}/milestones/{targetId}",
         resource_absence="CHAPTER_NOT_FOUND",
     ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/collections"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/collections", body=COLLECTION),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/collections/{collectionId}",
+        resource_absence="COLLECTION_NOT_FOUND",
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/collections/{collectionId}",
+        body={"title": "Matrix Collection updated"},
+        if_match=True,
+        resource_absence="COLLECTION_NOT_FOUND",
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/collections/{collectionId}",
+        if_match=True,
+        resource_absence="COLLECTION_NOT_FOUND",
+    ),
+    Endpoint(
+        "POST",
+        "/api/v1/spaces/{spaceId}/collections/{collectionId}/items",
+        body=COLLECTION_ITEM,
+        resource_absence="COLLECTION_NOT_FOUND",
+        placeholders=("collectionId",),
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/collections/{collectionId}/items/{itemId}",
+        body={"completed": True},
+        if_match=True,
+        resource_absence="COLLECTION_ITEM_NOT_FOUND",
+        placeholders=("itemId",),
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/collections/{collectionId}/items/{itemId}",
+        if_match=True,
+        resource_absence="COLLECTION_ITEM_NOT_FOUND",
+        placeholders=("itemId",),
+    ),
+    Endpoint(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/collections/{collectionId}/order",
+        body={"itemIds": []},
+        if_match=True,
+        resource_absence="COLLECTION_NOT_FOUND",
+        placeholders=("collectionId",),
+    ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/plans"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/plans", body=PLAN),
     Endpoint(
@@ -632,6 +684,12 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
     place = client.post(f"{base_path}/places", json=PLACE, headers=headers).json()
     plan = client.post(f"{base_path}/plans", json=PLAN, headers=headers).json()
     chapter = client.post(f"{base_path}/chapters", json=CHAPTER, headers=headers).json()
+    collection = client.post(f"{base_path}/collections", json=COLLECTION, headers=headers).json()
+    collection_item = client.post(
+        f"{base_path}/collections/{collection['id']}/items",
+        json=COLLECTION_ITEM,
+        headers=headers,
+    ).json()
     attachment = client.post(f"{base_path}/attachments", json=ATTACHMENT, headers=headers).json()
 
     return {
@@ -654,6 +712,8 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "planId": plan["id"],
             "placeId": place["id"],
             "chapterId": chapter["id"],
+            "collectionId": collection["id"],
+            "itemId": collection_item["id"],
             # The target is a typed relation. A memory is enough for all three
             # relation types because this matrix checks occur before target resolution.
             "targetId": memory["id"],
@@ -760,6 +820,8 @@ class TestEveryResourceId:
 
 
 def _resource_placeholders(endpoint: Endpoint) -> tuple[str, ...]:
+    if endpoint.placeholders:
+        return endpoint.placeholders
     return tuple(
         name
         for name in (
@@ -777,6 +839,8 @@ def _resource_placeholders(endpoint: Endpoint) -> tuple[str, ...]:
             "planId",
             "placeId",
             "chapterId",
+            "collectionId",
+            "itemId",
             "targetId",
         )
         if "{" + name + "}" in endpoint.template
@@ -804,6 +868,13 @@ def test_without_if_match_does_not_write(scenario, endpoint: Endpoint) -> None: 
             afterwards = scenario["client"].patch(
                 path,
                 json=COMMENT,
+                headers={**scenario["owner_headers"], "If-Match": '"1"'},
+            )
+            assert afterwards.status_code == 200
+        elif "{itemId}" in endpoint.template:
+            afterwards = scenario["client"].patch(
+                path,
+                json={"completed": True},
                 headers={**scenario["owner_headers"], "If-Match": '"1"'},
             )
             assert afterwards.status_code == 200
