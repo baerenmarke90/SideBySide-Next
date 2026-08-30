@@ -3,7 +3,11 @@ import {
   normalizeClientError,
 } from './problemDetails';
 
-export type ProductCacheKind = 'memory' | 'heartMoment' | 'milestone';
+export type ProductCacheKind =
+  | 'memory'
+  | 'heartMoment'
+  | 'milestone'
+  | 'story';
 export type ProductReadSource = 'network' | 'cache';
 
 interface ProductCacheRecord {
@@ -91,6 +95,32 @@ export function mayUseOfflineProductCache(error: ClientProblemError): boolean {
   return error.kind === 'offline' || error.kind === 'server';
 }
 
+export async function saveProductReadCacheEntry<T>({
+  accountId,
+  spaceId,
+  kind,
+  resourceId,
+  value,
+  serialize,
+}: {
+  accountId: string;
+  spaceId: string;
+  kind: ProductCacheKind;
+  resourceId: string;
+  value: T;
+  serialize: (value: T) => unknown;
+}): Promise<void> {
+  await writeRecord({
+    key: cacheKey(accountId, spaceId, kind, resourceId),
+    accountId,
+    spaceId,
+    kind,
+    resourceId,
+    payload: serialize(value),
+    cachedAt: new Date().toISOString(),
+  });
+}
+
 export async function loadProductWithReadCache<T>({
   accountId,
   spaceId,
@@ -112,14 +142,13 @@ export async function loadProductWithReadCache<T>({
 
   try {
     const value = await load();
-    await writeRecord({
-      key,
+    await saveProductReadCacheEntry({
       accountId,
       spaceId,
       kind,
       resourceId,
-      payload: serialize(value),
-      cachedAt: new Date().toISOString(),
+      value,
+      serialize,
     });
     return { value, source: 'network' };
   } catch (error) {
