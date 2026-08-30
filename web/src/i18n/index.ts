@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import de from './locales/de';
 import importantDates from './locales/importantDates';
+import partnerConnection from './locales/partnerConnection';
 import people from './locales/people';
 import profiles from './locales/profiles';
 
@@ -28,6 +29,7 @@ if (!i18n.isInitialized) {
             profile: 'Profil',
           },
           importantDates,
+          partnerConnection,
           people,
           profiles,
         },
