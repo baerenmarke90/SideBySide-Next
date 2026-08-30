@@ -4,7 +4,7 @@ import { ContentVisibility } from '../api/generated/models/ContentVisibility';
 import { HeartEmotion } from '../api/generated/models/HeartEmotion';
 import type { HeartMomentDetail } from '../api/generated/models/HeartMomentDetail';
 import { memoryDateInputValue } from '../client/memoryProduct';
-import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
+import type { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { useTranslation } from '../i18n';
 import { AttachmentDraftField } from './AttachmentDraftField';
 

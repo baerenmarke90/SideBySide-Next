@@ -1,8 +1,8 @@
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ContentVisibility } from '../api/generated/models/ContentVisibility';
-import { HeartEmotion } from '../api/generated/models/HeartEmotion';
+import type { ContentVisibility } from '../api/generated/models/ContentVisibility';
+import type { HeartEmotion } from '../api/generated/models/HeartEmotion';
 import type { HeartMomentDetail } from '../api/generated/models/HeartMomentDetail';
 import { deleteUnboundAttachment } from '../client/memoryAttachmentDraft';
 import { normalizeClientError } from '../client/problemDetails';
