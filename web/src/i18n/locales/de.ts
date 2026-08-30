@@ -35,7 +35,8 @@ const de = {
     offline: {
       title: 'Du bist gerade offline.',
       body: 'Stelle die Verbindung wieder her und versuche es erneut.',
-      banner: 'Offline – Änderungen und neue Inhalte benötigen eine Verbindung.',
+      banner:
+        'Offline – Änderungen und neue Inhalte benötigen eine Verbindung.',
     },
     server: {
       title: 'SideBySide ist gerade nicht erreichbar.',
