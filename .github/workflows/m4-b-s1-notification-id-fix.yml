@@ -1,0 +1,124 @@
+name: M4-B-S1 Notification ID Fix
+
+on:
+  push:
+    branches:
+      - feat/282-m4b-activity-notifications
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+  SBS_ENVIRONMENT: test
+  SBS_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+  SBS_TEST_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+
+jobs:
+  fix:
+    name: Fix opaque notification resource IDs
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sidebyside
+          POSTGRES_PASSWORD: sidebyside
+          POSTGRES_DB: sidebyside_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sidebyside -d sidebyside_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Apply the B-S1 opaque-ID fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          api = Path("backend/src/sidebyside/api/v1/engagement.py")
+          text = api.read_text(encoding="utf-8")
+          old = '    notification_id: Annotated[UUID, Path(alias="notificationId")],\n'
+          new = '    notification_id: Annotated[str, Path(alias="notificationId")],\n'
+          if old not in text:
+              raise SystemExit("notification route UUID marker not found")
+          api.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          service = Path("backend/src/sidebyside/engagement/service.py")
+          text = service.read_text(encoding="utf-8")
+          import_marker = "from sidebyside.core.errors import ErrorCode, NotFoundError\n"
+          if "from sidebyside.core.ids import parse_id\n" not in text:
+              if import_marker not in text:
+                  raise SystemExit("service import marker not found")
+              text = text.replace(
+                  import_marker,
+                  import_marker + "from sidebyside.core.ids import parse_id\n",
+                  1,
+              )
+          signature = "    notification_id: UUID,\n) -> Notification:\n    statement = (\n"
+          replacement = (
+              "    notification_id: UUID | str,\n"
+              ") -> Notification:\n"
+              "    identifier = notification_id if isinstance(notification_id, UUID) else parse_id(notification_id)\n"
+              "    if identifier is None:\n"
+              "        raise NotFoundError(\n"
+              "            \"Notification not found.\",\n"
+              "            ErrorCode.NOTIFICATION_NOT_FOUND,\n"
+              "        )\n"
+              "    statement = (\n"
+          )
+          if signature not in text:
+              raise SystemExit("service notification signature marker not found")
+          text = text.replace(signature, replacement, 1)
+          query_marker = "            Notification.id == notification_id,\n"
+          if query_marker not in text:
+              raise SystemExit("service notification query marker not found")
+          text = text.replace(query_marker, "            Notification.id == identifier,\n", 1)
+          service.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Validate the regression and regenerate contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "uv==$UV_VERSION"
+          (
+            cd backend
+            uv lock --check
+            uv sync --frozen
+            uv run --frozen ruff check src/sidebyside/api/v1/engagement.py src/sidebyside/engagement/service.py
+            uv run --frozen ruff format --check src/sidebyside/api/v1/engagement.py src/sidebyside/engagement/service.py
+            uv run --frozen mypy src/sidebyside/api/v1/engagement.py src/sidebyside/engagement/service.py
+            uv run --frozen alembic upgrade head
+            uv run --frozen pytest -m integration -q tests/integration/test_endpoint_matrix.py -k "malformed_resource_id_remains_same_404 and notifications"
+            uv run --frozen python scripts/openapi_contract.py write
+          )
+          tools/openapi/generate.sh
+          tools/openapi/generate.sh --check
+
+      - name: Commit generated B-S1 fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/m4-b-s1-notification-id-fix.yml
+          git add backend/src/sidebyside/api/v1/engagement.py backend/src/sidebyside/engagement/service.py backend/openapi.json web/src/api/generated android/api/generated
+          git commit -m "fix(engagement): hide malformed notification IDs"
+          git push origin HEAD:feat/282-m4b-activity-notifications
