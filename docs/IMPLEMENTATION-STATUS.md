@@ -2,18 +2,18 @@
 
 As of: August 30, 2026
 Current repository state: GitHub `main` is the canonical SHA source; this living status document deliberately stores no static current SHA.  
-Current gate status: **G2 passed; M2 complete; M3 released**
+Current gate status: **G3 passed; M3 complete; M4 is the next milestone**
 
 ## Document roles
 
 - **Binding source:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Compact product overview:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
-- **Current gate decision:** [2026-08-26-g2-final-gate-review.md](reviews/2026-08-26-g2-final-gate-review.md)
+- **Current gate decision:** [2026-08-30-g3-gate-review.md](reviews/2026-08-30-g3-gate-review.md)
 - **Status sources and drift rules:** [STATUS-SOURCES.md](STATUS-SOURCES.md)
 - **Binding development rule:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) and [AGENTS.md](../AGENTS.md)
 - **Architecture/operations decisions:** dated ADRs under [docs/decisions](decisions)
 - **M2 project control:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
-- **M3 readiness and delivery:** [m3/README.md](m3/README.md), [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md), and [m3/G3-EVIDENCE.md](m3/G3-EVIDENCE.md)
+- **M3 readiness, delivery, and evidence:** [m3/README.md](m3/README.md), [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md), and [m3/G3-EVIDENCE.md](m3/G3-EVIDENCE.md)
 - **Historical reviews:** dated files under `docs/reviews/`; they are never modified retroactively.
 - **This document:** living work and progress list.
 
@@ -120,7 +120,7 @@ M2-D22 (owner view) is no longer in that category: the question shapes the Story
 
 Video remains fail-closed until a new product decision: M2-D04 allows MP4 and QuickTime in the target contract, while the current server rejects them with `ATTACHMENT_TYPE_NOT_ALLOWED`. Clients must not present video as available.
 
-Historical M2 project control and binding milestone boundaries are documented in [M2 Project Control](m2/PROJECT-CONTROL.md). The current gate decision is documented in the [final G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
+Historical M2 project control and binding milestone boundaries are documented in [M2 Project Control](m2/PROJECT-CONTROL.md). The immutable G2 decision is documented in the [final G2 Gate Review](reviews/2026-08-26-g2-final-gate-review.md).
 
 ### Binding M2/M5 boundary
 
@@ -142,7 +142,7 @@ M4 is internally split into three delivery slices:
 - M4-B Activity + Notifications
 - M4-C Reminders + Rules
 
-Global full-text Search was not part of G2. The minimum Story contract includes `type`, `year`, `order`, `cursor`, and `limit`; global full-text Search belongs to M4-A.
+Global full-text Search was not part of G2 or G3. The minimum Story contract includes `type`, `year`, `order`, `cursor`, and `limit`; global full-text Search belongs to M4-A.
 
 ## M2 runtime sequence after S0
 
@@ -168,19 +168,28 @@ Manual Accessibility acceptance was deliberately moved from G2 into final client
 
 ## M3 — Planning & Private Area
 
-**Status: released.** The [M3 Technical Readiness Package](m3/README.md) is prepared; all M3-D01 through M3-D32 are `DECIDED`.
+**Status: complete; G3 passed.** The [M3 Technical Readiness Package](m3/README.md) records the completed M3 decisions, runtime delivery, evidence, and final gate result; all M3-D01 through M3-D32 are `DECIDED`.
 
-The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A concrete slice starts only when its production Request/Response/OpenAPI contract is unambiguously contract-testable and Reuse-before-build plus the normal PR/CI gates are satisfied.
+The runtime sequence followed the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). Each production slice was contract-testable and passed the applicable Reuse-before-build plus normal PR/CI gates.
 
-- [x] **M3-S1 — Wish Foundation:** Wish Domain with ProtectedPayload for title, collaborative write per M3-D01, `status` exclusively server-controlled, `If-Match`/409, status filtering through a Space- and filter-bound Cursor, and redacted `WISH_*` events. The Wish->Plan operation and Plan-dependent rows of the Delete Matrix follow in S2.
-- [x] **M3-S2 — Plan + Wish->Plan:** Plan Domain with Direct Create per M3-D30, state machine `IDEA | PLANNED | COMPLETED` with date invariants as both service and DB constraints, `sourceWishId` with `UNIQUE` and a composite Same-Space foreign key, atomic and idempotent Wish->Plan conversion, `return-to-wish`, `schedule`/`unschedule`/`complete`, and canonical lock order `Wish -> Plan` with real PostgreSQL race and rollback tests. The Wish Delete Matrix from M3-D05 is therefore complete.
+- [x] **M3-S1 — Wish Foundation:** Wish Domain with ProtectedPayload for title, collaborative write per M3-D01, `status` exclusively server-controlled, `If-Match`/409, status filtering through a Space- and filter-bound Cursor, and redacted `WISH_*` events. The Wish->Plan operation and Plan-dependent rows of the Delete Matrix followed in S2.
+- [x] **M3-S2 — Plan + Wish->Plan:** Plan Domain with Direct Create per M3-D30, state machine `IDEA | PLANNED | COMPLETED` with date invariants as both service and DB constraints, `sourceWishId` with `UNIQUE` and a composite Same-Space foreign key, atomic and idempotent Wish->Plan conversion, `return-to-wish`, `schedule`/`unschedule`/`complete`, and canonical lock order `Wish -> Plan` with real PostgreSQL race and rollback tests. The Wish Delete Matrix from M3-D05 is complete.
 - [x] **M3-S3 — Place Foundation:** Place Domain with name, description, and address behind the ProtectedPayload boundary; coordinates as typed `NUMERIC` columns with pair, range, and precision invariants in both service and schema; CRUD/List without deduplication; no Geocoding or Maps Provider. `Plan.placeId` was added (canonical and single-column, with composite Same-Space foreign key). Place deletion versionedly unlinks assigned Plans while preserving them. Additionally, bound DB parameters no longer appear in error messages and therefore no longer appear in application logs.
-- [x] **M3-S4 — typed Content Relations:** `place_memories`, `place_heart_moments`, and `place_milestones` with real composite foreign keys over `(id, space_id)`, primary key `(place_id, target_id)`, and typed REST routes instead of free `(targetType,targetId)` polymorphism. Same-Space is a schema property rather than a service rule: both foreign keys share the same `space_id` column. Unknown, deleted, foreign, and private targets all resolve indistinguishably to `RELATION_TARGET_NOT_FOUND`. The Privacy transition `SHARED -> PRIVATE` removes relations in the same transaction; beneath it, a schema guard makes the state "private with shared relation" unrepresentable. Lock order `Place -> Target` is verified with PostgreSQL race tests against parent deletion, target deletion, and Privacy transition.
+- [x] **M3-S4 — typed Content Relations:** `place_memories`, `place_heart_moments`, and `place_milestones` with real composite foreign keys over `(id, space_id)`, primary key `(place_id, target_id)`, and typed REST routes instead of free `(targetType,targetId)` polymorphism. Same-Space is a schema property rather than a service rule. Unknown, deleted, foreign, and private targets all resolve indistinguishably to `RELATION_TARGET_NOT_FOUND`. The Privacy transition `SHARED -> PRIVATE` removes relations in the same transaction; schema guards make private-with-shared-relation states unrepresentable. PostgreSQL race tests cover parent deletion, target deletion, and Privacy transition.
 - [x] **M3-S5 — Chapter:** Chapter Domain with optional `startOn`/`endOn`, canonical nullable `placeId`, collaborative CRUD/List with `If-Match`/409, typed `chapter_memories`/`chapter_heart_moments`/`chapter_milestones`, deterministic derived cross-type content ordering, privacy-safe target handling, and delete semantics that remove only the Chapter and its relations while preserving all originals.
 - [x] **M3-S6 — Shared Collections:** shared Collection + CollectionItem aggregate with collaborative writes; immutable server-derived `createdBy`; independent root structure/order and Item content versions; contiguous positions; append-on-create, transactional delete compaction, and atomic exact-set full-list reorder; Cross-Tenant fail-closed handling and real PostgreSQL reorder/create/delete/completion race coverage; Collection/Item titles remain out of event payloads. ShoppingList and persisted multi-select state remain outside S6.
 - [x] **M3-S7 — PrivateNote + GiftIdea:** dedicated owner-only PrivateNote and GiftIdea tables/services with ProtectedPayload content, server-derived Space/owner/privacy, CRUD/List under `/spaces/{spaceId}/private/...`, `If-Match`/409, GiftIdea lifecycle `IDEA | BOUGHT | GIVEN`, inert URL storage without server fetches, privacy-safe 404 behavior, owner-filtered pagination, redacted private events, and PostgreSQL/HTTP partner/Cross-Tenant coverage.
 - [x] **M3-S8 — PrivateCollection:** dedicated owner-only PrivateCollection and PrivateCollectionItem persistence with Parent-derived Item authorization, ProtectedPayload content, root/item optimistic concurrency, append/compaction and atomic full-list reorder, privacy-safe partner/Cross-Tenant handling, redacted private events, real PostgreSQL race coverage, and synchronized OpenAPI plus generated TypeScript/Kotlin clients (Issue #259 / PR #260).
 - [x] **M3-S9 — Integrated M3 backend/API evidence:** executable [G3 evidence map](m3/G3-EVIDENCE.md) for all five M3-D24 real HTTP/PostgreSQL flows; integrated Chapter relation/delete preservation and Private Area owner -> partner -> owner context-switch flows; Shared Collection and PrivateCollection Parent Delete vs. Item Create/Reorder races added with independent PostgreSQL transactions; existing S1-S8 Tenant, Privacy, redaction, lifecycle, and contract suites reused rather than duplicated (Issue #261 / PR #263).
+- [x] **M3-S10 — final G3 Review:** the immutable [2026-08-30 G3 Gate Review](reviews/2026-08-30-g3-gate-review.md) reviewed the merged S9 tree, exact successful workflow runs, all five mandatory flows, negative/race/delete/redaction/contract evidence, and current open findings; **G3: PASSED** (Issue #264).
+
+## G3 — Shared everyday use
+
+**Status: PASSED.** The binding decision source is the [final G3 Gate Review](reviews/2026-08-30-g3-gate-review.md).
+
+Demonstrated are consistent Wish/Plan/Place/Chapter/Collection behavior, complete owner-only Private Area isolation, deterministic version/Delete/race semantics, Domain-original preservation outside documented Parent-Child cascades, protected event/log redaction, canonical OpenAPI/generated-client compatibility, and all five mandatory M3-D24 real HTTP/PostgreSQL flows. The exact S9 tree passed CI, PostgreSQL integration, CodeQL, Reuse Review, Self-Hosted Deployment Guard, and the existing client-regression guard.
+
+No current open issue documents an actual G3-blocking Critical/High Security/Privacy/Tenant finding or known Tenant/`OWNER_ONLY` leak. Release, Observability, Accessibility, client-parity, Backup/Restore, Premium, future-provider, and cleanup backlog remains open in its later milestone or product scope.
 
 ## Later milestones
 
@@ -192,6 +201,8 @@ The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A conc
 - [ ] M9 — Productization, Managed/Self-Hosted policy, Backup, Entitlements, Launch Hardening
 - [ ] MX — real E2EE as a separate later Security milestone
 
-## Next checkpoint
+## Next milestone
 
-M3-S10 **G3 Review** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md): evaluate the final merged `main` SHA, authoritative workflow runs, the five S9 evidence flows, and all open Security/Privacy/Tenant findings in a new dated immutable review. Only that review may conclude `G3: PASSED` or `G3: FAILED`.
+**M4 — Engage** is next. Its defined first delivery boundary is **M4-A Search + Dashboard Read Models**, followed by M4-B Activity + Notifications and M4-C Reminders + Rules.
+
+M3-S10 only closes the G3 gate and synchronizes status. It does **not** start or implement M4; any M4 work requires its own scoped issue, decisions, branch, pull request, Reuse review where relevant, and unchanged repository gates.
