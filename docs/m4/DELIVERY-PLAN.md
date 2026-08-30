@@ -1,6 +1,6 @@
 # M4 Delivery Plan
 
-**Status:** M4-A, M4-B and M4-C S0 decisions ready; runtime slices remain separate  
+**Status:** complete — all M4 runtime slices and cumulative S3 evidence delivered
 **As of:** August 30, 2026  
 **M4-A readiness:** #272  
 **M4-B readiness:** #276  
@@ -123,6 +123,8 @@ Business classification:
 - basic Dashboard = Free/Core.
 
 ## M4-A-S3 — integrated evidence and status sync
+
+**Status:** delivered cumulatively; see [M4-EVIDENCE.md](./M4-EVIDENCE.md).
 
 Goal:
 
@@ -271,6 +273,8 @@ Business classification:
 
 ## M4-B-S3 — integrated evidence and status sync
 
+**Status:** delivered cumulatively; see [M4-EVIDENCE.md](./M4-EVIDENCE.md).
+
 Goal:
 
 Prove engagement projections and delivery state do not create a new privacy/tenant leak or duplicate-effect path.
@@ -345,7 +349,7 @@ S0 Readiness / Contract (#277)
 
 **Owner:** #277  
 **Runtime changes:** none  
-**Status:** ready when the owning documentation PR merges
+**Status:** delivered
 
 Deliverables:
 
@@ -436,6 +440,8 @@ Reuse result:
 - no Redis/Celery/Quartz/Kafka/RabbitMQ/new scheduler stack.
 
 ## M4-C-S3 — integrated evidence and status sync
+
+**Status:** delivered by the final M4-C-S2/S3 closeout; see [M4-EVIDENCE.md](./M4-EVIDENCE.md).
 
 Goal:
 

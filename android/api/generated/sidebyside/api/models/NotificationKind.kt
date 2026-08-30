@@ -31,7 +31,7 @@ import kotlinx.serialization.Serializable
 /**
  * 
  *
- * Values: COMMENT_CREATED,THINKING_OF_YOU
+ * Values: COMMENT_CREATED,THINKING_OF_YOU,REMINDER_DUE
  */
 @Serializable
 enum class NotificationKind(val value: kotlin.String) {
@@ -40,7 +40,10 @@ enum class NotificationKind(val value: kotlin.String) {
     COMMENT_CREATED("COMMENT_CREATED"),
 
     @SerialName(value = "THINKING_OF_YOU")
-    THINKING_OF_YOU("THINKING_OF_YOU");
+    THINKING_OF_YOU("THINKING_OF_YOU"),
+
+    @SerialName(value = "REMINDER_DUE")
+    REMINDER_DUE("REMINDER_DUE");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use

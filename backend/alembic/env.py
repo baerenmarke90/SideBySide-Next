@@ -46,6 +46,7 @@ from sidebyside.profiles import models as _profiles  # noqa: F401
 from sidebyside.relations import models as _relations  # noqa: F401
 from sidebyside.relationship import models as _relationship  # noqa: F401
 from sidebyside.reminders import models as _reminders  # noqa: F401
+from sidebyside.reminders import runtime_models as _reminder_runtime  # noqa: F401
 from sidebyside.wishes import models as _wishes  # noqa: F401
 
 

@@ -2,7 +2,7 @@
 
 As of: August 30, 2026
 Current repository state: GitHub `main` is the canonical SHA source; this living status document deliberately stores no static current SHA.  
-Current gate status: **G3 passed; M3 complete; M4 is the next milestone**
+Current gate status: **G3 passed; M4 complete; M5 is active; G4 not yet evaluated**
 
 ## Document roles
 
@@ -14,6 +14,7 @@ Current gate status: **G3 passed; M3 complete; M4 is the next milestone**
 - **Architecture/operations decisions:** dated ADRs under [docs/decisions](decisions)
 - **M2 project control:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
 - **M3 readiness, delivery, and evidence:** [m3/README.md](m3/README.md), [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md), and [m3/G3-EVIDENCE.md](m3/G3-EVIDENCE.md)
+- **M4 delivery and evidence:** [m4/README.md](m4/README.md), [m4/DELIVERY-PLAN.md](m4/DELIVERY-PLAN.md), and [m4/M4-EVIDENCE.md](m4/M4-EVIDENCE.md)
 - **Historical reviews:** dated files under `docs/reviews/`; they are never modified retroactively.
 - **This document:** living work and progress list.
 
@@ -191,9 +192,25 @@ Demonstrated are consistent Wish/Plan/Place/Chapter/Collection behavior, complet
 
 No current open issue documents an actual G3-blocking Critical/High Security/Privacy/Tenant finding or known Tenant/`OWNER_ONLY` leak. Release, Observability, Accessibility, client-parity, Backup/Restore, Premium, future-provider, and cleanup backlog remains open in its later milestone or product scope.
 
+## M4 — Engage
+
+**Status: complete.** The cumulative delivery/evidence index is [M4 Evidence Map](m4/M4-EVIDENCE.md).
+
+- [x] **M4-A-S0:** Search + Dashboard decisions frozen (#272 / #273).
+- [x] **M4-A-S1:** authorization-first PostgreSQL Search foundation delivered (#274 / #288), including the bounded FTS metadata correction #294.
+- [x] **M4-A-S2/S3:** shared-only Dashboard and integrated M4-A evidence delivered (#280 / #291 plus cumulative required checks).
+- [x] **M4-B-S0:** Activity/Notification/Push/Thinking contracts frozen (#276 / #278).
+- [x] **M4-B-S1:** minimized Activity + recipient Notification foundation delivered (#282 / #284).
+- [x] **M4-B-S2/S3:** content-free Thinking-of-you + provider-neutral PushDelivery and integrated evidence delivered (#289 / #305 plus cumulative required checks).
+- [x] **M4-C-S0:** Reminder/Rule contracts frozen (#277 / #279).
+- [x] **M4-C-S1:** shared Reminder domain, typed schedules, offsets and per-account mute preference delivered (#285 / #308).
+- [x] **M4-C-S2/S3:** controlled Rule catalog, generated Reminder reconciliation, durable occurrences, bounded Job Queue planning, deterministic time/DST behavior and minimized `REMINDER_DUE` handoff delivered (#292 / #309).
+
+The final M4 migration order is `0028 -> 0029 -> 0030 -> 0031 -> 0032`. M4 remains Free/Core at the delivered baseline and reuses PostgreSQL FTS, the transactional Outbox and the existing PostgreSQL Job Queue rather than adding a parallel search, broker, scheduler, notification, or push stack.
+
 ## Later milestones
 
-- [ ] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules
+- [x] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules
 - [ ] M5 — Client Completion & Parity, Export/Import, Read Cache, final Accessibility QA
 - [ ] M6 — Questions, Check-in, monthly/yearly recaps
 - [ ] M7 — Integrations/Providers
@@ -201,8 +218,8 @@ No current open issue documents an actual G3-blocking Critical/High Security/Pri
 - [ ] M9 — Productization, Managed/Self-Hosted policy, Backup, Entitlements, Launch Hardening
 - [ ] MX — real E2EE as a separate later Security milestone
 
-## Next milestone
+## Active milestone
 
-**M4 — Engage** is next. Its defined first delivery boundary is **M4-A Search + Dashboard Read Models**, followed by M4-B Activity + Notifications and M4-C Reminders + Rules.
+**M5 — Client Completion & Parity** is active. M4's backend/API contracts are now stable on `main`; M5 productizes them across Web and Android together with Export/Import, Read Cache, Deep Links, Accessibility, Performance, and systematic parity.
 
-M3-S10 only closes the G3 gate and synchronizes status. It does **not** start or implement M4; any M4 work requires its own scoped issue, decisions, branch, pull request, Reuse review where relevant, and unchanged repository gates.
+M4 completion does **not** declare G4 passed. G4 requires the complete M5 client/parity/release evidence defined by the Roadmap and binding specifications.

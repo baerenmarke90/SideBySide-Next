@@ -31,6 +31,7 @@ from sidebyside.api.v1 import (
     private_collections,
     profiles,
     reminders,
+    rules,
     search,
     spaces,
     story,
@@ -63,3 +64,4 @@ router.include_router(collections.router)
 router.include_router(private_area.router)
 router.include_router(private_collections.router)
 router.include_router(reminders.router)
+router.include_router(rules.router)

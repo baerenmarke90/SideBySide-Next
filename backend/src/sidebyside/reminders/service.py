@@ -19,6 +19,7 @@ from sidebyside.authorization import (
 )
 from sidebyside.core import clock
 from sidebyside.core.errors import ConflictError, ErrorCode, ValidationError
+from sidebyside.reminders import runtime as reminder_runtime
 from sidebyside.reminders.models import (
     Reminder,
     ReminderOffset,
@@ -233,6 +234,7 @@ def create_reminder(
     _flush(session)
     _replace_offsets(session, reminder, normalized_offsets)
     _flush(session)
+    reminder_runtime.reconcile_reminder(session, reminder.id)
     return ReminderView(reminder=reminder, offsets=normalized_offsets, muted=False)
 
 
@@ -309,6 +311,7 @@ def update_reminder(
     reminder.updated_at = clock.now()
     _replace_offsets(session, reminder, normalized_offsets)
     _flush(session)
+    reminder_runtime.reconcile_reminder(session, reminder.id)
     return ReminderView(
         reminder=reminder,
         offsets=normalized_offsets,
@@ -352,6 +355,7 @@ def set_preference(
     )
     session.execute(statement)
     _flush(session)
+    reminder_runtime.reconcile_reminder(session, reminder.id)
     return ReminderView(
         reminder=reminder,
         offsets=_offsets(session, reminder.id),

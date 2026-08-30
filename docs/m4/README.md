@@ -1,6 +1,6 @@
 # M4 Technical Readiness Package
 
-**Status:** M4-A, M4-B and M4-C S0 decisions complete; runtime remains slice-owned  
+**Status:** complete — M4-A, M4-B and M4-C runtime plus integrated evidence delivered
 **As of:** August 30, 2026  
 **M4-A tracking:** #272  
 **M4-B tracking:** #276  
@@ -12,7 +12,7 @@ M4 — Engage follows M3/G3 and remains split into separate risk classes:
 - **M4-B:** Activity + Notifications;
 - **M4-C:** Reminders + Rules.
 
-All three M4 risk classes now have explicit S0 contracts. This does not mean all M4 runtime is implemented: each runtime slice still needs its own issue/branch/PR, concrete OpenAPI/client generation where applicable, negative evidence and green repository gates.
+All three M4 risk classes have their frozen S0 contracts and delivered runtime. Search/Dashboard, Activity/Notifications/Thinking-of-you/PushDelivery, and Reminders/Rules/occurrence planning are complete for the M4 scope. Integrated runtime evidence and the final migration chain are indexed in [M4-EVIDENCE.md](./M4-EVIDENCE.md). Full client productization remains M5 and G4 is not implied by M4 completion.
 
 ## Binding sources and precedence
 

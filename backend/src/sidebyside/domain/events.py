@@ -11,6 +11,7 @@ to end-to-end encryption the server would not have that text anyway.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 from uuid import UUID
@@ -113,10 +114,13 @@ class PublicEventPayload(BaseModel):
     target_type: Literal["MEMORY", "HEART_MOMENT", "MILESTONE"] | None = None
     target_id: UUID | None = None
     recipient_id: UUID | None = None
-    """Safe comment/relation references for a later consumer.
+    occurrence_id: UUID | None = None
+    due_at: datetime | None = None
+    rule_key: str | None = Field(default=None, max_length=96)
+    """Safe references and technical scheduling metadata for later consumers.
 
-    IDs and the closed target category only. User content must never appear
-    here.
+    IDs, closed target categories, due instants and stable machine rule keys
+    only. User-controlled content must never appear here.
     """
 
 
