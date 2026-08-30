@@ -460,7 +460,9 @@ function AuthenticatedApp({
           />
           <Route
             path={MEMORY_DETAIL_ROUTE_PATTERN}
-            element={<MemoryProductPage mode="detail" {...memoryProductProps} />}
+            element={
+              <MemoryProductPage mode="detail" {...memoryProductProps} />
+            }
           />
           <Route
             path={HEART_MOMENT_CREATE_ROUTE}
