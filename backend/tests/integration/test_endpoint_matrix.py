@@ -102,6 +102,8 @@ PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 CHAPTER = {"title": "Matrix Chapter", "description": "Text"}
 COLLECTION = {"title": "Matrix Collection", "icon": "list"}
 COLLECTION_ITEM = {"title": "Matrix Collection Item"}
+PRIVATE_NOTE = {"title": "Matrix Private Note", "body": "Private body"}
+GIFT_IDEA = {"title": "Matrix Gift Idea"}
 
 SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("GET", "/api/v1/spaces/{spaceId}"),
@@ -517,6 +519,52 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         resource_absence="COLLECTION_NOT_FOUND",
         placeholders=("collectionId",),
     ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/private/notes"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/private/notes", body=PRIVATE_NOTE),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+        resource_absence="PRIVATE_NOTE_NOT_FOUND",
+        placeholders=("noteId",),
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+        body={"pinned": True},
+        if_match=True,
+        resource_absence="PRIVATE_NOTE_NOT_FOUND",
+        placeholders=("noteId",),
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+        if_match=True,
+        resource_absence="PRIVATE_NOTE_NOT_FOUND",
+        placeholders=("noteId",),
+    ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/private/gift-ideas"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/private/gift-ideas", body=GIFT_IDEA),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+        resource_absence="GIFT_IDEA_NOT_FOUND",
+        placeholders=("giftIdeaId",),
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+        body={"pinned": True},
+        if_match=True,
+        resource_absence="GIFT_IDEA_NOT_FOUND",
+        placeholders=("giftIdeaId",),
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+        if_match=True,
+        resource_absence="GIFT_IDEA_NOT_FOUND",
+        placeholders=("giftIdeaId",),
+    ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/plans"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/plans", body=PLAN),
     Endpoint(
@@ -690,6 +738,12 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
         json=COLLECTION_ITEM,
         headers=headers,
     ).json()
+    private_note = client.post(
+        f"{base_path}/private/notes", json=PRIVATE_NOTE, headers=headers
+    ).json()
+    gift_idea = client.post(
+        f"{base_path}/private/gift-ideas", json=GIFT_IDEA, headers=headers
+    ).json()
     attachment = client.post(f"{base_path}/attachments", json=ATTACHMENT, headers=headers).json()
 
     return {
@@ -714,6 +768,8 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "chapterId": chapter["id"],
             "collectionId": collection["id"],
             "itemId": collection_item["id"],
+            "noteId": private_note["id"],
+            "giftIdeaId": gift_idea["id"],
             # The target is a typed relation. A memory is enough for all three
             # relation types because this matrix checks occur before target resolution.
             "targetId": memory["id"],

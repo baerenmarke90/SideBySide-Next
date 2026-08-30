@@ -1,6 +1,6 @@
 # M3 Delivery Plan
 
-**Status:** S0 complete; runtime released; S1 through S6 delivered
+**Status:** S0 complete; runtime released; S1 through S7 delivered
 **As of:** August 30, 2026
 
 ## 1. Gate before runtime
@@ -232,7 +232,7 @@ Not included: ShoppingList and persisted multi-select state.
 
 Implemented. Collection CRUD/List and Item Create/Update/Delete are collaborative within the Space while `createdBy` remains immutable server attribution. The Collection root version protects root fields plus list structure/order; Item versions protect title/completed independently. Item Create appends, Item Delete compacts positions transactionally, and full-list Reorder is atomic under the root `If-Match` with a deferrable `(collection_id, position)` uniqueness constraint. Real PostgreSQL races cover competing Reorders and Reorder against Create/Delete/Completion; Cross-Tenant and foreign parent/item IDs fail closed. Collection and Item titles remain outside event payloads. ShoppingList and persisted multi-select state remain outside S6.
 
-## 10. S7 – PrivateNote + GiftIdea
+## 10. S7 – PrivateNote + GiftIdea – delivered
 
 Scope:
 
@@ -245,6 +245,8 @@ Scope:
 - Privacy-safe 404;
 - Event/log Redaction;
 - partner negative tests.
+
+Implemented. PrivateNote and GiftIdea use dedicated owner-only tables/services and derive Space, owner, and `OWNER_ONLY` on the server. Protected content remains behind `ProtectedPayload`; list cursors are bound to Space and owner before pagination. Both roots use `If-Match`/409. GiftIdea starts in `IDEA` and enforces the decided `IDEA | BOUGHT | GIVEN` transition graph, including rejection of `GIVEN -> IDEA`. GiftIdea URLs are inert stored content and trigger no server fetch or preview. Unknown, partner-owned, and foreign-Space IDs are privacy-safe 404s, private content and structural state stay out of persistent event payloads, and PostgreSQL/HTTP tests cover owner CRUD, partner/Cross-Tenant isolation, concurrency, lifecycle transitions, and the no-network URL invariant. OpenAPI and generated TypeScript/Kotlin clients are synchronized.
 
 ## 11. S8 – PrivateCollection
 

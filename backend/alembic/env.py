@@ -29,6 +29,7 @@ from sidebyside.collections import models as _collections  # noqa: F401
 from sidebyside.comments import models as _comments  # noqa: F401
 from sidebyside.config import DatabaseSettings
 from sidebyside.db.base import Base
+from sidebyside.gift_ideas import models as _gift_ideas  # noqa: F401
 from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
 from sidebyside.identity import models as _identity  # noqa: F401
 from sidebyside.jobs import models as _jobs  # noqa: F401
@@ -38,6 +39,7 @@ from sidebyside.outbox import models as _outbox  # noqa: F401
 from sidebyside.people import models as _people  # noqa: F401
 from sidebyside.places import models as _places  # noqa: F401
 from sidebyside.plans import models as _plans  # noqa: F401
+from sidebyside.private_notes import models as _private_notes  # noqa: F401
 from sidebyside.profiles import models as _profiles  # noqa: F401
 from sidebyside.relations import models as _relations  # noqa: F401
 from sidebyside.relationship import models as _relationship  # noqa: F401

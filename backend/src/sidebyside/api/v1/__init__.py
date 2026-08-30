@@ -25,6 +25,7 @@ from sidebyside.api.v1 import (
     place_relations,
     places,
     plans,
+    private_area,
     profiles,
     spaces,
     story,
@@ -51,3 +52,4 @@ router.include_router(plans.router)
 router.include_router(chapters.router)
 router.include_router(chapter_relations.router)
 router.include_router(collections.router)
+router.include_router(private_area.router)
