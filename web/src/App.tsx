@@ -29,6 +29,7 @@ import {
   stripSensitiveEntryToken,
 } from './client/entryToken';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
+import { createPeopleApi } from './client/peopleApi';
 import { normalizeClientError } from './client/problemDetails';
 import {
   loadAuthorizedMemberships,
@@ -47,6 +48,7 @@ import { Brand } from './components/Brand';
 import { IdentityEntry } from './components/IdentityEntry';
 import { PageHeader } from './components/PageHeader';
 import { ProblemState } from './components/ProblemState';
+import { RelatedPeoplePage } from './components/RelatedPeoplePage';
 import { StoryList } from './components/StoryList';
 import { ThemeControl } from './components/ThemeControl';
 import { UiState } from './components/UiState';
@@ -488,6 +490,10 @@ function AuthenticatedApp({
     () => createReferenceApis(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
   );
+  const peopleApi = useMemo(
+    () => createPeopleApi(apiBaseUrl, tokens.accessToken),
+    [apiBaseUrl, tokens.accessToken],
+  );
 
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
@@ -556,6 +562,10 @@ function AuthenticatedApp({
                 loadMemoryImage={loadMemoryImage}
               />
             }
+          />
+          <Route
+            path={appRoutePath('people')}
+            element={<RelatedPeoplePage peopleApi={peopleApi} spaceId={spaceId} />}
           />
           <Route
             path={appRoutePath('memoryCreate')}
