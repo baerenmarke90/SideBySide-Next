@@ -48,8 +48,8 @@ jobs:
               path.write_text(text, encoding="utf-8")
           PY
           cd backend
-          uv run --frozen ruff check --fix src/sidebyside/reminders tests/integration/test_reminders.py alembic/versions/0029_m4_reminders.py
           uv run --frozen ruff format src/sidebyside/reminders tests/integration/test_reminders.py alembic/versions/0029_m4_reminders.py
+          uv run --frozen ruff check --fix src/sidebyside/reminders tests/integration/test_reminders.py alembic/versions/0029_m4_reminders.py
 
       - name: Commit static fixes
         run: |
