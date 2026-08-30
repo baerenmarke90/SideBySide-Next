@@ -98,8 +98,7 @@ const storyProducts = {
     deleteConfirm: 'Endgültig löschen',
     deleteCancel: 'Nicht löschen',
     deleting: 'Wird gelöscht …',
-    commentsPrivate:
-      'Private Herzmomente haben keine geteilten Kommentare.',
+    commentsPrivate: 'Private Herzmomente haben keine geteilten Kommentare.',
     savedTitle: 'Herzmoment gespeichert.',
   },
   milestoneProduct: {
@@ -108,7 +107,8 @@ const storyProducts = {
     backToMilestone: '← Zurück zum Meilenstein',
     createEyebrow: 'Meilenstein festhalten',
     createHeading: 'Neuer Meilenstein',
-    createIntro: 'Haltet einen wichtigen gemeinsamen Schritt in eurer Story fest.',
+    createIntro:
+      'Haltet einen wichtigen gemeinsamen Schritt in eurer Story fest.',
     editEyebrow: 'Meilenstein bearbeiten',
     editHeading: 'Meilenstein bearbeiten',
     editIntro:
