@@ -28,6 +28,7 @@ import { resolvedLocale, useTranslation } from '../i18n';
 import { AttachmentDraftPicker } from './AttachmentDraftPicker';
 import { CommentsPanel } from './CommentsPanel';
 import { MediaGallery } from './MediaGallery';
+import { MemoryPreview } from './MemoryPreview';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -71,6 +72,9 @@ export function MemoryProductPage({
   const memoryId = params.memoryId;
   const memoryKey = ['memory', spaceId, memoryId] as const;
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const attachments = useAttachmentDrafts({
     apis,
     apiBaseUrl,
@@ -112,10 +116,13 @@ export function MemoryProductPage({
           memoryUpdate: memoryUpdatePayload(values),
         });
 
-        if (attachments.readyIds.length > 0) {
+        const attachmentsChanged =
+          attachments.readyIds.length > 0 || removedAttachmentIds.size > 0;
+        if (attachmentsChanged) {
           const existing = [...updated.attachments]
             .sort((left, right) => left.position - right.position)
-            .map((attachment) => attachment.id);
+            .map((attachment) => attachment.id)
+            .filter((attachmentId) => !removedAttachmentIds.has(attachmentId));
           const attachmentIds = [...existing, ...attachments.readyIds];
           updated = await apis.memories.replaceMemoryAttachments({
             spaceId,
@@ -153,9 +160,11 @@ export function MemoryProductPage({
     },
     onError: (_error, _variables, context) => {
       if (context?.previous) queryClient.setQueryData(memoryKey, context.previous);
+      void queryClient.invalidateQueries({ queryKey: memoryKey });
     },
     onSuccess: async (memory) => {
       attachments.clear();
+      setRemovedAttachmentIds(new Set());
       queryClient.setQueryData(memoryKey, { value: memory, source: 'network' });
       await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
       await queryClient.invalidateQueries({ queryKey: memoryKey });
@@ -188,10 +197,20 @@ export function MemoryProductPage({
     },
   });
 
+  function toggleAttachmentRemoval(attachmentId: string) {
+    setRemovedAttachmentIds((current) => {
+      const next = new Set(current);
+      if (next.has(attachmentId)) next.delete(attachmentId);
+      else next.add(attachmentId);
+      return next;
+    });
+  }
+
   async function reloadCurrentMemory() {
     updateMutation.reset();
     deleteMutation.reset();
     setConfirmDelete(false);
+    setRemovedAttachmentIds(new Set());
     await memoryQuery.refetch();
   }
 
@@ -222,6 +241,9 @@ export function MemoryProductPage({
   if (!result) return null;
   const memory = result.value;
   const offline = result.source === 'cache';
+  const readyAttachments = [...memory.attachments]
+    .filter((attachment) => attachment.status === 'READY')
+    .sort((left, right) => left.position - right.position);
 
   if (mode === 'edit') {
     if (!memory.capabilities.canEdit || offline) {
@@ -284,7 +306,10 @@ export function MemoryProductPage({
           className="create-heading"
         />
 
-        <section className="form-card product-sheet" aria-labelledby="memory-edit-heading">
+        <section
+          className="form-card product-sheet"
+          aria-labelledby="memory-edit-heading"
+        >
           <h2 id="memory-edit-heading" className="sr-only">
             {t('memoryProduct.formAria')}
           </h2>
@@ -321,14 +346,65 @@ export function MemoryProductPage({
                 defaultValue={memoryDateInputValue(memory.happenedOn)}
               />
             </div>
+
+            {readyAttachments.length > 0 ? (
+              <fieldset className="memory-existing-attachments">
+                <legend>{t('memoryProduct.existingPhotosHeading')}</legend>
+                <p className="field-help">
+                  {t('memoryProduct.existingPhotosHelp')}
+                </p>
+                <ul className="memory-edit-attachment-list">
+                  {readyAttachments.map((attachment) => {
+                    const removed = removedAttachmentIds.has(attachment.id);
+                    return (
+                      <li
+                        key={attachment.id}
+                        className={`memory-edit-attachment${
+                          removed ? ' memory-edit-attachment-removed' : ''
+                        }`}
+                      >
+                        <MemoryPreview
+                          memoryId={memory.id}
+                          attachmentId={attachment.id}
+                          loadImage={loadMemoryImage}
+                        />
+                        <div className="memory-edit-attachment-actions">
+                          {removed ? (
+                            <span role="status">
+                              {t('memoryProduct.photoMarkedForRemoval')}
+                            </span>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="tertiary"
+                            onClick={() => toggleAttachmentRemoval(attachment.id)}
+                          >
+                            {removed
+                              ? t('memoryProduct.keepPhoto')
+                              : t('memoryProduct.markPhotoForRemoval')}
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </fieldset>
+            ) : null}
+
+            <div className="memory-new-attachments-heading">
+              <strong>{t('memoryProduct.newPhotosHeading')}</strong>
+              {readyAttachments.length > 0 ? (
+                <p className="field-help">
+                  {t('memoryProduct.editPhotosPreserved')}
+                </p>
+              ) : null}
+            </div>
             <AttachmentDraftPicker
               id="memory-edit-images"
               attachments={attachments}
               multiple
             />
-            {memory.attachments.length > 0 ? (
-              <p className="field-help">{t('memoryProduct.editPhotosPreserved')}</p>
-            ) : null}
+
             <div className="form-actions">
               <Link
                 className="button-link secondary-link"
@@ -356,10 +432,6 @@ export function MemoryProductPage({
       </div>
     );
   }
-
-  const readyAttachments = [...memory.attachments]
-    .filter((attachment) => attachment.status === 'READY')
-    .sort((left, right) => left.position - right.position);
 
   return (
     <div className="page memory-product-page">
@@ -417,7 +489,9 @@ export function MemoryProductPage({
           <div className="section-head memory-section-head">
             <div>
               <p className="section-kicker">{t('memory.photoLabel')}</p>
-              <h2 id="memory-photos-heading">{t('memoryProduct.photosHeading')}</h2>
+              <h2 id="memory-photos-heading">
+                {t('memoryProduct.photosHeading')}
+              </h2>
             </div>
           </div>
           {readyAttachments.length > 0 ? (
@@ -426,7 +500,9 @@ export function MemoryProductPage({
                 id: attachment.id,
                 mediaType: attachment.mediaType,
               }))}
-              loadMedia={(attachmentId) => loadMemoryImage(memory.id, attachmentId)}
+              loadMedia={(attachmentId) =>
+                loadMemoryImage(memory.id, attachmentId)
+              }
             />
           ) : (
             <p className="muted">{t('memoryProduct.noPhotos')}</p>
@@ -444,7 +520,10 @@ export function MemoryProductPage({
         />
 
         {memory.capabilities.canDelete && !offline ? (
-          <section className="memory-danger-zone" aria-label={t('memoryProduct.delete')}>
+          <section
+            className="memory-danger-zone"
+            aria-label={t('memoryProduct.delete')}
+          >
             {!confirmDelete ? (
               <button
                 type="button"
