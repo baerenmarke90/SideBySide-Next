@@ -1,24 +1,24 @@
 # M3 Technical Readiness Package
 
-**Status:** S0 decisions complete; runtime released since #146, per-slice contract requirement remains  
-**As of:** August 26, 2026  
-**Tracking:** #159, #162, #163, #164, #165
+**Status:** S0 and runtime complete; G3 passed  
+**As of:** August 30, 2026  
+**Tracking:** #159, #162, #163, #164, #165, #261, #264
 
-This package prepares **M3 – Shared Life / Planning & Private Area** technically and from a domain perspective. The M3-S0 decisions are complete. Runtime code, migrations, and the production OpenAPI contract continue to be implemented only in the respective runtime slices.
+This package records the technical and domain foundation for **M3 – Shared Life / Planning & Private Area**. The M3-S0 decisions are complete, runtime slices S1 through S9 are delivered, and M3-S10 concluded **G3: PASSED** in the [final G3 Gate Review](../reviews/2026-08-30-g3-gate-review.md).
 
 ## Gate rule
 
-Planning was allowed before G2 completed. **Completing the M3-S0 decisions does not automatically release M3 runtime work.**
+Planning was allowed before G2 completed. **Completing the M3-S0 decisions did not automatically release M3 runtime work.**
 
-Under the currently documented project rule, runtime work starts only when:
+Under the documented project rule, runtime work started only when:
 
-1. the final G2 review explicitly evaluates G2 as `PASSED` (#147),
-2. the subsequent status sync #146 lists M3 as a released milestone,
-3. the affected REST/OpenAPI contract for the respective runtime slice is concretely contract-testable.
+1. the final G2 review explicitly evaluated G2 as `PASSED` (#147),
+2. the subsequent status sync #146 listed M3 as a released milestone,
+3. the affected REST/OpenAPI contract for the respective runtime slice was concretely contract-testable.
 
-Items 1 and 2 are satisfied: #147 ends with `G2: PASSED`, and #146 lists M3 as released. Item 3 remains a condition **for each slice** and is satisfied in the respective runtime PR.
+Items 1 and 2 were satisfied before M3 runtime began. Item 3 remained a condition **for each slice** and was satisfied in the respective runtime PR. The runtime delivery sequence is now complete through S9, and S10 completed the formal G3 decision.
 
-All M3-D01 through M3-D32 are now `DECIDED`; domain-level S0 readiness therefore no longer adds another blocker.
+All M3-D01 through M3-D32 are `DECIDED`; domain-level S0 readiness therefore adds no remaining blocker.
 
 ## Binding sources and precedence
 
@@ -109,14 +109,16 @@ Defined, among other things:
 - Plan checklist/media deliberately later;
 - multi-select only as client state.
 
-## Additional readiness documents
+## Additional M3 documents
 
 - [Domain Model](./DOMAIN-MODEL.md) – original model/risk draft; for decided points, the decision documents apply
-- [API Design](./API-DESIGN.md) – original API target surface; concrete operation semantics are bound by decisions and later transferred into OpenAPI
+- [API Design](./API-DESIGN.md) – original API target surface; concrete operation semantics are bound by decisions and the published OpenAPI contract
 - [Decision Log](./DECISION-LOG.md) – current compact matrix of all M3-D01 through D32
 - [Privacy Threat Model](./PRIVACY-THREAT-MODEL.md) – tenant, owner-only, relation, and location leaks
 - [Security Test Matrix](./SECURITY-TEST-MATRIX.md) – negative paths, races, and Privacy evidence
-- [Delivery Plan](./DELIVERY-PLAN.md) – vertical runtime slices after gate release
+- [Delivery Plan](./DELIVERY-PLAN.md) – completed S1-S10 delivery sequence
+- [G3 Evidence Map](./G3-EVIDENCE.md) – executable real HTTP/PostgreSQL and negative evidence assembled in S9
+- [Final G3 Gate Review](../reviews/2026-08-30-g3-gate-review.md) – immutable S10 decision: **G3: PASSED**
 
 ## Do not pull forward into M3
 
@@ -135,20 +137,20 @@ Defined, among other things:
 
 ## Definition of Ready for an M3 runtime slice
 
-A slice is ready when:
+The following checklist was the per-slice readiness rule used during M3 runtime delivery:
 
-- [x] G2 has formally passed and M3 is released through #146;
-- [x] relevant BLOCKING decisions are `DECIDED`;
-- [x] model fields, Privacy class, creator/owner, and write permissions are settled from a domain perspective;
-- [x] status/Delete/relation/Concurrency boundaries for the affected M3 Core are settled;
-- [ ] production Request/Response/OpenAPI contract for the concrete slice is implemented or unambiguously contract-testable;
-- [x] mandatory Cross-Tenant/Privacy/race tests are specified in advance;
-- [x] Event payload requires no sensitive plaintext;
-- [ ] Reuse-before-build for technical commodity functionality is completed in the concrete runtime PR where relevant.
+- [x] G2 formally passed and M3 was released through #146;
+- [x] relevant BLOCKING decisions were `DECIDED`;
+- [x] model fields, Privacy class, creator/owner, and write permissions were settled from a domain perspective;
+- [x] status/Delete/relation/Concurrency boundaries for the affected M3 Core were settled;
+- [x] production Request/Response/OpenAPI contracts were implemented or unambiguously contract-testable in each delivered slice;
+- [x] mandatory Cross-Tenant/Privacy/race tests were specified and implemented;
+- [x] Event payloads require no sensitive plaintext;
+- [x] Reuse-before-build was addressed in each concrete runtime PR where relevant.
 
-## G3 target
+## G3 result
 
-After M3 runtime, G3 requires at minimum:
+G3 required at minimum:
 
 - consistent Wishes/Plans/Places/Chapters/Collections;
 - complete Private Area isolation;
@@ -156,4 +158,10 @@ After M3 runtime, G3 requires at minimum:
 - five real HTTP/PostgreSQL E2E flows according to `G3-CLIENT-BOUNDARIES.md`;
 - no open High/Critical Security/Privacy findings and no Tenant/`OWNER_ONLY` leak.
 
-The final G3 review is a new dated snapshot under `docs/reviews/` and explicitly ends with `G3: PASSED` or `G3: NOT PASSED`.
+M3-S9 assembled the executable evidence in [G3-EVIDENCE.md](./G3-EVIDENCE.md). M3-S10 reviewed the merged S9 `main` tree, exact successful workflow runs, all five mandatory flows, the negative/race/redaction/contract evidence, and the current open finding set.
+
+The immutable [final G3 Gate Review](../reviews/2026-08-30-g3-gate-review.md) concludes:
+
+**G3: PASSED**
+
+M3 is complete for its defined Domain/API/PostgreSQL scope. The next roadmap milestone is M4 — Engage; no M4 implementation is part of this M3 package or the S10 gate review.
