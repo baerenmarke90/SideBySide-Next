@@ -1,0 +1,96 @@
+name: M4-B S2 Static and Privacy Fix
+
+on:
+  push:
+    branches:
+      - ops/m4b-s2-fix
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out M4-B S2 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/289-m4b-thinking-push
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: 3.13.7
+
+      - name: Install uv and backend dependencies
+        run: |
+          python -m pip install "uv==0.12.5"
+          cd backend
+          uv sync --frozen
+
+      - name: Fix constraint name and add membership-change evidence
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          for filename in (
+              "backend/src/sidebyside/engagement/models.py",
+              "backend/alembic/versions/0029_m4_thinking_push.py",
+          ):
+              path = Path(filename)
+              text = path.read_text(encoding="utf-8")
+              text = text.replace(
+                  "thinking_request_sender_differs_recipient",
+                  "thinking_sender_ne_recipient",
+              )
+              path.write_text(text, encoding="utf-8")
+
+          test = Path("backend/tests/integration/test_thinking_push.py")
+          text = test.read_text(encoding="utf-8")
+          old = "from sidebyside.relationship import service as relationship_service\n"
+          new = (
+              old
+              + "from sidebyside.relationship.models import Membership, MembershipStatus\n"
+          )
+          if "from sidebyside.relationship.models import Membership, MembershipStatus\n" not in text:
+              if old not in text:
+                  raise SystemExit("Relationship import anchor missing")
+              text = text.replace(old, new, 1)
+
+          marker = "def test_membership_change_prevents_pending_push_delivery"
+          if marker not in text:
+              text += '''\n\ndef test_membership_change_prevents_pending_push_delivery(\n    client, session: Session, couple, monkeypatch\n) -> None:  # type: ignore[no-untyped-def]\n    monkeypatch.setattr(thinking.clock, "now", lambda: NOW)\n    push.register_endpoint(\n        session,\n        account_id=couple["ben"].id,\n        provider_key="fake",\n        endpoint_value="secret-endpoint-token",\n    )\n    provider = FakePushProvider()\n    push.providers.register("fake", provider)\n\n    response = client.post(\n        _url(couple),\n        json={"clientRequestId": str(uuid4())},\n        headers=auth(couple["anna_token"]),\n    )\n    assert response.status_code == 202\n    request = session.execute(select(ThinkingOfYouRequest)).scalar_one()\n    event = session.get(OutboxEvent, request.source_event_id)\n    assert event is not None\n    service.project_event(session, event)\n    session.flush()\n    delivery = session.execute(select(PushDelivery)).scalar_one()\n\n    membership = session.execute(\n        select(Membership).where(\n            Membership.space_id == couple["space"].id,\n            Membership.account_id == couple["ben"].id,\n        )\n    ).scalar_one()\n    membership.status = MembershipStatus.REMOVED.value\n    session.flush()\n\n    push.handle_delivery(session, {"deliveryId": str(delivery.id)})\n    session.flush()\n    assert delivery.status == PushDeliveryStatus.UNAVAILABLE.value\n    assert provider.calls == []\n'''
+          test.write_text(text, encoding="utf-8")
+          PY
+
+          cd backend
+          uv run --frozen ruff format \
+            src/sidebyside/engagement/models.py \
+            src/sidebyside/engagement/push.py \
+            src/sidebyside/engagement/thinking.py \
+            tests/integration/test_thinking_push.py \
+            alembic/versions/0029_m4_thinking_push.py
+          uv run --frozen ruff check --fix \
+            src/sidebyside/engagement/models.py \
+            src/sidebyside/engagement/push.py \
+            src/sidebyside/engagement/thinking.py \
+            tests/integration/test_thinking_push.py \
+            alembic/versions/0029_m4_thinking_push.py
+
+      - name: Commit fixes
+        run: |
+          git add \
+            backend/src/sidebyside/engagement/models.py \
+            backend/src/sidebyside/engagement/push.py \
+            backend/src/sidebyside/engagement/thinking.py \
+            backend/tests/integration/test_thinking_push.py \
+            backend/alembic/versions/0029_m4_thinking_push.py
+          if git diff --cached --quiet; then
+            echo "No changes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "test(engagement): close B-S2 privacy evidence"
+          git push origin HEAD:feat/289-m4b-thinking-push
