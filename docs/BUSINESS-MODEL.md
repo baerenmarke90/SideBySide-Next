@@ -73,6 +73,28 @@ Community forks and Pull Requests are explicitly welcome. Changes may be merged 
 
 The Maintainers decide whether to accept a contribution. Contributions are governed by [CONTRIBUTING.md](../CONTRIBUTING.md) and the [Contributor License Agreement](../CLA.md), so accepted Contributions can be reused with legal clarity both in the noncommercial model and under later commercial licensing.
 
+## Development consistency rule
+
+This business model is an active development constraint, not only a commercialization or launch document.
+
+Every human- or AI-assisted development change must review its consistency with this model before implementation and record the result in the pull request. The review may conclude that a change has no business/freemium impact, but that conclusion requires a short rationale.
+
+The review must be revisited before merge if implementation decisions changed any of the following:
+
+- Free/Premium/Mixed/non-paywallable feature classification;
+- entitlement or capability boundaries;
+- relationship/couple ownership of commercial entitlements;
+- Self-Hosted versus SideBySide Cloud/Managed behavior;
+- managed storage, compute, rendering, provider/API, inference, email/push, support, or comparable ongoing cost;
+- quotas, storage limits, fair-use rules, retention, or other managed-resource behavior;
+- trial, grandfathering, downgrade, restore, export, or existing-data semantics.
+
+A change must not silently introduce a business-model contradiction. If a development decision requires changing this model or the authoritative Free/Premium feature matrix, the product decision and documentation change must be explicit and traceable before merge.
+
+Until the detailed freemium/Premium decisions tracked in issue #262 are promoted into authoritative versioned repository documentation, #262 is the current working decision source for those pending feature-tier questions. This temporary reference does not replace the requirement to move finalized decisions into repository documentation.
+
+The concrete implementation and pull-request rules are defined in [`AGENTS.md`](../AGENTS.md).
+
 ## Product principles
 
 The business model follows these principles:
@@ -84,6 +106,7 @@ The business model follows these principles:
 - **Commercial use remains controlled.** Third parties require a separate license for it.
 - **Community contributions can flow back.** The Maintainers decide whether they are accepted into `main`.
 - **Privacy remains a product characteristic.** Monetization must not rely on advertising, selling personal data, or unnecessary tracking.
+- **Business-model consistency is checked during development.** Product, entitlement, Cloud/Self-Hosted, managed-resource, and downgrade assumptions must remain traceable as the implementation evolves.
 
 ## Positioning
 
