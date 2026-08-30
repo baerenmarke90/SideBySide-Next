@@ -6,9 +6,9 @@ from datetime import datetime, time
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Field, Path, Response
+from fastapi import APIRouter, Path, Response
 from fastapi import status as http_status
-from pydantic import ConfigDict, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
@@ -58,7 +58,7 @@ class ReminderWrite(ApiModel):
     title: str
     description: str | None = None
     schedule: ReminderSchedule
-    offsets: list[int] = []
+    offsets: list[int] = Field(default_factory=list)
 
     @field_validator("title")
     @classmethod
@@ -112,7 +112,11 @@ def _schedule(view: service.ReminderView) -> ReminderSchedule:
             raise RuntimeError("ONCE Reminder is missing once_at despite database constraint.")
         return OnceSchedule(type=schedule_type, at=reminder.once_at)
     if schedule_type is ReminderScheduleType.ANNUAL:
-        if reminder.annual_month is None or reminder.annual_day is None or reminder.local_time is None:
+        if (
+            reminder.annual_month is None
+            or reminder.annual_day is None
+            or reminder.local_time is None
+        ):
             raise RuntimeError("ANNUAL Reminder is incomplete despite database constraint.")
         return AnnualSchedule(
             type=schedule_type,
@@ -216,7 +220,10 @@ def list_reminders(
 ) -> ReminderList:
     response.headers["Cache-Control"] = "private, no-store"
     return ReminderList(
-        items=[reminder_detail(session, view) for view in service.list_reminders(session, authorization)]
+        items=[
+            reminder_detail(session, view)
+            for view in service.list_reminders(session, authorization)
+        ]
     )
 
 
