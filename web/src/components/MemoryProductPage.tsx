@@ -1,7 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import type { MemoriesApi } from '../api/generated/apis/MemoriesApi';
 import { MediaType } from '../api/generated/models/MediaType';
 import type { MemoryDetail } from '../api/generated/models/MemoryDetail';
 import {
@@ -11,12 +10,15 @@ import {
   type MemoryEditValues,
 } from '../client/memoryProduct';
 import { normalizeClientError } from '../client/problemDetails';
+import type { ReferenceApis } from '../client/referenceFlow';
 import {
   appRoutePath,
   memoryDetailPath,
   memoryEditPath,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
+import { CommentsSection } from './CommentsSection';
+import { MemoryAttachmentManager } from './MemoryAttachmentManager';
 import { MemoryPreview } from './MemoryPreview';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -39,13 +41,19 @@ function formatCreatedAt(value: Date): string {
 
 export function MemoryProductPage({
   mode,
-  memoriesApi,
+  apis,
+  apiBaseUrl,
+  accessToken,
   spaceId,
+  currentAccountId,
   loadMemoryImage,
 }: {
   mode: MemoryProductMode;
-  memoriesApi: MemoriesApi;
+  apis: ReferenceApis;
+  apiBaseUrl: string;
+  accessToken: string;
   spaceId: string;
+  currentAccountId: string;
   loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
 }) {
   const { t } = useTranslation();
@@ -61,7 +69,7 @@ export function MemoryProductPage({
     queryFn: async () => {
       if (!memoryId) throw new Error('Missing memory route parameter.');
       try {
-        return await memoriesApi.getMemory({ spaceId, memoryId });
+        return await apis.memories.getMemory({ spaceId, memoryId });
       } catch (error) {
         throw await normalizeClientError(error);
       }
@@ -79,7 +87,7 @@ export function MemoryProductPage({
       values: MemoryEditValues;
     }) => {
       try {
-        return await memoriesApi.updateMemory({
+        return await apis.memories.updateMemory({
           spaceId,
           memoryId: memory.id,
           ifMatch: memoryIfMatch(memory),
@@ -99,7 +107,7 @@ export function MemoryProductPage({
   const deleteMutation = useMutation({
     mutationFn: async (memory: MemoryDetail) => {
       try {
-        await memoriesApi.deleteMemory({
+        await apis.memories.deleteMemory({
           spaceId,
           memoryId: memory.id,
           ifMatch: memoryIfMatch(memory),
@@ -131,11 +139,9 @@ export function MemoryProductPage({
       />
     );
   }
-
   if (memoryQuery.isLoading) {
     return <UiState kind="loading" title={t('memoryProduct.loading')} />;
   }
-
   if (memoryQuery.error) {
     return (
       <ProblemState
@@ -144,7 +150,6 @@ export function MemoryProductPage({
       />
     );
   }
-
   const memory = memoryQuery.data;
   if (!memory) return null;
 
@@ -171,13 +176,11 @@ export function MemoryProductPage({
       );
     }
 
-    const editableMemory = memory;
-
     function submit(event: FormEvent<HTMLFormElement>) {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       updateMutation.mutate({
-        memory: editableMemory,
+        memory,
         values: {
           title: String(data.get('title') || ''),
           body: String(data.get('body') || ''),
@@ -199,7 +202,6 @@ export function MemoryProductPage({
           description={t('memoryProduct.editIntro')}
           className="create-heading"
         />
-
         <section className="form-card" aria-labelledby="memory-edit-heading">
           <h2 id="memory-edit-heading" className="sr-only">
             {t('memoryProduct.formAria')}
@@ -210,9 +212,7 @@ export function MemoryProductPage({
             className="form-grid memory-form"
           >
             <div className="field-group">
-              <label htmlFor="memory-edit-title">
-                {t('memory.titleLabel')}
-              </label>
+              <label htmlFor="memory-edit-title">{t('memory.titleLabel')}</label>
               <input
                 id="memory-edit-title"
                 name="title"
@@ -236,7 +236,11 @@ export function MemoryProductPage({
                 id="memory-edit-date"
                 name="happenedOn"
                 type="date"
-                defaultValue={memoryDateInputValue(memory.happenedOn)}
+                defaultValue={
+                  memory.happenedOn
+                    ? memoryDateInputValue(memory.happenedOn)
+                    : undefined
+                }
               />
             </div>
             <div className="form-actions">
@@ -267,8 +271,7 @@ export function MemoryProductPage({
   const imageAttachments = memory.attachments
     .filter(
       (attachment) =>
-        attachment.mediaType === MediaType.IMAGE &&
-        attachment.status === 'READY',
+        attachment.mediaType === MediaType.IMAGE && attachment.status === 'READY',
     )
     .sort((left, right) => left.position - right.position);
 
@@ -329,7 +332,7 @@ export function MemoryProductPage({
             </div>
           </div>
           {imageAttachments.length > 0 ? (
-            <div className="memory-gallery">
+            <div className="memory-gallery" aria-label={t('memoryProduct.galleryAria')}>
               {imageAttachments.map((attachment) => (
                 <MemoryPreview
                   key={attachment.id}
@@ -343,6 +346,29 @@ export function MemoryProductPage({
             <p className="muted">{t('memoryProduct.noPhotos')}</p>
           )}
         </section>
+
+        {memory.capabilities.canEdit ? (
+          <MemoryAttachmentManager
+            memory={memory}
+            apis={apis}
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            spaceId={spaceId}
+            loadMemoryImage={loadMemoryImage}
+            onMemoryUpdated={(updated) =>
+              queryClient.setQueryData(memoryKey, updated)
+            }
+          />
+        ) : null}
+
+        <CommentsSection
+          apis={apis}
+          spaceId={spaceId}
+          parentKind="MEMORY"
+          parentId={memory.id}
+          canComment={memory.capabilities.canComment}
+          currentAccountId={currentAccountId}
+        />
 
         {memory.capabilities.canDelete ? (
           <section

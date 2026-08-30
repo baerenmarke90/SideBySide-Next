@@ -1,18 +1,24 @@
 import { AttachmentsApi } from '../api/generated/apis/AttachmentsApi';
 import { AuthApi } from '../api/generated/apis/AuthApi';
+import { CommentsApi } from '../api/generated/apis/CommentsApi';
+import { HeartMomentsApi } from '../api/generated/apis/HeartMomentsApi';
 import { MemoriesApi } from '../api/generated/apis/MemoriesApi';
+import { MilestonesApi } from '../api/generated/apis/MilestonesApi';
 import { StoryApi } from '../api/generated/apis/StoryApi';
-import { Configuration, ResponseError } from '../api/generated/runtime';
+import {
+  AttachmentReadRequestParentTypeEnum,
+  type AttachmentReadRequestParentTypeEnum as AttachmentParentType,
+} from '../api/generated/models/AttachmentReadRequest';
 import type { MemoryCreate } from '../api/generated/models/MemoryCreate';
-import type { MemoryDetail } from '../api/generated/models/MemoryDetail';
+import { MediaType } from '../api/generated/models/MediaType';
+import { ReadDescriptorMethodEnum } from '../api/generated/models/ReadDescriptor';
 import type { SessionView } from '../api/generated/models/SessionView';
 import type { StoryPage } from '../api/generated/models/StoryPage';
 import type { UploadDescriptor } from '../api/generated/models/UploadDescriptor';
 import { UploadDescriptorMethodEnum } from '../api/generated/models/UploadDescriptor';
-import { ReadDescriptorMethodEnum } from '../api/generated/models/ReadDescriptor';
-import { AttachmentReadRequestParentTypeEnum } from '../api/generated/models/AttachmentReadRequest';
-import { MediaType } from '../api/generated/models/MediaType';
+import { Configuration, ResponseError } from '../api/generated/runtime';
 import { i18n } from '../i18n';
+import type { MemoryDetail } from '../api/generated/models/MemoryDetail';
 
 export interface FlowResult {
   memory: MemoryDetail;
@@ -23,7 +29,10 @@ export interface FlowResult {
 export interface ReferenceApis {
   attachments: AttachmentsApi;
   auth: AuthApi;
+  comments: CommentsApi;
+  heartMoments: HeartMomentsApi;
   memories: MemoriesApi;
+  milestones: MilestonesApi;
   story: StoryApi;
 }
 
@@ -55,7 +64,10 @@ export function createReferenceApis(
   return {
     attachments: new AttachmentsApi(configuration),
     auth: new AuthApi(configuration),
+    comments: new CommentsApi(configuration),
+    heartMoments: new HeartMomentsApi(configuration),
     memories: new MemoriesApi(configuration),
+    milestones: new MilestonesApi(configuration),
     story: new StoryApi(configuration),
   };
 }
@@ -98,6 +110,7 @@ export async function uploadAttachmentBytes(
   descriptor: UploadDescriptor,
   file: File,
   fetchApi: typeof fetch = fetch,
+  signal?: AbortSignal,
 ): Promise<void> {
   const headers = new Headers(descriptor.requiredHeaders);
   if (descriptor.method === UploadDescriptorMethodEnum.STREAM) {
@@ -110,6 +123,7 @@ export async function uploadAttachmentBytes(
       method: 'PUT',
       headers,
       body: file,
+      signal,
     },
   );
   await assertOk(response, i18n.t('flow.uploadFailed'));
@@ -119,9 +133,13 @@ async function waitUntilReady(
   apis: ReferenceApis,
   spaceId: string,
   attachmentId: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
+    if (signal?.aborted) {
+      throw new ReferenceFlowError(i18n.t('m5Product.upload.cancelled'));
+    }
     const attachment = await apis.attachments.getAttachment({
       spaceId,
       attachmentId,
@@ -141,12 +159,13 @@ async function waitUntilReady(
   throw new ReferenceFlowError(i18n.t('flow.processingTimeout'));
 }
 
-export async function loadAuthorizedImage(
+export async function loadAuthorizedParentImage(
   apis: ReferenceApis,
   apiBaseUrl: string,
   accessToken: string,
   spaceId: string,
-  memoryId: string,
+  parentType: AttachmentParentType,
+  parentId: string,
   attachmentId: string,
   fetchApi: typeof fetch = fetch,
 ): Promise<string> {
@@ -154,8 +173,8 @@ export async function loadAuthorizedImage(
     spaceId,
     attachmentId,
     attachmentReadRequest: {
-      parentType: AttachmentReadRequestParentTypeEnum.MEMORY,
-      parentId: memoryId,
+      parentType,
+      parentId,
     },
   });
 
@@ -169,6 +188,27 @@ export async function loadAuthorizedImage(
   );
   await assertOk(response, i18n.t('flow.imageLoadFailed'));
   return URL.createObjectURL(await response.blob());
+}
+
+export async function loadAuthorizedImage(
+  apis: ReferenceApis,
+  apiBaseUrl: string,
+  accessToken: string,
+  spaceId: string,
+  memoryId: string,
+  attachmentId: string,
+  fetchApi: typeof fetch = fetch,
+): Promise<string> {
+  return loadAuthorizedParentImage(
+    apis,
+    apiBaseUrl,
+    accessToken,
+    spaceId,
+    AttachmentReadRequestParentTypeEnum.MEMORY,
+    memoryId,
+    attachmentId,
+    fetchApi,
+  );
 }
 
 export async function signIn(

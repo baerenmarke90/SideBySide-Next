@@ -1,3 +1,4 @@
+import type { UploadDescriptor } from '../api/generated/models/UploadDescriptor';
 import { MediaType } from '../api/generated/models/MediaType';
 import type { MemoryCreate } from '../api/generated/models/MemoryCreate';
 import { i18n } from '../i18n';
@@ -18,9 +19,13 @@ async function waitUntilReady(
   apis: ReferenceApis,
   spaceId: string,
   attachmentId: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
+    if (signal?.aborted) {
+      throw new ReferenceFlowError(i18n.t('m5Product.upload.cancelled'));
+    }
     const attachment = await apis.attachments.getAttachment({
       spaceId,
       attachmentId,
@@ -40,6 +45,38 @@ async function waitUntilReady(
   throw new ReferenceFlowError(i18n.t('flow.processingTimeout'));
 }
 
+export async function deleteUnboundAttachment(
+  apis: ReferenceApis,
+  spaceId: string,
+  attachmentId: string,
+): Promise<boolean> {
+  try {
+    const attachment = await apis.attachments.getAttachment({
+      spaceId,
+      attachmentId,
+    });
+    if (attachment.status === 'DELETING') return true;
+    await apis.attachments.deleteAttachment({
+      spaceId,
+      attachmentId: attachment.id,
+      ifMatch: String(attachment.version),
+    });
+    return true;
+  } catch {
+    // Orphan cleanup is best-effort; server retention remains the fail-safe.
+    return false;
+  }
+}
+
+async function cleanupUnboundAttachment(
+  apis: ReferenceApis,
+  spaceId: string,
+  upload: UploadDescriptor | undefined,
+): Promise<void> {
+  if (!upload) return;
+  await deleteUnboundAttachment(apis, spaceId, upload.attachment.id);
+}
+
 export async function uploadMemoryDraftAttachment(
   apis: ReferenceApis,
   apiBaseUrl: string,
@@ -48,14 +85,19 @@ export async function uploadMemoryDraftAttachment(
   file: File,
   onPhase?: (phase: DraftUploadPhase) => void,
   fetchApi: typeof fetch = fetch,
+  signal?: AbortSignal,
 ): Promise<ReadyDraftAttachment> {
   if (!file.type.startsWith('image/'))
     throw new ReferenceFlowError(i18n.t('flow.imageOnly'));
   if (file.size === 0) throw new ReferenceFlowError(i18n.t('flow.imageEmpty'));
 
+  let upload: UploadDescriptor | undefined;
   try {
+    if (signal?.aborted) {
+      throw new ReferenceFlowError(i18n.t('m5Product.upload.cancelled'));
+    }
     onPhase?.('uploading');
-    const upload = await apis.attachments.createAttachmentUpload({
+    upload = await apis.attachments.createAttachmentUpload({
       spaceId,
       attachmentUploadCreate: {
         expectedMimeType: file.type,
@@ -71,17 +113,25 @@ export async function uploadMemoryDraftAttachment(
       upload,
       file,
       fetchApi,
+      signal,
     );
+    if (signal?.aborted) {
+      throw new ReferenceFlowError(i18n.t('m5Product.upload.cancelled'));
+    }
     onPhase?.('validating');
     await apis.attachments.finalizeAttachmentUpload({
       spaceId,
       attachmentId: upload.attachment.id,
       body: {},
     });
-    await waitUntilReady(apis, spaceId, upload.attachment.id);
+    await waitUntilReady(apis, spaceId, upload.attachment.id, signal);
 
     return { attachmentId: upload.attachment.id };
   } catch (error) {
+    await cleanupUnboundAttachment(apis, spaceId, upload);
+    if (signal?.aborted) {
+      throw new ReferenceFlowError(i18n.t('m5Product.upload.cancelled'));
+    }
     if (error instanceof ReferenceFlowError) throw error;
     throw new ReferenceFlowError(i18n.t('flow.uploadFailed'));
   }

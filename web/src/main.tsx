@@ -11,6 +11,7 @@ import './theme.css';
 import './shell.css';
 import './attachment-drafts.css';
 import './components/MemoryProductPage.css';
+import './components/M5Product.css';
 import './components/RelatedPeoplePage.css';
 import './components/ProfilePage.css';
 

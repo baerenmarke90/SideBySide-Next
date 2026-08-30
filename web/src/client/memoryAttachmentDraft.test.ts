@@ -40,6 +40,7 @@ describe('uploadMemoryDraftAttachment', () => {
           status: 'PROCESSING',
         })),
         getAttachment: vi.fn(async () => ({ ...attachment, status: 'READY' })),
+        deleteAttachment: vi.fn(),
       },
       story: {},
     } as unknown as ReferenceApis;
@@ -68,11 +69,16 @@ describe('uploadMemoryDraftAttachment', () => {
       spaceId: 'space-1',
       attachmentId: 'attachment-1',
     });
+    expect(apis.attachments.deleteAttachment).not.toHaveBeenCalled();
   });
 
-  it('fails when server-side validation rejects the uploaded image', async () => {
+  it('cleans up an unbound attachment when server-side validation rejects it', async () => {
     const phases: string[] = [];
     const attachment = uploadingAttachment();
+    const getAttachment = vi
+      .fn()
+      .mockResolvedValueOnce({ ...attachment, status: 'FAILED', version: 2 })
+      .mockResolvedValueOnce({ ...attachment, status: 'FAILED', version: 2 });
     const apis = {
       auth: {},
       memories: {},
@@ -87,7 +93,8 @@ describe('uploadMemoryDraftAttachment', () => {
           ...attachment,
           status: 'PROCESSING',
         })),
-        getAttachment: vi.fn(async () => ({ ...attachment, status: 'FAILED' })),
+        getAttachment,
+        deleteAttachment: vi.fn(async () => undefined),
       },
       story: {},
     } as unknown as ReferenceApis;
@@ -108,7 +115,57 @@ describe('uploadMemoryDraftAttachment', () => {
     ).rejects.toThrow();
 
     expect(phases).toEqual(['uploading', 'validating']);
-    expect(apis.attachments.getAttachment).toHaveBeenCalledTimes(1);
+    expect(apis.attachments.deleteAttachment).toHaveBeenCalledWith({
+      spaceId: 'space-1',
+      attachmentId: 'attachment-1',
+      ifMatch: '2',
+    });
+  });
+
+  it('passes cancellation to the upload transport and removes the orphan', async () => {
+    const attachment = uploadingAttachment();
+    const controller = new AbortController();
+    const apis = {
+      auth: {},
+      memories: {},
+      attachments: {
+        createAttachmentUpload: vi.fn(async () => ({
+          attachment,
+          method: UploadDescriptorMethodEnum.STREAM,
+          requiredHeaders: { 'Content-Type': 'image/jpeg' },
+          uploadUrl: '/api/v1/spaces/space-1/attachments/attachment-1/content',
+        })),
+        getAttachment: vi.fn(async () => ({ ...attachment, version: 3 })),
+        deleteAttachment: vi.fn(async () => undefined),
+      },
+      story: {},
+    } as unknown as ReferenceApis;
+    const fetchApi = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        expect(init?.signal).toBe(controller.signal);
+        controller.abort();
+        throw new DOMException('Aborted', 'AbortError');
+      },
+    ) as unknown as typeof fetch;
+
+    await expect(
+      uploadMemoryDraftAttachment(
+        apis,
+        'https://api.example.invalid',
+        'token',
+        'space-1',
+        new File(['image'], 'cancel.jpg', { type: 'image/jpeg' }),
+        undefined,
+        fetchApi,
+        controller.signal,
+      ),
+    ).rejects.toThrow('abgebrochen');
+
+    expect(apis.attachments.deleteAttachment).toHaveBeenCalledWith({
+      spaceId: 'space-1',
+      attachmentId: 'attachment-1',
+      ifMatch: '3',
+    });
   });
 });
 

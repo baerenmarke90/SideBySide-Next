@@ -6,6 +6,7 @@ import {
   type AttachmentDraft,
 } from './attachmentDraftState';
 import {
+  deleteUnboundAttachment,
   uploadMemoryDraftAttachment,
   type DraftUploadPhase,
 } from './memoryAttachmentDraft';
@@ -31,28 +32,42 @@ export function useAttachmentDrafts({
   spaceId,
 }: AttachmentDraftOptions) {
   const [items, dispatch] = useReducer(attachmentDraftReducer, []);
+  const itemsRef = useRef<AttachmentDraft[]>([]);
+  itemsRef.current = items;
   const nextAttempt = useRef(0);
   const previewUrls = useRef(new Map<string, string>());
+  const controllers = useRef(new Map<string, AbortController>());
   const mounted = useRef(true);
 
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      for (const controller of controllers.current.values()) controller.abort();
+      controllers.current.clear();
+      for (const draft of itemsRef.current) {
+        if (draft.attachmentId) {
+          void deleteUnboundAttachment(apis, spaceId, draft.attachmentId);
+        }
+      }
+      itemsRef.current = [];
       for (const previewUrl of previewUrls.current.values()) {
         URL.revokeObjectURL(previewUrl);
       }
       previewUrls.current.clear();
     };
-  }, []);
+  }, [apis, spaceId]);
 
   const startUpload = useCallback(
     (id: string, file: File) => {
+      controllers.current.get(id)?.abort();
+      const controller = new AbortController();
+      controllers.current.set(id, controller);
       const attempt = ++nextAttempt.current;
       dispatch({ type: 'start', id, attempt });
 
       const updatePhase = (status: DraftUploadPhase) => {
-        if (!mounted.current) return;
+        if (!mounted.current || controller.signal.aborted) return;
         dispatch({ type: 'phase', id, attempt, status });
       };
 
@@ -63,13 +78,17 @@ export function useAttachmentDrafts({
         spaceId,
         file,
         updatePhase,
+        fetch,
+        controller.signal,
       )
         .then(({ attachmentId }) => {
-          if (!mounted.current) return;
+          if (!mounted.current || controller.signal.aborted) return;
+          controllers.current.delete(id);
           dispatch({ type: 'ready', id, attempt, attachmentId });
         })
         .catch((error: unknown) => {
-          if (!mounted.current) return;
+          controllers.current.delete(id);
+          if (!mounted.current || controller.signal.aborted) return;
           dispatch({ type: 'failed', id, attempt, error: errorMessage(error) });
         });
     },
@@ -99,12 +118,24 @@ export function useAttachmentDrafts({
     [startUpload],
   );
 
-  const remove = useCallback((id: string) => {
-    const previewUrl = previewUrls.current.get(id);
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    previewUrls.current.delete(id);
-    dispatch({ type: 'remove', id });
-  }, []);
+  const remove = useCallback(
+    (id: string) => {
+      controllers.current.get(id)?.abort();
+      controllers.current.delete(id);
+      const draft = itemsRef.current.find((candidate) => candidate.id === id);
+      itemsRef.current = itemsRef.current.filter(
+        (candidate) => candidate.id !== id,
+      );
+      if (draft?.attachmentId) {
+        void deleteUnboundAttachment(apis, spaceId, draft.attachmentId);
+      }
+      const previewUrl = previewUrls.current.get(id);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrls.current.delete(id);
+      dispatch({ type: 'remove', id });
+    },
+    [apis, spaceId],
+  );
 
   const retry = useCallback(
     (draft: AttachmentDraft) => startUpload(draft.id, draft.file),
@@ -112,6 +143,9 @@ export function useAttachmentDrafts({
   );
 
   const clear = useCallback(() => {
+    for (const controller of controllers.current.values()) controller.abort();
+    controllers.current.clear();
+    itemsRef.current = [];
     for (const previewUrl of previewUrls.current.values()) {
       URL.revokeObjectURL(previewUrl);
     }

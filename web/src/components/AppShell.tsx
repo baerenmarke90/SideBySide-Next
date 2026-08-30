@@ -18,6 +18,14 @@ function NavigationIcon({ icon }: { icon: AppRouteIcon }) {
     );
   }
 
+  if (icon === 'heart') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10Z" />
+      </svg>
+    );
+  }
+
   if (icon === 'people') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">

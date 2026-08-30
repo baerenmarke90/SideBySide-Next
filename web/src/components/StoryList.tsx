@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import type { StoryItem } from '../api/generated/models/StoryItem';
-import { memoryDetailPath } from '../client/routes';
+import {
+  heartMomentDetailPath,
+  memoryDetailPath,
+  milestoneDetailPath,
+} from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { MemoryPreview } from './MemoryPreview';
 import {
@@ -10,6 +14,14 @@ import {
   storyItemPresentation,
 } from './storyPresentation';
 import { UiState } from './UiState';
+
+function storyDetailPath(item: StoryItem): string {
+  if (item.kind === 'MEMORY') return memoryDetailPath(item.memory.id);
+  if (item.kind === 'HEART_MOMENT') {
+    return heartMomentDetailPath(item.heartMoment.id);
+  }
+  return milestoneDetailPath(item.milestone.id);
+}
 
 export function StoryList({
   items,
@@ -59,46 +71,44 @@ export function StoryList({
                       <span className="kind-badge">
                         {presentation.kindLabel}
                       </span>
-                      {presentation.sharedLabel && (
+                      {presentation.sharedLabel ? (
                         <span className="shared-badge">
                           {presentation.sharedLabel}
                         </span>
-                      )}
+                      ) : null}
                       <time
                         dateTime={item.effectiveDate.toISOString().slice(0, 10)}
                       >
                         {formatStoryDate(item.effectiveDate, locale)}
                       </time>
                     </div>
-                    {item.kind === 'MEMORY' && firstMemoryAttachment && (
+                    {item.kind === 'MEMORY' && firstMemoryAttachment ? (
                       <MemoryPreview
                         memoryId={item.memory.id}
                         attachmentId={firstMemoryAttachment.id}
                         loadImage={loadMemoryImage}
                       />
-                    )}
+                    ) : null}
                     <h4>{presentation.title}</h4>
-                    {presentation.preview && (
+                    {presentation.preview ? (
                       <p className="story-preview">{presentation.preview}</p>
-                    )}
+                    ) : null}
                     <div className="story-card-footer">
                       <span>
                         {t('story.byAuthor', { author: presentation.author })}
                       </span>
                       <div className="story-card-footer-actions">
-                        {presentation.mediaLabel && (
+                        {presentation.mediaLabel ? (
                           <span className="media-label">
                             ▧ {presentation.mediaLabel}
                           </span>
-                        )}
-                        {item.kind === 'MEMORY' ? (
-                          <Link
-                            className="story-memory-link"
-                            to={memoryDetailPath(item.memory.id)}
-                          >
-                            {t('memoryProduct.open')}
-                          </Link>
                         ) : null}
+                        <Link
+                          className="story-memory-link"
+                          to={storyDetailPath(item)}
+                        >
+                          {t('m5Product.story.openItem')}
+                        </Link>
                       </div>
                     </div>
                   </article>

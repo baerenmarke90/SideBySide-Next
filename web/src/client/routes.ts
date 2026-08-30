@@ -1,5 +1,10 @@
-export type AppRouteId = 'story' | 'people' | 'profile' | 'memoryCreate';
-export type AppRouteIcon = 'story' | 'people' | 'profile' | 'add';
+export type AppRouteId =
+  | 'story'
+  | 'heartMoments'
+  | 'people'
+  | 'profile'
+  | 'memoryCreate';
+export type AppRouteIcon = 'story' | 'heart' | 'people' | 'profile' | 'add';
 
 export interface AppRouteDefinition {
   id: AppRouteId;
@@ -15,6 +20,13 @@ export const APP_ROUTES = [
     path: '/story',
     labelKey: 'navigation.story',
     icon: 'story',
+    end: true,
+  },
+  {
+    id: 'heartMoments',
+    path: '/heart-moments',
+    labelKey: 'm5Product.navigation.heartMoments',
+    icon: 'heart',
     end: true,
   },
   {
@@ -43,6 +55,14 @@ export const APP_ROUTES = [
 export const DEFAULT_APP_ROUTE = APP_ROUTES[0].path;
 export const MEMORY_DETAIL_ROUTE_PATTERN = '/memory/:memoryId';
 export const MEMORY_EDIT_ROUTE_PATTERN = '/memory/:memoryId/edit';
+export const HEART_MOMENT_CREATE_ROUTE = '/heart-moments/new';
+export const HEART_MOMENT_DETAIL_ROUTE_PATTERN =
+  '/heart-moments/:heartMomentId';
+export const HEART_MOMENT_EDIT_ROUTE_PATTERN =
+  '/heart-moments/:heartMomentId/edit';
+export const MILESTONE_CREATE_ROUTE = '/milestones/new';
+export const MILESTONE_DETAIL_ROUTE_PATTERN = '/milestones/:milestoneId';
+export const MILESTONE_EDIT_ROUTE_PATTERN = '/milestones/:milestoneId/edit';
 
 export function appRoutePath(id: AppRouteId): string {
   const route = APP_ROUTES.find((candidate) => candidate.id === id);
@@ -56,4 +76,20 @@ export function memoryDetailPath(memoryId: string): string {
 
 export function memoryEditPath(memoryId: string): string {
   return `${memoryDetailPath(memoryId)}/edit`;
+}
+
+export function heartMomentDetailPath(heartMomentId: string): string {
+  return `/heart-moments/${encodeURIComponent(heartMomentId)}`;
+}
+
+export function heartMomentEditPath(heartMomentId: string): string {
+  return `${heartMomentDetailPath(heartMomentId)}/edit`;
+}
+
+export function milestoneDetailPath(milestoneId: string): string {
+  return `/milestones/${encodeURIComponent(milestoneId)}`;
+}
+
+export function milestoneEditPath(milestoneId: string): string {
+  return `${milestoneDetailPath(milestoneId)}/edit`;
 }
