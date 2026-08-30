@@ -266,7 +266,10 @@ export function MilestoneProductPage({
         <div className="page">
           <PageHeader
             before={
-              <Link className="back-link" to={milestoneDetailPath(milestone.id)}>
+              <Link
+                className="back-link"
+                to={milestoneDetailPath(milestone.id)}
+              >
                 {t('milestoneProduct.backToMilestone')}
               </Link>
             }
@@ -310,10 +313,7 @@ export function MilestoneProductPage({
       <div className="page create-page product-editor-page">
         <PageHeader
           before={
-            <Link
-              className="back-link"
-              to={milestoneDetailPath(milestone.id)}
-            >
+            <Link className="back-link" to={milestoneDetailPath(milestone.id)}>
               {t('milestoneProduct.backToMilestone')}
             </Link>
           }
