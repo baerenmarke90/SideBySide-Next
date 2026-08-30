@@ -1,6 +1,6 @@
 # Implementation Status
 
-As of: August 27, 2026  
+As of: August 30, 2026
 Current repository state: GitHub `main` is the canonical SHA source; this living status document deliberately stores no static current SHA.  
 Current gate status: **G2 passed; M2 complete; M3 released**
 
@@ -177,7 +177,8 @@ The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A conc
 - [x] **M3-S3 — Place Foundation:** Place Domain with name, description, and address behind the ProtectedPayload boundary; coordinates as typed `NUMERIC` columns with pair, range, and precision invariants in both service and schema; CRUD/List without deduplication; no Geocoding or Maps Provider. `Plan.placeId` was added (canonical and single-column, with composite Same-Space foreign key). Place deletion versionedly unlinks assigned Plans while preserving them. Additionally, bound DB parameters no longer appear in error messages and therefore no longer appear in application logs.
 - [x] **M3-S4 — typed Content Relations:** `place_memories`, `place_heart_moments`, and `place_milestones` with real composite foreign keys over `(id, space_id)`, primary key `(place_id, target_id)`, and typed REST routes instead of free `(targetType,targetId)` polymorphism. Same-Space is a schema property rather than a service rule: both foreign keys share the same `space_id` column. Unknown, deleted, foreign, and private targets all resolve indistinguishably to `RELATION_TARGET_NOT_FOUND`. The Privacy transition `SHARED -> PRIVATE` removes relations in the same transaction; beneath it, a schema guard makes the state "private with shared relation" unrepresentable. Lock order `Place -> Target` is verified with PostgreSQL race tests against parent deletion, target deletion, and Privacy transition.
 - [x] **M3-S5 — Chapter:** Chapter Domain with optional `startOn`/`endOn`, canonical nullable `placeId`, collaborative CRUD/List with `If-Match`/409, typed `chapter_memories`/`chapter_heart_moments`/`chapter_milestones`, deterministic derived cross-type content ordering, privacy-safe target handling, and delete semantics that remove only the Chapter and its relations while preserving all originals.
-- [ ] **M3-S6 — Shared Collections:** next runtime slice according to the Delivery Plan. S7+ continues with PrivateNote, GiftIdea, and PrivateCollection.
+- [x] **M3-S6 — Shared Collections:** shared Collection + CollectionItem aggregate with collaborative writes; immutable server-derived `createdBy`; independent root structure/order and Item content versions; contiguous positions; append-on-create, transactional delete compaction, and atomic exact-set full-list reorder; Cross-Tenant fail-closed handling and real PostgreSQL reorder/create/delete/completion race coverage; Collection/Item titles remain out of event payloads. ShoppingList and persisted multi-select state remain outside S6.
+- [ ] **M3-S7 — PrivateNote + GiftIdea:** next runtime slice according to the Delivery Plan.
 
 ## Later milestones
 
@@ -191,4 +192,4 @@ The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A conc
 
 ## Next checkpoint
 
-M3-S6 **Shared Collections** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md): Collection + CollectionItem, collaborative writes, separate root/item versioning, contiguous positions, atomic full-list reorder, delete compaction, and Cross-Tenant/Concurrency coverage. ShoppingList and persisted multi-select state remain outside S6.
+M3-S7 **PrivateNote + GiftIdea** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md): separate owner-only tables/services and CRUD/List under `/spaces/{spaceId}/private/...`, ProtectedPayload content, GiftIdea lifecycle `IDEA | BOUGHT | GIVEN`, Privacy-safe 404 behavior, event/log redaction, and partner-negative coverage. PrivateCollection follows in S8.

@@ -1,6 +1,6 @@
 # M3 Delivery Plan
 
-**Status:** S0 complete; runtime released; S1 through S5 delivered  
+**Status:** S0 complete; runtime released; S1 through S6 delivered
 **As of:** August 30, 2026
 
 ## 1. Gate before runtime
@@ -214,7 +214,7 @@ Chapter + Memory + SHARED HeartMoment + Milestone
 
 Implemented. Chapter CRUD/List is exposed through the versioned REST/OpenAPI contract with `If-Match`/409 semantics; all four decided date shapes and the invalid-range error are covered. `Chapter.placeId` is canonical and Same-Space, Place deletion detaches it versionedly, and the three typed relation families reuse the S4 integrity/privacy/locking model. Derived content ordering is computed from original resources without a persisted position. Chapter deletion removes relation rows only and preserves Memory, SHARED HeartMoment, Milestone, and Place originals.
 
-## 9. S6 – Shared Collections
+## 9. S6 – Shared Collections – delivered
 
 Scope:
 
@@ -229,6 +229,8 @@ Scope:
 - Cross-Tenant/Concurrency tests.
 
 Not included: ShoppingList and persisted multi-select state.
+
+Implemented. Collection CRUD/List and Item Create/Update/Delete are collaborative within the Space while `createdBy` remains immutable server attribution. The Collection root version protects root fields plus list structure/order; Item versions protect title/completed independently. Item Create appends, Item Delete compacts positions transactionally, and full-list Reorder is atomic under the root `If-Match` with a deferrable `(collection_id, position)` uniqueness constraint. Real PostgreSQL races cover competing Reorders and Reorder against Create/Delete/Completion; Cross-Tenant and foreign parent/item IDs fail closed. Collection and Item titles remain outside event payloads. ShoppingList and persisted multi-select state remain outside S6.
 
 ## 10. S7 – PrivateNote + GiftIdea
 

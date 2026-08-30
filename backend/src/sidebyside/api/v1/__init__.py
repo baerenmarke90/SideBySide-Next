@@ -14,6 +14,7 @@ from sidebyside.api.v1 import (
     auth,
     chapter_relations,
     chapters,
+    collections,
     comments,
     health,
     heart_moments,
@@ -49,3 +50,4 @@ router.include_router(place_relations.router)
 router.include_router(plans.router)
 router.include_router(chapters.router)
 router.include_router(chapter_relations.router)
+router.include_router(collections.router)
