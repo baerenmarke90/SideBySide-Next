@@ -255,16 +255,17 @@ def list_reminders(session: Session, context: AuthorizationContext) -> list[Remi
             readable(Reminder, context).order_by(Reminder.created_at.desc(), Reminder.id.desc())
         ).scalars()
     )
-    preference_rows = dict(
-        session.execute(
-            select(ReminderPreference.reminder_id, ReminderPreference.muted).where(
-                ReminderPreference.account_id == context.account_id,
-                ReminderPreference.reminder_id.in_([reminder.id for reminder in reminders]),
+    preference_rows: dict[UUID, bool] = {}
+    if reminders:
+        preference_rows = {
+            reminder_id: muted
+            for reminder_id, muted in session.execute(
+                select(ReminderPreference.reminder_id, ReminderPreference.muted).where(
+                    ReminderPreference.account_id == context.account_id,
+                    ReminderPreference.reminder_id.in_([reminder.id for reminder in reminders]),
+                )
             )
-        ).all()
-        if reminders
-        else []
-    )
+        }
     offsets_by_reminder: dict[UUID, list[int]] = {reminder.id: [] for reminder in reminders}
     if reminders:
         for reminder_id, days_before in session.execute(
@@ -341,7 +342,7 @@ def set_preference(
 ) -> ReminderView:
     reminder = require_readable(session, Reminder, context, reminder_id)
     statement = (
-        postgresql.insert(ReminderPreference.__table__)
+        postgresql.insert(ReminderPreference)
         .values(
             reminder_id=reminder.id,
             account_id=context.account_id,
