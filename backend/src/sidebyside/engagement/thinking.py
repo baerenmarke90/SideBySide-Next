@@ -109,6 +109,7 @@ def send(
         recipient_account_id=recipient_id,
         client_request_id=client_request_id,
         source_event_id=event.id,
+        created_at=current_time,
     )
     session.add(request)
     session.flush()
