@@ -1,0 +1,151 @@
+name: M4 Closeout Docs
+
+on:
+  push:
+    branches: [chore/292-m4-closeout-docs]
+
+permissions:
+  contents: write
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Synchronize living M4 status and evidence
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              if old not in text:
+                  raise RuntimeError(f"Missing closeout anchor in {path}: {old[:100]!r}")
+              target.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace(
+              "README.md",
+              "<strong>Current: G3 has passed. M3 is complete; M4 is the next roadmap milestone.</strong><br>",
+              "<strong>Current: M4 is complete. M5 — Client Completion & Parity is the active roadmap milestone.</strong><br>",
+          )
+          replace(
+              "README.md",
+              "<a href=\"docs/reviews/2026-08-30-g3-gate-review.md\">Open the final G3 Gate Review</a>",
+              "<a href=\"docs/m4/M4-EVIDENCE.md\">Open M4 completion evidence</a> ·\n  <a href=\"docs/reviews/2026-08-30-g3-gate-review.md\">Open the final G3 Gate Review</a>",
+          )
+
+          replace(
+              "docs/ROADMAP.md",
+              "This roadmap translates the binding product specification into an understandable sequence. It shows goals, dependencies, and release points. The actual implementation state is tracked in [Implementation Status](./IMPLEMENTATION-STATUS.md); rules for living status sources are defined in [Status Sources and Drift Rules](./STATUS-SOURCES.md); the refined M2 boundaries are documented in [M2 Project Control](./m2/PROJECT-CONTROL.md), and M3 readiness/delivery in the [M3 Technical Readiness Package](./m3/README.md).",
+              "This roadmap translates the binding product specification into an understandable sequence. It shows goals, dependencies, and release points. The actual implementation state is tracked in [Implementation Status](./IMPLEMENTATION-STATUS.md); rules for living status sources are defined in [Status Sources and Drift Rules](./STATUS-SOURCES.md); the refined M2 boundaries are documented in [M2 Project Control](./m2/PROJECT-CONTROL.md), M3 readiness/delivery in the [M3 Technical Readiness Package](./m3/README.md), and completed M4 runtime evidence in the [M4 Evidence Map](./m4/M4-EVIDENCE.md).",
+          )
+          replace(
+              "docs/ROADMAP.md",
+              "**Current:** M0, M1, M2, and M3 are complete for their intended scope. **G1, G2, and G3 have passed.** The next roadmap milestone is **M4 — Engage**, beginning with the defined M4-A boundary for Search + Dashboard Read Models. The binding current gate decision is the [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md). M3-S10 does not start M4 implementation.",
+              "**Current:** M0 through M4 are complete for their intended scope. **G1, G2, and G3 have passed.** **M5 — Client Completion & Parity** is the active roadmap milestone; G4 has not yet been evaluated or passed. Completed M4 runtime and integrated evidence are indexed in the [M4 Evidence Map](./m4/M4-EVIDENCE.md). The binding current gate decision remains the [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md).",
+          )
+          replace(
+              "docs/ROADMAP.md",
+              "| [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md) | Which executable HTTP/PostgreSQL/race tests constitute the G3 evidence set? |\n",
+              "| [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md) | Which executable HTTP/PostgreSQL/race tests constitute the G3 evidence set? |\n| [M4 Evidence Map](./m4/M4-EVIDENCE.md) | Which M4-A/B/C runtime slices, migrations, privacy/time/idempotency tests, and generated contracts complete M4? |\n",
+          )
+          replace(
+              "docs/ROADMAP.md",
+              "### M3 — Planning & Private Area: complete, G3 passed\n\nThe [M3 Technical Readiness Package](./m3/README.md) records the completed M3 decisions and delivery. M3-D01 through M3-D32 are `DECIDED`, runtime slices S1 through S9 are delivered, and M3-S10 completed the formal gate review.\n\nDelivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, **M3-S4 typed Content Relations**, **M3-S5 Chapter**, **M3-S6 Shared Collections**, **M3-S7 PrivateNote + GiftIdea**, **M3-S8 PrivateCollection**, **M3-S9 Integrated M3 backend/API evidence**, and **M3-S10 G3 Review**. The executable S9 evidence set is indexed in [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md); the immutable [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) concludes **G3: PASSED**.\n",
+              "### M3 — Planning & Private Area: complete, G3 passed\n\nThe [M3 Technical Readiness Package](./m3/README.md) records the completed M3 decisions and delivery. M3-D01 through M3-D32 are `DECIDED`, runtime slices S1 through S9 are delivered, and M3-S10 completed the formal gate review.\n\nDelivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, **M3-S4 typed Content Relations**, **M3-S5 Chapter**, **M3-S6 Shared Collections**, **M3-S7 PrivateNote + GiftIdea**, **M3-S8 PrivateCollection**, **M3-S9 Integrated M3 backend/API evidence**, and **M3-S10 G3 Review**. The executable S9 evidence set is indexed in [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md); the immutable [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) concludes **G3: PASSED**.\n\n### M4 — Engage: complete\n\nM4-A Search/Dashboard, M4-B Activity/Notifications/Thinking-of-you/PushDelivery, and M4-C Reminders/Rules/occurrence planning are delivered. The final migration chain is `0028 -> 0029 -> 0030 -> 0031 -> 0032` with one Alembic head. The integrated Privacy, Tenant, time/DST, retry/idempotency, OpenAPI and generated-client evidence is indexed in the [M4 Evidence Map](./m4/M4-EVIDENCE.md). M4 completion does not imply G4: full Web/Android productization and parity remain M5.\n",
+          )
+          replace(
+              "docs/ROADMAP.md",
+              "- global full-text Search before the M4 Privacy/index strategy is resolved,\n",
+              "- semantic/vector/AI Search before a separately approved later capability and Privacy model,\n",
+          )
+          replace(
+              "docs/ROADMAP.md",
+              "- [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md)\n",
+              "- [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md)\n- [M4 Evidence Map](./m4/M4-EVIDENCE.md)\n",
+          )
+
+          replace(
+              "docs/IMPLEMENTATION-STATUS.md",
+              "Current gate status: **G3 passed; M3 complete; M4 is the next milestone**",
+              "Current gate status: **G3 passed; M4 complete; M5 is active; G4 not yet evaluated**",
+          )
+          replace(
+              "docs/IMPLEMENTATION-STATUS.md",
+              "- **M3 readiness, delivery, and evidence:** [m3/README.md](m3/README.md), [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md), and [m3/G3-EVIDENCE.md](m3/G3-EVIDENCE.md)\n",
+              "- **M3 readiness, delivery, and evidence:** [m3/README.md](m3/README.md), [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md), and [m3/G3-EVIDENCE.md](m3/G3-EVIDENCE.md)\n- **M4 delivery and evidence:** [m4/README.md](m4/README.md), [m4/DELIVERY-PLAN.md](m4/DELIVERY-PLAN.md), and [m4/M4-EVIDENCE.md](m4/M4-EVIDENCE.md)\n",
+          )
+          replace(
+              "docs/IMPLEMENTATION-STATUS.md",
+              "## Later milestones\n\n- [ ] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules\n",
+              "## M4 — Engage\n\n**Status: complete.** The cumulative delivery/evidence index is [M4 Evidence Map](m4/M4-EVIDENCE.md).\n\n- [x] **M4-A-S0:** Search + Dashboard decisions frozen (#272 / #273).\n- [x] **M4-A-S1:** authorization-first PostgreSQL Search foundation delivered (#274 / #288), including the bounded FTS metadata correction #294.\n- [x] **M4-A-S2/S3:** shared-only Dashboard and integrated M4-A evidence delivered (#280 / #291 plus cumulative required checks).\n- [x] **M4-B-S0:** Activity/Notification/Push/Thinking contracts frozen (#276 / #278).\n- [x] **M4-B-S1:** minimized Activity + recipient Notification foundation delivered (#282 / #284).\n- [x] **M4-B-S2/S3:** content-free Thinking-of-you + provider-neutral PushDelivery and integrated evidence delivered (#289 / #305 plus cumulative required checks).\n- [x] **M4-C-S0:** Reminder/Rule contracts frozen (#277 / #279).\n- [x] **M4-C-S1:** shared Reminder domain, typed schedules, offsets and per-account mute preference delivered (#285 / #308).\n- [x] **M4-C-S2/S3:** controlled Rule catalog, generated Reminder reconciliation, durable occurrences, bounded Job Queue planning, deterministic time/DST behavior and minimized `REMINDER_DUE` handoff delivered (#292 / #309).\n\nThe final M4 migration order is `0028 -> 0029 -> 0030 -> 0031 -> 0032`. M4 remains Free/Core at the delivered baseline and reuses PostgreSQL FTS, the transactional Outbox and the existing PostgreSQL Job Queue rather than adding a parallel search, broker, scheduler, notification, or push stack.\n\n## Later milestones\n\n- [x] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules\n",
+          )
+          replace(
+              "docs/IMPLEMENTATION-STATUS.md",
+              "## Next milestone\n\n**M4 — Engage** is next. Its defined first delivery boundary is **M4-A Search + Dashboard Read Models**, followed by M4-B Activity + Notifications and M4-C Reminders + Rules.\n\nM3-S10 only closes the G3 gate and synchronizes status. It does **not** start or implement M4; any M4 work requires its own scoped issue, decisions, branch, pull request, Reuse review where relevant, and unchanged repository gates.",
+              "## Active milestone\n\n**M5 — Client Completion & Parity** is active. M4's backend/API contracts are now stable on `main`; M5 productizes them across Web and Android together with Export/Import, Read Cache, Deep Links, Accessibility, Performance, and systematic parity.\n\nM4 completion does **not** declare G4 passed. G4 requires the complete M5 client/parity/release evidence defined by the Roadmap and binding specifications.",
+          )
+
+          replace(
+              "docs/m4/README.md",
+              "**Status:** M4-A, M4-B and M4-C S0 decisions complete; runtime remains slice-owned  ",
+              "**Status:** complete — M4-A, M4-B and M4-C runtime plus integrated evidence delivered  ",
+          )
+          replace(
+              "docs/m4/README.md",
+              "All three M4 risk classes now have explicit S0 contracts. This does not mean all M4 runtime is implemented: each runtime slice still needs its own issue/branch/PR, concrete OpenAPI/client generation where applicable, negative evidence and green repository gates.",
+              "All three M4 risk classes have their frozen S0 contracts and delivered runtime. Search/Dashboard, Activity/Notifications/Thinking-of-you/PushDelivery, and Reminders/Rules/occurrence planning are complete for the M4 scope. Integrated runtime evidence and the final migration chain are indexed in [M4-EVIDENCE.md](./M4-EVIDENCE.md). Full client productization remains M5 and G4 is not implied by M4 completion.",
+          )
+
+          replace(
+              "docs/m4/DELIVERY-PLAN.md",
+              "**Status:** M4-A, M4-B and M4-C S0 decisions ready; runtime slices remain separate  ",
+              "**Status:** complete — all M4 runtime slices and cumulative S3 evidence delivered  ",
+          )
+          replace(
+              "docs/m4/DELIVERY-PLAN.md",
+              "**Status:** ready when the owning documentation PR merges",
+              "**Status:** delivered",
+          )
+          replace(
+              "docs/m4/DELIVERY-PLAN.md",
+              "## M4-A-S3 — integrated evidence and status sync\n\nGoal:",
+              "## M4-A-S3 — integrated evidence and status sync\n\n**Status:** delivered cumulatively; see [M4-EVIDENCE.md](./M4-EVIDENCE.md).\n\nGoal:",
+          )
+          replace(
+              "docs/m4/DELIVERY-PLAN.md",
+              "## M4-B-S3 — integrated evidence and status sync\n\nGoal:",
+              "## M4-B-S3 — integrated evidence and status sync\n\n**Status:** delivered cumulatively; see [M4-EVIDENCE.md](./M4-EVIDENCE.md).\n\nGoal:",
+          )
+          replace(
+              "docs/m4/DELIVERY-PLAN.md",
+              "## M4-C-S3 — integrated evidence and status sync\n\nGoal:",
+              "## M4-C-S3 — integrated evidence and status sync\n\n**Status:** delivered by the final M4-C-S2/S3 closeout; see [M4-EVIDENCE.md](./M4-EVIDENCE.md).\n\nGoal:",
+          )
+
+          Path("docs/m4/M4-EVIDENCE.md").write_text(
+              '''# M4 Completion Evidence\n\n**Status:** M4 complete on merge of the final M4-C-S2/S3 pull request  \n**As of:** August 30, 2026  \n**Scope:** M4 — Engage only\n\nThis document is the living evidence index for the completed M4 backend/API milestone. It maps the frozen M4 decisions to delivered runtime, migrations, executable evidence, generated contracts and the final repository gates. It does not declare G4 passed; M5 remains responsible for complete Web/Android productization and parity.\n\n## Delivery map\n\n| Risk class | Readiness | Runtime / closeout | Result |\n|---|---|---|---|\n| M4-A Search + Dashboard | #272 / PR #273 | Search #274 / PR #288; Dashboard #280 / PR #291; FTS metadata correction PR #294 | delivered |\n| M4-B Activity + Notifications | #276 / PR #278 | Activity/Notifications #282 / PR #284; Thinking-of-you/Push #289 / PR #305 | delivered |\n| M4-C Reminders + Rules | #277 / PR #279 | Reminder domain #285 / PR #308; Rules/Occurrences + integrated closeout #292 / PR #309 | delivered |\n\nHistorical replacement/draft PRs are not part of the final delivery identity. The merged PRs above are the authoritative runtime line.\n\n## Migration chain\n\nM4 preserves one linear Alembic head:\n\n```text\n0028  Search FTS\n  -> 0029  Activity + Notifications\n  -> 0030  Thinking-of-you + PushDelivery\n  -> 0031  Reminder domain + schedules/preferences\n  -> 0032  RulePreference + ReminderOccurrence + REMINDER_DUE notification kind\n```\n\nThe final M4-C validation exercises upgrade through `0032`; the final closeout additionally verifies `0032` downgrade/upgrade and Alembic drift before merge.\n\n## M4-A evidence\n\n- Search applies Tenant/authorization predicates before ranking or projection. Caller-owned private results are permitted only for the caller; partner-private rows cannot influence results, counts or cursors.\n- Search uses PostgreSQL Full Text Search with GIN expression indexes and an Account+Space+query/filter-bound signed keyset cursor; no external Search service or copied plaintext search table exists.\n- Dashboard is derived from authoritative rows and is deliberately shared-only. `OWNER_ONLY` data is excluded even for its owner and cannot influence shared counts/cards.\n- Search and Dashboard endpoints are covered by the cross-cutting Tenant matrix, PostgreSQL integration evidence, the authoritative OpenAPI contract and generated TypeScript/Kotlin clients.\n- PR #294 aligns compound SQLAlchemy FTS metadata with migration `0028` and protects `Base.metadata.create_all()` with PostgreSQL compilation regression coverage.\n\n## M4-B evidence\n\n- Activity and Notification are minimized durable projections from safe Outbox facts; ProtectedPayload prose is not copied into projection metadata.\n- Activity is shared-Space state; Notifications and unread/read state are Account+Space scoped. Current target authorization is re-evaluated before exposing projected state.\n- Projection uniqueness makes Outbox replay idempotent; mark-one-read is idempotent and mark-all-read uses a server cutoff.\n- Thinking-of-you is content-free, derives the other active partner server-side, uses sender+Space+`clientRequestId` idempotency and a rolling cooldown, and creates Notification but no Activity noise.\n- PushDelivery reuses the existing PostgreSQL Job Queue and receives only generic presentation keys plus technical Notification references. Self-Hosted without a provider remains nonfatal.\n\n## M4-C evidence\n\n- Manual Reminder definitions are shared Space content with optimistic concurrency, exactly one typed schedule and dedicated offset rows. `ReminderPreference.muted` is independent per Account.\n- The controlled Rule catalog contains exactly the four M4 keys and defaults: ImportantDate `[7,1]`, RelatedPerson birthday `[14,7,1]`, relationship anniversary `[30,7,1]`, and Plan start `[1,0]`.\n- `RulePreference` is Account+Space+ruleKey scoped, server-validates typed parameters, uses catalog defaults when absent and changes only that recipient's future eligibility.\n- Generated Reminders reconcile only from shared/eligible ImportantDate, RelatedPerson birthday, relationship start and PLANNED Plan start sources. Private/`OWNER_ONLY` sources cannot generate Reminder, occurrence or notification state.\n- Source mutations, relationship-start changes and Account timezone changes trigger reconciliation; periodic/startup reconciliation remains bounded and idempotent for restore/downtime recovery.\n- `ReminderOccurrence` persists technical metadata only and has logical uniqueness over Reminder+recipient+occurrenceKey+offset. Jobs carry occurrence ID + generation, so stale/superseded work no-ops after reloading current state.\n- Planning materializes only the next eligible recurrence set per recipient/offset rather than years of future jobs.\n- ONCE uses an absolute UTC instant and exact 24-hour offsets. ANNUAL and RELATIONSHIP_DAY_COUNT use recipient IANA timezone and calendar-day semantics. February 29 falls back to February 28 in non-leap years.\n- DST gaps shift forward by the gap and ambiguous times choose the earlier instant. Europe/Berlin and a second DST pattern are part of final closeout evidence.\n- Due handling rechecks Membership, source eligibility, Reminder mute, RulePreference and current occurrence generation/state. Catch-up is bounded to 24 hours; older work expires without a stale burst.\n- M4-C emits one minimized `REMINDER_DUE` Outbox fact and reuses the existing M4-B Notification/PushDelivery stack. Replay cannot create a duplicate logical Notification/PushDelivery.\n\n## Query/resource bounds\n\nM4 deliberately avoids a new infrastructure tier. Representative hot paths are bounded by database indexes and logical uniqueness:\n\n- Search uses the M4-A PostgreSQL GIN expression indexes and keyset pagination.\n- Activity reads use `(space_id, occurred_at, id)` ordering; Notification reads use recipient+Space+created ordering with a partial unread index.\n- RulePreference has unique Account+Space+ruleKey identity plus a Space+Account index.\n- ReminderOccurrence has logical uniqueness plus recipient/state/due and reminder/state/due indexes.\n- occurrence planning stores only the bounded next recurrence set; no unbounded future materialization is performed.\n\n## Contract and repository evidence\n\nThe final M4 tree must satisfy all of the following before its Merge Commit:\n\n- one Alembic head through `0032`, upgrade/downgrade/drift clean;\n- Endpoint/Tenant matrix includes Search, Dashboard, Activity, Notifications, Thinking-of-you, Reminders and Rules;\n- authoritative `backend/openapi.json` matches runtime routes/models;\n- repository-native generator produces matching TypeScript and Kotlin clients;\n- PostgreSQL integration evidence covers Privacy/Tenant isolation, replay/idempotency, Reminder time/DST/catch-up and M4-B handoff;\n- normal CI, Backend Integration, Supply Chain, Secret Scan, Provenance, CodeQL, Self-Hosted Deployment Guard, Reuse Review and client-regression checks are green on the final current head.\n\n## Business and reuse traceability\n\nThe delivered M4 baseline remains **Free/Core** for Self-Hosted and Cloud/Managed: basic Search, Dashboard, Activity, in-app Notifications, Thinking-of-you, basic push capability, manual shared Reminders, the four deterministic rules and per-account core preferences. M4 introduces no entitlement runtime.\n\nReuse decisions remain binding: PostgreSQL FTS instead of a second Search service; transactional Outbox and the existing PostgreSQL Job Queue instead of Redis/Celery/Kafka/RabbitMQ/Quartz; one M4-B Notification/PushDelivery path instead of a Reminder-specific duplicate stack.\n\n## Boundary after M4\n\nM4 completion freezes the backend/API contracts needed by M5. It does not complete M5 or G4. Complete Web/Android screens, parity, Deep Links, Read Cache, Export/Import, Accessibility and client performance remain M5/G4 scope.\n''',
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Verify closeout diff
+        run: |
+          git diff --check
+          test -s docs/m4/M4-EVIDENCE.md
+          grep -q "M4 complete" docs/IMPLEMENTATION-STATUS.md
+          grep -q "M5 — Client Completion & Parity" README.md
+
+      - name: Commit prepared closeout docs
+        run: |
+          rm .github/workflows/m4-closeout-docs.yml
+          git add -A
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs(m4): record completed M4 evidence and status"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
