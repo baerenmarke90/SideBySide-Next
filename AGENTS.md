@@ -11,8 +11,9 @@ Before relevant work, read at least these documents:
 3. `docs/REUSE-BEFORE-BUILD.md`
 4. `docs/CROSS-CUTTING-QUALITY.md`
 5. `docs/BUSINESS-MODEL.md`
-6. `docs/EXTERNAL-PROVIDER-CANDIDATES.md` when providers, infrastructure, or platform components are affected
-7. `docs/ROADMAP.md` and the relevant milestone/project-control documentation
+6. `docs/FREEMIUM-FEATURE-MATRIX.md`
+7. `docs/EXTERNAL-PROVIDER-CANDIDATES.md` when providers, infrastructure, or platform components are affected
+8. `docs/ROADMAP.md` and the relevant milestone/project-control documentation
 
 ## Engineering language
 
@@ -50,17 +51,17 @@ When the change is relevant, the issue or pull request must document:
 
 ## Business / freemium model consistency
 
-Consistency with `docs/BUSINESS-MODEL.md` is a mandatory development invariant, not a launch-only or monetization-only review.
+Consistency with `docs/BUSINESS-MODEL.md` and `docs/FREEMIUM-FEATURE-MATRIX.md` is a mandatory development invariant, not a launch-only or monetization-only review.
 
 Every development issue and pull request must explicitly assess whether the change is consistent with the current SideBySide Next business/freemium model. The review is mandatory even when the conclusion is that the change has no business-model impact.
 
-Until the detailed Free/Premium decisions from #262 are promoted into authoritative repository documentation, #262 is the current working source for those pending product-tier decisions. It must not become a permanent substitute for versioned repository documentation.
+For capabilities already classified in `docs/FREEMIUM-FEATURE-MATRIX.md`, that versioned matrix is the authoritative product-tier baseline. Until remaining future/unimplemented Free/Premium decisions from #262 are promoted into authoritative repository documentation, #262 remains the working source for those pending decisions. It must not become a permanent substitute for versioned repository documentation.
 
 ### Required before implementation starts
 
 Assess at least the following when relevant:
 
-- Free, Premium, Mixed, or explicitly non-paywallable capability classification;
+- Free, Premium, Mixed, or explicitly non-paywallable capability classification, including the current matrix row or the need to add/update one;
 - entitlement/capability boundaries and relationship/couple ownership semantics;
 - Self-Hosted versus SideBySide Cloud/Managed behavior;
 - managed infrastructure, storage, compute, rendering, provider/API, inference, email/push, or support cost;
@@ -71,7 +72,7 @@ Assess at least the following when relevant:
 
 The issue or pull request must record one of:
 
-- **Business/freemium impact reviewed** — with the relevant decision or link to the owning product decision; or
+- **Business/freemium impact reviewed** — with the relevant matrix classification/decision or link to the owning product decision; or
 - **No business/freemium impact** — with a short rationale.
 
 A generic unchecked statement such as `not relevant` without rationale is insufficient.
@@ -81,6 +82,8 @@ A generic unchecked statement such as `not relevant` without rationale is insuff
 Re-evaluate the business/freemium result when implementation decisions changed the product surface, entitlement model, Self-Hosted/Cloud behavior, managed-resource usage, storage/quota behavior, operating cost, or downgrade/data semantics.
 
 A pull request is not merge-ready when it introduces or changes a recognizable monetization, entitlement, Premium, Cloud/Self-Hosted, managed-resource, storage/quota, or downgrade behavior that conflicts with the current model or lacks an explicit owning decision.
+
+If the product-tier contract changes, update `docs/FREEMIUM-FEATURE-MATRIX.md` before or with the implementation. Do not silently reinterpret an existing row from Free to Premium, Premium to Free, or change a Mixed boundary without versioned rationale and migration semantics where existing data/users are affected.
 
 Business-model consistency does not replace security, privacy, architecture, accessibility, reuse, or cross-cutting-quality review. All applicable gates remain cumulative.
 
@@ -147,7 +150,7 @@ Reuse, business-model, or cross-cutting decisions must never weaken Clean-Room, 
 
 A relevant pull request without a traceable reuse review is not merge-ready. Pure domain changes may mark the review as `not relevant` with a short rationale.
 
-Every development pull request must contain a traceable Business/Freemium Model Consistency result. `No business/freemium impact` is acceptable only with a short rationale. A recognizable conflict with `docs/BUSINESS-MODEL.md` or the current authoritative/working feature-tier decisions must be resolved before merge or routed through an explicit owning product decision.
+Every development pull request must contain a traceable Business/Freemium Model Consistency result. `No business/freemium impact` is acceptable only with a short rationale. A recognizable conflict with `docs/BUSINESS-MODEL.md`, `docs/FREEMIUM-FEATURE-MATRIX.md`, or the current working decisions for unclassified future features must be resolved before merge or routed through an explicit owning product decision.
 
 Larger runtime slices, client features, and production user flows must document their relevant cross-cutting consequences in the pull request. The pull-request template is the minimum review surface; deeper decisions belong in the owning issue, decision document, or ADR.
 
