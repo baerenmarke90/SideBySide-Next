@@ -317,7 +317,11 @@ def _upcoming_sort_key(item: DashboardItem) -> tuple[datetime, str, str]:
     if item.scheduled_at is not None:
         moment = clock.ensure_utc(item.scheduled_at)
     elif item.occurred_on is not None:
-        moment = datetime.combine(item.occurred_on, datetime.min.time(), tzinfo=clock.resolve_zone("UTC"))
+        moment = datetime.combine(
+            item.occurred_on,
+            datetime.min.time(),
+            tzinfo=clock.resolve_zone("UTC"),
+        )
     else:
         raise RuntimeError("Upcoming Dashboard item has no occurrence.")
     return moment, item.type.value, str(item.id)
@@ -330,7 +334,9 @@ def _recent_shared(
     candidates: list[DashboardItem] = []
 
     for memory in session.execute(
-        readable(Memory, authorization).order_by(Memory.created_at.desc(), Memory.id).limit(SECTION_LIMIT)
+        readable(Memory, authorization)
+        .order_by(Memory.created_at.desc(), Memory.id)
+        .limit(SECTION_LIMIT)
     ).scalars():
         candidates.append(
             DashboardItem(
@@ -398,7 +404,9 @@ def _recent_shared(
         )
 
     for place in session.execute(
-        readable(Place, authorization).order_by(Place.created_at.desc(), Place.id).limit(SECTION_LIMIT)
+        readable(Place, authorization)
+        .order_by(Place.created_at.desc(), Place.id)
+        .limit(SECTION_LIMIT)
     ).scalars():
         candidates.append(
             DashboardItem(
