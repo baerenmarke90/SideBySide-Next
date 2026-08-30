@@ -18,7 +18,9 @@ export function PageHeader({
   return (
     <>
       {before}
-      <header className={`page-heading shared-page-heading ${className}`.trim()}>
+      <header
+        className={`page-heading shared-page-heading ${className}`.trim()}
+      >
         <div>
           {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
           <h1>{title}</h1>
