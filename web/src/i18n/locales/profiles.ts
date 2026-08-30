@@ -54,9 +54,11 @@ const profiles = {
   loading: 'Profil wird geladen …',
   preferencesLoading: 'Vorlieben werden geladen …',
   emptySelfTitle: 'Noch keine eigene Vorliebe gespeichert',
-  emptySelfBody: 'Ergänze Dinge, die dich ausmachen oder die dein Partner wissen darf.',
+  emptySelfBody:
+    'Ergänze Dinge, die dich ausmachen oder die dein Partner wissen darf.',
   emptyPrivateTitle: 'Noch keine private Notiz gespeichert',
-  emptyPrivateBody: 'Private Notizen helfen dir, persönliche Details nur für dich festzuhalten.',
+  emptyPrivateBody:
+    'Private Notizen helfen dir, persönliche Details nur für dich festzuhalten.',
   edit: 'Bearbeiten',
   delete: 'Löschen',
   deleteQuestion: 'Diesen Eintrag wirklich löschen?',
