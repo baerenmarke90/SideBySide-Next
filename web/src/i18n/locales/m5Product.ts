@@ -24,7 +24,7 @@ const m5Product = {
     invalidYear: 'Bitte ein gültiges Jahr zwischen 1 und 9999 eingeben.',
     loadMore: 'Ältere Story-Einträge laden',
     loadingMore: 'Weitere Story-Einträge werden geladen …',
-    openItem: 'Öffnen',
+    openItem: '{{kind}} öffnen',
   },
   upload: {
     select: 'Foto auswählen',

@@ -107,7 +107,9 @@ export function StoryList({
                           className="story-memory-link"
                           to={storyDetailPath(item)}
                         >
-                          {t('m5Product.story.openItem')}
+                          {t('m5Product.story.openItem', {
+                            kind: presentation.kindLabel,
+                          })}
                         </Link>
                       </div>
                     </div>
