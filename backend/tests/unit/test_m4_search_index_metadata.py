@@ -31,7 +31,8 @@ def test_compound_search_index_metadata_uses_postgresql_expression_parentheses(
     model: type[object],
     index_name: str,
 ) -> None:
-    index = next(index for index in model.__table__.indexes if index.name == index_name)  # type: ignore[attr-defined]
+    table = getattr(model, "__table__")
+    index = next(index for index in table.indexes if index.name == index_name)
 
     ddl = str(CreateIndex(index).compile(dialect=postgresql.dialect()))
 
