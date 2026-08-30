@@ -164,9 +164,7 @@ export function StoryProductPage({
           </fieldset>
 
           <div className="field-group compact-field">
-            <label htmlFor="story-year">
-              {t('m5Product.story.yearLabel')}
-            </label>
+            <label htmlFor="story-year">{t('m5Product.story.yearLabel')}</label>
             <input
               id="story-year"
               inputMode="numeric"

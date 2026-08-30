@@ -97,8 +97,7 @@ const m5Product = {
     createIntro:
       'Halte einen Gedanken, ein Gefühl oder einen besonderen Augenblick fest.',
     textLabel: 'Was möchtest du festhalten?',
-    textPlaceholder:
-      'Ein Gedanke, ein Gefühl oder eine kleine Nachricht …',
+    textPlaceholder: 'Ein Gedanke, ein Gefühl oder eine kleine Nachricht …',
     emotionLabel: 'Gefühl',
     dateLabel: 'Datum',
     visibilityLabel: 'Sichtbarkeit',
@@ -168,8 +167,7 @@ const m5Product = {
     editDeniedTitle: 'Dieser Meilenstein kann nicht bearbeitet werden.',
     editDeniedBody: 'Dein aktueller Zugriff erlaubt hier keine Änderungen.',
     delete: 'Meilenstein löschen',
-    deleteWarning:
-      'Der Meilenstein wird dauerhaft aus eurer Story entfernt.',
+    deleteWarning: 'Der Meilenstein wird dauerhaft aus eurer Story entfernt.',
     confirmDelete: 'Endgültig löschen',
     backToStory: '← Zurück zur Story',
     backToDetail: '← Zurück zum Meilenstein',
