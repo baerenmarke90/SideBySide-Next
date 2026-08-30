@@ -1,0 +1,52 @@
+name: M4-B Contract Sync
+
+on:
+  push:
+    branches:
+      - ops/m4b-contract-sync
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out M4-B S1 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/282-m4b-activity-notifications
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: 3.13.7
+
+      - name: Install uv and backend dependencies
+        run: |
+          python -m pip install "uv==0.12.5"
+          cd backend
+          uv sync --frozen
+
+      - name: Regenerate authoritative OpenAPI contract
+        env:
+          SBS_ENVIRONMENT: test
+        run: |
+          cd backend
+          uv run --frozen python scripts/openapi_contract.py write
+
+      - name: Regenerate TypeScript and Kotlin API clients
+        run: tools/openapi/generate.sh
+
+      - name: Commit synchronized contract outputs
+        run: |
+          git add backend/openapi.json web/src/api/generated android/api/generated
+          if git diff --cached --quiet; then
+            echo "Contract outputs already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(api): synchronize M4-B S1 contract"
+          git push origin HEAD:feat/282-m4b-activity-notifications
