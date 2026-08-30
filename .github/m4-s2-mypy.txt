@@ -1,0 +1,10 @@
+src/sidebyside/reminders/runtime.py:203: error: Incompatible types in assignment (expression has type "RelatedPerson", variable has type "ImportantDate")  [assignment]
+src/sidebyside/reminders/runtime.py:204: error: "ImportantDate" has no attribute "birthday"  [attr-defined]
+src/sidebyside/reminders/runtime.py:209: error: "ImportantDate" has no attribute "birthday"  [attr-defined]
+src/sidebyside/reminders/runtime.py:210: error: "ImportantDate" has no attribute "birthday"  [attr-defined]
+src/sidebyside/reminders/runtime.py:237: error: Incompatible types in assignment (expression has type "Plan", variable has type "ImportantDate")  [assignment]
+src/sidebyside/reminders/runtime.py:238: error: "ImportantDate" has no attribute "planned_start"  [attr-defined]
+src/sidebyside/reminders/runtime.py:243: error: "ImportantDate" has no attribute "planned_start"  [attr-defined]
+Found 7 errors in 1 file (checked 172 source files)
+
+exit=1
