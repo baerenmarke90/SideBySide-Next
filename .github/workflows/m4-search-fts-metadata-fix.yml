@@ -47,50 +47,85 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
+          import ast
+          import json
           from pathlib import Path
-          import re
 
-          pattern = re.compile(
-              r'(?P<prefix>\s+text\(\n)(?P<body>(?:\s+"[^"\n]*"\n?)+)(?P<suffix>\s+\),\n\s+postgresql_using="gin",)'
-          )
-          literal_pattern = re.compile(r'"([^"\n]*)"')
-          changed = []
-          indexes = 0
+          migration_path = Path("backend/alembic/versions/0028_m4_search_indexes.py")
+          migration_tree = ast.parse(migration_path.read_text(encoding="utf-8"))
+          index_rows = None
+          for node in migration_tree.body:
+              if (
+                  isinstance(node, ast.AnnAssign)
+                  and isinstance(node.target, ast.Name)
+                  and node.target.id == "_INDEXES"
+              ):
+                  index_rows = ast.literal_eval(node.value)
+                  break
+          if index_rows is None:
+              raise SystemExit("Could not read canonical M4 Search index expressions from 0028")
+
+          expressions = {name: expression for name, _table, expression in index_rows}
+          if len(expressions) != 13:
+              raise SystemExit(f"Expected 13 canonical M4 Search indexes, found {len(expressions)}")
+
+          changed_files = []
+          changed_indexes = 0
 
           for path in sorted(Path("backend/src/sidebyside").glob("*/models.py")):
-              original = path.read_text(encoding="utf-8")
-              if "_search_fts" not in original:
+              source = path.read_text(encoding="utf-8")
+              if "_search_fts" not in source:
                   continue
+              tree = ast.parse(source)
+              lines = source.splitlines(keepends=True)
+              line_offsets = [0]
+              for line in lines:
+                  line_offsets.append(line_offsets[-1] + len(line))
 
-              def wrap(match: re.Match[str]) -> str:
-                  nonlocal_indexes[0] += 1
-                  body = match.group("body")
-                  literals = list(literal_pattern.finditer(body))
-                  if not literals:
-                      raise SystemExit(f"No SQL literal found in FTS index block: {path}")
-                  first = literals[0]
-                  last = literals[-1]
-                  if first.group(1).startswith("("):
-                      return match.group(0)
-                  body = body[: first.start(1)] + "(" + body[first.start(1):]
-                  last_end = last.end(1) + 1
-                  body = body[:last_end] + ")" + body[last_end:]
-                  return match.group("prefix") + body + match.group("suffix")
+              replacements: list[tuple[int, int, str]] = []
+              for node in ast.walk(tree):
+                  if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+                      continue
+                  if node.func.id != "Index" or len(node.args) < 2:
+                      continue
+                  if not isinstance(node.args[0], ast.Constant) or not isinstance(node.args[0].value, str):
+                      continue
+                  index_name = node.args[0].value
+                  if index_name not in expressions:
+                      continue
+                  if not any(
+                      keyword.arg == "postgresql_using"
+                      and isinstance(keyword.value, ast.Constant)
+                      and keyword.value.value == "gin"
+                      for keyword in node.keywords
+                  ):
+                      raise SystemExit(f"M4 Search index is not PostgreSQL GIN: {index_name}")
+                  text_call = node.args[1]
+                  if (
+                      not isinstance(text_call, ast.Call)
+                      or not isinstance(text_call.func, ast.Name)
+                      or text_call.func.id != "text"
+                  ):
+                      raise SystemExit(f"M4 Search index has unexpected ORM expression: {index_name}")
+                  if text_call.end_lineno is None or text_call.end_col_offset is None:
+                      raise SystemExit(f"Missing AST source span for {index_name}")
+                  start = line_offsets[text_call.lineno - 1] + text_call.col_offset
+                  end = line_offsets[text_call.end_lineno - 1] + text_call.end_col_offset
+                  wrapped = f"({expressions[index_name]})"
+                  replacements.append((start, end, f"text({json.dumps(wrapped)})"))
 
-              nonlocal_indexes = [0]
-              updated = pattern.sub(wrap, original)
-              if nonlocal_indexes[0] == 0:
-                  raise SystemExit(f"Search model contains no PostgreSQL GIN text index: {path}")
-              indexes += nonlocal_indexes[0]
-              if updated != original:
-                  path.write_text(updated, encoding="utf-8")
-                  changed.append(str(path))
+              if replacements:
+                  updated = source
+                  for start, end, replacement in sorted(replacements, reverse=True):
+                      updated = updated[:start] + replacement + updated[end:]
+                  if updated != source:
+                      path.write_text(updated, encoding="utf-8")
+                      changed_files.append(str(path))
+                      changed_indexes += len(replacements)
 
-          if indexes != 13:
-              raise SystemExit(f"Expected 13 M4 Search FTS indexes, found {indexes}")
-          if not changed:
-              raise SystemExit("No M4 Search ORM FTS metadata required correction")
-          print(f"Corrected {indexes} FTS indexes across {len(changed)} model files")
+          if changed_indexes != 13:
+              raise SystemExit(f"Expected to correct 13 M4 Search ORM indexes, corrected {changed_indexes}")
+          print(f"Corrected {changed_indexes} FTS indexes across {len(changed_files)} model files")
           PY
       - name: Validate Search metadata and integration coverage
         shell: bash
