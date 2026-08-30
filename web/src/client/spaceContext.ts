@@ -16,6 +16,7 @@ export async function loadAuthorizedMemberships(
   }
 }
 
+/** Resolve an active Space exclusively from the server-authorized Membership set. */
 export function resolveActiveSpaceId(
   memberships: AccountMembershipView[],
   currentSpaceId: string | null,
