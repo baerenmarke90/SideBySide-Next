@@ -16,6 +16,11 @@ import { RelatedPersonDeletePolicy } from '../api/generated/models/RelatedPerson
 import type { RelatedPersonFields } from '../api/generated/models/RelatedPersonFields';
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
 import {
+  birthdayFromInput,
+  birthdayInputParts,
+  daysInMonth,
+} from '../client/relatedPersonBirthday';
+import {
   canConfirmRelatedPersonDelete,
   INITIAL_RELATED_PERSON_DELETE_CHOICE,
   type RelatedPersonDeleteChoice,
@@ -37,7 +42,13 @@ function dateInputValue(value: Date | null): string {
 }
 
 function personFields(form: FormData): RelatedPersonFields {
-  const birthdayValue = String(form.get('birthday') || '');
+  const birthdayYearKnown = form.get('birthdayYearKnown') === 'on';
+  const birthday = birthdayFromInput({
+    yearKnown: birthdayYearKnown,
+    dateValue: String(form.get('birthday') || ''),
+    monthValue: String(form.get('birthdayMonth') || ''),
+    dayValue: String(form.get('birthdayDay') || ''),
+  });
   return {
     displayName: String(form.get('displayName') || '').trim(),
     relationship: String(
@@ -46,10 +57,8 @@ function personFields(form: FormData): RelatedPersonFields {
     visibility: String(
       form.get('visibility'),
     ) as RelatedPersonFields['visibility'],
-    birthday: birthdayValue ? new Date(`${birthdayValue}T00:00:00.000Z`) : null,
-    birthdayYearKnown: birthdayValue
-      ? form.get('birthdayYearKnown') === 'on'
-      : false,
+    birthday,
+    birthdayYearKnown: Boolean(birthday && birthdayYearKnown),
   };
 }
 
@@ -64,7 +73,34 @@ function RelatedPersonForm({
   onCancel: () => void;
   onSubmit: (fields: RelatedPersonFields) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const initialBirthdayParts = birthdayInputParts(person?.birthday ?? null);
+  const [birthdayYearKnown, setBirthdayYearKnown] = useState(
+    person?.birthday ? person.birthdayYearKnown : true,
+  );
+  const [knownBirthday, setKnownBirthday] = useState(
+    person?.birthday && person.birthdayYearKnown
+      ? dateInputValue(person.birthday)
+      : '',
+  );
+  const [birthdayMonth, setBirthdayMonth] = useState(
+    initialBirthdayParts.monthValue,
+  );
+  const [birthdayDay, setBirthdayDay] = useState(
+    initialBirthdayParts.dayValue,
+  );
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, index) => ({
+        value: String(index + 1),
+        label: new Intl.DateTimeFormat(i18n.language, {
+          month: 'long',
+          timeZone: 'UTC',
+        }).format(new Date(Date.UTC(2000, index, 1))),
+      })),
+    [i18n.language],
+  );
+  const birthdayPartRequired = Boolean(birthdayMonth || birthdayDay);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -107,15 +143,7 @@ function RelatedPersonForm({
         </div>
 
         <div className="field-group">
-          <label htmlFor="related-person-birthday">
-            {t('people.birthdayLabel')}
-          </label>
-          <input
-            id="related-person-birthday"
-            name="birthday"
-            type="date"
-            defaultValue={dateInputValue(person?.birthday ?? null)}
-          />
+          <span>{t('people.birthdayLabel')}</span>
           <label
             className="choice-row"
             htmlFor="related-person-birthday-year-known"
@@ -124,10 +152,78 @@ function RelatedPersonForm({
               id="related-person-birthday-year-known"
               name="birthdayYearKnown"
               type="checkbox"
-              defaultChecked={person?.birthdayYearKnown ?? true}
+              checked={birthdayYearKnown}
+              onChange={(event) => {
+                const nextYearKnown = event.currentTarget.checked;
+                if (!nextYearKnown && knownBirthday) {
+                  const knownDate = new Date(`${knownBirthday}T00:00:00.000Z`);
+                  setBirthdayMonth(String(knownDate.getUTCMonth() + 1));
+                  setBirthdayDay(String(knownDate.getUTCDate()));
+                }
+                setBirthdayYearKnown(nextYearKnown);
+              }}
             />
             <span>{t('people.birthdayYearKnown')}</span>
           </label>
+
+          {birthdayYearKnown ? (
+            <input
+              id="related-person-birthday"
+              name="birthday"
+              type="date"
+              value={knownBirthday}
+              onChange={(event) => setKnownBirthday(event.currentTarget.value)}
+            />
+          ) : (
+            <>
+              <div className="form-actions">
+                <div className="field-group">
+                  <label htmlFor="related-person-birthday-day">
+                    {t('people.birthdayDayLabel')}
+                  </label>
+                  <input
+                    id="related-person-birthday-day"
+                    name="birthdayDay"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={daysInMonth(Number(birthdayMonth))}
+                    required={birthdayPartRequired}
+                    value={birthdayDay}
+                    onChange={(event) =>
+                      setBirthdayDay(event.currentTarget.value)
+                    }
+                  />
+                </div>
+                <div className="field-group">
+                  <label htmlFor="related-person-birthday-month">
+                    {t('people.birthdayMonthLabel')}
+                  </label>
+                  <select
+                    id="related-person-birthday-month"
+                    name="birthdayMonth"
+                    required={birthdayPartRequired}
+                    value={birthdayMonth}
+                    onChange={(event) =>
+                      setBirthdayMonth(event.currentTarget.value)
+                    }
+                  >
+                    <option value="">
+                      {t('people.birthdayMonthPlaceholder')}
+                    </option>
+                    {monthOptions.map((month) => (
+                      <option key={month.value} value={month.value}>
+                        {month.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="field-help">
+                {t('people.birthdayUnknownYearHelp')}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="field-group">
@@ -486,6 +582,7 @@ export function RelatedPeoplePage({
       ) : null}
 
       <RelatedPersonForm
+        key={editing?.id ?? 'new'}
         person={editing}
         pending={saveMutation.isPending}
         onCancel={() => {
