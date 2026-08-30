@@ -34,6 +34,46 @@ import {
     GiftIdeaUpdateToJSON,
 } from '../models/GiftIdeaUpdate';
 import {
+    type PrivateCollectionCreate,
+    PrivateCollectionCreateFromJSON,
+    PrivateCollectionCreateToJSON,
+} from '../models/PrivateCollectionCreate';
+import {
+    type PrivateCollectionDetail,
+    PrivateCollectionDetailFromJSON,
+    PrivateCollectionDetailToJSON,
+} from '../models/PrivateCollectionDetail';
+import {
+    type PrivateCollectionItemCreate,
+    PrivateCollectionItemCreateFromJSON,
+    PrivateCollectionItemCreateToJSON,
+} from '../models/PrivateCollectionItemCreate';
+import {
+    type PrivateCollectionItemDetail,
+    PrivateCollectionItemDetailFromJSON,
+    PrivateCollectionItemDetailToJSON,
+} from '../models/PrivateCollectionItemDetail';
+import {
+    type PrivateCollectionItemUpdate,
+    PrivateCollectionItemUpdateFromJSON,
+    PrivateCollectionItemUpdateToJSON,
+} from '../models/PrivateCollectionItemUpdate';
+import {
+    type PrivateCollectionOrder,
+    PrivateCollectionOrderFromJSON,
+    PrivateCollectionOrderToJSON,
+} from '../models/PrivateCollectionOrder';
+import {
+    type PrivateCollectionPage,
+    PrivateCollectionPageFromJSON,
+    PrivateCollectionPageToJSON,
+} from '../models/PrivateCollectionPage';
+import {
+    type PrivateCollectionUpdate,
+    PrivateCollectionUpdateFromJSON,
+    PrivateCollectionUpdateToJSON,
+} from '../models/PrivateCollectionUpdate';
+import {
     type PrivateNoteCreate,
     PrivateNoteCreateFromJSON,
     PrivateNoteCreateToJSON,
@@ -64,6 +104,17 @@ export interface CreateGiftIdeaRequest {
     giftIdeaCreate: GiftIdeaCreate;
 }
 
+export interface CreatePrivateCollectionRequest {
+    spaceId: string;
+    privateCollectionCreate: PrivateCollectionCreate;
+}
+
+export interface CreatePrivateCollectionItemRequest {
+    collectionId: string;
+    spaceId: string;
+    privateCollectionItemCreate: PrivateCollectionItemCreate;
+}
+
 export interface CreatePrivateNoteRequest {
     spaceId: string;
     privateNoteCreate: PrivateNoteCreate;
@@ -71,6 +122,19 @@ export interface CreatePrivateNoteRequest {
 
 export interface DeleteGiftIdeaRequest {
     giftIdeaId: string;
+    spaceId: string;
+    ifMatch: string;
+}
+
+export interface DeletePrivateCollectionRequest {
+    collectionId: string;
+    spaceId: string;
+    ifMatch: string;
+}
+
+export interface DeletePrivateCollectionItemRequest {
+    collectionId: string;
+    itemId: string;
     spaceId: string;
     ifMatch: string;
 }
@@ -86,6 +150,17 @@ export interface GetGiftIdeaRequest {
     spaceId: string;
 }
 
+export interface GetPrivateCollectionRequest {
+    collectionId: string;
+    spaceId: string;
+}
+
+export interface GetPrivateCollectionItemRequest {
+    collectionId: string;
+    itemId: string;
+    spaceId: string;
+}
+
 export interface GetPrivateNoteRequest {
     noteId: string;
     spaceId: string;
@@ -97,10 +172,23 @@ export interface ListGiftIdeasRequest {
     limit?: number;
 }
 
+export interface ListPrivateCollectionsRequest {
+    spaceId: string;
+    cursor?: string | null;
+    limit?: number;
+}
+
 export interface ListPrivateNotesRequest {
     spaceId: string;
     cursor?: string | null;
     limit?: number;
+}
+
+export interface ReorderPrivateCollectionItemsRequest {
+    collectionId: string;
+    spaceId: string;
+    ifMatch: string;
+    privateCollectionOrder: PrivateCollectionOrder;
 }
 
 export interface UpdateGiftIdeaRequest {
@@ -108,6 +196,21 @@ export interface UpdateGiftIdeaRequest {
     spaceId: string;
     ifMatch: string;
     giftIdeaUpdate: GiftIdeaUpdate;
+}
+
+export interface UpdatePrivateCollectionRequest {
+    collectionId: string;
+    spaceId: string;
+    ifMatch: string;
+    privateCollectionUpdate: PrivateCollectionUpdate;
+}
+
+export interface UpdatePrivateCollectionItemRequest {
+    collectionId: string;
+    itemId: string;
+    spaceId: string;
+    ifMatch: string;
+    privateCollectionItemUpdate: PrivateCollectionItemUpdate;
 }
 
 export interface UpdatePrivateNoteRequest {
@@ -174,6 +277,124 @@ export class PrivateAreaApi extends runtime.BaseAPI {
      */
     async createGiftIdea(requestParameters: CreateGiftIdeaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GiftIdeaDetail> {
         const response = await this.createGiftIdeaRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for createPrivateCollection without sending the request
+     */
+    async createPrivateCollectionRequestOpts(requestParameters: CreatePrivateCollectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling createPrivateCollection().'
+            );
+        }
+
+        if (requestParameters['privateCollectionCreate'] == null) {
+            throw new runtime.RequiredError(
+                'privateCollectionCreate',
+                'Required parameter "privateCollectionCreate" was null or undefined when calling createPrivateCollection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections`;
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PrivateCollectionCreateToJSON(requestParameters['privateCollectionCreate']),
+        };
+    }
+
+    /**
+     * Create Private Collection
+     */
+    async createPrivateCollectionRaw(requestParameters: CreatePrivateCollectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PrivateCollectionDetail>> {
+        const requestOptions = await this.createPrivateCollectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PrivateCollectionDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Create Private Collection
+     */
+    async createPrivateCollection(requestParameters: CreatePrivateCollectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateCollectionDetail> {
+        const response = await this.createPrivateCollectionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for createPrivateCollectionItem without sending the request
+     */
+    async createPrivateCollectionItemRequestOpts(requestParameters: CreatePrivateCollectionItemRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['collectionId'] == null) {
+            throw new runtime.RequiredError(
+                'collectionId',
+                'Required parameter "collectionId" was null or undefined when calling createPrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling createPrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['privateCollectionItemCreate'] == null) {
+            throw new runtime.RequiredError(
+                'privateCollectionItemCreate',
+                'Required parameter "privateCollectionItemCreate" was null or undefined when calling createPrivateCollectionItem().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections/{collectionId}/items`;
+        urlPath = urlPath.replace('{collectionId}', encodeURIComponent(String(requestParameters['collectionId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PrivateCollectionItemCreateToJSON(requestParameters['privateCollectionItemCreate']),
+        };
+    }
+
+    /**
+     * Create Private Collection Item
+     */
+    async createPrivateCollectionItemRaw(requestParameters: CreatePrivateCollectionItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PrivateCollectionItemDetail>> {
+        const requestOptions = await this.createPrivateCollectionItemRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PrivateCollectionItemDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Create Private Collection Item
+     */
+    async createPrivateCollectionItem(requestParameters: CreatePrivateCollectionItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateCollectionItemDetail> {
+        const response = await this.createPrivateCollectionItemRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -296,6 +517,140 @@ export class PrivateAreaApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for deletePrivateCollection without sending the request
+     */
+    async deletePrivateCollectionRequestOpts(requestParameters: DeletePrivateCollectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['collectionId'] == null) {
+            throw new runtime.RequiredError(
+                'collectionId',
+                'Required parameter "collectionId" was null or undefined when calling deletePrivateCollection().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling deletePrivateCollection().'
+            );
+        }
+
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling deletePrivateCollection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections/{collectionId}`;
+        urlPath = urlPath.replace('{collectionId}', encodeURIComponent(String(requestParameters['collectionId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Delete Private Collection
+     */
+    async deletePrivateCollectionRaw(requestParameters: DeletePrivateCollectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deletePrivateCollectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Delete Private Collection
+     */
+    async deletePrivateCollection(requestParameters: DeletePrivateCollectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deletePrivateCollectionRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for deletePrivateCollectionItem without sending the request
+     */
+    async deletePrivateCollectionItemRequestOpts(requestParameters: DeletePrivateCollectionItemRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['collectionId'] == null) {
+            throw new runtime.RequiredError(
+                'collectionId',
+                'Required parameter "collectionId" was null or undefined when calling deletePrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling deletePrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling deletePrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling deletePrivateCollectionItem().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections/{collectionId}/items/{itemId}`;
+        urlPath = urlPath.replace('{collectionId}', encodeURIComponent(String(requestParameters['collectionId'])));
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Delete Private Collection Item
+     */
+    async deletePrivateCollectionItemRaw(requestParameters: DeletePrivateCollectionItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deletePrivateCollectionItemRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Delete Private Collection Item
+     */
+    async deletePrivateCollectionItem(requestParameters: DeletePrivateCollectionItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deletePrivateCollectionItemRaw(requestParameters, initOverrides);
+    }
+
+    /**
      * Creates request options for deletePrivateNote without sending the request
      */
     async deletePrivateNoteRequestOpts(requestParameters: DeletePrivateNoteRequest): Promise<runtime.RequestOpts> {
@@ -412,6 +767,120 @@ export class PrivateAreaApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getPrivateCollection without sending the request
+     */
+    async getPrivateCollectionRequestOpts(requestParameters: GetPrivateCollectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['collectionId'] == null) {
+            throw new runtime.RequiredError(
+                'collectionId',
+                'Required parameter "collectionId" was null or undefined when calling getPrivateCollection().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling getPrivateCollection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections/{collectionId}`;
+        urlPath = urlPath.replace('{collectionId}', encodeURIComponent(String(requestParameters['collectionId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get Private Collection
+     */
+    async getPrivateCollectionRaw(requestParameters: GetPrivateCollectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PrivateCollectionDetail>> {
+        const requestOptions = await this.getPrivateCollectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PrivateCollectionDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Get Private Collection
+     */
+    async getPrivateCollection(requestParameters: GetPrivateCollectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateCollectionDetail> {
+        const response = await this.getPrivateCollectionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getPrivateCollectionItem without sending the request
+     */
+    async getPrivateCollectionItemRequestOpts(requestParameters: GetPrivateCollectionItemRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['collectionId'] == null) {
+            throw new runtime.RequiredError(
+                'collectionId',
+                'Required parameter "collectionId" was null or undefined when calling getPrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling getPrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling getPrivateCollectionItem().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections/{collectionId}/items/{itemId}`;
+        urlPath = urlPath.replace('{collectionId}', encodeURIComponent(String(requestParameters['collectionId'])));
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get Private Collection Item
+     */
+    async getPrivateCollectionItemRaw(requestParameters: GetPrivateCollectionItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PrivateCollectionItemDetail>> {
+        const requestOptions = await this.getPrivateCollectionItemRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PrivateCollectionItemDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Get Private Collection Item
+     */
+    async getPrivateCollectionItem(requestParameters: GetPrivateCollectionItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateCollectionItemDetail> {
+        const response = await this.getPrivateCollectionItemRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getPrivateNote without sending the request
      */
     async getPrivateNoteRequestOpts(requestParameters: GetPrivateNoteRequest): Promise<runtime.RequestOpts> {
@@ -518,6 +987,59 @@ export class PrivateAreaApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listPrivateCollections without sending the request
+     */
+    async listPrivateCollectionsRequestOpts(requestParameters: ListPrivateCollectionsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling listPrivateCollections().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections`;
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List Private Collections
+     */
+    async listPrivateCollectionsRaw(requestParameters: ListPrivateCollectionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PrivateCollectionPage>> {
+        const requestOptions = await this.listPrivateCollectionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PrivateCollectionPageFromJSON(jsonValue));
+    }
+
+    /**
+     * List Private Collections
+     */
+    async listPrivateCollections(requestParameters: ListPrivateCollectionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateCollectionPage> {
+        const response = await this.listPrivateCollectionsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listPrivateNotes without sending the request
      */
     async listPrivateNotesRequestOpts(requestParameters: ListPrivateNotesRequest): Promise<runtime.RequestOpts> {
@@ -567,6 +1089,80 @@ export class PrivateAreaApi extends runtime.BaseAPI {
      */
     async listPrivateNotes(requestParameters: ListPrivateNotesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateNotePage> {
         const response = await this.listPrivateNotesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for reorderPrivateCollectionItems without sending the request
+     */
+    async reorderPrivateCollectionItemsRequestOpts(requestParameters: ReorderPrivateCollectionItemsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['collectionId'] == null) {
+            throw new runtime.RequiredError(
+                'collectionId',
+                'Required parameter "collectionId" was null or undefined when calling reorderPrivateCollectionItems().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling reorderPrivateCollectionItems().'
+            );
+        }
+
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling reorderPrivateCollectionItems().'
+            );
+        }
+
+        if (requestParameters['privateCollectionOrder'] == null) {
+            throw new runtime.RequiredError(
+                'privateCollectionOrder',
+                'Required parameter "privateCollectionOrder" was null or undefined when calling reorderPrivateCollectionItems().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections/{collectionId}/order`;
+        urlPath = urlPath.replace('{collectionId}', encodeURIComponent(String(requestParameters['collectionId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PrivateCollectionOrderToJSON(requestParameters['privateCollectionOrder']),
+        };
+    }
+
+    /**
+     * Reorder Private Collection Items
+     */
+    async reorderPrivateCollectionItemsRaw(requestParameters: ReorderPrivateCollectionItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PrivateCollectionDetail>> {
+        const requestOptions = await this.reorderPrivateCollectionItemsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PrivateCollectionDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Reorder Private Collection Items
+     */
+    async reorderPrivateCollectionItems(requestParameters: ReorderPrivateCollectionItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateCollectionDetail> {
+        const response = await this.reorderPrivateCollectionItemsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -641,6 +1237,162 @@ export class PrivateAreaApi extends runtime.BaseAPI {
      */
     async updateGiftIdea(requestParameters: UpdateGiftIdeaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GiftIdeaDetail> {
         const response = await this.updateGiftIdeaRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updatePrivateCollection without sending the request
+     */
+    async updatePrivateCollectionRequestOpts(requestParameters: UpdatePrivateCollectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['collectionId'] == null) {
+            throw new runtime.RequiredError(
+                'collectionId',
+                'Required parameter "collectionId" was null or undefined when calling updatePrivateCollection().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling updatePrivateCollection().'
+            );
+        }
+
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling updatePrivateCollection().'
+            );
+        }
+
+        if (requestParameters['privateCollectionUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'privateCollectionUpdate',
+                'Required parameter "privateCollectionUpdate" was null or undefined when calling updatePrivateCollection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections/{collectionId}`;
+        urlPath = urlPath.replace('{collectionId}', encodeURIComponent(String(requestParameters['collectionId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PrivateCollectionUpdateToJSON(requestParameters['privateCollectionUpdate']),
+        };
+    }
+
+    /**
+     * Update Private Collection
+     */
+    async updatePrivateCollectionRaw(requestParameters: UpdatePrivateCollectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PrivateCollectionDetail>> {
+        const requestOptions = await this.updatePrivateCollectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PrivateCollectionDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Update Private Collection
+     */
+    async updatePrivateCollection(requestParameters: UpdatePrivateCollectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateCollectionDetail> {
+        const response = await this.updatePrivateCollectionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updatePrivateCollectionItem without sending the request
+     */
+    async updatePrivateCollectionItemRequestOpts(requestParameters: UpdatePrivateCollectionItemRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['collectionId'] == null) {
+            throw new runtime.RequiredError(
+                'collectionId',
+                'Required parameter "collectionId" was null or undefined when calling updatePrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling updatePrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling updatePrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling updatePrivateCollectionItem().'
+            );
+        }
+
+        if (requestParameters['privateCollectionItemUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'privateCollectionItemUpdate',
+                'Required parameter "privateCollectionItemUpdate" was null or undefined when calling updatePrivateCollectionItem().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/private/collections/{collectionId}/items/{itemId}`;
+        urlPath = urlPath.replace('{collectionId}', encodeURIComponent(String(requestParameters['collectionId'])));
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PrivateCollectionItemUpdateToJSON(requestParameters['privateCollectionItemUpdate']),
+        };
+    }
+
+    /**
+     * Update Private Collection Item
+     */
+    async updatePrivateCollectionItemRaw(requestParameters: UpdatePrivateCollectionItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PrivateCollectionItemDetail>> {
+        const requestOptions = await this.updatePrivateCollectionItemRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PrivateCollectionItemDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Update Private Collection Item
+     */
+    async updatePrivateCollectionItem(requestParameters: UpdatePrivateCollectionItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PrivateCollectionItemDetail> {
+        const response = await this.updatePrivateCollectionItemRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -262,7 +262,9 @@ class TestPrivateCollection:
         assert "Ben private collection" not in str(anna_page)
         assert "Anna private collection" not in str(ben_page)
 
-    def test_foreign_space_collection_is_indistinguishable_from_unknown(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+    def test_foreign_space_collection_is_indistinguishable_from_unknown(
+        self, client, couple
+    ) -> None:  # type: ignore[no-untyped-def]
         foreign = create_collection(
             client,
             couple,

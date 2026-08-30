@@ -162,8 +162,7 @@ def private_collection_detail(
         updated_at=collection.updated_at,
         capabilities=_capabilities(),
         items=[
-            private_collection_item_detail(item)
-            for item in service.list_items(session, collection)
+            private_collection_item_detail(item) for item in service.list_items(session, collection)
         ],
     )
 

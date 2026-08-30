@@ -315,9 +315,7 @@ def list_items(session: Session, collection: PrivateCollection) -> list[PrivateC
 def _item_identifier(value: UUID | str) -> UUID:
     identifier = value if isinstance(value, UUID) else parse_id(value)
     if identifier is None:
-        raise NotFoundError(
-            "Private Collection Item not found.", PRIVATE_COLLECTION_ITEM_NOT_FOUND
-        )
+        raise NotFoundError("Private Collection Item not found.", PRIVATE_COLLECTION_ITEM_NOT_FOUND)
     return identifier
 
 
@@ -337,9 +335,7 @@ def _require_item(
         statement = statement.with_for_update()
     item = session.execute(statement).scalar_one_or_none()
     if item is None:
-        raise NotFoundError(
-            "Private Collection Item not found.", PRIVATE_COLLECTION_ITEM_NOT_FOUND
-        )
+        raise NotFoundError("Private Collection Item not found.", PRIVATE_COLLECTION_ITEM_NOT_FOUND)
     return item
 
 
@@ -416,9 +412,7 @@ def update_item(
     return item
 
 
-def _compact_after_delete(
-    session: Session, collection_id: UUID, deleted_position: int
-) -> None:
+def _compact_after_delete(session: Session, collection_id: UUID, deleted_position: int) -> None:
     session.execute(
         update(PrivateCollectionItem)
         .where(

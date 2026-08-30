@@ -42,6 +42,7 @@ class Endpoint:
     """
 
     placeholders: tuple[str, ...] = field(default=())
+    fixture_aliases: dict[str, str] = field(default_factory=dict)
     query: dict[str, str] = field(default_factory=dict)
 
     def __str__(self) -> str:
@@ -104,6 +105,12 @@ COLLECTION = {"title": "Matrix Collection", "icon": "list"}
 COLLECTION_ITEM = {"title": "Matrix Collection Item"}
 PRIVATE_NOTE = {"title": "Matrix Private Note", "body": "Private body"}
 GIFT_IDEA = {"title": "Matrix Gift Idea"}
+PRIVATE_COLLECTION = {"title": "Matrix Private Collection", "icon": "lock"}
+PRIVATE_COLLECTION_ITEM = {"title": "Matrix Private Collection Item"}
+PRIVATE_COLLECTION_FIXTURES = {
+    "collectionId": "privateCollectionId",
+    "itemId": "privateCollectionItemId",
+}
 
 SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("GET", "/api/v1/spaces/{spaceId}"),
@@ -519,6 +526,74 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         resource_absence="COLLECTION_NOT_FOUND",
         placeholders=("collectionId",),
     ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/private/collections"),
+    Endpoint(
+        "POST",
+        "/api/v1/spaces/{spaceId}/private/collections",
+        body=PRIVATE_COLLECTION,
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/private/collections/{collectionId}",
+        resource_absence="PRIVATE_COLLECTION_NOT_FOUND",
+        fixture_aliases=PRIVATE_COLLECTION_FIXTURES,
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/private/collections/{collectionId}",
+        body={"title": "Matrix Private Collection updated"},
+        if_match=True,
+        resource_absence="PRIVATE_COLLECTION_NOT_FOUND",
+        fixture_aliases=PRIVATE_COLLECTION_FIXTURES,
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/private/collections/{collectionId}",
+        if_match=True,
+        resource_absence="PRIVATE_COLLECTION_NOT_FOUND",
+        fixture_aliases=PRIVATE_COLLECTION_FIXTURES,
+    ),
+    Endpoint(
+        "POST",
+        "/api/v1/spaces/{spaceId}/private/collections/{collectionId}/items",
+        body=PRIVATE_COLLECTION_ITEM,
+        resource_absence="PRIVATE_COLLECTION_NOT_FOUND",
+        placeholders=("collectionId",),
+        fixture_aliases=PRIVATE_COLLECTION_FIXTURES,
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/private/collections/{collectionId}/items/{itemId}",
+        resource_absence="PRIVATE_COLLECTION_ITEM_NOT_FOUND",
+        placeholders=("itemId",),
+        fixture_aliases=PRIVATE_COLLECTION_FIXTURES,
+    ),
+    Endpoint(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/private/collections/{collectionId}/items/{itemId}",
+        body={"completed": True},
+        if_match=True,
+        resource_absence="PRIVATE_COLLECTION_ITEM_NOT_FOUND",
+        placeholders=("itemId",),
+        fixture_aliases=PRIVATE_COLLECTION_FIXTURES,
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/private/collections/{collectionId}/items/{itemId}",
+        if_match=True,
+        resource_absence="PRIVATE_COLLECTION_ITEM_NOT_FOUND",
+        placeholders=("itemId",),
+        fixture_aliases=PRIVATE_COLLECTION_FIXTURES,
+    ),
+    Endpoint(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/private/collections/{collectionId}/order",
+        body={"itemIds": []},
+        if_match=True,
+        resource_absence="PRIVATE_COLLECTION_NOT_FOUND",
+        placeholders=("collectionId",),
+        fixture_aliases=PRIVATE_COLLECTION_FIXTURES,
+    ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/private/notes"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/private/notes", body=PRIVATE_NOTE),
     Endpoint(
@@ -738,6 +813,16 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
         json=COLLECTION_ITEM,
         headers=headers,
     ).json()
+    private_collection = client.post(
+        f"{base_path}/private/collections",
+        json=PRIVATE_COLLECTION,
+        headers=headers,
+    ).json()
+    private_collection_item = client.post(
+        f"{base_path}/private/collections/{private_collection['id']}/items",
+        json=PRIVATE_COLLECTION_ITEM,
+        headers=headers,
+    ).json()
     private_note = client.post(
         f"{base_path}/private/notes", json=PRIVATE_NOTE, headers=headers
     ).json()
@@ -768,6 +853,8 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "chapterId": chapter["id"],
             "collectionId": collection["id"],
             "itemId": collection_item["id"],
+            "privateCollectionId": private_collection["id"],
+            "privateCollectionItemId": private_collection_item["id"],
             "noteId": private_note["id"],
             "giftIdeaId": gift_idea["id"],
             # The target is a typed relation. A memory is enough for all three
@@ -779,7 +866,10 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
 
 
 def _path(endpoint: Endpoint, ids: dict[str, str], **replacements: str) -> str:
-    values = {**ids, **replacements}
+    values = dict(ids)
+    for placeholder, fixture_id in endpoint.fixture_aliases.items():
+        values[placeholder] = ids[fixture_id]
+    values.update(replacements)
     return endpoint.template.format(**values)
 
 
@@ -854,8 +944,10 @@ class TestEveryResourceId:
     "Within the actor's own space, the resource ID decides and reveals nothing."
 
     def test_unknown_resource_remains_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
-        path = endpoint.template.format(
-            **{**scenario["ids"], **dict.fromkeys(_resource_placeholders(endpoint), str(uuid4()))}
+        path = _path(
+            endpoint,
+            scenario["ids"],
+            **dict.fromkeys(_resource_placeholders(endpoint), str(uuid4())),
         )
         response = _send(scenario, endpoint, path, scenario["owner_headers"])
         assert response.status_code == 404
@@ -863,11 +955,15 @@ class TestEveryResourceId:
 
     def test_malformed_resource_id_remains_same_404(self, scenario, endpoint: Endpoint) -> None:  # type: ignore[no-untyped-def]
         "Well-formedness must not disclose existence."
-        unknown = endpoint.template.format(
-            **{**scenario["ids"], **dict.fromkeys(_resource_placeholders(endpoint), str(uuid4()))}
+        unknown = _path(
+            endpoint,
+            scenario["ids"],
+            **dict.fromkeys(_resource_placeholders(endpoint), str(uuid4())),
         )
-        malformed = endpoint.template.format(
-            **{**scenario["ids"], **dict.fromkeys(_resource_placeholders(endpoint), "nicht-echt")}
+        malformed = _path(
+            endpoint,
+            scenario["ids"],
+            **dict.fromkeys(_resource_placeholders(endpoint), "nicht-echt"),
         )
         first = _send(scenario, endpoint, unknown, scenario["owner_headers"])
         second = _send(scenario, endpoint, malformed, scenario["owner_headers"])
