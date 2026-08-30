@@ -189,12 +189,8 @@ class ThinkingOfYouRequest(IdMixin, Base):
         ForeignKey("accounts.id", ondelete="CASCADE"),
         nullable=False,
     )
-    client_request_id: Mapped[UUID] = mapped_column(
-        postgresql.UUID(as_uuid=True), nullable=False
-    )
-    source_event_id: Mapped[UUID] = mapped_column(
-        postgresql.UUID(as_uuid=True), nullable=False
-    )
+    client_request_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
+    source_event_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -202,7 +198,7 @@ class ThinkingOfYouRequest(IdMixin, Base):
     __table_args__ = (
         CheckConstraint(
             "sender_account_id <> recipient_account_id",
-            name="thinking_request_sender_differs_recipient",
+            name="thinking_sender_ne_recipient",
         ),
         UniqueConstraint(
             "source_event_id",

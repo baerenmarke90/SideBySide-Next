@@ -76,8 +76,7 @@ def send(
         .where(
             ThinkingOfYouRequest.space_id == context.space_id,
             ThinkingOfYouRequest.sender_account_id == context.account_id,
-            ThinkingOfYouRequest.created_at
-            > current_time - timedelta(seconds=COOLDOWN_SECONDS),
+            ThinkingOfYouRequest.created_at > current_time - timedelta(seconds=COOLDOWN_SECONDS),
         )
         .order_by(ThinkingOfYouRequest.created_at.desc())
         .limit(1)
@@ -144,9 +143,7 @@ def project_notification(session: Session, event: OutboxEvent) -> None:
             target_id=None,
             created_at=event.created_at,
         )
-        .on_conflict_do_nothing(
-            index_elements=["recipient_account_id", "source_event_id", "kind"]
-        )
+        .on_conflict_do_nothing(index_elements=["recipient_account_id", "source_event_id", "kind"])
     )
     session.execute(statement)
 

@@ -62,7 +62,7 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "sender_account_id <> recipient_account_id",
-            name="thinking_request_sender_differs_recipient",
+            name="thinking_sender_ne_recipient",
         ),
         sa.UniqueConstraint(
             "source_event_id",

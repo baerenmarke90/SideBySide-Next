@@ -21,6 +21,7 @@ from sidebyside.engagement.models import (
 from sidebyside.jobs.errors import RetryableJobError
 from sidebyside.outbox.models import OutboxEvent
 from sidebyside.relationship import service as relationship_service
+from sidebyside.relationship.models import Membership, MembershipStatus
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -113,9 +114,11 @@ def test_replay_is_idempotent_before_cooldown_and_projects_notification_only(
     service.project_event(session, event)
     session.flush()
 
-    notifications = session.execute(
-        select(Notification).where(Notification.source_event_id == event_id)
-    ).scalars().all()
+    notifications = (
+        session.execute(select(Notification).where(Notification.source_event_id == event_id))
+        .scalars()
+        .all()
+    )
     assert len(notifications) == 1
     assert notifications[0].recipient_account_id == couple["ben"].id
     assert notifications[0].kind == NotificationKind.THINKING_OF_YOU.value
@@ -150,10 +153,7 @@ def test_no_other_active_partner_creates_no_signal(client, session: Session, mon
     )
     assert response.status_code == 404
     assert response.json()["code"] == thinking.PARTNER_NOT_AVAILABLE
-    assert (
-        session.execute(select(func.count(ThinkingOfYouRequest.id))).scalar_one()
-        == 0
-    )
+    assert session.execute(select(func.count(ThinkingOfYouRequest.id))).scalar_one() == 0
 
 
 def test_push_uses_generic_payload_and_logical_delivery_is_unique(
@@ -277,3 +277,44 @@ def test_unconfigured_provider_is_nonfatal_and_marks_delivery_unavailable(
     session.flush()
     assert delivery.status == PushDeliveryStatus.UNAVAILABLE.value
     assert delivery.last_error_code == "PUSH_NOT_CONFIGURED"
+
+
+def test_membership_change_prevents_pending_push_delivery(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(thinking.clock, "now", lambda: NOW)
+    push.register_endpoint(
+        session,
+        account_id=couple["ben"].id,
+        provider_key="fake",
+        endpoint_value="secret-endpoint-token",
+    )
+    provider = FakePushProvider()
+    push.providers.register("fake", provider)
+
+    response = client.post(
+        _url(couple),
+        json={"clientRequestId": str(uuid4())},
+        headers=auth(couple["anna_token"]),
+    )
+    assert response.status_code == 202
+    request = session.execute(select(ThinkingOfYouRequest)).scalar_one()
+    event = session.get(OutboxEvent, request.source_event_id)
+    assert event is not None
+    service.project_event(session, event)
+    session.flush()
+    delivery = session.execute(select(PushDelivery)).scalar_one()
+
+    membership = session.execute(
+        select(Membership).where(
+            Membership.space_id == couple["space"].id,
+            Membership.account_id == couple["ben"].id,
+        )
+    ).scalar_one()
+    membership.status = MembershipStatus.REMOVED.value
+    session.flush()
+
+    push.handle_delivery(session, {"deliveryId": str(delivery.id)})
+    session.flush()
+    assert delivery.status == PushDeliveryStatus.UNAVAILABLE.value
+    assert provider.calls == []

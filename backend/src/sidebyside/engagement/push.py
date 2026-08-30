@@ -138,9 +138,7 @@ def ensure_deliveries_for_source_event(session: Session, source_event_id: UUID) 
                     status=PushDeliveryStatus.PENDING.value,
                     attempts=0,
                 )
-                .on_conflict_do_nothing(
-                    index_elements=["notification_id", "push_endpoint_id"]
-                )
+                .on_conflict_do_nothing(index_elements=["notification_id", "push_endpoint_id"])
                 .returning(PushDelivery.id)
             )
             delivery_id = session.execute(statement).scalar_one_or_none()
