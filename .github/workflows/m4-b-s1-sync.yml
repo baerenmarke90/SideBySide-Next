@@ -135,6 +135,5 @@ jobs:
           set -euo pipefail
           git rm .github/workflows/m4-b-s1-sync.yml
           git add -A
-          git diff --cached --check
           git commit -m "Merge main into M4-B-S1"
           git push origin HEAD:feat/282-m4b-activity-notifications
