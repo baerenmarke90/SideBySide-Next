@@ -6,12 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseQueryResult,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Link,
   Navigate,
@@ -23,7 +18,6 @@ import {
 import type { AccountView } from './api/generated/models/AccountView';
 import { AttachmentReadRequestParentTypeEnum } from './api/generated/models/AttachmentReadRequest';
 import type { SpaceView } from './api/generated/models/SpaceView';
-import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';
 import type { TokenView } from './api/generated/models/TokenView';
 import { loadReferenceClientConfig } from './client/config';
 import {
@@ -34,11 +28,6 @@ import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft
 import { createPeopleApi } from './client/peopleApi';
 import { normalizeClientError } from './client/problemDetails';
 import { clearProductReadCache } from './client/productReadCache';
-import {
-  loadAuthorizedMemberships,
-  loadAuthorizedSpaces,
-  resolveActiveSpaceId,
-} from './client/spaceContext';
 import {
   createReferenceApis,
   loadAuthorizedImage,
@@ -56,6 +45,11 @@ import {
   MILESTONE_DETAIL_ROUTE_PATTERN,
   MILESTONE_EDIT_ROUTE_PATTERN,
 } from './client/routes';
+import {
+  loadAuthorizedMemberships,
+  loadAuthorizedSpaces,
+  resolveActiveSpaceId,
+} from './client/spaceContext';
 import { useAttachmentDrafts } from './client/useAttachmentDrafts';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppShell } from './components/AppShell';
@@ -69,7 +63,7 @@ import { PageHeader } from './components/PageHeader';
 import { ProblemState } from './components/ProblemState';
 import { ProfilePage } from './components/ProfilePage';
 import { RelatedPeoplePage } from './components/RelatedPeoplePage';
-import { StoryList } from './components/StoryList';
+import { StoryProductPage } from './components/StoryProductPage';
 import { ThemeControl } from './components/ThemeControl';
 import { UiState } from './components/UiState';
 import { useTranslation } from './i18n';
@@ -152,97 +146,6 @@ function SpacePicker({
         </div>
       </section>
     </main>
-  );
-}
-
-function StoryPage({
-  storyQuery,
-  loadMemoryImage,
-}: {
-  storyQuery: UseQueryResult<StoryPageData, Error>;
-  loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
-}) {
-  const { t } = useTranslation();
-  const location = useLocation();
-  const saved = Boolean((location.state as { saved?: boolean } | null)?.saved);
-
-  return (
-    <div className="page story-page">
-      {saved ? (
-        <div className="inline-message inline-message-success" role="status">
-          <strong>{t('story.savedTitle')}</strong>
-          <span>{t('story.savedBody')}</span>
-        </div>
-      ) : null}
-
-      <PageHeader
-        eyebrow={t('story.eyebrow')}
-        title={t('story.title')}
-        description={t('story.intro')}
-        className="story-heading"
-        action={
-          <div
-            className="story-create-actions"
-            role="group"
-            aria-label={t('storyActions.addAria')}
-          >
-            <Link
-              className="button-link primary-action"
-              to={appRoutePath('memoryCreate')}
-            >
-              {t('story.addMemory')}
-            </Link>
-            <Link
-              className="button-link secondary-link"
-              to={HEART_MOMENT_CREATE_ROUTE}
-            >
-              {t('storyActions.addHeartMoment')}
-            </Link>
-            <Link
-              className="button-link secondary-link"
-              to={MILESTONE_CREATE_ROUTE}
-            >
-              {t('storyActions.addMilestone')}
-            </Link>
-          </div>
-        }
-      />
-
-      <section className="story-surface" aria-labelledby="timeline-heading">
-        <div className="section-head">
-          <div>
-            <p className="section-kicker">{t('story.timelineKicker')}</p>
-            <h2 id="timeline-heading">{t('story.timelineHeading')}</h2>
-          </div>
-          <button
-            type="button"
-            className="secondary compact-action"
-            onClick={() => storyQuery.refetch()}
-            disabled={storyQuery.isFetching}
-          >
-            {storyQuery.isFetching
-              ? t('common.refreshing')
-              : t('common.refresh')}
-          </button>
-        </div>
-
-        {storyQuery.isLoading ? (
-          <UiState kind="loading" title={t('story.loadingAria')} />
-        ) : null}
-        {storyQuery.error ? (
-          <ProblemState
-            error={storyQuery.error}
-            onRetry={() => void storyQuery.refetch()}
-          />
-        ) : null}
-        {storyQuery.data ? (
-          <StoryList
-            items={storyQuery.data.items}
-            loadMemoryImage={loadMemoryImage}
-          />
-        ) : null}
-      </section>
-    </div>
   );
 }
 
@@ -344,7 +247,6 @@ function MemoryCreatePage({
               placeholder={t('memory.titlePlaceholder')}
             />
           </div>
-
           <div className="field-group">
             <label htmlFor="body">{t('memory.bodyLabel')}</label>
             <textarea
@@ -354,19 +256,16 @@ function MemoryCreatePage({
               placeholder={t('memory.bodyPlaceholder')}
             />
           </div>
-
           <div className="field-group">
             <label htmlFor="happenedOn">{t('memory.dateLabel')}</label>
             <input id="happenedOn" name="happenedOn" type="date" />
             <p className="field-help">{t('memory.dateHelp')}</p>
           </div>
-
           <AttachmentDraftPicker
             id="memory-create-images"
             attachments={attachments}
             multiple
           />
-
           <div
             className="sharing-note"
             role="note"
@@ -380,7 +279,6 @@ function MemoryCreatePage({
               <p>{t('memory.sharedBody')}</p>
             </div>
           </div>
-
           <div className="form-actions">
             <Link
               className="button-link secondary-link"
@@ -396,7 +294,6 @@ function MemoryCreatePage({
             </button>
           </div>
         </form>
-
         {mutation.isPending ? (
           <p className="status" role="status" aria-live="polite">
             {t('memory.processing')}
@@ -439,18 +336,6 @@ function AuthenticatedApp({
     queryClient.clear();
     previousSpaceId.current = spaceId;
   }, [queryClient, spaceId]);
-
-  const storyQuery = useQuery({
-    queryKey: ['story', spaceId],
-    queryFn: async () => {
-      try {
-        return await apis.story.getStoryTimeline({ spaceId, limit: 25 });
-      } catch (error) {
-        throw await normalizeClientError(error);
-      }
-    },
-    retry: false,
-  });
 
   const loadMemoryImage = useCallback(
     (memoryId: string, attachmentId: string) =>
@@ -533,8 +418,10 @@ function AuthenticatedApp({
           <Route
             path={appRoutePath('story')}
             element={
-              <StoryPage
-                storyQuery={storyQuery}
+              <StoryProductPage
+                apis={apis}
+                accountId={account.id}
+                spaceId={spaceId}
                 loadMemoryImage={loadMemoryImage}
               />
             }
