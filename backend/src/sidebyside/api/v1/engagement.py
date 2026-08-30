@@ -20,7 +20,7 @@ from sidebyside.engagement.models import (
     NotificationKind,
 )
 
-router = APIRouter(tags=["activity", "notifications"])
+router = APIRouter()
 
 
 class ActivityItem(ApiModel):
@@ -71,6 +71,7 @@ class NotificationsReadAllResult(ApiModel):
     response_model=ActivityPage,
     operation_id="getActivity",
     responses=problem_responses(400, 401, 404, 422),
+    tags=["activity"],
 )
 def get_activity(
     authorization: Authorization,
@@ -98,6 +99,7 @@ def get_activity(
     response_model=NotificationPage,
     operation_id="getNotifications",
     responses=problem_responses(400, 401, 404, 422),
+    tags=["notifications"],
 )
 def get_notifications(
     authorization: Authorization,
@@ -125,6 +127,7 @@ def get_notifications(
     response_model=NotificationUnreadCount,
     operation_id="getNotificationUnreadCount",
     responses=problem_responses(401, 404, 422),
+    tags=["notifications"],
 )
 def get_notification_unread_count(
     authorization: Authorization,
@@ -140,6 +143,7 @@ def get_notification_unread_count(
     response_model=NotificationItem,
     operation_id="markNotificationRead",
     responses=problem_responses(401, 404, 422),
+    tags=["notifications"],
 )
 def mark_notification_read(
     authorization: Authorization,
@@ -161,6 +165,7 @@ def mark_notification_read(
     response_model=NotificationsReadAllResult,
     operation_id="markAllNotificationsRead",
     responses=problem_responses(401, 404, 422),
+    tags=["notifications"],
 )
 def mark_all_notifications_read(
     authorization: Authorization,
