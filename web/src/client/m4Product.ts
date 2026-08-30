@@ -32,10 +32,7 @@ export function createM4ProductApis(
   };
 }
 
-export function searchResultPath(
-  type: SearchKind,
-  id: string,
-): string | null {
+export function searchResultPath(type: SearchKind, id: string): string | null {
   switch (type) {
     case 'MEMORY':
       return memoryDetailPath(id);
