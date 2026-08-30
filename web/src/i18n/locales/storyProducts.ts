@@ -4,6 +4,20 @@ const storyProducts = {
     addHeartMoment: 'Herzmoment',
     addMilestone: 'Meilenstein',
   },
+  storyFilters: {
+    aria: 'Story filtern und sortieren',
+    type: 'Inhalt',
+    allTypes: 'Alle Inhalte',
+    year: 'Jahr',
+    anyYear: 'Alle Jahre',
+    order: 'Reihenfolge',
+    newest: 'Neueste zuerst',
+    oldest: 'Älteste zuerst',
+    apply: 'Filter anwenden',
+    reset: 'Zurücksetzen',
+    loadMore: 'Weitere Einträge laden',
+    loadingMore: 'Weitere Einträge werden geladen …',
+  },
   offlineCache: {
     banner:
       'Offline-Ansicht: Du siehst den zuletzt erfolgreich geladenen Stand. Änderungen sind erst wieder mit Verbindung möglich.',
@@ -12,7 +26,6 @@ const storyProducts = {
     aria: 'Mediengalerie',
     dialogAria: 'Medien in Vollbildansicht',
     imageAlt: 'Foto zu diesem Eintrag',
-    videoLabel: 'Video zu diesem Eintrag',
     openItem: 'Medium {{index}} von {{count}} öffnen',
     counter: '{{index}} von {{count}}',
     close: 'Schließen',
