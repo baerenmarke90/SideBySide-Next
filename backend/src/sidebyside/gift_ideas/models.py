@@ -94,11 +94,11 @@ class GiftIdea(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin, Base
         Index(
             "ix_gift_ideas_search_fts",
             text(
-                "setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'recipient', '')), 'B') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'occasion', '')), 'B') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'price_text', '')), 'B')"
+                "((((setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B')) || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'recipient', '')), 'B')) || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'occasion', '')), 'B')) || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'price_text', '')), 'B'))"
             ),
             postgresql_using="gin",
         ),
