@@ -12,6 +12,7 @@ const de = {
     dark: 'Dunkel',
   },
   brand: {
+    suffix: 'Next',
     storyAria: 'SideBySide – zur Story',
   },
   setup: {
@@ -24,10 +25,14 @@ const de = {
     operatorSuffix: 'gesetzt sein.',
   },
   login: {
-    introEyebrow: 'Euer gemeinsamer Ort',
-    introHeading: 'Erinnerungen, die euch gehören.',
+    introEyebrow: 'Gemeinsam leben. Privat verbunden.',
+    introHeading: 'Euer gemeinsamer Raum für die Dinge, die bleiben.',
     introBody:
-      'Haltet gemeinsame Momente fest und findet eure Geschichte an einem ruhigen, privaten Ort wieder.',
+      'Erinnerungen, Wünsche und Pläne an einem ruhigen Ort – für zwei Menschen gedacht, nicht für ein soziales Netzwerk.',
+    trustAria: 'Was SideBySide auszeichnet',
+    trustPrivacy: 'Privacy-first',
+    trustTwo: 'Für zwei gedacht',
+    trustAds: 'Ohne Werbung',
     eyebrow: 'Willkommen zurück',
     heading: 'Anmelden',
     body: 'Melde dich mit deinem SideBySide-Konto an.',
@@ -37,6 +42,7 @@ const de = {
     pending: 'Anmeldung läuft …',
     errorFallback:
       'Anmeldung fehlgeschlagen. Bitte prüfe deine Zugangsdaten und versuche es erneut.',
+    assurance: 'Euer gemeinsamer Space bleibt nur für euch bestimmt.',
   },
   story: {
     savedTitle: 'Erinnerung gespeichert.',

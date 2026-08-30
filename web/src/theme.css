@@ -10,6 +10,16 @@
   --color-brand-glow: #eee7ff80;
   --color-on-accent: #ffffff;
   --color-text-inverse-muted: rgb(255 255 255 / 90%);
+  --color-entry-panel: #faf8fc;
+  --color-entry-hero-start: #3b236b;
+  --color-entry-hero-middle: #6540d9;
+  --color-entry-hero-end: #237a65;
+  --color-entry-light-glow: #ffffff24;
+  --color-entry-mark-surface: #ffffff16;
+  --color-entry-mark-border: #ffffff45;
+  --color-entry-trust-accent: #aee7d9;
+  --color-entry-aura-brand: #eee7ffb8;
+  --color-entry-aura-shared: #dff5ef9c;
   --color-shadow-card: #211a2b14;
   --color-shadow-soft: #211a2b0b;
   --color-shadow-brand: #6638dc25;
@@ -40,6 +50,16 @@
   --color-brand-text: #bda7ff;
   --color-brand-surface: #3d2e55;
   --color-brand-glow: #7c4dff24;
+  --color-entry-panel: #1c1525;
+  --color-entry-hero-start: #2c1b4d;
+  --color-entry-hero-middle: #4a2b9a;
+  --color-entry-hero-end: #174a40;
+  --color-entry-light-glow: #ffffff1c;
+  --color-entry-mark-surface: #ffffff12;
+  --color-entry-mark-border: #ffffff38;
+  --color-entry-trust-accent: #9ee6d6;
+  --color-entry-aura-brand: #7c4dff24;
+  --color-entry-aura-shared: #36ae971c;
   --color-shared: #8fe0ce;
   --color-shared-accent: #36ae97;
   --color-shared-surface: #183c34;
@@ -79,6 +99,16 @@
     --color-brand-text: #bda7ff;
     --color-brand-surface: #3d2e55;
     --color-brand-glow: #7c4dff24;
+    --color-entry-panel: #1c1525;
+    --color-entry-hero-start: #2c1b4d;
+    --color-entry-hero-middle: #4a2b9a;
+    --color-entry-hero-end: #174a40;
+    --color-entry-light-glow: #ffffff1c;
+    --color-entry-mark-surface: #ffffff12;
+    --color-entry-mark-border: #ffffff38;
+    --color-entry-trust-accent: #9ee6d6;
+    --color-entry-aura-brand: #7c4dff24;
+    --color-entry-aura-shared: #36ae971c;
     --color-shared: #8fe0ce;
     --color-shared-accent: #36ae97;
     --color-shared-surface: #183c34;
@@ -203,7 +233,7 @@ button.secondary,
   position: fixed;
   z-index: 100;
   right: 1rem;
-  bottom: 1rem;
+  top: 1rem;
   display: flex;
   align-items: center;
   gap: 0.55rem;
@@ -215,6 +245,20 @@ button.secondary,
   color: var(--color-text-secondary);
   box-shadow: 0 8px 28px var(--color-shadow-card);
   backdrop-filter: blur(18px);
+}
+
+.theme-control-inline {
+  position: static;
+  border-color: transparent;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.theme-control-icon {
+  color: var(--color-brand-text);
+  font-size: 0.9rem;
 }
 
 .theme-control label {
@@ -243,7 +287,7 @@ button.secondary,
 @media (max-width: 599px) {
   .theme-control {
     right: 0.75rem;
-    bottom: 0.75rem;
+    top: 0.75rem;
   }
 
   .theme-control label {
@@ -256,5 +300,26 @@ button.secondary,
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  .theme-control-inline {
+    right: auto;
+    top: auto;
+  }
+
+  .theme-control-icon {
+    display: none;
+  }
+
+  .theme-control-floating {
+    padding: 0.25rem;
+  }
+
+  .theme-control-floating select {
+    max-width: 7.25rem;
+  }
+
+  .app-header .theme-control-inline select {
+    max-width: 5.5rem;
   }
 }

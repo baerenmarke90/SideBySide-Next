@@ -23,7 +23,9 @@ import {
   signIn,
 } from './client/referenceFlow';
 import { useAttachmentDrafts } from './client/useAttachmentDrafts';
+import { Brand } from './components/Brand';
 import { StoryList } from './components/StoryList';
+import { ThemeControl } from './components/ThemeControl';
 import { useTranslation } from './i18n';
 
 function readableError(error: unknown, fallback: string): string {
@@ -33,32 +35,24 @@ function readableError(error: unknown, fallback: string): string {
   return error.message;
 }
 
-function Brand() {
-  const { t } = useTranslation();
-  return (
-    <Link className="brand" to="/story" aria-label={t('brand.storyAria')}>
-      <span className="brand-mark" aria-hidden="true">
-        S
-      </span>
-      <span>SideBySide</span>
-    </Link>
-  );
-}
-
 function SetupNotice() {
   const { t } = useTranslation();
   return (
     <main className="setup-shell">
+      <div className="entry-aura entry-aura-start" aria-hidden="true" />
+      <div className="entry-aura entry-aura-end" aria-hidden="true" />
       <section className="setup-card" aria-labelledby="setup-heading">
-        <div className="brand brand-static">
-          <span className="brand-mark" aria-hidden="true">
-            S
+        <Brand
+          suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
+        />
+        <div className="setup-content">
+          <span className="setup-symbol" aria-hidden="true">
+            <span />
           </span>
-          <span>SideBySide</span>
+          <p className="eyebrow">{t('setup.eyebrow')}</p>
+          <h1 id="setup-heading">{t('setup.heading')}</h1>
+          <p>{t('setup.body')}</p>
         </div>
-        <p className="eyebrow">{t('setup.eyebrow')}</p>
-        <h1 id="setup-heading">{t('setup.heading')}</h1>
-        <p>{t('setup.body')}</p>
         <details className="operator-note">
           <summary>{t('setup.operatorSummary')}</summary>
           <p>
@@ -91,48 +85,78 @@ function LoginScreen({
   return (
     <main className="login-shell">
       <section className="login-intro" aria-labelledby="welcome-heading">
-        <div className="brand brand-static brand-inverse">
-          <span className="brand-mark" aria-hidden="true">
-            S
-          </span>
-          <span>SideBySide</span>
+        <Brand
+          inverse
+          suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
+        />
+        <div className="login-intro-content">
+          <p className="eyebrow eyebrow-inverse">{t('login.introEyebrow')}</p>
+          <h1 id="welcome-heading">{t('login.introHeading')}</h1>
+          <p>{t('login.introBody')}</p>
+          <ul className="entry-trust-list" aria-label={t('login.trustAria')}>
+            <li>
+              <span aria-hidden="true">◇</span>
+              {t('login.trustPrivacy')}
+            </li>
+            <li>
+              <span aria-hidden="true">○○</span>
+              {t('login.trustTwo')}
+            </li>
+            <li>
+              <span aria-hidden="true">✦</span>
+              {t('login.trustAds')}
+            </li>
+          </ul>
         </div>
-        <p className="eyebrow eyebrow-inverse">{t('login.introEyebrow')}</p>
-        <h1 id="welcome-heading">{t('login.introHeading')}</h1>
-        <p>{t('login.introBody')}</p>
+        <div className="entry-illustration" aria-hidden="true">
+          <span className="entry-orbit entry-orbit-large" />
+          <span className="entry-orbit entry-orbit-small" />
+          <span className="entry-illustration-heart">♡</span>
+        </div>
       </section>
 
-      <section className="login-card" aria-labelledby="login-heading">
-        <div>
-          <p className="eyebrow">{t('login.eyebrow')}</p>
-          <h2 id="login-heading">{t('login.heading')}</h2>
-          <p className="muted">{t('login.body')}</p>
-        </div>
-        <form onSubmit={submit} className="form-grid">
-          <label htmlFor="email">{t('login.email')}</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="username"
-            required
-          />
-          <label htmlFor="password">{t('login.password')}</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-          />
-          <button type="submit" disabled={pending}>
-            {pending ? t('login.pending') : t('login.submit')}
-          </button>
-        </form>
-        <p className="status status-error" role="alert" aria-live="polite">
-          {error ? readableError(error, t('login.errorFallback')) : ''}
-        </p>
-      </section>
+      <div className="login-panel">
+        <section className="login-card" aria-labelledby="login-heading">
+          <div>
+            <p className="eyebrow">{t('login.eyebrow')}</p>
+            <h2 id="login-heading">{t('login.heading')}</h2>
+            <p className="muted">{t('login.body')}</p>
+          </div>
+          <form onSubmit={submit} className="form-grid login-form">
+            <div className="field-group">
+              <label htmlFor="email">{t('login.email')}</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="password">{t('login.password')}</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </div>
+            <button type="submit" disabled={pending} aria-busy={pending}>
+              {pending ? t('login.pending') : t('login.submit')}
+            </button>
+          </form>
+          {error ? (
+            <p className="status status-error" role="alert">
+              {readableError(error, t('login.errorFallback'))}
+            </p>
+          ) : null}
+          <p className="login-assurance">{t('login.assurance')}</p>
+        </section>
+      </div>
     </main>
   );
 }
@@ -526,11 +550,12 @@ function AuthenticatedApp({
   return (
     <div className="app-shell">
       <header className="app-header">
-        <Brand />
+        <Brand to="/story" ariaLabel={t('brand.storyAria')} />
         <div className="header-actions">
           <span className="shared-context">
             <span aria-hidden="true">♥</span> {t('header.sharedArea')}
           </span>
+          <ThemeControl variant="inline" />
           <button type="button" className="tertiary" onClick={logout}>
             {t('header.logout')}
           </button>
@@ -586,15 +611,26 @@ export function App() {
     queryClient.clear();
   }
 
-  if (!config.spaceId) return <SetupNotice />;
+  if (!config.spaceId)
+    return (
+      <>
+        <ThemeControl />
+        <SetupNotice />
+      </>
+    );
 
   if (!tokens) {
     return (
-      <LoginScreen
-        onLogin={(email, password) => loginMutation.mutate({ email, password })}
-        pending={loginMutation.isPending}
-        error={loginMutation.error}
-      />
+      <>
+        <ThemeControl />
+        <LoginScreen
+          onLogin={(email, password) =>
+            loginMutation.mutate({ email, password })
+          }
+          pending={loginMutation.isPending}
+          error={loginMutation.error}
+        />
+      </>
     );
   }
 
