@@ -196,6 +196,14 @@ class Plan(
         Index("ix_plans_space_id_created_at_id", "space_id", "created_at", "id"),
         Index("ix_plans_space_id_status", "space_id", "status"),
         Index("ix_plans_space_id_planned_start", "space_id", "planned_start"),
+        Index(
+            "ix_plans_search_fts",
+            text(
+                "(setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B'))"
+            ),
+            postgresql_using="gin",
+        ),
     )
 
 

@@ -249,6 +249,12 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         resource_absence="RESOURCE_NOT_FOUND",
     ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/timeline"),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/search",
+        query={"q": "Matrix"},
+    ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/dashboard"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/activity"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/notifications"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/notifications/unread-count"),
@@ -258,6 +264,11 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         resource_absence="NOTIFICATION_NOT_FOUND",
     ),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/notifications/read-all"),
+    Endpoint(
+        "POST",
+        "/api/v1/spaces/{spaceId}/thinking-of-you",
+        body={"clientRequestId": str(uuid4())},
+    ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/milestones"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
     Endpoint(

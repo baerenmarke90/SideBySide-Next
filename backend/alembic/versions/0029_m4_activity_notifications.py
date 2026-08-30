@@ -1,7 +1,7 @@
 """M4-B Activity and in-app Notification projections.
 
-Revision ID: 0028
-Revises: 0027
+Revision ID: 0029
+Revises: 0028
 Create Date: 2026-08-30
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision = "0028"
-down_revision = "0027"
+revision = "0029"
+down_revision = "0028"
 branch_labels = None
 depends_on = None
 
