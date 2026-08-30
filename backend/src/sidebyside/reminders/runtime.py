@@ -418,7 +418,7 @@ def _plan_for_recipient(session: Session, reminder: Reminder, account: Account) 
             _supersede_pending(session, reminder.id, account.id, set())
             return
 
-    desired = _desired_occurrences(reminder, account, parameters)
+    desired = _desired_occurrences(session, reminder, account, parameters)
     desired_keys = {(key, days) for key, days, _ in desired}
     _supersede_pending(session, reminder.id, account.id, desired_keys)
     for occurrence_key, days_before, due_at in desired:
@@ -502,6 +502,7 @@ def _upsert_occurrence(
 
 
 def _desired_occurrences(
+    session: Session,
     reminder: Reminder,
     account: Account,
     parameters: RuleParameters,
@@ -528,7 +529,7 @@ def _desired_occurrences(
         return result
 
     if schedule_type is ReminderScheduleType.RELATIONSHIP_DAY_COUNT:
-        profile = _relationship_profile(reminder.space_id)
+        profile = _relationship_profile_for(session, reminder.space_id)
         if profile is None or profile.relationship_started_on is None or reminder.relationship_day_count is None:
             return result
         try:
@@ -561,10 +562,6 @@ def _desired_occurrences(
             return candidate
     return result
 
-
-def _relationship_profile(space_id: UUID) -> None:
-    # Marker replaced by the session-aware lookup in `_desired_occurrences_with_session`.
-    raise AssertionError(space_id)
 
 
 def _timezone(name: str) -> ZoneInfo:
