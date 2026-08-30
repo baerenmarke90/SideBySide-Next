@@ -54,7 +54,7 @@ describe('RelatedPerson delete dialog', () => {
   it('allows preserve without presenting a destructive warning', () => {
     const html = renderChoice(RelatedPersonDeletePolicy.preserve);
 
-    expect(html).toContain('value="preserve" checked=""');
+    expect(html).toContain('checked="" value="preserve"');
     expect(html).not.toContain('role="alert"');
     expect(html).not.toContain('disabled=""');
   });
@@ -62,7 +62,7 @@ describe('RelatedPerson delete dialog', () => {
   it('shows a privacy-safe warning and blocks unconfirmed cascade', () => {
     const html = renderChoice(RelatedPersonDeletePolicy.cascade);
 
-    expect(html).toContain('value="cascade" checked=""');
+    expect(html).toContain('checked="" value="cascade"');
     expect(html).toContain('role="alert"');
     expect(html).toContain('Einträge deines Partners');
     expect(html).toContain('keine Anzahl oder Details');
