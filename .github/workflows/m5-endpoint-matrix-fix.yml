@@ -1,0 +1,44 @@
+name: M5 Endpoint Matrix Fix
+
+on:
+  push:
+    branches:
+      - feat/298-m5-web-identity-relationship
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    name: Add authenticated Membership endpoint to matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/298-m5-web-identity-relationship
+          fetch-depth: 0
+
+      - name: Update endpoint completeness matrix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/tests/integration/test_endpoint_matrix.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (\n    ("GET", "/api/v1/auth/me"),\n'''
+          new = '''AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (\n    ("GET", "/api/v1/auth/me"),\n    ("GET", "/api/v1/auth/memberships"),\n'''
+          if old not in text:
+              raise SystemExit('Authenticated endpoint matrix anchor not found')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Commit matrix coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/tests/integration/test_endpoint_matrix.py
+          git commit -m "test(auth): cover Membership context in endpoint matrix"
+          git push origin HEAD:feat/298-m5-web-identity-relationship
