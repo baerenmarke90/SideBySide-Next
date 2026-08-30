@@ -75,7 +75,10 @@ export function StoryProductPage({
   const location = useLocation();
   const saved = Boolean((location.state as { saved?: boolean } | null)?.saved);
   const [searchParams, setSearchParams] = useSearchParams();
-  const filters = useMemo(() => parseStoryFilters(searchParams), [searchParams]);
+  const filters = useMemo(
+    () => parseStoryFilters(searchParams),
+    [searchParams],
+  );
   const cacheResourceId = useMemo(
     () => storyCacheResourceId(filters),
     [filters],
@@ -120,9 +123,7 @@ export function StoryProductPage({
 
   const combinedStory = useMemo(() => {
     if (!storyQuery.data) return null;
-    return aggregateStoryPages(
-      storyQuery.data.pages.map((page) => page.value),
-    );
+    return aggregateStoryPages(storyQuery.data.pages.map((page) => page.value));
   }, [storyQuery.data]);
   const allPagesFromNetwork =
     storyQuery.data?.pages.every((page) => page.source === 'network') ?? false;
@@ -138,13 +139,7 @@ export function StoryProductPage({
       value: combinedStory,
       serialize: StoryPageToJSON,
     });
-  }, [
-    accountId,
-    allPagesFromNetwork,
-    cacheResourceId,
-    combinedStory,
-    spaceId,
-  ]);
+  }, [accountId, allPagesFromNetwork, cacheResourceId, combinedStory, spaceId]);
 
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -240,13 +235,17 @@ export function StoryProductPage({
             />
           </div>
           <div className="field-group">
-            <label htmlFor="story-filter-order">{t('storyFilters.order')}</label>
+            <label htmlFor="story-filter-order">
+              {t('storyFilters.order')}
+            </label>
             <select
               id="story-filter-order"
               name="order"
               defaultValue={filters.order}
             >
-              <option value={StoryOrder.DESC}>{t('storyFilters.newest')}</option>
+              <option value={StoryOrder.DESC}>
+                {t('storyFilters.newest')}
+              </option>
               <option value={StoryOrder.ASC}>{t('storyFilters.oldest')}</option>
             </select>
           </div>
