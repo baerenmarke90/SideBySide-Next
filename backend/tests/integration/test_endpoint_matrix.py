@@ -248,6 +248,11 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         resource_absence="RESOURCE_NOT_FOUND",
     ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/timeline"),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/search",
+        query={"q": "Matrix"},
+    ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/milestones"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
     Endpoint(
