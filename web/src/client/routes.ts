@@ -1,0 +1,35 @@
+export type AppRouteId = 'story' | 'memoryCreate';
+export type AppRouteIcon = 'story' | 'add';
+
+export interface AppRouteDefinition {
+  id: AppRouteId;
+  path: string;
+  labelKey: string;
+  icon: AppRouteIcon;
+  end: boolean;
+}
+
+export const APP_ROUTES = [
+  {
+    id: 'story',
+    path: '/story',
+    labelKey: 'navigation.story',
+    icon: 'story',
+    end: true,
+  },
+  {
+    id: 'memoryCreate',
+    path: '/memory/new',
+    labelKey: 'navigation.newMemory',
+    icon: 'add',
+    end: true,
+  },
+] as const satisfies readonly AppRouteDefinition[];
+
+export const DEFAULT_APP_ROUTE = APP_ROUTES[0].path;
+
+export function appRoutePath(id: AppRouteId): string {
+  const route = APP_ROUTES.find((candidate) => candidate.id === id);
+  if (!route) throw new Error(`Unknown app route: ${id}`);
+  return route.path;
+}
