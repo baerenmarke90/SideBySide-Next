@@ -77,10 +77,9 @@ Expected response:
 {"status":"ok","database":"ok"}
 ```
 
-The Web start page is visible without Space configuration. The technical
-login/Memory/image/Story flow becomes active only after `SBS_WEB_SPACE_ID` in
-`.env` is set to an existing Space UUID and the image is rebuilt with
-`docker compose up -d --build web`.
+The Web start page requires no Space configuration. After authentication, the
+client discovers the account's active Memberships through the API and uses only
+a server-authorized Space. No Space UUID is embedded in the Web image.
 
 This state is intended for evaluation, not publication. Before making the
 instance reachable, complete the production checklist below.
@@ -142,8 +141,6 @@ SBS_CURSOR_SIGNING_KEY=...        # openssl rand -base64 48
 SBS_PUBLIC_BASE_URL=https://your-domain.example
 SBS_ALLOWED_HOSTS=["your-domain.example"]
 TRUSTED_PROXY_IPS=...             # smallest IP range used by the reverse proxy
-SBS_WEB_SPACE_ID=...              # existing Space UUID for the G2 reference flow
-
 # With a mail server:
 SBS_MAIL_TRANSPORT=smtp
 SBS_MAIL_FROM=no-reply@your-domain.example
@@ -177,8 +174,7 @@ substantive: with `none`, no token leaves the system.
 
 Then run `docker compose up -d --build --force-recreate --wait --wait-timeout
 300` and verify that `docker compose logs api` reports production mode.
-`--build` is required for the PoC because the operator Space ID is embedded at
-Vite build time.
+`--build` ensures the deployed Web and backend images match the selected source revision.
 
 ## Media storage
 

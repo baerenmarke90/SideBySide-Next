@@ -8,9 +8,7 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 ARG VITE_SBS_API_BASE_URL=""
-ARG VITE_SBS_SPACE_ID=""
 ENV VITE_SBS_API_BASE_URL=${VITE_SBS_API_BASE_URL}
-ENV VITE_SBS_SPACE_ID=${VITE_SBS_SPACE_ID}
 RUN sh scripts/test_csp_config.sh
 RUN npm run build
 

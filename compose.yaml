@@ -41,7 +41,6 @@ x-web-build: &web-build
     context: ./web
     args:
       VITE_SBS_API_BASE_URL: ""
-      VITE_SBS_SPACE_ID: "${SBS_WEB_SPACE_ID:-}"
   pull_policy: build
 
 services:

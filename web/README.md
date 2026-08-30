@@ -56,8 +56,8 @@ Technical values are operator configuration and are not exposed to normal
 users as input fields:
 
 - `VITE_SBS_API_BASE_URL` — API base URL; an empty value uses same-origin.
-- `VITE_SBS_SPACE_ID` — reference Space for the current M2 Web slice.
 
+The active Space is derived only after authentication from the account's server-authorized Memberships; it is not a build-time or operator value.
 Access and refresh tokens remain exclusively in ephemeral React state. Logout
 clears state and the TanStack Query cache; M2 introduces no persistent offline
 or read-cache policy.
@@ -94,15 +94,9 @@ Compose test, it serves static files at
 service. The browser therefore remains same-origin and needs no broad CORS
 allowance.
 
-The current M2 Web slice still requires a known Space UUID:
-
-```dotenv
-SBS_WEB_SPACE_ID=00000000-0000-0000-0000-000000000000
-```
-
-Because Vite embeds this operator value at build time, changing it requires
-`docker compose up -d --build web`. The UUID is not a secret; access and refresh
-tokens remain exclusively in ephemeral browser state.
+After sign-in, the Web client discovers the account's active Memberships through
+the authenticated API and uses only a server-authorized Space ID. No Space UUID
+is embedded in the Web image or configured by the operator.
 
 In public operation, `/api/` must not be routed through the Web container. The
 TLS reverse proxy routes `/api/` directly to the API host port and all remaining

@@ -140,18 +140,12 @@ TRUSTED_PROXY_IPS=192.168.10.30,192.168.10.31
 `TRUSTED_PROXY_IPS` contains only the addresses or smallest CIDR range from
 which the reverse proxy actually reaches the API. Never use `*`.
 
-## Web reference flow
+## Web Space context
 
-The current Web reference flow still requires an existing Space UUID as build
-configuration:
-
-```dotenv
-SBS_WEB_SPACE_ID=<space-uuid>
-```
-
-The UUID is not a secret. It is embedded in the Web bundle during the Vite
-build. A container restart is therefore insufficient after a change; the Web
-image must be rebuilt.
+The Web client does not accept an operator-provided Space UUID. After
+authentication it discovers the account's active Memberships through the API
+and uses only a server-authorized Space. Arcane therefore needs no Space-specific
+Web build argument or environment value.
 
 ## Post-deployment verification
 

@@ -26,6 +26,10 @@ import { loadReferenceClientConfig } from './client/config';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
 import { normalizeClientError } from './client/problemDetails';
 import {
+  loadAuthorizedMemberships,
+  resolveActiveSpaceId,
+} from './client/spaceContext';
+import {
   createReferenceApis,
   loadAuthorizedImage,
   signIn,
@@ -49,31 +53,37 @@ function readableError(error: unknown, fallback: string): string {
   return error.message;
 }
 
-function SetupNotice() {
+function SpaceContextGate({
+  loading,
+  error,
+  onRetry,
+}: {
+  loading: boolean;
+  error: Error | null;
+  onRetry: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <main className="setup-shell">
       <div className="entry-aura entry-aura-start" aria-hidden="true" />
       <div className="entry-aura entry-aura-end" aria-hidden="true" />
-      <section className="setup-card" aria-labelledby="setup-heading">
+      <section className="setup-card" aria-labelledby="space-context-heading">
         <Brand
           suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
         />
         <div className="setup-content">
-          <span className="setup-symbol" aria-hidden="true">
-            <span />
-          </span>
-          <p className="eyebrow">{t('setup.eyebrow')}</p>
-          <h1 id="setup-heading">{t('setup.heading')}</h1>
-          <p>{t('setup.body')}</p>
+          <p className="eyebrow">{t('spaceContext.eyebrow')}</p>
+          {loading ? (
+            <UiState kind="loading" title={t('spaceContext.loading')} />
+          ) : error ? (
+            <ProblemState error={error} onRetry={onRetry} />
+          ) : (
+            <>
+              <h1 id="space-context-heading">{t('spaceContext.emptyTitle')}</h1>
+              <p>{t('spaceContext.emptyBody')}</p>
+            </>
+          )}
         </div>
-        <details className="operator-note">
-          <summary>{t('setup.operatorSummary')}</summary>
-          <p>
-            {t('setup.operatorPrefix')} <code>SBS_WEB_SPACE_ID</code>{' '}
-            {t('setup.operatorSuffix')}
-          </p>
-        </details>
       </section>
     </main>
   );
@@ -609,28 +619,43 @@ export function App() {
   const config = useMemo(loadReferenceClientConfig, []);
   const queryClient = useQueryClient();
   const [tokens, setTokens] = useState<TokenView | null>(null);
+  const [spaceId, setSpaceId] = useState<string | null>(null);
+
+  const membershipsQuery = useQuery({
+    queryKey: ['account-memberships'],
+    queryFn: async () => {
+      if (!tokens) return [];
+      return loadAuthorizedMemberships(config.apiBaseUrl, tokens.accessToken);
+    },
+    enabled: tokens !== null,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!tokens || !membershipsQuery.data) {
+      setSpaceId(null);
+      return;
+    }
+    setSpaceId((current) =>
+      resolveActiveSpaceId(membershipsQuery.data, current),
+    );
+  }, [membershipsQuery.data, tokens]);
 
   const loginMutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       signIn(config.apiBaseUrl, email, password),
     onSuccess: (session) => {
+      setSpaceId(null);
       setTokens(session.tokens);
       queryClient.clear();
     },
   });
 
   function logout() {
+    setSpaceId(null);
     setTokens(null);
     queryClient.clear();
   }
-
-  if (!config.spaceId)
-    return (
-      <>
-        <ThemeControl />
-        <SetupNotice />
-      </>
-    );
 
   if (!tokens) {
     return (
@@ -647,12 +672,25 @@ export function App() {
     );
   }
 
+  if (membershipsQuery.isPending || membershipsQuery.error || !spaceId) {
+    return (
+      <>
+        <ThemeControl />
+        <SpaceContextGate
+          loading={membershipsQuery.isPending}
+          error={membershipsQuery.error}
+          onRetry={() => void membershipsQuery.refetch()}
+        />
+      </>
+    );
+  }
+
   return (
     <AuthenticatedApp
       tokens={tokens}
       logout={logout}
       apiBaseUrl={config.apiBaseUrl}
-      spaceId={config.spaceId}
+      spaceId={spaceId}
     />
   );
 }
