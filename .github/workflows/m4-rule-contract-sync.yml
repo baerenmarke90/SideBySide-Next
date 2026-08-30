@@ -1,0 +1,93 @@
+name: M4 Rule Contract Sync
+
+on:
+  push:
+    branches: [feat/292-m4c-rules-occurrences-final]
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+  SBS_ENVIRONMENT: test
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv lock --check
+          uv sync --frozen
+
+      - name: Validate typed API source
+        working-directory: backend
+        run: |
+          uv run --frozen ruff check src tests scripts alembic
+          uv run --frozen ruff format --check src tests scripts alembic
+          uv run --frozen mypy
+
+      - name: Regenerate authoritative OpenAPI and clients
+        run: |
+          cd backend
+          uv run --frozen python scripts/openapi_contract.py write
+          uv run --frozen python scripts/openapi_contract.py check
+          cd ..
+          tools/openapi/generate.sh
+          tools/openapi/generate.sh --check
+
+      - name: Assert Kotlin Rule parameters are concrete
+        run: |
+          test -f android/api/generated/sidebyside/api/models/RuleParametersUpdate.kt
+          if grep -R "Map<String, Any>" \
+            android/api/generated/sidebyside/api/models/RulePreferenceUpdate.kt \
+            android/api/generated/sidebyside/api/models/RuleParametersUpdate.kt; then
+            echo "Rule preference contract still contains unserializable Any values."
+            exit 1
+          fi
+          grep -q "RuleParametersUpdate" \
+            android/api/generated/sidebyside/api/models/RulePreferenceUpdate.kt
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle cache and validate wrapper
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Install Android SDK 37.1
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-37.1" "build-tools;36.0.0"
+
+      - name: Re-run Android unit and contract tests
+        working-directory: android
+        run: ./gradlew --no-daemon --stacktrace --dependency-verification strict :app:testDebugUnitTest
+
+      - name: Commit synchronized contract
+        run: |
+          rm .github/workflows/m4-rule-contract-sync.yml
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git commit -m "fix(rules): synchronize typed Rule API clients"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
