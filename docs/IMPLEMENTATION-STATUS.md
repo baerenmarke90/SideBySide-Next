@@ -13,7 +13,7 @@ Current gate status: **G2 passed; M2 complete; M3 released**
 - **Binding development rule:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) and [AGENTS.md](../AGENTS.md)
 - **Architecture/operations decisions:** dated ADRs under [docs/decisions](decisions)
 - **M2 project control:** [m2/PROJECT-CONTROL.md](m2/PROJECT-CONTROL.md)
-- **M3 readiness and delivery:** [m3/README.md](m3/README.md) and [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md)
+- **M3 readiness and delivery:** [m3/README.md](m3/README.md), [m3/DELIVERY-PLAN.md](m3/DELIVERY-PLAN.md), and [m3/G3-EVIDENCE.md](m3/G3-EVIDENCE.md)
 - **Historical reviews:** dated files under `docs/reviews/`; they are never modified retroactively.
 - **This document:** living work and progress list.
 
@@ -180,6 +180,7 @@ The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A conc
 - [x] **M3-S6 — Shared Collections:** shared Collection + CollectionItem aggregate with collaborative writes; immutable server-derived `createdBy`; independent root structure/order and Item content versions; contiguous positions; append-on-create, transactional delete compaction, and atomic exact-set full-list reorder; Cross-Tenant fail-closed handling and real PostgreSQL reorder/create/delete/completion race coverage; Collection/Item titles remain out of event payloads. ShoppingList and persisted multi-select state remain outside S6.
 - [x] **M3-S7 — PrivateNote + GiftIdea:** dedicated owner-only PrivateNote and GiftIdea tables/services with ProtectedPayload content, server-derived Space/owner/privacy, CRUD/List under `/spaces/{spaceId}/private/...`, `If-Match`/409, GiftIdea lifecycle `IDEA | BOUGHT | GIVEN`, inert URL storage without server fetches, privacy-safe 404 behavior, owner-filtered pagination, redacted private events, and PostgreSQL/HTTP partner/Cross-Tenant coverage.
 - [x] **M3-S8 — PrivateCollection:** dedicated owner-only PrivateCollection and PrivateCollectionItem persistence with Parent-derived Item authorization, ProtectedPayload content, root/item optimistic concurrency, append/compaction and atomic full-list reorder, privacy-safe partner/Cross-Tenant handling, redacted private events, real PostgreSQL race coverage, and synchronized OpenAPI plus generated TypeScript/Kotlin clients (Issue #259 / PR #260).
+- [x] **M3-S9 — Integrated M3 backend/API evidence:** executable [G3 evidence map](m3/G3-EVIDENCE.md) for all five M3-D24 real HTTP/PostgreSQL flows; integrated Chapter relation/delete preservation and Private Area owner -> partner -> owner context-switch flows; Shared Collection and PrivateCollection Parent Delete vs. Item Create/Reorder races added with independent PostgreSQL transactions; existing S1-S8 Tenant, Privacy, redaction, lifecycle, and contract suites reused rather than duplicated (Issue #261 / PR #263).
 
 ## Later milestones
 
@@ -193,4 +194,4 @@ The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A conc
 
 ## Next checkpoint
 
-M3-S9 **Integrated M3 backend/API evidence** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md): demonstrate the five mandatory G3 flows against the real SideBySide API + PostgreSQL and consolidate Cross-Tenant, race, Event/log Redaction, and Delete evidence before S10/G3 review.
+M3-S10 **G3 Review** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md): evaluate the final merged `main` SHA, authoritative workflow runs, the five S9 evidence flows, and all open Security/Privacy/Tenant findings in a new dated immutable review. Only that review may conclude `G3: PASSED` or `G3: FAILED`.
