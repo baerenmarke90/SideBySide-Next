@@ -1,0 +1,124 @@
+name: M4 Materialize Final
+
+on:
+  push:
+    branches: [feat/292-m4c-rules-occurrences-final]
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+  SBS_ENVIRONMENT: test
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Apply validated M4-C-S2 completion
+        run: |
+          python3 tools/m4_finalize.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def extract(workflow_path: str, step_name: str | None = None) -> str:
+              workflow = Path(workflow_path).read_text(encoding="utf-8")
+              if step_name is not None:
+                  workflow = workflow[workflow.index(step_name):]
+              start_marker = "          python3 - <<'PY'\n"
+              end_marker = "\n          PY\n"
+              start = workflow.index(start_marker) + len(start_marker)
+              end = workflow.index(end_marker, start)
+              lines = workflow[start:end].splitlines()
+              return "\n".join(
+                  line[10:] if line.startswith("          ") else line for line in lines
+              ) + "\n"
+
+          Path("/tmp/m4_runtime_prior.py").write_text(
+              extract(".github/workflows/m4-finalize.yml"), encoding="utf-8"
+          )
+          Path("/tmp/m4_runtime_r6.py").write_text(
+              extract(
+                  ".github/workflows/m4-finalize-r5.yml",
+                  "- name: Make timezone replanning explicit and fix catch-up evidence",
+              ),
+              encoding="utf-8",
+          )
+          PY
+          python3 /tmp/m4_runtime_prior.py
+          python3 /tmp/m4_runtime_r6.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("backend/src/sidebyside/reminders/runtime.py")
+          text = path.read_text(encoding="utf-8")
+          old = (
+              "    for reminder in reminders:\n"
+              "        _plan_for_recipient(\n"
+              "            session, reminder, account, timezone_name=timezone_name\n"
+              "        )\n\n\n"
+              "def _active_owner"
+          )
+          new = (
+              "    for reminder in reminders:\n"
+              "        _plan_for_recipient(\n"
+              "            session, reminder, account, timezone_name=timezone_name\n"
+              "        )\n"
+              "    session.flush()\n\n\n"
+              "def _active_owner"
+          )
+          if old not in text:
+              raise RuntimeError("Missing reconcile_account flush anchor")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv lock --check
+          uv sync --frozen
+
+      - name: Normalize backend completion
+        working-directory: backend
+        run: |
+          uv run --frozen ruff check src tests scripts alembic --fix --unsafe-fixes
+          uv run --frozen ruff format src tests scripts alembic
+          uv run --frozen ruff check src tests scripts alembic
+          uv run --frozen mypy
+
+      - name: Regenerate authoritative contract and clients
+        run: |
+          cd backend
+          uv run --frozen python scripts/openapi_contract.py write
+          uv run --frozen python scripts/openapi_contract.py check
+          cd ..
+          tools/openapi/generate.sh
+          tools/openapi/generate.sh --check
+
+      - name: Remove temporary finalization machinery
+        run: |
+          rm -f tools/m4_finalize.py \
+            .github/workflows/m4-finalize.yml \
+            .github/workflows/m4-finalize-r5.yml \
+            .github/workflows/m4-finalize-r7.yml \
+            .github/workflows/m4-materialize-final.yml
+
+      - name: Commit validated final tree
+        run: |
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(reminders): finish M4-C-S2 evidence and reconciliation"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
