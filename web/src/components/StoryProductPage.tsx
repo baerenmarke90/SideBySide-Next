@@ -57,7 +57,7 @@ function selectedYear(value: FormDataEntryValue | null): number | null {
   const text = String(value ?? '').trim();
   if (!text) return null;
   const year = Number(text);
-  return Number.isInteger(year) && year >= 1900 && year <= 9999 ? year : null;
+  return Number.isInteger(year) && year > 0 ? year : null;
 }
 
 export function StoryProductPage({
@@ -177,9 +177,8 @@ export function StoryProductPage({
         description={t('story.intro')}
         className="story-heading"
         action={
-          <div
+          <nav
             className="story-create-actions"
-            role="group"
             aria-label={t('storyActions.addAria')}
           >
             <Link
@@ -200,7 +199,7 @@ export function StoryProductPage({
             >
               {t('storyActions.addMilestone')}
             </Link>
-          </div>
+          </nav>
         }
       />
 
@@ -235,8 +234,7 @@ export function StoryProductPage({
               name="year"
               type="number"
               inputMode="numeric"
-              min={1900}
-              max={9999}
+              min={1}
               defaultValue={filters.year ?? ''}
               placeholder={t('storyFilters.anyYear')}
             />
