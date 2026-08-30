@@ -26,6 +26,10 @@ Primary HTTP evidence:
   aggregate.
 - `backend/tests/integration/test_wish_to_plan.py::TestConversion::test_stale_wish_creates_no_plan`
   proves stale `If-Match` returns 409 without a partial Plan.
+- `backend/tests/integration/test_plans.py`
+  covers the M3-D04 Plan lifecycle through the real API, including direct
+  creation, schedule/unschedule/complete behavior, date invariants, stale
+  versions, and explicit forbidden transition paths.
 
 Concurrency/rollback evidence:
 
@@ -118,6 +122,7 @@ Additional isolation/lifecycle evidence:
 |---|---|
 | Cross-Tenant isolation | `test_tenant_isolation.py`, `test_endpoint_matrix.py`, plus M3 slice-specific foreign-Space tests |
 | OWNER_ONLY isolation | `test_private_authorization.py`, `test_private_area_api.py`, `test_private_collections_api.py`, integrated Flow 5 |
+| Plan lifecycle transitions and version conflicts | `test_plans.py`, `test_wish_to_plan.py`, `test_wish_plan_races.py` |
 | Relation to private/non-readable targets | `test_place_relations.py`, `test_chapter_relations_api.py` |
 | Wish->Plan double submit/rollback | `test_wish_to_plan.py`, `test_wish_plan_races.py` |
 | Relation/privacy races | `test_place_relation_races.py`, `test_chapter_relation_races.py` |
