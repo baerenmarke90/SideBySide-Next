@@ -15,6 +15,7 @@ import { PersonRelationship } from '../api/generated/models/PersonRelationship';
 import { RelatedPersonDeletePolicy } from '../api/generated/models/RelatedPersonDeletePolicy';
 import type { RelatedPersonFields } from '../api/generated/models/RelatedPersonFields';
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
+import { normalizeClientError } from '../client/problemDetails';
 import {
   canConfirmRelatedPersonDelete,
   INITIAL_RELATED_PERSON_DELETE_CHOICE,
@@ -22,8 +23,8 @@ import {
   type RelatedPersonDeletePolicyValue,
   relatedPersonDeleteReducer,
 } from '../client/relatedPersonDelete';
-import { normalizeClientError } from '../client/problemDetails';
 import { useTranslation } from '../i18n';
+import { ImportantDatesPanel } from './ImportantDatesPanel';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -388,6 +389,7 @@ export function RelatedPeoplePage({
         day: '2-digit',
         month: 'long',
         year: 'numeric',
+        timeZone: 'UTC',
       }),
     [i18n.language],
   );
@@ -396,6 +398,7 @@ export function RelatedPeoplePage({
       new Intl.DateTimeFormat(i18n.language, {
         day: '2-digit',
         month: 'long',
+        timeZone: 'UTC',
       }),
     [i18n.language],
   );
@@ -465,9 +468,10 @@ export function RelatedPeoplePage({
     onSuccess: async () => {
       setDeleteTarget(null);
       setSavedMessage(t('people.deleted'));
-      await queryClient.invalidateQueries({
-        queryKey: ['related-people', spaceId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['related-people', spaceId] }),
+        queryClient.invalidateQueries({ queryKey: ['important-dates', spaceId] }),
+      ]);
     },
   });
 
@@ -588,6 +592,12 @@ export function RelatedPeoplePage({
           </ul>
         ) : null}
       </section>
+
+      <ImportantDatesPanel
+        peopleApi={peopleApi}
+        spaceId={spaceId}
+        people={peopleQuery.data ?? []}
+      />
 
       {deleteTarget ? (
         <DeleteRelatedPersonDialog
