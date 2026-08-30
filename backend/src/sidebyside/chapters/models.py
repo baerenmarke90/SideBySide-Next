@@ -82,8 +82,8 @@ class Chapter(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin, Base)
         Index(
             "ix_chapters_search_fts",
             text(
-                "setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B')"
+                "(setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B'))"
             ),
             postgresql_using="gin",
         ),
