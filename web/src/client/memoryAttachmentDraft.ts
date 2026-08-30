@@ -30,6 +30,9 @@ async function waitUntilReady(
       spaceId,
       attachmentId,
     });
+    if (signal?.aborted) {
+      throw new ReferenceFlowError(i18n.t('m5Product.upload.cancelled'));
+    }
     if (attachment.status === 'READY') return;
     if (
       attachment.status === 'FAILED' ||
