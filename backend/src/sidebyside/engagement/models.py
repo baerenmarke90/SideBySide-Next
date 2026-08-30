@@ -6,7 +6,15 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, Index, String, UniqueConstraint, func
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -52,10 +60,17 @@ class Activity(IdMixin, Base):
 
     __tablename__ = "activities"
 
-    space_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
+    space_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("spaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     source_event_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
     kind: Mapped[str] = mapped_column(String(64), nullable=False)
-    actor_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
+    actor_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="SET NULL"),
+    )
     target_type: Mapped[str | None] = mapped_column(String(32))
     target_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -83,11 +98,22 @@ class Notification(IdMixin, Base):
 
     __tablename__ = "notifications"
 
-    space_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
-    recipient_account_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
+    space_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("spaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    recipient_account_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     source_event_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
     kind: Mapped[str] = mapped_column(String(64), nullable=False)
-    actor_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
+    actor_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="SET NULL"),
+    )
     target_type: Mapped[str | None] = mapped_column(String(32))
     target_id: Mapped[UUID | None] = mapped_column(postgresql.UUID(as_uuid=True))
     created_at: Mapped[datetime] = mapped_column(
