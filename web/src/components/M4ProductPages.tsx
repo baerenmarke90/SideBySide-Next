@@ -295,7 +295,7 @@ export function SearchProductPage({
         description={t('m5s5.search.intro')}
       />
 
-      <form className="m4-toolbar" role="search" onSubmit={submit}>
+      <form className="m4-toolbar" onSubmit={submit}>
         <div className="m4-toolbar-row">
           <div className="field-group">
             <label htmlFor="m4-search-query">{t('m5s5.search.label')}</label>
