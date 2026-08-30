@@ -1,6 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { APP_ROUTES, DEFAULT_APP_ROUTE, type AppRouteIcon } from '../client/routes';
+import {
+  APP_ROUTES,
+  DEFAULT_APP_ROUTE,
+  type AppRouteIcon,
+} from '../client/routes';
 import { useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { ThemeControl } from './ThemeControl';
