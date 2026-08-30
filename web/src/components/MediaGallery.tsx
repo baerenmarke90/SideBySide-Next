@@ -108,11 +108,7 @@ export function MediaGallery({
 
   return (
     <>
-      <div
-        className="media-gallery-grid"
-        role="region"
-        aria-label={t('gallery.aria')}
-      >
+      <section className="media-gallery-grid" aria-label={t('gallery.aria')}>
         {items.map((item, index) => (
           <button
             key={item.id}
@@ -127,7 +123,7 @@ export function MediaGallery({
             {renderMedia(item, 'media-gallery-thumb-content')}
           </button>
         ))}
-      </div>
+      </section>
 
       {activeItem && activeIndex !== null ? (
         <div
