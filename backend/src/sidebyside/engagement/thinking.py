@@ -1,4 +1,4 @@
-"""Content-free `Ich denke an dich` command and projection helper."""
+"""Content-free thinking-of-you command and projection helper."""
 
 from __future__ import annotations
 
