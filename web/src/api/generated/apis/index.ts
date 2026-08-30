@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from './ActivityApi';
 export * from './AttachmentsApi';
 export * from './AuthApi';
 export * from './ChapterRelationsApi';
@@ -12,6 +13,7 @@ export * from './HeartMomentsApi';
 export * from './InvitationsApi';
 export * from './MemoriesApi';
 export * from './MilestonesApi';
+export * from './NotificationsApi';
 export * from './PeopleApi';
 export * from './PlaceRelationsApi';
 export * from './PlacesApi';
