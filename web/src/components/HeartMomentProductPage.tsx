@@ -90,7 +90,8 @@ export function HeartMomentProductPage({
   const heartMomentQuery = useQuery({
     queryKey,
     queryFn: async () => {
-      if (!heartMomentId) throw new Error('Missing HeartMoment route parameter.');
+      if (!heartMomentId)
+        throw new Error('Missing HeartMoment route parameter.');
       return loadProductWithReadCache({
         accountId: currentAccountId,
         spaceId,
@@ -161,8 +162,7 @@ export function HeartMomentProductPage({
           text: update.text ?? current.text,
           emotion: update.emotion ?? current.emotion,
           happenedOn: update.happenedOn ?? current.happenedOn,
-          attachment:
-            update.attachmentId === null ? null : current.attachment,
+          attachment: update.attachmentId === null ? null : current.attachment,
           updatedAt: new Date(),
         },
         source: 'network',
@@ -170,7 +170,8 @@ export function HeartMomentProductPage({
       return { previous };
     },
     onError: (_error, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      if (context?.previous)
+        queryClient.setQueryData(queryKey, context.previous);
     },
     onSuccess: async (heartMoment) => {
       attachments.clear();
@@ -209,7 +210,8 @@ export function HeartMomentProductPage({
       return { previous: queryClient.getQueryData(queryKey) };
     },
     onError: (_error, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      if (context?.previous)
+        queryClient.setQueryData(queryKey, context.previous);
     },
     onSuccess: async (heartMoment) => {
       queryClient.setQueryData(queryKey, {
@@ -403,7 +405,8 @@ export function HeartMomentProductPage({
         emotion: String(data.get('emotion')) as HeartEmotionValue,
         happenedOn: new Date(`${happenedOn}T00:00:00Z`),
       };
-      if (replacementAttachmentId) update.attachmentId = replacementAttachmentId;
+      if (replacementAttachmentId)
+        update.attachmentId = replacementAttachmentId;
       else if (removeExistingPhoto) update.attachmentId = null;
 
       updateMutation.mutate({ current: heartMoment, update });
@@ -568,7 +571,10 @@ export function HeartMomentProductPage({
         )}
 
         {heartMoment.capabilities.canEdit && !offline ? (
-          <section className="visibility-panel" aria-labelledby="visibility-change-heading">
+          <section
+            className="visibility-panel"
+            aria-labelledby="visibility-change-heading"
+          >
             <h2 id="visibility-change-heading">
               {t('heartMomentProduct.visibilityChangeHeading')}
             </h2>
