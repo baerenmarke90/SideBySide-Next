@@ -253,6 +253,7 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         "/api/v1/spaces/{spaceId}/search",
         query={"q": "Matrix"},
     ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/dashboard"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/milestones"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
     Endpoint(
