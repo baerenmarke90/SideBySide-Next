@@ -124,7 +124,9 @@ def reconcile_all(session: Session) -> None:
 
 def reconcile_space(session: Session, space_id: UUID) -> None:
     _reconcile_generated_reminders(session, space_id)
-    reminders = list(session.execute(select(Reminder).where(Reminder.space_id == space_id)).scalars())
+    reminders = list(
+        session.execute(select(Reminder).where(Reminder.space_id == space_id)).scalars()
+    )
     recipients = list(
         session.execute(
             select(Account)
@@ -530,7 +532,11 @@ def _desired_occurrences(
 
     if schedule_type is ReminderScheduleType.RELATIONSHIP_DAY_COUNT:
         profile = _relationship_profile_for(session, reminder.space_id)
-        if profile is None or profile.relationship_started_on is None or reminder.relationship_day_count is None:
+        if (
+            profile is None
+            or profile.relationship_started_on is None
+            or reminder.relationship_day_count is None
+        ):
             return result
         try:
             target_date = profile.relationship_started_on + timedelta(
@@ -563,12 +569,13 @@ def _desired_occurrences(
     return result
 
 
-
 def _timezone(name: str) -> ZoneInfo:
     try:
         return ZoneInfo(name)
     except ZoneInfoNotFoundError as error:
-        raise ValidationError("Account timezone is invalid.", RuntimeErrorCode.TIMEZONE_INVALID) from error
+        raise ValidationError(
+            "Account timezone is invalid.", RuntimeErrorCode.TIMEZONE_INVALID
+        ) from error
 
 
 def _annual_date(year: int, month: int, day: int) -> date:
