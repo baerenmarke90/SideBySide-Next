@@ -16,6 +16,7 @@ from sidebyside.api.v1 import (
     chapters,
     collections,
     comments,
+    engagement,
     health,
     heart_moments,
     invitations,
@@ -39,6 +40,7 @@ router.include_router(health.router)
 router.include_router(invitations.router)
 router.include_router(attachments.router)
 router.include_router(story.router)
+router.include_router(engagement.router)
 router.include_router(memories.router)
 router.include_router(milestones.router)
 router.include_router(heart_moments.router)
