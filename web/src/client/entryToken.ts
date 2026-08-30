@@ -1,26 +1,30 @@
 export type SensitiveEntryToken =
   | { kind: 'recovery'; token: string }
+  | { kind: 'magicLink'; token: string }
+  | { kind: 'emailVerification'; token: string }
   | { kind: 'invitation'; token: string };
 
-export function readSensitiveEntryToken(search: string): SensitiveEntryToken | null {
-  const params = new URLSearchParams(search);
-  const recovery = params.get('recovery')?.trim();
-  if (recovery) return { kind: 'recovery', token: recovery };
+const ENTRY_PATHS: Record<string, SensitiveEntryToken['kind']> = {
+  '/auth/recovery': 'recovery',
+  '/auth/magic-link': 'magicLink',
+  '/auth/verify-email': 'emailVerification',
+  '/auth/invitation': 'invitation',
+};
 
-  const invitation = params.get('invite')?.trim();
-  if (invitation) return { kind: 'invitation', token: invitation };
-
-  return null;
-}
-
-export function stripSensitiveEntryTokens(
+export function readSensitiveEntryToken(
   pathname: string,
   search: string,
-  hash: string,
-): string {
+): SensitiveEntryToken | null {
+  const kind = ENTRY_PATHS[pathname.replace(/\/$/, '')];
+  if (!kind) return null;
+
+  const token = new URLSearchParams(search).get('token')?.trim();
+  return token ? { kind, token } : null;
+}
+
+export function stripSensitiveEntryToken(search: string): string {
   const params = new URLSearchParams(search);
-  params.delete('recovery');
-  params.delete('invite');
+  params.delete('token');
   const nextSearch = params.toString();
-  return `${pathname}${nextSearch ? `?${nextSearch}` : ''}${hash}`;
+  return `/${nextSearch ? `?${nextSearch}` : ''}`;
 }
