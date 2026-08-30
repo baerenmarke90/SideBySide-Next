@@ -23,12 +23,14 @@ const people = {
   listTitle: 'Gespeicherte Personen',
   listAria: 'Wichtige Menschen',
   emptyTitle: 'Noch keine Person gespeichert',
-  emptyBody: 'Fügt hier Menschen hinzu, die in eurem gemeinsamen Leben wichtig sind.',
+  emptyBody:
+    'Fügt hier Menschen hinzu, die in eurem gemeinsamen Leben wichtig sind.',
   birthdayValue: 'Geburtstag: {{date}}',
   edit: 'Bearbeiten',
   delete: 'Löschen',
   deleteTitle: 'Person löschen',
-  deleteBody: 'Wie sollen verknüpfte Termine behandelt werden, wenn du {{name}} löschst?',
+  deleteBody:
+    'Wie sollen verknüpfte Termine behandelt werden, wenn du {{name}} löschst?',
   deletePrivacyNote:
     'Mit dieser Person verknüpfte Termine können auch Einträge deines Partners enthalten. Deshalb zeigen wir hier bewusst keine Anzahl oder Details.',
   deletePolicyLegend: 'Verknüpfte Termine',
