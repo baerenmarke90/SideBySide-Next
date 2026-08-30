@@ -29,6 +29,7 @@ import {
   readSensitiveEntryToken,
   stripSensitiveEntryToken,
 } from './client/entryToken';
+import { createM4ProductApis } from './client/m4Product';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
 import { createPeopleApi } from './client/peopleApi';
 import { normalizeClientError } from './client/problemDetails';
@@ -52,6 +53,12 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppShell } from './components/AppShell';
 import { Brand } from './components/Brand';
 import { IdentityEntry } from './components/IdentityEntry';
+import {
+  ActivityProductPage,
+  DashboardProductPage,
+  NotificationsProductPage,
+  SearchProductPage,
+} from './components/M4ProductPages';
 import { MemoryProductPage } from './components/MemoryProductPage';
 import { PageHeader } from './components/PageHeader';
 import { ProblemState } from './components/ProblemState';
@@ -504,6 +511,10 @@ function AuthenticatedApp({
     () => createPeopleApi(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
   );
+  const m4Apis = useMemo(
+    () => createM4ProductApis(apiBaseUrl, tokens.accessToken),
+    [apiBaseUrl, tokens.accessToken],
+  );
 
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
@@ -571,6 +582,24 @@ function AuthenticatedApp({
                 storyQuery={storyQuery}
                 loadMemoryImage={loadMemoryImage}
               />
+            }
+          />
+          <Route
+            path={appRoutePath('dashboard')}
+            element={<DashboardProductPage apis={m4Apis} spaceId={spaceId} />}
+          />
+          <Route
+            path={appRoutePath('search')}
+            element={<SearchProductPage apis={m4Apis} spaceId={spaceId} />}
+          />
+          <Route
+            path={appRoutePath('activity')}
+            element={<ActivityProductPage apis={m4Apis} spaceId={spaceId} />}
+          />
+          <Route
+            path={appRoutePath('notifications')}
+            element={
+              <NotificationsProductPage apis={m4Apis} spaceId={spaceId} />
             }
           />
           <Route
