@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import de from './locales/de';
 import importantDates from './locales/importantDates';
 import people from './locales/people';
+import profiles from './locales/profiles';
 
 export const DEFAULT_LOCALE = 'de';
 
@@ -24,9 +25,11 @@ if (!i18n.isInitialized) {
           navigation: {
             ...de.navigation,
             people: 'Menschen',
+            profile: 'Profil',
           },
           importantDates,
           people,
+          profiles,
         },
       },
     },
