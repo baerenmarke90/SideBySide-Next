@@ -1,0 +1,105 @@
+name: M4-B Endpoint Matrix
+
+on:
+  push:
+    branches:
+      - ops/m4b-endpoint-matrix
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Activity branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/282-m4b-activity-notifications
+          fetch-depth: 0
+
+      - name: Patch endpoint matrix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("backend/tests/integration/test_endpoint_matrix.py")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              (
+                  "from uuid import uuid4\n",
+                  "from uuid import UUID, uuid4\n",
+              ),
+              (
+                  "from sidebyside.main import create_app\n",
+                  "from sidebyside.engagement.models import Notification, NotificationKind\n"
+                  "from sidebyside.main import create_app\n",
+              ),
+              (
+                  '    Endpoint("GET", "/api/v1/spaces/{spaceId}/timeline"),\n',
+                  '    Endpoint("GET", "/api/v1/spaces/{spaceId}/timeline"),\n'
+                  '    Endpoint("GET", "/api/v1/spaces/{spaceId}/activity"),\n'
+                  '    Endpoint("GET", "/api/v1/spaces/{spaceId}/notifications"),\n'
+                  '    Endpoint("GET", "/api/v1/spaces/{spaceId}/notifications/unread-count"),\n'
+                  '    Endpoint(\n'
+                  '        "POST",\n'
+                  '        "/api/v1/spaces/{spaceId}/notifications/{notificationId}/read",\n'
+                  '        resource_absence="NOTIFICATION_NOT_FOUND",\n'
+                  '    ),\n'
+                  '    Endpoint("POST", "/api/v1/spaces/{spaceId}/notifications/read-all"),\n',
+              ),
+              (
+                  '    memory = client.post(f"{base_path}/memories", json=MEMORY, headers=headers).json()\n',
+                  '    memory = client.post(f"{base_path}/memories", json=MEMORY, headers=headers).json()\n'
+                  '    notification = Notification(\n'
+                  '        space_id=space.id,\n'
+                  '        recipient_account_id=anna.id,\n'
+                  '        source_event_id=uuid4(),\n'
+                  '        kind=NotificationKind.COMMENT_CREATED.value,\n'
+                  '        actor_id=ben.id,\n'
+                  '        target_type="MEMORY",\n'
+                  '        target_id=UUID(memory["id"]),\n'
+                  '    )\n'
+                  '    session.add(notification)\n'
+                  '    session.flush()\n',
+              ),
+              (
+                  '            "memoryId": memory["id"],\n',
+                  '            "memoryId": memory["id"],\n'
+                  '            "notificationId": str(notification.id),\n',
+              ),
+              (
+                  '            "memoryId",\n',
+                  '            "memoryId",\n'
+                  '            "notificationId",\n',
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f"Expected matrix fragment not found: {old!r}")
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Format patched test
+        run: |
+          python -m pip install "uv==0.12.5"
+          cd backend
+          uv sync --frozen
+          uv run --frozen ruff check --fix tests/integration/test_endpoint_matrix.py
+          uv run --frozen ruff format tests/integration/test_endpoint_matrix.py
+
+      - name: Commit endpoint matrix
+        run: |
+          git add backend/tests/integration/test_endpoint_matrix.py
+          if git diff --cached --quiet; then
+            echo "Endpoint matrix already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "test(engagement): cover endpoints in tenant matrix"
+          git push origin HEAD:feat/282-m4b-activity-notifications
