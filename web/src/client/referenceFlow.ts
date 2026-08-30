@@ -7,9 +7,9 @@ import { MilestonesApi } from '../api/generated/apis/MilestonesApi';
 import { StoryApi } from '../api/generated/apis/StoryApi';
 import { AttachmentReadRequestParentTypeEnum } from '../api/generated/models/AttachmentReadRequest';
 import { MediaType } from '../api/generated/models/MediaType';
-import { ReadDescriptorMethodEnum } from '../api/generated/models/ReadDescriptor';
 import type { MemoryCreate } from '../api/generated/models/MemoryCreate';
 import type { MemoryDetail } from '../api/generated/models/MemoryDetail';
+import { ReadDescriptorMethodEnum } from '../api/generated/models/ReadDescriptor';
 import type { SessionView } from '../api/generated/models/SessionView';
 import type { StoryPage } from '../api/generated/models/StoryPage';
 import type { UploadDescriptor } from '../api/generated/models/UploadDescriptor';
@@ -162,7 +162,10 @@ export async function uploadAttachmentBytesWithProgress(
 
     request.upload.onprogress = (event) => {
       if (!event.lengthComputable || event.total <= 0) return;
-      const progress = Math.min(100, Math.round((event.loaded / event.total) * 100));
+      const progress = Math.min(
+        100,
+        Math.round((event.loaded / event.total) * 100),
+      );
       options.onProgress?.(progress);
     };
     request.onload = () => {
