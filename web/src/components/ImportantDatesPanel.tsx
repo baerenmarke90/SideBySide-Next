@@ -334,7 +334,9 @@ export function ImportantDatesPanel({
         aria-labelledby="important-dates-list-title"
       >
         <div className="section-head">
-          <h3 id="important-dates-list-title">{t('importantDates.listTitle')}</h3>
+          <h3 id="important-dates-list-title">
+            {t('importantDates.listTitle')}
+          </h3>
         </div>
 
         {datesQuery.isLoading ? (
