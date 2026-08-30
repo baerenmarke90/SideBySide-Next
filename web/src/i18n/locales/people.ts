@@ -9,6 +9,11 @@ const people = {
   relationshipLabel: 'Beziehung',
   birthdayLabel: 'Geburtstag',
   birthdayYearKnown: 'Das Geburtsjahr ist bekannt',
+  birthdayDayLabel: 'Tag',
+  birthdayMonthLabel: 'Monat',
+  birthdayMonthPlaceholder: 'Monat auswählen',
+  birthdayUnknownYearHelp:
+    'Wenn das Geburtsjahr unbekannt ist, speichert und zeigt SideBySide nur Tag und Monat.',
   visibilityLabel: 'Sichtbarkeit',
   visibilityHelp:
     'Geteilte Personen sind für euch beide sichtbar. Private Personen bleiben nur bei dir.',
