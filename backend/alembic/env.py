@@ -45,6 +45,7 @@ from sidebyside.private_notes import models as _private_notes  # noqa: F401
 from sidebyside.profiles import models as _profiles  # noqa: F401
 from sidebyside.relations import models as _relations  # noqa: F401
 from sidebyside.relationship import models as _relationship  # noqa: F401
+from sidebyside.reminders import models as _reminders  # noqa: F401
 from sidebyside.wishes import models as _wishes  # noqa: F401
 
 
@@ -89,8 +90,6 @@ def _type_bound_checks(table_name: str) -> set[str]:
         constraint.name
         for constraint in table.constraints
         if isinstance(constraint, CheckConstraint)
-        # No public attribute exists, but this is the same marker Alembic uses
-        # internally to identify type-bound constraints.
         and getattr(constraint, "_type_bound", False)
         and constraint.name is not None
     }
@@ -103,16 +102,7 @@ def include_object(
     reflected: bool,
     compare_to: SchemaItem | None,
 ) -> bool:
-    """Exclude type-bound CHECK constraints from autogenerate comparison.
-
-    Autogenerate deliberately omits them on the model side but reads them
-    from the database, otherwise proposing their removal on every run and
-    keeping the drift check permanently red.
-
-    Manually adding the same rule to the table is the obvious but wrong
-    workaround: it would receive the same name as the type-owned constraint
-    and `create_all` would fail on the duplicate.
-    """
+    """Exclude type-bound CHECK constraints from autogenerate comparison."""
     del compare_to
     if type_ != "check_constraint" or not reflected or name is None:
         return True
