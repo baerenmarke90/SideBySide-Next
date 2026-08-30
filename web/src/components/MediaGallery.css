@@ -42,7 +42,11 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: color-mix(in srgb, var(--color-entry-hero-start) 88%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--color-entry-hero-start) 88%,
+    transparent
+  );
 }
 
 .media-lightbox {
