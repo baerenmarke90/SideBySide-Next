@@ -323,3 +323,27 @@ button.secondary,
     max-width: 5.5rem;
   }
 }
+
+@media (min-width: 600px) and (max-width: 839px) {
+  .app-header .brand-name,
+  .app-header .theme-control-inline label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .app-header .shared-context,
+  .app-header .theme-control-icon {
+    display: none;
+  }
+
+  .app-header .theme-control-inline select {
+    max-width: 5.5rem;
+  }
+}
