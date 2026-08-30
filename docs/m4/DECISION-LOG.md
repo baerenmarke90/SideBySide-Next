@@ -1,8 +1,10 @@
 # M4 Decision Log
 
 **As of:** August 30, 2026  
-**M4-A S0 status:** all M4-A blocking decisions below are `DECIDED`  
-**Rule:** Search/Dashboard semantics are not invented silently in runtime code.
+**M4-A S0 status:** all M4-A blocking decisions are `DECIDED`  
+**M4-B S0 status:** all M4-B blocking decisions are `DECIDED` through #276  
+**M4-C S0 status:** pending #277  
+**Rule:** M4 semantics are not invented silently in runtime code.
 
 ## Status
 
@@ -14,7 +16,7 @@
 
 - `BLOCKING` — decide before the first affected runtime slice;
 - `BEFORE_CLIENTS` — decide before stable Web/Android integration;
-- `BEFORE_EVIDENCE` — decide before M4-A integrated evidence;
+- `BEFORE_EVIDENCE` — decide before the affected integrated evidence slice;
 - `LATER` — deliberately outside the current slice.
 
 ## Decision matrix
@@ -48,16 +50,32 @@
 | M4-D25 | BLOCKING | DECIDED | Dashboard empty behavior | Optional sections are omitted when empty; the response does not fabricate zero-state domain rows. Stable top-level structure may expose explicit nullable/empty collections only where the final OpenAPI contract benefits clients. |
 | M4-D26 | BLOCKING | DECIDED | Dashboard consistency/cache | Use one application unit of work with normal authorized reads; cross-section atomic snapshot semantics are not promised because Dashboard is not a transactional report. Short-lived inconsistencies under concurrent writes are acceptable, Privacy violations are not. Response is `private, no-store` in v1. |
 | M4-D27 | BEFORE_CLIENTS | DECIDED | Client boundary | M4-A runtime must publish OpenAPI and regenerate TypeScript/Kotlin clients. Full Search/Dashboard screen productization, offline Read Cache and systematic parity remain M5 unless a thin evidence flow is explicitly scoped. |
-| M4-D28 | BLOCKING | DECIDED | Freemium | Basic authorized global Search and the basic relationship Dashboard are Free/Core in both Cloud and Self-Hosted. Semantic/AI search, saved analytical views or richer Premium presentation remain separate future decisions. |
-| M4-D29 | BEFORE_EVIDENCE | DECIDED | Mandatory evidence | Real PostgreSQL tests must prove index-backed matching, cursor binding, Cross-Tenant isolation, partner-private non-generation, private child-parent authorization, deterministic ordering, Dashboard owner-only exclusion and no private influence on shared section shape. |
+| M4-D28 | BLOCKING | DECIDED | M4-A freemium | Basic authorized global Search and the basic relationship Dashboard are Free/Core in both Cloud and Self-Hosted. Semantic/AI search, saved analytical views or richer Premium presentation remain separate future decisions. |
+| M4-D29 | BEFORE_EVIDENCE | DECIDED | M4-A mandatory evidence | Real PostgreSQL tests must prove index-backed matching, cursor binding, Cross-Tenant isolation, partner-private non-generation, private child-parent authorization, deterministic ordering, Dashboard owner-only exclusion and no private influence on shared section shape. |
 | M4-D30 | LATER | DECIDED | Search backend replacement/E2EE | A later backend or real E2EE search strategy may replace server-side plaintext FTS behind the Search abstraction. M4-A does not claim server-side FTS is compatible with real E2EE ciphertext. |
+| M4-D31 | BLOCKING | DECIDED | Engagement model split | `OutboxEvent` is internal transactional integration state, Activity is a user-visible Space event, Notification is recipient state, and PushDelivery is a technical delivery attempt. They are separate models and one is not exposed as another. |
+| M4-D32 | BLOCKING | DECIDED | Activity projection | Activity is a persisted, minimized asynchronous projection from committed safe Outbox facts. Projection retry is idempotent. Activity stores references/kinds, not copied ProtectedPayload plaintext. |
+| M4-D33 | BLOCKING | DECIDED | Activity v1 catalog | v1 Activity is controlled: shared Memory/Milestone/SHARED HeartMoment/Wish/Plan/Place/Chapter/Collection creation, Plan completion and Comment creation. Private events, normal edits, reorders, item toggles and technical events are excluded unless a later explicit decision adds them. |
+| M4-D34 | BLOCKING | DECIDED | Activity privacy | Activity is a shared Space surface. `OWNER_ONLY` events are never generated into it; current target authorization is re-evaluated before projection so deleted/newly-private targets cannot leak rows, counts, IDs or presentation metadata. |
+| M4-D35 | BLOCKING | DECIDED | Activity pagination/lifecycle | Order `occurredAt DESC, id DESC`, signed Account+Space-bound `activity-v1` keyset cursor, default 25/max 50. v1 introduces no arbitrary time-based product retention limit; lifecycle follows Space/account/source privacy/deletion rules. |
+| M4-D36 | BLOCKING | DECIDED | Notification persistence | Notification is recipient+Space-scoped persisted state projected idempotently from eligible events. It stores safe references/kinds and `readAt`, not copied relationship plaintext. |
+| M4-D37 | BLOCKING | DECIDED | Notification recipients | Recipients are derived server-side from active Membership and current target authorization. The actor is not notified about their own action unless an explicit event contract says otherwise. Client-supplied arbitrary recipients are not supported. |
+| M4-D38 | BLOCKING | DECIDED | Notification read state | `readAt IS NULL` means unread. Mark-one is idempotent and server-timestamped. Mark-all captures a server cutoff and affects only recipient+Space Notifications committed at/before that cutoff; later Notifications remain unread. |
+| M4-D39 | BLOCKING | DECIDED | Notification target/privacy transition | Notifications are never access grants. Deleted/non-readable targets cannot leak stale payload or continue influencing partner-visible unread counts. A SHARED-to-PRIVATE transition becomes effective on reads immediately after source commit. |
+| M4-D40 | BLOCKING | DECIDED | Push provider boundary | Push is optional delivery for an existing Notification through a provider-neutral adapter and existing PostgreSQL Job Queue. Self-Hosted without push configuration retains full in-app Notification behavior and does not fail the application. |
+| M4-D41 | BLOCKING | DECIDED | Push preview privacy | v1 push/lock-screen payloads contain no protected relationship plaintext. Default presentation is generic and client-localized. Rich content previews require a later explicit opt-in privacy decision. |
+| M4-D42 | BLOCKING | DECIDED | `Ich denke an dich` ownership | M4-B owns a content-free partner nudge. It has no free-text payload, no separate durable content model and no Activity row in v1; it creates a safe event and recipient Notification, with optional PushDelivery. |
+| M4-D43 | BLOCKING | DECIDED | `Ich denke an dich` idempotency/abuse | `POST /spaces/{spaceId}/thinking-of-you` carries a client request UUID. Sender+Space+request ID is idempotent. New sends have a rolling 60-second sender/Space cooldown plus normal API rate limiting. Recipient is server-derived. |
+| M4-D44 | BLOCKING | DECIDED | Projection/delivery idempotency | Activity/Notification use source-event uniqueness; PushDelivery uses stable Notification+endpoint logical identity. Existing lease/retry/backoff infrastructure is reused. Network delivery is retryable; the design does not claim transport-level exactly-once semantics. |
+| M4-D45 | BLOCKING | DECIDED | M4-B freemium | Basic Activity, in-app Notifications/read state, basic `Ich denke an dich` and basic push capability where infrastructure exists are Free/Core. Advanced digests/routing/rich-preview customization/notification automation remain future Mixed/Premium candidates; M4-B adds no entitlement runtime. |
+| M4-D46 | BEFORE_EVIDENCE | DECIDED | M4-B mandatory evidence | Real PostgreSQL/HTTP evidence must prove Cross-Tenant and OWNER_ONLY non-generation/non-influence, source privacy transitions, recipient isolation, read/unread concurrency, projector retry idempotency, safe push payloads, Self-Hosted unconfigured push, and `Ich denke an dich` idempotency/cooldown. |
 
 ## Closure rule
 
-A `DECIDED` M4-A semantic is not silently changed in a runtime PR. A change requires an explicit decision update with:
+A `DECIDED` M4 semantic is not silently changed in a runtime PR. A change requires an explicit decision update with:
 
 - API/client compatibility impact;
-- persistence/index migration impact;
+- persistence/index/migration impact;
 - Privacy/Tenant implications;
 - Self-Hosted/Cloud implications;
 - business/freemium impact;
