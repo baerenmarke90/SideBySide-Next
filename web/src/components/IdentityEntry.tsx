@@ -238,10 +238,7 @@ export function IdentityEntry({
                 <BackToSignIn onClick={discardEntryToken} />
               </>
             ) : (
-              <UiState
-                kind="loading"
-                title={t('identity.magicLinkOpening')}
-              />
+              <UiState kind="loading" title={t('identity.magicLinkOpening')} />
             )
           ) : showsVerification ? (
             verificationSucceeded ? (
