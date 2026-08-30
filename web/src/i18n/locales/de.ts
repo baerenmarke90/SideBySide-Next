@@ -5,6 +5,52 @@ const de = {
     refresh: 'Aktualisieren',
     refreshing: 'Aktualisiert …',
   },
+  navigation: {
+    skipToContent: 'Zum Inhalt springen',
+    primary: 'Hauptnavigation',
+    story: 'Story',
+    newMemory: 'Neue Erinnerung',
+  },
+  states: {
+    validation: {
+      title: 'Einige Angaben passen noch nicht.',
+      body: 'Bitte prüfe deine Eingaben und versuche es erneut.',
+    },
+    session: {
+      title: 'Deine Sitzung ist nicht mehr gültig.',
+      body: 'Bitte melde dich erneut an.',
+    },
+    permission: {
+      title: 'Dieser Inhalt ist nicht verfügbar.',
+      body: 'Du kannst diesen Inhalt mit deinem aktuellen Zugriff nicht öffnen.',
+    },
+    conflict: {
+      title: 'Die Daten haben sich inzwischen geändert.',
+      body: 'Lade den aktuellen Stand neu und wiederhole deine Änderung.',
+    },
+    rateLimit: {
+      title: 'Das waren zu viele Anfragen in kurzer Zeit.',
+      body: 'Warte einen Moment und versuche es dann erneut.',
+    },
+    offline: {
+      title: 'Du bist gerade offline.',
+      body: 'Stelle die Verbindung wieder her und versuche es erneut.',
+      banner:
+        'Offline – Änderungen und neue Inhalte benötigen eine Verbindung.',
+    },
+    server: {
+      title: 'SideBySide ist gerade nicht erreichbar.',
+      body: 'Versuche es in einem Moment erneut.',
+    },
+    unknown: {
+      title: 'Etwas ist schiefgegangen.',
+      body: 'Bitte versuche es erneut.',
+    },
+    unexpected: {
+      title: 'Diese Ansicht konnte nicht angezeigt werden.',
+      body: 'Öffne die Ansicht erneut. Deine gespeicherten Inhalte bleiben unverändert.',
+    },
+  },
   theme: {
     label: 'Darstellung',
     system: 'System',
@@ -12,6 +58,7 @@ const de = {
     dark: 'Dunkel',
   },
   brand: {
+    suffix: 'Next',
     storyAria: 'SideBySide – zur Story',
   },
   setup: {
@@ -24,10 +71,9 @@ const de = {
     operatorSuffix: 'gesetzt sein.',
   },
   login: {
-    introEyebrow: 'Euer gemeinsamer Ort',
-    introHeading: 'Erinnerungen, die euch gehören.',
+    introHeading: 'Euer gemeinsamer Raum für die Dinge, die bleiben.',
     introBody:
-      'Haltet gemeinsame Momente fest und findet eure Geschichte an einem ruhigen, privaten Ort wieder.',
+      'Erinnerungen, Wünsche und Pläne an einem ruhigen Ort – nur für euch zwei.',
     eyebrow: 'Willkommen zurück',
     heading: 'Anmelden',
     body: 'Melde dich mit deinem SideBySide-Konto an.',
@@ -37,6 +83,7 @@ const de = {
     pending: 'Anmeldung läuft …',
     errorFallback:
       'Anmeldung fehlgeschlagen. Bitte prüfe deine Zugangsdaten und versuche es erneut.',
+    assurance: 'Euer gemeinsamer Space bleibt nur für euch bestimmt.',
   },
   story: {
     savedTitle: 'Erinnerung gespeichert.',

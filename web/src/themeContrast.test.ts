@@ -71,8 +71,10 @@ function cssVariable(block: string, name: string): string {
   return match[1];
 }
 
+const themeCss = readSource('./theme.css');
 const light = cssBlock(readSource('./styles.css'), ':root');
-const dark = darkThemeBlock(readSource('./theme.css'));
+const entryLight = cssBlock(themeCss, ':root');
+const dark = darkThemeBlock(themeCss);
 const white = '#ffffff';
 
 describe('theme token contrast', () => {
@@ -110,6 +112,21 @@ describe('theme token contrast', () => {
     expect(
       contrast(white, cssVariable(dark, 'color-brand-strong')),
     ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('keeps entry copy readable across every hero gradient stop', () => {
+    for (const theme of [entryLight, dark]) {
+      const foreground = cssVariable(theme, 'color-on-accent');
+      for (const stop of [
+        'color-entry-hero-start',
+        'color-entry-hero-middle',
+        'color-entry-hero-end',
+      ]) {
+        expect(
+          contrast(foreground, cssVariable(theme, stop)),
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   });
 
   it('keeps status text readable on its semantic surface', () => {

@@ -3,12 +3,12 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
-import { ThemeControl } from './components/ThemeControl';
 import './i18n';
 import { initializeTheme } from './theme';
 import './styles.css';
 import './story-media.css';
 import './theme.css';
+import './shell.css';
 import './attachment-drafts.css';
 
 initializeTheme();
@@ -26,7 +26,6 @@ ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <ThemeControl />
         <App />
       </QueryClientProvider>
     </BrowserRouter>

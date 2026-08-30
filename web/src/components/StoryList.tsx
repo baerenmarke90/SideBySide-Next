@@ -7,6 +7,7 @@ import {
   storyItemKey,
   storyItemPresentation,
 } from './storyPresentation';
+import { UiState } from './UiState';
 
 export function StoryList({
   items,
@@ -19,13 +20,11 @@ export function StoryList({
 
   if (items.length === 0) {
     return (
-      <div className="story-empty" role="status">
-        <span className="story-empty-mark" aria-hidden="true">
-          ♥
-        </span>
-        <h3>{t('story.emptyTitle')}</h3>
-        <p>{t('story.emptyBody')}</p>
-      </div>
+      <UiState
+        kind="empty"
+        title={t('story.emptyTitle')}
+        body={t('story.emptyBody')}
+      />
     );
   }
 
