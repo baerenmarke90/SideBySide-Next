@@ -330,7 +330,9 @@ function MilestoneFormPage({
         before={
           <Link
             className="back-link"
-            to={initial ? milestoneDetailPath(initial.id) : appRoutePath('story')}
+            to={
+              initial ? milestoneDetailPath(initial.id) : appRoutePath('story')
+            }
           >
             {initial
               ? t('m5Product.milestone.backToDetail')

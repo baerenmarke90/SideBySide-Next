@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { MemoryDetail } from '../api/generated/models/MemoryDetail';
-import {
-  deleteUnboundAttachment,
-} from '../client/memoryAttachmentDraft';
+import { deleteUnboundAttachment } from '../client/memoryAttachmentDraft';
 import { normalizeClientError } from '../client/problemDetails';
 import type { ReferenceApis } from '../client/referenceFlow';
 import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
@@ -109,7 +107,10 @@ export function MemoryAttachmentManager({
   }
 
   return (
-    <section className="memory-attachment-manager" aria-labelledby="attachment-manager-heading">
+    <section
+      className="memory-attachment-manager"
+      aria-labelledby="attachment-manager-heading"
+    >
       <div className="section-head memory-section-head">
         <div>
           <p className="section-kicker">{t('m5Product.media.kicker')}</p>

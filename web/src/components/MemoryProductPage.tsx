@@ -213,7 +213,9 @@ export function MemoryProductPage({
             className="form-grid memory-form"
           >
             <div className="field-group">
-              <label htmlFor="memory-edit-title">{t('memory.titleLabel')}</label>
+              <label htmlFor="memory-edit-title">
+                {t('memory.titleLabel')}
+              </label>
               <input
                 id="memory-edit-title"
                 name="title"
@@ -272,7 +274,8 @@ export function MemoryProductPage({
   const imageAttachments = memory.attachments
     .filter(
       (attachment) =>
-        attachment.mediaType === MediaType.IMAGE && attachment.status === 'READY',
+        attachment.mediaType === MediaType.IMAGE &&
+        attachment.status === 'READY',
     )
     .sort((left, right) => left.position - right.position);
 

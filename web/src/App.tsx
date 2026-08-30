@@ -36,7 +36,9 @@ function SpaceContextGate({
       <div className="entry-aura entry-aura-start" aria-hidden="true" />
       <div className="entry-aura entry-aura-end" aria-hidden="true" />
       <section className="setup-card" aria-labelledby="space-context-heading">
-        <Brand suffix={<span className="brand-suffix">{t('brand.suffix')}</span>} />
+        <Brand
+          suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
+        />
         <div className="setup-content">
           <p className="eyebrow">{t('spaceContext.eyebrow')}</p>
           {loading ? (
@@ -68,7 +70,9 @@ function SpacePicker({
       <div className="entry-aura entry-aura-start" aria-hidden="true" />
       <div className="entry-aura entry-aura-end" aria-hidden="true" />
       <section className="setup-card" aria-labelledby="space-picker-heading">
-        <Brand suffix={<span className="brand-suffix">{t('brand.suffix')}</span>} />
+        <Brand
+          suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
+        />
         <div className="setup-content">
           <p className="eyebrow">{t('spaceContext.eyebrow')}</p>
           <h1 id="space-picker-heading">{t('spaceContext.pickerTitle')}</h1>
@@ -86,7 +90,8 @@ function SpacePicker({
                   type="button"
                   onClick={() => onSelect(space.id)}
                 >
-                  {names || t('spaceContext.spaceFallback', { index: index + 1 })}
+                  {names ||
+                    t('spaceContext.spaceFallback', { index: index + 1 })}
                 </button>
               );
             })}
@@ -148,7 +153,9 @@ export function App() {
       setSpaceId(null);
       return;
     }
-    setSpaceId((current) => resolveActiveSpaceId(membershipsQuery.data, current));
+    setSpaceId((current) =>
+      resolveActiveSpaceId(membershipsQuery.data, current),
+    );
   }, [membershipsQuery.data, tokens]);
 
   function logout() {

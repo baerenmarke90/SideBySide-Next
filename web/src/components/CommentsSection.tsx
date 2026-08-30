@@ -125,13 +125,7 @@ export function CommentsSection({
   const createMutation = useMutation({
     mutationFn: async (body: string) => {
       try {
-        return await createComment(
-          apis,
-          parentKind,
-          spaceId,
-          parentId,
-          body,
-        );
+        return await createComment(apis, parentKind, spaceId, parentId, body);
       } catch (error) {
         throw await normalizeClientError(error);
       }
@@ -185,7 +179,8 @@ export function CommentsSection({
 
   if (!commentsAllowed) return null;
 
-  const comments = commentsQuery.data?.pages.flatMap((page) => page.items) ?? [];
+  const comments =
+    commentsQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   function submitNew(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -197,13 +192,14 @@ export function CommentsSection({
   }
 
   return (
-    <section className="comments-section" aria-labelledby={`comments-${parentId}`}>
+    <section
+      className="comments-section"
+      aria-labelledby={`comments-${parentId}`}
+    >
       <div className="section-head memory-section-head">
         <div>
           <p className="section-kicker">{t('m5Product.comments.kicker')}</p>
-          <h2 id={`comments-${parentId}`}>
-            {t('m5Product.comments.heading')}
-          </h2>
+          <h2 id={`comments-${parentId}`}>{t('m5Product.comments.heading')}</h2>
         </div>
       </div>
 
@@ -217,7 +213,9 @@ export function CommentsSection({
         />
       ) : null}
 
-      {!commentsQuery.isLoading && !commentsQuery.error && comments.length === 0 ? (
+      {!commentsQuery.isLoading &&
+      !commentsQuery.error &&
+      comments.length === 0 ? (
         <p className="muted">{t('m5Product.comments.empty')}</p>
       ) : null}
 
@@ -244,7 +242,10 @@ export function CommentsSection({
                       if (body) updateMutation.mutate({ comment, body });
                     }}
                   >
-                    <label className="sr-only" htmlFor={`comment-edit-${comment.id}`}>
+                    <label
+                      className="sr-only"
+                      htmlFor={`comment-edit-${comment.id}`}
+                    >
                       {t('m5Product.comments.editLabel')}
                     </label>
                     <textarea
@@ -328,7 +329,9 @@ export function CommentsSection({
         </form>
       ) : null}
 
-      {createMutation.error ? <ProblemState error={createMutation.error} /> : null}
+      {createMutation.error ? (
+        <ProblemState error={createMutation.error} />
+      ) : null}
       {updateMutation.error ? (
         <ProblemState
           error={updateMutation.error}

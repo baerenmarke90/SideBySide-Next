@@ -60,7 +60,10 @@ export function HeartMomentsPage({
         title={t('m5Product.heart.listTitle')}
         description={t('m5Product.heart.listIntro')}
         action={
-          <Link className="button-link primary-action" to={HEART_MOMENT_CREATE_ROUTE}>
+          <Link
+            className="button-link primary-action"
+            to={HEART_MOMENT_CREATE_ROUTE}
+          >
             {t('m5Product.heart.create')}
           </Link>
         }
@@ -75,7 +78,9 @@ export function HeartMomentsPage({
           type="button"
           role="tab"
           aria-selected={visibility === ContentVisibility.SHARED}
-          className={visibility === ContentVisibility.SHARED ? 'active' : 'secondary'}
+          className={
+            visibility === ContentVisibility.SHARED ? 'active' : 'secondary'
+          }
           onClick={() => setVisibility(ContentVisibility.SHARED)}
         >
           {t('m5Product.heart.sharedTab')}
@@ -84,7 +89,9 @@ export function HeartMomentsPage({
           type="button"
           role="tab"
           aria-selected={visibility === ContentVisibility.PRIVATE}
-          className={visibility === ContentVisibility.PRIVATE ? 'active' : 'secondary'}
+          className={
+            visibility === ContentVisibility.PRIVATE ? 'active' : 'secondary'
+          }
           onClick={() => setVisibility(ContentVisibility.PRIVATE)}
         >
           {t('m5Product.heart.privateTab')}
@@ -96,7 +103,10 @@ export function HeartMomentsPage({
           <UiState kind="loading" title={t('m5Product.heart.loadingList')} />
         ) : null}
         {query.error ? (
-          <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+          <ProblemState
+            error={query.error}
+            onRetry={() => void query.refetch()}
+          />
         ) : null}
         {!query.isLoading && !query.error && items.length === 0 ? (
           <UiState
@@ -121,7 +131,11 @@ export function HeartMomentsPage({
                         ? t('m5Product.heart.privateBadge')
                         : t('m5Product.heart.sharedBadge')}
                     </span>
-                    <time dateTime={heartMoment.happenedOn.toISOString().slice(0, 10)}>
+                    <time
+                      dateTime={heartMoment.happenedOn
+                        .toISOString()
+                        .slice(0, 10)}
+                    >
                       {formatDate(heartMoment.happenedOn)}
                     </time>
                   </div>

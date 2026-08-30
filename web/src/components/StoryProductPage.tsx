@@ -123,11 +123,18 @@ export function StoryProductPage({
         }
       />
 
-      <section className="story-filter-card" aria-labelledby="story-filter-heading">
+      <section
+        className="story-filter-card"
+        aria-labelledby="story-filter-heading"
+      >
         <div className="section-head">
           <div>
-            <p className="section-kicker">{t('m5Product.story.filterKicker')}</p>
-            <h2 id="story-filter-heading">{t('m5Product.story.filterHeading')}</h2>
+            <p className="section-kicker">
+              {t('m5Product.story.filterKicker')}
+            </p>
+            <h2 id="story-filter-heading">
+              {t('m5Product.story.filterHeading')}
+            </h2>
           </div>
         </div>
         <form className="story-filter-form" onSubmit={applyFilters}>
@@ -157,7 +164,9 @@ export function StoryProductPage({
           </fieldset>
 
           <div className="field-group compact-field">
-            <label htmlFor="story-year">{t('m5Product.story.yearLabel')}</label>
+            <label htmlFor="story-year">
+              {t('m5Product.story.yearLabel')}
+            </label>
             <input
               id="story-year"
               inputMode="numeric"
@@ -173,7 +182,9 @@ export function StoryProductPage({
           </div>
 
           <div className="field-group compact-field">
-            <label htmlFor="story-order">{t('m5Product.story.orderLabel')}</label>
+            <label htmlFor="story-order">
+              {t('m5Product.story.orderLabel')}
+            </label>
             <select
               id="story-order"
               value={draft.order}

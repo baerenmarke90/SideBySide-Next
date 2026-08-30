@@ -39,7 +39,8 @@ const m5Product = {
     remove: 'Entfernen',
     localPreview: 'Lokale Vorschau',
     previewAlt: 'Vorschau von {{name}}',
-    pendingSave: 'Speichern ist möglich, sobald alle Uploads abgeschlossen sind.',
+    pendingSave:
+      'Speichern ist möglich, sobald alle Uploads abgeschlossen sind.',
     limitReached: 'Für diesen Eintrag ist maximal ein Foto vorgesehen.',
     cancelled: 'Der Upload wurde abgebrochen.',
   },
@@ -96,7 +97,8 @@ const m5Product = {
     createIntro:
       'Halte einen Gedanken, ein Gefühl oder einen besonderen Augenblick fest.',
     textLabel: 'Was möchtest du festhalten?',
-    textPlaceholder: 'Ein Gedanke, ein Gefühl oder eine kleine Nachricht …',
+    textPlaceholder:
+      'Ein Gedanke, ein Gefühl oder eine kleine Nachricht …',
     emotionLabel: 'Gefühl',
     dateLabel: 'Datum',
     visibilityLabel: 'Sichtbarkeit',
@@ -109,7 +111,8 @@ const m5Product = {
     loading: 'Herzmoment wird geladen …',
     detailEyebrow: 'Herzmoment',
     privateDetailIntro: 'Dieser Herzmoment ist nur für dich sichtbar.',
-    sharedDetailIntro: 'Dieser Herzmoment ist in eurem gemeinsamen Bereich sichtbar.',
+    sharedDetailIntro:
+      'Dieser Herzmoment ist in eurem gemeinsamen Bereich sichtbar.',
     byAuthor: 'Festgehalten von {{author}}',
     edit: 'Bearbeiten',
     editEyebrow: 'Herzmoment bearbeiten',
@@ -146,7 +149,8 @@ const m5Product = {
   milestone: {
     formEyebrow: 'Meilenstein',
     createTitle: 'Meilenstein festhalten',
-    createIntro: 'Halte einen wichtigen gemeinsamen Schritt in eurer Story fest.',
+    createIntro:
+      'Halte einen wichtigen gemeinsamen Schritt in eurer Story fest.',
     titleLabel: 'Titel',
     bodyLabel: 'Beschreibung (optional)',
     dateLabel: 'Datum',
@@ -158,12 +162,14 @@ const m5Product = {
     noBody: 'Zu diesem Meilenstein gibt es keinen zusätzlichen Text.',
     edit: 'Bearbeiten',
     editTitle: 'Meilenstein bearbeiten',
-    editIntro: 'Passe Titel, Beschreibung oder Datum auf dem aktuellen Stand an.',
+    editIntro:
+      'Passe Titel, Beschreibung oder Datum auf dem aktuellen Stand an.',
     saveChanges: 'Änderungen speichern',
     editDeniedTitle: 'Dieser Meilenstein kann nicht bearbeitet werden.',
     editDeniedBody: 'Dein aktueller Zugriff erlaubt hier keine Änderungen.',
     delete: 'Meilenstein löschen',
-    deleteWarning: 'Der Meilenstein wird dauerhaft aus eurer Story entfernt.',
+    deleteWarning:
+      'Der Meilenstein wird dauerhaft aus eurer Story entfernt.',
     confirmDelete: 'Endgültig löschen',
     backToStory: '← Zurück zur Story',
     backToDetail: '← Zurück zum Meilenstein',

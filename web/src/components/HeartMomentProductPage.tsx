@@ -7,10 +7,7 @@ import type { HeartMomentDetail } from '../api/generated/models/HeartMomentDetai
 import { deleteUnboundAttachment } from '../client/memoryAttachmentDraft';
 import { normalizeClientError } from '../client/problemDetails';
 import type { ReferenceApis } from '../client/referenceFlow';
-import {
-  appRoutePath,
-  heartMomentDetailPath,
-} from '../client/routes';
+import { appRoutePath, heartMomentDetailPath } from '../client/routes';
 import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { useTranslation } from '../i18n';
 import { HeartMomentDetailView } from './HeartMomentDetailView';
@@ -60,7 +57,8 @@ export function HeartMomentProductPage({
   const detailQuery = useQuery({
     queryKey: detailKey,
     queryFn: async () => {
-      if (!heartMomentId) throw new Error('Missing HeartMoment route parameter.');
+      if (!heartMomentId)
+        throw new Error('Missing HeartMoment route parameter.');
       try {
         return await apis.heartMoments.getHeartMoment({
           spaceId,
@@ -239,7 +237,9 @@ export function HeartMomentProductPage({
             attachments={attachments}
             onSubmit={submit}
           />
-          {createMutation.error ? <ProblemState error={createMutation.error} /> : null}
+          {createMutation.error ? (
+            <ProblemState error={createMutation.error} />
+          ) : null}
         </section>
       </div>
     );
@@ -296,7 +296,10 @@ export function HeartMomentProductPage({
       <div className="page create-page">
         <PageHeader
           before={
-            <Link className="back-link" to={heartMomentDetailPath(heartMoment.id)}>
+            <Link
+              className="back-link"
+              to={heartMomentDetailPath(heartMoment.id)}
+            >
               {t('m5Product.heart.backToDetail')}
             </Link>
           }

@@ -8,10 +8,7 @@ import type { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { useTranslation } from '../i18n';
 import { AttachmentDraftField } from './AttachmentDraftField';
 
-export function heartEmotionLabel(
-  emotion: HeartEmotion,
-  t: TFunction,
-): string {
+export function heartEmotionLabel(emotion: HeartEmotion, t: TFunction): string {
   return t(`m5Product.heart.emotions.${emotion.toLowerCase()}`);
 }
 
@@ -43,7 +40,9 @@ export function HeartMomentForm({
         />
       </div>
       <div className="field-group">
-        <label htmlFor="heart-emotion">{t('m5Product.heart.emotionLabel')}</label>
+        <label htmlFor="heart-emotion">
+          {t('m5Product.heart.emotionLabel')}
+        </label>
         <select
           id="heart-emotion"
           name="emotion"

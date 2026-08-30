@@ -3,10 +3,7 @@ import { Link } from 'react-router-dom';
 import { ContentVisibility } from '../api/generated/models/ContentVisibility';
 import type { HeartMomentDetail } from '../api/generated/models/HeartMomentDetail';
 import type { ReferenceApis } from '../client/referenceFlow';
-import {
-  appRoutePath,
-  heartMomentEditPath,
-} from '../client/routes';
+import { appRoutePath, heartMomentEditPath } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { CommentsSection } from './CommentsSection';
 import { heartEmotionLabel } from './HeartMomentForm';
@@ -116,8 +113,13 @@ export function HeartMomentDetailView({
         ) : null}
 
         {heartMoment.capabilities.canEdit ? (
-          <section className="visibility-control" aria-labelledby="visibility-heading">
-            <h2 id="visibility-heading">{t('m5Product.heart.visibilityHeading')}</h2>
+          <section
+            className="visibility-control"
+            aria-labelledby="visibility-heading"
+          >
+            <h2 id="visibility-heading">
+              {t('m5Product.heart.visibilityHeading')}
+            </h2>
             <p>
               {privateMoment
                 ? t('m5Product.heart.privateVisibilityBody')
@@ -198,7 +200,11 @@ export function HeartMomentDetailView({
                   >
                     {t('common.cancel')}
                   </button>
-                  <button type="button" disabled={deletePending} onClick={onDelete}>
+                  <button
+                    type="button"
+                    disabled={deletePending}
+                    onClick={onDelete}
+                  >
                     {t('m5Product.heart.confirmDelete')}
                   </button>
                 </div>

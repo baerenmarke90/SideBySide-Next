@@ -141,7 +141,10 @@ export function MemoryCreatePage({
           </div>
 
           <div className="form-actions">
-            <Link className="button-link secondary-link" to={appRoutePath('story')}>
+            <Link
+              className="button-link secondary-link"
+              to={appRoutePath('story')}
+            >
               {t('common.cancel')}
             </Link>
             <button

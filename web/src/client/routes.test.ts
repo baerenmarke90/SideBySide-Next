@@ -55,18 +55,12 @@ describe('app route registry', () => {
     expect(HEART_MOMENT_EDIT_ROUTE_PATTERN).toBe(
       '/heart-moments/:heartMomentId/edit',
     );
-    expect(heartMomentDetailPath('heart/1')).toBe(
-      '/heart-moments/heart%2F1',
-    );
-    expect(heartMomentEditPath('heart-1')).toBe(
-      '/heart-moments/heart-1/edit',
-    );
+    expect(heartMomentDetailPath('heart/1')).toBe('/heart-moments/heart%2F1');
+    expect(heartMomentEditPath('heart-1')).toBe('/heart-moments/heart-1/edit');
 
     expect(MILESTONE_CREATE_ROUTE).toBe('/milestones/new');
     expect(MILESTONE_DETAIL_ROUTE_PATTERN).toBe('/milestones/:milestoneId');
-    expect(MILESTONE_EDIT_ROUTE_PATTERN).toBe(
-      '/milestones/:milestoneId/edit',
-    );
+    expect(MILESTONE_EDIT_ROUTE_PATTERN).toBe('/milestones/:milestoneId/edit');
     expect(milestoneDetailPath('milestone/1')).toBe(
       '/milestones/milestone%2F1',
     );
