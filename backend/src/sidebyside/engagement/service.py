@@ -243,9 +243,7 @@ def _project_comment_notification(
             target_id=target_id,
             created_at=event.created_at,
         )
-        .on_conflict_do_nothing(
-            index_elements=["recipient_account_id", "source_event_id", "kind"]
-        )
+        .on_conflict_do_nothing(index_elements=["recipient_account_id", "source_event_id", "kind"])
     )
     session.execute(statement)
 
