@@ -65,6 +65,10 @@ const m5s5 = {
     refreshing: 'Wird aktualisiert …',
     occurredOn: '{{date}}',
   },
+  scope: {
+    SHARED: 'Gemeinsam',
+    PRIVATE: 'Privat',
+  },
   kind: {
     MEMORY: 'Erinnerung',
     HEART_MOMENT: 'Herzensmoment',
