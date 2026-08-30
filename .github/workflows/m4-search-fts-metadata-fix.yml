@@ -1,0 +1,126 @@
+name: M4 Search FTS Metadata Fix
+
+on:
+  push:
+    branches:
+      - fix/m4-search-fts-metadata-indexes
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+  SBS_ENVIRONMENT: test
+  SBS_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+  SBS_TEST_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+
+jobs:
+  fix-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sidebyside
+          POSTGRES_PASSWORD: sidebyside
+          POSTGRES_DB: sidebyside_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sidebyside -d sidebyside_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+      - name: Align ORM FTS expression indexes with migration 0028
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          pattern = re.compile(
+              r'(?P<prefix>\s+text\(\n)(?P<body>(?:\s+"[^"\n]*"\n?)+)(?P<suffix>\s+\),\n\s+postgresql_using="gin",)'
+          )
+          literal_pattern = re.compile(r'"([^"\n]*)"')
+          changed = []
+          indexes = 0
+
+          for path in sorted(Path("backend/src/sidebyside").glob("*/models.py")):
+              original = path.read_text(encoding="utf-8")
+              if "_search_fts" not in original:
+                  continue
+
+              def wrap(match: re.Match[str]) -> str:
+                  nonlocal_indexes[0] += 1
+                  body = match.group("body")
+                  literals = list(literal_pattern.finditer(body))
+                  if not literals:
+                      raise SystemExit(f"No SQL literal found in FTS index block: {path}")
+                  first = literals[0]
+                  last = literals[-1]
+                  if first.group(1).startswith("(") and last.group(1).endswith(")"):
+                      return match.group(0)
+                  if first.group(1).startswith("(") or last.group(1).endswith(")"):
+                      raise SystemExit(f"Partially wrapped FTS expression: {path}")
+                  body = body[: first.start(1)] + "(" + body[first.start(1):]
+                  # Account for the one inserted character before locating the last literal.
+                  last_end = last.end(1) + 1
+                  body = body[:last_end] + ")" + body[last_end:]
+                  return match.group("prefix") + body + match.group("suffix")
+
+              nonlocal_indexes = [0]
+              updated = pattern.sub(wrap, original)
+              if nonlocal_indexes[0] == 0:
+                  raise SystemExit(f"Search model contains no PostgreSQL GIN text index: {path}")
+              indexes += nonlocal_indexes[0]
+              if updated != original:
+                  path.write_text(updated, encoding="utf-8")
+                  changed.append(str(path))
+
+          if indexes != 13:
+              raise SystemExit(f"Expected 13 M4 Search FTS indexes, found {indexes}")
+          if not changed:
+              raise SystemExit("No M4 Search ORM FTS metadata required correction")
+          print(f"Corrected {indexes} FTS indexes across {len(changed)} model files")
+          PY
+      - name: Validate Search metadata and integration coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "uv==$UV_VERSION"
+          (
+            cd backend
+            uv lock --check
+            uv sync --frozen
+            uv run --frozen ruff format src/sidebyside/*/models.py
+            uv run --frozen ruff check src/sidebyside
+            uv run --frozen ruff format --check src/sidebyside
+            uv run --frozen mypy src/sidebyside
+            uv run --frozen alembic upgrade head
+            uv run --frozen alembic check
+            uv run --frozen pytest -m integration -q tests/integration/test_search.py
+            uv run --frozen pytest -m integration -q tests/integration/test_endpoint_matrix.py
+          )
+      - name: Commit validated M4 Search metadata fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/m4-search-fts-metadata-fix.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(search): align ORM FTS index expressions with PostgreSQL"
+          git push origin HEAD:fix/m4-search-fts-metadata-indexes
