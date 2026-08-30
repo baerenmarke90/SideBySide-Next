@@ -1,0 +1,59 @@
+name: M5 Space Picker Replay
+
+on:
+  push:
+    branches:
+      - feat/298-m5-web-space-picker-ready
+
+permissions:
+  contents: write
+
+jobs:
+  replay:
+    name: Replay and validate Space picker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/298-m5-web-space-picker-ready
+          fetch-depth: 0
+
+      - name: Replay validated product files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/298-m5-web-space-picker
+          for file in \
+            web/src/App.tsx \
+            web/src/client/spaceContext.ts \
+            web/src/client/spaceContext.test.ts \
+            web/src/i18n/locales/de.ts; do
+            git show "origin/feat/298-m5-web-space-picker:$file" > "$file"
+          done
+
+      - name: Install locked Web dependencies
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Validate replayed product files
+        working-directory: web
+        run: |
+          npm run format:check
+          npm run typecheck
+          npm run lint
+          npm test
+          npm run build
+
+      - name: Commit validated product files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src/App.tsx web/src/client/spaceContext.ts web/src/client/spaceContext.test.ts web/src/i18n/locales/de.ts
+          if git diff --cached --quiet; then
+            echo "Space picker product files are already current."
+            exit 0
+          fi
+          git commit -m "feat(web): require explicit choice between authorized Spaces"
+          git push origin HEAD:feat/298-m5-web-space-picker-ready
