@@ -23,6 +23,7 @@ from sidebyside.core import clock
 from sidebyside.core import cursor as cursor_codec
 from sidebyside.core.errors import ErrorCode, NotFoundError
 from sidebyside.domain.events import EventType
+from sidebyside.engagement import push, thinking
 from sidebyside.engagement.models import (
     Activity,
     ActivityKind,
@@ -119,6 +120,11 @@ def project_event(session: Session, event: OutboxEvent) -> None:
     except ValueError:
         return
 
+    if event_type is EventType.PARTNER_THINKING_OF_YOU:
+        thinking.project_notification(session, event)
+        push.ensure_deliveries_for_source_event(session, event.id)
+        return
+
     activity_target = _activity_target(event, event_type)
     if activity_target is not None:
         kind, target_type, target_id = activity_target
@@ -131,6 +137,8 @@ def project_event(session: Session, event: OutboxEvent) -> None:
             return
         target_type, target_id = comment_target
         _project_comment_notification(session, event, target_type, target_id)
+
+    push.ensure_deliveries_for_source_event(session, event.id)
 
 
 def _activity_target(
