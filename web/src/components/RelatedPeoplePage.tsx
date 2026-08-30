@@ -469,8 +469,12 @@ export function RelatedPeoplePage({
       setDeleteTarget(null);
       setSavedMessage(t('people.deleted'));
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['related-people', spaceId] }),
-        queryClient.invalidateQueries({ queryKey: ['important-dates', spaceId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['related-people', spaceId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['important-dates', spaceId],
+        }),
       ]);
     },
   });
