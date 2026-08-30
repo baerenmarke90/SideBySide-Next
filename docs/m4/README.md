@@ -1,18 +1,18 @@
 # M4 Technical Readiness Package
 
-**Status:** M4-A S0 decisions complete; runtime not started  
+**Status:** M4-A and M4-B S0 decisions complete; M4-C readiness tracked by #277  
 **As of:** August 30, 2026  
-**Tracking:** #272
+**M4-A tracking:** #272  
+**M4-B tracking:** #276  
+**M4-C tracking:** #277
 
-This package starts **M4 — Engage** after M3/G3 completion. It closes the blocking decisions for **M4-A: Search + Dashboard Read Models** before runtime code is allowed to define those semantics implicitly.
-
-M4 remains split into separate risk classes:
+M4 — Engage follows M3/G3 and remains split into separate risk classes:
 
 - **M4-A:** Search + Dashboard Read Models;
 - **M4-B:** Activity + Notifications;
 - **M4-C:** Reminders + Rules.
 
-Only M4-A is released by this package. M4-B and M4-C require their own readiness/runtime ownership and are not pulled forward by #272.
+M4-A and M4-B now have explicit readiness contracts. M4-C remains blocked from runtime until its own S0 decision package is merged.
 
 ## Binding sources and precedence
 
@@ -49,15 +49,15 @@ The initial searchable surface is:
 - the caller's GiftIdea;
 - the caller's PrivateCollection and PrivateCollectionItem.
 
-Questions remain M6. Comments, Profiles, RelatedPersons and ImportantDates are deliberately not part of the first global Search contract. Their exclusion is a bounded product decision, not evidence that they can never be searchable.
+Questions remain M6. Comments, Profiles, RelatedPersons and ImportantDates are deliberately not part of the first global Search contract.
 
-The detailed contract is in [Search Design](./SEARCH-DESIGN.md).
+Detailed contract: [Search Design](./SEARCH-DESIGN.md).
 
 ### Dashboard
 
-Dashboard is a derived Read Model. There is no `dashboard` table, no copied domain payload, and no separate persisted dashboard truth.
+Dashboard is a derived Read Model. There is no `dashboard` table, copied Domain payload, or separate persisted dashboard truth.
 
-The first M4-A Dashboard derives only data whose owning domain already exists:
+The first M4-A Dashboard derives only data whose owning Domain already exists:
 
 - Space/partner summary;
 - optional relationship duration;
@@ -65,106 +65,190 @@ The first M4-A Dashboard derives only data whose owning domain already exists:
 - upcoming scheduled Plans and date-based relationship items;
 - recent shared root content.
 
-`Ich denke an dich` is an M4 feature but is not faked by M4-A. It is added when its owning M4 slice exists. Activity/Notification/Reminder/Rule data is likewise absent until M4-B/M4-C deliver it. Questions/Year Summary remain M6.
+`Ich denke an dich` is not faked by M4-A. M4-B owns its runtime contract. Activity/Notification/Reminder/Rule data remains absent until its owning M4 slice delivers it. Questions/Year Summary remain M6.
 
-The detailed contract is in [Dashboard Design](./DASHBOARD-DESIGN.md).
+Detailed contract: [Dashboard Design](./DASHBOARD-DESIGN.md).
 
-## Privacy rule
+### M4-A privacy rule
 
-M4-A Read Models are **authorization-first**, not projection-first.
+M4-A Read Models are authorization-first, not projection-first.
 
 For Search:
 
 - shared results require active Membership and matching `space_id`;
-- owner-only rows require `owner_id == current_account_id` in the SQL/repository predicate;
-- child private collection items are reachable only through an owner-authorized parent join;
-- partner-private rows do not enter ranking, pagination, result counts, excerpts, or cursor positions.
+- owner-only rows require `owner_id == current_account_id` in SQL/authorized joins;
+- partner-private rows do not enter ranking, pagination, counts, excerpts or cursor positions.
 
 For Dashboard:
 
 - only shared relationship data enters the shared Dashboard;
-- owner-only data is excluded even for its owner so the couple Dashboard has one stable shared privacy meaning;
-- no private counts, timestamps, existence flags, or indirect metadata are projected.
+- owner-only data is excluded even for its owner;
+- no private counts, timestamps, existence flags or indirect metadata are projected.
 
-See [Privacy and Test Matrix](./PRIVACY-TEST-MATRIX.md).
+Detailed evidence contract: [M4-A Privacy and Test Matrix](./PRIVACY-TEST-MATRIX.md).
 
-## Reuse-before-build result
+## M4-B product boundary
 
-Reuse review is **relevant** because M4-A introduces search/indexing behavior.
+M4-B keeps four concepts separate:
 
-Selected platform capability:
+```text
+OutboxEvent   = internal transactional integration fact
+Activity      = user-visible shared Space event
+Notification  = recipient-specific state
+PushDelivery  = technical delivery attempt/channel
+```
 
-- PostgreSQL built-in Full Text Search (`to_tsvector`, `websearch_to_tsquery`/equivalent bounded query construction, GIN indexes).
+Detailed contract: [Activity and Notification Design](./ACTIVITY-NOTIFICATIONS-DESIGN.md).
 
-Alternatives reviewed:
+### Activity
 
-- Elasticsearch/OpenSearch: rejected for v1 because the binding specification does not require them, they add a separate service, replication/index synchronization, operational burden, additional privacy surface, and Self-Hosted complexity without a demonstrated need;
-- custom search engine/index service: rejected because PostgreSQL already provides the required capability;
-- unindexed `ILIKE` scans: rejected as the primary global-search design because they do not provide the intended ranked FTS behavior and scale poorly across growing content.
+Activity is a persisted, minimized asynchronous projection of a controlled set of committed safe Outbox facts.
 
-The application still exposes a Search-service abstraction so a later implementation can change without leaking provider/query details into API clients.
+The initial feed includes only selected shared meaningful events such as creation of Memory/Milestone/SHARED HeartMoment/Wish/Plan/Place/Chapter/Collection, Plan completion and Comment creation.
 
-## ProtectedPayload and index rule
+It deliberately excludes:
 
-Current sensitive text is stored in PostgreSQL JSONB through the `ProtectedPayload` persistence boundary. M4-A must not create an independent plaintext search table.
+- `OWNER_ONLY` events;
+- ordinary edits/reorders/item toggles;
+- Auth/Audit/Job/Outbox/Attachment-processing internals;
+- worker/provider attempts;
+- `Ich denke an dich` in v1.
 
-The approved v1 strategy is **per-table derived FTS expressions plus GIN expression indexes** over the existing ProtectedPayload JSONB fields.
+Activity stores stable kinds/references, not copied ProtectedPayload plaintext. Current target authorization is re-evaluated before projection.
 
-Consequences:
+### Notifications
 
-- ProtectedPayload remains the only plaintext source of truth;
-- the index is transactionally updated by PostgreSQL with the source row;
-- there is no outbox-driven eventual-consistency window for Search;
-- there is no search-backfill table containing copied user text;
-- index data is treated as sensitive derived data and is never exported, logged, or used for analytics;
-- future real E2EE work may replace server-side plaintext search; the Search abstraction and rebuildable indexes deliberately keep that migration boundary open.
+Notification is Account+Space recipient state with server-authored read/unread status.
 
-## Business / freemium result
+- recipients are derived server-side;
+- a Notification never grants target access;
+- stale/deleted/newly-private targets cannot continue to leak through rows or unread counts;
+- mark-one-read is idempotent;
+- mark-all-read uses a server transaction cutoff so newer Notifications stay unread;
+- Notification persistence stores safe references/kinds, not copied relationship plaintext.
 
-M4-A is consistent with the current freemium model:
+### `Ich denke an dich`
 
-- **basic global Search of the user's own authorized SideBySide content is Free/Core**;
-- **the basic relationship Dashboard is Free/Core**;
-- advanced semantic/AI Search, saved analytical views, or richer premium presentation may be classified separately later;
-- no Cloud-only feature restriction or managed-resource quota is introduced by M4-A;
-- Self-Hosted and Cloud use the same functional Search/Dashboard contract.
+M4-B owns the v1 content-free partner nudge.
 
-The M4-A runtime PRs must repeat the mandatory business/freemium review and update the authoritative feature matrix if product-tier scope changes.
+- no free-text payload;
+- no separate durable content object;
+- recipient derived from the other active Space Membership;
+- caller-generated `clientRequestId` provides retry idempotency;
+- one new logical send per sender/Space per rolling 60 seconds, plus normal rate limiting;
+- creates recipient Notification and optional PushDelivery;
+- does not create Activity feed noise in v1.
+
+### Push
+
+Push is optional delivery for an existing Notification through a provider-neutral adapter.
+
+Default push/lock-screen presentation contains no protected relationship plaintext. Rich previews require a later explicit opt-in privacy decision.
+
+Self-Hosted without configured push remains fully functional for Activity, in-app Notifications/read state and in-app `Ich denke an dich` delivery.
+
+Detailed evidence contract: [M4-B Activity and Notification Privacy/Test Matrix](./ACTIVITY-NOTIFICATIONS-PRIVACY-TEST-MATRIX.md).
+
+## Reuse-before-build results
+
+Reuse review is relevant for M4-A and M4-B.
+
+### M4-A
+
+Selected:
+
+- PostgreSQL built-in Full Text Search (`to_tsvector`, bounded tsquery construction, GIN indexes);
+- existing signed cursor infrastructure.
+
+Rejected for v1:
+
+- Elasticsearch/OpenSearch;
+- custom search/index service;
+- unindexed `ILIKE` as primary global Search.
+
+### M4-B
+
+Selected/reused:
+
+- existing transactional Outbox;
+- existing minimized safe event payload boundary;
+- existing PostgreSQL Job Queue;
+- existing `FOR UPDATE SKIP LOCKED` lease behavior;
+- existing retry/exponential backoff;
+- existing content-free COMMENT_CREATED notification hook as a proven pattern.
+
+Not introduced by M4-B:
+
+- Redis;
+- Celery;
+- Kafka/RabbitMQ;
+- another event store/message broker;
+- copied plaintext Activity documents;
+- a provider-specific push dependency inside Domain services.
+
+## Business / freemium results
+
+M4 currently promotes the following runtime classifications:
+
+- basic authorized global Search: **Free/Core**;
+- basic relationship Dashboard: **Free/Core**;
+- basic shared Activity: **Free/Core**;
+- basic in-app Notification/read state: **Free/Core**;
+- basic `Ich denke an dich`: **Free/Core**;
+- basic push capability when infrastructure is configured: **Free/Core capability**, with transport availability/configuration treated separately from product entitlement.
+
+Potential later Premium extensions remain separate decisions, for example semantic/AI Search, advanced analytical views, notification digests/routing, rich preview customization or advanced automation.
+
+M4-B introduces no Premium entitlement runtime. M9/#262 remains the entitlement/billing implementation boundary.
 
 ## Definition of Ready for M4-A runtime
 
-A runtime slice may start only when:
+- [x] M3 complete and G3 passed;
+- [x] all M4-A blocking decisions `DECIDED`;
+- [x] Search privacy/query/ranking/cursor/index semantics fixed;
+- [x] Dashboard sections/ordering/time/privacy semantics fixed;
+- [x] PostgreSQL FTS reuse decision traceable;
+- [x] Search and Dashboard confirmed Free/Core;
+- [x] required negative/privacy/performance evidence specified;
+- [ ] each runtime slice publishes its concrete OpenAPI contract;
+- [ ] each runtime slice passes normal CI/security/reuse/business/cross-cutting gates.
 
-- [x] M3 is complete and G3 passed;
-- [x] all M4-A `BLOCKING` decisions in [Decision Log](./DECISION-LOG.md) are `DECIDED`;
-- [x] Search privacy, query, ranking, cursor and indexing semantics are fixed;
-- [x] Dashboard sections, ordering, time semantics and privacy rules are fixed;
-- [x] PostgreSQL FTS reuse decision is traceable;
-- [x] basic Search and Dashboard are confirmed Free/Core;
-- [x] required negative/privacy/performance evidence is specified;
-- [ ] the affected runtime slice implements and publishes the concrete OpenAPI contract;
-- [ ] the affected runtime slice passes normal CI/security/reuse/business/cross-cutting gates.
+## Definition of Ready for M4-B runtime
 
-The last two items are per-runtime-slice conditions and are intentionally not satisfied by S0 documentation alone.
+- [x] Activity/Notification/PushDelivery/Outbox distinction fixed;
+- [x] Activity event catalog and exclusions fixed;
+- [x] Activity/Notification privacy-transition semantics fixed;
+- [x] read/unread/unread-count semantics fixed;
+- [x] cursor/pagination semantics fixed;
+- [x] `Ich denke an dich` ownership/idempotency/cooldown fixed;
+- [x] generic push privacy and Self-Hosted-unconfigured behavior fixed;
+- [x] existing Outbox/Job infrastructure selected for reuse;
+- [x] M4-B Free/Core classification fixed;
+- [x] mandatory negative/concurrency/delivery evidence specified;
+- [ ] each runtime slice publishes its concrete OpenAPI contract;
+- [ ] each runtime slice passes normal CI/security/reuse/business/cross-cutting gates.
 
-## Runtime sequence after S0
+## M4 runtime sequence
 
-The current M4-A delivery sequence is defined in [Delivery Plan](./DELIVERY-PLAN.md):
+See [Delivery Plan](./DELIVERY-PLAN.md).
 
-1. **M4-A-S1 — Search Foundation**;
+Current sequences:
+
+1. **M4-A-S1 — Search Foundation** (#274/#275 at the time of this decision);
 2. **M4-A-S2 — Dashboard Read Model**;
-3. **M4-A-S3 — integrated M4-A evidence and contract/client-generation check**.
+3. **M4-A-S3 — integrated M4-A evidence**;
+4. **M4-B-S1 — Activity + in-app Notification foundation**;
+5. **M4-B-S2 — `Ich denke an dich` + PushDelivery boundary**;
+6. **M4-B-S3 — integrated M4-B evidence**;
+7. **M4-C** only after #277 freezes its own blocking semantics.
 
-M4-B and M4-C start only through separately scoped issues after their own blocking decisions are explicit.
+Parallel implementation is allowed only where migration/router/OpenAPI/generated-client surfaces are coordinated and authoritative contracts do not conflict.
 
 ## Deliberately not pulled forward
 
-- Activity feed and Notification delivery — M4-B;
-- `Ich denke an dich` runtime — later M4 owning slice, not a fake M4-A placeholder;
-- Reminders and Rules — M4-C;
+- M4-C Reminder/Rule runtime before #277 readiness;
 - full Web/Android productization, Offline Read Cache and parity — M5;
 - Questions and Recaps — M6;
 - semantic/AI Search — later explicit scope;
-- external Search provider/service — not needed for v1;
 - real E2EE — MX;
 - Premium entitlement runtime — M9/#262.
