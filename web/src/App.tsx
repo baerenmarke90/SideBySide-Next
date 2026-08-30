@@ -21,6 +21,7 @@ import {
   useNavigate,
 } from 'react-router-dom';
 import type { AccountView } from './api/generated/models/AccountView';
+import { AttachmentReadRequestParentTypeEnum } from './api/generated/models/AttachmentReadRequest';
 import type { SpaceView } from './api/generated/models/SpaceView';
 import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';
 import type { TokenView } from './api/generated/models/TokenView';
@@ -32,6 +33,7 @@ import {
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
 import { createPeopleApi } from './client/peopleApi';
 import { normalizeClientError } from './client/problemDetails';
+import { clearProductReadCache } from './client/productReadCache';
 import {
   loadAuthorizedMemberships,
   loadAuthorizedSpaces,
@@ -40,19 +42,29 @@ import {
 import {
   createReferenceApis,
   loadAuthorizedImage,
+  loadAuthorizedMedia,
 } from './client/referenceFlow';
 import {
   appRoutePath,
   DEFAULT_APP_ROUTE,
+  HEART_MOMENT_CREATE_ROUTE,
+  HEART_MOMENT_DETAIL_ROUTE_PATTERN,
+  HEART_MOMENT_EDIT_ROUTE_PATTERN,
   MEMORY_DETAIL_ROUTE_PATTERN,
   MEMORY_EDIT_ROUTE_PATTERN,
+  MILESTONE_CREATE_ROUTE,
+  MILESTONE_DETAIL_ROUTE_PATTERN,
+  MILESTONE_EDIT_ROUTE_PATTERN,
 } from './client/routes';
 import { useAttachmentDrafts } from './client/useAttachmentDrafts';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppShell } from './components/AppShell';
+import { AttachmentDraftPicker } from './components/AttachmentDraftPicker';
 import { Brand } from './components/Brand';
+import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
 import { MemoryProductPage } from './components/MemoryProductPage';
+import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { PageHeader } from './components/PageHeader';
 import { ProblemState } from './components/ProblemState';
 import { ProfilePage } from './components/ProfilePage';
@@ -156,12 +168,12 @@ function StoryPage({
 
   return (
     <div className="page story-page">
-      {saved && (
+      {saved ? (
         <div className="inline-message inline-message-success" role="status">
           <strong>{t('story.savedTitle')}</strong>
           <span>{t('story.savedBody')}</span>
         </div>
-      )}
+      ) : null}
 
       <PageHeader
         eyebrow={t('story.eyebrow')}
@@ -169,12 +181,29 @@ function StoryPage({
         description={t('story.intro')}
         className="story-heading"
         action={
-          <Link
-            className="button-link primary-action"
-            to={appRoutePath('memoryCreate')}
+          <div
+            className="story-create-actions"
+            aria-label={t('storyActions.addAria')}
           >
-            {t('story.addMemory')}
-          </Link>
+            <Link
+              className="button-link primary-action"
+              to={appRoutePath('memoryCreate')}
+            >
+              {t('story.addMemory')}
+            </Link>
+            <Link
+              className="button-link secondary-link"
+              to={HEART_MOMENT_CREATE_ROUTE}
+            >
+              {t('storyActions.addHeartMoment')}
+            </Link>
+            <Link
+              className="button-link secondary-link"
+              to={MILESTONE_CREATE_ROUTE}
+            >
+              {t('storyActions.addMilestone')}
+            </Link>
+          </div>
         }
       />
 
@@ -331,112 +360,11 @@ function MemoryCreatePage({
             <p className="field-help">{t('memory.dateHelp')}</p>
           </div>
 
-          <div className="field-group">
-            <label htmlFor="image">{t('memory.photoLabel')}</label>
-            <input
-              className="visually-hidden-input"
-              id="image"
-              name="image"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-              multiple
-              onChange={(event) => {
-                attachments.addFiles(event.currentTarget.files);
-                event.currentTarget.value = '';
-              }}
-            />
-            <label className="file-picker" htmlFor="image">
-              <span className="file-picker-icon" aria-hidden="true">
-                ＋
-              </span>
-              <span>
-                <strong>
-                  {attachments.items.length
-                    ? t('memory.photoAddMore')
-                    : t('memory.photoSelect')}
-                </strong>
-                <small>{t('memory.photoFormats')}</small>
-              </span>
-            </label>
-
-            {attachments.items.length > 0 && (
-              <ul
-                className="attachment-draft-list"
-                aria-label={t('memory.photoDraftsAria')}
-              >
-                {attachments.items.map((attachment) => {
-                  const statusText =
-                    attachment.status === 'uploading'
-                      ? t('memory.photoUploading')
-                      : attachment.status === 'validating'
-                        ? t('memory.photoValidating')
-                        : attachment.status === 'ready'
-                          ? t('memory.photoReady')
-                          : t('memory.photoFailed');
-
-                  return (
-                    <li className="attachment-draft-item" key={attachment.id}>
-                      <div className="attachment-preview-wrap">
-                        <img
-                          className="attachment-preview"
-                          src={attachment.previewUrl}
-                          alt={t('memory.photoPreviewAlt', {
-                            name: attachment.file.name,
-                          })}
-                        />
-                        <span className="attachment-preview-label">
-                          {t('memory.photoLocalPreview')}
-                        </span>
-                      </div>
-                      <div className="attachment-draft-meta">
-                        <strong>{attachment.file.name}</strong>
-                        <span
-                          className={`attachment-status attachment-status-${attachment.status}`}
-                          role={
-                            attachment.status === 'failed' ? 'alert' : 'status'
-                          }
-                          aria-live="polite"
-                        >
-                          {statusText}
-                        </span>
-                        {attachment.status === 'failed' && (
-                          <>
-                            <small className="attachment-draft-error">
-                              {attachment.error}
-                            </small>
-                            <small>{t('memory.photoFailedNotSaved')}</small>
-                          </>
-                        )}
-                      </div>
-                      <div className="attachment-draft-actions">
-                        {attachment.status === 'failed' && (
-                          <button
-                            type="button"
-                            className="secondary"
-                            onClick={() => attachments.retry(attachment)}
-                          >
-                            {t('common.retry')}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="tertiary"
-                          onClick={() => attachments.remove(attachment.id)}
-                        >
-                          {t('memory.photoRemove')}
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {attachments.hasPending && (
-              <p className="field-help" role="status" aria-live="polite">
-                {t('memory.photoPendingSave')}
-              </p>
-            )}
-          </div>
+          <AttachmentDraftPicker
+            id="memory-create-images"
+            attachments={attachments}
+            multiple
+          />
 
           <div
             className="sharing-note"
@@ -468,11 +396,11 @@ function MemoryCreatePage({
           </div>
         </form>
 
-        {mutation.isPending && (
+        {mutation.isPending ? (
           <p className="status" role="status" aria-live="polite">
             {t('memory.processing')}
           </p>
-        )}
+        ) : null}
         {mutation.error ? <ProblemState error={mutation.error} /> : null}
       </section>
     </div>
@@ -522,6 +450,7 @@ function AuthenticatedApp({
     },
     retry: false,
   });
+
   const loadMemoryImage = useCallback(
     (memoryId: string, attachmentId: string) =>
       loadAuthorizedImage(
@@ -535,9 +464,45 @@ function AuthenticatedApp({
     [apiBaseUrl, apis, spaceId, tokens.accessToken],
   );
 
+  const loadHeartMomentAttachment = useCallback(
+    (heartMomentId: string, attachmentId: string) =>
+      loadAuthorizedMedia(
+        apis,
+        apiBaseUrl,
+        tokens.accessToken,
+        spaceId,
+        AttachmentReadRequestParentTypeEnum.HEART_MOMENT,
+        heartMomentId,
+        attachmentId,
+      ),
+    [apiBaseUrl, apis, spaceId, tokens.accessToken],
+  );
+
   async function refreshStory() {
     await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
   }
+
+  const memoryProductProps = {
+    apis,
+    apiBaseUrl,
+    accessToken: tokens.accessToken,
+    spaceId,
+    currentAccountId: account.id,
+    loadMemoryImage,
+  };
+  const heartMomentProductProps = {
+    apis,
+    apiBaseUrl,
+    accessToken: tokens.accessToken,
+    spaceId,
+    currentAccountId: account.id,
+    loadAttachment: loadHeartMomentAttachment,
+  };
+  const milestoneProductProps = {
+    apis,
+    spaceId,
+    currentAccountId: account.id,
+  };
 
   return (
     <AppShell onLogout={logout}>
@@ -603,24 +568,55 @@ function AuthenticatedApp({
           />
           <Route
             path={MEMORY_EDIT_ROUTE_PATTERN}
+            element={<MemoryProductPage mode="edit" {...memoryProductProps} />}
+          />
+          <Route
+            path={MEMORY_DETAIL_ROUTE_PATTERN}
+            element={<MemoryProductPage mode="detail" {...memoryProductProps} />}
+          />
+          <Route
+            path={HEART_MOMENT_CREATE_ROUTE}
             element={
-              <MemoryProductPage
-                mode="edit"
-                memoriesApi={apis.memories}
-                spaceId={spaceId}
-                loadMemoryImage={loadMemoryImage}
+              <HeartMomentProductPage
+                mode="create"
+                {...heartMomentProductProps}
               />
             }
           />
           <Route
-            path={MEMORY_DETAIL_ROUTE_PATTERN}
+            path={HEART_MOMENT_EDIT_ROUTE_PATTERN}
             element={
-              <MemoryProductPage
-                mode="detail"
-                memoriesApi={apis.memories}
-                spaceId={spaceId}
-                loadMemoryImage={loadMemoryImage}
+              <HeartMomentProductPage
+                mode="edit"
+                {...heartMomentProductProps}
               />
+            }
+          />
+          <Route
+            path={HEART_MOMENT_DETAIL_ROUTE_PATTERN}
+            element={
+              <HeartMomentProductPage
+                mode="detail"
+                {...heartMomentProductProps}
+              />
+            }
+          />
+          <Route
+            path={MILESTONE_CREATE_ROUTE}
+            element={
+              <MilestoneProductPage mode="create" {...milestoneProductProps} />
+            }
+          />
+          <Route
+            path={MILESTONE_EDIT_ROUTE_PATTERN}
+            element={
+              <MilestoneProductPage mode="edit" {...milestoneProductProps} />
+            }
+          />
+          <Route
+            path={MILESTONE_DETAIL_ROUTE_PATTERN}
+            element={
+              <MilestoneProductPage mode="detail" {...milestoneProductProps} />
             }
           />
           <Route
@@ -695,6 +691,7 @@ export function App() {
     setAccount(null);
     setTokens(null);
     queryClient.clear();
+    void clearProductReadCache();
   }
 
   if (!tokens || !account) {
