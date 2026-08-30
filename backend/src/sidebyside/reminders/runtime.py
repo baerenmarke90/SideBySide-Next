@@ -290,9 +290,7 @@ def _apply_generated_schedule(reminder: Reminder, values: dict[str, Any]) -> Non
     reminder.relationship_day_count = None
 
 
-def _replace_generated_offsets(
-    session: Session, reminder: Reminder, rule: RuleDefinition
-) -> None:
+def _replace_generated_offsets(session: Session, reminder: Reminder, rule: RuleDefinition) -> None:
     if reminder.id is None:
         session.flush()
     current = list(
@@ -680,9 +678,7 @@ def handle_occurrence(session: Session, payload: dict[str, Any]) -> None:
         return
 
     occurrence = session.execute(
-        select(ReminderOccurrence)
-        .where(ReminderOccurrence.id == occurrence_id)
-        .with_for_update()
+        select(ReminderOccurrence).where(ReminderOccurrence.id == occurrence_id).with_for_update()
     ).scalar_one_or_none()
     if (
         occurrence is None
