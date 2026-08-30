@@ -1,0 +1,56 @@
+name: M4-C Type Fix
+
+on:
+  push:
+    branches:
+      - ops/m4c-type-fix
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Reminder branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/285-m4c-reminders
+          fetch-depth: 0
+
+      - name: Apply type-only fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("backend/src/sidebyside/reminders/service.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''    preference_rows = dict(\n        session.execute(\n            select(ReminderPreference.reminder_id, ReminderPreference.muted).where(\n                ReminderPreference.account_id == context.account_id,\n                ReminderPreference.reminder_id.in_([reminder.id for reminder in reminders]),\n            )\n        ).all()\n        if reminders\n        else []\n    )\n'''
+          new = '''    preference_rows: dict[UUID, bool] = {}\n    if reminders:\n        preference_rows = {\n            reminder_id: muted\n            for reminder_id, muted in session.execute(\n                select(ReminderPreference.reminder_id, ReminderPreference.muted).where(\n                    ReminderPreference.account_id == context.account_id,\n                    ReminderPreference.reminder_id.in_([reminder.id for reminder in reminders]),\n                )\n            )\n        }\n'''
+          if old not in text:
+              raise SystemExit("Preference map fragment not found")
+          text = text.replace(old, new, 1)
+          text = text.replace(
+              "postgresql.insert(ReminderPreference.__table__)",
+              "postgresql.insert(ReminderPreference)",
+              1,
+          )
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Format and type-check Reminder service
+        run: |
+          python -m pip install "uv==0.12.5"
+          cd backend
+          uv sync --frozen
+          uv run --frozen ruff format src/sidebyside/reminders/service.py
+          uv run --frozen ruff check --fix src/sidebyside/reminders/service.py
+          uv run --frozen mypy src/sidebyside/reminders/service.py
+
+      - name: Commit type fixes
+        run: |
+          git add backend/src/sidebyside/reminders/service.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(reminders): satisfy service typing"
+          git push origin HEAD:feat/285-m4c-reminders
