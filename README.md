@@ -84,10 +84,10 @@ localized product content.
 </p>
 
 <p align="center">
-  <strong>Current: G2 has passed. M2 is complete; M3 is released as the next milestone.</strong><br>
+  <strong>Current: G3 has passed. M3 is complete; M4 is the next roadmap milestone.</strong><br>
   <a href="docs/ROADMAP.md">View roadmap, parallel workstreams, and Release Gates</a> ·
   <a href="docs/IMPLEMENTATION-STATUS.md">Open the actual implementation state</a> ·
-  <a href="docs/m3/README.md">Open the M3 Technical Readiness Package</a>
+  <a href="docs/reviews/2026-08-30-g3-gate-review.md">Open the final G3 Gate Review</a>
 </p>
 
 ## Principles
@@ -240,15 +240,28 @@ The [final G2 Gate Review](docs/reviews/2026-08-26-g2-final-gate-review.md)
 sets G2 explicitly to **PASSED**. Manual Accessibility acceptance was not
 claimed as passed there; it remains part of later Client/Release QA in M5/G4.
 
-**M3 — released.** S0 Readiness and all M3-D01 through M3-D32 are `DECIDED`.
-Runtime slices may proceed according to the
-[M3 Technical Readiness Package](docs/m3/README.md) and
-[M3 Delivery Plan](docs/m3/DELIVERY-PLAN.md) once the respective production
-REST/OpenAPI contract is concretized in a contract-testable form.
+**M3 / G3 — complete and passed.** Wishes, Plans, Places, typed content
+relations, Chapters, Shared Collections, PrivateNote, GiftIdea, and
+PrivateCollection are delivered through the versioned REST/OpenAPI contract.
+M3-S9 assembled the five mandatory real HTTP/PostgreSQL G3 flows plus the
+binding Cross-Tenant, `OWNER_ONLY`, race, delete-preservation, redaction, and
+contract evidence.
+
+The [final G3 Gate Review](docs/reviews/2026-08-30-g3-gate-review.md) reviewed
+the merged S9 tree and exact successful workflow runs and sets G3 explicitly
+to **PASSED**. Complete client parity, Accessibility, Read Cache, Export/Import,
+Deep Links, and client performance remain M5/G4.
+
+**Next milestone: M4 — Engage.** The first defined delivery boundary is M4-A
+Search + Dashboard Read Models, followed by M4-B Activity + Notifications and
+M4-C Reminders + Rules. M3-S10 closes G3 only; it does not start M4
+implementation.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the target architecture,
 [docs/SECURITY.md](docs/SECURITY.md) for Security invariants,
-[docs/m3/README.md](docs/m3/README.md) for the M3 Readiness Package, and
+[docs/m3/README.md](docs/m3/README.md) for the completed M3 package,
+[docs/reviews/2026-08-30-g3-gate-review.md](docs/reviews/2026-08-30-g3-gate-review.md)
+for the current gate decision, and
 [specification/PRODUCT-SPEC.md](specification/PRODUCT-SPEC.md) for functional
 scope.
 
