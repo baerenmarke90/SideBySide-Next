@@ -1005,6 +1005,209 @@
         "title": "ContentVisibility",
         "type": "string"
       },
+      "DashboardItem": {
+        "properties": {
+          "createdAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "occurredOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurredon"
+          },
+          "scheduledAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduledat"
+          },
+          "titleOrText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Titleortext"
+          },
+          "type": {
+            "$ref": "#/components/schemas/DashboardItemType"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "titleOrText",
+          "occurredOn",
+          "scheduledAt",
+          "createdAt"
+        ],
+        "title": "DashboardItem",
+        "type": "object"
+      },
+      "DashboardItemType": {
+        "enum": [
+          "MEMORY",
+          "HEART_MOMENT",
+          "MILESTONE",
+          "WISH",
+          "PLAN",
+          "PLACE",
+          "CHAPTER",
+          "COLLECTION",
+          "IMPORTANT_DATE",
+          "BIRTHDAY",
+          "ANNIVERSARY"
+        ],
+        "title": "DashboardItemType",
+        "type": "string"
+      },
+      "DashboardPartner": {
+        "properties": {
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "displayName"
+        ],
+        "title": "DashboardPartner",
+        "type": "object"
+      },
+      "DashboardRelationshipDuration": {
+        "properties": {
+          "daysTogether": {
+            "title": "Daystogether",
+            "type": "integer"
+          },
+          "displayMode": {
+            "$ref": "#/components/schemas/DurationDisplayMode"
+          },
+          "startedOn": {
+            "format": "date",
+            "title": "Startedon",
+            "type": "string"
+          }
+        },
+        "required": [
+          "startedOn",
+          "daysTogether",
+          "displayMode"
+        ],
+        "title": "DashboardRelationshipDuration",
+        "type": "object"
+      },
+      "DashboardSpaceSummary": {
+        "properties": {
+          "partner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardPartner"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spaceId",
+          "partner"
+        ],
+        "title": "DashboardSpaceSummary",
+        "type": "object"
+      },
+      "DashboardView": {
+        "properties": {
+          "recentShared": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardItem"
+            },
+            "title": "Recentshared",
+            "type": "array"
+          },
+          "relationshipDuration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardRelationshipDuration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retrospective": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "space": {
+            "$ref": "#/components/schemas/DashboardSpaceSummary"
+          },
+          "upcoming": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardItem"
+            },
+            "title": "Upcoming",
+            "type": "array"
+          }
+        },
+        "required": [
+          "space",
+          "relationshipDuration",
+          "retrospective",
+          "upcoming",
+          "recentShared"
+        ],
+        "title": "DashboardView",
+        "type": "object"
+      },
       "DateRepeat": {
         "description": "How often an important date recurs.\n\nDeliberately limited to two values. A full recurrence rule belongs to\nlater reminder logic; birthdays and anniversaries do not need it.",
         "enum": [
@@ -8740,6 +8943,69 @@
         "summary": "Update Comment",
         "tags": [
           "comments"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/dashboard": {
+      "get": {
+        "description": "Return the shared-only relationship overview for one Space.",
+        "operationId": "getDashboard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Get Dashboard",
+        "tags": [
+          "dashboard"
         ]
       }
     },
