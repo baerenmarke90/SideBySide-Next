@@ -199,8 +199,8 @@ class Plan(
         Index(
             "ix_plans_search_fts",
             text(
-                "setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B')"
+                "(setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B'))"
             ),
             postgresql_using="gin",
         ),
