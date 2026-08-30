@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateIndex
@@ -28,10 +30,10 @@ from sidebyside.private_notes.models import PrivateNote
     ),
 )
 def test_compound_search_index_metadata_uses_postgresql_expression_parentheses(
-    model: type[object],
+    model: Any,
     index_name: str,
 ) -> None:
-    table = getattr(model, "__table__")
+    table = model.__table__
     index = next(index for index in table.indexes if index.name == index_name)
 
     ddl = str(CreateIndex(index).compile(dialect=postgresql.dialect()))
