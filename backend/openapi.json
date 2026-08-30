@@ -2844,7 +2844,8 @@
       },
       "NotificationKind": {
         "enum": [
-          "COMMENT_CREATED"
+          "COMMENT_CREATED",
+          "THINKING_OF_YOU"
         ],
         "title": "NotificationKind",
         "type": "string"
@@ -5094,6 +5095,35 @@
           "hasMore"
         ],
         "title": "StoryPage",
+        "type": "object"
+      },
+      "ThinkingOfYouAccepted": {
+        "properties": {
+          "clientRequestId": {
+            "format": "uuid",
+            "title": "Clientrequestid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientRequestId"
+        ],
+        "title": "ThinkingOfYouAccepted",
+        "type": "object"
+      },
+      "ThinkingOfYouCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "clientRequestId": {
+            "format": "uuid",
+            "title": "Clientrequestid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientRequestId"
+        ],
+        "title": "ThinkingOfYouCreate",
         "type": "object"
       },
       "TokenOnlyRequest": {
@@ -17410,6 +17440,88 @@
         "summary": "Search Space Content",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/thinking-of-you": {
+      "post": {
+        "operationId": "sendThinkingOfYou",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThinkingOfYouCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThinkingOfYouAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Too many attempts occurred within the allowed time window."
+          }
+        },
+        "summary": "Send Thinking Of You",
+        "tags": [
+          "notifications"
         ]
       }
     },

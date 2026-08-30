@@ -38,6 +38,16 @@ import {
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
 } from '../models/ProblemDetails';
+import {
+    type ThinkingOfYouAccepted,
+    ThinkingOfYouAcceptedFromJSON,
+    ThinkingOfYouAcceptedToJSON,
+} from '../models/ThinkingOfYouAccepted';
+import {
+    type ThinkingOfYouCreate,
+    ThinkingOfYouCreateFromJSON,
+    ThinkingOfYouCreateToJSON,
+} from '../models/ThinkingOfYouCreate';
 
 export interface GetNotificationUnreadCountRequest {
     spaceId: string;
@@ -56,6 +66,11 @@ export interface MarkAllNotificationsReadRequest {
 export interface MarkNotificationReadRequest {
     notificationId: string;
     spaceId: string;
+}
+
+export interface SendThinkingOfYouRequest {
+    spaceId: string;
+    thinkingOfYouCreate: ThinkingOfYouCreate;
 }
 
 /**
@@ -256,6 +271,61 @@ export class NotificationsApi extends runtime.BaseAPI {
      */
     async markNotificationRead(requestParameters: MarkNotificationReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<NotificationItem> {
         const response = await this.markNotificationReadRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for sendThinkingOfYou without sending the request
+     */
+    async sendThinkingOfYouRequestOpts(requestParameters: SendThinkingOfYouRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling sendThinkingOfYou().'
+            );
+        }
+
+        if (requestParameters['thinkingOfYouCreate'] == null) {
+            throw new runtime.RequiredError(
+                'thinkingOfYouCreate',
+                'Required parameter "thinkingOfYouCreate" was null or undefined when calling sendThinkingOfYou().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/thinking-of-you`;
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ThinkingOfYouCreateToJSON(requestParameters['thinkingOfYouCreate']),
+        };
+    }
+
+    /**
+     * Send Thinking Of You
+     */
+    async sendThinkingOfYouRaw(requestParameters: SendThinkingOfYouRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ThinkingOfYouAccepted>> {
+        const requestOptions = await this.sendThinkingOfYouRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ThinkingOfYouAcceptedFromJSON(jsonValue));
+    }
+
+    /**
+     * Send Thinking Of You
+     */
+    async sendThinkingOfYou(requestParameters: SendThinkingOfYouRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ThinkingOfYouAccepted> {
+        const response = await this.sendThinkingOfYouRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
