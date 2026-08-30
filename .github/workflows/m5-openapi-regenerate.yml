@@ -1,0 +1,59 @@
+name: M5 OpenAPI Regenerate
+
+on:
+  push:
+    branches:
+      - feat/298-m5-web-identity-relationship
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+
+jobs:
+  regenerate:
+    name: Regenerate OpenAPI artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/298-m5-web-identity-relationship
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv lock --check
+          uv sync --frozen
+
+      - name: Regenerate authoritative contract
+        working-directory: backend
+        env:
+          SBS_ENVIRONMENT: test
+        run: uv run --frozen python scripts/openapi_contract.py write
+
+      - name: Regenerate Web and Android clients
+        run: tools/openapi/generate.sh
+
+      - name: Commit generated artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- backend/openapi.json web/src/api/generated android/api/generated; then
+            echo "Generated artifacts are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/openapi.json web/src/api/generated android/api/generated
+          git commit -m "chore(api): regenerate clients for membership context"
+          git push origin HEAD:feat/298-m5-web-identity-relationship
