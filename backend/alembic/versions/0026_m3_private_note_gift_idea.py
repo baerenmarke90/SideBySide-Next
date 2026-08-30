@@ -49,7 +49,9 @@ def _owner_only_table(name: str, *, gift_idea: bool) -> None:
     ]
     if gift_idea:
         columns.append(
-            sa.Column("status", _gift_idea_status(), server_default=sa.text("'IDEA'"), nullable=False)
+            sa.Column(
+                "status", _gift_idea_status(), server_default=sa.text("'IDEA'"), nullable=False
+            )
         )
     columns.extend(
         [

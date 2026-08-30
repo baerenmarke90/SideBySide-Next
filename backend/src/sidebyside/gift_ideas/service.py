@@ -226,9 +226,7 @@ def _cursor_binding(context: AuthorizationContext) -> dict[str, Any]:
     }
 
 
-def _encode_cursor(
-    *, context: AuthorizationContext, created_at: datetime, idea_id: UUID
-) -> str:
+def _encode_cursor(*, context: AuthorizationContext, created_at: datetime, idea_id: UUID) -> str:
     return cursor_codec.encode(
         binding=_cursor_binding(context),
         position={

@@ -120,12 +120,8 @@ class TestPrivateNote:
     def test_partner_unknown_and_foreign_ids_are_indistinguishable(self, client, couple) -> None:  # type: ignore[no-untyped-def]
         note = create_note(client, couple).json()
         partner_headers = auth(couple["token_b"])
-        real = client.get(
-            f"{note_path(couple['space'].id)}/{note['id']}", headers=partner_headers
-        )
-        unknown = client.get(
-            f"{note_path(couple['space'].id)}/{uuid4()}", headers=partner_headers
-        )
+        real = client.get(f"{note_path(couple['space'].id)}/{note['id']}", headers=partner_headers)
+        unknown = client.get(f"{note_path(couple['space'].id)}/{uuid4()}", headers=partner_headers)
         assert real.status_code == unknown.status_code == 404
         assert real.json() == unknown.json()
         assert real.json()["code"] == "PRIVATE_NOTE_NOT_FOUND"
@@ -152,9 +148,7 @@ class TestPrivateNote:
         anna_page = client.get(
             note_path(couple["space"].id), headers=auth(couple["token_a"])
         ).json()
-        ben_page = client.get(
-            note_path(couple["space"].id), headers=auth(couple["token_b"])
-        ).json()
+        ben_page = client.get(note_path(couple["space"].id), headers=auth(couple["token_b"])).json()
         assert [entry["id"] for entry in anna_page["items"]] == [anna["id"]]
         assert [entry["id"] for entry in ben_page["items"]] == [ben["id"]]
         assert "Ben private" not in str(anna_page)
@@ -222,7 +216,9 @@ class TestGiftIdea:
             ("GIVEN", "IDEA", False),
         ],
     )
-    def test_status_transition_matrix(self, client, couple, start: str, target: str, allowed: bool) -> None:  # type: ignore[no-untyped-def]
+    def test_status_transition_matrix(
+        self, client, couple, start: str, target: str, allowed: bool
+    ) -> None:  # type: ignore[no-untyped-def]
         idea = create_gift(client, couple, title=f"{start}-{target}").json()
         version = 1
         if start != "IDEA":
@@ -252,7 +248,9 @@ class TestGiftIdea:
         partner_headers = auth(couple["token_b"])
         assert client.get(base, headers=partner_headers).status_code == 404
         assert (
-            client.patch(base, json={"pinned": False}, headers=if_match(couple["token_b"], 1)).status_code
+            client.patch(
+                base, json={"pinned": False}, headers=if_match(couple["token_b"], 1)
+            ).status_code
             == 404
         )
         assert client.delete(base, headers=if_match(couple["token_b"], 1)).status_code == 404
@@ -261,7 +259,9 @@ class TestGiftIdea:
         assert page.json()["items"] == []
         assert SECRET_GIFT_TITLE not in page.text
 
-    def test_url_is_inert_content_and_never_triggers_server_network(self, client, couple, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def test_url_is_inert_content_and_never_triggers_server_network(
+        self, client, couple, monkeypatch
+    ) -> None:  # type: ignore[no-untyped-def]
         def fail_network(*args, **kwargs):  # type: ignore[no-untyped-def]
             raise AssertionError("GiftIdea URL must not trigger a network request")
 
@@ -272,7 +272,9 @@ class TestGiftIdea:
 
 
 class TestPrivateEventRedaction:
-    def test_private_content_and_structural_state_never_enter_event_payload(self, client, session, couple) -> None:  # type: ignore[no-untyped-def]
+    def test_private_content_and_structural_state_never_enter_event_payload(
+        self, client, session, couple
+    ) -> None:  # type: ignore[no-untyped-def]
         create_note(client, couple)
         create_gift(client, couple)
         session.expire_all()
@@ -284,7 +286,8 @@ class TestPrivateEventRedaction:
         private_events = [
             event
             for event in events
-            if event.event_type.startswith("PRIVATE_NOTE_") or event.event_type.startswith("GIFT_IDEA_")
+            if event.event_type.startswith("PRIVATE_NOTE_")
+            or event.event_type.startswith("GIFT_IDEA_")
         ]
         assert private_events
         serialized = "\n".join(
