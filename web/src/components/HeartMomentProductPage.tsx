@@ -279,12 +279,13 @@ export function HeartMomentProductPage({
       );
     }
 
+    const editableHeartMoment = heartMoment;
     function submit(event: FormEvent<HTMLFormElement>) {
       event.preventDefault();
       if (attachments.hasPending) return;
       const data = new FormData(event.currentTarget);
       updateMutation.mutate({
-        heartMoment,
+        heartMoment: editableHeartMoment,
         text: String(data.get('text') || '').trim(),
         emotion: String(data.get('emotion')) as HeartEmotion,
         happenedOn: new Date(`${String(data.get('happenedOn'))}T00:00:00Z`),
