@@ -112,11 +112,12 @@ jobs:
                   start = line_offsets[text_call.lineno - 1] + text_call.col_offset
                   end = line_offsets[text_call.end_lineno - 1] + text_call.end_col_offset
                   parts = expressions[index_name].split(" || ")
-                  chunks = []
-                  for position, part in enumerate(parts):
-                      prefix = "(" if position == 0 else ""
-                      suffix = ")" if position == len(parts) - 1 else " || "
-                      chunks.append(prefix + part + suffix)
+                  if len(parts) == 1:
+                      chunks = [f"({parts[0]})"]
+                  else:
+                      chunks = ["(" * (len(parts) - 1) + parts[0] + " || "]
+                      chunks.extend(part + ") || " for part in parts[1:-1])
+                      chunks.append(parts[-1] + ")")
                   inner_indent = " " * (text_call.col_offset + 4)
                   closing_indent = " " * text_call.col_offset
                   replacement = "text(\n"
