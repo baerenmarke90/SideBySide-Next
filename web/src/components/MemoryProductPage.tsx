@@ -176,11 +176,12 @@ export function MemoryProductPage({
       );
     }
 
+    const editableMemory = memory;
     function submit(event: FormEvent<HTMLFormElement>) {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       updateMutation.mutate({
-        memory,
+        memory: editableMemory,
         values: {
           title: String(data.get('title') || ''),
           body: String(data.get('body') || ''),
