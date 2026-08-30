@@ -183,6 +183,7 @@ function StoryPage({
         action={
           <div
             className="story-create-actions"
+            role="group"
             aria-label={t('storyActions.addAria')}
           >
             <Link
