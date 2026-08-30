@@ -1,3 +1,7 @@
+.mobile-bottom-nav {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .choice-row {
   min-height: 44px;
   display: flex;
@@ -47,7 +51,11 @@
 }
 
 .choice-card-danger {
-  border-color: color-mix(in srgb, var(--color-error) 35%, var(--color-border-subtle));
+  border-color: color-mix(
+    in srgb,
+    var(--color-error) 35%,
+    var(--color-border-subtle)
+  );
 }
 
 .modal-backdrop {
