@@ -105,9 +105,11 @@ def test_projection_replay_is_idempotent_and_copies_no_protected_text(
     service.project_event(session, event)
     session.flush()
 
-    rows = session.execute(
-        select(Activity).where(Activity.source_event_id == event.id)
-    ).scalars().all()
+    rows = (
+        session.execute(select(Activity).where(Activity.source_event_id == event.id))
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
     activity = rows[0]
     assert activity.kind == ActivityKind.MEMORY_CREATED.value
@@ -170,9 +172,11 @@ def test_comment_notifies_only_other_authorized_partner_and_replay_is_idempotent
     service.project_event(session, event)
     session.flush()
 
-    notifications = session.execute(
-        select(Notification).where(Notification.source_event_id == event.id)
-    ).scalars().all()
+    notifications = (
+        session.execute(select(Notification).where(Notification.source_event_id == event.id))
+        .scalars()
+        .all()
+    )
     assert len(notifications) == 1
     notification = notifications[0]
     assert notification.recipient_account_id == couple["anna"].id
