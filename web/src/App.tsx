@@ -575,7 +575,10 @@ function AuthenticatedApp({
             title={t('states.unexpected.title')}
             body={t('states.unexpected.body')}
             action={
-              <Link className="button-link secondary-link" to={DEFAULT_APP_ROUTE}>
+              <Link
+                className="button-link secondary-link"
+                to={DEFAULT_APP_ROUTE}
+              >
                 {t('navigation.story')}
               </Link>
             }
@@ -583,7 +586,10 @@ function AuthenticatedApp({
         }
       >
         <Routes>
-          <Route path="/" element={<Navigate replace to={DEFAULT_APP_ROUTE} />} />
+          <Route
+            path="/"
+            element={<Navigate replace to={DEFAULT_APP_ROUTE} />}
+          />
           <Route
             path={appRoutePath('story')}
             element={
@@ -604,7 +610,10 @@ function AuthenticatedApp({
               />
             }
           />
-          <Route path="*" element={<Navigate replace to={DEFAULT_APP_ROUTE} />} />
+          <Route
+            path="*"
+            element={<Navigate replace to={DEFAULT_APP_ROUTE} />}
+          />
         </Routes>
       </AppErrorBoundary>
     </AppShell>
