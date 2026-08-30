@@ -268,9 +268,7 @@ class TestSearchTargetsAndPrivacy:
         seeded = _seed_all_targets(session, couple)
         item = next(
             entry
-            for entry in _items(
-                _search(client, couple, type=["PRIVATE_COLLECTION_ITEM"], limit=50)
-            )
+            for entry in _items(_search(client, couple, type=["PRIVATE_COLLECTION_ITEM"], limit=50))
             if entry["id"] == str(seeded["private_collection_item"].id)
         )
         assert item["parentId"] == str(seeded["private_collection"].id)
@@ -323,8 +321,7 @@ class TestSearchTargetsAndPrivacy:
             )
         }
         owner_after = {
-            item["id"]
-            for item in _items(_search(client, couple, type=["HEART_MOMENT"]))
+            item["id"] for item in _items(_search(client, couple, type=["HEART_MOMENT"]))
         }
         assert heart_id not in partner_after
         assert heart_id in owner_after
@@ -384,9 +381,7 @@ class TestSearchRequestContract:
 
     def test_cursor_is_bound_to_query_and_filters(self, client, session, couple) -> None:  # type: ignore[no-untyped-def]
         _seed_all_targets(session, couple)
-        cursor = _search(client, couple, type=["MEMORY", "WISH"], limit=1).json()[
-            "nextCursor"
-        ]
+        cursor = _search(client, couple, type=["MEMORY", "WISH"], limit=1).json()["nextCursor"]
         assert cursor is not None
 
         changed_query = _search(
