@@ -70,12 +70,9 @@ jobs:
                       raise SystemExit(f"No SQL literal found in FTS index block: {path}")
                   first = literals[0]
                   last = literals[-1]
-                  if first.group(1).startswith("(") and last.group(1).endswith(")"):
+                  if first.group(1).startswith("("):
                       return match.group(0)
-                  if first.group(1).startswith("(") or last.group(1).endswith(")"):
-                      raise SystemExit(f"Partially wrapped FTS expression: {path}")
                   body = body[: first.start(1)] + "(" + body[first.start(1):]
-                  # Account for the one inserted character before locating the last literal.
                   last_end = last.end(1) + 1
                   body = body[:last_end] + ")" + body[last_end:]
                   return match.group("prefix") + body + match.group("suffix")
