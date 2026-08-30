@@ -10,7 +10,7 @@ M5 Web S2 completes the product surfaces for Memories, HeartMoments, and Milesto
 - HeartMoment create, detail, edit, delete, visibility changes, optional image attachment, comments for shared HeartMoments, and deep links.
 - Milestone create, detail, edit, delete, comments, and deep links.
 - Story cards link directly to the corresponding detail route.
-- Image galleries provide a fullscreen viewer, keyboard navigation, touch swipe navigation, and an item counter. The renderer is video-capable for server-supported READY video attachments, but the current backend intentionally remains fail-closed for video upload until the dedicated video scope is implemented.
+- Image galleries provide a fullscreen viewer, keyboard navigation, touch swipe navigation, and an item counter. Video playback remains out of scope because the current backend intentionally rejects video fail-closed; a future video slice must provide the media and accessibility contract before the web client enables playback.
 - Memory and HeartMoment attachment drafts upload immediately after selection, show a local preview and upload progress, and can be cancelled before binding the attachment to domain content.
 
 Routes:
@@ -47,7 +47,7 @@ M5 Web S2 reuses existing capabilities instead of introducing parallel infrastru
 - the existing attachment upload/finalize/READY lifecycle;
 - IndexedDB for durable local reads;
 - `AbortController` plus `XMLHttpRequest.upload` for cancellable upload progress;
-- native image/video elements, keyboard events, and touch events for the gallery;
+- native image elements, keyboard events, and touch events for the gallery;
 - React Router for deep links and TanStack Query for remote state and optimistic rollback.
 
 No new runtime dependency or provider service is introduced.
