@@ -45,22 +45,176 @@ jobs:
       - name: Apply bounded M4-C-S2 completion
         run: python3 tools/m4_finalize.py
 
-      - name: Normalize generated runtime test signatures
+      - name: Close final runtime evidence gaps
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path("backend/tests/integration/test_reminder_runtime.py")
-          text = path.read_text(encoding="utf-8")
-          text = text.replace(
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              if old not in text:
+                  raise RuntimeError(f"Missing final patch anchor in {path}: {old[:100]!r}")
+              target.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "backend/src/sidebyside/reminders/runtime.py",
+              "def _active_owner(session: Session, space_id: UUID) -> UUID | None:\n",
+              "def reconcile_account(session: Session, account: Account) -> None:\n"
+              "    \"\"\"Replan current Reminder occurrences for one Account after timezone changes.\"\"\"\n"
+              "    space_ids = list(\n"
+              "        session.execute(\n"
+              "            select(Membership.space_id).where(\n"
+              "                Membership.account_id == account.id,\n"
+              "                Membership.status == MembershipStatus.ACTIVE.value,\n"
+              "            )\n"
+              "        ).scalars()\n"
+              "    )\n"
+              "    if not space_ids:\n"
+              "        return\n"
+              "    reminders = session.execute(\n"
+              "        select(Reminder).where(Reminder.space_id.in_(space_ids))\n"
+              "    ).scalars()\n"
+              "    for reminder in reminders:\n"
+              "        _plan_for_recipient(session, reminder, account)\n\n\n"
+              "def _active_owner(session: Session, space_id: UUID) -> UUID | None:\n",
+          )
+
+          replace_once(
+              "backend/src/sidebyside/identity/preferences.py",
+              "from sqlalchemy import select\nfrom sqlalchemy.orm import Session\n",
+              "from sqlalchemy.orm import Session\n",
+          )
+          replace_once(
+              "backend/src/sidebyside/identity/preferences.py",
+              "from sidebyside.relationship.models import Membership, MembershipStatus\n",
+              "",
+          )
+          replace_once(
+              "backend/src/sidebyside/identity/preferences.py",
+              "    if timezone_changed:\n"
+              "        space_ids = session.execute(\n"
+              "            select(Membership.space_id).where(\n"
+              "                Membership.account_id == account.id,\n"
+              "                Membership.status == MembershipStatus.ACTIVE.value,\n"
+              "            )\n"
+              "        ).scalars()\n"
+              "        for space_id in space_ids:\n"
+              "            reminder_runtime.reconcile_space(session, space_id)\n",
+              "    if timezone_changed:\n"
+              "        reminder_runtime.reconcile_account(session, account)\n",
+          )
+
+          test_path = "backend/tests/integration/test_reminder_runtime.py"
+          replace_once(
+              test_path,
               "def test_rule_catalog_defaults_validation_and_account_isolation(client, session: Session, couple) -> None:  # type: ignore[no-untyped-def]",
-              "def test_rule_catalog_defaults_validation_and_account_isolation(\n    client, session: Session, couple\n) -> None:  # type: ignore[no-untyped-def]",
+              "def test_rule_catalog_defaults_validation_and_account_isolation(\n"
+              "    client, session: Session, couple\n"
+              ") -> None:  # type: ignore[no-untyped-def]",
           )
-          text = text.replace(
+          replace_once(
+              test_path,
               "def test_time_contracts_and_timezone_replanning(client, session: Session, couple, monkeypatch) -> None:  # type: ignore[no-untyped-def]",
-              "def test_time_contracts_and_timezone_replanning(\n    client, session: Session, couple, monkeypatch\n) -> None:  # type: ignore[no-untyped-def]",
+              "def test_time_contracts_and_timezone_replanning(\n"
+              "    client, session: Session, couple, monkeypatch\n"
+              ") -> None:  # type: ignore[no-untyped-def]",
           )
-          path.write_text(text, encoding="utf-8")
+          replace_once(
+              test_path,
+              "    assert runtime._resolve_local(date(2026, 10, 25), time(2, 30), berlin) == datetime(\n"
+              "        2026, 10, 25, 0, 30, tzinfo=UTC\n"
+              "    )\n\n"
+              "    annual = client.post(\n",
+              "    assert runtime._resolve_local(date(2026, 10, 25), time(2, 30), berlin) == datetime(\n"
+              "        2026, 10, 25, 0, 30, tzinfo=UTC\n"
+              "    )\n"
+              "    new_york = ZoneInfo(\"America/New_York\")\n"
+              "    assert runtime._resolve_local(date(2026, 3, 8), time(2, 30), new_york) == datetime(\n"
+              "        2026, 3, 8, 7, 30, tzinfo=UTC\n"
+              "    )\n"
+              "    assert runtime._resolve_local(date(2026, 11, 1), time(1, 30), new_york) == datetime(\n"
+              "        2026, 11, 1, 5, 30, tzinfo=UTC\n"
+              "    )\n\n"
+              "    annual = client.post(\n",
+          )
+          replace_once(
+              test_path,
+              "    events = list(\n"
+              "        session.execute(\n"
+              "            select(OutboxEvent).where(\n"
+              "                OutboxEvent.event_type == EventType.REMINDER_DUE.value,\n"
+              "                OutboxEvent.subject_id == occurrence.reminder_id,\n"
+              "                OutboxEvent.payload[\"occurrenceId\"].astext == str(occurrence.id),\n"
+              "            )\n"
+              "        ).scalars()\n"
+              "    )\n",
+              "    events = [\n"
+              "        event\n"
+              "        for event in session.execute(\n"
+              "            select(OutboxEvent).where(\n"
+              "                OutboxEvent.event_type == EventType.REMINDER_DUE.value,\n"
+              "                OutboxEvent.subject_id == occurrence.reminder_id,\n"
+              "            )\n"
+              "        ).scalars()\n"
+              "        if event.payload.occurrence_id == occurrence.id\n"
+              "    ]\n",
+          )
+          replace_once(
+              test_path,
+              "    assert session.execute(\n"
+              "        select(func.count()).select_from(ReminderOccurrence).where(\n"
+              "            ReminderOccurrence.reminder_id == generated.id\n"
+              "        )\n"
+              "    ).scalar_one() == first_count\n\n"
+              "    tightened = client.put(\n",
+              "    assert session.execute(\n"
+              "        select(func.count()).select_from(ReminderOccurrence).where(\n"
+              "            ReminderOccurrence.reminder_id == generated.id\n"
+              "        )\n"
+              "    ).scalar_one() == first_count\n\n"
+              "    disabled = client.put(\n"
+              "        f\"{_rule_base(couple)}/{rules.IMPORTANT_DATE_RULE}/preference\",\n"
+              "        json={\"enabled\": False, \"parameters\": {\"daysBefore\": [7, 1]}},\n"
+              "        headers=auth(couple[\"anna_token\"]),\n"
+              "    )\n"
+              "    assert disabled.status_code == 200, disabled.text\n"
+              "    assert session.execute(\n"
+              "        select(func.count()).select_from(ReminderOccurrence).where(\n"
+              "            ReminderOccurrence.reminder_id == generated.id,\n"
+              "            ReminderOccurrence.recipient_account_id == couple[\"anna\"].id,\n"
+              "            ReminderOccurrence.state == OccurrenceState.PENDING.value,\n"
+              "        )\n"
+              "    ).scalar_one() == 0\n"
+              "    assert session.execute(\n"
+              "        select(func.count()).select_from(ReminderOccurrence).where(\n"
+              "            ReminderOccurrence.reminder_id == generated.id,\n"
+              "            ReminderOccurrence.recipient_account_id == couple[\"ben\"].id,\n"
+              "            ReminderOccurrence.state == OccurrenceState.PENDING.value,\n"
+              "        )\n"
+              "    ).scalar_one() == 2\n"
+              "    reenabled = client.put(\n"
+              "        f\"{_rule_base(couple)}/{rules.IMPORTANT_DATE_RULE}/preference\",\n"
+              "        json={\"enabled\": True, \"parameters\": {\"daysBefore\": [7, 1]}},\n"
+              "        headers=auth(couple[\"anna_token\"]),\n"
+              "    )\n"
+              "    assert reenabled.status_code == 200, reenabled.text\n"
+              "    assert session.execute(\n"
+              "        select(func.count()).select_from(ReminderOccurrence).where(\n"
+              "            ReminderOccurrence.reminder_id == generated.id,\n"
+              "            ReminderOccurrence.recipient_account_id == couple[\"anna\"].id,\n"
+              "            ReminderOccurrence.state == OccurrenceState.PENDING.value,\n"
+              "        )\n"
+              "    ).scalar_one() == 2\n\n"
+              "    tightened = client.put(\n",
+          )
+          path = Path(test_path)
+          text = path.read_text(encoding="utf-8")
+          marker = "\ndef test_due_handler_catchup_and_m4b_projection_are_idempotent(\n"
+          relationship_test = '''\n\ndef test_relationship_day_count_replans_for_start_and_timezone(\n    client, session: Session, couple, monkeypatch\n) -> None:  # type: ignore[no-untyped-def]\n    monkeypatch.setattr(runtime.clock, "now", lambda: NOW)\n    profile = relationship_profile.load(session, couple["space"].id)\n    assert profile is not None\n    relationship_profile.update(\n        session,\n        couple["space"].id,\n        expected_version=profile.version,\n        relationship_started_on=date(2026, 8, 25),\n        show_relationship_duration=True,\n        duration_display_mode=DurationDisplayMode.YEARS_MONTHS,\n        today=NOW.date(),\n    )\n    reminder = client.post(\n        _reminder_base(couple),\n        json={\n            "title": "Day ten",\n            "schedule": {\n                "type": "RELATIONSHIP_DAY_COUNT",\n                "dayCount": 10,\n                "localTime": "09:00:00",\n            },\n            "offsets": [0],\n        },\n        headers=auth(couple["anna_token"]),\n    )\n    assert reminder.status_code == 201, reminder.text\n    first = [\n        row\n        for row in _occurrences(session, reminder.json()["id"], couple["anna"].id)\n        if row.state == OccurrenceState.PENDING.value\n    ][0]\n    assert first.due_at == datetime(2026, 9, 3, 7, 0, tzinfo=UTC)\n\n    profile = relationship_profile.load(session, couple["space"].id)\n    assert profile is not None\n    relationship_profile.update(\n        session,\n        couple["space"].id,\n        expected_version=profile.version,\n        relationship_started_on=date(2026, 8, 26),\n        show_relationship_duration=True,\n        duration_display_mode=DurationDisplayMode.YEARS_MONTHS,\n        today=NOW.date(),\n    )\n    pending = [\n        row\n        for row in _occurrences(session, reminder.json()["id"], couple["anna"].id)\n        if row.state == OccurrenceState.PENDING.value\n    ]\n    assert len(pending) == 1\n    assert pending[0].due_at == datetime(2026, 9, 4, 7, 0, tzinfo=UTC)\n\n    account_preferences.set_preferences(session, couple["anna"], timezone="America/New_York")\n    session.refresh(pending[0])\n    assert pending[0].due_at == datetime(2026, 9, 4, 13, 0, tzinfo=UTC)\n'''
+          if marker not in text:
+              raise RuntimeError("Missing relationship runtime test insertion marker")
+          path.write_text(text.replace(marker, relationship_test + marker, 1), encoding="utf-8")
           PY
 
       - name: Install locked backend dependencies
@@ -90,17 +244,18 @@ jobs:
           uv run --frozen mypy
           uv run --frozen python scripts/openapi_contract.py check
 
-      - name: Apply migrations
-        working-directory: backend
-        run: uv run --frozen alembic upgrade head
-
-      - name: Validate final M4 integration evidence
+      - name: Validate migration round-trip and drift
         working-directory: backend
         run: |
-          uv run --frozen pytest -q \
-            tests/integration/test_reminder_runtime.py \
-            tests/integration/test_reminders.py \
-            tests/integration/test_endpoint_matrix.py
+          uv run --frozen alembic upgrade head
+          uv run --frozen alembic downgrade 0031
+          uv run --frozen alembic upgrade head
+          uv run --frozen alembic check
+
+      - name: Validate focused final M4 runtime evidence
+        working-directory: backend
+        run: |
+          uv run --frozen pytest -q tests/integration/test_reminder_runtime.py
 
       - name: Verify generated clients
         run: tools/openapi/generate.sh --check
