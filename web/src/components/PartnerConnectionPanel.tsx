@@ -68,8 +68,9 @@ export function PartnerConnectionPanel({
   });
 
   const partner =
-    spaceQuery.data?.partners.find((candidate) => candidate.id !== account.id) ??
-    null;
+    spaceQuery.data?.partners.find(
+      (candidate) => candidate.id !== account.id,
+    ) ?? null;
   const canInvite = Boolean(spaceQuery.data && !partner);
 
   const invitationsQuery = useQuery({
@@ -138,7 +139,8 @@ export function PartnerConnectionPanel({
   async function copyIssuedLink() {
     if (!issuedLink) return;
     try {
-      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      if (!navigator.clipboard?.writeText)
+        throw new Error('Clipboard unavailable');
       await navigator.clipboard.writeText(issuedLink);
       setCopyState('copied');
     } catch {
@@ -159,10 +161,7 @@ export function PartnerConnectionPanel({
           className="profile-section"
           aria-labelledby="partner-connection-title"
         >
-          <UiState
-            kind="loading"
-            title={t('partnerConnection.checking')}
-          />
+          <UiState kind="loading" title={t('partnerConnection.checking')} />
         </section>
       </div>
     );
@@ -197,7 +196,9 @@ export function PartnerConnectionPanel({
         <div className="section-head">
           <div>
             <p className="section-kicker">{t('partnerConnection.eyebrow')}</p>
-            <h2 id="partner-connection-title">{t('partnerConnection.title')}</h2>
+            <h2 id="partner-connection-title">
+              {t('partnerConnection.title')}
+            </h2>
             <p className="profile-section-intro">
               {t('partnerConnection.intro')}
             </p>
