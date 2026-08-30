@@ -622,7 +622,7 @@ export function App() {
   const [spaceId, setSpaceId] = useState<string | null>(null);
 
   const membershipsQuery = useQuery({
-    queryKey: ['account-memberships', tokens?.accessToken ?? 'signed-out'],
+    queryKey: ['account-memberships'],
     queryFn: async () => {
       if (!tokens) return [];
       return loadAuthorizedMemberships(config.apiBaseUrl, tokens.accessToken);
