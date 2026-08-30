@@ -110,9 +110,9 @@ class Place(
         Index(
             "ix_places_search_fts",
             text(
-                "setweight(to_tsvector('simple', coalesce(payload->>'name', '')), 'A') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'address', '')), 'B')"
+                "((setweight(to_tsvector('simple', coalesce(payload->>'name', '')), 'A') || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'description', '')), 'B')) || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'address', '')), 'B'))"
             ),
             postgresql_using="gin",
         ),
