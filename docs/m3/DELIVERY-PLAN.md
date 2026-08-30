@@ -1,6 +1,6 @@
 # M3 Delivery Plan
 
-**Status:** S0 complete; runtime released; S1 through S8 delivered
+**Status:** S0 complete; runtime released; S1 through S9 delivered
 **As of:** August 30, 2026
 
 ## 1. Gate before runtime
@@ -263,7 +263,7 @@ Shared Collection and PrivateCollection share neither a table nor an unsafe quer
 
 Implemented in Issue #259 / PR #260 with dedicated owner-only root and Item persistence, ProtectedPayload-backed title/icon content, and server-derived Space/owner/privacy. Item rows deliberately duplicate neither `spaceId` nor `ownerId`; every child operation authorizes through the owner-scoped Parent. Root `version` protects Item-set/order structure, Item `version` protects title/completion, Create appends, Delete compacts positions, and exact-set Reorder is atomic under the root version using the proven collision-safe PostgreSQL strategy. Partner, Cross-Space, unknown-Parent, stale-version, cascade, event-redaction, and real PostgreSQL race coverage is included. The canonical OpenAPI snapshot and generated TypeScript/Kotlin clients are synchronized.
 
-## 12. S9 – Integrated M3 backend/API evidence
+## 12. S9 – Integrated M3 backend/API evidence – delivered
 
 The five mandatory G3 flows are demonstrated against the real SideBySide API + PostgreSQL:
 
@@ -274,6 +274,19 @@ The five mandatory G3 flows are demonstrated against the real SideBySide API + P
 5. PrivateNote/GiftIdea/PrivateCollection with partner negative path.
 
 Additionally, Cross-Tenant, race, Event/log Redaction, and Delete suites run.
+
+Implemented in Issue #261 / PR #263. The executable evidence index is
+[`G3-EVIDENCE.md`](./G3-EVIDENCE.md). S9 adds an integrated Chapter
+HTTP/PostgreSQL flow that proves derived ordering and original preservation, an
+owner -> partner -> owner authorization-context switch across the complete
+Private Area, and the previously missing real-PostgreSQL Parent Delete vs. Item
+Create/Reorder races for both shared and private Collection aggregates. Existing
+S1-S8 acceptance suites are reused for the remaining G3 evidence instead of
+being duplicated. No production API, Domain model, dependency, service, secret,
+or configuration is added by S9.
+
+S9 establishes the evidence set only. It does **not** decide G3; the final gate
+decision remains S10.
 
 ## 13. S10 – G3 Review
 
