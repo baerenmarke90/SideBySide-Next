@@ -11,7 +11,7 @@ This roadmap translates the binding product specification into an understandable
 
 ![Roadmap from M0 Foundation through M9 Release and the strategic E2EE track](./assets/roadmap/roadmap-overview.svg)
 
-**Current:** M0, M1, and M2 are complete for their intended scope. **G1 and G2 have passed. M3 is released for implementation; S1 through S8 are delivered. The next runtime slice is M3-S9 — Integrated M3 backend/API evidence.** The binding current gate evidence is the [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).
+**Current:** M0, M1, and M2 are complete for their intended scope. **G1 and G2 have passed. M3 is released for implementation; S1 through S9 are delivered. The next checkpoint is M3-S10 — the final G3 Review.** The binding current gate evidence remains the [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) until S10 creates a new dated G3 decision.
 
 The earlier Pre-Exposure hardening items #59 and #60 and Repository Hardening #25 are complete. The active `main` ruleset enforces Pull Requests, Merge Commits, and the defined required checks.
 
@@ -24,7 +24,8 @@ The earlier Pre-Exposure hardening items #59 and #60 and Repository Hardening #2
 | [Status Sources and Drift Rules](./STATUS-SOURCES.md) | Which status files are living documents and which are historical snapshots? |
 | [M2 Project Control](./m2/PROJECT-CONTROL.md) | Which M2/M5 boundaries and G2 criteria applied? |
 | [M3 Technical Readiness Package](./m3/README.md) | Which M3 decisions, gate rules, and runtime prerequisites apply? |
-| [Final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) | current gate decision |
+| [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md) | Which executable HTTP/PostgreSQL/race tests constitute the S9 G3 evidence set? |
+| [Final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) | current gate decision until S10 writes a new dated G3 review |
 | older dated reviews | historical review snapshots that are never rewritten |
 | GitHub Issues/PRs | Which concrete work packages are being handled? |
 | [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | What is binding from a product and technical perspective? |
@@ -58,11 +59,11 @@ The [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) explici
 
 Future backlog: #88 retains video uploads and poster frames for later reevaluation. Prototype #109 was deliberately closed without merge because of a production image of roughly 755 MiB and the additional ffmpeg operational, Supply Chain, and Security burden; `main` remains fail-closed for video.
 
-### M3 — Planning & Private Area: released, S1 through S8 delivered
+### M3 — Planning & Private Area: released, S1 through S9 delivered
 
 The [M3 Technical Readiness Package](./m3/README.md) is prepared; M3-D01 through M3-D32 are `DECIDED`. Domain-level S0 readiness is therefore complete. Runtime slices are implemented according to the [M3 Delivery Plan](./m3/DELIVERY-PLAN.md) once the production REST/OpenAPI contract for the respective slice is concretely contract-testable and the normal Reuse/PR/CI rules are satisfied.
 
-Delivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, **M3-S4 typed Content Relations**, **M3-S5 Chapter**, **M3-S6 Shared Collections**, **M3-S7 PrivateNote + GiftIdea**, and **M3-S8 PrivateCollection**. The next runtime slice is **M3-S9 — Integrated M3 backend/API evidence**.
+Delivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, **M3-S4 typed Content Relations**, **M3-S5 Chapter**, **M3-S6 Shared Collections**, **M3-S7 PrivateNote + GiftIdea**, **M3-S8 PrivateCollection**, and **M3-S9 Integrated M3 backend/API evidence**. The S9 evidence set is indexed in [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md). The next checkpoint is **M3-S10 — G3 Review**; G3 remains undecided until that new dated review is completed.
 
 ## Milestones
 
@@ -191,6 +192,8 @@ Manual Accessibility acceptance is deliberately **no longer a G2 blocker** and i
 - Delete/409 effects understandable,
 - M4 Read Model boundaries prepared.
 
+**Current state: evidence delivered in M3-S9; final gate decision pending M3-S10.**
+
 ### G4 — Core Release Candidate
 
 - Web and Android domain-equivalent,
@@ -245,6 +248,7 @@ Manual Accessibility acceptance is deliberately **no longer a G2 blocker** and i
 - [M3 Technical Readiness Package](./m3/README.md)
 - [M3 Decision Log](./m3/DECISION-LOG.md)
 - [M3 Delivery Plan](./m3/DELIVERY-PLAN.md)
+- [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md)
 - [Final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md)
 - [Product Specification](../specification/PRODUCT-SPEC.md)
 - [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
