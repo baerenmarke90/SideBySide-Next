@@ -27,7 +27,7 @@ from sidebyside.relationship.models import Membership, MembershipStatus
 JOB_KIND = "push-delivery"
 GENERIC_PRESENTATION_KEY = "notification.generic"
 MAX_PUSH_ATTEMPTS = 5
-_ERROR_CODE = re.compile(r"[^A-Z0-9_-]+")
+_TECHNICAL_CODE = re.compile(r"[A-Z0-9_-]{1,64}\Z")
 
 
 @dataclass(frozen=True)
@@ -110,7 +110,10 @@ def register_endpoint(
         .returning(PushEndpoint.id)
     )
     endpoint_id = session.execute(statement).scalar_one()
-    return session.get(PushEndpoint, endpoint_id)  # type: ignore[return-value]
+    endpoint_row = session.get(PushEndpoint, endpoint_id)
+    if endpoint_row is None:
+        raise RuntimeError("Push endpoint disappeared after upsert.")
+    return endpoint_row
 
 
 def ensure_deliveries_for_source_event(session: Session, source_event_id: UUID) -> None:
@@ -227,8 +230,11 @@ def handle_delivery(session: Session, payload: dict[str, Any]) -> None:
 
 
 def sanitize_error_code(value: str) -> str:
-    normalized = _ERROR_CODE.sub("_", value.strip().upper()).strip("_")
-    return (normalized or "PROVIDER_ERROR")[:64]
+    """Persist only explicit machine codes, never transformed provider prose."""
+    candidate = value.strip().upper()
+    if _TECHNICAL_CODE.fullmatch(candidate) is None:
+        return "PROVIDER_ERROR"
+    return candidate
 
 
 def bounded_identifier(value: str | None) -> str | None:
