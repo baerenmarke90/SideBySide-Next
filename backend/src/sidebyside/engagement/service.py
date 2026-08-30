@@ -19,7 +19,8 @@ from sidebyside.authorization import (
 )
 from sidebyside.chapters.models import Chapter
 from sidebyside.collections.models import Collection
-from sidebyside.core import clock, cursor as cursor_codec
+from sidebyside.core import clock
+from sidebyside.core import cursor as cursor_codec
 from sidebyside.core.errors import ErrorCode, NotFoundError
 from sidebyside.domain.events import EventType
 from sidebyside.engagement.models import (
@@ -136,9 +137,11 @@ def _activity_target(
     event: OutboxEvent,
     event_type: EventType,
 ) -> tuple[ActivityKind, EngagementTarget, UUID] | None:
-    if event_type is EventType.HEART_MOMENT_CREATED:
-        if event.payload.visibility is not ContentVisibility.SHARED:
-            return None
+    if (
+        event_type is EventType.HEART_MOMENT_CREATED
+        and event.payload.visibility is not ContentVisibility.SHARED
+    ):
+        return None
 
     mapped = _ACTIVITY_EVENTS.get(event_type)
     if mapped is not None:
