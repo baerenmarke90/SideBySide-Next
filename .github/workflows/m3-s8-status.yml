@@ -1,0 +1,115 @@
+name: M3 S8 Status Sync
+
+on:
+  push:
+    branches: [feat/259-m3-s8-private-collections]
+    paths:
+      - .github/workflows/m3-s8-status.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/259-m3-s8-private-collections
+
+      - name: Record M3-S8 delivery status
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          def replace_once(text: str, pattern: str, replacement: str, label: str, *, flags: int = 0) -> str:
+              updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one {label} replacement, got {count}.")
+              return updated
+
+          implementation_path = Path("docs/IMPLEMENTATION-STATUS.md")
+          implementation = implementation_path.read_text(encoding="utf-8")
+          if "**M3-S8 — PrivateCollection:**" not in implementation:
+              implementation = replace_once(
+                  implementation,
+                  r"(?m)^(- \[x\] \*\*M3-S7 — PrivateNote \+ GiftIdea:\*\*.*)$",
+                  r"\1\n- [x] **M3-S8 — PrivateCollection:** dedicated owner-only PrivateCollection and PrivateCollectionItem persistence with Parent-derived Item authorization, ProtectedPayload content, root/item optimistic concurrency, append/compaction and atomic full-list reorder, privacy-safe partner/Cross-Tenant handling, redacted private events, real PostgreSQL race coverage, and synchronized OpenAPI plus generated TypeScript/Kotlin clients (Issue #259 / PR #260).",
+                  "Implementation Status S8 bullet",
+              )
+          implementation = replace_once(
+              implementation,
+              r"(### Next checkpoint\n\n)M3 backend/API runtime is in delivery with S1 through S7 complete\..*?(?=\n\n##|\Z)",
+              r"\1M3 backend/API runtime is in delivery with S1 through S8 complete. The next coherent production slice is S9 (Integrated M3 backend/API evidence): demonstrate the five mandatory G3 flows against the real SideBySide API + PostgreSQL and run Cross-Tenant, race, event/log redaction, and delete suites before S10/G3 review.",
+              "Implementation Status next checkpoint",
+              flags=re.DOTALL,
+          )
+          implementation_path.write_text(implementation, encoding="utf-8")
+
+          roadmap_path = Path("docs/ROADMAP.md")
+          roadmap = roadmap_path.read_text(encoding="utf-8")
+          roadmap = replace_once(
+              roadmap,
+              r"(?m)^M3 backend/API runtime is now released and actively in delivery:.*$",
+              "M3 backend/API runtime is now released and actively in delivery: S1 through S8 are complete, including the owner-only PrivateCollection aggregate with Parent-derived Item authorization and concurrency/privacy evidence; the next slice is S9 (Integrated M3 backend/API evidence).",
+              "Roadmap current M3 status",
+          )
+          roadmap = replace_once(
+              roadmap,
+              r"(?m)^(### Milestone exit: M3 runtime delivery in progress; M3-D01 through D32 decided; S1 through S7 delivered)$",
+              "### Milestone exit: M3 runtime delivery in progress; M3-D01 through D32 decided; S1 through S8 delivered",
+              "Roadmap milestone heading",
+          )
+          roadmap = replace_once(
+              roadmap,
+              r"(?m)^S1 through S7 are delivered on main\..*$",
+              "S1 through S8 are delivered on main. S9 (Integrated M3 backend/API evidence) is the next production slice: demonstrate the mandatory G3 flows against the real API + PostgreSQL and consolidate Cross-Tenant, race, redaction, and delete evidence before S10/G3 review.",
+              "Roadmap next slice",
+          )
+          roadmap_path.write_text(roadmap, encoding="utf-8")
+
+          delivery_path = Path("docs/m3/DELIVERY-PLAN.md")
+          delivery = delivery_path.read_text(encoding="utf-8")
+          delivery = replace_once(
+              delivery,
+              r"\*\*Status:\*\* S0 complete; runtime released; S1 through S7 delivered",
+              "**Status:** S0 complete; runtime released; S1 through S8 delivered",
+              "Delivery Plan top status",
+          )
+          s8 = """## 11. S8 – PrivateCollection – delivered
+
+Scope:
+
+- PrivateCollection root with id/space/owner/version;
+- Items with Parent FK, id/version/position;
+- authorize owner/space exclusively through Parent;
+- owner-only Reorder/Completion;
+- Parent Delete cascades only Items;
+- partner/Cross-Space negative tests.
+
+Shared Collection and PrivateCollection share neither a table nor an unsafe query path.
+
+Implemented in Issue #259 / PR #260 with dedicated owner-only root and Item persistence, ProtectedPayload-backed title/icon content, and server-derived Space/owner/privacy. Item rows deliberately duplicate neither `spaceId` nor `ownerId`; every child operation authorizes through the owner-scoped Parent. Root `version` protects Item-set/order structure, Item `version` protects title/completion, Create appends, Delete compacts positions, and exact-set Reorder is atomic under the root version using the proven collision-safe PostgreSQL strategy. Partner, Cross-Space, unknown-Parent, stale-version, cascade, event-redaction, and real PostgreSQL race coverage is included. The canonical OpenAPI snapshot and generated TypeScript/Kotlin clients are synchronized.
+"""
+          delivery = replace_once(
+              delivery,
+              r"## 11\. S8 – PrivateCollection\n.*?(?=\n## 12\.)",
+              s8,
+              "Delivery Plan S8 section",
+              flags=re.DOTALL,
+          )
+          delivery_path.write_text(delivery, encoding="utf-8")
+          PY
+
+          git diff --check
+          git diff -- docs/IMPLEMENTATION-STATUS.md docs/ROADMAP.md docs/m3/DELIVERY-PLAN.md
+
+      - name: Commit status synchronization and remove helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/m3-s8-status.yml
+          git add docs/IMPLEMENTATION-STATUS.md docs/ROADMAP.md docs/m3/DELIVERY-PLAN.md
+          git commit -m "docs(m3): record S8 delivery (#259)"
+          git push origin HEAD:feat/259-m3-s8-private-collections
