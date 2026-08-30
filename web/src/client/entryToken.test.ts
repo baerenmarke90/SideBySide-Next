@@ -1,31 +1,37 @@
-import { readSensitiveEntryToken, stripSensitiveEntryTokens } from './entryToken';
+import { readSensitiveEntryToken, stripSensitiveEntryToken } from './entryToken';
 
 describe('sensitive identity entry tokens', () => {
-  it('prefers a recovery token when conflicting sensitive parameters exist', () => {
-    expect(readSensitiveEntryToken('?invite=invite-token&recovery=recovery-token')).toEqual({
+  it('reads the recovery token from the authoritative recovery path', () => {
+    expect(readSensitiveEntryToken('/auth/recovery', '?token=recovery-token')).toEqual({
       kind: 'recovery',
       token: 'recovery-token',
     });
   });
 
-  it('reads an invitation token without exposing unrelated query state', () => {
-    expect(readSensitiveEntryToken('?from=email&invite=invite-token')).toEqual({
+  it('distinguishes magic-link, verification and invitation entry paths', () => {
+    expect(readSensitiveEntryToken('/auth/magic-link', '?token=magic')).toEqual({
+      kind: 'magicLink',
+      token: 'magic',
+    });
+    expect(readSensitiveEntryToken('/auth/verify-email', '?token=verify')).toEqual({
+      kind: 'emailVerification',
+      token: 'verify',
+    });
+    expect(readSensitiveEntryToken('/auth/invitation', '?token=invite')).toEqual({
       kind: 'invitation',
-      token: 'invite-token',
+      token: 'invite',
     });
   });
 
-  it('ignores empty sensitive parameters', () => {
-    expect(readSensitiveEntryToken('?invite=%20%20')).toBeNull();
+  it('does not treat a token on an unrelated path as an authentication proof', () => {
+    expect(readSensitiveEntryToken('/story', '?token=secret')).toBeNull();
   });
 
-  it('removes sensitive parameters while preserving unrelated URL state', () => {
-    expect(
-      stripSensitiveEntryTokens(
-        '/welcome',
-        '?invite=secret&from=email&recovery=other-secret',
-        '#section',
-      ),
-    ).toBe('/welcome?from=email#section');
+  it('ignores empty tokens', () => {
+    expect(readSensitiveEntryToken('/auth/recovery', '?token=%20%20')).toBeNull();
+  });
+
+  it('removes the proof while preserving unrelated query state', () => {
+    expect(stripSensitiveEntryToken('?token=secret&from=email')).toBe('/?from=email');
   });
 });
