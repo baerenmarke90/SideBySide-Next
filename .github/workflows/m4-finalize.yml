@@ -45,6 +45,24 @@ jobs:
       - name: Apply bounded M4-C-S2 completion
         run: python3 tools/m4_finalize.py
 
+      - name: Normalize generated runtime test signatures
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("backend/tests/integration/test_reminder_runtime.py")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace(
+              "def test_rule_catalog_defaults_validation_and_account_isolation(client, session: Session, couple) -> None:  # type: ignore[no-untyped-def]",
+              "def test_rule_catalog_defaults_validation_and_account_isolation(\n    client, session: Session, couple\n) -> None:  # type: ignore[no-untyped-def]",
+          )
+          text = text.replace(
+              "def test_time_contracts_and_timezone_replanning(client, session: Session, couple, monkeypatch) -> None:  # type: ignore[no-untyped-def]",
+              "def test_time_contracts_and_timezone_replanning(\n    client, session: Session, couple, monkeypatch\n) -> None:  # type: ignore[no-untyped-def]",
+          )
+          path.write_text(text, encoding="utf-8")
+          PY
+
       - name: Install locked backend dependencies
         working-directory: backend
         run: |
