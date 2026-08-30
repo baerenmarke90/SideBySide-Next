@@ -1,4 +1,13 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PeopleApi } from '../api/generated/apis/PeopleApi';
 import { ContentVisibility } from '../api/generated/models/ContentVisibility';
@@ -6,6 +15,13 @@ import { PersonRelationship } from '../api/generated/models/PersonRelationship';
 import { RelatedPersonDeletePolicy } from '../api/generated/models/RelatedPersonDeletePolicy';
 import type { RelatedPersonFields } from '../api/generated/models/RelatedPersonFields';
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
+import {
+  canConfirmRelatedPersonDelete,
+  INITIAL_RELATED_PERSON_DELETE_CHOICE,
+  type RelatedPersonDeleteChoice,
+  type RelatedPersonDeletePolicyValue,
+  relatedPersonDeleteReducer,
+} from '../client/relatedPersonDelete';
 import { normalizeClientError } from '../client/problemDetails';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
@@ -14,9 +30,6 @@ import { UiState } from './UiState';
 
 const RELATIONSHIPS = Object.values(PersonRelationship);
 const VISIBILITIES = Object.values(ContentVisibility);
-
-type DeletePolicy =
-  (typeof RelatedPersonDeletePolicy)[keyof typeof RelatedPersonDeletePolicy];
 
 function dateInputValue(value: Date | null): string {
   if (!value) return '';
@@ -27,8 +40,12 @@ function personFields(form: FormData): RelatedPersonFields {
   const birthdayValue = String(form.get('birthday') || '');
   return {
     displayName: String(form.get('displayName') || '').trim(),
-    relationship: String(form.get('relationship')) as RelatedPersonFields['relationship'],
-    visibility: String(form.get('visibility')) as RelatedPersonFields['visibility'],
+    relationship: String(
+      form.get('relationship'),
+    ) as RelatedPersonFields['relationship'],
+    visibility: String(
+      form.get('visibility'),
+    ) as RelatedPersonFields['visibility'],
     birthday: birthdayValue
       ? new Date(`${birthdayValue}T00:00:00.000Z`)
       : null,
@@ -101,7 +118,10 @@ function RelatedPersonForm({
             type="date"
             defaultValue={dateInputValue(person?.birthday ?? null)}
           />
-          <label className="choice-row" htmlFor="related-person-birthday-year-known">
+          <label
+            className="choice-row"
+            htmlFor="related-person-birthday-year-known"
+          >
             <input
               id="related-person-birthday-year-known"
               name="birthdayYearKnown"
@@ -149,6 +169,132 @@ function RelatedPersonForm({
   );
 }
 
+export function DeleteRelatedPersonDialogContent({
+  person,
+  pending,
+  error,
+  choice,
+  onSelectPolicy,
+  onCascadeConfirmed,
+  onCancel,
+  onDelete,
+  dialogRef,
+  cancelButtonRef,
+  onKeyDown,
+}: {
+  person: RelatedPersonView;
+  pending: boolean;
+  error: Error | null;
+  choice: RelatedPersonDeleteChoice;
+  onSelectPolicy: (policy: RelatedPersonDeletePolicyValue) => void;
+  onCascadeConfirmed: (confirmed: boolean) => void;
+  onCancel: () => void;
+  onDelete: (policy: RelatedPersonDeletePolicyValue) => void;
+  dialogRef?: RefObject<HTMLElement | null>;
+  cancelButtonRef?: RefObject<HTMLButtonElement | null>;
+  onKeyDown?: (event: KeyboardEvent<HTMLElement>) => void;
+}) {
+  const { t } = useTranslation();
+  const canDelete = canConfirmRelatedPersonDelete(choice);
+
+  return (
+    <section
+      ref={dialogRef}
+      className="modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="related-person-delete-title"
+      aria-describedby="related-person-delete-description related-person-delete-privacy"
+      onKeyDown={onKeyDown}
+    >
+      <h2 id="related-person-delete-title">{t('people.deleteTitle')}</h2>
+      <p id="related-person-delete-description">
+        {t('people.deleteBody', { name: person.displayName })}
+      </p>
+      <p id="related-person-delete-privacy" className="field-help">
+        {t('people.deletePrivacyNote')}
+      </p>
+
+      <fieldset className="form-grid">
+        <legend>{t('people.deletePolicyLegend')}</legend>
+        <label className="choice-card">
+          <input
+            type="radio"
+            name="deletePolicy"
+            value={RelatedPersonDeletePolicy.preserve}
+            checked={choice.policy === RelatedPersonDeletePolicy.preserve}
+            onChange={() =>
+              onSelectPolicy(RelatedPersonDeletePolicy.preserve)
+            }
+          />
+          <span>
+            <strong>{t('people.deletePreserveTitle')}</strong>
+            <small>{t('people.deletePreserveBody')}</small>
+          </span>
+        </label>
+        <label className="choice-card choice-card-danger">
+          <input
+            type="radio"
+            name="deletePolicy"
+            value={RelatedPersonDeletePolicy.cascade}
+            checked={choice.policy === RelatedPersonDeletePolicy.cascade}
+            onChange={() => onSelectPolicy(RelatedPersonDeletePolicy.cascade)}
+          />
+          <span>
+            <strong>{t('people.deleteCascadeTitle')}</strong>
+            <small>{t('people.deleteCascadeBody')}</small>
+          </span>
+        </label>
+      </fieldset>
+
+      {choice.policy === RelatedPersonDeletePolicy.cascade ? (
+        <div className="inline-message inline-message-danger" role="alert">
+          <strong>{t('people.deleteCascadeWarningTitle')}</strong>
+          <span>{t('people.deleteCascadeWarningBody')}</span>
+          <label className="choice-row">
+            <input
+              type="checkbox"
+              checked={choice.cascadeConfirmed}
+              onChange={(event) =>
+                onCascadeConfirmed(event.currentTarget.checked)
+              }
+            />
+            <span>{t('people.deleteCascadeConfirm')}</span>
+          </label>
+        </div>
+      ) : null}
+
+      {error ? <ProblemState error={error} /> : null}
+
+      <div className="form-actions">
+        <button
+          ref={cancelButtonRef}
+          type="button"
+          className="secondary"
+          onClick={onCancel}
+          disabled={pending}
+        >
+          {t('common.cancel')}
+        </button>
+        <button
+          type="button"
+          className={
+            choice.policy === RelatedPersonDeletePolicy.cascade
+              ? 'danger'
+              : undefined
+          }
+          disabled={!canDelete || pending}
+          onClick={() => {
+            if (choice.policy && canDelete) onDelete(choice.policy);
+          }}
+        >
+          {pending ? t('people.deleting') : t('people.deleteConfirm')}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function DeleteRelatedPersonDialog({
   person,
   pending,
@@ -160,99 +306,67 @@ function DeleteRelatedPersonDialog({
   pending: boolean;
   error: Error | null;
   onCancel: () => void;
-  onDelete: (policy: DeletePolicy) => void;
+  onDelete: (policy: RelatedPersonDeletePolicyValue) => void;
 }) {
-  const { t } = useTranslation();
-  const [policy, setPolicy] = useState<DeletePolicy | null>(null);
-  const [cascadeConfirmed, setCascadeConfirmed] = useState(false);
-  const canDelete =
-    policy === RelatedPersonDeletePolicy.preserve ||
-    (policy === RelatedPersonDeletePolicy.cascade && cascadeConfirmed);
+  const [choice, dispatch] = useReducer(
+    relatedPersonDeleteReducer,
+    INITIAL_RELATED_PERSON_DELETE_CHOICE,
+  );
+  const dialogRef = useRef<HTMLElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const previousFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    cancelButtonRef.current?.focus();
+    return () => previousFocus?.focus();
+  }, []);
+
+  function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === 'Escape' && !pending) {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+    if (event.key !== 'Tab' || !dialogRef.current) return;
+
+    const focusable = Array.from(
+      dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section
-        className="modal-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="related-person-delete-title"
-        aria-describedby="related-person-delete-description"
-      >
-        <h2 id="related-person-delete-title">{t('people.deleteTitle')}</h2>
-        <p id="related-person-delete-description">
-          {t('people.deleteBody', { name: person.displayName })}
-        </p>
-        <p className="field-help">{t('people.deletePrivacyNote')}</p>
-
-        <fieldset className="form-grid">
-          <legend>{t('people.deletePolicyLegend')}</legend>
-          <label className="choice-card">
-            <input
-              type="radio"
-              name="deletePolicy"
-              value={RelatedPersonDeletePolicy.preserve}
-              checked={policy === RelatedPersonDeletePolicy.preserve}
-              onChange={() => {
-                setPolicy(RelatedPersonDeletePolicy.preserve);
-                setCascadeConfirmed(false);
-              }}
-            />
-            <span>
-              <strong>{t('people.deletePreserveTitle')}</strong>
-              <small>{t('people.deletePreserveBody')}</small>
-            </span>
-          </label>
-          <label className="choice-card choice-card-danger">
-            <input
-              type="radio"
-              name="deletePolicy"
-              value={RelatedPersonDeletePolicy.cascade}
-              checked={policy === RelatedPersonDeletePolicy.cascade}
-              onChange={() => {
-                setPolicy(RelatedPersonDeletePolicy.cascade);
-                setCascadeConfirmed(false);
-              }}
-            />
-            <span>
-              <strong>{t('people.deleteCascadeTitle')}</strong>
-              <small>{t('people.deleteCascadeBody')}</small>
-            </span>
-          </label>
-        </fieldset>
-
-        {policy === RelatedPersonDeletePolicy.cascade ? (
-          <div className="inline-message inline-message-danger" role="alert">
-            <strong>{t('people.deleteCascadeWarningTitle')}</strong>
-            <span>{t('people.deleteCascadeWarningBody')}</span>
-            <label className="choice-row">
-              <input
-                type="checkbox"
-                checked={cascadeConfirmed}
-                onChange={(event) => setCascadeConfirmed(event.currentTarget.checked)}
-              />
-              <span>{t('people.deleteCascadeConfirm')}</span>
-            </label>
-          </div>
-        ) : null}
-
-        {error ? <ProblemState error={error} /> : null}
-
-        <div className="form-actions">
-          <button type="button" className="secondary" onClick={onCancel} disabled={pending}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className={policy === RelatedPersonDeletePolicy.cascade ? 'danger' : undefined}
-            disabled={!canDelete || pending}
-            onClick={() => {
-              if (policy && canDelete) onDelete(policy);
-            }}
-          >
-            {pending ? t('people.deleting') : t('people.deleteConfirm')}
-          </button>
-        </div>
-      </section>
+      <DeleteRelatedPersonDialogContent
+        person={person}
+        pending={pending}
+        error={error}
+        choice={choice}
+        onSelectPolicy={(policy) => dispatch({ type: 'select', policy })}
+        onCascadeConfirmed={(confirmed) =>
+          dispatch({ type: 'confirmCascade', confirmed })
+        }
+        onCancel={onCancel}
+        onDelete={onDelete}
+        dialogRef={dialogRef}
+        cancelButtonRef={cancelButtonRef}
+        onKeyDown={handleDialogKeyDown}
+      />
     </div>
   );
 }
@@ -267,15 +381,26 @@ export function RelatedPeoplePage({
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<RelatedPersonView | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<RelatedPersonView | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RelatedPersonView | null>(
+    null,
+  );
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   const birthdayFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { day: '2-digit', month: 'long', year: 'numeric' }),
+    () =>
+      new Intl.DateTimeFormat(i18n.language, {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      }),
     [i18n.language],
   );
   const birthdayWithoutYearFormatter = useMemo(
-    () => new Intl.DateTimeFormat(i18n.language, { day: '2-digit', month: 'long' }),
+    () =>
+      new Intl.DateTimeFormat(i18n.language, {
+        day: '2-digit',
+        month: 'long',
+      }),
     [i18n.language],
   );
 
@@ -283,7 +408,9 @@ export function RelatedPeoplePage({
     queryKey: ['related-people', spaceId],
     queryFn: async () => {
       try {
-        return await peopleApi.listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGet({ spaceId });
+        return await peopleApi.listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGet(
+          { spaceId },
+        );
       } catch (error) {
         throw await normalizeClientError(error);
       }
@@ -295,17 +422,21 @@ export function RelatedPeoplePage({
     mutationFn: async (fields: RelatedPersonFields) => {
       try {
         if (editing) {
-          return await peopleApi.updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut({
-            personId: editing.id,
-            spaceId,
-            ifMatch: String(editing.version),
-            relatedPersonFields: fields,
-          });
+          return await peopleApi.updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut(
+            {
+              personId: editing.id,
+              spaceId,
+              ifMatch: String(editing.version),
+              relatedPersonFields: fields,
+            },
+          );
         }
-        return await peopleApi.createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPost({
-          spaceId,
-          relatedPersonFields: fields,
-        });
+        return await peopleApi.createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPost(
+          {
+            spaceId,
+            relatedPersonFields: fields,
+          },
+        );
       } catch (error) {
         throw await normalizeClientError(error);
       }
@@ -313,20 +444,24 @@ export function RelatedPeoplePage({
     onSuccess: async () => {
       setSavedMessage(editing ? t('people.updated') : t('people.created'));
       setEditing(null);
-      await queryClient.invalidateQueries({ queryKey: ['related-people', spaceId] });
+      await queryClient.invalidateQueries({
+        queryKey: ['related-people', spaceId],
+      });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (policy: DeletePolicy) => {
+    mutationFn: async (policy: RelatedPersonDeletePolicyValue) => {
       if (!deleteTarget) return;
       try {
-        await peopleApi.deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDelete({
-          personId: deleteTarget.id,
-          spaceId,
-          deletePolicy: policy,
-          ifMatch: String(deleteTarget.version),
-        });
+        await peopleApi.deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDelete(
+          {
+            personId: deleteTarget.id,
+            spaceId,
+            deletePolicy: policy,
+            ifMatch: String(deleteTarget.version),
+          },
+        );
       } catch (error) {
         throw await normalizeClientError(error);
       }
@@ -334,7 +469,9 @@ export function RelatedPeoplePage({
     onSuccess: async () => {
       setDeleteTarget(null);
       setSavedMessage(t('people.deleted'));
-      await queryClient.invalidateQueries({ queryKey: ['related-people', spaceId] });
+      await queryClient.invalidateQueries({
+        queryKey: ['related-people', spaceId],
+      });
     },
   });
 
@@ -366,7 +503,10 @@ export function RelatedPeoplePage({
       />
       {saveMutation.error ? <ProblemState error={saveMutation.error} /> : null}
 
-      <section className="story-surface" aria-labelledby="related-people-list-title">
+      <section
+        className="story-surface"
+        aria-labelledby="related-people-list-title"
+      >
         <div className="section-head">
           <div>
             <p className="section-kicker">{t('people.listKicker')}</p>
@@ -378,16 +518,27 @@ export function RelatedPeoplePage({
             onClick={() => void peopleQuery.refetch()}
             disabled={peopleQuery.isFetching}
           >
-            {peopleQuery.isFetching ? t('common.refreshing') : t('common.refresh')}
+            {peopleQuery.isFetching
+              ? t('common.refreshing')
+              : t('common.refresh')}
           </button>
         </div>
 
-        {peopleQuery.isLoading ? <UiState kind="loading" title={t('people.loading')} /> : null}
+        {peopleQuery.isLoading ? (
+          <UiState kind="loading" title={t('people.loading')} />
+        ) : null}
         {peopleQuery.error ? (
-          <ProblemState error={peopleQuery.error} onRetry={() => void peopleQuery.refetch()} />
+          <ProblemState
+            error={peopleQuery.error}
+            onRetry={() => void peopleQuery.refetch()}
+          />
         ) : null}
         {peopleQuery.data?.length === 0 ? (
-          <UiState kind="empty" title={t('people.emptyTitle')} body={t('people.emptyBody')} />
+          <UiState
+            kind="empty"
+            title={t('people.emptyTitle')}
+            body={t('people.emptyBody')}
+          />
         ) : null}
         {peopleQuery.data?.length ? (
           <ul className="story-list" aria-label={t('people.listAria')}>
@@ -405,7 +556,9 @@ export function RelatedPeoplePage({
                         {t('people.birthdayValue', {
                           date: person.birthdayYearKnown
                             ? birthdayFormatter.format(person.birthday)
-                            : birthdayWithoutYearFormatter.format(person.birthday),
+                            : birthdayWithoutYearFormatter.format(
+                                person.birthday,
+                              ),
                         })}
                       </p>
                     ) : null}
