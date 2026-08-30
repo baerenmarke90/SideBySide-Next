@@ -1,0 +1,33 @@
+name: M4 Sync API Clients
+
+on:
+  push:
+    branches: [feat/285-m4c-reminders-final]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/285-m4c-reminders-final
+
+      - name: Generate clients from authoritative contract
+        run: tools/openapi/generate.sh
+
+      - name: Commit generated clients
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- web/src/api/generated android/api/generated; then
+            echo "API clients already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src/api/generated android/api/generated
+          git commit -m "chore(api): synchronize M4-C-S1 generated clients"
+          git push origin HEAD:feat/285-m4c-reminders-final
