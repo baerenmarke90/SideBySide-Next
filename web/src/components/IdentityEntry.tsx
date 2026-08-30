@@ -1,5 +1,4 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import type { SessionView } from '../api/generated/models/SessionView';
 import type { SensitiveEntryToken } from '../client/entryToken';
 import {
@@ -17,6 +16,14 @@ import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 
 type EntryMode = 'signIn' | 'register' | 'recoveryRequest' | 'magicLinkRequest';
+type PendingAction =
+  | 'signIn'
+  | 'register'
+  | 'recoveryRequest'
+  | 'recovery'
+  | 'magicLinkRequest'
+  | 'magicLinkConsume'
+  | 'verification';
 
 export function IdentityEntry({
   apiBaseUrl,
@@ -36,74 +43,69 @@ export function IdentityEntry({
   const [recoveryRequested, setRecoveryRequested] = useState(false);
   const [magicLinkRequested, setMagicLinkRequested] = useState(false);
   const [verificationDismissed, setVerificationDismissed] = useState(false);
+  const [verificationSucceeded, setVerificationSucceeded] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [activeError, setActiveError] = useState<unknown>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const processedEntryToken = useRef<string | null>(null);
 
-  const signInMutation = useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      signInAndJoinInvitation(apiBaseUrl, email, password, invitationToken),
-    onSuccess: onSession,
-  });
-
-  const registerMutation = useMutation({
-    mutationFn: ({
-      displayName,
-      email,
-      password,
-    }: {
-      displayName: string;
-      email: string;
-      password: string;
-    }) => {
-      if (!invitationToken) throw new Error(t('identity.invitationMissing'));
-      return registerFromInvitation(
-        apiBaseUrl,
-        displayName,
-        email,
-        password,
-        invitationToken,
-      );
-    },
-    onSuccess: onSession,
-  });
-
-  const recoveryRequestMutation = useMutation({
-    mutationFn: (email: string) => requestPasswordRecovery(apiBaseUrl, email),
-    onSuccess: () => setRecoveryRequested(true),
-  });
-
-  const recoveryMutation = useMutation({
-    mutationFn: (newPassword: string) => {
-      if (!recoveryToken) throw new Error(t('identity.recoveryMissing'));
-      return completePasswordRecovery(apiBaseUrl, recoveryToken, newPassword);
-    },
-    onSuccess: onSession,
-  });
-
-  const magicLinkRequestMutation = useMutation({
-    mutationFn: (email: string) => requestMagicLink(apiBaseUrl, email),
-    onSuccess: () => setMagicLinkRequested(true),
-  });
-
-  const magicLinkConsumeMutation = useMutation({
-    mutationFn: (token: string) => consumeMagicLink(apiBaseUrl, token),
-    onSuccess: onSession,
-  });
-
-  const verificationMutation = useMutation({
-    mutationFn: (token: string) => confirmEmailAddress(apiBaseUrl, token),
-  });
+  async function runAction<T>(
+    action: PendingAction,
+    operation: () => Promise<T>,
+    onSuccess: (result: T) => void,
+  ): Promise<void> {
+    setActiveError(null);
+    setPendingAction(action);
+    try {
+      const result = await operation();
+      setPendingAction(null);
+      onSuccess(result);
+    } catch (error) {
+      setActiveError(error);
+      setPendingAction(null);
+    }
+  }
 
   useEffect(() => {
     if (!entryToken || processedEntryToken.current === entryToken.token) return;
+
     if (entryToken.kind === 'magicLink') {
-      processedEntryToken.current = entryToken.token;
-      magicLinkConsumeMutation.mutate(entryToken.token);
+      const token = entryToken.token;
+      processedEntryToken.current = token;
+      setActiveError(null);
+      setPendingAction('magicLinkConsume');
+      void consumeMagicLink(apiBaseUrl, token)
+        .then((session) => {
+          setPendingAction(null);
+          onSession(session);
+        })
+        .catch((error: unknown) => {
+          setActiveError(error);
+          setPendingAction(null);
+        });
     } else if (entryToken.kind === 'emailVerification') {
-      processedEntryToken.current = entryToken.token;
-      verificationMutation.mutate(entryToken.token);
+      const token = entryToken.token;
+      processedEntryToken.current = token;
+      setActiveError(null);
+      setVerificationSucceeded(false);
+      setPendingAction('verification');
+      void confirmEmailAddress(apiBaseUrl, token)
+        .then(() => {
+          setVerificationSucceeded(true);
+          setPendingAction(null);
+        })
+        .catch((error: unknown) => {
+          setActiveError(error);
+          setPendingAction(null);
+        });
     }
-  }, [entryToken, magicLinkConsumeMutation, verificationMutation]);
+  }, [apiBaseUrl, entryToken, onSession]);
+
+  function switchMode(nextMode: EntryMode) {
+    setActiveError(null);
+    setValidationError(null);
+    setMode(nextMode);
+  }
 
   function requireMatchingPasswords(data: FormData): string | null {
     const password = String(data.get('password'));
@@ -119,10 +121,19 @@ export function IdentityEntry({
   function submitSignIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    signInMutation.mutate({
-      email: String(data.get('email')),
-      password: String(data.get('password')),
-    });
+    const email = String(data.get('email'));
+    const password = String(data.get('password'));
+    void runAction(
+      'signIn',
+      () =>
+        signInAndJoinInvitation(
+          apiBaseUrl,
+          email,
+          password,
+          invitationToken,
+        ),
+      onSession,
+    );
   }
 
   function submitRegistration(event: FormEvent<HTMLFormElement>) {
@@ -130,40 +141,63 @@ export function IdentityEntry({
     const data = new FormData(event.currentTarget);
     const password = requireMatchingPasswords(data);
     if (!password) return;
-    registerMutation.mutate({
-      displayName: String(data.get('displayName')),
-      email: String(data.get('email')),
-      password,
-    });
+    if (!invitationToken) {
+      setActiveError(new Error(t('identity.invitationMissing')));
+      return;
+    }
+    const displayName = String(data.get('displayName'));
+    const email = String(data.get('email'));
+    void runAction(
+      'register',
+      () =>
+        registerFromInvitation(
+          apiBaseUrl,
+          displayName,
+          email,
+          password,
+          invitationToken,
+        ),
+      onSession,
+    );
   }
 
   function submitRecoveryRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    recoveryRequestMutation.mutate(String(data.get('email')));
+    const email = String(data.get('email'));
+    void runAction(
+      'recoveryRequest',
+      () => requestPasswordRecovery(apiBaseUrl, email),
+      () => setRecoveryRequested(true),
+    );
   }
 
   function submitRecovery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const password = requireMatchingPasswords(data);
-    if (password) recoveryMutation.mutate(password);
+    if (!password) return;
+    if (!recoveryToken) {
+      setActiveError(new Error(t('identity.recoveryMissing')));
+      return;
+    }
+    void runAction(
+      'recovery',
+      () => completePasswordRecovery(apiBaseUrl, recoveryToken, password),
+      onSession,
+    );
   }
 
   function submitMagicLinkRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    magicLinkRequestMutation.mutate(String(data.get('email')));
+    const email = String(data.get('email'));
+    void runAction(
+      'magicLinkRequest',
+      () => requestMagicLink(apiBaseUrl, email),
+      () => setMagicLinkRequested(true),
+    );
   }
-
-  const activeError =
-    signInMutation.error ??
-    registerMutation.error ??
-    recoveryRequestMutation.error ??
-    recoveryMutation.error ??
-    magicLinkRequestMutation.error ??
-    magicLinkConsumeMutation.error ??
-    verificationMutation.error;
 
   const showsVerification =
     entryToken?.kind === 'emailVerification' && !verificationDismissed;
@@ -190,20 +224,18 @@ export function IdentityEntry({
         <section className="login-card" aria-label={t('identity.entryAria')}>
           {entryToken?.kind === 'magicLink' ? (
             <UiState
-              kind={magicLinkConsumeMutation.error ? 'error' : 'loading'}
+              kind={activeError ? 'error' : 'loading'}
               title={
-                magicLinkConsumeMutation.error
+                activeError
                   ? t('identity.magicLinkFailedTitle')
                   : t('identity.magicLinkOpening')
               }
               body={
-                magicLinkConsumeMutation.error
-                  ? t('identity.magicLinkFailedBody')
-                  : undefined
+                activeError ? t('identity.magicLinkFailedBody') : undefined
               }
             />
           ) : showsVerification ? (
-            verificationMutation.isSuccess ? (
+            verificationSucceeded ? (
               <>
                 <div
                   className="inline-message inline-message-success"
@@ -221,16 +253,14 @@ export function IdentityEntry({
               </>
             ) : (
               <UiState
-                kind={verificationMutation.error ? 'error' : 'loading'}
+                kind={activeError ? 'error' : 'loading'}
                 title={
-                  verificationMutation.error
+                  activeError
                     ? t('identity.verificationFailedTitle')
                     : t('identity.verificationOpening')
                 }
                 body={
-                  verificationMutation.error
-                    ? t('identity.verificationFailedBody')
-                    : undefined
+                  activeError ? t('identity.verificationFailedBody') : undefined
                 }
               />
             )
@@ -247,10 +277,10 @@ export function IdentityEntry({
                 <PasswordFields />
                 <button
                   type="submit"
-                  disabled={recoveryMutation.isPending}
-                  aria-busy={recoveryMutation.isPending}
+                  disabled={pendingAction === 'recovery'}
+                  aria-busy={pendingAction === 'recovery'}
                 >
-                  {recoveryMutation.isPending
+                  {pendingAction === 'recovery'
                     ? t('identity.recoverySaving')
                     : t('identity.recoverySave')}
                 </button>
@@ -284,17 +314,17 @@ export function IdentityEntry({
                 <PasswordFields />
                 <button
                   type="submit"
-                  disabled={registerMutation.isPending}
-                  aria-busy={registerMutation.isPending}
+                  disabled={pendingAction === 'register'}
+                  aria-busy={pendingAction === 'register'}
                 >
-                  {registerMutation.isPending
+                  {pendingAction === 'register'
                     ? t('identity.registerPending')
                     : t('identity.registerSubmit')}
                 </button>
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => setMode('signIn')}
+                  onClick={() => switchMode('signIn')}
                 >
                   {t('identity.haveAccount')}
                 </button>
@@ -321,10 +351,10 @@ export function IdentityEntry({
                   <EmailField />
                   <button
                     type="submit"
-                    disabled={recoveryRequestMutation.isPending}
-                    aria-busy={recoveryRequestMutation.isPending}
+                    disabled={pendingAction === 'recoveryRequest'}
+                    aria-busy={pendingAction === 'recoveryRequest'}
                   >
-                    {recoveryRequestMutation.isPending
+                    {pendingAction === 'recoveryRequest'
                       ? t('identity.recoveryRequestPending')
                       : t('identity.recoveryRequestSubmit')}
                   </button>
@@ -333,7 +363,7 @@ export function IdentityEntry({
               <BackToSignIn
                 onClick={() => {
                   setRecoveryRequested(false);
-                  setMode('signIn');
+                  switchMode('signIn');
                 }}
               />
             </>
@@ -356,10 +386,10 @@ export function IdentityEntry({
                   <EmailField />
                   <button
                     type="submit"
-                    disabled={magicLinkRequestMutation.isPending}
-                    aria-busy={magicLinkRequestMutation.isPending}
+                    disabled={pendingAction === 'magicLinkRequest'}
+                    aria-busy={pendingAction === 'magicLinkRequest'}
                   >
-                    {magicLinkRequestMutation.isPending
+                    {pendingAction === 'magicLinkRequest'
                       ? t('identity.magicLinkRequestPending')
                       : t('identity.magicLinkRequestSubmit')}
                   </button>
@@ -368,7 +398,7 @@ export function IdentityEntry({
               <BackToSignIn
                 onClick={() => {
                   setMagicLinkRequested(false);
-                  setMode('signIn');
+                  switchMode('signIn');
                 }}
               />
             </>
@@ -405,10 +435,10 @@ export function IdentityEntry({
                 </div>
                 <button
                   type="submit"
-                  disabled={signInMutation.isPending}
-                  aria-busy={signInMutation.isPending}
+                  disabled={pendingAction === 'signIn'}
+                  aria-busy={pendingAction === 'signIn'}
                 >
-                  {signInMutation.isPending
+                  {pendingAction === 'signIn'
                     ? t('login.pending')
                     : t('login.submit')}
                 </button>
@@ -416,7 +446,7 @@ export function IdentityEntry({
                   <button
                     type="button"
                     className="secondary"
-                    onClick={() => setMode('register')}
+                    onClick={() => switchMode('register')}
                   >
                     {t('identity.createAccount')}
                   </button>
@@ -424,7 +454,7 @@ export function IdentityEntry({
                   <button
                     type="button"
                     className="secondary"
-                    onClick={() => setMode('magicLinkRequest')}
+                    onClick={() => switchMode('magicLinkRequest')}
                   >
                     {t('identity.useMagicLink')}
                   </button>
@@ -432,7 +462,7 @@ export function IdentityEntry({
                 <button
                   type="button"
                   className="tertiary"
-                  onClick={() => setMode('recoveryRequest')}
+                  onClick={() => switchMode('recoveryRequest')}
                 >
                   {t('identity.forgotPassword')}
                 </button>
