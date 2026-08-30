@@ -128,7 +128,7 @@ class HeartMoment(
         ),
         Index(
             "ix_heart_moments_search_fts",
-            text("setweight(to_tsvector('simple', coalesce(payload->>'text', '')), 'A')"),
+            text("(setweight(to_tsvector('simple', coalesce(payload->>'text', '')), 'A'))"),
             postgresql_using="gin",
         ),
     )

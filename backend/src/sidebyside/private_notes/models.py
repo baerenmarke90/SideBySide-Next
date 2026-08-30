@@ -61,8 +61,8 @@ class PrivateNote(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin, B
         Index(
             "ix_private_notes_search_fts",
             text(
-                "setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
-                "setweight(to_tsvector('simple', coalesce(payload->>'body', '')), 'B')"
+                "(setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A') || "
+                "setweight(to_tsvector('simple', coalesce(payload->>'body', '')), 'B'))"
             ),
             postgresql_using="gin",
         ),

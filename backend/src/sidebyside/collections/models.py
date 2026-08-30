@@ -72,7 +72,7 @@ class Collection(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin, Ba
         Index("ix_collections_space_id_created_at_id", "space_id", "created_at", "id"),
         Index(
             "ix_collections_search_fts",
-            text("setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A')"),
+            text("(setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A'))"),
             postgresql_using="gin",
         ),
     )
@@ -125,7 +125,7 @@ class CollectionItem(IdMixin, TimestampMixin, VersionMixin, Base):
         Index("ix_collection_items_collection_id_id", "collection_id", "id"),
         Index(
             "ix_collection_items_search_fts",
-            text("setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A')"),
+            text("(setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A'))"),
             postgresql_using="gin",
         ),
     )

@@ -113,7 +113,7 @@ class Wish(
         Index("ix_wishes_space_id_status", "space_id", "status"),
         Index(
             "ix_wishes_search_fts",
-            text("setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A')"),
+            text("(setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A'))"),
             postgresql_using="gin",
         ),
     )
