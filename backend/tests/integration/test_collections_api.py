@@ -68,7 +68,9 @@ def create_item(client, couple, collection_id: str, title: str, *, token_key: st
 
 
 class TestCollectionCrud:
-    def test_partner_can_update_and_delete_without_changing_created_by(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+    def test_partner_can_update_and_delete_without_changing_created_by(
+        self, client, couple
+    ) -> None:  # type: ignore[no-untyped-def]
         created = create_collection(client, couple)
         assert created.status_code == 201
         collection = created.json()
@@ -321,7 +323,9 @@ class TestCollectionLifecycle:
         session.expire_all()
         assert session.get(CollectionItem, UUID(item["id"])) is None
 
-    def test_collection_and_item_titles_never_enter_outbox_payloads(self, client, session, couple) -> None:  # type: ignore[no-untyped-def]
+    def test_collection_and_item_titles_never_enter_outbox_payloads(
+        self, client, session, couple
+    ) -> None:  # type: ignore[no-untyped-def]
         collection = create_collection(client, couple, title=SECRET_COLLECTION_TITLE).json()
         create_item(client, couple, collection["id"], SECRET_ITEM_TITLE)
         session.expire_all()
