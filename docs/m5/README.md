@@ -1,8 +1,8 @@
 # M5 Web Client Completion
 
-**Status:** delivery started with M5-Web-S0A  
-**Parent issue:** #295  
-**Current implementation issue:** #296
+- **Status:** delivery started with M5-Web-S0A
+- **Parent issue:** #295
+- **Current implementation issue:** #296
 
 This package controls the staged productization of the SideBySide Next Web
 client. M5 Web may progress in parallel with M4 only where the required Domain

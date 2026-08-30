@@ -1,9 +1,9 @@
 # M5 Web Delivery Plan
 
-**Parent issue:** #295  
-**Scope:** Web only; Android remains separate  
-**Gate:** M5/G4 remains dependent on completed M4 and the full cross-platform
-evidence set
+- **Parent issue:** #295
+- **Scope:** Web only; Android remains separate
+- **Gate:** M5/G4 remains dependent on completed M4 and the full cross-platform
+  evidence set
 
 ## Delivery sequence
 
