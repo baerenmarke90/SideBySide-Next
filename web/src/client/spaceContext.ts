@@ -16,7 +16,10 @@ export async function loadAuthorizedMemberships(
   }
 }
 
-/** Resolve an active Space exclusively from the server-authorized Membership set. */
+/**
+ * Resolve an active Space exclusively from the server-authorized Membership set.
+ * Existing client state is retained only while that Space remains authorized.
+ */
 export function resolveActiveSpaceId(
   memberships: AccountMembershipView[],
   currentSpaceId: string | null,
