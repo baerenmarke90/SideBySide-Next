@@ -11,12 +11,17 @@ from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
-from sidebyside.authorization import AuthorizationContext, PrivacyClass, readable
+from sidebyside.authorization import (
+    AuthorizationContext,
+    ContentVisibility,
+    PrivacyClass,
+    readable,
+)
 from sidebyside.chapters.models import Chapter
 from sidebyside.collections.models import Collection
 from sidebyside.core import clock, cursor as cursor_codec
-from sidebyside.core.errors import NotFoundError
-from sidebyside.domain.events import ContentVisibility, EventType
+from sidebyside.core.errors import ErrorCode, NotFoundError
+from sidebyside.domain.events import EventType
 from sidebyside.engagement.models import (
     Activity,
     ActivityKind,
@@ -205,34 +210,41 @@ def _project_comment_notification(
     target_type: EngagementTarget,
     target_id: UUID,
 ) -> None:
-    recipients = session.execute(
+    recipient_id = event.payload.recipient_id
+    if recipient_id is None or recipient_id == event.actor_id:
+        return
+
+    active_recipient = session.execute(
         select(Membership.account_id).where(
             Membership.space_id == event.space_id,
+            Membership.account_id == recipient_id,
             Membership.status == MembershipStatus.ACTIVE.value,
-            Membership.account_id != event.actor_id,
         )
-    ).scalars()
-    for recipient_id in recipients:
-        context = AuthorizationContext(account_id=recipient_id, space_id=event.space_id)
-        if not _target_is_projectable(session, context, target_type, target_id):
-            continue
-        statement = (
-            postgresql.insert(Notification.__table__)
-            .values(
-                space_id=event.space_id,
-                recipient_account_id=recipient_id,
-                source_event_id=event.id,
-                kind=NotificationKind.COMMENT_CREATED.value,
-                actor_id=event.actor_id,
-                target_type=target_type.value,
-                target_id=target_id,
-                created_at=event.created_at,
-            )
-            .on_conflict_do_nothing(
-                index_elements=["recipient_account_id", "source_event_id", "kind"]
-            )
+    ).scalar_one_or_none()
+    if active_recipient is None:
+        return
+
+    context = AuthorizationContext(account_id=recipient_id, space_id=event.space_id)
+    if not _target_is_projectable(session, context, target_type, target_id):
+        return
+
+    statement = (
+        postgresql.insert(Notification.__table__)
+        .values(
+            space_id=event.space_id,
+            recipient_account_id=recipient_id,
+            source_event_id=event.id,
+            kind=NotificationKind.COMMENT_CREATED.value,
+            actor_id=event.actor_id,
+            target_type=target_type.value,
+            target_id=target_id,
+            created_at=event.created_at,
         )
-        session.execute(statement)
+        .on_conflict_do_nothing(
+            index_elements=["recipient_account_id", "source_event_id", "kind"]
+        )
+    )
+    session.execute(statement)
 
 
 def _target_is_projectable(
@@ -412,7 +424,7 @@ def mark_notification_read(
     )
     notification = session.execute(statement).scalar_one_or_none()
     if notification is None:
-        raise NotFoundError("Notification not found.", "NOTIFICATION_NOT_FOUND")
+        raise NotFoundError("Notification not found.", ErrorCode.NOTIFICATION_NOT_FOUND)
     if notification.read_at is None:
         notification.read_at = clock.now()
         session.flush()
@@ -436,4 +448,5 @@ def mark_all_notifications_read(
         .values(read_at=cutoff)
     )
     result = session.execute(statement)
-    return MarkAllResult(read_through=cutoff, updated=int(result.rowcount or 0))
+    updated = getattr(result, "rowcount", 0)
+    return MarkAllResult(read_through=cutoff, updated=int(updated or 0))
