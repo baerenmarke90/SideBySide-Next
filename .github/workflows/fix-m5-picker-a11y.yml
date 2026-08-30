@@ -26,19 +26,13 @@ jobs:
 
           path = Path('.github/workflows/m5-space-picker-patch.yml')
           text = path.read_text(encoding='utf-8')
-          old = '''                    <div
-                      className="form-grid"
-                      role="group"
-                      aria-label={t('spaceContext.pickerAria')}
-                    >
-'''
-          new = '''                    <fieldset className="form-grid">
-                      <legend>{t('spaceContext.pickerAria')}</legend>
-'''
-          if old not in text:
+          old = "                    <div\n                      className=\"form-grid\"\n                      role=\"group\"\n                      aria-label={t('spaceContext.pickerAria')}\n                    >\n"
+          new = "                    <fieldset className=\"form-grid\">\n                      <legend>{t('spaceContext.pickerAria')}</legend>\n"
+          closing_old = "                    </div>\n                  </div>\n                </section>"
+          closing_new = "                    </fieldset>\n                  </div>\n                </section>"
+          if old not in text or closing_old not in text:
               raise SystemExit('Space picker group anchor not found')
-          text = text.replace(old, new, 1).replace('                    </div>\n                  </div>\n                </section>', '                    </fieldset>\n                  </div>\n                </section>', 1)
-          path.write_text(text, encoding='utf-8')
+          path.write_text(text.replace(old, new, 1).replace(closing_old, closing_new, 1), encoding='utf-8')
           PY
 
       - name: Commit fix and remove this helper
