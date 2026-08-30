@@ -42,3 +42,4 @@ jobs:
           git add backend/tests/integration/test_endpoint_matrix.py
           git commit -m "style(api): format M4-C-S1 endpoint matrix"
           git push origin HEAD:feat/285-m4c-reminders-final
+# Trigger after workflow registration.
