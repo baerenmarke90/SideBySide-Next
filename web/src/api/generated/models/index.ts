@@ -139,6 +139,7 @@ export * from './ReminderSource';
 export * from './ReminderWrite';
 export * from './ResourceCapabilities';
 export * from './RuleList';
+export * from './RuleParametersUpdate';
 export * from './RuleParametersView';
 export * from './RulePreferenceUpdate';
 export * from './RulePreferenceView';

@@ -23,27 +23,26 @@
 
 package sidebyside.api.models
 
-import sidebyside.api.models.RuleParametersUpdate
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * 
+ * Typed, provider-neutral M4 Rule parameters accepted at the API boundary.
  *
- * @param enabled 
- * @param parameters 
+ * @param daysBefore 
+ * @param localTime 
  */
 @Serializable
 
-data class RulePreferenceUpdate (
+data class RuleParametersUpdate (
 
-    @SerialName(value = "enabled")
-    val enabled: kotlin.Boolean,
+    @SerialName(value = "daysBefore")
+    val daysBefore: kotlin.collections.List<kotlin.Int>? = null,
 
-    @SerialName(value = "parameters")
-    val parameters: RuleParametersUpdate? = null
+    @SerialName(value = "localTime")
+    val localTime: kotlin.String? = null
 
 ) {
 

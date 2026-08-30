@@ -4888,6 +4888,40 @@
         "title": "RuleList",
         "type": "object"
       },
+      "RuleParametersUpdate": {
+        "additionalProperties": false,
+        "description": "Typed, provider-neutral M4 Rule parameters accepted at the API boundary.",
+        "properties": {
+          "daysBefore": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daysbefore"
+          },
+          "localTime": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Localtime"
+          }
+        },
+        "title": "RuleParametersUpdate",
+        "type": "object"
+      },
       "RuleParametersView": {
         "properties": {
           "daysBefore": {
@@ -4924,9 +4958,7 @@
             "type": "boolean"
           },
           "parameters": {
-            "additionalProperties": true,
-            "title": "Parameters",
-            "type": "object"
+            "$ref": "#/components/schemas/RuleParametersUpdate"
           }
         },
         "required": [

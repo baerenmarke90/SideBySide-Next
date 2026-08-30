@@ -1,24 +1,25 @@
 
-# RulePreferenceUpdate
+# RuleParametersUpdate
 
+Typed, provider-neutral M4 Rule parameters accepted at the API boundary.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
-`enabled` | boolean
-`parameters` | [RuleParametersUpdate](RuleParametersUpdate.md)
+`daysBefore` | Array&lt;number&gt;
+`localTime` | string
 
 ## Example
 
 ```typescript
-import type { RulePreferenceUpdate } from ''
+import type { RuleParametersUpdate } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "enabled": null,
-  "parameters": null,
-} satisfies RulePreferenceUpdate
+  "daysBefore": null,
+  "localTime": null,
+} satisfies RuleParametersUpdate
 
 console.log(example)
 
@@ -27,7 +28,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as RulePreferenceUpdate
+const exampleParsed = JSON.parse(exampleJSON) as RuleParametersUpdate
 console.log(exampleParsed)
 ```
 

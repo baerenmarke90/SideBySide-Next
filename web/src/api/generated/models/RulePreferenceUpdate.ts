@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { RuleParametersUpdate } from './RuleParametersUpdate';
+import {
+    RuleParametersUpdateFromJSON,
+    RuleParametersUpdateFromJSONTyped,
+    RuleParametersUpdateToJSON,
+    RuleParametersUpdateToJSONTyped,
+} from './RuleParametersUpdate';
+
 /**
  * 
  * @export
@@ -27,10 +35,10 @@ export interface RulePreferenceUpdate {
     enabled: boolean;
     /**
      * 
-     * @type {{ [key: string]: any; }}
+     * @type {RuleParametersUpdate}
      * @memberof RulePreferenceUpdate
      */
-    parameters?: { [key: string]: any; };
+    parameters?: RuleParametersUpdate;
 }
 
 /**
@@ -52,7 +60,7 @@ export function RulePreferenceUpdateFromJSONTyped(json: any, ignoreDiscriminator
     return {
         
         'enabled': json['enabled'],
-        'parameters': json['parameters'] == null ? undefined : json['parameters'],
+        'parameters': json['parameters'] == null ? undefined : RuleParametersUpdateFromJSON(json['parameters']),
     };
 }
 
@@ -68,7 +76,7 @@ export function RulePreferenceUpdateToJSONTyped(value?: RulePreferenceUpdate | n
     return {
         
         'enabled': value['enabled'],
-        'parameters': value['parameters'],
+        'parameters': RuleParametersUpdateToJSON(value['parameters']),
     };
 }
 
