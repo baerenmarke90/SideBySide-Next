@@ -155,6 +155,36 @@
         "title": "ActivityPage",
         "type": "object"
       },
+      "AnnualSchedule": {
+        "properties": {
+          "day": {
+            "title": "Day",
+            "type": "integer"
+          },
+          "localTime": {
+            "format": "time",
+            "title": "Localtime",
+            "type": "string"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "type": {
+            "const": "ANNUAL",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "month",
+          "day",
+          "localTime"
+        ],
+        "title": "AnnualSchedule",
+        "type": "object"
+      },
       "AttachmentDetail": {
         "properties": {
           "createdAt": {
@@ -2978,6 +3008,26 @@
         "title": "OidcStartView",
         "type": "object"
       },
+      "OnceSchedule": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "type": {
+            "const": "ONCE",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "at"
+        ],
+        "title": "OnceSchedule",
+        "type": "object"
+      },
       "PartnerProfileView": {
         "properties": {
           "accountId": {
@@ -4514,6 +4564,288 @@
           "items"
         ],
         "title": "RelationTargets",
+        "type": "object"
+      },
+      "RelationshipDayCountSchedule": {
+        "properties": {
+          "dayCount": {
+            "title": "Daycount",
+            "type": "integer"
+          },
+          "localTime": {
+            "format": "time",
+            "title": "Localtime",
+            "type": "string"
+          },
+          "type": {
+            "const": "RELATIONSHIP_DAY_COUNT",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "dayCount",
+          "localTime"
+        ],
+        "title": "RelationshipDayCountSchedule",
+        "type": "object"
+      },
+      "ReminderDetail": {
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/ResourceCapabilities"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "createdBy": {
+            "format": "uuid",
+            "title": "Createdby",
+            "type": "string"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/AuthorSummary"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "muted": {
+            "title": "Muted",
+            "type": "boolean"
+          },
+          "offsets": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Offsets",
+            "type": "array"
+          },
+          "ruleKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rulekey"
+          },
+          "schedule": {
+            "discriminator": {
+              "mapping": {
+                "ANNUAL": "#/components/schemas/AnnualSchedule",
+                "ONCE": "#/components/schemas/OnceSchedule",
+                "RELATIONSHIP_DAY_COUNT": "#/components/schemas/RelationshipDayCountSchedule"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnceSchedule"
+              },
+              {
+                "$ref": "#/components/schemas/AnnualSchedule"
+              },
+              {
+                "$ref": "#/components/schemas/RelationshipDayCountSchedule"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ReminderSource"
+          },
+          "sourceId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourceid"
+          },
+          "sourceType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcetype"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "spaceId",
+          "title",
+          "description",
+          "source",
+          "sourceType",
+          "sourceId",
+          "ruleKey",
+          "createdBy",
+          "schedule",
+          "offsets",
+          "muted",
+          "version",
+          "createdAt",
+          "updatedAt",
+          "creator",
+          "capabilities"
+        ],
+        "title": "ReminderDetail",
+        "type": "object"
+      },
+      "ReminderList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReminderDetail"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ReminderList",
+        "type": "object"
+      },
+      "ReminderPreferenceUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "muted": {
+            "title": "Muted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "muted"
+        ],
+        "title": "ReminderPreferenceUpdate",
+        "type": "object"
+      },
+      "ReminderPreferenceView": {
+        "properties": {
+          "muted": {
+            "title": "Muted",
+            "type": "boolean"
+          },
+          "reminderId": {
+            "format": "uuid",
+            "title": "Reminderid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reminderId",
+          "muted"
+        ],
+        "title": "ReminderPreferenceView",
+        "type": "object"
+      },
+      "ReminderSource": {
+        "enum": [
+          "MANUAL",
+          "GENERATED"
+        ],
+        "title": "ReminderSource",
+        "type": "string"
+      },
+      "ReminderWrite": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "offsets": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Offsets",
+            "type": "array"
+          },
+          "schedule": {
+            "discriminator": {
+              "mapping": {
+                "ANNUAL": "#/components/schemas/AnnualSchedule",
+                "ONCE": "#/components/schemas/OnceSchedule",
+                "RELATIONSHIP_DAY_COUNT": "#/components/schemas/RelationshipDayCountSchedule"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnceSchedule"
+              },
+              {
+                "$ref": "#/components/schemas/AnnualSchedule"
+              },
+              {
+                "$ref": "#/components/schemas/RelationshipDayCountSchedule"
+              }
+            ],
+            "title": "Schedule"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "schedule"
+        ],
+        "title": "ReminderWrite",
         "type": "object"
       },
       "ResourceCapabilities": {
@@ -17311,6 +17643,487 @@
         "summary": "Update Related Person",
         "tags": [
           "people"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/reminders": {
+      "get": {
+        "operationId": "listReminders",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "List Reminders",
+        "tags": [
+          "reminders"
+        ]
+      },
+      "post": {
+        "operationId": "createReminder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderDetail"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Create Reminder",
+        "tags": [
+          "reminders"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/reminders/{reminderId}": {
+      "delete": {
+        "operationId": "deleteReminder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminderId",
+            "required": true,
+            "schema": {
+              "title": "Reminderid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request conflicts with the current state of the resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Delete Reminder",
+        "tags": [
+          "reminders"
+        ]
+      },
+      "get": {
+        "operationId": "getReminder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminderId",
+            "required": true,
+            "schema": {
+              "title": "Reminderid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderDetail"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Reminder",
+        "tags": [
+          "reminders"
+        ]
+      },
+      "put": {
+        "operationId": "updateReminder",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminderId",
+            "required": true,
+            "schema": {
+              "title": "Reminderid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderDetail"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request conflicts with the current state of the resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Update Reminder",
+        "tags": [
+          "reminders"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/reminders/{reminderId}/preference": {
+      "put": {
+        "operationId": "setReminderPreference",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reminderId",
+            "required": true,
+            "schema": {
+              "title": "Reminderid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderPreferenceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderPreferenceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Set Reminder Preference",
+        "tags": [
+          "reminders"
         ]
       }
     },
