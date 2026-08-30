@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.db.session import unit_of_work
 from sidebyside.jobs import queue
+from sidebyside.jobs.errors import RetryableJobError
 from sidebyside.jobs.models import Job
 
 log = logging.getLogger(__name__)
@@ -72,6 +73,12 @@ def _run_job(job_id: Any, kind: str, payload: dict[str, Any]) -> None:
 
         try:
             handler(session, payload)
+        except RetryableJobError as exc:
+            # Controlled retry errors contain a stable technical code only.
+            # The handler transaction remains valid so safe attempt metadata
+            # can commit together with the queue backoff state.
+            queue.fail(job, exc.code)
+            log.warning("job retry scheduled", extra={"kind": kind, "error_code": exc.code})
         except Exception as exc:
             session.rollback()
             # After rollback the session is usable again, but the failure must
