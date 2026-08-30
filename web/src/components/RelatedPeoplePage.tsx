@@ -86,9 +86,7 @@ function RelatedPersonForm({
   const [birthdayMonth, setBirthdayMonth] = useState(
     initialBirthdayParts.monthValue,
   );
-  const [birthdayDay, setBirthdayDay] = useState(
-    initialBirthdayParts.dayValue,
-  );
+  const [birthdayDay, setBirthdayDay] = useState(initialBirthdayParts.dayValue);
   const monthOptions = useMemo(
     () =>
       Array.from({ length: 12 }, (_, index) => ({
