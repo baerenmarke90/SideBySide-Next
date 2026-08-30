@@ -71,6 +71,7 @@ jobs:
 
           changed_files = []
           changed_indexes = 0
+          seen_indexes = 0
 
           for path in sorted(Path("backend/src/sidebyside").glob("*/models.py")):
               source = path.read_text(encoding="utf-8")
@@ -93,6 +94,7 @@ jobs:
                   index_name = node.args[0].value
                   if index_name not in expressions:
                       continue
+                  seen_indexes += 1
                   if not any(
                       keyword.arg == "postgresql_using"
                       and isinstance(keyword.value, ast.Constant)
@@ -136,9 +138,14 @@ jobs:
                       changed_files.append(str(path))
                       changed_indexes += len(replacements)
 
-          if changed_indexes != 13:
-              raise SystemExit(f"Expected to correct 13 M4 Search ORM indexes, corrected {changed_indexes}")
-          print(f"Corrected {changed_indexes} FTS indexes across {len(changed_files)} model files")
+          if seen_indexes != 13:
+              raise SystemExit(f"Expected to find 13 M4 Search ORM indexes, found {seen_indexes}")
+          if changed_indexes == 0:
+              raise SystemExit("No M4 Search ORM FTS metadata required correction")
+          print(
+              f"Found {seen_indexes} FTS indexes; corrected {changed_indexes} across "
+              f"{len(changed_files)} model files"
+          )
           PY
       - name: Validate Search metadata and integration coverage
         shell: bash
