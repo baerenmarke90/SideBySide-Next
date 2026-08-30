@@ -328,6 +328,7 @@ export function MemoryProductPage({
           {imageAttachments.length > 0 ? (
             <div
               className="memory-gallery"
+              role="group"
               aria-label={t('memoryProduct.galleryAria')}
             >
               {imageAttachments.map((attachment) => (
