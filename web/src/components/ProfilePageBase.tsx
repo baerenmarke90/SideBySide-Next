@@ -256,7 +256,9 @@ function PreferenceForm({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     onSubmit({
-      category: String(form.get('category')) as ProfilePreferenceDraft['category'],
+      category: String(
+        form.get('category'),
+      ) as ProfilePreferenceDraft['category'],
       sentiment: String(
         form.get('sentiment'),
       ) as ProfilePreferenceDraft['sentiment'],
@@ -320,9 +322,7 @@ function PreferenceForm({
       </div>
 
       <div className="field-group">
-        <label
-          htmlFor={`preference-topic-${privateNote ? 'private' : 'self'}`}
-        >
+        <label htmlFor={`preference-topic-${privateNote ? 'private' : 'self'}`}>
           {t('profiles.topicLabel')}
         </label>
         <input
@@ -340,9 +340,7 @@ function PreferenceForm({
       </div>
 
       <div className="field-group">
-        <label
-          htmlFor={`preference-value-${privateNote ? 'private' : 'self'}`}
-        >
+        <label htmlFor={`preference-value-${privateNote ? 'private' : 'self'}`}>
           {t('profiles.valueLabel')}
         </label>
         <textarea
@@ -402,9 +400,8 @@ function PreferenceManager({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<ProfilePreferenceView | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ProfilePreferenceView | null>(
-    null,
-  );
+  const [deleteTarget, setDeleteTarget] =
+    useState<ProfilePreferenceView | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const privateNote = visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE;
 
@@ -511,7 +508,9 @@ function PreferenceManager({
                 <div>
                   <div className="profile-preference-meta">
                     <span>{t(`profiles.category.${preference.category}`)}</span>
-                    <span>{t(`profiles.sentiment.${preference.sentiment}`)}</span>
+                    <span>
+                      {t(`profiles.sentiment.${preference.sentiment}`)}
+                    </span>
                   </div>
                   <h3>{preference.topic}</h3>
                   <p>{preference.value}</p>
@@ -707,8 +706,9 @@ export function ProfilePage({
   });
 
   const partner =
-    spaceQuery.data?.partners.find((candidate) => candidate.id !== account.id) ??
-    null;
+    spaceQuery.data?.partners.find(
+      (candidate) => candidate.id !== account.id,
+    ) ?? null;
   const selfPreferences =
     preferencesQuery.data?.filter(
       (preference) =>
