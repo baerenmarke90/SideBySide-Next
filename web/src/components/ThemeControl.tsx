@@ -9,7 +9,11 @@ import {
   type ThemePreference,
 } from '../theme';
 
-export function ThemeControl() {
+export function ThemeControl({
+  variant = 'floating',
+}: {
+  variant?: 'floating' | 'inline';
+}) {
   const { t } = useTranslation();
   const [preference, setPreference] =
     useState<ThemePreference>(readThemePreference);
@@ -30,7 +34,10 @@ export function ThemeControl() {
   }
 
   return (
-    <div className="theme-control">
+    <div className={`theme-control theme-control-${variant}`}>
+      <span className="theme-control-icon" aria-hidden="true">
+        ◐
+      </span>
       <label htmlFor="theme-preference">{t('theme.label')}</label>
       <select
         id="theme-preference"
