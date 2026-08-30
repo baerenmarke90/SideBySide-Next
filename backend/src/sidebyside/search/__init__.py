@@ -1,4 +1,4 @@
-"""M4-A global Search read model."""
+"""M4-A authorization-first global Search read model."""
 
 from sidebyside.search.service import (
     DEFAULT_LIMIT,
