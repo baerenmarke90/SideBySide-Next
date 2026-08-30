@@ -168,7 +168,10 @@ export function DashboardProductPage({
 
       {dashboardQuery.data ? (
         <>
-          <section className="m4-summary-card" aria-labelledby="m4-summary-heading">
+          <section
+            className="m4-summary-card"
+            aria-labelledby="m4-summary-heading"
+          >
             <h2 id="m4-summary-heading">
               {dashboardQuery.data.space.partner
                 ? t('m5s5.dashboard.partner', {
@@ -180,7 +183,8 @@ export function DashboardProductPage({
               <>
                 <p className="m4-summary-value">
                   {t('m5s5.dashboard.durationDays', {
-                    count: dashboardQuery.data.relationshipDuration.daysTogether,
+                    count:
+                      dashboardQuery.data.relationshipDuration.daysTogether,
                   })}
                 </p>
                 <p className="m4-muted">
@@ -327,7 +331,10 @@ export function SearchProductPage({
           </div>
         </div>
         <div className="m4-item-actions">
-          <button type="submit" disabled={!draftQuery.trim() || searchQuery.isFetching}>
+          <button
+            type="submit"
+            disabled={!draftQuery.trim() || searchQuery.isFetching}
+          >
             {searchQuery.isFetching && !searchQuery.isFetchingNextPage
               ? t('m5s5.search.searching')
               : t('m5s5.search.submit')}
@@ -581,7 +588,11 @@ export function NotificationsProductPage({
 
       <section className="m4-section" aria-labelledby="m4-notification-summary">
         <div className="m4-notification-summary">
-          <h2 id="m4-notification-summary" className="m4-unread-badge" aria-live="polite">
+          <h2
+            id="m4-notification-summary"
+            className="m4-unread-badge"
+            aria-live="polite"
+          >
             {t('m5s5.notifications.unreadCount', { count: unreadCount })}
           </h2>
           <button
@@ -607,7 +618,10 @@ export function NotificationsProductPage({
         />
       ) : null}
       {unreadQuery.error ? (
-        <ProblemState error={unreadQuery.error} onRetry={() => void unreadQuery.refetch()} />
+        <ProblemState
+          error={unreadQuery.error}
+          onRetry={() => void unreadQuery.refetch()}
+        />
       ) : null}
       {markOne.error ? <ProblemState error={markOne.error} /> : null}
       {markAll.error ? <ProblemState error={markAll.error} /> : null}
@@ -625,7 +639,8 @@ export function NotificationsProductPage({
           <ul className="m4-list">
             {items.map((item) => {
               const path = engagementTargetPath(item.targetType, item.targetId);
-              const markingThis = markOne.isPending && markOne.variables === item.id;
+              const markingThis =
+                markOne.isPending && markOne.variables === item.id;
               return (
                 <li
                   className={`m4-item${item.readAt ? '' : ' m4-item-unread'}`}
@@ -639,7 +654,10 @@ export function NotificationsProductPage({
                         : t('m5s5.notifications.unread')}
                     </span>
                   </div>
-                  <time className="m4-item-meta" dateTime={item.createdAt.toISOString()}>
+                  <time
+                    className="m4-item-meta"
+                    dateTime={item.createdAt.toISOString()}
+                  >
                     {formatDateTime(item.createdAt)}
                   </time>
                   <div className="m4-item-actions">
