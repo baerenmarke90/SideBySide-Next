@@ -1,6 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from './AcceptRequest';
+export * from './AccountMembershipView';
 export * from './AccountView';
 export * from './ActivityItem';
 export * from './ActivityKind';

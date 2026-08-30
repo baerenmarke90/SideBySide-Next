@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type AccountMembershipView,
+    AccountMembershipViewFromJSON,
+    AccountMembershipViewToJSON,
+} from '../models/AccountMembershipView';
+import {
     type AccountView,
     AccountViewFromJSON,
     AccountViewToJSON,
@@ -554,6 +559,45 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async linkOidcApiV1AuthOidcConnectionIdLinkPost(requestParameters: LinkOidcApiV1AuthOidcConnectionIdLinkPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OidcStartView> {
         const response = await this.linkOidcApiV1AuthOidcConnectionIdLinkPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listAccountMembershipsApiV1AuthMembershipsGet without sending the request
+     */
+    async listAccountMembershipsApiV1AuthMembershipsGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/auth/memberships`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return the caller\'s active Space memberships.  Returning this small authorization projection lets official clients select an authorized Space without a build-time Space identifier or ID probing. It intentionally contains no partner or Space content; clients load the selected Space through the normal tenant-guarded endpoint afterward.
+     * List Account Memberships
+     */
+    async listAccountMembershipsApiV1AuthMembershipsGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<AccountMembershipView>>> {
+        const requestOptions = await this.listAccountMembershipsApiV1AuthMembershipsGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(AccountMembershipViewFromJSON));
+    }
+
+    /**
+     * Return the caller\'s active Space memberships.  Returning this small authorization projection lets official clients select an authorized Space without a build-time Space identifier or ID probing. It intentionally contains no partner or Space content; clients load the selected Space through the normal tenant-guarded endpoint afterward.
+     * List Account Memberships
+     */
+    async listAccountMembershipsApiV1AuthMembershipsGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<AccountMembershipView>> {
+        const response = await this.listAccountMembershipsApiV1AuthMembershipsGetRaw(initOverrides);
         return await response.value();
     }
 
