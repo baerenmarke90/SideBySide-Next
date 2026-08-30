@@ -116,9 +116,7 @@ def test_dashboard_is_shared_only_and_private_no_store(
     assert body["retrospective"]["id"] == str(shared_heart.id)
 
     visible_ids = {
-        item["id"]
-        for section in (body["upcoming"], body["recentShared"])
-        for item in section
+        item["id"] for section in (body["upcoming"], body["recentShared"]) for item in section
     }
     visible_ids.add(body["retrospective"]["id"])
     assert str(private_heart.id) not in visible_ids
