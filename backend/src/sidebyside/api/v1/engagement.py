@@ -149,7 +149,7 @@ def mark_notification_read(
     authorization: Authorization,
     session: DbSession,
     response: Response,
-    notification_id: Annotated[UUID, Path(alias="notificationId")],
+    notification_id: Annotated[str, Path(alias="notificationId")],
 ) -> NotificationItem:
     notification = service.mark_notification_read(
         session,

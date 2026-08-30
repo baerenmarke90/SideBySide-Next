@@ -12486,7 +12486,6 @@
             "name": "notificationId",
             "required": true,
             "schema": {
-              "format": "uuid",
               "title": "Notificationid",
               "type": "string"
             }

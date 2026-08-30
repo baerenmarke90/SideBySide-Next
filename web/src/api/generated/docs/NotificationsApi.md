@@ -243,7 +243,7 @@ async function example() {
 
   const body = {
     // string
-    notificationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    notificationId: notificationId_example,
     // string
     spaceId: spaceId_example,
   } satisfies MarkNotificationReadRequest;

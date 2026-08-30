@@ -22,6 +22,7 @@ from sidebyside.collections.models import Collection
 from sidebyside.core import clock
 from sidebyside.core import cursor as cursor_codec
 from sidebyside.core.errors import ErrorCode, NotFoundError
+from sidebyside.core.ids import parse_id
 from sidebyside.domain.events import EventType
 from sidebyside.engagement.models import (
     Activity,
@@ -411,12 +412,18 @@ def unread_count(session: Session, context: AuthorizationContext) -> int:
 def mark_notification_read(
     session: Session,
     context: AuthorizationContext,
-    notification_id: UUID,
+    notification_id: UUID | str,
 ) -> Notification:
+    identifier = notification_id if isinstance(notification_id, UUID) else parse_id(notification_id)
+    if identifier is None:
+        raise NotFoundError(
+            "Notification not found.",
+            ErrorCode.NOTIFICATION_NOT_FOUND,
+        )
     statement = (
         select(Notification)
         .where(
-            Notification.id == notification_id,
+            Notification.id == identifier,
             Notification.space_id == context.space_id,
             Notification.recipient_account_id == context.account_id,
             _projectable_predicate(Notification.target_type, Notification.target_id, context),
