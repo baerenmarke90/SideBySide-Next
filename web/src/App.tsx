@@ -90,23 +90,8 @@ function LoginScreen({
           suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
         />
         <div className="login-intro-content">
-          <p className="eyebrow eyebrow-inverse">{t('login.introEyebrow')}</p>
           <h1 id="welcome-heading">{t('login.introHeading')}</h1>
           <p>{t('login.introBody')}</p>
-          <ul className="entry-trust-list" aria-label={t('login.trustAria')}>
-            <li>
-              <span aria-hidden="true">◇</span>
-              {t('login.trustPrivacy')}
-            </li>
-            <li>
-              <span aria-hidden="true">○○</span>
-              {t('login.trustTwo')}
-            </li>
-            <li>
-              <span aria-hidden="true">✦</span>
-              {t('login.trustAds')}
-            </li>
-          </ul>
         </div>
         <div className="entry-illustration" aria-hidden="true">
           <span className="entry-orbit entry-orbit-large" />

@@ -444,18 +444,14 @@ code {
   max-width: 43rem;
 }
 
-.eyebrow-inverse {
-  color: var(--color-text-inverse-muted);
-}
-
 .login-intro h1 {
-  max-width: 11ch;
+  max-width: 15ch;
   color: var(--color-on-accent);
-  font-family: var(--font-display);
-  font-size: clamp(3rem, 6.3vw, 5.7rem);
-  font-weight: 600;
-  line-height: 0.96;
-  letter-spacing: -0.04em;
+  font-family: var(--font-ui);
+  font-size: clamp(2.6rem, 4.5vw, 3.75rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
 }
 
 .login-intro-content > p:not(.eyebrow) {
@@ -463,30 +459,6 @@ code {
   margin-bottom: 0;
   color: var(--color-text-inverse-muted);
   font-size: 1.08rem;
-}
-
-.entry-trust-list {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4) var(--space-6);
-  margin: var(--space-8) 0 0;
-  padding: 0;
-  color: var(--color-text-inverse-muted);
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.entry-trust-list li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.entry-trust-list span {
-  min-width: 1.2rem;
-  color: var(--color-entry-trust-accent);
-  text-align: center;
 }
 
 .entry-illustration {
@@ -1046,8 +1018,8 @@ code {
   }
 
   .login-intro h1 {
-    max-width: 12ch;
-    font-size: clamp(2.7rem, 10vw, 4.3rem);
+    max-width: 15ch;
+    font-size: clamp(2.4rem, 7vw, 3.15rem);
   }
 
   .entry-illustration {
@@ -1108,13 +1080,7 @@ code {
   }
 
   .login-intro h1 {
-    font-size: clamp(2.55rem, 12.5vw, 3.45rem);
-  }
-
-  .entry-trust-list {
-    display: grid;
-    gap: var(--space-3);
-    margin-top: var(--space-6);
+    font-size: clamp(2.25rem, 9.5vw, 2.8rem);
   }
 
   .login-card {

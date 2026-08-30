@@ -2,8 +2,7 @@
 
 **Status:** Mandatory foundation for Web and App  
 **Version:** 1.0  
-**Effective from:** August 24, 2026  
-**Brand promise (de-DE):** *Gemeinsam leben. Privat verbunden.*
+**Effective from:** August 24, 2026
 
 This document translates the SideBySide Next product idea into mandatory
 design rules. It applies to product surfaces, the website, store listings,
@@ -169,8 +168,10 @@ Mandatory rules:
 
 At most two font families are used:
 
-- **Display:** Fraunces 600 for emotional hero titles and selected Story moments.
-- **UI:** Inter 400/500/600 for navigation, content, forms, and controls.
+- **Display:** Fraunces 600 for selected editorial and Story moments where it
+  supports the content without reducing readability.
+- **UI:** Inter 400/500/600 for navigation, content, forms, controls, and product
+  entry or authentication headings.
 - Fallbacks: `Georgia, serif` and
   `system-ui, -apple-system, Segoe UI, sans-serif`, respectively.
 
@@ -183,6 +184,8 @@ At most two font families are used:
 | Body | 16/24 | 16/24 | standard text |
 | Meta | 13/18 | 13/18 | date, status, and helper text |
 
+- Authentication and setup entry headings MUST use the UI family; the display
+  family is reserved for editorial or Story contexts.
 - Body text is never smaller than 16 px or 16 sp, respectively.
 - Long-form text uses at most 70 characters per line.
 - All-caps is allowed only for very short labels.
