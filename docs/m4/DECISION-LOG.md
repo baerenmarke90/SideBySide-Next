@@ -1,8 +1,10 @@
 # M4 Decision Log
 
 **As of:** August 30, 2026  
-**M4-A S0 status:** all M4-A blocking decisions below are `DECIDED`  
-**Rule:** Search/Dashboard semantics are not invented silently in runtime code.
+**M4-A S0 status:** all M4-A blocking decisions are `DECIDED`  
+**M4-B S0 status:** all M4-B blocking decisions are `DECIDED` through #276  
+**M4-C S0 status:** all M4-C blocking decisions are `DECIDED` through #277  
+**Rule:** M4 semantics are not invented silently in runtime code.
 
 ## Status
 
@@ -14,7 +16,7 @@
 
 - `BLOCKING` — decide before the first affected runtime slice;
 - `BEFORE_CLIENTS` — decide before stable Web/Android integration;
-- `BEFORE_EVIDENCE` — decide before M4-A integrated evidence;
+- `BEFORE_EVIDENCE` — decide before the affected integrated evidence slice;
 - `LATER` — deliberately outside the current slice.
 
 ## Decision matrix
@@ -48,16 +50,52 @@
 | M4-D25 | BLOCKING | DECIDED | Dashboard empty behavior | Optional sections are omitted when empty; the response does not fabricate zero-state domain rows. Stable top-level structure may expose explicit nullable/empty collections only where the final OpenAPI contract benefits clients. |
 | M4-D26 | BLOCKING | DECIDED | Dashboard consistency/cache | Use one application unit of work with normal authorized reads; cross-section atomic snapshot semantics are not promised because Dashboard is not a transactional report. Short-lived inconsistencies under concurrent writes are acceptable, Privacy violations are not. Response is `private, no-store` in v1. |
 | M4-D27 | BEFORE_CLIENTS | DECIDED | Client boundary | M4-A runtime must publish OpenAPI and regenerate TypeScript/Kotlin clients. Full Search/Dashboard screen productization, offline Read Cache and systematic parity remain M5 unless a thin evidence flow is explicitly scoped. |
-| M4-D28 | BLOCKING | DECIDED | Freemium | Basic authorized global Search and the basic relationship Dashboard are Free/Core in both Cloud and Self-Hosted. Semantic/AI search, saved analytical views or richer Premium presentation remain separate future decisions. |
-| M4-D29 | BEFORE_EVIDENCE | DECIDED | Mandatory evidence | Real PostgreSQL tests must prove index-backed matching, cursor binding, Cross-Tenant isolation, partner-private non-generation, private child-parent authorization, deterministic ordering, Dashboard owner-only exclusion and no private influence on shared section shape. |
+| M4-D28 | BLOCKING | DECIDED | M4-A freemium | Basic authorized global Search and the basic relationship Dashboard are Free/Core in both Cloud and Self-Hosted. Semantic/AI search, saved analytical views or richer Premium presentation remain separate future decisions. |
+| M4-D29 | BEFORE_EVIDENCE | DECIDED | M4-A mandatory evidence | Real PostgreSQL tests must prove index-backed matching, cursor binding, Cross-Tenant isolation, partner-private non-generation, private child-parent authorization, deterministic ordering, Dashboard owner-only exclusion and no private influence on shared section shape. |
 | M4-D30 | LATER | DECIDED | Search backend replacement/E2EE | A later backend or real E2EE search strategy may replace server-side plaintext FTS behind the Search abstraction. M4-A does not claim server-side FTS is compatible with real E2EE ciphertext. |
+| M4-D31 | BLOCKING | DECIDED | Engagement model split | `OutboxEvent` is internal transactional integration state, Activity is a user-visible Space event, Notification is recipient state, and PushDelivery is a technical delivery attempt. They are separate models and one is not exposed as another. |
+| M4-D32 | BLOCKING | DECIDED | Activity projection | Activity is a persisted, minimized asynchronous projection from committed safe Outbox facts. Projection retry is idempotent. Activity stores references/kinds, not copied ProtectedPayload plaintext. |
+| M4-D33 | BLOCKING | DECIDED | Activity v1 catalog | v1 Activity is controlled: shared Memory/Milestone/SHARED HeartMoment/Wish/Plan/Place/Chapter/Collection creation, Plan completion and Comment creation. Private events, normal edits, reorders, item toggles and technical events are excluded unless a later explicit decision adds them. |
+| M4-D34 | BLOCKING | DECIDED | Activity privacy | Activity is a shared Space surface. `OWNER_ONLY` events are never generated into it; current target authorization is re-evaluated before projection so deleted/newly-private targets cannot leak rows, counts, IDs or presentation metadata. |
+| M4-D35 | BLOCKING | DECIDED | Activity pagination/lifecycle | Order `occurredAt DESC, id DESC`, signed Account+Space-bound `activity-v1` keyset cursor, default 25/max 50. v1 introduces no arbitrary time-based product retention limit; lifecycle follows Space/account/source privacy/deletion rules. |
+| M4-D36 | BLOCKING | DECIDED | Notification persistence | Notification is recipient+Space-scoped persisted state projected idempotently from eligible events. It stores safe references/kinds and `readAt`, not copied relationship plaintext. |
+| M4-D37 | BLOCKING | DECIDED | Notification recipients | Recipients are derived server-side from active Membership and current target authorization. The actor is not notified about their own action unless an explicit event contract says otherwise. Client-supplied arbitrary recipients are not supported. |
+| M4-D38 | BLOCKING | DECIDED | Notification read state | `readAt IS NULL` means unread. Mark-one is idempotent and server-timestamped. Mark-all captures a server cutoff and affects only recipient+Space Notifications committed at/before that cutoff; later Notifications remain unread. |
+| M4-D39 | BLOCKING | DECIDED | Notification target/privacy transition | Notifications are never access grants. Deleted/non-readable targets cannot leak stale payload or continue influencing partner-visible unread counts. A SHARED-to-PRIVATE transition becomes effective on reads immediately after source commit. |
+| M4-D40 | BLOCKING | DECIDED | Push provider boundary | Push is optional delivery for an existing Notification through a provider-neutral adapter and existing PostgreSQL Job Queue. Self-Hosted without push configuration retains full in-app Notification behavior and does not fail the application. |
+| M4-D41 | BLOCKING | DECIDED | Push preview privacy | v1 push/lock-screen payloads contain no protected relationship plaintext. Default presentation is generic and client-localized. Rich content previews require a later explicit opt-in privacy decision. |
+| M4-D42 | BLOCKING | DECIDED | `Ich denke an dich` ownership | M4-B owns a content-free partner nudge. It has no free-text payload, no separate durable content model and no Activity row in v1; it creates a safe event and recipient Notification, with optional PushDelivery. |
+| M4-D43 | BLOCKING | DECIDED | `Ich denke an dich` idempotency/abuse | `POST /spaces/{spaceId}/thinking-of-you` carries a client request UUID. Sender+Space+request ID is idempotent. New sends have a rolling 60-second sender/Space cooldown plus normal API rate limiting. Recipient is server-derived. |
+| M4-D44 | BLOCKING | DECIDED | Projection/delivery idempotency | Activity/Notification use source-event uniqueness; PushDelivery uses stable Notification+endpoint logical identity. Existing lease/retry/backoff infrastructure is reused. Network delivery is retryable; the design does not claim transport-level exactly-once semantics. |
+| M4-D45 | BLOCKING | DECIDED | M4-B freemium | Basic Activity, in-app Notifications/read state, basic `Ich denke an dich` and basic push capability where infrastructure exists are Free/Core. Advanced digests/routing/rich-preview customization/notification automation remain future Mixed/Premium candidates; M4-B adds no entitlement runtime. |
+| M4-D46 | BEFORE_EVIDENCE | DECIDED | M4-B mandatory evidence | Real PostgreSQL/HTTP evidence must prove Cross-Tenant and OWNER_ONLY non-generation/non-influence, source privacy transitions, recipient isolation, read/unread concurrency, projector retry idempotency, safe push payloads, Self-Hosted unconfigured push, and `Ich denke an dich` idempotency/cooldown. |
+| M4-D47 | BLOCKING | DECIDED | Reminder v1 scope | Reminder is shared Space content in v1. `createdBy` is provenance, not owner-only authorization. An owner-only/personal Reminder class is deferred until an explicit model/privacy decision; M4-C must not emulate it by linking shared Reminders to private sources. |
+| M4-D48 | BLOCKING | DECIDED | Manual Reminder collaboration | Both active Space partners may read/create/update/delete manual shared Reminders subject to normal version conflicts. Generated Reminders are source/rule-owned and not freely editable/deletable. |
+| M4-D49 | BLOCKING | DECIDED | Automatic source privacy | v1 generated Reminders use only shared ImportantDate, shared RelatedPerson birthday, relationship start/anniversary data and shared scheduled Plan. `OWNER_ONLY` sources such as GiftIdea, PrivateNote, private collections or PRIVATE HeartMoment are excluded and cannot influence shared Reminder/delivery metadata. |
+| M4-D50 | BLOCKING | DECIDED | ReminderPreference | Muting is per Account+Reminder. It suppresses that Account's future delivery only, does not delete the shared Reminder or alter the partner, and unmuting does not replay unbounded missed history. |
+| M4-D51 | BLOCKING | DECIDED | ONCE schedule | `ONCE` uses one future RFC3339 offset-aware timestamp normalized to a UTC instant. Account/device timezone changes do not move it; `daysBefore` subtracts exact 24-hour durations. |
+| M4-D52 | BLOCKING | DECIDED | ANNUAL schedule | `ANNUAL` uses month/day/localTime. Each recipient resolves future occurrences using the Account's current configured IANA timezone; offsets are calendar days applied before local-time resolution. Device timezone is not authoritative. |
+| M4-D53 | BLOCKING | DECIDED | RELATIONSHIP_DAY_COUNT | Day 1 equals relationship start date; target = start + (dayCount-1). It resolves recipient localTime using Account timezone. Missing start produces no occurrence; start-date changes supersede/recompute future pending work. |
+| M4-D54 | BLOCKING | DECIDED | DST/timezone resolution | For calendar-based schedules, a nonexistent local time shifts forward by the timezone gap; an ambiguous repeated local time selects the earlier instant/offset. Account timezone changes recompute future calendar-based occurrences; ONCE remains absolute. |
+| M4-D55 | BLOCKING | DECIDED | Leap-day recurrence | February 29 `ANNUAL` schedules resolve to February 28 in non-leap years. This is server-authoritative and identical across clients/deployments. |
+| M4-D56 | BLOCKING | DECIDED | Reminder offsets | `ReminderOffset.daysBefore` is a dedicated integer row with allowed range 0-365, no negative/after-event offsets in v1, unique per Reminder and stable ascending projection. The bound is technical, not commercial. |
+| M4-D57 | BLOCKING | DECIDED | Rule engine | Rules are a versioned controlled catalog of trigger + typed conditions + deterministic action. No arbitrary scripts/SQL/executable expressions, general workflow DAG engine or AI dependency is introduced. |
+| M4-D58 | BLOCKING | DECIDED | Initial Rule catalog | v1 Free/Core rules: `important_date_reminder` defaults `[7,1]`, `related_person_birthday_reminder` `[14,7,1]`, `relationship_anniversary_reminder` `[30,7,1]`, `plan_start_reminder` `[1,0]`. Calendar-only sources default to 09:00 recipient Account local time unless source has an authoritative time. |
+| M4-D59 | BLOCKING | DECIDED | RulePreference | RulePreference is per Account+Space+ruleKey with server-validated typed parameters. Disable affects only that Account's future eligibility; re-enable plans future occurrences without historical burst. Incompatible Rule semantics require a new key or explicit catalog migration. |
+| M4-D60 | BLOCKING | DECIDED | Generated Reminder identity | Logical generated Reminder identity is Space + source type + source ID + ruleKey. Reconciliation is idempotent; source update recomputes, source deletion/ineligibility removes/cancels pending work, and replay cannot create duplicates. |
+| M4-D61 | BLOCKING | DECIDED | Reminder occurrence ledger | Use a small SYSTEM_METADATA occurrence ledger keyed logically by Reminder + recipient + occurrenceKey + daysBefore. It stores scheduling state/dueAt, not copied user content, and provides generation/state checks so stale queued Jobs no-op. |
+| M4-D62 | BLOCKING | DECIDED | Scheduling/reconciliation | Reuse the PostgreSQL Job Queue. Plan only the next required occurrence per recipient/offset, enqueue with `run_after`, plan the next recurrence after handling, and run bounded repeatable startup/periodic reconciliation. No unbounded future job generation or new scheduler/broker stack. |
+| M4-D63 | BLOCKING | DECIDED | Missed occurrence policy | A due occurrence may be caught up for 24 hours after `dueAt`; older missed occurrences are skipped/expired without stale notification burst, while Reminder definitions and future recurrences remain intact. |
+| M4-D64 | BLOCKING | DECIDED | M4-C to M4-B handoff | M4-C owns due calculation and emits one content-minimized `REMINDER_DUE` logical fact per eligible occurrence. M4-B owns recipient Notification/read state/Push. M4-C does not create a second notification or push stack. |
+| M4-D65 | BLOCKING | DECIDED | M4-C freemium | Manual shared Reminders, initial date/birthday/anniversary/Plan rules, per-account mute and core RulePreference controls are Free/Core. Advanced multi-condition/multi-step/templates/external-trigger automation remains a future Mixed/Premium candidate. M4-C adds no entitlement runtime. |
+| M4-D66 | BEFORE_EVIDENCE | DECIDED | M4-C mandatory evidence | Real PostgreSQL/HTTP evidence must prove Cross-Tenant/private-source non-generation, schedule/DST/leap/timezone semantics, generated Reminder and occurrence idempotency, stale-job suppression, RulePreference isolation, 24-hour catch-up, and M4-B Notification handoff consistency. |
 
 ## Closure rule
 
-A `DECIDED` M4-A semantic is not silently changed in a runtime PR. A change requires an explicit decision update with:
+A `DECIDED` M4 semantic is not silently changed in a runtime PR. A change requires an explicit decision update with:
 
 - API/client compatibility impact;
-- persistence/index migration impact;
+- persistence/index/migration impact;
 - Privacy/Tenant implications;
 - Self-Hosted/Cloud implications;
 - business/freemium impact;
