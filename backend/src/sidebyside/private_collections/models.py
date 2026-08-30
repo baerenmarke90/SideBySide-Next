@@ -69,6 +69,11 @@ class PrivateCollection(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMi
             "created_at",
             "id",
         ),
+        Index(
+            "ix_private_collections_search_fts",
+            text("setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A')"),
+            postgresql_using="gin",
+        ),
     )
 
 
@@ -114,6 +119,11 @@ class PrivateCollectionItem(IdMixin, TimestampMixin, VersionMixin, Base):
             "ix_private_collection_items_collection_id_id",
             "collection_id",
             "id",
+        ),
+        Index(
+            "ix_private_collection_items_search_fts",
+            text("setweight(to_tsvector('simple', coalesce(payload->>'title', '')), 'A')"),
+            postgresql_using="gin",
         ),
     )
 
