@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import time
-from typing import Any, Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Path, Response
 from pydantic import ConfigDict, Field
