@@ -133,9 +133,7 @@ function RelationshipProfileSection({
     const form = new FormData(event.currentTarget);
     const start = String(form.get('relationshipStartedOn') || '');
     mutation.mutate({
-      relationshipStartedOn: start
-        ? new Date(`${start}T00:00:00.000Z`)
-        : null,
+      relationshipStartedOn: start ? new Date(`${start}T00:00:00.000Z`) : null,
       showRelationshipDuration: form.get('showRelationshipDuration') === 'on',
       durationDisplayMode: String(
         form.get('durationDisplayMode'),
@@ -144,7 +142,10 @@ function RelationshipProfileSection({
   }
 
   return (
-    <section className="profile-section" aria-labelledby="relationship-profile-title">
+    <section
+      className="profile-section"
+      aria-labelledby="relationship-profile-title"
+    >
       <h2 id="relationship-profile-title">{t('profiles.relationshipTitle')}</h2>
 
       {profileQuery.isLoading ? (
@@ -281,7 +282,9 @@ function PreferenceForm({
       </h3>
 
       <div className="field-group">
-        <label htmlFor={`preference-category-${privateNote ? 'private' : 'self'}`}>
+        <label
+          htmlFor={`preference-category-${privateNote ? 'private' : 'self'}`}
+        >
           {t('profiles.categoryLabel')}
         </label>
         <select
@@ -298,7 +301,9 @@ function PreferenceForm({
       </div>
 
       <div className="field-group">
-        <label htmlFor={`preference-sentiment-${privateNote ? 'private' : 'self'}`}>
+        <label
+          htmlFor={`preference-sentiment-${privateNote ? 'private' : 'self'}`}
+        >
           {t('profiles.sentimentLabel')}
         </label>
         <select
@@ -315,7 +320,9 @@ function PreferenceForm({
       </div>
 
       <div className="field-group">
-        <label htmlFor={`preference-topic-${privateNote ? 'private' : 'self'}`}>
+        <label
+          htmlFor={`preference-topic-${privateNote ? 'private' : 'self'}`}
+        >
           {t('profiles.topicLabel')}
         </label>
         <input
@@ -333,7 +340,9 @@ function PreferenceForm({
       </div>
 
       <div className="field-group">
-        <label htmlFor={`preference-value-${privateNote ? 'private' : 'self'}`}>
+        <label
+          htmlFor={`preference-value-${privateNote ? 'private' : 'self'}`}
+        >
           {t('profiles.valueLabel')}
         </label>
         <textarea
@@ -459,7 +468,10 @@ function PreferenceManager({
   });
 
   return (
-    <section className="profile-section" aria-labelledby={`profile-manager-${visibility}`}>
+    <section
+      className="profile-section"
+      aria-labelledby={`profile-manager-${visibility}`}
+    >
       <div className="section-head">
         <div>
           <h2 id={`profile-manager-${visibility}`}>{title}</h2>
@@ -597,7 +609,10 @@ function PartnerProfileSection({
   });
 
   return (
-    <section className="profile-section" aria-labelledby="partner-profile-title">
+    <section
+      className="profile-section"
+      aria-labelledby="partner-profile-title"
+    >
       <h2 id="partner-profile-title">
         {t('profiles.partnerTitle', { name: partnerName })}
       </h2>
@@ -656,7 +671,10 @@ export function ProfilePage({
       }),
     [accessToken, apiBaseUrl],
   );
-  const spacesApi = useMemo(() => new SpacesApi(configuration), [configuration]);
+  const spacesApi = useMemo(
+    () => new SpacesApi(configuration),
+    [configuration],
+  );
   const profilesApi = useMemo(
     () => new ProfilesApi(configuration),
     [configuration],
@@ -713,7 +731,10 @@ export function ProfilePage({
         description={t('profiles.intro')}
       />
 
-      <section className="profile-section" aria-labelledby="account-profile-title">
+      <section
+        className="profile-section"
+        aria-labelledby="account-profile-title"
+      >
         <h2 id="account-profile-title">{t('profiles.accountTitle')}</h2>
         <dl className="profile-account-list">
           <div>
