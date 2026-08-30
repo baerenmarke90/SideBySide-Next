@@ -192,7 +192,7 @@ def _insert_activity(
     target_id: UUID,
 ) -> None:
     statement = (
-        postgresql.insert(Activity.__table__)
+        postgresql.insert(Activity)
         .values(
             space_id=event.space_id,
             source_event_id=event.id,
@@ -232,7 +232,7 @@ def _project_comment_notification(
         return
 
     statement = (
-        postgresql.insert(Notification.__table__)
+        postgresql.insert(Notification)
         .values(
             space_id=event.space_id,
             recipient_account_id=recipient_id,
