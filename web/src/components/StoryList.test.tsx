@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
 import { StoryItemFromJSON } from '../api/generated/models/StoryItem';
 import { StoryList } from './StoryList';
 
@@ -24,13 +25,19 @@ describe('StoryList', () => {
     });
 
     const html = renderToStaticMarkup(
-      <StoryList items={[item]} loadMemoryImage={loadMemoryImage} />,
+      <MemoryRouter>
+        <StoryList items={[item]} loadMemoryImage={loadMemoryImage} />
+      </MemoryRouter>,
     );
     expect(html).toContain('<ol');
     expect(html).toContain('aria-label="Gemeinsame Story"');
     expect(html).toContain('Erinnerung');
     expect(html).toContain('Am See');
     expect(html).toContain('<time');
+    expect(html).toContain(
+      'href="/memory/00000000-0000-0000-0000-000000000002"',
+    );
+    expect(html).toContain('Erinnerung öffnen');
   });
 
   it('announces an empty story as a status', () => {
