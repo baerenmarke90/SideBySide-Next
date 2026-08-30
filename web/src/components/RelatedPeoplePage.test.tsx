@@ -3,6 +3,7 @@ import { ContentVisibility } from '../api/generated/models/ContentVisibility';
 import { PersonRelationship } from '../api/generated/models/PersonRelationship';
 import { RelatedPersonDeletePolicy } from '../api/generated/models/RelatedPersonDeletePolicy';
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
+import people from '../i18n/locales/people';
 import { DeleteRelatedPersonDialogContent } from './RelatedPeoplePage';
 
 const person: RelatedPersonView = {
@@ -64,8 +65,8 @@ describe('RelatedPerson delete dialog', () => {
 
     expect(html).toContain('checked="" value="cascade"');
     expect(html).toContain('role="alert"');
-    expect(html).toContain('Einträge deines Partners');
-    expect(html).toContain('keine Anzahl oder Details');
+    expect(html).toContain(people.deletePrivacyNote);
+    expect(html).toContain(people.deleteCascadeWarningBody);
     expect(html).toContain('disabled=""');
   });
 
