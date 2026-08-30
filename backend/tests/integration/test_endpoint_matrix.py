@@ -264,6 +264,11 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         resource_absence="NOTIFICATION_NOT_FOUND",
     ),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/notifications/read-all"),
+    Endpoint(
+        "POST",
+        "/api/v1/spaces/{spaceId}/thinking-of-you",
+        body={"clientRequestId": str(uuid4())},
+    ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/milestones"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
     Endpoint(

@@ -1,4 +1,4 @@
-"""HTTP contract for M4-B Activity and in-app Notifications."""
+"""HTTP contract for M4-B Activity, Notifications, and partner nudges."""
 
 from __future__ import annotations
 
@@ -7,11 +7,13 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response
+from fastapi import status as http_status
+from pydantic import ConfigDict
 
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.engagement import service
+from sidebyside.engagement import service, thinking
 from sidebyside.engagement.models import (
     Activity,
     ActivityKind,
@@ -64,6 +66,16 @@ class NotificationUnreadCount(ApiModel):
 class NotificationsReadAllResult(ApiModel):
     read_through: datetime
     updated: int
+
+
+class ThinkingOfYouCreate(ApiModel):
+    model_config = ConfigDict(extra="forbid")
+
+    client_request_id: UUID
+
+
+class ThinkingOfYouAccepted(ApiModel):
+    client_request_id: UUID
 
 
 @router.get(
@@ -178,6 +190,29 @@ def mark_all_notifications_read(
         read_through=result.read_through,
         updated=result.updated,
     )
+
+
+@router.post(
+    "/spaces/{spaceId}/thinking-of-you",
+    response_model=ThinkingOfYouAccepted,
+    status_code=http_status.HTTP_202_ACCEPTED,
+    operation_id="sendThinkingOfYou",
+    responses=problem_responses(401, 404, 422, 429),
+    tags=["notifications"],
+)
+def send_thinking_of_you(
+    authorization: Authorization,
+    session: DbSession,
+    response: Response,
+    body: ThinkingOfYouCreate,
+) -> ThinkingOfYouAccepted:
+    request = thinking.send(
+        session,
+        authorization,
+        client_request_id=body.client_request_id,
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    return ThinkingOfYouAccepted(client_request_id=request.client_request_id)
 
 
 def _activity_item(item: Activity) -> ActivityItem:

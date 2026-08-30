@@ -1,4 +1,4 @@
-"""Minimized M4-B Activity and in-app Notification projections."""
+"""Minimized M4-B Activity, Notification, signal, and push metadata."""
 
 from __future__ import annotations
 
@@ -11,9 +11,11 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
@@ -37,6 +39,7 @@ class ActivityKind(StrEnum):
 
 class NotificationKind(StrEnum):
     COMMENT_CREATED = "COMMENT_CREATED"
+    THINKING_OF_YOU = "THINKING_OF_YOU"
 
 
 class EngagementTarget(StrEnum):
@@ -50,9 +53,18 @@ class EngagementTarget(StrEnum):
     COLLECTION = "COLLECTION"
 
 
+class PushDeliveryStatus(StrEnum):
+    PENDING = "PENDING"
+    RETRYING = "RETRYING"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    UNAVAILABLE = "UNAVAILABLE"
+
+
 _ACTIVITY_KIND_VALUES = ", ".join(f"'{value.value}'" for value in ActivityKind)
 _NOTIFICATION_KIND_VALUES = ", ".join(f"'{value.value}'" for value in NotificationKind)
 _TARGET_VALUES = ", ".join(f"'{value.value}'" for value in EngagementTarget)
+_PUSH_STATUS_VALUES = ", ".join(f"'{value.value}'" for value in PushDeliveryStatus)
 
 
 class Activity(IdMixin, Base):
@@ -154,4 +166,127 @@ class Notification(IdMixin, Base):
             "created_at",
             postgresql_where=read_at.is_(None),
         ),
+    )
+
+
+class ThinkingOfYouRequest(IdMixin, Base):
+    """Technical idempotency/cooldown receipt for a content-free partner nudge."""
+
+    __tablename__ = "thinking_of_you_requests"
+
+    space_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("spaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sender_account_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    recipient_account_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    client_request_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
+    source_event_id: Mapped[UUID] = mapped_column(postgresql.UUID(as_uuid=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "sender_account_id <> recipient_account_id",
+            name="thinking_sender_ne_recipient",
+        ),
+        UniqueConstraint(
+            "source_event_id",
+            name="uq_thinking_of_you_requests_source_event_id",
+        ),
+        UniqueConstraint(
+            "space_id",
+            "sender_account_id",
+            "client_request_id",
+            name="uq_thinking_requests_sender_space_client",
+        ),
+        Index(
+            "ix_thinking_requests_sender_space_created",
+            "sender_account_id",
+            "space_id",
+            "created_at",
+        ),
+    )
+
+
+class PushEndpoint(IdMixin, Base):
+    """Security-sensitive technical endpoint owned by one Account."""
+
+    __tablename__ = "push_endpoints"
+
+    account_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    endpoint_value: Mapped[str] = mapped_column(String(2048), nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint(
+            "account_id",
+            "provider_key",
+            "fingerprint",
+            name="uq_push_endpoints_account_provider_fingerprint",
+        ),
+        Index("ix_push_endpoints_account_active", "account_id", "disabled_at"),
+    )
+
+
+class PushDelivery(IdMixin, Base):
+    """Provider-neutral delivery state with no relationship plaintext."""
+
+    __tablename__ = "push_deliveries"
+
+    notification_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("notifications.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    push_endpoint_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("push_endpoints.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default=PushDeliveryStatus.PENDING.value
+    )
+    attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    last_error_code: Mapped[str | None] = mapped_column(String(64))
+    provider_message_id: Mapped[str | None] = mapped_column(String(256))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        CheckConstraint(
+            f"status IN ({_PUSH_STATUS_VALUES})",
+            name="push_delivery_status_allowed",
+        ),
+        CheckConstraint("attempts >= 0", name="push_delivery_attempts_non_negative"),
+        UniqueConstraint(
+            "notification_id",
+            "push_endpoint_id",
+            name="uq_push_deliveries_notification_endpoint",
+        ),
+        Index("ix_push_deliveries_status_created", "status", "created_at"),
     )
