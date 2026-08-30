@@ -6,12 +6,12 @@ describe('Brand', () => {
   it('renders an accessible product link with a decorative mark', () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
-        <Brand to="/story" ariaLabel="SideBySide – zur Story" />
+        <Brand to="/story" ariaLabel="Open SideBySide Story" />
       </MemoryRouter>,
     );
 
     expect(html).toContain('href="/story"');
-    expect(html).toContain('aria-label="SideBySide – zur Story"');
+    expect(html).toContain('aria-label="Open SideBySide Story"');
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('<svg');
     expect(html).toContain('SideBySide');
