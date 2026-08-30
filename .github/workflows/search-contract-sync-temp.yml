@@ -1,0 +1,50 @@
+name: Temporary Search Contract Sync
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref == 'feat/274-m4a-search-foundation'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/274-m4a-search-foundation
+          fetch-depth: 1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: 3.13.7
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Generate authoritative OpenAPI contract
+        working-directory: backend
+        env:
+          SBS_ENVIRONMENT: test
+        run: |
+          python -m pip install 'uv==0.12.5'
+          uv sync --frozen
+          uv run --frozen python scripts/openapi_contract.py write
+
+      - name: Regenerate TypeScript and Kotlin clients
+        run: tools/openapi/generate.sh
+
+      - name: Commit generator output to the feature branch
+        run: |
+          git add -A backend/openapi.json web/src/api/generated android/api/generated
+          if git diff --cached --quiet; then
+            echo 'Generator output is already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(api): synchronize Search contract clients (#274)'
+          git push origin HEAD:feat/274-m4a-search-foundation
