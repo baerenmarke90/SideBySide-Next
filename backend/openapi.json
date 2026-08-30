@@ -4047,6 +4047,133 @@
         "title": "ResourceCapabilities",
         "type": "object"
       },
+      "SearchKind": {
+        "enum": [
+          "MEMORY",
+          "HEART_MOMENT",
+          "MILESTONE",
+          "WISH",
+          "PLAN",
+          "PLACE",
+          "CHAPTER",
+          "COLLECTION",
+          "COLLECTION_ITEM",
+          "PRIVATE_NOTE",
+          "GIFT_IDEA",
+          "PRIVATE_COLLECTION",
+          "PRIVATE_COLLECTION_ITEM"
+        ],
+        "title": "SearchKind",
+        "type": "string"
+      },
+      "SearchPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nextcursor"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "title": "SearchPage",
+        "type": "object"
+      },
+      "SearchResult": {
+        "properties": {
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "occurredOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurredon"
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parentid"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/SearchScope"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SearchKind"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "parentId",
+          "scope",
+          "title",
+          "excerpt",
+          "occurredOn"
+        ],
+        "title": "SearchResult",
+        "type": "object"
+      },
+      "SearchScope": {
+        "enum": [
+          "SHARED",
+          "PRIVATE"
+        ],
+        "title": "SearchScope",
+        "type": "string"
+      },
       "SessionView": {
         "properties": {
           "account": {
@@ -16205,6 +16332,135 @@
         "summary": "Update Related Person",
         "tags": [
           "people"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/search": {
+      "get": {
+        "description": "Search shared Space content plus the caller's own private content.",
+        "operationId": "searchSpaceContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/SearchKind"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request is syntactically valid but cannot be processed in this form."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Search Space Content",
+        "tags": [
+          "search"
         ]
       }
     },
