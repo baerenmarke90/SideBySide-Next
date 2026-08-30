@@ -1,0 +1,126 @@
+.memory-product-page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.memory-detail-card {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.memory-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.memory-meta-grid > div {
+  border-radius: var(--radius-medium);
+  padding: var(--space-4);
+  background: var(--color-surface-subtle);
+}
+
+.memory-meta-grid dt {
+  margin-bottom: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.memory-meta-grid dd {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 650;
+}
+
+.memory-detail-body {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.memory-section-head {
+  margin-bottom: var(--space-4);
+}
+
+.memory-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-4);
+}
+
+.memory-gallery .story-media-preview,
+.memory-gallery .story-media-skeleton,
+.memory-gallery .story-media-placeholder {
+  width: 100%;
+  min-height: 12rem;
+  margin: 0;
+  border-radius: var(--radius-large);
+  object-fit: cover;
+}
+
+.memory-danger-zone {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-6);
+}
+
+.memory-delete-confirmation {
+  display: grid;
+  gap: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  padding: var(--space-4);
+  background: var(--color-surface-subtle);
+}
+
+.memory-delete-confirmation h2 {
+  margin-bottom: var(--space-2);
+  font-size: 1.05rem;
+}
+
+.memory-delete-confirmation p {
+  margin-bottom: 0;
+  color: var(--color-text-secondary);
+}
+
+.memory-actions,
+.story-card-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.story-card-footer-actions {
+  justify-content: flex-end;
+}
+
+.story-memory-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-brand-strong);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .memory-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memory-actions > button {
+    width: 100%;
+  }
+
+  .story-card-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .story-card-footer-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

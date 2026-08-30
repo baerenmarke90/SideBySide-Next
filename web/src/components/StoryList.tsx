@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom';
 import type { StoryItem } from '../api/generated/models/StoryItem';
+import { memoryDetailPath } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { MemoryPreview } from './MemoryPreview';
 import {
@@ -83,11 +85,21 @@ export function StoryList({
                       <span>
                         {t('story.byAuthor', { author: presentation.author })}
                       </span>
-                      {presentation.mediaLabel && (
-                        <span className="media-label">
-                          ▧ {presentation.mediaLabel}
-                        </span>
-                      )}
+                      <div className="story-card-footer-actions">
+                        {presentation.mediaLabel && (
+                          <span className="media-label">
+                            ▧ {presentation.mediaLabel}
+                          </span>
+                        )}
+                        {item.kind === 'MEMORY' ? (
+                          <Link
+                            className="story-memory-link"
+                            to={memoryDetailPath(item.memory.id)}
+                          >
+                            {t('memoryProduct.open')}
+                          </Link>
+                        ) : null}
+                      </div>
                     </div>
                   </article>
                 </li>
