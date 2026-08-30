@@ -23,7 +23,6 @@ from sidebyside.api.v1 import (
     invitations,
     memories,
     milestones,
-    notifications,
     people,
     place_relations,
     places,
@@ -50,7 +49,6 @@ router.include_router(story.router)
 router.include_router(search.router)
 router.include_router(dashboard.router)
 router.include_router(engagement.router)
-router.include_router(notifications.router)
 router.include_router(memories.router)
 router.include_router(milestones.router)
 router.include_router(heart_moments.router)
