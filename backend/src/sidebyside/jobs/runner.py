@@ -18,6 +18,7 @@ from types import FrameType
 
 from sidebyside.attachments import cleanup as media_cleanup
 from sidebyside.db.session import unit_of_work
+from sidebyside.engagement import push as push_delivery
 from sidebyside.engagement import service as engagement_service
 from sidebyside.jobs import maintenance
 from sidebyside.jobs.worker import run_once
@@ -77,6 +78,7 @@ def main() -> None:
 
     maintenance.register_handlers()
     media_cleanup.register_handlers()
+    push_delivery.register_handlers()
     _ensure_maintenance()
     last_checked = time.monotonic()
 
