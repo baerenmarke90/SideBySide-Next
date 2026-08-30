@@ -40,6 +40,7 @@ from sidebyside.outbox.models import OutboxEvent
 from sidebyside.places.models import Place
 from sidebyside.plans.models import Plan
 from sidebyside.relationship.models import Membership, MembershipStatus
+from sidebyside.reminders import delivery as reminder_delivery
 from sidebyside.wishes.models import Wish
 
 DEFAULT_LIMIT = 25
@@ -123,6 +124,11 @@ def project_event(session: Session, event: OutboxEvent) -> None:
 
     if event_type is EventType.PARTNER_THINKING_OF_YOU:
         thinking.project_notification(session, event)
+        push.ensure_deliveries_for_source_event(session, event.id)
+        return
+
+    if event_type is EventType.REMINDER_DUE:
+        reminder_delivery.project_notification(session, event)
         push.ensure_deliveries_for_source_event(session, event.id)
         return
 

@@ -40,6 +40,7 @@ class ActivityKind(StrEnum):
 class NotificationKind(StrEnum):
     COMMENT_CREATED = "COMMENT_CREATED"
     THINKING_OF_YOU = "THINKING_OF_YOU"
+    REMINDER_DUE = "REMINDER_DUE"
 
 
 class EngagementTarget(StrEnum):
