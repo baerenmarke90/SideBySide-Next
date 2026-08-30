@@ -139,10 +139,14 @@ export function MilestoneProductPage({
       return { previous };
     },
     onError: (_error, _variables, context) => {
-      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      if (context?.previous)
+        queryClient.setQueryData(queryKey, context.previous);
     },
     onSuccess: async (milestone) => {
-      queryClient.setQueryData(queryKey, { value: milestone, source: 'network' });
+      queryClient.setQueryData(queryKey, {
+        value: milestone,
+        source: 'network',
+      });
       await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
       await queryClient.invalidateQueries({ queryKey });
       navigate(milestoneDetailPath(milestone.id), { replace: true });
@@ -200,14 +204,20 @@ export function MilestoneProductPage({
           title={t('milestoneProduct.createHeading')}
           description={t('milestoneProduct.createIntro')}
         />
-        <section className="form-card product-sheet" aria-labelledby="milestone-create-heading">
+        <section
+          className="form-card product-sheet"
+          aria-labelledby="milestone-create-heading"
+        >
           <h2 id="milestone-create-heading" className="sr-only">
             {t('milestoneProduct.createHeading')}
           </h2>
           <form className="form-grid" onSubmit={submitCreate}>
             <MilestoneFields />
             <div className="form-actions">
-              <Link className="button-link secondary-link" to={appRoutePath('story')}>
+              <Link
+                className="button-link secondary-link"
+                to={appRoutePath('story')}
+              >
                 {t('common.cancel')}
               </Link>
               <button type="submit" disabled={createMutation.isPending}>
@@ -217,7 +227,9 @@ export function MilestoneProductPage({
               </button>
             </div>
           </form>
-          {createMutation.error ? <ProblemState error={createMutation.error} /> : null}
+          {createMutation.error ? (
+            <ProblemState error={createMutation.error} />
+          ) : null}
         </section>
       </div>
     );
@@ -254,7 +266,10 @@ export function MilestoneProductPage({
         <div className="page">
           <PageHeader
             before={
-              <Link className="back-link" to={milestoneDetailPath(milestone.id)}>
+              <Link
+                className="back-link"
+                to={milestoneDetailPath(milestone.id)}
+              >
                 {t('milestoneProduct.backToMilestone')}
               </Link>
             }
@@ -298,7 +313,10 @@ export function MilestoneProductPage({
       <div className="page create-page product-editor-page">
         <PageHeader
           before={
-            <Link className="back-link" to={milestoneDetailPath(milestone.id)}>
+            <Link
+              className="back-link"
+              to={milestoneDetailPath(milestone.id)}
+            >
               {t('milestoneProduct.backToMilestone')}
             </Link>
           }
@@ -306,14 +324,20 @@ export function MilestoneProductPage({
           title={t('milestoneProduct.editHeading')}
           description={t('milestoneProduct.editIntro')}
         />
-        <section className="form-card product-sheet" aria-labelledby="milestone-edit-heading">
+        <section
+          className="form-card product-sheet"
+          aria-labelledby="milestone-edit-heading"
+        >
           <h2 id="milestone-edit-heading" className="sr-only">
             {t('milestoneProduct.formAria')}
           </h2>
           <form className="form-grid" onSubmit={submitEdit}>
             <MilestoneFields milestone={milestone} />
             <div className="form-actions">
-              <Link className="button-link secondary-link" to={milestoneDetailPath(milestone.id)}>
+              <Link
+                className="button-link secondary-link"
+                to={milestoneDetailPath(milestone.id)}
+              >
                 {t('common.cancel')}
               </Link>
               <button type="submit" disabled={updateMutation.isPending}>
@@ -323,7 +347,9 @@ export function MilestoneProductPage({
               </button>
             </div>
           </form>
-          {updateMutation.error ? <ProblemState error={updateMutation.error} /> : null}
+          {updateMutation.error ? (
+            <ProblemState error={updateMutation.error} />
+          ) : null}
         </section>
       </div>
     );
@@ -347,7 +373,10 @@ export function MilestoneProductPage({
         description={formatDateOnly(milestone.happenedOn)}
         action={
           milestone.capabilities.canEdit && !offline ? (
-            <Link className="button-link secondary-link" to={milestoneEditPath(milestone.id)}>
+            <Link
+              className="button-link secondary-link"
+              to={milestoneEditPath(milestone.id)}
+            >
               {t('milestoneProduct.edit')}
             </Link>
           ) : undefined
@@ -385,9 +414,16 @@ export function MilestoneProductPage({
         />
 
         {milestone.capabilities.canDelete && !offline ? (
-          <section className="memory-danger-zone" aria-label={t('milestoneProduct.delete')}>
+          <section
+            className="memory-danger-zone"
+            aria-label={t('milestoneProduct.delete')}
+          >
             {!confirmDelete ? (
-              <button type="button" className="secondary" onClick={() => setConfirmDelete(true)}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setConfirmDelete(true)}
+              >
                 {t('milestoneProduct.delete')}
               </button>
             ) : (
@@ -417,7 +453,9 @@ export function MilestoneProductPage({
                 </div>
               </div>
             )}
-            {deleteMutation.error ? <ProblemState error={deleteMutation.error} /> : null}
+            {deleteMutation.error ? (
+              <ProblemState error={deleteMutation.error} />
+            ) : null}
           </section>
         ) : null}
       </article>
@@ -430,7 +468,9 @@ function MilestoneFields({ milestone }: { milestone?: MilestoneDetail }) {
   return (
     <>
       <div className="field-group">
-        <label htmlFor="milestone-title">{t('milestoneProduct.titleLabel')}</label>
+        <label htmlFor="milestone-title">
+          {t('milestoneProduct.titleLabel')}
+        </label>
         <input
           id="milestone-title"
           name="title"
@@ -441,7 +481,9 @@ function MilestoneFields({ milestone }: { milestone?: MilestoneDetail }) {
         />
       </div>
       <div className="field-group">
-        <label htmlFor="milestone-body">{t('milestoneProduct.bodyLabel')}</label>
+        <label htmlFor="milestone-body">
+          {t('milestoneProduct.bodyLabel')}
+        </label>
         <textarea
           id="milestone-body"
           name="body"
@@ -459,7 +501,9 @@ function MilestoneFields({ milestone }: { milestone?: MilestoneDetail }) {
           name="happenedOn"
           type="date"
           required
-          defaultValue={milestone ? dateInputValue(milestone.happenedOn) : undefined}
+          defaultValue={
+            milestone ? dateInputValue(milestone.happenedOn) : undefined
+          }
         />
       </div>
     </>
