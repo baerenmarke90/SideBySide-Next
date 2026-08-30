@@ -28,10 +28,12 @@ type PendingAction =
 export function IdentityEntry({
   apiBaseUrl,
   entryToken,
+  onEntryTokenCleared,
   onSession,
 }: {
   apiBaseUrl: string;
   entryToken: SensitiveEntryToken | null;
+  onEntryTokenCleared: () => void;
   onSession: (session: SessionView) => void;
 }) {
   const { t } = useTranslation();
@@ -107,6 +109,12 @@ export function IdentityEntry({
     setActiveError(null);
     setValidationError(null);
     setMode(nextMode);
+  }
+
+  function discardEntryToken() {
+    setActiveError(null);
+    setVerificationDismissed(true);
+    onEntryTokenCleared();
   }
 
   function requireMatchingPasswords(data: FormData): string | null {
@@ -220,15 +228,21 @@ export function IdentityEntry({
       <div className="login-panel">
         <section className="login-card" aria-label={t('identity.entryAria')}>
           {entryToken?.kind === 'magicLink' ? (
-            <UiState
-              kind={activeError ? 'error' : 'loading'}
-              title={
-                activeError
-                  ? t('identity.magicLinkFailedTitle')
-                  : t('identity.magicLinkOpening')
-              }
-              body={activeError ? t('identity.magicLinkFailedBody') : undefined}
-            />
+            activeError ? (
+              <>
+                <UiState
+                  kind="error"
+                  title={t('identity.magicLinkFailedTitle')}
+                  body={t('identity.magicLinkFailedBody')}
+                />
+                <BackToSignIn onClick={discardEntryToken} />
+              </>
+            ) : (
+              <UiState
+                kind="loading"
+                title={t('identity.magicLinkOpening')}
+              />
+            )
           ) : showsVerification ? (
             verificationSucceeded ? (
               <>
@@ -239,24 +253,23 @@ export function IdentityEntry({
                   <strong>{t('identity.verificationCompleteTitle')}</strong>
                   <span>{t('identity.verificationCompleteBody')}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setVerificationDismissed(true)}
-                >
+                <button type="button" onClick={discardEntryToken}>
                   {t('identity.backToSignIn')}
                 </button>
               </>
+            ) : activeError ? (
+              <>
+                <UiState
+                  kind="error"
+                  title={t('identity.verificationFailedTitle')}
+                  body={t('identity.verificationFailedBody')}
+                />
+                <BackToSignIn onClick={discardEntryToken} />
+              </>
             ) : (
               <UiState
-                kind={activeError ? 'error' : 'loading'}
-                title={
-                  activeError
-                    ? t('identity.verificationFailedTitle')
-                    : t('identity.verificationOpening')
-                }
-                body={
-                  activeError ? t('identity.verificationFailedBody') : undefined
-                }
+                kind="loading"
+                title={t('identity.verificationOpening')}
               />
             )
           ) : recoveryToken ? (
