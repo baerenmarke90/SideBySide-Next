@@ -35,10 +35,20 @@ describe('SBS-M5-Web-S2-SCOPE', () => {
   });
 
   it('fails closed instead of exposing a cached resource after authorization failures', () => {
-    expect(mayUseOfflineProductCache(new ClientProblemError('offline'))).toBe(true);
-    expect(mayUseOfflineProductCache(new ClientProblemError('server', 503))).toBe(true);
-    expect(mayUseOfflineProductCache(new ClientProblemError('unauthorized', 401))).toBe(false);
-    expect(mayUseOfflineProductCache(new ClientProblemError('permission', 403))).toBe(false);
-    expect(mayUseOfflineProductCache(new ClientProblemError('notFound', 404))).toBe(false);
+    expect(mayUseOfflineProductCache(new ClientProblemError('offline'))).toBe(
+      true,
+    );
+    expect(
+      mayUseOfflineProductCache(new ClientProblemError('server', 503)),
+    ).toBe(true);
+    expect(
+      mayUseOfflineProductCache(new ClientProblemError('unauthorized', 401)),
+    ).toBe(false);
+    expect(
+      mayUseOfflineProductCache(new ClientProblemError('permission', 403)),
+    ).toBe(false);
+    expect(
+      mayUseOfflineProductCache(new ClientProblemError('notFound', 404)),
+    ).toBe(false);
   });
 });
