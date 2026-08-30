@@ -583,7 +583,7 @@ export function App() {
   const queryClient = useQueryClient();
   const [tokens, setTokens] = useState<TokenView | null>(null);
   const [spaceId, setSpaceId] = useState<string | null>(null);
-  const [entryToken] = useState(() =>
+  const [entryToken, setEntryToken] = useState(() =>
     readSensitiveEntryToken(window.location.pathname, window.location.search),
   );
 
@@ -634,6 +634,7 @@ export function App() {
   }, [membershipsQuery.data, tokens]);
 
   function logout() {
+    setEntryToken(null);
     setSpaceId(null);
     setTokens(null);
     queryClient.clear();
@@ -646,7 +647,9 @@ export function App() {
         <IdentityEntry
           apiBaseUrl={config.apiBaseUrl}
           entryToken={entryToken}
+          onEntryTokenCleared={() => setEntryToken(null)}
           onSession={(session) => {
+            setEntryToken(null);
             setSpaceId(null);
             setTokens(session.tokens);
             queryClient.clear();
