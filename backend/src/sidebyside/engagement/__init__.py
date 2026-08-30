@@ -1,1 +1,1 @@
-"""M4-B Activity and Notification projections."""
+"""Shared M4-B Activity and recipient Notification projections."""
