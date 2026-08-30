@@ -65,7 +65,7 @@
   border-top: 1px solid var(--color-border-subtle);
 }
 
-.important-dates-section > .section-head p {
+.important-dates-intro {
   max-width: 60ch;
   margin-bottom: 0;
   color: var(--color-text-secondary);
