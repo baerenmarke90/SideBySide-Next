@@ -308,6 +308,10 @@ def update_reminder(
         description=_normalize_description(description),
     )
     _apply_schedule(reminder, validated_schedule)
+    # Offsets are child rows, but they are part of the versioned Reminder
+    # definition. Touching the parent guarantees an offset-only edit advances
+    # the optimistic-concurrency version as well.
+    reminder.updated_at = clock.now()
     _replace_offsets(session, reminder, normalized_offsets)
     _flush(session)
     return ReminderView(
