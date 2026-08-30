@@ -100,6 +100,17 @@ MILESTONE = {
 COMMENT = {"body": "Matrix Comment"}
 WISH = {"title": "Matrix Wish"}
 PLAN = {"title": "Matrix Plan", "description": "Text"}
+REMINDER = {
+    "title": "Matrix Reminder",
+    "description": "Text",
+    "schedule": {
+        "type": "ANNUAL",
+        "month": 6,
+        "day": 13,
+        "localTime": "09:00:00",
+    },
+    "offsets": [7, 1],
+}
 PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 CHAPTER = {"title": "Matrix Chapter", "description": "Text"}
 COLLECTION = {"title": "Matrix Collection", "icon": "list"}
@@ -268,6 +279,32 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         "POST",
         "/api/v1/spaces/{spaceId}/thinking-of-you",
         body={"clientRequestId": str(uuid4())},
+    ),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/reminders"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/reminders", body=REMINDER),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/reminders/{reminderId}",
+        resource_absence="REMINDER_NOT_FOUND",
+    ),
+    Endpoint(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/reminders/{reminderId}",
+        body=REMINDER,
+        if_match=True,
+        resource_absence="REMINDER_NOT_FOUND",
+    ),
+    Endpoint(
+        "DELETE",
+        "/api/v1/spaces/{spaceId}/reminders/{reminderId}",
+        if_match=True,
+        resource_absence="REMINDER_NOT_FOUND",
+    ),
+    Endpoint(
+        "PUT",
+        "/api/v1/spaces/{spaceId}/reminders/{reminderId}/preference",
+        body={"muted": True},
+        resource_absence="REMINDER_NOT_FOUND",
     ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/milestones"),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/milestones", body=MILESTONE),
@@ -838,6 +875,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
     wish = client.post(f"{base_path}/wishes", json=WISH, headers=headers).json()
     place = client.post(f"{base_path}/places", json=PLACE, headers=headers).json()
     plan = client.post(f"{base_path}/plans", json=PLAN, headers=headers).json()
+    reminder = client.post(f"{base_path}/reminders", json=REMINDER, headers=headers).json()
     chapter = client.post(f"{base_path}/chapters", json=CHAPTER, headers=headers).json()
     collection = client.post(f"{base_path}/collections", json=COLLECTION, headers=headers).json()
     collection_item = client.post(
@@ -882,6 +920,7 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "commentId": comment["id"],
             "wishId": wish["id"],
             "planId": plan["id"],
+            "reminderId": reminder["id"],
             "placeId": place["id"],
             "chapterId": chapter["id"],
             "collectionId": collection["id"],
@@ -1023,6 +1062,7 @@ def _resource_placeholders(endpoint: Endpoint) -> tuple[str, ...]:
             "commentId",
             "wishId",
             "planId",
+            "reminderId",
             "placeId",
             "chapterId",
             "collectionId",

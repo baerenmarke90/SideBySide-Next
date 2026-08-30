@@ -20,6 +20,7 @@ export * from './PlacesApi';
 export * from './PlansApi';
 export * from './PrivateAreaApi';
 export * from './ProfilesApi';
+export * from './RemindersApi';
 export * from './SearchApi';
 export * from './SpacesApi';
 export * from './StoryApi';
