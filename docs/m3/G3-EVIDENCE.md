@@ -1,16 +1,13 @@
 # M3 G3 Evidence Map
 
-**Status:** M3-S9 evidence index; final G3 decision remains M3-S10  
-**Tracking:** #261  
-**Gate contract:** M3-D24 in `decisions/G3-CLIENT-BOUNDARIES.md`
+**Status:** M3-S9 evidence index; G3 passed in M3-S10  
+**Tracking:** #261, #264  
+**Gate contract:** M3-D24 in `decisions/G3-CLIENT-BOUNDARIES.md`  
+**Final decision:** [`2026-08-30-g3-gate-review.md`](../reviews/2026-08-30-g3-gate-review.md)
 
-This document maps the frozen G3 requirements to executable evidence. It does
-not declare `G3: PASSED`; the dated S10 gate review owns that decision, the
-final `main` SHA, workflow run IDs, and any accepted findings.
+This document maps the frozen G3 requirements to executable evidence. M3-S10 reviewed the final merged S9 tree and the authoritative workflow results and concluded **G3: PASSED** in the dated gate review linked above.
 
-All backend entries below run against the repository's production-like
-FastAPI/PostgreSQL integration stack. Service-level race tests use independent
-PostgreSQL transactions where concurrency is the property under test.
+All backend entries below run against the repository's production-like FastAPI/PostgreSQL integration stack. Service-level race tests use independent PostgreSQL transactions where concurrency is the property under test.
 
 ## 1. Mandatory G3 HTTP/PostgreSQL flows
 
@@ -143,9 +140,17 @@ client product scope and no new production dependency.
 OpenAPI and generated TypeScript/Kotlin clients remain governed by the existing
 canonical CI/generation gates. S9 introduces no intentional API surface change.
 
-## 4. S10 handoff
+## 4. S10 result
 
-S10 must use the final merged `main` state, rerun/confirm the authoritative
-workflows, inspect open Security/Privacy/Tenant findings, and write a new dated
-review under `docs/reviews/`. Only that review may conclude with `G3: PASSED` or
-`G3: FAILED`.
+M3-S10 reviewed the merged S9 `main` state at
+`fdaa4402ba59bc3532fedab44d5e64fdf68c2727`, whose tree is identical to the
+validated PR #263 head tree. The authoritative S9 workflow runs all completed
+successfully: CI `33303226921`, Reuse Review `33303227006`, Self-Hosted
+Deployment Guard `33303226982`, CodeQL SAST `33303226984`, and G2 Client E2E
+regression guard `33303226941`.
+
+The dated immutable decision is
+[`2026-08-30-g3-gate-review.md`](../reviews/2026-08-30-g3-gate-review.md), which
+concludes:
+
+**G3: PASSED**

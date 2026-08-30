@@ -1,19 +1,19 @@
 # M3 Delivery Plan
 
-**Status:** S0 complete; runtime released; S1 through S9 delivered
+**Status:** S0 complete; S1 through S10 delivered; G3 passed
 **As of:** August 30, 2026
 
 ## 1. Gate before runtime
 
-This plan describes the sequence **after runtime release**.
+This plan describes the completed sequence **after runtime release**.
 
-Before the first M3 runtime commit, the current project rule requires:
+Before the first M3 runtime commit, the project rule required:
 
 1. the final G2 review on current `main` to determine `G2: PASSED` (#147),
 2. #146 to synchronize the status sources and release M3,
-3. the concrete runtime PR to address the production OpenAPI contract and Reuse-before-build cleanly.
+3. each concrete runtime PR to address the production OpenAPI contract and Reuse-before-build cleanly.
 
-Items 1 and 2 are satisfied. Item 3 remains a condition **for each runtime PR** and is not discharged by the gate.
+Items 1 and 2 were satisfied before runtime started. Item 3 remained a condition for every runtime PR and was satisfied throughout the delivered S1-S9 sequence.
 
 The domain-level S0 decisions are complete: M3-D01 through M3-D32 are `DECIDED`.
 
@@ -285,30 +285,27 @@ S1-S8 acceptance suites are reused for the remaining G3 evidence instead of
 being duplicated. No production API, Domain model, dependency, service, secret,
 or configuration is added by S9.
 
-S9 establishes the evidence set only. It does **not** decide G3; the final gate
-decision remains S10.
+S9 establishes the evidence set only; the final gate decision is recorded by S10.
 
-## 13. S10 – G3 Review
+## 13. S10 – G3 Review – delivered
 
-The final review is created as a new dated snapshot:
+M3-S10 / Issue #264 created the immutable dated review:
 
-```text
-docs/reviews/YYYY-MM-DD-g3-gate-review.md
-```
+[`../reviews/2026-08-30-g3-gate-review.md`](../reviews/2026-08-30-g3-gate-review.md)
 
-It references the final `main` SHA, CI runs, the five E2E flows, and open findings and ends with:
+The review freezes the post-S9 `main` state at
+`fdaa4402ba59bc3532fedab44d5e64fdf68c2727`, verifies the exact successful S9
+workflow runs, evaluates all five mandatory M3-D24 flows and the binding
+Cross-Tenant/`OWNER_ONLY`/race/delete/redaction/contract evidence, and audits the
+current open findings against the G3 blocker definition.
+
+The review concludes:
 
 ```text
 G3: PASSED
 ```
 
-or
-
-```text
-G3: NOT PASSED
-```
-
-G3 does not require complete Web/Android reference flows. Systematic client parity, Accessibility, Read Cache, Export/Import, and Performance remain M5/G4.
+G3 does not require complete Web/Android product flows. Systematic client parity, Accessibility, Read Cache, Export/Import, Deep Links, and Performance remain M5/G4.
 
 ## 14. Dependency graph
 
@@ -342,7 +339,7 @@ S2 + S3 + S4 + S5 + S6 + S7 + S8
            S9 E2E
               |
               v
-           S10 G3
+           S10 G3 ✓
 ```
 
-S3/S6/S7 may be partially parallelized after runtime release as long as their schema/migrations remain cleanly coordinated.
+The M3 delivery chain is complete and G3 has passed. The next roadmap milestone is M4 — Engage. This delivery plan does not start or implement M4.
