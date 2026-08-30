@@ -29,7 +29,8 @@ export function birthdayFromInput(input: BirthdayInput): Date | null {
   const month = Number(input.monthValue);
   const day = Number(input.dayValue);
   if (!Number.isInteger(month) || month < 1 || month > 12) return null;
-  if (!Number.isInteger(day) || day < 1 || day > daysInMonth(month)) return null;
+  if (!Number.isInteger(day) || day < 1 || day > daysInMonth(month))
+    return null;
 
   // This year exists only in the outgoing Date transport value. The server is
   // authoritative for canonicalizing unknown-year birthdays and never exposes
