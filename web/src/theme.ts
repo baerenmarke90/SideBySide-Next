@@ -9,6 +9,8 @@ const THEME_COLOR: Record<ResolvedTheme, string> = {
   dark: '#1c1525',
 };
 
+let activeThemePreference: ThemePreference | null = null;
+
 export function parseThemePreference(
   value: string | null | undefined,
 ): ThemePreference {
@@ -27,13 +29,18 @@ export function resolveTheme(
 
 export function readThemePreference(): ThemePreference {
   try {
-    return parseThemePreference(window.localStorage.getItem(THEME_STORAGE_KEY));
+    const preference = parseThemePreference(
+      window.localStorage.getItem(THEME_STORAGE_KEY),
+    );
+    activeThemePreference = preference;
+    return preference;
   } catch {
-    return 'system';
+    return activeThemePreference ?? 'system';
   }
 }
 
 export function storeThemePreference(preference: ThemePreference): void {
+  activeThemePreference = preference;
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, preference);
   } catch {
