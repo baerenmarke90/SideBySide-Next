@@ -116,7 +116,10 @@ export function StoryList({
                             ▧ {presentation.mediaLabel}
                           </span>
                         ) : null}
-                        <Link className="story-memory-link" to={productLink.path}>
+                        <Link
+                          className="story-memory-link"
+                          to={productLink.path}
+                        >
                           {t(productLink.labelKey)}
                         </Link>
                       </div>
