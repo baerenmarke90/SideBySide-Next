@@ -2,9 +2,10 @@ name: M3 S8 Status Sync
 
 on:
   push:
-    branches: [feat/259-m3-s8-private-collections]
+    branches:
+      - "feat/259-m3-s8-private-collections"
     paths:
-      - .github/workflows/m3-s8-status.yml
+      - ".github/workflows/m3-s8-status.yml"
 
 permissions:
   contents: write
@@ -77,21 +78,23 @@ jobs:
               "**Status:** S0 complete; runtime released; S1 through S8 delivered",
               "Delivery Plan top status",
           )
-          s8 = """## 11. S8 – PrivateCollection – delivered
-
-Scope:
-
-- PrivateCollection root with id/space/owner/version;
-- Items with Parent FK, id/version/position;
-- authorize owner/space exclusively through Parent;
-- owner-only Reorder/Completion;
-- Parent Delete cascades only Items;
-- partner/Cross-Space negative tests.
-
-Shared Collection and PrivateCollection share neither a table nor an unsafe query path.
-
-Implemented in Issue #259 / PR #260 with dedicated owner-only root and Item persistence, ProtectedPayload-backed title/icon content, and server-derived Space/owner/privacy. Item rows deliberately duplicate neither `spaceId` nor `ownerId`; every child operation authorizes through the owner-scoped Parent. Root `version` protects Item-set/order structure, Item `version` protects title/completion, Create appends, Delete compacts positions, and exact-set Reorder is atomic under the root version using the proven collision-safe PostgreSQL strategy. Partner, Cross-Space, unknown-Parent, stale-version, cascade, event-redaction, and real PostgreSQL race coverage is included. The canonical OpenAPI snapshot and generated TypeScript/Kotlin clients are synchronized.
-"""
+          s8 = "\n".join([
+              "## 11. S8 – PrivateCollection – delivered",
+              "",
+              "Scope:",
+              "",
+              "- PrivateCollection root with id/space/owner/version;",
+              "- Items with Parent FK, id/version/position;",
+              "- authorize owner/space exclusively through Parent;",
+              "- owner-only Reorder/Completion;",
+              "- Parent Delete cascades only Items;",
+              "- partner/Cross-Space negative tests.",
+              "",
+              "Shared Collection and PrivateCollection share neither a table nor an unsafe query path.",
+              "",
+              "Implemented in Issue #259 / PR #260 with dedicated owner-only root and Item persistence, ProtectedPayload-backed title/icon content, and server-derived Space/owner/privacy. Item rows deliberately duplicate neither `spaceId` nor `ownerId`; every child operation authorizes through the owner-scoped Parent. Root `version` protects Item-set/order structure, Item `version` protects title/completion, Create appends, Delete compacts positions, and exact-set Reorder is atomic under the root version using the proven collision-safe PostgreSQL strategy. Partner, Cross-Space, unknown-Parent, stale-version, cascade, event-redaction, and real PostgreSQL race coverage is included. The canonical OpenAPI snapshot and generated TypeScript/Kotlin clients are synchronized.",
+              "",
+          ])
           delivery = replace_once(
               delivery,
               r"## 11\. S8 – PrivateCollection\n.*?(?=\n## 12\.)",
