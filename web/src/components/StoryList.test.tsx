@@ -47,7 +47,7 @@ describe('StoryList', () => {
       effectiveDate: new Date('2026-08-26T00:00:00Z'),
       heartMoment: {
         id: 'heart-1',
-        text: 'Danke für heute.',
+        text: 'Thanks for today.',
         emotion: 'GRATEFUL',
         author: { id: 'author-1', displayName: 'A' },
         attachment: null,
@@ -58,7 +58,7 @@ describe('StoryList', () => {
       effectiveDate: new Date('2026-08-25T00:00:00Z'),
       milestone: {
         id: 'milestone-1',
-        title: 'Erste Wohnung',
+        title: 'First apartment',
         body: null,
         author: { id: 'author-2', displayName: 'B' },
       },
