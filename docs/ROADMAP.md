@@ -5,13 +5,13 @@
 **As of:** August 30, 2026  
 **Time model:** phases and Release Gates, no committed calendar dates
 
-This roadmap translates the binding product specification into an understandable sequence. It shows goals, dependencies, and release points. The actual implementation state is tracked in [Implementation Status](./IMPLEMENTATION-STATUS.md); rules for living status sources are defined in [Status Sources and Drift Rules](./STATUS-SOURCES.md); the refined M2 boundaries are documented in [M2 Project Control](./m2/PROJECT-CONTROL.md), and M3 readiness/delivery in the [M3 Technical Readiness Package](./m3/README.md).
+This roadmap translates the binding product specification into an understandable sequence. It shows goals, dependencies, and release points. The actual implementation state is tracked in [Implementation Status](./IMPLEMENTATION-STATUS.md); rules for living status sources are defined in [Status Sources and Drift Rules](./STATUS-SOURCES.md); the refined M2 boundaries are documented in [M2 Project Control](./m2/PROJECT-CONTROL.md), M3 readiness/delivery in the [M3 Technical Readiness Package](./m3/README.md), and completed M4 runtime evidence in the [M4 Evidence Map](./m4/M4-EVIDENCE.md).
 
 ## Roadmap at a glance
 
 ![Roadmap from M0 Foundation through M9 Release and the strategic E2EE track](./assets/roadmap/roadmap-overview.svg)
 
-**Current:** M0, M1, M2, and M3 are complete for their intended scope. **G1, G2, and G3 have passed.** The next roadmap milestone is **M4 — Engage**, beginning with the defined M4-A boundary for Search + Dashboard Read Models. The binding current gate decision is the [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md). M3-S10 does not start M4 implementation.
+**Current:** M0 through M4 are complete for their intended scope. **G1, G2, and G3 have passed.** **M5 — Client Completion & Parity** is the active roadmap milestone; G4 has not yet been evaluated or passed. Completed M4 runtime and integrated evidence are indexed in the [M4 Evidence Map](./m4/M4-EVIDENCE.md). The binding current gate decision remains the [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md).
 
 The earlier Pre-Exposure hardening items #59 and #60 and Repository Hardening #25 are complete. The active `main` ruleset enforces Pull Requests, Merge Commits, and the defined required checks.
 
@@ -25,6 +25,7 @@ The earlier Pre-Exposure hardening items #59 and #60 and Repository Hardening #2
 | [M2 Project Control](./m2/PROJECT-CONTROL.md) | Which M2/M5 boundaries and G2 criteria applied? |
 | [M3 Technical Readiness Package](./m3/README.md) | Which M3 decisions, delivery rules, and runtime results apply? |
 | [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md) | Which executable HTTP/PostgreSQL/race tests constitute the G3 evidence set? |
+| [M4 Evidence Map](./m4/M4-EVIDENCE.md) | Which M4-A/B/C runtime slices, migrations, privacy/time/idempotency tests, and generated contracts complete M4? |
 | [Final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) | current gate decision |
 | [Final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) | historical G2 gate decision |
 | older dated reviews | historical review snapshots that are never rewritten |
@@ -65,6 +66,10 @@ Future backlog: #88 retains video uploads and poster frames for later reevaluati
 The [M3 Technical Readiness Package](./m3/README.md) records the completed M3 decisions and delivery. M3-D01 through M3-D32 are `DECIDED`, runtime slices S1 through S9 are delivered, and M3-S10 completed the formal gate review.
 
 Delivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, **M3-S4 typed Content Relations**, **M3-S5 Chapter**, **M3-S6 Shared Collections**, **M3-S7 PrivateNote + GiftIdea**, **M3-S8 PrivateCollection**, **M3-S9 Integrated M3 backend/API evidence**, and **M3-S10 G3 Review**. The executable S9 evidence set is indexed in [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md); the immutable [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) concludes **G3: PASSED**.
+
+### M4 — Engage: complete
+
+M4-A Search/Dashboard, M4-B Activity/Notifications/Thinking-of-you/PushDelivery, and M4-C Reminders/Rules/occurrence planning are delivered. The final migration chain is `0028 -> 0029 -> 0030 -> 0031 -> 0032` with one Alembic head. The integrated Privacy, Tenant, time/DST, retry/idempotency, OpenAPI and generated-client evidence is indexed in the [M4 Evidence Map](./m4/M4-EVIDENCE.md). M4 completion does not imply G4: full Web/Android productization and parity remain M5.
 
 ## Milestones
 
@@ -217,7 +222,7 @@ Complete Web/Android productization, systematic parity, Accessibility, Read Cach
 
 ## Deliberately not pulled forward
 
-- global full-text Search before the M4 Privacy/index strategy is resolved,
+- semantic/vector/AI Search before a separately approved later capability and Privacy model,
 - Shopping, Event Discovery, and Provider integrations before a stable Core,
 - Offline Write Sync in the MVP,
 - public Share Links,
@@ -252,6 +257,7 @@ Complete Web/Android productization, systematic parity, Accessibility, Read Cach
 - [M3 Decision Log](./m3/DECISION-LOG.md)
 - [M3 Delivery Plan](./m3/DELIVERY-PLAN.md)
 - [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md)
+- [M4 Evidence Map](./m4/M4-EVIDENCE.md)
 - [Final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md)
 - [Final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md)
 - [Product Specification](../specification/PRODUCT-SPEC.md)

@@ -84,9 +84,10 @@ localized product content.
 </p>
 
 <p align="center">
-  <strong>Current: G3 has passed. M3 is complete; M4 is the next roadmap milestone.</strong><br>
+  <strong>Current: M4 is complete. M5 — Client Completion & Parity is the active roadmap milestone.</strong><br>
   <a href="docs/ROADMAP.md">View roadmap, parallel workstreams, and Release Gates</a> ·
   <a href="docs/IMPLEMENTATION-STATUS.md">Open the actual implementation state</a> ·
+  <a href="docs/m4/M4-EVIDENCE.md">Open M4 completion evidence</a> ·
   <a href="docs/reviews/2026-08-30-g3-gate-review.md">Open the final G3 Gate Review</a>
 </p>
 
