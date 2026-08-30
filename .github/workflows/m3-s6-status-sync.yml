@@ -33,7 +33,7 @@ jobs:
           replace(
               "docs/IMPLEMENTATION-STATUS.md",
               "As of: August 27, 2026  ",
-              "As of: August 30, 2026  ",
+              "As of: August 30, 2026",
           )
           replace(
               "docs/IMPLEMENTATION-STATUS.md",
@@ -46,7 +46,7 @@ jobs:
               "M3-S7 **PrivateNote + GiftIdea** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md): separate owner-only tables/services and CRUD/List under `/spaces/{spaceId}/private/...`, ProtectedPayload content, GiftIdea lifecycle `IDEA | BOUGHT | GIVEN`, Privacy-safe 404 behavior, event/log redaction, and partner-negative coverage. PrivateCollection follows in S8.",
           )
 
-          replace("docs/ROADMAP.md", "**Version:** 1.9  ", "**Version:** 2.0  ")
+          replace("docs/ROADMAP.md", "**Version:** 1.9  ", "**Version:** 2.0")
           replace(
               "docs/ROADMAP.md",
               "**Current:** M0, M1, and M2 are complete for their intended scope. **G1 and G2 have passed. M3 is released for implementation; S1 through S5 are delivered. The next runtime slice is M3-S6 — Shared Collections.** The binding current gate evidence is the [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).",
@@ -66,7 +66,7 @@ jobs:
           replace(
               "docs/m3/DELIVERY-PLAN.md",
               "**Status:** S0 complete; runtime released; S1 through S5 delivered  ",
-              "**Status:** S0 complete; runtime released; S1 through S6 delivered  ",
+              "**Status:** S0 complete; runtime released; S1 through S6 delivered",
           )
           replace(
               "docs/m3/DELIVERY-PLAN.md",
