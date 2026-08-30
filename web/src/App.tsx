@@ -24,6 +24,10 @@ import type { SpaceView } from './api/generated/models/SpaceView';
 import type { StoryPage as StoryPageData } from './api/generated/models/StoryPage';
 import type { TokenView } from './api/generated/models/TokenView';
 import { loadReferenceClientConfig } from './client/config';
+import {
+  readSensitiveEntryToken,
+  stripSensitiveEntryToken,
+} from './client/entryToken';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
 import { normalizeClientError } from './client/problemDetails';
 import {
@@ -34,26 +38,19 @@ import {
 import {
   createReferenceApis,
   loadAuthorizedImage,
-  signIn,
 } from './client/referenceFlow';
 import { appRoutePath, DEFAULT_APP_ROUTE } from './client/routes';
 import { useAttachmentDrafts } from './client/useAttachmentDrafts';
 import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppShell } from './components/AppShell';
 import { Brand } from './components/Brand';
+import { IdentityEntry } from './components/IdentityEntry';
 import { PageHeader } from './components/PageHeader';
 import { ProblemState } from './components/ProblemState';
 import { StoryList } from './components/StoryList';
 import { ThemeControl } from './components/ThemeControl';
 import { UiState } from './components/UiState';
 import { useTranslation } from './i18n';
-
-function readableError(error: unknown, fallback: string): string {
-  if (!(error instanceof Error)) return fallback;
-  if (!error.message || error.message === 'Response returned an error code')
-    return fallback;
-  return error.message;
-}
 
 function SpaceContextGate({
   loading,
@@ -132,87 +129,6 @@ function SpacePicker({
           </fieldset>
         </div>
       </section>
-    </main>
-  );
-}
-
-function LoginScreen({
-  onLogin,
-  pending,
-  error,
-}: {
-  onLogin: (email: string, password: string) => void;
-  pending: boolean;
-  error: unknown;
-}) {
-  const { t } = useTranslation();
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    onLogin(String(data.get('email')), String(data.get('password')));
-  }
-
-  return (
-    <main className="login-shell">
-      <section className="login-intro" aria-labelledby="welcome-heading">
-        <Brand
-          inverse
-          suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
-        />
-        <div className="login-intro-content">
-          <h1 id="welcome-heading">{t('login.introHeading')}</h1>
-          <p>{t('login.introBody')}</p>
-        </div>
-        <div className="entry-illustration" aria-hidden="true">
-          <span className="entry-orbit entry-orbit-large" />
-          <span className="entry-orbit entry-orbit-small" />
-          <span className="entry-illustration-heart">♡</span>
-        </div>
-      </section>
-
-      <div className="login-panel">
-        <section className="login-card" aria-labelledby="login-heading">
-          <div>
-            <p className="eyebrow">{t('login.eyebrow')}</p>
-            <h2 id="login-heading">{t('login.heading')}</h2>
-            <p className="muted">{t('login.body')}</p>
-          </div>
-          <form onSubmit={submit} className="form-grid login-form">
-            <div className="field-group">
-              <label htmlFor="email">{t('login.email')}</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                required
-              />
-            </div>
-            <div className="field-group">
-              <label htmlFor="password">{t('login.password')}</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </div>
-            <button type="submit" disabled={pending} aria-busy={pending}>
-              {pending ? t('login.pending') : t('login.submit')}
-            </button>
-          </form>
-          {error ? (
-            <p className="status status-error" role="alert">
-              {readableError(error, t('login.errorFallback'))}
-            </p>
-          ) : null}
-          <p className="login-assurance">{t('login.assurance')}</p>
-        </section>
-      </div>
     </main>
   );
 }
@@ -667,6 +583,18 @@ export function App() {
   const queryClient = useQueryClient();
   const [tokens, setTokens] = useState<TokenView | null>(null);
   const [spaceId, setSpaceId] = useState<string | null>(null);
+  const [entryToken] = useState(() =>
+    readSensitiveEntryToken(window.location.pathname, window.location.search),
+  );
+
+  useEffect(() => {
+    if (!entryToken) return;
+    window.history.replaceState(
+      window.history.state,
+      '',
+      stripSensitiveEntryToken(window.location.search),
+    );
+  }, [entryToken]);
 
   const membershipsQuery = useQuery({
     queryKey: ['account-memberships'],
@@ -705,16 +633,6 @@ export function App() {
     );
   }, [membershipsQuery.data, tokens]);
 
-  const loginMutation = useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      signIn(config.apiBaseUrl, email, password),
-    onSuccess: (session) => {
-      setSpaceId(null);
-      setTokens(session.tokens);
-      queryClient.clear();
-    },
-  });
-
   function logout() {
     setSpaceId(null);
     setTokens(null);
@@ -725,12 +643,14 @@ export function App() {
     return (
       <>
         <ThemeControl />
-        <LoginScreen
-          onLogin={(email, password) =>
-            loginMutation.mutate({ email, password })
-          }
-          pending={loginMutation.isPending}
-          error={loginMutation.error}
+        <IdentityEntry
+          apiBaseUrl={config.apiBaseUrl}
+          entryToken={entryToken}
+          onSession={(session) => {
+            setSpaceId(null);
+            setTokens(session.tokens);
+            queryClient.clear();
+          }}
         />
       </>
     );

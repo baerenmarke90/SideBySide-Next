@@ -16,11 +16,7 @@ import { Brand } from './Brand';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 
-type EntryMode =
-  | 'signIn'
-  | 'register'
-  | 'recoveryRequest'
-  | 'magicLinkRequest';
+type EntryMode = 'signIn' | 'register' | 'recoveryRequest' | 'magicLinkRequest';
 
 export function IdentityEntry({
   apiBaseUrl,
@@ -34,7 +30,8 @@ export function IdentityEntry({
   const { t } = useTranslation();
   const invitationToken =
     entryToken?.kind === 'invitation' ? entryToken.token : null;
-  const recoveryToken = entryToken?.kind === 'recovery' ? entryToken.token : null;
+  const recoveryToken =
+    entryToken?.kind === 'recovery' ? entryToken.token : null;
   const [mode, setMode] = useState<EntryMode>('signIn');
   const [recoveryRequested, setRecoveryRequested] = useState(false);
   const [magicLinkRequested, setMagicLinkRequested] = useState(false);
@@ -44,12 +41,7 @@ export function IdentityEntry({
 
   const signInMutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
-      signInAndJoinInvitation(
-        apiBaseUrl,
-        email,
-        password,
-        invitationToken,
-      ),
+      signInAndJoinInvitation(apiBaseUrl, email, password, invitationToken),
     onSuccess: onSession,
   });
 
@@ -195,7 +187,7 @@ export function IdentityEntry({
       </section>
 
       <div className="login-panel">
-        <section className="login-card" aria-labelledby="identity-entry-heading">
+        <section className="login-card" aria-label={t('identity.entryAria')}>
           {entryToken?.kind === 'magicLink' ? (
             <UiState
               kind={magicLinkConsumeMutation.error ? 'error' : 'loading'}
@@ -213,11 +205,13 @@ export function IdentityEntry({
           ) : showsVerification ? (
             verificationMutation.isSuccess ? (
               <>
-                <UiState
-                  kind="success"
-                  title={t('identity.verificationCompleteTitle')}
-                  body={t('identity.verificationCompleteBody')}
-                />
+                <div
+                  className="inline-message inline-message-success"
+                  role="status"
+                >
+                  <strong>{t('identity.verificationCompleteTitle')}</strong>
+                  <span>{t('identity.verificationCompleteBody')}</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setVerificationDismissed(true)}
@@ -244,7 +238,9 @@ export function IdentityEntry({
             <>
               <div>
                 <p className="eyebrow">{t('identity.recoveryEyebrow')}</p>
-                <h2 id="identity-entry-heading">{t('identity.recoveryTitle')}</h2>
+                <h2 id="identity-entry-heading">
+                  {t('identity.recoveryTitle')}
+                </h2>
                 <p className="muted">{t('identity.recoveryBody')}</p>
               </div>
               <form onSubmit={submitRecovery} className="form-grid login-form">
@@ -264,12 +260,19 @@ export function IdentityEntry({
             <>
               <div>
                 <p className="eyebrow">{t('identity.invitationEyebrow')}</p>
-                <h2 id="identity-entry-heading">{t('identity.registerTitle')}</h2>
+                <h2 id="identity-entry-heading">
+                  {t('identity.registerTitle')}
+                </h2>
                 <p className="muted">{t('identity.registerBody')}</p>
               </div>
-              <form onSubmit={submitRegistration} className="form-grid login-form">
+              <form
+                onSubmit={submitRegistration}
+                className="form-grid login-form"
+              >
                 <div className="field-group">
-                  <label htmlFor="display-name">{t('identity.displayName')}</label>
+                  <label htmlFor="display-name">
+                    {t('identity.displayName')}
+                  </label>
                   <input
                     id="display-name"
                     name="displayName"
@@ -300,7 +303,9 @@ export function IdentityEntry({
           ) : mode === 'recoveryRequest' ? (
             <>
               <div>
-                <p className="eyebrow">{t('identity.recoveryRequestEyebrow')}</p>
+                <p className="eyebrow">
+                  {t('identity.recoveryRequestEyebrow')}
+                </p>
                 <h2 id="identity-entry-heading">
                   {t('identity.recoveryRequestTitle')}
                 </h2>
@@ -336,7 +341,9 @@ export function IdentityEntry({
             <>
               <div>
                 <p className="eyebrow">{t('identity.magicLinkEyebrow')}</p>
-                <h2 id="identity-entry-heading">{t('identity.magicLinkTitle')}</h2>
+                <h2 id="identity-entry-heading">
+                  {t('identity.magicLinkTitle')}
+                </h2>
                 <p className="muted">{t('identity.magicLinkBody')}</p>
               </div>
               {magicLinkRequested ? (
@@ -379,7 +386,9 @@ export function IdentityEntry({
                     : t('login.heading')}
                 </h2>
                 <p className="muted">
-                  {invitationToken ? t('identity.invitationBody') : t('login.body')}
+                  {invitationToken
+                    ? t('identity.invitationBody')
+                    : t('login.body')}
                 </p>
               </div>
               <form onSubmit={submitSignIn} className="form-grid login-form">

@@ -1,23 +1,34 @@
-import { readSensitiveEntryToken, stripSensitiveEntryToken } from './entryToken';
+import {
+  readSensitiveEntryToken,
+  stripSensitiveEntryToken,
+} from './entryToken';
 
 describe('sensitive identity entry tokens', () => {
   it('reads the recovery token from the authoritative recovery path', () => {
-    expect(readSensitiveEntryToken('/auth/recovery', '?token=recovery-token')).toEqual({
+    expect(
+      readSensitiveEntryToken('/auth/recovery', '?token=recovery-token'),
+    ).toEqual({
       kind: 'recovery',
       token: 'recovery-token',
     });
   });
 
   it('distinguishes magic-link, verification and invitation entry paths', () => {
-    expect(readSensitiveEntryToken('/auth/magic-link', '?token=magic')).toEqual({
-      kind: 'magicLink',
-      token: 'magic',
-    });
-    expect(readSensitiveEntryToken('/auth/verify-email', '?token=verify')).toEqual({
+    expect(readSensitiveEntryToken('/auth/magic-link', '?token=magic')).toEqual(
+      {
+        kind: 'magicLink',
+        token: 'magic',
+      },
+    );
+    expect(
+      readSensitiveEntryToken('/auth/verify-email', '?token=verify'),
+    ).toEqual({
       kind: 'emailVerification',
       token: 'verify',
     });
-    expect(readSensitiveEntryToken('/auth/invitation', '?token=invite')).toEqual({
+    expect(
+      readSensitiveEntryToken('/auth/invitation', '?token=invite'),
+    ).toEqual({
       kind: 'invitation',
       token: 'invite',
     });
@@ -28,10 +39,14 @@ describe('sensitive identity entry tokens', () => {
   });
 
   it('ignores empty tokens', () => {
-    expect(readSensitiveEntryToken('/auth/recovery', '?token=%20%20')).toBeNull();
+    expect(
+      readSensitiveEntryToken('/auth/recovery', '?token=%20%20'),
+    ).toBeNull();
   });
 
   it('removes the proof while preserving unrelated query state', () => {
-    expect(stripSensitiveEntryToken('?token=secret&from=email')).toBe('/?from=email');
+    expect(stripSensitiveEntryToken('?token=secret&from=email')).toBe(
+      '/?from=email',
+    );
   });
 });

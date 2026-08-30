@@ -50,7 +50,9 @@ export async function registerFromInvitation(
   invitationToken: string,
 ): Promise<SessionView> {
   try {
-    return await createReferenceApis(apiBaseUrl).auth.registerApiV1AuthRegisterPost({
+    return await createReferenceApis(
+      apiBaseUrl,
+    ).auth.registerApiV1AuthRegisterPost({
       registerRequest: {
         displayName,
         email,
@@ -70,7 +72,9 @@ export async function requestPasswordRecovery(
   email: string,
 ): Promise<void> {
   try {
-    await createReferenceApis(apiBaseUrl).auth.requestRecoveryApiV1AuthRecoveryRequestPost({
+    await createReferenceApis(
+      apiBaseUrl,
+    ).auth.requestRecoveryApiV1AuthRecoveryRequestPost({
       emailRequest: { email },
     });
   } catch (error) {
@@ -84,7 +88,9 @@ export async function completePasswordRecovery(
   newPassword: string,
 ): Promise<SessionView> {
   try {
-    return await createReferenceApis(apiBaseUrl).auth.consumeRecoveryApiV1AuthRecoveryConsumePost({
+    return await createReferenceApis(
+      apiBaseUrl,
+    ).auth.consumeRecoveryApiV1AuthRecoveryConsumePost({
       recoveryConsumeRequest: {
         token: recoveryToken,
         newPassword,
@@ -102,7 +108,9 @@ export async function requestMagicLink(
   email: string,
 ): Promise<void> {
   try {
-    await createReferenceApis(apiBaseUrl).auth.requestMagicLinkApiV1AuthMagicLinkRequestPost({
+    await createReferenceApis(
+      apiBaseUrl,
+    ).auth.requestMagicLinkApiV1AuthMagicLinkRequestPost({
       emailRequest: { email },
     });
   } catch (error) {
@@ -115,7 +123,9 @@ export async function consumeMagicLink(
   token: string,
 ): Promise<SessionView> {
   try {
-    return await createReferenceApis(apiBaseUrl).auth.consumeMagicLinkApiV1AuthMagicLinkConsumePost({
+    return await createReferenceApis(
+      apiBaseUrl,
+    ).auth.consumeMagicLinkApiV1AuthMagicLinkConsumePost({
       magicLinkConsumeRequest: {
         token,
         deviceName: WEB_DEVICE_NAME,
@@ -132,7 +142,9 @@ export async function confirmEmailAddress(
   token: string,
 ): Promise<void> {
   try {
-    await createReferenceApis(apiBaseUrl).auth.confirmEmailApiV1AuthEmailVerificationConfirmPost({
+    await createReferenceApis(
+      apiBaseUrl,
+    ).auth.confirmEmailApiV1AuthEmailVerificationConfirmPost({
       tokenOnlyRequest: { token },
     });
   } catch (error) {
