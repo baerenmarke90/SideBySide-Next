@@ -96,12 +96,7 @@ export async function uploadMemoryDraftAttachment(
       attachmentId: upload.attachment.id,
       body: {},
     });
-    await waitUntilReady(
-      apis,
-      spaceId,
-      upload.attachment.id,
-      options.signal,
-    );
+    await waitUntilReady(apis, spaceId, upload.attachment.id, options.signal);
 
     return { attachmentId: upload.attachment.id };
   } catch (error) {
