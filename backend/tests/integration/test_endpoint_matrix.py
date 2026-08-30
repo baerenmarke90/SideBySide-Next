@@ -798,6 +798,7 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
 
 AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/auth/me"),
+    ("GET", "/api/v1/auth/memberships"),
     ("POST", "/api/v1/auth/sign-out"),
     ("POST", "/api/v1/auth/password"),
     ("POST", "/api/v1/auth/email/verification/request"),
