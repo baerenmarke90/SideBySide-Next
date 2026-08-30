@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import time
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Path, Response
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, StrictInt
 
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
@@ -18,6 +18,15 @@ router = APIRouter(tags=["rules"])
 
 class RuleParametersView(ApiModel):
     days_before: list[int]
+    local_time: time | None = None
+
+
+class RuleParametersUpdate(ApiModel):
+    """Typed, provider-neutral M4 Rule parameters accepted at the API boundary."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    days_before: list[StrictInt] | None = None
     local_time: time | None = None
 
 
@@ -38,7 +47,7 @@ class RulePreferenceUpdate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     enabled: bool
-    parameters: dict[str, Any] = Field(default_factory=dict)
+    parameters: RuleParametersUpdate = Field(default_factory=RuleParametersUpdate)
 
 
 class RulePreferenceView(ApiModel):
@@ -136,7 +145,11 @@ def set_rule_preference(
         space_id=authorization.space_id,
         rule=definition,
         enabled=body.enabled,
-        parameters=body.parameters,
+        parameters=body.parameters.model_dump(
+            mode="json",
+            by_alias=True,
+            exclude_none=True,
+        ),
     )
     parameters = rules.validate_parameters(definition, row.parameters)
     response.headers["Cache-Control"] = "private, no-store"
