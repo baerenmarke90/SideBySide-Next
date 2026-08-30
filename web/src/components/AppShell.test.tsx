@@ -18,6 +18,7 @@ describe('AppShell', () => {
     expect(html).toContain('<nav');
     expect(html).toContain('href="/story"');
     expect(html).toContain('href="/people"');
+    expect(html).toContain('href="/profile"');
     expect(html).toContain('href="/memory/new"');
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain('/dashboard');
@@ -44,6 +45,18 @@ describe('AppShell', () => {
     );
 
     expect(html).toContain('href="/people"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('shell-nav-link-active');
+  });
+
+  it('marks the profile deep link as the current route', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/profile']}>
+        <AppShell onLogout={() => undefined}>Profile</AppShell>
+      </MemoryRouter>,
+    );
+
+    expect(html).toContain('href="/profile"');
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('shell-nav-link-active');
   });
