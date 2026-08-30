@@ -40,100 +40,90 @@ jobs:
           path = Path("backend/tests/integration/test_endpoint_matrix.py")
           text = path.read_text(encoding="utf-8")
 
-          constants_anchor = 'COLLECTION_ITEM = {"title": "Matrix Collection Item"}\n'
-          constants = constants_anchor + 'PRIVATE_NOTE = {"title": "Matrix Private Note", "body": "Private body"}\nGIFT_IDEA = {"title": "Matrix Gift Idea"}\n'
           if "PRIVATE_NOTE =" not in text:
-              text = text.replace(constants_anchor, constants, 1)
+              marker = 'COLLECTION_ITEM = {"title": "Matrix Collection Item"}\n'
+              replacement = marker + (
+                  'PRIVATE_NOTE = {"title": "Matrix Private Note", "body": "Private body"}\n'
+                  'GIFT_IDEA = {"title": "Matrix Gift Idea"}\n'
+              )
+              if marker not in text:
+                  raise SystemExit("Constant marker not found")
+              text = text.replace(marker, replacement, 1)
 
-          endpoint_anchor = '''    Endpoint(
-              "PUT",
-              "/api/v1/spaces/{spaceId}/collections/{collectionId}/order",
-              body={"itemIds": []},
+          if 'Endpoint("GET", "/api/v1/spaces/{spaceId}/private/notes")' not in text:
+              marker = '    Endpoint("GET", "/api/v1/spaces/{spaceId}/plans"),\n'
+              endpoints = '''    Endpoint("GET", "/api/v1/spaces/{spaceId}/private/notes"),
+          Endpoint("POST", "/api/v1/spaces/{spaceId}/private/notes", body=PRIVATE_NOTE),
+          Endpoint(
+              "GET",
+              "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+              resource_absence="PRIVATE_NOTE_NOT_FOUND",
+              placeholders=("noteId",),
+          ),
+          Endpoint(
+              "PATCH",
+              "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+              body={"pinned": True},
               if_match=True,
-              resource_absence="COLLECTION_NOT_FOUND",
-              placeholders=("collectionId",),
+              resource_absence="PRIVATE_NOTE_NOT_FOUND",
+              placeholders=("noteId",),
+          ),
+          Endpoint(
+              "DELETE",
+              "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+              if_match=True,
+              resource_absence="PRIVATE_NOTE_NOT_FOUND",
+              placeholders=("noteId",),
+          ),
+          Endpoint("GET", "/api/v1/spaces/{spaceId}/private/gift-ideas"),
+          Endpoint("POST", "/api/v1/spaces/{spaceId}/private/gift-ideas", body=GIFT_IDEA),
+          Endpoint(
+              "GET",
+              "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+              resource_absence="GIFT_IDEA_NOT_FOUND",
+              placeholders=("giftIdeaId",),
+          ),
+          Endpoint(
+              "PATCH",
+              "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+              body={"pinned": True},
+              if_match=True,
+              resource_absence="GIFT_IDEA_NOT_FOUND",
+              placeholders=("giftIdeaId",),
+          ),
+          Endpoint(
+              "DELETE",
+              "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+              if_match=True,
+              resource_absence="GIFT_IDEA_NOT_FOUND",
+              placeholders=("giftIdeaId",),
           ),
           '''
-          private_endpoints = endpoint_anchor + '''    Endpoint("GET", "/api/v1/spaces/{spaceId}/private/notes"),
-              Endpoint("POST", "/api/v1/spaces/{spaceId}/private/notes", body=PRIVATE_NOTE),
-              Endpoint(
-                  "GET",
-                  "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
-                  resource_absence="PRIVATE_NOTE_NOT_FOUND",
-                  placeholders=("noteId",),
-              ),
-              Endpoint(
-                  "PATCH",
-                  "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
-                  body={"pinned": True},
-                  if_match=True,
-                  resource_absence="PRIVATE_NOTE_NOT_FOUND",
-                  placeholders=("noteId",),
-              ),
-              Endpoint(
-                  "DELETE",
-                  "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
-                  if_match=True,
-                  resource_absence="PRIVATE_NOTE_NOT_FOUND",
-                  placeholders=("noteId",),
-              ),
-              Endpoint("GET", "/api/v1/spaces/{spaceId}/private/gift-ideas"),
-              Endpoint("POST", "/api/v1/spaces/{spaceId}/private/gift-ideas", body=GIFT_IDEA),
-              Endpoint(
-                  "GET",
-                  "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
-                  resource_absence="GIFT_IDEA_NOT_FOUND",
-                  placeholders=("giftIdeaId",),
-              ),
-              Endpoint(
-                  "PATCH",
-                  "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
-                  body={"pinned": True},
-                  if_match=True,
-                  resource_absence="GIFT_IDEA_NOT_FOUND",
-                  placeholders=("giftIdeaId",),
-              ),
-              Endpoint(
-                  "DELETE",
-                  "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
-                  if_match=True,
-                  resource_absence="GIFT_IDEA_NOT_FOUND",
-                  placeholders=("giftIdeaId",),
-              ),
-          '''
-          if "/private/notes" not in text:
-              if endpoint_anchor not in text:
-                  raise SystemExit("Collection endpoint anchor not found")
-              text = text.replace(endpoint_anchor, private_endpoints, 1)
+              if marker not in text:
+                  raise SystemExit("Plan endpoint marker not found")
+              text = text.replace(marker, endpoints + marker, 1)
 
-          create_anchor = '''    collection_item = client.post(
-              f"{base_path}/collections/{collection['id']}/items",
-              json=COLLECTION_ITEM,
-              headers=headers,
-          ).json()
-          '''
-          create_private = create_anchor + '''    private_note = client.post(
+          if "private_note = client.post" not in text:
+              marker = '    attachment = client.post(f"{base_path}/attachments", json=ATTACHMENT, headers=headers).json()\n'
+              creation = '''    private_note = client.post(
               f"{base_path}/private/notes", json=PRIVATE_NOTE, headers=headers
           ).json()
-              gift_idea = client.post(
-                  f"{base_path}/private/gift-ideas", json=GIFT_IDEA, headers=headers
-              ).json()
+          gift_idea = client.post(
+              f"{base_path}/private/gift-ideas", json=GIFT_IDEA, headers=headers
+          ).json()
           '''
-          if "private_note = client.post" not in text:
-              if create_anchor not in text:
-                  raise SystemExit("Resource creation anchor not found")
-              text = text.replace(create_anchor, create_private, 1)
+              if marker not in text:
+                  raise SystemExit("Attachment creation marker not found")
+              text = text.replace(marker, creation + marker, 1)
 
-          id_anchor = '''            "collectionId": collection["id"],
-              "itemId": collection_item["id"],
-          '''
-          private_ids = id_anchor + '''            "noteId": private_note["id"],
+          if '"noteId": private_note["id"]' not in text:
+              marker = '            # The target is a typed relation. A memory is enough for all three\n'
+              ids = '''            "noteId": private_note["id"],
               "giftIdeaId": gift_idea["id"],
           '''
-          if '"noteId": private_note["id"]' not in text:
-              if id_anchor not in text:
-                  raise SystemExit("Resource ID anchor not found")
-              text = text.replace(id_anchor, private_ids, 1)
+              if marker not in text:
+                  raise SystemExit("ID marker not found")
+              text = text.replace(marker, ids + marker, 1)
 
           path.write_text(text, encoding="utf-8")
           PY
