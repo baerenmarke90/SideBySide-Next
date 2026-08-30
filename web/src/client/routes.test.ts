@@ -12,6 +12,10 @@ describe('app route registry', () => {
   it('contains only the currently implemented primary authenticated routes', () => {
     expect(APP_ROUTES.map((route) => route.path)).toEqual([
       '/story',
+      '/dashboard',
+      '/search',
+      '/activity',
+      '/notifications',
       '/people',
       '/profile',
       '/memory/new',
@@ -21,6 +25,10 @@ describe('app route registry', () => {
 
   it('resolves primary route paths from stable ids', () => {
     expect(appRoutePath('story')).toBe('/story');
+    expect(appRoutePath('dashboard')).toBe('/dashboard');
+    expect(appRoutePath('search')).toBe('/search');
+    expect(appRoutePath('activity')).toBe('/activity');
+    expect(appRoutePath('notifications')).toBe('/notifications');
     expect(appRoutePath('people')).toBe('/people');
     expect(appRoutePath('profile')).toBe('/profile');
     expect(appRoutePath('memoryCreate')).toBe('/memory/new');

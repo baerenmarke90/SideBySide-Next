@@ -18,6 +18,40 @@ function NavigationIcon({ icon }: { icon: AppRouteIcon }) {
     );
   }
 
+  if (icon === 'dashboard') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" />
+      </svg>
+    );
+  }
+
+  if (icon === 'search') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="6" />
+        <path d="m16 16 4 4" />
+      </svg>
+    );
+  }
+
+  if (icon === 'activity') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 7h14M5 12h14M5 17h9" />
+        <circle cx="18" cy="17" r="2" />
+      </svg>
+    );
+  }
+
+  if (icon === 'notifications') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 17h12l-1.5-2.5V10a4.5 4.5 0 0 0-9 0v4.5L6 17Zm4 3h4" />
+      </svg>
+    );
+  }
+
   if (icon === 'people') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">

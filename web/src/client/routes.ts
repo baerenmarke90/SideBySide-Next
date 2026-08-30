@@ -1,5 +1,21 @@
-export type AppRouteId = 'story' | 'people' | 'profile' | 'memoryCreate';
-export type AppRouteIcon = 'story' | 'people' | 'profile' | 'add';
+export type AppRouteId =
+  | 'story'
+  | 'dashboard'
+  | 'search'
+  | 'activity'
+  | 'notifications'
+  | 'people'
+  | 'profile'
+  | 'memoryCreate';
+export type AppRouteIcon =
+  | 'story'
+  | 'dashboard'
+  | 'search'
+  | 'activity'
+  | 'notifications'
+  | 'people'
+  | 'profile'
+  | 'add';
 
 export interface AppRouteDefinition {
   id: AppRouteId;
@@ -15,6 +31,34 @@ export const APP_ROUTES = [
     path: '/story',
     labelKey: 'navigation.story',
     icon: 'story',
+    end: true,
+  },
+  {
+    id: 'dashboard',
+    path: '/dashboard',
+    labelKey: 'navigation.dashboard',
+    icon: 'dashboard',
+    end: true,
+  },
+  {
+    id: 'search',
+    path: '/search',
+    labelKey: 'navigation.search',
+    icon: 'search',
+    end: true,
+  },
+  {
+    id: 'activity',
+    path: '/activity',
+    labelKey: 'navigation.activity',
+    icon: 'activity',
+    end: true,
+  },
+  {
+    id: 'notifications',
+    path: '/notifications',
+    labelKey: 'navigation.notifications',
+    icon: 'notifications',
     end: true,
   },
   {

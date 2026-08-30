@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { AppShell } from './AppShell';
 
 describe('AppShell', () => {
-  it('renders skip navigation, landmarks and only implemented route links', () => {
+  it('renders skip navigation, landmarks and all implemented product links', () => {
     const html = renderToStaticMarkup(
       <MemoryRouter initialEntries={['/story']}>
         <AppShell onLogout={() => undefined}>
@@ -17,46 +17,34 @@ describe('AppShell', () => {
     expect(html).toContain('<main');
     expect(html).toContain('<nav');
     expect(html).toContain('href="/story"');
+    expect(html).toContain('href="/dashboard"');
+    expect(html).toContain('href="/search"');
+    expect(html).toContain('href="/activity"');
+    expect(html).toContain('href="/notifications"');
     expect(html).toContain('href="/people"');
     expect(html).toContain('href="/profile"');
     expect(html).toContain('href="/memory/new"');
     expect(html).toContain('aria-current="page"');
-    expect(html).not.toContain('/dashboard');
     expect(html).not.toContain('/reminders');
+    expect(html).not.toContain('/rules');
   });
 
-  it('marks a direct memory deep link as the current route', () => {
+  it.each([
+    '/memory/new',
+    '/people',
+    '/profile',
+    '/dashboard',
+    '/search',
+    '/activity',
+    '/notifications',
+  ])('marks the %s deep link as the current route', (route) => {
     const html = renderToStaticMarkup(
-      <MemoryRouter initialEntries={['/memory/new']}>
-        <AppShell onLogout={() => undefined}>Memory</AppShell>
+      <MemoryRouter initialEntries={[route]}>
+        <AppShell onLogout={() => undefined}>Content</AppShell>
       </MemoryRouter>,
     );
 
-    expect(html).toContain('href="/memory/new"');
-    expect(html).toContain('aria-current="page"');
-    expect(html).toContain('shell-nav-link-active');
-  });
-
-  it('marks the people deep link as the current route', () => {
-    const html = renderToStaticMarkup(
-      <MemoryRouter initialEntries={['/people']}>
-        <AppShell onLogout={() => undefined}>People</AppShell>
-      </MemoryRouter>,
-    );
-
-    expect(html).toContain('href="/people"');
-    expect(html).toContain('aria-current="page"');
-    expect(html).toContain('shell-nav-link-active');
-  });
-
-  it('marks the profile deep link as the current route', () => {
-    const html = renderToStaticMarkup(
-      <MemoryRouter initialEntries={['/profile']}>
-        <AppShell onLogout={() => undefined}>Profile</AppShell>
-      </MemoryRouter>,
-    );
-
-    expect(html).toContain('href="/profile"');
+    expect(html).toContain(`href="${route}"`);
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('shell-nav-link-active');
   });
