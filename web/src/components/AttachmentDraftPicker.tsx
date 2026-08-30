@@ -98,7 +98,9 @@ export function AttachmentDraftPicker({
                         {attachment.progress}%
                       </progress>
                       <small>
-                        {t('upload.progress', { progress: attachment.progress })}
+                        {t('upload.progress', {
+                          progress: attachment.progress,
+                        })}
                       </small>
                     </>
                   ) : null}
