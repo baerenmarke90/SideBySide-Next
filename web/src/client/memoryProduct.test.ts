@@ -15,19 +15,19 @@ describe('memory product helpers', () => {
   it('builds an update payload that can also clear happenedOn', () => {
     expect(
       memoryUpdatePayload({
-        title: 'Am See',
-        body: 'Ein guter Tag',
+        title: 'At the lake',
+        body: 'A good day',
         happenedOn: '2026-08-30',
       }),
     ).toEqual({
-      title: 'Am See',
-      body: 'Ein guter Tag',
+      title: 'At the lake',
+      body: 'A good day',
       happenedOn: new Date('2026-08-30T00:00:00.000Z'),
     });
 
     expect(
-      memoryUpdatePayload({ title: 'Am See', body: '', happenedOn: '' }),
-    ).toEqual({ title: 'Am See', body: '', happenedOn: null });
+      memoryUpdatePayload({ title: 'At the lake', body: '', happenedOn: '' }),
+    ).toEqual({ title: 'At the lake', body: '', happenedOn: null });
   });
 
   it('uses the observed resource version as If-Match value', () => {
