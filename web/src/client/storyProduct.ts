@@ -1,6 +1,12 @@
 import type { GetStoryTimelineRequest } from '../api/generated/apis/StoryApi';
-import { StoryKind, type StoryKind as StoryKindValue } from '../api/generated/models/StoryKind';
-import { StoryOrder, type StoryOrder as StoryOrderValue } from '../api/generated/models/StoryOrder';
+import {
+  StoryKind,
+  type StoryKind as StoryKindValue,
+} from '../api/generated/models/StoryKind';
+import {
+  StoryOrder,
+  type StoryOrder as StoryOrderValue,
+} from '../api/generated/models/StoryOrder';
 import type { StoryPage } from '../api/generated/models/StoryPage';
 
 export interface StoryFilters {
@@ -16,21 +22,21 @@ export const DEFAULT_STORY_FILTERS: StoryFilters = {
 };
 
 function isStoryKind(value: string | null): value is StoryKindValue {
-  return value !== null && Object.values(StoryKind).includes(value as StoryKindValue);
+  return (
+    value !== null && Object.values(StoryKind).includes(value as StoryKindValue)
+  );
 }
 
 export function parseStoryFilters(search: URLSearchParams): StoryFilters {
   const kindValue = search.get('type');
   const yearValue = search.get('year');
   const parsedYear = yearValue ? Number(yearValue) : Number.NaN;
-  const order = search.get('order') === StoryOrder.ASC ? StoryOrder.ASC : StoryOrder.DESC;
+  const order =
+    search.get('order') === StoryOrder.ASC ? StoryOrder.ASC : StoryOrder.DESC;
 
   return {
     kind: isStoryKind(kindValue) ? kindValue : null,
-    year:
-      Number.isInteger(parsedYear) && parsedYear >= 1900 && parsedYear <= 9999
-        ? parsedYear
-        : null,
+    year: Number.isInteger(parsedYear) && parsedYear > 0 ? parsedYear : null,
     order,
   };
 }
