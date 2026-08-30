@@ -1,18 +1,26 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { SessionView } from '../api/generated/models/SessionView';
 import type { SensitiveEntryToken } from '../client/entryToken';
 import {
   completePasswordRecovery,
+  confirmEmailAddress,
+  consumeMagicLink,
   registerFromInvitation,
+  requestMagicLink,
   requestPasswordRecovery,
   signInAndJoinInvitation,
 } from '../client/identityFlow';
 import { useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { ProblemState } from './ProblemState';
+import { UiState } from './UiState';
 
-type EntryMode = 'signIn' | 'register' | 'recoveryRequest';
+type EntryMode =
+  | 'signIn'
+  | 'register'
+  | 'recoveryRequest'
+  | 'magicLinkRequest';
 
 export function IdentityEntry({
   apiBaseUrl,
@@ -29,7 +37,10 @@ export function IdentityEntry({
   const recoveryToken = entryToken?.kind === 'recovery' ? entryToken.token : null;
   const [mode, setMode] = useState<EntryMode>('signIn');
   const [recoveryRequested, setRecoveryRequested] = useState(false);
+  const [magicLinkRequested, setMagicLinkRequested] = useState(false);
+  const [verificationDismissed, setVerificationDismissed] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const processedEntryToken = useRef<string | null>(null);
 
   const signInMutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
@@ -77,6 +88,31 @@ export function IdentityEntry({
     onSuccess: onSession,
   });
 
+  const magicLinkRequestMutation = useMutation({
+    mutationFn: (email: string) => requestMagicLink(apiBaseUrl, email),
+    onSuccess: () => setMagicLinkRequested(true),
+  });
+
+  const magicLinkConsumeMutation = useMutation({
+    mutationFn: (token: string) => consumeMagicLink(apiBaseUrl, token),
+    onSuccess: onSession,
+  });
+
+  const verificationMutation = useMutation({
+    mutationFn: (token: string) => confirmEmailAddress(apiBaseUrl, token),
+  });
+
+  useEffect(() => {
+    if (!entryToken || processedEntryToken.current === entryToken.token) return;
+    if (entryToken.kind === 'magicLink') {
+      processedEntryToken.current = entryToken.token;
+      magicLinkConsumeMutation.mutate(entryToken.token);
+    } else if (entryToken.kind === 'emailVerification') {
+      processedEntryToken.current = entryToken.token;
+      verificationMutation.mutate(entryToken.token);
+    }
+  }, [entryToken, magicLinkConsumeMutation, verificationMutation]);
+
   function requireMatchingPasswords(data: FormData): string | null {
     const password = String(data.get('password'));
     const confirmation = String(data.get('passwordConfirmation'));
@@ -122,11 +158,23 @@ export function IdentityEntry({
     if (password) recoveryMutation.mutate(password);
   }
 
+  function submitMagicLinkRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    magicLinkRequestMutation.mutate(String(data.get('email')));
+  }
+
   const activeError =
     signInMutation.error ??
     registerMutation.error ??
     recoveryRequestMutation.error ??
-    recoveryMutation.error;
+    recoveryMutation.error ??
+    magicLinkRequestMutation.error ??
+    magicLinkConsumeMutation.error ??
+    verificationMutation.error;
+
+  const showsVerification =
+    entryToken?.kind === 'emailVerification' && !verificationDismissed;
 
   return (
     <main className="login-shell">
@@ -148,7 +196,51 @@ export function IdentityEntry({
 
       <div className="login-panel">
         <section className="login-card" aria-labelledby="identity-entry-heading">
-          {recoveryToken ? (
+          {entryToken?.kind === 'magicLink' ? (
+            <UiState
+              kind={magicLinkConsumeMutation.error ? 'error' : 'loading'}
+              title={
+                magicLinkConsumeMutation.error
+                  ? t('identity.magicLinkFailedTitle')
+                  : t('identity.magicLinkOpening')
+              }
+              body={
+                magicLinkConsumeMutation.error
+                  ? t('identity.magicLinkFailedBody')
+                  : undefined
+              }
+            />
+          ) : showsVerification ? (
+            verificationMutation.isSuccess ? (
+              <>
+                <UiState
+                  kind="success"
+                  title={t('identity.verificationCompleteTitle')}
+                  body={t('identity.verificationCompleteBody')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setVerificationDismissed(true)}
+                >
+                  {t('identity.backToSignIn')}
+                </button>
+              </>
+            ) : (
+              <UiState
+                kind={verificationMutation.error ? 'error' : 'loading'}
+                title={
+                  verificationMutation.error
+                    ? t('identity.verificationFailedTitle')
+                    : t('identity.verificationOpening')
+                }
+                body={
+                  verificationMutation.error
+                    ? t('identity.verificationFailedBody')
+                    : undefined
+                }
+              />
+            )
+          ) : recoveryToken ? (
             <>
               <div>
                 <p className="eyebrow">{t('identity.recoveryEyebrow')}</p>
@@ -215,10 +307,7 @@ export function IdentityEntry({
                 <p className="muted">{t('identity.recoveryRequestBody')}</p>
               </div>
               {recoveryRequested ? (
-                <div className="inline-message inline-message-success" role="status">
-                  <strong>{t('identity.recoveryRequestedTitle')}</strong>
-                  <span>{t('identity.recoveryRequestedBody')}</span>
-                </div>
+                <NeutralMailResult />
               ) : (
                 <form
                   onSubmit={submitRecoveryRequest}
@@ -236,16 +325,45 @@ export function IdentityEntry({
                   </button>
                 </form>
               )}
-              <button
-                type="button"
-                className="secondary"
+              <BackToSignIn
                 onClick={() => {
                   setRecoveryRequested(false);
                   setMode('signIn');
                 }}
-              >
-                {t('identity.backToSignIn')}
-              </button>
+              />
+            </>
+          ) : mode === 'magicLinkRequest' ? (
+            <>
+              <div>
+                <p className="eyebrow">{t('identity.magicLinkEyebrow')}</p>
+                <h2 id="identity-entry-heading">{t('identity.magicLinkTitle')}</h2>
+                <p className="muted">{t('identity.magicLinkBody')}</p>
+              </div>
+              {magicLinkRequested ? (
+                <NeutralMailResult />
+              ) : (
+                <form
+                  onSubmit={submitMagicLinkRequest}
+                  className="form-grid login-form"
+                >
+                  <EmailField />
+                  <button
+                    type="submit"
+                    disabled={magicLinkRequestMutation.isPending}
+                    aria-busy={magicLinkRequestMutation.isPending}
+                  >
+                    {magicLinkRequestMutation.isPending
+                      ? t('identity.magicLinkRequestPending')
+                      : t('identity.magicLinkRequestSubmit')}
+                  </button>
+                </form>
+              )}
+              <BackToSignIn
+                onClick={() => {
+                  setMagicLinkRequested(false);
+                  setMode('signIn');
+                }}
+              />
             </>
           ) : (
             <>
@@ -293,7 +411,15 @@ export function IdentityEntry({
                   >
                     {t('identity.createAccount')}
                   </button>
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setMode('magicLinkRequest')}
+                  >
+                    {t('identity.useMagicLink')}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="tertiary"
@@ -310,7 +436,11 @@ export function IdentityEntry({
               {validationError}
             </p>
           ) : null}
-          {activeError ? <ProblemState error={activeError} /> : null}
+          {activeError &&
+          entryToken?.kind !== 'magicLink' &&
+          entryToken?.kind !== 'emailVerification' ? (
+            <ProblemState error={activeError} />
+          ) : null}
           <p className="login-assurance">{t('login.assurance')}</p>
         </section>
       </div>
@@ -363,5 +493,24 @@ function PasswordFields() {
         />
       </div>
     </>
+  );
+}
+
+function NeutralMailResult() {
+  const { t } = useTranslation();
+  return (
+    <div className="inline-message inline-message-success" role="status">
+      <strong>{t('identity.mailRequestedTitle')}</strong>
+      <span>{t('identity.mailRequestedBody')}</span>
+    </div>
+  );
+}
+
+function BackToSignIn({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <button type="button" className="secondary" onClick={onClick}>
+      {t('identity.backToSignIn')}
+    </button>
   );
 }
