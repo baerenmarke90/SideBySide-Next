@@ -1,6 +1,6 @@
 # M3 Delivery Plan
 
-**Status:** S0 complete; runtime released; S1 through S7 delivered
+**Status:** S0 complete; runtime released; S1 through S8 delivered
 **As of:** August 30, 2026
 
 ## 1. Gate before runtime
@@ -248,7 +248,7 @@ Scope:
 
 Implemented. PrivateNote and GiftIdea use dedicated owner-only tables/services and derive Space, owner, and `OWNER_ONLY` on the server. Protected content remains behind `ProtectedPayload`; list cursors are bound to Space and owner before pagination. Both roots use `If-Match`/409. GiftIdea starts in `IDEA` and enforces the decided `IDEA | BOUGHT | GIVEN` transition graph, including rejection of `GIVEN -> IDEA`. GiftIdea URLs are inert stored content and trigger no server fetch or preview. Unknown, partner-owned, and foreign-Space IDs are privacy-safe 404s, private content and structural state stay out of persistent event payloads, and PostgreSQL/HTTP tests cover owner CRUD, partner/Cross-Tenant isolation, concurrency, lifecycle transitions, and the no-network URL invariant. OpenAPI and generated TypeScript/Kotlin clients are synchronized.
 
-## 11. S8 – PrivateCollection
+## 11. S8 – PrivateCollection – delivered
 
 Scope:
 
@@ -260,6 +260,8 @@ Scope:
 - partner/Cross-Space negative tests.
 
 Shared Collection and PrivateCollection share neither a table nor an unsafe query path.
+
+Implemented in Issue #259 / PR #260 with dedicated owner-only root and Item persistence, ProtectedPayload-backed title/icon content, and server-derived Space/owner/privacy. Item rows deliberately duplicate neither `spaceId` nor `ownerId`; every child operation authorizes through the owner-scoped Parent. Root `version` protects Item-set/order structure, Item `version` protects title/completion, Create appends, Delete compacts positions, and exact-set Reorder is atomic under the root version using the proven collision-safe PostgreSQL strategy. Partner, Cross-Space, unknown-Parent, stale-version, cascade, event-redaction, and real PostgreSQL race coverage is included. The canonical OpenAPI snapshot and generated TypeScript/Kotlin clients are synchronized.
 
 ## 12. S9 – Integrated M3 backend/API evidence
 

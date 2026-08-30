@@ -11,7 +11,7 @@ This roadmap translates the binding product specification into an understandable
 
 ![Roadmap from M0 Foundation through M9 Release and the strategic E2EE track](./assets/roadmap/roadmap-overview.svg)
 
-**Current:** M0, M1, and M2 are complete for their intended scope. **G1 and G2 have passed. M3 is released for implementation; S1 through S7 are delivered. The next runtime slice is M3-S8 — PrivateCollection.** The binding current gate evidence is the [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).
+**Current:** M0, M1, and M2 are complete for their intended scope. **G1 and G2 have passed. M3 is released for implementation; S1 through S8 are delivered. The next runtime slice is M3-S9 — Integrated M3 backend/API evidence.** The binding current gate evidence is the [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md).
 
 The earlier Pre-Exposure hardening items #59 and #60 and Repository Hardening #25 are complete. The active `main` ruleset enforces Pull Requests, Merge Commits, and the defined required checks.
 
@@ -58,11 +58,11 @@ The [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) explici
 
 Future backlog: #88 retains video uploads and poster frames for later reevaluation. Prototype #109 was deliberately closed without merge because of a production image of roughly 755 MiB and the additional ffmpeg operational, Supply Chain, and Security burden; `main` remains fail-closed for video.
 
-### M3 — Planning & Private Area: released, S1 through S7 delivered
+### M3 — Planning & Private Area: released, S1 through S8 delivered
 
 The [M3 Technical Readiness Package](./m3/README.md) is prepared; M3-D01 through M3-D32 are `DECIDED`. Domain-level S0 readiness is therefore complete. Runtime slices are implemented according to the [M3 Delivery Plan](./m3/DELIVERY-PLAN.md) once the production REST/OpenAPI contract for the respective slice is concretely contract-testable and the normal Reuse/PR/CI rules are satisfied.
 
-Delivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, **M3-S4 typed Content Relations**, **M3-S5 Chapter**, **M3-S6 Shared Collections**, and **M3-S7 PrivateNote + GiftIdea**. The next runtime slice is **M3-S8 — PrivateCollection**.
+Delivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, **M3-S4 typed Content Relations**, **M3-S5 Chapter**, **M3-S6 Shared Collections**, **M3-S7 PrivateNote + GiftIdea**, and **M3-S8 PrivateCollection**. The next runtime slice is **M3-S9 — Integrated M3 backend/API evidence**.
 
 ## Milestones
 

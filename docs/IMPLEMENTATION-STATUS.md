@@ -179,6 +179,7 @@ The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A conc
 - [x] **M3-S5 — Chapter:** Chapter Domain with optional `startOn`/`endOn`, canonical nullable `placeId`, collaborative CRUD/List with `If-Match`/409, typed `chapter_memories`/`chapter_heart_moments`/`chapter_milestones`, deterministic derived cross-type content ordering, privacy-safe target handling, and delete semantics that remove only the Chapter and its relations while preserving all originals.
 - [x] **M3-S6 — Shared Collections:** shared Collection + CollectionItem aggregate with collaborative writes; immutable server-derived `createdBy`; independent root structure/order and Item content versions; contiguous positions; append-on-create, transactional delete compaction, and atomic exact-set full-list reorder; Cross-Tenant fail-closed handling and real PostgreSQL reorder/create/delete/completion race coverage; Collection/Item titles remain out of event payloads. ShoppingList and persisted multi-select state remain outside S6.
 - [x] **M3-S7 — PrivateNote + GiftIdea:** dedicated owner-only PrivateNote and GiftIdea tables/services with ProtectedPayload content, server-derived Space/owner/privacy, CRUD/List under `/spaces/{spaceId}/private/...`, `If-Match`/409, GiftIdea lifecycle `IDEA | BOUGHT | GIVEN`, inert URL storage without server fetches, privacy-safe 404 behavior, owner-filtered pagination, redacted private events, and PostgreSQL/HTTP partner/Cross-Tenant coverage.
+- [x] **M3-S8 — PrivateCollection:** dedicated owner-only PrivateCollection and PrivateCollectionItem persistence with Parent-derived Item authorization, ProtectedPayload content, root/item optimistic concurrency, append/compaction and atomic full-list reorder, privacy-safe partner/Cross-Tenant handling, redacted private events, real PostgreSQL race coverage, and synchronized OpenAPI plus generated TypeScript/Kotlin clients (Issue #259 / PR #260).
 
 ## Later milestones
 
@@ -192,4 +193,4 @@ The runtime sequence follows the [M3 Delivery Plan](m3/DELIVERY-PLAN.md). A conc
 
 ## Next checkpoint
 
-M3-S8 **PrivateCollection** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md): separate owner-only root/items, parent-derived authorization, owner-only reorder/completion, Privacy-safe 404 behavior, and partner/Cross-Space negative coverage.
+M3-S9 **Integrated M3 backend/API evidence** according to the [M3 Delivery Plan](m3/DELIVERY-PLAN.md): demonstrate the five mandatory G3 flows against the real SideBySide API + PostgreSQL and consolidate Cross-Tenant, race, Event/log Redaction, and Delete evidence before S10/G3 review.
