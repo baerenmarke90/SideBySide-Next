@@ -177,7 +177,10 @@ def collection_detail(session: DbSession, collection: Collection) -> CollectionD
             can_delete=True,
             can_comment=False,
         ),
-        items=[collection_item_detail(session, item) for item in service.list_items(session, collection)],
+        items=[
+            collection_item_detail(session, item)
+            for item in service.list_items(session, collection)
+        ],
     )
 
 
