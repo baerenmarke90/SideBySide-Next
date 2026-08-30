@@ -1,0 +1,76 @@
+name: M4-B Sync Main Resolve
+
+on:
+  push:
+    branches:
+      - ops/m4b-sync-main-resolve
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out M4-B S1 branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feat/282-m4b-activity-notifications
+          fetch-depth: 0
+
+      - name: Merge main and resolve known M4 conflict
+        run: |
+          git fetch origin main
+          git config user.name "baerenmarke90"
+          git config user.email "49028921+baerenmarke90@users.noreply.github.com"
+          if git merge --no-ff origin/main -m "Merge current main after M4-A Search"; then
+            git push origin HEAD:feat/282-m4b-activity-notifications
+            exit 0
+          fi
+
+          conflicts="$(git diff --name-only --diff-filter=U | sort)"
+          expected="backend/src/sidebyside/api/v1/__init__.py
+          backend/tests/integration/test_endpoint_matrix.py"
+          if [ "$conflicts" != "$expected" ]; then
+            echo "Unexpected merge conflicts:"
+            printf '%s\n' "$conflicts"
+            exit 1
+          fi
+
+          git checkout --ours backend/src/sidebyside/api/v1/__init__.py
+          git checkout --ours backend/tests/integration/test_endpoint_matrix.py
+
+          python - <<'PY'
+          from pathlib import Path
+
+          api = Path("backend/src/sidebyside/api/v1/__init__.py")
+          text = api.read_text(encoding="utf-8")
+          if "    search,\n" not in text:
+              text = text.replace("    profiles,\n", "    profiles,\n    search,\n", 1)
+          if "router.include_router(search.router)" not in text:
+              text = text.replace(
+                  "router.include_router(story.router)\n",
+                  "router.include_router(story.router)\nrouter.include_router(search.router)\n",
+                  1,
+              )
+          api.write_text(text, encoding="utf-8")
+
+          matrix = Path("backend/tests/integration/test_endpoint_matrix.py")
+          text = matrix.read_text(encoding="utf-8")
+          search_block = '''    Endpoint(\n        "GET",\n        "/api/v1/spaces/{spaceId}/search",\n        query={"q": "Matrix"},\n    ),\n'''
+          if '/api/v1/spaces/{spaceId}/search' not in text:
+              text = text.replace(
+                  '    Endpoint("GET", "/api/v1/spaces/{spaceId}/timeline"),\n',
+                  '    Endpoint("GET", "/api/v1/spaces/{spaceId}/timeline"),\n' + search_block,
+                  1,
+              )
+          matrix.write_text(text, encoding="utf-8")
+          PY
+
+          git add backend/src/sidebyside/api/v1/__init__.py backend/tests/integration/test_endpoint_matrix.py
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Unresolved merge conflicts remain."
+            exit 1
+          fi
+          git commit --no-edit
+          git push origin HEAD:feat/282-m4b-activity-notifications
