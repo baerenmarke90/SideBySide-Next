@@ -156,7 +156,9 @@ export async function uploadAttachmentBytesWithProgress(
   await new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open('PUT', resolveTransportUrl(apiBaseUrl, descriptor.uploadUrl));
-    headers.forEach((value, key) => request.setRequestHeader(key, value));
+    headers.forEach((value, key) => {
+      request.setRequestHeader(key, value);
+    });
 
     request.upload.onprogress = (event) => {
       if (!event.lengthComputable || event.total <= 0) return;
@@ -229,7 +231,9 @@ export async function loadAuthorizedMedia(
   apiBaseUrl: string,
   accessToken: string,
   spaceId: string,
-  parentType: typeof AttachmentReadRequestParentTypeEnum.MEMORY | typeof AttachmentReadRequestParentTypeEnum.HEART_MOMENT,
+  parentType:
+    | typeof AttachmentReadRequestParentTypeEnum.MEMORY
+    | typeof AttachmentReadRequestParentTypeEnum.HEART_MOMENT,
   parentId: string,
   attachmentId: string,
   fetchApi: typeof fetch = fetch,
