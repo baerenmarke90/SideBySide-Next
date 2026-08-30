@@ -1,9 +1,15 @@
 import type { FormEvent } from 'react';
 import { useEffect, useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
-import { StoryKind, type StoryKind as StoryKindValue } from '../api/generated/models/StoryKind';
-import { StoryOrder, type StoryOrder as StoryOrderValue } from '../api/generated/models/StoryOrder';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import {
+  StoryKind,
+  type StoryKind as StoryKindValue,
+} from '../api/generated/models/StoryKind';
+import {
+  StoryOrder,
+  type StoryOrder as StoryOrderValue,
+} from '../api/generated/models/StoryOrder';
 import {
   StoryPageFromJSON,
   StoryPageToJSON,
@@ -66,6 +72,8 @@ export function StoryProductPage({
   loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
 }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const saved = Boolean((location.state as { saved?: boolean } | null)?.saved);
   const [searchParams, setSearchParams] = useSearchParams();
   const filters = useMemo(() => parseStoryFilters(searchParams), [searchParams]);
   const cacheResourceId = useMemo(
@@ -76,14 +84,17 @@ export function StoryProductPage({
   const storyQuery = useInfiniteQuery({
     queryKey: ['story', spaceId, cacheResourceId],
     initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }): Promise<ProductReadResult<ReturnType<typeof StoryPageFromJSON>>> => {
+    queryFn: async ({
+      pageParam,
+    }): Promise<ProductReadResult<ReturnType<typeof StoryPageFromJSON>>> => {
       if (pageParam === null) {
         return loadProductWithReadCache({
           accountId,
           spaceId,
           kind: 'story',
           resourceId: cacheResourceId,
-          load: () => apis.story.getStoryTimeline(storyRequest(spaceId, filters, null)),
+          load: () =>
+            apis.story.getStoryTimeline(storyRequest(spaceId, filters, null)),
           serialize: StoryPageToJSON,
           deserialize: (payload) => StoryPageFromJSON(payload),
         });
@@ -148,6 +159,12 @@ export function StoryProductPage({
 
   return (
     <div className="page story-page">
+      {saved ? (
+        <div className="inline-message inline-message-success" role="status">
+          <strong>{t('story.savedTitle')}</strong>
+          <span>{t('story.savedBody')}</span>
+        </div>
+      ) : null}
       {offline ? (
         <div className="inline-message" role="status">
           {t('offlineCache.banner')}
