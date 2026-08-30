@@ -1,0 +1,140 @@
+name: M4-B-S1 Sync
+
+on:
+  push:
+    branches:
+      - feat/282-m4b-activity-notifications
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+
+jobs:
+  sync:
+    name: Merge main and regenerate contracts
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Merge current main and resolve the known M4 overlap
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          set +e
+          git merge --no-ff --no-commit origin/main
+          merge_status=$?
+          set -e
+
+          if [ "$merge_status" -ne 0 ]; then
+            unexpected=0
+            while IFS= read -r path; do
+              case "$path" in
+                backend/openapi.json|backend/src/sidebyside/api/v1/__init__.py|backend/tests/integration/test_endpoint_matrix.py|web/src/api/generated/apis/index.ts|web/src/api/generated/models/index.ts)
+                  ;;
+                *)
+                  echo "Unexpected merge conflict: $path"
+                  unexpected=1
+                  ;;
+              esac
+            done < <(git diff --name-only --diff-filter=U)
+            if [ "$unexpected" -ne 0 ]; then
+              exit 1
+            fi
+          fi
+
+          for path in \
+            backend/openapi.json \
+            backend/src/sidebyside/api/v1/__init__.py \
+            backend/tests/integration/test_endpoint_matrix.py \
+            web/src/api/generated/apis/index.ts \
+            web/src/api/generated/models/index.ts; do
+            if git ls-files -u -- "$path" | grep -q .; then
+              git checkout --ours -- "$path"
+              git add "$path"
+            fi
+          done
+
+          if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+            echo "Unresolved conflicts remain:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          python - <<'PY'
+          from pathlib import Path
+
+          router = Path("backend/src/sidebyside/api/v1/__init__.py")
+          text = router.read_text(encoding="utf-8")
+          if "    dashboard,\n" not in text:
+              marker = "    comments,\n    engagement,\n"
+              if marker not in text:
+                  raise SystemExit("router import marker not found")
+              text = text.replace(marker, "    comments,\n    dashboard,\n    engagement,\n", 1)
+          if "router.include_router(dashboard.router)" not in text:
+              marker = "router.include_router(search.router)\nrouter.include_router(engagement.router)"
+              if marker not in text:
+                  raise SystemExit("router include marker not found")
+              text = text.replace(
+                  marker,
+                  "router.include_router(search.router)\n"
+                  "router.include_router(dashboard.router)\n"
+                  "router.include_router(engagement.router)",
+                  1,
+              )
+          router.write_text(text, encoding="utf-8")
+
+          matrix = Path("backend/tests/integration/test_endpoint_matrix.py")
+          text = matrix.read_text(encoding="utf-8")
+          dashboard = '    Endpoint("GET", "/api/v1/spaces/{spaceId}/dashboard"),\n'
+          if dashboard not in text:
+              marker = '    Endpoint("GET", "/api/v1/spaces/{spaceId}/activity"),\n'
+              if marker not in text:
+                  raise SystemExit("endpoint-matrix activity marker not found")
+              text = text.replace(marker, dashboard + marker, 1)
+          matrix.write_text(text, encoding="utf-8")
+          PY
+
+          git add backend/src/sidebyside/api/v1/__init__.py backend/tests/integration/test_endpoint_matrix.py
+
+      - name: Regenerate authoritative OpenAPI and clients
+        shell: bash
+        env:
+          SBS_ENVIRONMENT: test
+        run: |
+          set -euo pipefail
+          python -m pip install "uv==$UV_VERSION"
+          (
+            cd backend
+            uv lock --check
+            uv sync --frozen
+            uv run --frozen python scripts/openapi_contract.py write
+          )
+          tools/openapi/generate.sh
+          git add backend/openapi.json web/src/api/generated android/api/generated
+          git diff --check
+
+      - name: Create real merge commit and push it
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/m4-b-s1-sync.yml
+          git add -A
+          git diff --cached --check
+          git commit -m "Merge main into M4-B-S1"
+          git push origin HEAD:feat/282-m4b-activity-notifications
