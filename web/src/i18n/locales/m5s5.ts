@@ -8,7 +8,8 @@ const m5s5 = {
     durationDays: '{{count}} Tage zusammen',
     durationSince: 'Seit {{date}}',
     retrospectiveTitle: 'Weißt du noch?',
-    retrospectiveEmpty: 'Hier erscheint eine gemeinsame Erinnerung, sobald es etwas Passendes gibt.',
+    retrospectiveEmpty:
+      'Hier erscheint eine gemeinsame Erinnerung, sobald es etwas Passendes gibt.',
     upcomingTitle: 'Demnächst',
     upcomingEmpty: 'Gerade steht nichts Gemeinsames bevor.',
     recentTitle: 'Zuletzt bei euch',
@@ -26,7 +27,8 @@ const m5s5 = {
     submit: 'Suchen',
     searching: 'Suche läuft …',
     startTitle: 'Wonach suchst du?',
-    startBody: 'Gib einen Suchbegriff ein. Ohne Suchbegriff werden keine Daten abgefragt.',
+    startBody:
+      'Gib einen Suchbegriff ein. Ohne Suchbegriff werden keine Daten abgefragt.',
     emptyTitle: 'Nichts gefunden',
     emptyBody: 'Versuche einen anderen Begriff oder einen anderen Inhaltstyp.',
     resultFallback: 'Eintrag ohne Titel',
