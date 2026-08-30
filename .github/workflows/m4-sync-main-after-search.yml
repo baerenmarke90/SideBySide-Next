@@ -1,0 +1,33 @@
+name: M4 Sync Main After Search
+
+on:
+  push:
+    branches:
+      - ops/m4-sync-main-after-search
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        branch:
+          - feat/280-m4a-dashboard
+          - feat/282-m4b-activity-notifications
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ matrix.branch }}
+          fetch-depth: 0
+
+      - name: Merge current main
+        run: |
+          git fetch origin main
+          git config user.name "baerenmarke90"
+          git config user.email "49028921+baerenmarke90@users.noreply.github.com"
+          git merge --no-ff origin/main -m "Merge current main after M4-A Search"
+          git push origin HEAD:${{ matrix.branch }}
