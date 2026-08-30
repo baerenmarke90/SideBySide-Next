@@ -1,0 +1,154 @@
+name: M3-S7 Generate Contracts
+
+on:
+  push:
+    branches:
+      - feat/257-m3-s7-private-note-gift-idea
+    paths:
+      - .github/workflows/m3-s7-generate.yml
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13.7'
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Install locked backend
+        working-directory: backend
+        run: |
+          python -m pip install 'uv==0.12.5'
+          uv lock --check
+          uv sync --frozen
+
+      - name: Extend cross-cutting endpoint matrix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/tests/integration/test_endpoint_matrix.py')
+          text = path.read_text(encoding='utf-8')
+
+          if 'PRIVATE_NOTE =' not in text:
+              marker = 'COLLECTION_ITEM = {"title": "Matrix Collection Item"}\n'
+              insert = (
+                  marker
+                  + 'PRIVATE_NOTE = {"title": "Matrix Private Note", "body": "Private body"}\n'
+                  + 'GIFT_IDEA = {"title": "Matrix Gift Idea"}\n'
+              )
+              if marker not in text:
+                  raise SystemExit('constant marker not found')
+              text = text.replace(marker, insert, 1)
+
+          if '/private/notes/{noteId}' not in text:
+              marker = '    Endpoint("GET", "/api/v1/spaces/{spaceId}/plans"),\n'
+              insert = '''    Endpoint("GET", "/api/v1/spaces/{spaceId}/private/notes"),
+          Endpoint("POST", "/api/v1/spaces/{spaceId}/private/notes", body=PRIVATE_NOTE),
+          Endpoint(
+              "GET",
+              "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+              resource_absence="PRIVATE_NOTE_NOT_FOUND",
+              placeholders=("noteId",),
+          ),
+          Endpoint(
+              "PATCH",
+              "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+              body={"pinned": True},
+              if_match=True,
+              resource_absence="PRIVATE_NOTE_NOT_FOUND",
+              placeholders=("noteId",),
+          ),
+          Endpoint(
+              "DELETE",
+              "/api/v1/spaces/{spaceId}/private/notes/{noteId}",
+              if_match=True,
+              resource_absence="PRIVATE_NOTE_NOT_FOUND",
+              placeholders=("noteId",),
+          ),
+          Endpoint("GET", "/api/v1/spaces/{spaceId}/private/gift-ideas"),
+          Endpoint("POST", "/api/v1/spaces/{spaceId}/private/gift-ideas", body=GIFT_IDEA),
+          Endpoint(
+              "GET",
+              "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+              resource_absence="GIFT_IDEA_NOT_FOUND",
+              placeholders=("giftIdeaId",),
+          ),
+          Endpoint(
+              "PATCH",
+              "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+              body={"pinned": True},
+              if_match=True,
+              resource_absence="GIFT_IDEA_NOT_FOUND",
+              placeholders=("giftIdeaId",),
+          ),
+          Endpoint(
+              "DELETE",
+              "/api/v1/spaces/{spaceId}/private/gift-ideas/{giftIdeaId}",
+              if_match=True,
+              resource_absence="GIFT_IDEA_NOT_FOUND",
+              placeholders=("giftIdeaId",),
+          ),
+          '''
+              if marker not in text:
+                  raise SystemExit('plan endpoint marker not found')
+              text = text.replace(marker, insert + marker, 1)
+
+          if 'private_note = client.post' not in text:
+              marker = '    attachment = client.post(f"{base_path}/attachments", json=ATTACHMENT, headers=headers).json()\n'
+              insert = '''    private_note = client.post(
+              f"{base_path}/private/notes", json=PRIVATE_NOTE, headers=headers
+          ).json()
+          gift_idea = client.post(
+              f"{base_path}/private/gift-ideas", json=GIFT_IDEA, headers=headers
+          ).json()
+          '''
+              if marker not in text:
+                  raise SystemExit('attachment marker not found')
+              text = text.replace(marker, insert + marker, 1)
+
+          if '"noteId": private_note["id"]' not in text:
+              marker = '            # The target is a typed relation. A memory is enough for all three\n'
+              insert = '''            "noteId": private_note["id"],
+              "giftIdeaId": gift_idea["id"],
+          '''
+              if marker not in text:
+                  raise SystemExit('resource id marker not found')
+              text = text.replace(marker, insert + marker, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Format backend changes
+        working-directory: backend
+        run: uv run --frozen ruff format src tests scripts alembic
+
+      - name: Write canonical OpenAPI snapshot
+        working-directory: backend
+        env:
+          SBS_ENVIRONMENT: test
+        run: uv run --frozen python scripts/openapi_contract.py write
+
+      - name: Generate pinned TypeScript and Kotlin clients
+        run: tools/openapi/generate.sh
+
+      - name: Commit generated artifacts to feature branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/openapi.json backend/src backend/tests backend/alembic web/src/api/generated android/api/generated
+          if git diff --cached --quiet; then
+            echo 'Generated artifacts are already current.'
+            exit 0
+          fi
+          git commit -m 'chore(api): regenerate M3-S7 contracts (#257)'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
