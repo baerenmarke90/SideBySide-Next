@@ -1,0 +1,100 @@
+name: M4 Finalize
+
+on:
+  push:
+    branches: [feat/292-m4c-rules-occurrences-final]
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+  SBS_ENVIRONMENT: test
+  SBS_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+  SBS_TEST_DATABASE_URL: postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: sidebyside
+          POSTGRES_PASSWORD: sidebyside
+          POSTGRES_DB: sidebyside_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sidebyside -d sidebyside_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Apply bounded M4-C-S2 completion
+        run: python3 tools/m4_finalize.py
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv lock --check
+          uv sync --frozen
+
+      - name: Format backend and tests
+        working-directory: backend
+        run: uv run --frozen ruff format src tests scripts alembic
+
+      - name: Regenerate authoritative OpenAPI contract
+        working-directory: backend
+        run: uv run --frozen python scripts/openapi_contract.py write
+
+      - name: Regenerate TypeScript and Kotlin clients
+        run: tools/openapi/generate.sh
+
+      - name: Validate static gates
+        working-directory: backend
+        run: |
+          uv run --frozen ruff check src tests scripts alembic
+          uv run --frozen mypy
+          uv run --frozen python scripts/openapi_contract.py check
+
+      - name: Apply migrations
+        working-directory: backend
+        run: uv run --frozen alembic upgrade head
+
+      - name: Validate final M4 integration evidence
+        working-directory: backend
+        run: |
+          uv run --frozen pytest -q \
+            tests/integration/test_reminder_runtime.py \
+            tests/integration/test_reminders.py \
+            tests/integration/test_endpoint_matrix.py
+
+      - name: Verify generated clients
+        run: tools/openapi/generate.sh --check
+
+      - name: Commit final M4-C-S2 tree
+        run: |
+          rm tools/m4_finalize.py .github/workflows/m4-finalize.yml
+          git add -A
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No finalization changes produced."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(reminders): finish M4-C-S2 evidence and reconciliation"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
