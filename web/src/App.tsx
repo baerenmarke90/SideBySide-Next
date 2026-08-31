@@ -470,11 +470,11 @@ function AuthenticatedApp({
             element={<PlanProductPage {...planningProductProps} />}
           />
           <Route
-            path={PLACE_DETÁIL_ROUTE_PATTERN}
+            path={PLACE_DETAIL_ROUTE_PATTERN}
             element={<PlaceProductPage {...planningProductProps} />}
           />
           <Route
-            path={CHAPTER_DETÁIL_ROUTE_PATTERN}
+            path={CHAPTER_DETAIL_ROUTE_PATTERN}
             element={<ChapterProductPage {...planningProductProps} />}
           />
           <Route
