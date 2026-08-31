@@ -1,0 +1,157 @@
+name: M5 S3 one-shot main integration
+
+on:
+  push:
+    branches:
+      - feat/300-m5-web-shared-planning
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-main:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge current main, resolve S3/S4 overlap, validate, and push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git clone --quiet "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" repo
+          cd repo
+          git checkout --quiet "${BRANCH}"
+          git fetch --quiet origin main
+
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+
+          if [ "${merge_status}" -ne 0 ]; then
+            mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
+            printf 'Merge conflicts:\n%s\n' "${conflicts[*]}"
+            if [ "${#conflicts[@]}" -ne 2 ]; then
+              echo "Unexpected number of merge conflicts"
+              exit 1
+            fi
+            for expected in web/src/App.tsx web/src/i18n/index.ts; do
+              if ! printf '%s\n' "${conflicts[@]}" | grep -Fxq "${expected}"; then
+                echo "Unexpected merge conflict set; missing ${expected}"
+                exit 1
+              fi
+            done
+
+            git checkout --theirs -- web/src/App.tsx web/src/i18n/index.ts
+
+            python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file_path = Path(path)
+              text = file_path.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(
+                      f"Expected exactly one integration anchor in {path}, found {count}: {old[:100]!r}"
+                  )
+              file_path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          app = "web/src/App.tsx"
+          app_text = Path(app).read_text(encoding="utf-8")
+          for required in ("createPrivateAreaApi", "PrivateAreaProductPage", 'path="/private/*"'):
+              if required not in app_text:
+                  raise SystemExit(f"Current main is missing expected M5-S4 integration: {required}")
+
+          replace_once(
+              app,
+              "  appRoutePath,\n  DEFAULT_APP_ROUTE,",
+              "  appRoutePath,\n  CHAPTER_DETAIL_ROUTE_PATTERN,\n  COLLECTION_DETAIL_ROUTE_PATTERN,\n  DEFAULT_APP_ROUTE,",
+          )
+          replace_once(
+              app,
+              "  MILESTONE_EDIT_ROUTE_PATTERN,\n} from './client/routes';",
+              "  MILESTONE_EDIT_ROUTE_PATTERN,\n  PLAN_DETAIL_ROUTE_PATTERN,\n  PLACE_DETAIL_ROUTE_PATTERN,\n  WISH_DETAIL_ROUTE_PATTERN,\n} from './client/routes';\nimport { createSharedPlanningApis } from './client/sharedPlanning';",
+          )
+          replace_once(
+              app,
+              "import { Brand } from './components/Brand';\nimport { HeartMomentProductPage }",
+              "import { Brand } from './components/Brand';\nimport { ChapterProductPage } from './components/ChapterProductPage';\nimport { CollectionProductPage } from './components/CollectionProductPage';\nimport { HeartMomentProductPage }",
+          )
+          replace_once(
+              app,
+              "import { PageHeader } from './components/PageHeader';\nimport { PrivateAreaProductPage }",
+              "import { PageHeader } from './components/PageHeader';\nimport { PlaceProductPage } from './components/PlaceProductPage';\nimport { PlanProductPage } from './components/PlanProductPage';\nimport { PrivateAreaProductPage }",
+          )
+          replace_once(
+              app,
+              "import { RelatedPeoplePage } from './components/RelatedPeoplePage';\nimport { StoryProductPage }",
+              "import { RelatedPeoplePage } from './components/RelatedPeoplePage';\nimport { SharedPlanningOverviewPage } from './components/SharedPlanningOverviewPage';\nimport { StoryProductPage }",
+          )
+          replace_once(
+              app,
+              "import { UiState } from './components/UiState';\nimport { useTranslation }",
+              "import { UiState } from './components/UiState';\nimport { WishProductPage } from './components/WishProductPage';\nimport { useTranslation }",
+          )
+          replace_once(
+              app,
+              "  const privateAreaApi = useMemo(\n",
+              "  const planningApis = useMemo(\n    () => createSharedPlanningApis(apiBaseUrl, tokens.accessToken),\n    [apiBaseUrl, tokens.accessToken],\n  );\n  const privateAreaApi = useMemo(\n",
+          )
+          replace_once(
+              app,
+              "  const milestoneProductProps = {\n    apis,\n    spaceId,\n    currentAccountId: account.id,\n  };\n\n  return (",
+              "  const milestoneProductProps = {\n    apis,\n    spaceId,\n    currentAccountId: account.id,\n  };\n  const planningProductProps = {\n    apis: planningApis,\n    spaceId,\n  };\n\n  return (",
+          )
+          replace_once(
+              app,
+              "          <Route\n            path={appRoutePath('dashboard')}\n",
+              "          <Route\n            path={appRoutePath('planning')}\n            element={<SharedPlanningOverviewPage {...planningProductProps} />}\n          />\n          <Route\n            path={WISH_DETAIL_ROUTE_PATTERN}\n            element={<WishProductPage {...planningProductProps} />}\n          />\n          <Route\n            path={PLAN_DETAIL_ROUTE_PATTERN}\n            element={<PlanProductPage {...planningProductProps} />}\n          />\n          <Route\n            path={PLACE_DETAIL_ROUTE_PATTERN}\n            element={<PlaceProductPage {...planningProductProps} />}\n          />\n          <Route\n            path={CHAPTER_DETAIL_ROUTE_PATTERN}\n            element={<ChapterProductPage {...planningProductProps} />}\n          />\n          <Route\n            path={COLLECTION_DETAIL_ROUTE_PATTERN}\n            element={<CollectionProductPage {...planningProductProps} />}\n          />\n          <Route\n            path={appRoutePath('dashboard')}\n",
+          )
+
+          i18n = "web/src/i18n/index.ts"
+          i18n_text = Path(i18n).read_text(encoding="utf-8")
+          if "privateArea" not in i18n_text:
+              raise SystemExit("Current main is missing expected M5-S4 private-area locale registration")
+          replace_once(
+              i18n,
+              "import importantDates from './locales/importantDates';\nimport m5s5",
+              "import importantDates from './locales/importantDates';\nimport m5s3 from './locales/m5s3';\nimport m5s5",
+          )
+          replace_once(
+              i18n,
+              "          navigation: {\n            ...de.navigation,\n            people:",
+              "          navigation: {\n            ...de.navigation,\n            planning: 'Planen',\n            people:",
+          )
+          replace_once(
+              i18n,
+              "          importantDates,\n          m5s5,",
+              "          importantDates,\n          m5s3,\n          m5s5,",
+          )
+          PY
+
+            git add web/src/App.tsx web/src/i18n/index.ts
+          fi
+
+          rm .github/workflows/s3-sync-main.yml
+
+          cd web
+          npm ci
+          npm run format
+          npm run format:check
+          npm run typecheck
+          npm run lint
+          npm test -- --run
+          npm run build
+          cd ..
+          python3 tools/ci/engineering_language_audit.py
+          git diff --check
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git status --short
+          git commit -m "merge: integrate M5-S4 main into M5-S3"
+          git push --quiet origin "HEAD:${BRANCH}"
