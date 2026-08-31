@@ -570,13 +570,14 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
       />
     );
   }
+  const editableCollection: PrivateCollectionDetail = collection;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const icon = String(data.get('icon') || '').trim();
     mutation.mutate({
-      collection,
+      collection: editableCollection,
       values: {
         title: String(data.get('title') || '').trim(),
         icon: icon || null,
