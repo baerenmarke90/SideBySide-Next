@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 
 from sidebyside.authorization import AuthorizationContext
@@ -118,8 +119,9 @@ def handle_export(session: Session, payload: dict[str, Any]) -> None:
         # the archive one deterministic snapshot even though the worker's Job
         # row was claimed in a separate transaction.
         bind = session.get_bind()
+        engine = bind.engine if isinstance(bind, Connection) else bind
         with (
-            bind.connect().execution_options(isolation_level="REPEATABLE READ") as connection,
+            engine.connect().execution_options(isolation_level="REPEATABLE READ") as connection,
             Session(bind=connection) as snapshot,
             snapshot.begin(),
         ):
