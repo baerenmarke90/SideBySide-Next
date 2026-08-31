@@ -157,7 +157,7 @@ export function PartnerConnectionPanel({
 
   if (spaceQuery.isLoading) {
     return (
-      <div className="page profile-page">
+      <div className="page page-reading profile-page">
         <section
           className="profile-section"
           aria-label={t('partnerConnection.title')}
@@ -170,7 +170,7 @@ export function PartnerConnectionPanel({
 
   if (spaceQuery.error) {
     return (
-      <div className="page profile-page">
+      <div className="page page-reading profile-page">
         <section
           className="profile-section"
           aria-label={t('partnerConnection.title')}
@@ -189,7 +189,7 @@ export function PartnerConnectionPanel({
   const invitations = invitationsQuery.data ?? [];
 
   return (
-    <div className="page profile-page">
+    <div className="page page-reading profile-page">
       <section
         className="profile-section"
         aria-labelledby="partner-connection-title"

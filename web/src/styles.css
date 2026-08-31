@@ -18,6 +18,10 @@
   --color-brand: #7c4dff;
   --color-brand-strong: #6638dc;
   --color-brand-surface: #eee7ff;
+  --color-surface-panel: #ffffff;
+  --color-surface-panel-tint: #f7f3fb;
+  --color-page-tint-brand: #ece4ff7a;
+  --color-page-tint-shared: #dff2ed66;
   --color-shared: #237a65;
   --color-shared-accent: #36ae97;
   --color-shared-surface: #e3f6f1;
@@ -27,6 +31,8 @@
   --color-focus: #005fcc;
   --content-max: 1200px;
   --reading-max: 720px;
+  --rail-width: 21rem;
+  --topbar-height: 72px;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -61,17 +67,12 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(
-      circle at 10% 0%,
-      var(--color-brand-glow) 0,
-      transparent 28rem
-    ),
-    var(--color-background);
+  background: var(--color-background);
 }
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -134,6 +135,7 @@ button:focus-visible,
 .button-link:focus-visible,
 a:focus-visible,
 input:focus-visible,
+select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible,
 .file-picker:focus-within {
@@ -141,7 +143,13 @@ summary:focus-visible,
   outline-offset: 2px;
 }
 
-input,
+/*
+ * Text-entry controls share one surface. A native select otherwise renders at
+ * its own size and reads as a different control class next to text inputs.
+ * Checkboxes and radios are sized separately; they are not full-width fields.
+ */
+input:not([type="checkbox"], [type="radio"]),
+select,
 textarea {
   width: 100%;
   min-height: 48px;
@@ -156,9 +164,44 @@ textarea {
     background var(--motion-fast);
 }
 
-input:hover,
+select {
+  appearance: none;
+  padding-right: var(--space-10);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent 50%,
+      currentcolor 50%,
+      currentcolor 58%,
+      transparent 58%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 50%,
+      currentcolor 50%,
+      currentcolor 58%,
+      transparent 58%
+    );
+  background-position:
+    right 1.35rem center,
+    right 1rem center;
+  background-size: 0.4rem 0.4rem;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+input:not([type="checkbox"], [type="radio"]):hover,
+select:hover,
 textarea:hover {
   border-color: var(--color-text-muted);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  accent-color: var(--color-brand-strong);
 }
 
 textarea {
@@ -189,15 +232,15 @@ h4 {
 
 h1 {
   margin-bottom: 0.65rem;
-  font-size: clamp(2rem, 5vw, 3rem);
-  line-height: 1.08;
-  letter-spacing: -0.025em;
+  font-size: clamp(1.75rem, 2.6vw, 2.25rem);
+  line-height: 1.22;
+  letter-spacing: -0.022em;
 }
 
 h2 {
   margin-bottom: 0.35rem;
-  font-size: clamp(1.45rem, 3vw, 1.75rem);
-  line-height: 1.2;
+  font-size: clamp(1.35rem, 1.9vw, 1.75rem);
+  line-height: 1.28;
   letter-spacing: -0.015em;
 }
 
@@ -582,34 +625,6 @@ code {
   padding: clamp(2rem, 5vw, 4.5rem) 0 5rem;
 }
 
-.page {
-  width: min(100%, var(--reading-max));
-  margin: 0 auto;
-}
-
-.page-heading {
-  margin-bottom: 2rem;
-}
-
-.page-heading > p:last-child,
-.page-heading > div > p:last-child {
-  max-width: 42rem;
-  margin-bottom: 0;
-  color: var(--color-text-secondary);
-}
-
-.story-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-bottom: 2.5rem;
-}
-
-.story-heading > div {
-  min-width: 0;
-}
-
 .primary-action {
   flex: 0 0 auto;
 }
@@ -619,7 +634,7 @@ code {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
   background: var(--color-surface);
-  box-shadow: 0 12px 40px #211a2b08;
+  box-shadow: var(--shadow-soft);
 }
 
 .story-surface {
@@ -664,7 +679,7 @@ code {
 }
 
 .inline-message-success {
-  border-color: #36ae9755;
+  border-color: var(--color-shared-border);
   background: var(--color-shared-surface);
 }
 
@@ -673,7 +688,7 @@ code {
 }
 
 .inline-message-error {
-  border-color: #a4133c40;
+  border-color: var(--color-error-border);
   background: var(--color-error-surface);
 }
 
@@ -694,7 +709,12 @@ code {
 .story-loading span {
   height: 7rem;
   border-radius: var(--radius-large);
-  background: linear-gradient(100deg, #f2eef5 25%, #faf8fc 45%, #f2eef5 65%);
+  background: linear-gradient(
+    100deg,
+    var(--color-shimmer-base) 25%,
+    var(--color-shimmer-highlight) 45%,
+    var(--color-shimmer-base) 65%
+  );
   background-size: 200% 100%;
   animation: story-shimmer 1.6s linear infinite;
 }
@@ -751,16 +771,24 @@ code {
 
 .story-card:hover {
   border-color: var(--color-border);
-  box-shadow: 0 8px 24px #211a2b0b;
+  box-shadow: var(--shadow-soft);
   transform: translateY(-1px);
 }
 
 .story-card-heart-moment {
-  background: linear-gradient(135deg, #fff 60%, #ffe7ee66);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface) 60%,
+    var(--color-private-surface-soft)
+  );
 }
 
 .story-card-milestone {
-  background: linear-gradient(135deg, #fff 60%, #fff2d566);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface) 60%,
+    var(--color-discovery-surface-soft)
+  );
 }
 
 .story-card-meta {
@@ -879,8 +907,8 @@ code {
   gap: 0.7rem;
 }
 
-.form-grid > label,
-.field-group > label:first-child {
+.form-grid > label:not(.choice-row),
+.field-group > label:first-child:not(.choice-row) {
   display: block;
   margin-bottom: 0.45rem;
   color: var(--color-text);
@@ -963,7 +991,7 @@ code {
   place-items: center;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-surface-raised);
   color: var(--color-shared);
 }
 
@@ -1103,12 +1131,6 @@ code {
   .app-main {
     width: min(100% - 2rem, var(--reading-max));
     padding: 2rem 0 4rem;
-  }
-
-  .story-heading {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 1.25rem;
   }
 
   .primary-action {

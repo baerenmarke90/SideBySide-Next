@@ -12,6 +12,9 @@ const de = {
     newMemory: 'Neue Erinnerung',
   },
   states: {
+    loading: {
+      title: 'Wird geladen …',
+    },
     validation: {
       title: 'Einige Angaben passen noch nicht.',
       body: 'Bitte prüfe deine Eingaben und versuche es erneut.',

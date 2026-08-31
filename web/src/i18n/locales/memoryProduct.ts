@@ -3,6 +3,7 @@ const memoryProduct = {
   backToStory: '← Zurück zur Story',
   backToMemory: '← Zurück zur Erinnerung',
   detailEyebrow: 'Erinnerung',
+  detailMetaAria: 'Angaben zu dieser Erinnerung',
   detailIntro: 'Alle Details zu diesem gemeinsamen Moment.',
   loading: 'Erinnerung wird geladen …',
   authorLabel: 'Festgehalten von',

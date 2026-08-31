@@ -37,7 +37,7 @@
   min-height: 2rem;
   padding: 0.2rem 0.7rem;
   border-radius: 999px;
-  background: var(--color-surface-muted);
+  background: var(--color-surface-subtle);
   color: var(--color-text-secondary);
   font-size: 0.85rem;
   font-weight: 650;
@@ -63,11 +63,32 @@
 }
 
 .private-area-nav a[aria-current="page"] {
-  border-color: var(--color-accent);
-  color: var(--color-text-primary);
+  border-color: transparent;
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  font-weight: 750;
 }
 
-.private-area-list,
+/*
+ * Entry overviews. Cards carry their own surface, so the overview itself does
+ * not add a second one around them.
+ */
+.private-area-results {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.private-area-results > button {
+  justify-self: start;
+}
+
+/* The overview list takes its columns from the shared overview grid. */
+.private-area-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .private-area-item-list {
   display: grid;
   gap: var(--space-3);
@@ -80,10 +101,16 @@
 .private-area-item {
   display: grid;
   gap: var(--space-3);
+  align-content: start;
   padding: var(--space-4);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-medium);
   background: var(--color-surface);
+}
+
+/* One direct action per card, at its own width. */
+.private-area-card > .button-link {
+  justify-self: start;
 }
 
 .private-area-card-heading,
@@ -131,11 +158,6 @@
   gap: var(--space-2);
   min-height: 44px;
   width: fit-content;
-}
-
-.private-area-check input {
-  width: 1.25rem;
-  height: 1.25rem;
 }
 
 .private-area-field-grid,

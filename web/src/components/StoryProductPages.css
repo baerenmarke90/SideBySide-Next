@@ -15,35 +15,29 @@
   border-radius: var(--radius-large);
 }
 
-.story-create-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-2);
-}
-
-.story-filter-bar {
+/*
+ * Filters live in the desktop context rail, where a stacked field list reads
+ * better than a row and keeps the timeline column free for content.
+ */
+.story-filter-panel .field-group {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-  gap: var(--space-3);
-  align-items: end;
-  margin-bottom: var(--space-6);
-  border-bottom: 1px solid var(--color-border-subtle);
-  padding-bottom: var(--space-5);
-}
-
-.story-filter-actions,
-.story-pagination {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 
 .story-filter-actions {
-  align-items: center;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.story-filter-actions > button {
+  width: 100%;
+  justify-content: center;
 }
 
 .story-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   justify-content: center;
   margin-top: var(--space-5);
 }
@@ -84,40 +78,4 @@
 
 .visibility-panel button {
   justify-self: start;
-}
-
-@media (max-width: 860px) {
-  .story-filter-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .story-filter-actions {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 640px) {
-  .story-create-actions {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .story-create-actions > a {
-    flex: 1 1 100%;
-    justify-content: center;
-  }
-
-  .story-filter-bar {
-    grid-template-columns: 1fr;
-  }
-
-  .story-filter-actions {
-    grid-column: auto;
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .story-filter-actions button {
-    width: 100%;
-  }
 }

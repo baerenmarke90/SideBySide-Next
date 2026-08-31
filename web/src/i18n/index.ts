@@ -30,8 +30,8 @@ if (!i18n.isInitialized) {
       de: {
         translation: {
           ...de,
-          navigation: { ...de.navigation, ...navigation },
           demo,
+          navigation: { ...de.navigation, ...navigation },
           importantDates,
           m5s3,
           m5s5,

@@ -221,7 +221,6 @@ export function GiftIdeasListPage({ api, accountId, spaceId }: Props) {
     <>
       <PageHeader
         before={<PrivateAreaBackToProfile />}
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.gifts.title')}
         description={t('privateArea.gifts.intro')}
         action={
@@ -247,8 +246,8 @@ export function GiftIdeasListPage({ api, accountId, spaceId }: Props) {
         />
       ) : null}
       {ideas.length > 0 ? (
-        <section className="private-area-section" aria-live="polite">
-          <ul className="private-area-list">
+        <section className="private-area-results" aria-live="polite">
+          <ul className="private-area-list layout-columns layout-columns-dense">
             {ideas.map((gift) => (
               <li key={gift.id} className="private-area-card">
                 <div className="private-area-card-heading">
@@ -311,7 +310,6 @@ export function GiftIdeaCreatePage({ api, accountId, spaceId }: Props) {
             {t('privateArea.gifts.detailBack')}
           </Link>
         }
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.gifts.createTitle')}
         description={t('privateArea.gifts.intro')}
       />
@@ -518,7 +516,6 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
             {t('privateArea.gifts.detailBack')}
           </Link>
         }
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.gifts.editTitle')}
         description={t('privateArea.gifts.intro')}
       />
