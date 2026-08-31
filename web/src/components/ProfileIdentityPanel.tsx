@@ -49,7 +49,10 @@ export function ProfileIdentityPanel({
       }),
     [accessToken, apiBaseUrl],
   );
-  const profilesApi = useMemo(() => new ProfilesApi(configuration), [configuration]);
+  const profilesApi = useMemo(
+    () => new ProfilesApi(configuration),
+    [configuration],
+  );
   const referenceApis = useMemo(
     () => createReferenceApis(apiBaseUrl, accessToken),
     [accessToken, apiBaseUrl],
@@ -59,10 +62,12 @@ export function ProfileIdentityPanel({
     queryKey: ['profile-identity', spaceId, account.id],
     queryFn: async () => {
       try {
-        return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet({
-          accountId: account.id,
-          spaceId,
-        });
+        return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet(
+          {
+            accountId: account.id,
+            spaceId,
+          },
+        );
       } catch (error) {
         throw await normalizeClientError(error);
       }
@@ -91,8 +96,13 @@ export function ProfileIdentityPanel({
     }
   }
 
-  async function acceptUpdatedProfile(profile: Awaited<ReturnType<typeof updateIdentity>>) {
-    queryClient.setQueryData(['profile-identity', spaceId, account.id], profile);
+  async function acceptUpdatedProfile(
+    profile: Awaited<ReturnType<typeof updateIdentity>>,
+  ) {
+    queryClient.setQueryData(
+      ['profile-identity', spaceId, account.id],
+      profile,
+    );
     onDisplayNameChanged(profile.displayName);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['space', spaceId] }),
@@ -120,7 +130,9 @@ export function ProfileIdentityPanel({
           setUploadPhase,
         );
         readyAttachmentId = ready.attachmentId;
-        return await updateIdentity({ profileAttachmentId: ready.attachmentId });
+        return await updateIdentity({
+          profileAttachmentId: ready.attachmentId,
+        });
       } catch (error) {
         if (readyAttachmentId) {
           try {
@@ -160,20 +172,30 @@ export function ProfileIdentityPanel({
   const profile = profileQuery.data;
   const visibleName = profile?.displayName ?? account.displayName;
   const pending =
-    displayNameMutation.isPending || avatarMutation.isPending || removeAvatarMutation.isPending;
+    displayNameMutation.isPending ||
+    avatarMutation.isPending ||
+    removeAvatarMutation.isPending;
   const phaseKey = uploadStatusKey(uploadPhase);
 
   return (
-    <section className="form-card profile-identity-panel" aria-labelledby="profile-identity-title">
+    <section
+      className="form-card profile-identity-panel"
+      aria-labelledby="profile-identity-title"
+    >
       <div>
         <p className="eyebrow">{t('profiles.eyebrow')}</p>
         <h2 id="profile-identity-title">{t('profileIdentity.title')}</h2>
         <p>{t('profileIdentity.intro')}</p>
       </div>
 
-      {profileQuery.isLoading ? <UiState kind="loading" title={t('profiles.loading')} /> : null}
+      {profileQuery.isLoading ? (
+        <UiState kind="loading" title={t('profiles.loading')} />
+      ) : null}
       {profileQuery.error ? (
-        <ProblemState error={profileQuery.error} onRetry={() => void profileQuery.refetch()} />
+        <ProblemState
+          error={profileQuery.error}
+          onRetry={() => void profileQuery.refetch()}
+        />
       ) : null}
 
       {profile ? (
@@ -185,7 +207,9 @@ export function ProfileIdentityPanel({
               imageUrl={avatarUrl}
               size="large"
               imageAlt={t('profileIdentity.imageAlt', { name: visibleName })}
-              fallbackAlt={t('profileIdentity.fallbackAlt', { name: visibleName })}
+              fallbackAlt={t('profileIdentity.fallbackAlt', {
+                name: visibleName,
+              })}
             />
           </div>
 
@@ -195,9 +219,15 @@ export function ProfileIdentityPanel({
             </p>
           ) : null}
 
-          <form key={`name-${profile.version}`} className="form-grid" onSubmit={submitDisplayName}>
+          <form
+            key={`name-${profile.version}`}
+            className="form-grid"
+            onSubmit={submitDisplayName}
+          >
             <div className="field-group">
-              <label htmlFor="profile-display-name">{t('profileIdentity.displayNameLabel')}</label>
+              <label htmlFor="profile-display-name">
+                {t('profileIdentity.displayNameLabel')}
+              </label>
               <input
                 id="profile-display-name"
                 name="displayName"
@@ -219,7 +249,9 @@ export function ProfileIdentityPanel({
           </form>
 
           <div className="field-group">
-            <label htmlFor="profile-avatar-file">{t('profileIdentity.avatarLabel')}</label>
+            <label htmlFor="profile-avatar-file">
+              {t('profileIdentity.avatarLabel')}
+            </label>
             <small>{t('profileIdentity.avatarHelp')}</small>
             <input
               id="profile-avatar-file"
@@ -239,7 +271,9 @@ export function ProfileIdentityPanel({
               {phaseKey ? (
                 <span role="status">{t(phaseKey)}</span>
               ) : avatarMutation.isPending ? (
-                <span role="status">{t('profileIdentity.replacingAvatar')}</span>
+                <span role="status">
+                  {t('profileIdentity.replacingAvatar')}
+                </span>
               ) : null}
               {profile.profileAttachmentId ? (
                 <button
@@ -266,9 +300,15 @@ export function ProfileIdentityPanel({
           <span>{t('profileIdentity.saved')}</span>
         </div>
       ) : null}
-      {displayNameMutation.error ? <ProblemState error={displayNameMutation.error} /> : null}
-      {avatarMutation.error ? <ProblemState error={avatarMutation.error} /> : null}
-      {removeAvatarMutation.error ? <ProblemState error={removeAvatarMutation.error} /> : null}
+      {displayNameMutation.error ? (
+        <ProblemState error={displayNameMutation.error} />
+      ) : null}
+      {avatarMutation.error ? (
+        <ProblemState error={avatarMutation.error} />
+      ) : null}
+      {removeAvatarMutation.error ? (
+        <ProblemState error={removeAvatarMutation.error} />
+      ) : null}
     </section>
   );
 }
