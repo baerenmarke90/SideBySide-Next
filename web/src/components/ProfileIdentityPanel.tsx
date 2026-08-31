@@ -104,10 +104,10 @@ export function ProfileIdentityPanel({
       profile,
     );
     onDisplayNameChanged(profile.displayName);
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['space', spaceId] }),
-      queryClient.invalidateQueries({ queryKey: ['partner-profile', spaceId] }),
-    ]);
+    // Presentation identity appears across Story/detail/dashboard projections.
+    // Identity edits are rare, so invalidate all in-memory React Query data
+    // rather than maintaining a fragile list of author-bearing query keys.
+    await queryClient.invalidateQueries();
     setSaved(true);
   }
 
@@ -162,9 +162,16 @@ export function ProfileIdentityPanel({
     onSuccess: acceptUpdatedProfile,
   });
 
+  function resetActionState() {
+    setSaved(false);
+    displayNameMutation.reset();
+    avatarMutation.reset();
+    removeAvatarMutation.reset();
+  }
+
   function submitDisplayName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaved(false);
+    resetActionState();
     const form = new FormData(event.currentTarget);
     displayNameMutation.mutate(String(form.get('displayName') ?? ''));
   }
@@ -263,7 +270,7 @@ export function ProfileIdentityPanel({
                 const file = event.currentTarget.files?.[0];
                 event.currentTarget.value = '';
                 if (!file) return;
-                setSaved(false);
+                resetActionState();
                 avatarMutation.mutate(file);
               }}
             />
@@ -281,7 +288,7 @@ export function ProfileIdentityPanel({
                   className="secondary"
                   disabled={pending}
                   onClick={() => {
-                    setSaved(false);
+                    resetActionState();
                     removeAvatarMutation.mutate();
                   }}
                 >
