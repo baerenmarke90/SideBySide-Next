@@ -278,7 +278,11 @@ export function CollectionProductPage({
                     <button type="submit" className="tertiary compact-action" disabled={updateItem.isPending}>{t('m5s3.common.save')}</button>
                   ) : null}
                 </form>
-                <div className="planning-order-actions" aria-label={t('m5s3.collection.orderActions', { title: item.title })}>
+                <div
+                  className="planning-order-actions"
+                  role="group"
+                  aria-label={t('m5s3.collection.orderActions', { title: item.title })}
+                >
                   <button type="button" className="tertiary compact-action" onClick={() => move(index, -1)} disabled={index === 0 || reorderItems.isPending || !collection.capabilities.canEdit} aria-label={t('m5s3.collection.moveUp', { title: item.title })}>↑</button>
                   <button type="button" className="tertiary compact-action" onClick={() => move(index, 1)} disabled={index === items.length - 1 || reorderItems.isPending || !collection.capabilities.canEdit} aria-label={t('m5s3.collection.moveDown', { title: item.title })}>↓</button>
                 </div>
