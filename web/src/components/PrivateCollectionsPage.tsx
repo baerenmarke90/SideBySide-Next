@@ -1,4 +1,4 @@
-import { type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -48,7 +48,8 @@ function usePrivateCollection(
       collectionId ?? 'missing',
     ),
     queryFn: () => {
-      if (!collectionId) throw new Error('Missing private collection route parameter.');
+      if (!collectionId)
+        throw new Error('Missing private collection route parameter.');
       return privateApiCall(() =>
         api.getPrivateCollection({ spaceId, collectionId }),
       );
@@ -130,7 +131,10 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
         <UiState kind="loading" title={t('privateArea.collections.loading')} />
       ) : null}
       {query.error ? (
-        <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+        <ProblemState
+          error={query.error}
+          onRetry={() => void query.refetch()}
+        />
       ) : null}
       {query.data && collections.length === 0 ? (
         <UiState
@@ -170,7 +174,11 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
   );
 }
 
-export function PrivateCollectionCreatePage({ api, accountId, spaceId }: Props) {
+export function PrivateCollectionCreatePage({
+  api,
+  accountId,
+  spaceId,
+}: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -216,11 +224,16 @@ export function PrivateCollectionCreatePage({ api, accountId, spaceId }: Props) 
         <form className="form-grid" onSubmit={submit}>
           <CollectionFields />
           <div className="form-actions">
-            <Link className="button-link secondary-link" to={PRIVATE_COLLECTIONS_PATH}>
+            <Link
+              className="button-link secondary-link"
+              to={PRIVATE_COLLECTIONS_PATH}
+            >
               {t('common.cancel')}
             </Link>
             <button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? t('privateArea.saving') : t('privateArea.save')}
+              {mutation.isPending
+                ? t('privateArea.saving')
+                : t('privateArea.save')}
             </button>
           </div>
         </form>
@@ -326,25 +339,39 @@ function CollectionItems({
     item: PrivateCollectionItemDetail,
   ) {
     event.preventDefault();
-    const title = String(new FormData(event.currentTarget).get('title') || '').trim();
+    const title = String(
+      new FormData(event.currentTarget).get('title') || '',
+    ).trim();
     if (!title || title === item.title) return;
     updateMutation.mutate({ item, update: { title } });
   }
 
   function move(itemId: string, direction: -1 | 1) {
     const itemIds = items.map((item) => item.id);
-    reorderMutation.mutate(movePrivateCollectionItem(itemIds, itemId, direction));
+    reorderMutation.mutate(
+      movePrivateCollectionItem(itemIds, itemId, direction),
+    );
   }
 
   return (
-    <section className="private-area-section" aria-labelledby="private-list-items-title">
-      <h2 id="private-list-items-title">{t('privateArea.collections.itemsTitle')}</h2>
+    <section
+      className="private-area-section"
+      aria-labelledby="private-list-items-title"
+    >
+      <h2 id="private-list-items-title">
+        {t('privateArea.collections.itemsTitle')}
+      </h2>
       <form className="private-area-inline-form" onSubmit={submitItem}>
         <div className="field-group">
           <label htmlFor="private-list-new-item">
             {t('privateArea.collections.itemTitleLabel')}
           </label>
-          <input id="private-list-new-item" name="title" required maxLength={200} />
+          <input
+            id="private-list-new-item"
+            name="title"
+            required
+            maxLength={200}
+          />
         </div>
         <button type="submit" disabled={createMutation.isPending}>
           {createMutation.isPending
@@ -352,8 +379,12 @@ function CollectionItems({
             : t('privateArea.collections.addItem')}
         </button>
       </form>
-      {createMutation.error ? <ProblemState error={createMutation.error} /> : null}
-      {items.length === 0 ? <p>{t('privateArea.collections.noItems')}</p> : null}
+      {createMutation.error ? (
+        <ProblemState error={createMutation.error} />
+      ) : null}
+      {items.length === 0 ? (
+        <p>{t('privateArea.collections.noItems')}</p>
+      ) : null}
       {items.length > 0 ? (
         <ol className="private-area-item-list">
           {items.map((item, index) => (
@@ -368,7 +399,10 @@ function CollectionItems({
                   className="private-area-item-title-form"
                   onSubmit={(event) => submitRename(event, item)}
                 >
-                  <label className="sr-only" htmlFor={`private-item-${item.id}`}>
+                  <label
+                    className="sr-only"
+                    htmlFor={`private-item-${item.id}`}
+                  >
                     {t('privateArea.collections.rename')}
                   </label>
                   <input
@@ -415,7 +449,9 @@ function CollectionItems({
                   type="button"
                   className="tertiary compact-action"
                   onClick={() => move(item.id, 1)}
-                  disabled={index === items.length - 1 || reorderMutation.isPending}
+                  disabled={
+                    index === items.length - 1 || reorderMutation.isPending
+                  }
                 >
                   {t('privateArea.collections.moveDown')}
                 </button>
@@ -435,14 +471,24 @@ function CollectionItems({
       {reorderMutation.isPending ? (
         <p role="status">{t('privateArea.collections.reordering')}</p>
       ) : null}
-      {updateMutation.error ? <ProblemState error={updateMutation.error} /> : null}
-      {deleteMutation.error ? <ProblemState error={deleteMutation.error} /> : null}
-      {reorderMutation.error ? <ProblemState error={reorderMutation.error} /> : null}
+      {updateMutation.error ? (
+        <ProblemState error={updateMutation.error} />
+      ) : null}
+      {deleteMutation.error ? (
+        <ProblemState error={deleteMutation.error} />
+      ) : null}
+      {reorderMutation.error ? (
+        <ProblemState error={reorderMutation.error} />
+      ) : null}
     </section>
   );
 }
 
-export function PrivateCollectionDetailPage({ api, accountId, spaceId }: Props) {
+export function PrivateCollectionDetailPage({
+  api,
+  accountId,
+  spaceId,
+}: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -474,10 +520,14 @@ export function PrivateCollectionDetailPage({ api, accountId, spaceId }: Props) 
   });
 
   if (query.isLoading) {
-    return <UiState kind="loading" title={t('privateArea.collections.loading')} />;
+    return (
+      <UiState kind="loading" title={t('privateArea.collections.loading')} />
+    );
   }
   if (query.error) {
-    return <ProblemState error={query.error} onRetry={() => void query.refetch()} />;
+    return (
+      <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+    );
   }
   const collection = query.data;
   if (!collection) return null;
@@ -520,7 +570,11 @@ export function PrivateCollectionDetailPage({ api, accountId, spaceId }: Props) 
   );
 }
 
-export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
+export function PrivateCollectionEditPage({
+  api,
+  accountId,
+  spaceId,
+}: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -554,10 +608,14 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
   });
 
   if (query.isLoading) {
-    return <UiState kind="loading" title={t('privateArea.collections.loading')} />;
+    return (
+      <UiState kind="loading" title={t('privateArea.collections.loading')} />
+    );
   }
   if (query.error) {
-    return <ProblemState error={query.error} onRetry={() => void query.refetch()} />;
+    return (
+      <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+    );
   }
   const collection = query.data;
   if (!collection) return null;
@@ -608,7 +666,9 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
               {t('common.cancel')}
             </Link>
             <button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? t('privateArea.saving') : t('privateArea.save')}
+              {mutation.isPending
+                ? t('privateArea.saving')
+                : t('privateArea.save')}
             </button>
           </div>
         </form>
