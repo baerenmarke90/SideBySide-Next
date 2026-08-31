@@ -120,9 +120,10 @@ composition decision.
   squeezed into 720 px.
 - **Now:** the relationship band spans the full width and reads as one line
   (label and since-date left, day count right) with a mint accent for shared
-  state; below it a `layout-split` with *Zuletzt bei euch* in the content
-  column and *Demnächst* plus *Weißt du noch?* in the context rail. The band
-  states its empty case explicitly instead of rendering an empty box.
+  state; below it a `layout-split` places the recent-entries section in the
+  content column, and the upcoming-dates and retrospective sections in the
+  context rail. The band states its empty case explicitly instead of rendering
+  an empty box.
 
 ### Search (`/search`)
 
@@ -159,9 +160,9 @@ composition decision.
   private partner notes.
 - **Dominant:** the preference collections.
 - **Was:** six sections in one column.
-- **Now:** `layout-split-lead-rail`. Context rail holds *Mein Konto* and
-  *Eure Beziehung* (identity and settings); content column holds the preference
-  managers, partner profile and private partner notes.
+- **Now:** `layout-split-lead-rail`. The context rail holds the account
+  section and the relationship-display settings; the content column holds the
+  preference managers, partner profile and private partner notes.
 
 ### Private area (`/private/notes`, `/private/gift-ideas`, `/private/collections`)
 
