@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
@@ -31,6 +31,7 @@ export function HeaderProfileMenu({
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const configuration = useMemo(
     () =>
       new Configuration({
@@ -61,8 +62,21 @@ export function HeaderProfileMenu({
     profile?.profileAttachmentId,
   );
 
+  function closeMenu() {
+    detailsRef.current?.removeAttribute('open');
+  }
+
   return (
-    <details className="header-profile-menu">
+    <details
+      ref={detailsRef}
+      className="header-profile-menu"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          closeMenu();
+          detailsRef.current?.querySelector<HTMLElement>('summary')?.focus();
+        }
+      }}
+    >
       <summary
         className="header-profile-trigger"
         aria-label={t('navigation.profileMenu')}
@@ -81,13 +95,21 @@ export function HeaderProfileMenu({
         className="header-profile-popover"
         aria-label={t('navigation.profileMenu')}
       >
-        <Link className="header-profile-menu-item" to={MORE_PROFILE_ROUTE}>
+        <Link
+          className="header-profile-menu-item"
+          to={MORE_PROFILE_ROUTE}
+          onClick={closeMenu}
+        >
           <span className="shell-nav-icon" aria-hidden="true">
             <DestinationIcon icon="profile" />
           </span>
           <span>{t('navigation.profile')}</span>
         </Link>
-        <Link className="header-profile-menu-item" to={ACTIVITY_ROUTE}>
+        <Link
+          className="header-profile-menu-item"
+          to={ACTIVITY_ROUTE}
+          onClick={closeMenu}
+        >
           <span className="shell-nav-icon" aria-hidden="true">
             <DestinationIcon icon="activity" />
           </span>
@@ -96,7 +118,10 @@ export function HeaderProfileMenu({
         <button
           type="button"
           className="header-profile-menu-item header-profile-menu-logout"
-          onClick={onLogout}
+          onClick={() => {
+            closeMenu();
+            onLogout();
+          }}
         >
           <span>{t('header.logout')}</span>
         </button>
