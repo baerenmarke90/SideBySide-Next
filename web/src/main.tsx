@@ -11,6 +11,7 @@ import './styles.css';
 import './story-media.css';
 import './theme.css';
 import './shell.css';
+import './layout.css';
 import './attachment-drafts.css';
 import './demo.css';
 import './components/CommentsPanel.css';
