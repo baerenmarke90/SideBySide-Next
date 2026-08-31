@@ -1,6 +1,10 @@
 import { InvitationsApi } from '../api/generated/apis/InvitationsApi';
 import type { SessionView } from '../api/generated/models/SessionView';
 import { Configuration } from '../api/generated/runtime';
+import {
+  rememberCurrentAuthReturnTarget,
+  restoreAuthReturnTarget,
+} from './deepLinks';
 import { normalizeClientError } from './problemDetails';
 import { createReferenceApis } from './referenceFlow';
 
@@ -13,6 +17,7 @@ export async function signInAndJoinInvitation(
   password: string,
   invitationToken?: string | null,
 ): Promise<SessionView> {
+  rememberCurrentAuthReturnTarget();
   try {
     const session = await createReferenceApis(
       apiBaseUrl,
@@ -25,7 +30,10 @@ export async function signInAndJoinInvitation(
       },
     });
 
-    if (!invitationToken) return session;
+    if (!invitationToken) {
+      restoreAuthReturnTarget();
+      return session;
+    }
 
     const invitations = new InvitationsApi(
       new Configuration({
@@ -36,6 +44,7 @@ export async function signInAndJoinInvitation(
     await invitations.acceptInvitationApiV1InvitationsAcceptPost({
       acceptRequest: { token: invitationToken },
     });
+    restoreAuthReturnTarget();
     return session;
   } catch (error) {
     throw await normalizeClientError(error);
@@ -107,6 +116,7 @@ export async function requestMagicLink(
   apiBaseUrl: string,
   email: string,
 ): Promise<void> {
+  rememberCurrentAuthReturnTarget();
   try {
     await createReferenceApis(
       apiBaseUrl,
@@ -123,7 +133,7 @@ export async function consumeMagicLink(
   token: string,
 ): Promise<SessionView> {
   try {
-    return await createReferenceApis(
+    const session = await createReferenceApis(
       apiBaseUrl,
     ).auth.consumeMagicLinkApiV1AuthMagicLinkConsumePost({
       magicLinkConsumeRequest: {
@@ -132,6 +142,8 @@ export async function consumeMagicLink(
         platform: WEB_PLATFORM,
       },
     });
+    restoreAuthReturnTarget();
+    return session;
   } catch (error) {
     throw await normalizeClientError(error);
   }
