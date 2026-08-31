@@ -13,6 +13,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
+from sidebyside.attachments import binding as attachment_binding
+from sidebyside.attachments import service as attachment_service
+from sidebyside.attachments.models import Attachment, MediaType
 from sidebyside.authorization import (
     AuthorizationContext,
     PrivacyClass,
@@ -40,6 +43,7 @@ class ProfileErrorCode:
     PARTNER_NOTE_TARGET_REQUIRED = "PROFILE_PARTNER_NOTE_TARGET_REQUIRED"
     TOPIC_REQUIRED = "PROFILE_PREFERENCE_TOPIC_REQUIRED"
     VALUE_REQUIRED = "PROFILE_PREFERENCE_VALUE_REQUIRED"
+    AVATAR_IMAGE_REQUIRED = "PROFILE_AVATAR_IMAGE_REQUIRED"
 
 
 def _subject_id(value: UUID | str) -> UUID | None:
@@ -104,6 +108,100 @@ def profile_for_subject(
     if profile is None:
         raise PartnerProfile.privacy_absence.error()
     return profile, subject
+
+
+def profile_attachment(session: Session, account_id: UUID) -> Attachment | None:
+    """Return the stable Attachment currently bound as this Account's avatar."""
+    return session.execute(
+        select(Attachment)
+        .join(
+            attachment_binding.AccountProfileAttachment,
+            attachment_binding.AccountProfileAttachment.attachment_id == Attachment.id,
+        )
+        .where(attachment_binding.AccountProfileAttachment.account_id == account_id)
+    ).scalar_one_or_none()
+
+
+def _locked_self_account(session: Session, context: AuthorizationContext) -> Account:
+    """Serialize Account-global avatar replacement after tenant authorization."""
+    active_subject(session, context, context.account_id)
+    return session.execute(
+        select(Account).where(Account.id == context.account_id).with_for_update()
+    ).scalar_one()
+
+
+def set_profile_attachment(
+    session: Session,
+    context: AuthorizationContext,
+    attachment_id: UUID | None,
+) -> Attachment | None:
+    """Replace or remove the authenticated Account's avatar atomically.
+
+    Candidate media must be a READY image uploaded by the same Account in the
+    currently authorized Space. The Account row serializes changes across
+    multiple active Spaces because the resulting avatar is Account-global.
+
+    Replacement first detaches the old parent relation, then binds the new
+    Attachment, and finally marks the obsolete media for the existing cleanup
+    job. Provider deletion therefore remains in the normal Attachment lifecycle
+    and never becomes a second profile-specific cleanup path.
+    """
+    account = _locked_self_account(session, context)
+    current = session.execute(
+        select(attachment_binding.AccountProfileAttachment).where(
+            attachment_binding.AccountProfileAttachment.account_id == account.id
+        )
+    ).scalar_one_or_none()
+
+    if attachment_id is None:
+        if current is None:
+            return None
+        previous = session.get(Attachment, current.attachment_id)
+        session.delete(current)
+        session.flush()
+        if previous is not None:
+            attachment_service.mark_for_deletion(session, previous)
+            session.flush()
+        return None
+
+    candidates = attachment_binding.lock_for_binding(session, [attachment_id])
+    candidate = attachment_binding.ensure_bindable(
+        candidates.get(attachment_id),
+        space_id=context.space_id,
+        account_id=account.id,
+    )
+    if candidate.media_type != MediaType.IMAGE.value:
+        raise ValidationError(
+            "A profile avatar must be an image.",
+            ProfileErrorCode.AVATAR_IMAGE_REQUIRED,
+        )
+
+    if current is not None and current.attachment_id == candidate.id:
+        return candidate
+
+    attachment_binding.ensure_unlinked(
+        session,
+        candidate.id,
+        allow=("ACCOUNT_PROFILE", account.id),
+    )
+
+    previous = session.get(Attachment, current.attachment_id) if current is not None else None
+    if current is not None:
+        session.delete(current)
+        session.flush()
+
+    session.add(
+        attachment_binding.AccountProfileAttachment(
+            account_id=account.id,
+            attachment_id=candidate.id,
+        )
+    )
+    session.flush()
+
+    if previous is not None:
+        attachment_service.mark_for_deletion(session, previous)
+        session.flush()
+    return candidate
 
 
 def profile_preferences(
