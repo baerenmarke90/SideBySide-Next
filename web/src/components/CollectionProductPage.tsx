@@ -64,18 +64,16 @@ export function CollectionProductPage({
     mutationFn: ({
       collection,
       title,
-      icon,
     }: {
       collection: CollectionDetail;
       title: string;
-      icon: string | null;
     }) =>
       apiCall(() =>
         apis.collections.updateCollection({
           spaceId,
           collectionId: collection.id,
           ifMatch: planningIfMatch(collection),
-          collectionUpdate: { title, icon },
+          collectionUpdate: { title },
         }),
       ),
     onSuccess: commitCollection,
@@ -218,11 +216,9 @@ export function CollectionProductPage({
     event.preventDefault();
     if (!collection) return;
     const data = new FormData(event.currentTarget);
-    const icon = String(data.get('icon')).trim();
     updateCollection.mutate({
       collection,
       title: String(data.get('title')).trim(),
-      icon: icon || null,
     });
   }
 
@@ -276,7 +272,7 @@ export function CollectionProductPage({
           </Link>
         }
         eyebrow={t('m5s3.collection.detailEyebrow')}
-        title={`${collection.icon ? `${collection.icon} ` : ''}${collection.title}`}
+        title={collection.title}
         description={t('m5s3.collection.itemCount', { count: items.length })}
       />
 
@@ -293,15 +289,6 @@ export function CollectionProductPage({
               required
               maxLength={200}
               defaultValue={collection.title}
-            />
-            <label htmlFor="collection-edit-icon">
-              {t('m5s3.collection.icon')}
-            </label>
-            <input
-              id="collection-edit-icon"
-              name="icon"
-              maxLength={32}
-              defaultValue={collection.icon ?? ''}
             />
             <button type="submit" disabled={updateCollection.isPending}>
               {updateCollection.isPending
