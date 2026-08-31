@@ -1,7 +1,6 @@
 package de.sidebyside.next.reference
 
 import android.content.Context
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHasClickAction
@@ -15,6 +14,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ApplicationProvider
+import de.sidebyside.next.design.SideBySideTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,7 +32,7 @@ class ReferenceFlowScreenSemanticsTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 2f)) {
-                MaterialTheme {
+                SideBySideTheme {
                     ReferenceFlowScreen(
                         state = ReferenceUiState(
                             configured = true,
@@ -71,7 +71,7 @@ class ReferenceFlowScreenSemanticsTest {
     fun multipleDraftImagesExposeStableOrderAndFailureAction() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         composeRule.setContent {
-            MaterialTheme {
+            SideBySideTheme {
                 ReferenceFlowScreen(
                     state = ReferenceUiState(
                         configured = true,
@@ -117,7 +117,7 @@ class ReferenceFlowScreenSemanticsTest {
     @Test
     fun loginFormHasNamedFieldsAndAction() {
         composeRule.setContent {
-            MaterialTheme {
+            SideBySideTheme {
                 ReferenceFlowScreen(
                     state = ReferenceUiState(configured = true),
                     onLogin = { _, _ -> },
@@ -129,7 +129,8 @@ class ReferenceFlowScreenSemanticsTest {
             }
         }
 
-        composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+        // Signed out, the screen is the product entry surface: a scrollable
+        // column rather than the lazy list the signed-in flow uses.
         composeRule.onNodeWithText("E-Mail").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Passwort").performScrollTo().assertIsDisplayed()
         composeRule.onNode(hasText("Anmelden") and hasClickAction())
