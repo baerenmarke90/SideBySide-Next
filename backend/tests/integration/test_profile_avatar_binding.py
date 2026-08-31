@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -104,3 +105,25 @@ def test_profile_attachment_cannot_belong_to_two_accounts(session: Session) -> N
             )
         )
         session.flush()
+
+
+def test_space_deletion_cascades_avatar_binding(session: Session) -> None:
+    account = make_account(session, "Anna")
+    space = make_space(session, account)
+    attachment = make_image_attachment(session, account, space)
+    binding_row = binding.AccountProfileAttachment(
+        account_id=account.id,
+        attachment_id=attachment.id,
+    )
+    session.add(binding_row)
+    session.flush()
+    binding_id = binding_row.id
+
+    session.delete(space)
+    session.flush()
+
+    assert session.execute(
+        select(binding.AccountProfileAttachment).where(
+            binding.AccountProfileAttachment.id == binding_id
+        )
+    ).scalar_one_or_none() is None
