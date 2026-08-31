@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import navigation from '../i18n/locales/navigation';
 import { AppShell } from './AppShell';
 
 /** Opening anchor tags, so attribute order in the markup does not matter. */
@@ -55,7 +56,7 @@ describe('AppShell', () => {
     expect(html).toContain('<main');
     expect(html).toContain('<nav');
     expect(html).toContain('href="/today"');
-    expect(html).toContain('>Übersicht<');
+    expect(html).toContain(`>${navigation.today}<`);
     expect(html).toContain('href="/story"');
     expect(html).toContain('href="/plan"');
     expect(html).toContain('href="/more"');
@@ -64,7 +65,7 @@ describe('AppShell', () => {
     expect(html).not.toContain('/rules');
   });
 
-  it('keeps Übersicht first in the primary navigation', () => {
+  it('keeps the landing destination first in primary navigation', () => {
     const html = renderShell('/story');
     const sidebar = html.slice(
       html.indexOf('<nav class="shell-nav"'),
@@ -89,9 +90,9 @@ describe('AppShell', () => {
     );
 
     expect(header).toContain('href="/search"');
-    expect(header).toContain('aria-label="Suche"');
+    expect(header).toContain(`aria-label="${navigation.search}"`);
     expect(header).toContain('href="/more/notifications"');
-    expect(header).toContain('aria-label="Benachrichtigungen"');
+    expect(header).toContain(`aria-label="${navigation.notifications}"`);
 
     const compact = html.slice(html.indexOf('mobile-bottom-nav'));
     expect(compact).not.toContain('href="/search"');
@@ -115,10 +116,10 @@ describe('AppShell', () => {
       html.indexOf('main-content'),
     );
 
-    expect(header).toContain('aria-label="Profil und Konto"');
+    expect(header).toContain(`aria-label="${navigation.profileMenu}"`);
     expect(header).toContain('href="/more/profile"');
     expect(header).toContain('href="/today/activity"');
-    expect(header).toContain('>Abmelden<');
+    expect(header).toContain('header-profile-menu-logout');
     expect(sidebar).not.toContain('href="/more/profile"');
     expect(sidebar).not.toContain('href="/today/activity"');
   });
