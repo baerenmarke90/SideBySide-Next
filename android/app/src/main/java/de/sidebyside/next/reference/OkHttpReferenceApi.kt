@@ -23,9 +23,18 @@ import sidebyside.api.models.SignInRequest
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
 
+/**
+ * A failed API call.
+ *
+ * The HTTP status is carried alongside the ProblemDetails code because the two
+ * answer different questions: the code identifies the domain reason, the status
+ * decides which system state the user sees. Dropping the status made
+ * permission, conflict and rate-limit indistinguishable.
+ */
 class ReferenceApiException(
     val code: String?,
     override val message: String,
+    val status: Int? = null,
 ) : RuntimeException(message)
 
 class OkHttpReferenceApi(
@@ -203,6 +212,7 @@ class OkHttpReferenceApi(
         throw ReferenceApiException(
             problem?.code,
             problem?.detail ?: "API request failed (HTTP ${response.code}).",
+            problem?.status ?: response.code,
         )
     }
 }

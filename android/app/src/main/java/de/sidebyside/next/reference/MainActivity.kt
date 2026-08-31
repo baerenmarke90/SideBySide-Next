@@ -2,6 +2,7 @@ package de.sidebyside.next.reference
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.PickVisualMediaRequest
@@ -17,9 +18,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.shell.AppDestination
+import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.shell.MoreScreen
+import de.sidebyside.next.shell.ShellSurface
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Declared rather than inherited: targetSdk 36 draws edge to edge
+        // anyway, and stating it keeps the behaviour explicit for the shell
+        // that consumes the insets.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             SideBySideTheme {
@@ -59,27 +68,53 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
         }
     }
 
-    ReferenceFlowScreen(
-        state = state,
-        onLogin = referenceViewModel::signIn,
-        onLogout = {
-            imageSelectionEpoch = null
-            referenceViewModel.logout()
-        },
-        onPickImage = {
-            referenceViewModel.beginImageSelection()?.let { selectionEpoch ->
-                imageSelectionEpoch = selectionEpoch
-                imagePicker.launch(
-                    PickVisualMediaRequest.Builder()
-                        .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        .setOrderedSelection(true)
-                        .build(),
-                )
-            }
-        },
-        onCreateMemory = referenceViewModel::createMemory,
-        onRefreshStory = referenceViewModel::refreshStory,
-        onRetryImage = referenceViewModel::retryImage,
-        onRemoveImage = referenceViewModel::removeImage,
-    )
+    val signOut = {
+        imageSelectionEpoch = null
+        referenceViewModel.logout()
+    }
+
+    val storyFlow = @Composable {
+        ReferenceFlowScreen(
+            state = state,
+            onLogin = referenceViewModel::signIn,
+            onLogout = signOut,
+            onPickImage = {
+                referenceViewModel.beginImageSelection()?.let { selectionEpoch ->
+                    imageSelectionEpoch = selectionEpoch
+                    imagePicker.launch(
+                        PickVisualMediaRequest.Builder()
+                            .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            .setOrderedSelection(true)
+                            .build(),
+                    )
+                }
+            },
+            onCreateMemory = referenceViewModel::createMemory,
+            onRefreshStory = referenceViewModel::refreshStory,
+            onRetryImage = referenceViewModel::retryImage,
+            onRemoveImage = referenceViewModel::removeImage,
+        )
+    }
+
+    // Signed out there is nothing to navigate between, but the surface still
+    // needs the window insets the shell owns.
+    if (!state.loggedIn) {
+        ShellSurface { storyFlow() }
+        return
+    }
+
+    // Only destinations that have something to show are rendered; the slice
+    // contract forbids dead navigation. Heute and Planen join in their slices.
+    AppNavigation(
+        destinations = listOf(AppDestination.Story, AppDestination.More),
+    ) { destination ->
+        when (destination) {
+            AppDestination.More -> MoreScreen(
+                onSignOut = signOut,
+                signOutEnabled = !state.busy,
+            )
+
+            else -> storyFlow()
+        }
+    }
 }

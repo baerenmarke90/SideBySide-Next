@@ -43,6 +43,39 @@ app, so both resolve to their documented fallbacks. Delivering them is a
 provider decision with licensing, size and privacy consequences and has not been
 made.
 
+## Application shell
+
+`de.sidebyside.next.shell` owns the two things a screen cannot get right on its
+own.
+
+**Window insets.** `targetSdk` 36 means the system draws the app edge to edge
+and hands back responsibility for the status bar, navigation bar, display
+cutout and keyboard. `AppShell` consumes `WindowInsets.safeDrawing` through its
+`Scaffold`, and `ShellSurface` does the same for surfaces shown before there is
+anything to navigate between. A screen that bypasses both ends up underneath
+the clock.
+
+**Navigation.** `AppDestination` is the registry; its route IDs and order come
+from `docs/decisions/0003-primary-navigation-and-route-model.md`, so Web and
+Android address the same destinations and a Deep Link registry can be built on
+one mapping. Bottom navigation below 600 dp, a navigation rail above it, both
+from the same list.
+
+A destination is only rendered once it has something to show. `declaredDestinations`
+is the full contract; the shell receives the implemented subset, so an area
+still being built never appears as an empty tab. `discover` stays reserved for
+M7 and is not declared as a destination at all.
+
+The active destination is drawn in brand purple rather than the Material
+default: Material fills its selection indicator from `secondaryContainer`,
+which this product maps to the shared mint, and mint means shared and confirmed
+(`docs/DESIGN-PRINCIPLES.md` 3.1).
+
+`problemFor` maps a failure to one of the shared system states. It returns
+string resources only — a ProblemDetails `detail` may name resources or
+internal reasons and never reaches the user — and 403 and 404 deliberately
+share one state so the difference cannot disclose that a resource exists.
+
 ## Generated API models
 
 `api/generated/` contains the Kotlin data classes generated from
