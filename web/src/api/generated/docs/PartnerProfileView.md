@@ -13,6 +13,7 @@ Name | Type
 `preferences` | [Array&lt;ProfilePreferenceView&gt;](ProfilePreferenceView.md)
 `profileAttachmentId` | string
 `updatedAt` | Date
+`version` | number
 
 ## Example
 
@@ -28,6 +29,7 @@ const example = {
   "preferences": null,
   "profileAttachmentId": null,
   "updatedAt": null,
+  "version": null,
 } satisfies PartnerProfileView
 
 console.log(example)

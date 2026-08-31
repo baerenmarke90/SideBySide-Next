@@ -148,6 +148,7 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         "PATCH",
         "/api/v1/spaces/{spaceId}/profiles/{accountId}",
         body={"displayName": "Matrix Name"},
+        if_match=True,
         resource_absence="PARTNER_PROFILE_NOT_FOUND",
     ),
     Endpoint(

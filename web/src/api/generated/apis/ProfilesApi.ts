@@ -77,6 +77,7 @@ export interface ListProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGetRe
 export interface UpdateProfileIdentityRequest {
     accountId: string;
     spaceId: string;
+    ifMatch: string;
     profileIdentityUpdate: ProfileIdentityUpdate;
 }
 
@@ -433,6 +434,13 @@ export class ProfilesApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['ifMatch'] == null) {
+            throw new runtime.RequiredError(
+                'ifMatch',
+                'Required parameter "ifMatch" was null or undefined when calling updateProfileIdentity().'
+            );
+        }
+
         if (requestParameters['profileIdentityUpdate'] == null) {
             throw new runtime.RequiredError(
                 'profileIdentityUpdate',
@@ -445,6 +453,10 @@ export class ProfilesApi extends runtime.BaseAPI {
         const headerParameters: runtime.HTTPHeaders = {};
 
         headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['ifMatch'] != null) {
+            headerParameters['If-Match'] = String(requestParameters['ifMatch']);
+        }
 
 
         let urlPath = `/api/v1/spaces/{spaceId}/profiles/{accountId}`;

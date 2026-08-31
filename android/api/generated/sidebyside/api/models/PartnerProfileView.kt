@@ -39,6 +39,7 @@ import kotlinx.serialization.Contextual
  * @param preferences 
  * @param profileAttachmentId 
  * @param updatedAt 
+ * @param version 
  */
 @Serializable
 
@@ -63,7 +64,10 @@ data class PartnerProfileView (
     val profileAttachmentId: java.util.UUID?,
 
     @Contextual @SerialName(value = "updatedAt")
-    val updatedAt: java.time.OffsetDateTime
+    val updatedAt: java.time.OffsetDateTime,
+
+    @SerialName(value = "version")
+    val version: kotlin.Int
 
 ) {
 

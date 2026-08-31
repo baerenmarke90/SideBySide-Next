@@ -3122,6 +3122,10 @@
             "format": "date-time",
             "title": "Updatedat",
             "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -3129,6 +3133,7 @@
           "accountId",
           "displayName",
           "profileAttachmentId",
+          "version",
           "createdAt",
           "updatedAt",
           "preferences"
@@ -17339,7 +17344,7 @@
             "description": "Successful Response",
             "headers": {
               "ETag": {
-                "description": "ProfilePreference version to use for the next If-Match write request.",
+                "description": "Resource version to use for the next If-Match write request.",
                 "schema": {
                   "type": "string"
                 }
@@ -17521,7 +17526,7 @@
             "description": "Successful Response",
             "headers": {
               "ETag": {
-                "description": "ProfilePreference version to use for the next If-Match write request.",
+                "description": "Resource version to use for the next If-Match write request.",
                 "schema": {
                   "type": "string"
                 }
@@ -17609,7 +17614,7 @@
             "description": "Successful Response",
             "headers": {
               "ETag": {
-                "description": "ProfilePreference version to use for the next If-Match write request.",
+                "description": "Resource version to use for the next If-Match write request.",
                 "schema": {
                   "type": "string"
                 }
@@ -17705,7 +17710,15 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "content": {
@@ -17754,6 +17767,17 @@
               "title": "Spaceid",
               "type": "string"
             }
+          },
+          {
+            "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+              "title": "If-Match",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -17775,7 +17799,15 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "content": {

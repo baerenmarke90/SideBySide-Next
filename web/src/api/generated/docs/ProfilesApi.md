@@ -78,7 +78,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **201** | Successful Response |  * ETag - ProfilePreference version to use for the next If-Match write request. <br>  |
+| **201** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
@@ -226,7 +226,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  -  |
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
 
@@ -368,7 +368,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  * ETag - ProfilePreference version to use for the next If-Match write request. <br>  |
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
 
@@ -444,7 +444,7 @@ No authorization required
 
 ## updateProfileIdentity
 
-> PartnerProfileView updateProfileIdentity(accountId, spaceId, profileIdentityUpdate)
+> PartnerProfileView updateProfileIdentity(accountId, spaceId, ifMatch, profileIdentityUpdate)
 
 Update Profile Identity
 
@@ -468,6 +468,8 @@ async function example() {
     accountId: accountId_example,
     // string
     spaceId: spaceId_example,
+    // string | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.
+    ifMatch: ifMatch_example,
     // ProfileIdentityUpdate
     profileIdentityUpdate: ...,
   } satisfies UpdateProfileIdentityRequest;
@@ -491,6 +493,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **accountId** | `string` |  | [Defaults to `undefined`] |
 | **spaceId** | `string` |  | [Defaults to `undefined`] |
+| **ifMatch** | `string` | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header. | [Defaults to `undefined`] |
 | **profileIdentityUpdate** | [ProfileIdentityUpdate](ProfileIdentityUpdate.md) |  | |
 
 ### Return type
@@ -510,7 +513,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  -  |
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
@@ -589,7 +592,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  * ETag - ProfilePreference version to use for the next If-Match write request. <br>  |
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |

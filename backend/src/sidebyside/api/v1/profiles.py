@@ -16,8 +16,6 @@ from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
 from sidebyside.attachments import service as attachment_service
 from sidebyside.attachments.models import Attachment, AttachmentStatus, MediaType
-from sidebyside.core.errors import ForbiddenError
-from sidebyside.identity import service as identity_service
 from sidebyside.profiles import service
 from sidebyside.profiles.models import (
     PartnerProfile,
@@ -33,7 +31,7 @@ STREAM_CHUNK = 64 * 1024
 
 ETAG_HEADERS = {
     "ETag": {
-        "description": "ProfilePreference version to use for the next If-Match write request.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }
@@ -99,6 +97,7 @@ class PartnerProfileView(ApiModel):
     account_id: UUID
     display_name: str
     profile_attachment_id: UUID | None
+    version: int
     created_at: datetime
     updated_at: datetime
     preferences: list[ProfilePreferenceView]
@@ -124,6 +123,7 @@ def _profile_view(
     *,
     display_name: str,
     profile_attachment_id: UUID | None,
+    version: int,
     preferences: list[ProfilePreferenceView],
 ) -> PartnerProfileView:
     return PartnerProfileView(
@@ -131,6 +131,7 @@ def _profile_view(
         account_id=profile.owner_id,
         display_name=display_name,
         profile_attachment_id=profile_attachment_id,
+        version=version,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
         preferences=preferences,
@@ -140,19 +141,25 @@ def _profile_view(
 @router.get(
     "/spaces/{spaceId}/profiles/{accountId}",
     response_model=PartnerProfileView,
-    responses=problem_responses(401, 404),
+    responses={
+        200: {"headers": ETAG_HEADERS},
+        **problem_responses(401, 404),
+    },
 )
 def get_partner_profile(
     authorization: Authorization,
     session: DbSession,
+    response: Response,
     account_id: Annotated[str, Path(alias="accountId")],
 ) -> PartnerProfileView:
     profile, subject, preferences = service.profile_preferences(session, authorization, account_id)
     attachment = service.profile_attachment(session, subject.id)
+    response.headers["ETag"] = etag_for(subject.version)
     return _profile_view(
         profile,
         display_name=subject.display_name,
         profile_attachment_id=attachment.id if attachment is not None else None,
+        version=subject.version,
         preferences=[_preference_view(preference) for preference in preferences],
     )
 
@@ -161,33 +168,37 @@ def get_partner_profile(
     "/spaces/{spaceId}/profiles/{accountId}",
     response_model=PartnerProfileView,
     operation_id="updateProfileIdentity",
-    responses=problem_responses(401, 403, 404, 409, 422),
+    responses={
+        200: {"headers": ETAG_HEADERS},
+        **problem_responses(401, 403, 404, 409, 422),
+    },
 )
 def update_profile_identity(
     authorization: Authorization,
     session: DbSession,
+    response: Response,
     body: ProfileIdentityUpdate,
+    expected_version: IfMatchVersion,
     account_id: Annotated[str, Path(alias="accountId")],
 ) -> PartnerProfileView:
     """Change only the authenticated account's current presentation identity."""
-    subject = service.active_subject(session, authorization, account_id)
-    if subject.id != authorization.account_id:
-        raise ForbiddenError(
-            "Only your own self profile can be changed.",
-            service.ProfileErrorCode.SELF_WRITE_ONLY,
-        )
-
-    if "display_name" in body.model_fields_set:
-        identity_service.update_display_name(session, subject, body.display_name or "")
-    if "profile_attachment_id" in body.model_fields_set:
-        service.set_profile_attachment(session, authorization, body.profile_attachment_id)
-
+    subject = service.update_profile_identity(
+        session,
+        authorization,
+        account_id,
+        expected_version=expected_version,
+        changed_fields=frozenset(body.model_fields_set),
+        display_name=body.display_name,
+        profile_attachment_id=body.profile_attachment_id,
+    )
     profile, subject, preferences = service.profile_preferences(session, authorization, subject.id)
     attachment = service.profile_attachment(session, subject.id)
+    response.headers["ETag"] = etag_for(subject.version)
     return _profile_view(
         profile,
         display_name=subject.display_name,
         profile_attachment_id=attachment.id if attachment is not None else None,
+        version=subject.version,
         preferences=[_preference_view(preference) for preference in preferences],
     )
 

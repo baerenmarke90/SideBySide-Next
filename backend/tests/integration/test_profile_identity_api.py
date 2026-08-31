@@ -100,15 +100,19 @@ def test_profile_projection_and_display_name_update(client, couple) -> None:  # 
     )
     assert initial.status_code == 200
     assert initial.json()["profileAttachmentId"] is None
+    assert initial.json()["version"] == 1
+    assert initial.headers["etag"] == '"1"'
 
     updated = client.patch(
         profile_path(couple["space"].id, couple["anna"].id),
         json={"displayName": "  Änne 李  "},
-        headers=auth(couple["token_a"]),
+        headers={**auth(couple["token_a"]), "If-Match": initial.headers["etag"]},
     )
     assert updated.status_code == 200
     assert updated.json()["displayName"] == "Änne 李"
     assert updated.json()["profileAttachmentId"] is None
+    assert updated.json()["version"] == 2
+    assert updated.headers["etag"] == '"2"'
 
     partner_view = client.get(
         profile_path(couple["space"].id, couple["anna"].id),
@@ -116,11 +120,21 @@ def test_profile_projection_and_display_name_update(client, couple) -> None:  # 
     )
     assert partner_view.status_code == 200
     assert partner_view.json()["displayName"] == "Änne 李"
+    assert partner_view.json()["version"] == 2
+    assert partner_view.headers["etag"] == '"2"'
+
+    stale = client.patch(
+        profile_path(couple["space"].id, couple["anna"].id),
+        json={"displayName": "Veraltet"},
+        headers={**auth(couple["token_a"]), "If-Match": initial.headers["etag"]},
+    )
+    assert stale.status_code == 409
+    assert stale.json()["code"] == "VERSION_CONFLICT"
 
     foreign_write = client.patch(
         profile_path(couple["space"].id, couple["anna"].id),
         json={"displayName": "Nicht erlaubt"},
-        headers=auth(couple["token_b"]),
+        headers={**auth(couple["token_b"]), "If-Match": partner_view.headers["etag"]},
     )
     assert foreign_write.status_code == 403
     assert foreign_write.json()["code"] == "PROFILE_SELF_WRITE_ONLY"
@@ -128,7 +142,7 @@ def test_profile_projection_and_display_name_update(client, couple) -> None:  # 
     invalid = client.patch(
         profile_path(couple["space"].id, couple["anna"].id),
         json={"displayName": None},
-        headers=auth(couple["token_a"]),
+        headers={**auth(couple["token_a"]), "If-Match": partner_view.headers["etag"]},
     )
     assert invalid.status_code == 422
     assert invalid.json()["code"] == "DISPLAY_NAME_REQUIRED"
@@ -139,6 +153,13 @@ def test_avatar_set_remove_and_attachment_owner_boundary(
     couple,
     session: Session,
 ) -> None:  # type: ignore[no-untyped-def]
+    initial = client.get(
+        profile_path(couple["space"].id, couple["anna"].id),
+        headers=auth(couple["token_a"]),
+    )
+    assert initial.status_code == 200
+    assert initial.headers["etag"] == '"1"'
+
     avatar = ready_avatar(
         session,
         account_id=couple["anna"].id,
@@ -147,10 +168,12 @@ def test_avatar_set_remove_and_attachment_owner_boundary(
     set_response = client.patch(
         profile_path(couple["space"].id, couple["anna"].id),
         json={"profileAttachmentId": str(avatar.id)},
-        headers=auth(couple["token_a"]),
+        headers={**auth(couple["token_a"]), "If-Match": initial.headers["etag"]},
     )
     assert set_response.status_code == 200
     assert set_response.json()["profileAttachmentId"] == str(avatar.id)
+    assert set_response.json()["version"] == 2
+    assert set_response.headers["etag"] == '"2"'
 
     partner_view = client.get(
         profile_path(couple["space"].id, couple["anna"].id),
@@ -158,6 +181,7 @@ def test_avatar_set_remove_and_attachment_owner_boundary(
     )
     assert partner_view.status_code == 200
     assert partner_view.json()["profileAttachmentId"] == str(avatar.id)
+    assert partner_view.json()["version"] == 2
 
     foreign_avatar = ready_avatar(
         session,
@@ -167,17 +191,19 @@ def test_avatar_set_remove_and_attachment_owner_boundary(
     foreign_candidate = client.patch(
         profile_path(couple["space"].id, couple["anna"].id),
         json={"profileAttachmentId": str(foreign_avatar.id)},
-        headers=auth(couple["token_a"]),
+        headers={**auth(couple["token_a"]), "If-Match": partner_view.headers["etag"]},
     )
     assert foreign_candidate.status_code == 404
 
     removed = client.patch(
         profile_path(couple["space"].id, couple["anna"].id),
         json={"profileAttachmentId": None},
-        headers=auth(couple["token_a"]),
+        headers={**auth(couple["token_a"]), "If-Match": partner_view.headers["etag"]},
     )
     assert removed.status_code == 200
     assert removed.json()["profileAttachmentId"] is None
+    assert removed.json()["version"] == 3
+    assert removed.headers["etag"] == '"3"'
     assert avatar.status == AttachmentStatus.DELETING.value
 
 

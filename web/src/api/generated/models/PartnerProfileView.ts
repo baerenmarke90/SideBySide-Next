@@ -69,6 +69,12 @@ export interface PartnerProfileView {
      * @memberof PartnerProfileView
      */
     updatedAt: Date;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartnerProfileView
+     */
+    version: number;
 }
 
 /**
@@ -82,6 +88,7 @@ export function instanceOfPartnerProfileView(value: object): value is PartnerPro
     if (!('preferences' in value) || value['preferences'] === undefined) return false;
     if (!('profileAttachmentId' in value) || value['profileAttachmentId'] === undefined) return false;
     if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
+    if (!('version' in value) || value['version'] === undefined) return false;
     return true;
 }
 
@@ -102,6 +109,7 @@ export function PartnerProfileViewFromJSONTyped(json: any, ignoreDiscriminator: 
         'preferences': ((json['preferences'] as Array<any>).map(ProfilePreferenceViewFromJSON)),
         'profileAttachmentId': json['profileAttachmentId'],
         'updatedAt': (new Date(json['updatedAt'])),
+        'version': json['version'],
     };
 }
 
@@ -123,6 +131,7 @@ export function PartnerProfileViewToJSONTyped(value?: PartnerProfileView | null,
         'preferences': ((value['preferences'] as Array<any>).map(ProfilePreferenceViewToJSON)),
         'profileAttachmentId': value['profileAttachmentId'],
         'updatedAt': value['updatedAt'].toISOString(),
+        'version': value['version'],
     };
 }
 

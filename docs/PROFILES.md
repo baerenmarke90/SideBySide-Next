@@ -64,7 +64,7 @@ The visible endpoint:
 
 always filters to `SELF_PROFILE`. The owner's own private notes about this person therefore cannot accidentally appear in this profile view.
 
-`PATCH /api/v1/spaces/{spaceId}/profiles/{accountId}` is self-write only. Omitted identity fields remain unchanged. `displayName` is normalized and validated only by the authoritative identity-domain rule; changing it does not change authentication identity or sessions. An explicit `profileAttachmentId: null` removes the avatar, while a non-null ID must pass the existing READY/owner/current-Space/image validation.
+`PATCH /api/v1/spaces/{spaceId}/profiles/{accountId}` is self-write only and requires the last-read Account presentation `ETag` in `If-Match`. Omitted identity fields remain unchanged. `displayName` is normalized and validated only by the authoritative identity-domain rule; changing it does not change authentication identity or sessions. An explicit `profileAttachmentId: null` removes the avatar, while a non-null ID must pass the existing READY/owner/current-Space/image validation. Display name and avatar share one Account-global `version`, because both follow the Account across Spaces; avatar-only changes advance that version too. A stale write returns `409 VERSION_CONFLICT` rather than silently overwriting a newer edit.
 
 `GET /api/v1/spaces/{spaceId}/profiles/{accountId}/avatar/content` requires an authenticated caller with readable current-Space profile access and returns `404` for a missing/invisible/non-ready current avatar. It does not accept an Attachment ID and therefore cannot be used as a cross-tenant media guessing oracle.
 
@@ -79,7 +79,7 @@ always filters to `SELF_PROFILE`. The owner's own private notes about this perso
 - `PUT /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`
 - `DELETE /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`
 
-ProfilePreference changes and deletes use ETag/`If-Match`. Stale versions return `409 VERSION_CONFLICT` instead of a silent Lost Update.
+Profile identity changes as well as ProfilePreference changes/deletes use ETag/`If-Match`. Stale versions return `409 VERSION_CONFLICT` instead of a silent Lost Update. The identity ETag is Account-global; preference ETags remain resource-local.
 
 ## Stable enums
 
