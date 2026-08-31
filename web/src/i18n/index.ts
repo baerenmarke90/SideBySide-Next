@@ -39,7 +39,7 @@ if (!i18n.isInitialized) {
             notifications: 'Benachrichtigungen',
             groups: {
               together: 'Gemeinsam',
-              discover: 'Entdecken',
+              keepUpToDate: 'Auf dem Laufenden',
               you: 'Ihr zwei',
             },
           },

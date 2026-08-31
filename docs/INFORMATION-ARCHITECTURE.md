@@ -1,8 +1,9 @@
 # Information Architecture for SideBySide Next
 
 **Status:** Binding foundation for Web and App  
-**Version:** 1.1  
-**Effective from:** August 24, 2026
+**Version:** 1.2  
+**Effective from:** August 31, 2026  
+**Route model decided by:** `decisions/0003-primary-navigation-and-route-model.md`
 
 This document defines navigation, naming, routes, and product-function
 assignment. Web and Android use the same domain architecture while adapting
@@ -22,13 +23,22 @@ navigation to window size and platform conventions.
 
 ## 2. Mandatory primary navigation
 
-| Route ID | de-DE product name | Purpose |
-|---|---|---|
-| `today` | Heute | shared overview and next meaningful actions |
-| `story` | Story | non-public shared timeline of memories |
-| `plan` | Planen | wishes and concrete plans; shopping later |
-| `discover` | Entdecken | curated inspiration for shared time |
-| `more` | Mehr | Space, privacy, profile, and settings |
+| Route ID | de-DE product name | Purpose | Availability |
+|---|---|---|---|
+| `today` | Heute | shared overview and next meaningful actions | now |
+| `story` | Story | non-public shared timeline of memories | now |
+| `plan` | Planen | wishes and concrete plans; shopping later | now |
+| `discover` | Entdecken | curated inspiration for shared time | **M7** |
+| `more` | Mehr | Space, privacy, profile, and settings | now |
+
+`discover` depends on the Discover domain, which `docs/ROADMAP.md` places in
+M7. Its route ID, label and position in the order are reserved from now, and it
+is not rendered before its domain exists: a reserved route is not dead
+navigation, but a visible empty area would be. Until M7 the primary navigation
+therefore carries four destinations.
+
+The label *Entdecken* is reserved for this area and must not be reused for a
+navigation group, a section heading, or any other surface.
 
 ### Platform representation
 
@@ -114,6 +124,7 @@ Links. IDs are opaque, stable identifiers.
 | Task | Canonical path |
 |---|---|
 | Open Heute | `/today` |
+| Activity between the partners | `/today/activity` |
 | Open Story | `/story` |
 | Open memory | `/story/memories/:memoryId` |
 | Create memory | `/story/memories/new` |
@@ -123,15 +134,24 @@ Links. IDs are opaque, stable identifiers.
 | Plans | `/plan/plans` |
 | Open plan | `/plan/plans/:planId` |
 | Shopping reserved for later domain | `/plan/shopping` |
-| Discover | `/discover` |
-| Open recommendation | `/discover/:recommendationId` |
+| Discover, reserved for M7 | `/discover` |
+| Open recommendation, reserved for M7 | `/discover/:recommendationId` |
 | More | `/more` |
 | Space and partner | `/more/space` |
+| Related people and important dates | `/more/people` |
+| Owner-only area | `/more/private` |
 | Privacy | `/more/privacy` |
 | Notifications | `/more/notifications` |
 | Profile | `/more/profile` |
 | Settings | `/more/settings` |
 | Data and account | `/more/data-account` |
+| Search | `/search` |
+
+**Search and Activity are not primary destinations.** Search is a global
+utility reachable from the app bar rather than an area of its own. Activity
+answers what happened between the partners, which is what `Heute` covers, so it
+lives underneath it. Promoting either to primary navigation would break the
+five-destination rule in section 1.
 
 ### Deep-Link rules
 
