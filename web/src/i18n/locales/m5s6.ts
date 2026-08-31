@@ -32,8 +32,8 @@ const m5s6 = {
     },
     import: {
       heading: 'Import',
-      fileLabel: 'SideBySide Transfer Bundle',
-      fileHelp: 'Wähle genau eine ZIP-Datei aus einem SideBySide-Export.',
+      fileLabel: 'SidebySide Transfer Bundle',
+      fileHelp: 'Wähle genau eine ZIP-Datei aus einem SidebySide-Export.',
       upload: 'Datei prüfen',
       uploading: 'Datei wird hochgeladen …',
       statusLabel: 'Importstatus',

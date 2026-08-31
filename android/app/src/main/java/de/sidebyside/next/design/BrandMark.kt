@@ -3,7 +3,6 @@ package de.sidebyside.next.design
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,9 +60,9 @@ fun BrandMark(
 }
 
 /**
- * Mark plus wordmark. The whole lockup carries one name for assistive
- * technology; announcing mark and words separately would say the product name
- * twice.
+ * Mark plus the canonical product name. The whole lockup carries one name for
+ * assistive technology; announcing mark and words separately would say the
+ * product name twice.
  */
 @Composable
 fun BrandLockup(
@@ -77,18 +76,11 @@ fun BrandLockup(
         horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
     ) {
         BrandMark(size = markSize)
-        Column {
-            Text(
-                text = stringResource(R.string.brand_name),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                text = stringResource(R.string.brand_suffix),
-                style = MaterialTheme.typography.labelSmall,
-                color = SideBySideTheme.colors.textMuted,
-            )
-        }
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
     }
 }
 
