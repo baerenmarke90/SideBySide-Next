@@ -134,4 +134,14 @@
     <string name="ref_image_too_large">Das Bild ist größer als 25 MiB.</string>
     <string name="ref_image_open_failed">Das Bild konnte nicht geöffnet werden.</string>
     <string name="ref_image_empty">Das ausgewählte Bild ist leer.</string>
+    <string name="story_kind_memory">Erinnerung</string>
+    <string name="story_kind_milestone">Meilenstein</string>
+    <string name="story_kind_heart_moment">Herzmoment</string>
+    <string name="story_by_author">von %1$s</string>
+    <string name="story_image_unavailable">Bild nicht geladen</string>
+    <string name="story_empty_title">Eure Geschichte beginnt hier</string>
+    <string name="story_empty_body">Sobald ihr eine Erinnerung festhaltet, erscheint sie an diesem Ort — nach Tagen geordnet.</string>
+    <string name="story_title">Eure Geschichte</string>
+    <string name="story_capture_cancel">Zurück zur Geschichte</string>
+    <string name="story_loading">Eure Geschichte wird geladen.</string>
 </resources>
