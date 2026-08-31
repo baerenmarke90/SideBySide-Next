@@ -16,7 +16,8 @@ const privateArea = {
   deleteConfirm: 'Endgültig löschen',
   deleteCancel: 'Behalten',
   deleteConfirmTitle: 'Wirklich löschen?',
-  deleteConfirmBody: 'Dieser Inhalt wird nur aus deinem persönlichen Bereich gelöscht.',
+  deleteConfirmBody:
+    'Dieser Inhalt wird nur aus deinem persönlichen Bereich gelöscht.',
   navigation: {
     aria: 'Mein Bereich',
     notes: 'Private Notizen',
@@ -27,7 +28,8 @@ const privateArea = {
     title: 'Mein Bereich',
     body: 'Private Notizen, Geschenkideen und Listen, die nur für dich sichtbar sind.',
     action: 'Mein Bereich öffnen',
-    privacy: 'Hier werden keine privaten Anzahlen oder Inhalte mit deinem Partner geteilt.',
+    privacy:
+      'Hier werden keine privaten Anzahlen oder Inhalte mit deinem Partner geteilt.',
   },
   notes: {
     title: 'Private Notizen',
@@ -62,7 +64,8 @@ const privateArea = {
     targetOnLabel: 'Für wann',
     priceLabel: 'Preisnotiz',
     urlLabel: 'Link',
-    urlHelp: 'Der Link wird nur gespeichert. SideBySide lädt keine Vorschau dafür.',
+    urlHelp:
+      'Der Link wird nur gespeichert. SideBySide lädt keine Vorschau dafür.',
     pinnedLabel: 'Oben anheften',
     statusLabel: 'Status',
     status: {
@@ -92,6 +95,8 @@ const privateArea = {
     noItems: 'Diese Liste ist noch leer.',
     complete: 'Erledigt',
     open: 'Offen',
+    rename: 'Eintrag bearbeiten',
+    saveItem: 'Eintrag speichern',
     markComplete: 'Als erledigt markieren',
     markOpen: 'Wieder öffnen',
     moveUp: 'Nach oben',
