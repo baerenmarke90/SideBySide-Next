@@ -570,11 +570,7 @@ export function PrivateCollectionDetailPage({
   );
 }
 
-export function PrivateCollectionEditPage({
-  api,
-  accountId,
-  spaceId,
-}: Props) {
+export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
