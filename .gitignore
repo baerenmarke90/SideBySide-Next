@@ -26,7 +26,11 @@ android/.gradle/
 android/local.properties
 android/**/build/
 *.apk
+# Release signing material, in every shape it usually takes. It is supplied by
+# the publishing environment and must never reach this repository.
 *.keystore
+*.jks
+keystore.properties
 
 # Environment and secrets
 .env

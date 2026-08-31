@@ -5,6 +5,25 @@ plugins {
 }
 
 val sbsApiBaseUrl = providers.gradleProperty("sbsApiBaseUrl").orElse("").get()
+
+// Release identity, per #194.
+//
+// `versionName` is the product's version and is edited by hand when the
+// product moves. `versionCode` is the monotonic integer Android orders updates
+// by; it carries no meaning beyond "later than the last one" and is supplied by
+// whatever publishes the build, so a rebuild of the same source can be
+// republished without inventing a new product version.
+val sbsVersionName = "0.1.0"
+val sbsVersionCode = providers.gradleProperty("sbsVersionCode").orElse("1").get().toInt()
+
+// Release signing material never lives in this repository. It is supplied by
+// the publishing environment, and when it is absent the release build stays
+// unsigned rather than silently falling back to the debug key — an artifact
+// signed with the debug key looks releasable and can never be updated by a
+// properly signed one.
+val releaseKeystore = providers.gradleProperty("sbsReleaseKeystore")
+    .orElse(providers.environmentVariable("SBS_RELEASE_KEYSTORE"))
+    .orNull
 // The Material 3 scheme and the semantic scale are derived from the shared
 // token set instead of restating its values. `design/tokens.json` stays the
 // single source of truth, exactly as `backend/openapi.json` is for the API
@@ -155,20 +174,67 @@ val prepareS8GeneratedModels by tasks.registering(org.gradle.api.tasks.Sync::cla
 
 fun quotedBuildConfig(value: String): String = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
+/**
+ * One piece of signing material, from a Gradle property or the environment.
+ *
+ * Missing material fails the configuration rather than producing a signing
+ * config with an empty password, which fails much later and less clearly.
+ */
+fun Project.secret(property: String, environmentVariable: String): String =
+    providers.gradleProperty(property)
+        .orElse(providers.environmentVariable(environmentVariable))
+        .orNull
+        ?: error(
+            "Release signing needs $property or $environmentVariable. " +
+                "Supply it from the publishing environment; it must never be committed.",
+        )
+
 android {
     namespace = "de.sidebyside.next.reference"
     compileSdk = 37
     compileSdkMinor = 1
 
     defaultConfig {
-        applicationId = "de.sidebyside.next.reference"
+        // Frozen by #194. Google Play binds an application ID to its listing
+        // permanently, so this cannot be corrected after a first release —
+        // which is why the M2 name `de.sidebyside.next.reference` had to go
+        // before distribution rather than after. `reference` named a technical
+        // flow and `next` is this repository's codename; neither is the
+        // product.
+        applicationId = "de.sidebyside.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.0.1-m2-s8"
+        versionCode = sbsVersionCode
+        versionName = sbsVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SBS_API_BASE_URL", quotedBuildConfig(sbsApiBaseUrl))
+    }
+
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = secret("sbsReleaseKeystorePassword", "SBS_RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = secret("sbsReleaseKeyAlias", "SBS_RELEASE_KEY_ALIAS")
+                keyPassword = secret("sbsReleaseKeyPassword", "SBS_RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            // A debug build is a different application to Android, so a
+            // developer's own installation cannot be replaced by, or replace,
+            // the one from the store.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
+
+        release {
+            signingConfig = signingConfigs.findByName("release")
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {
