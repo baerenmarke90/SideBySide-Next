@@ -1,0 +1,92 @@
+name: Transfer Hardening Patch
+
+on:
+  push:
+    branches: [feat/345-transfer-bundle]
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/345-transfer-bundle
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv sync --frozen
+
+      - name: Harden protected payload transfer
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/sidebyside/transfer/service.py")
+          text = path.read_text()
+
+          if "from pydantic import BaseModel\n" not in text:
+              text = text.replace(
+                  "from zipfile import ZIP_DEFLATED, ZipFile\n\nfrom sqlalchemy",
+                  "from zipfile import ZIP_DEFLATED, ZipFile\n\nfrom pydantic import BaseModel\nfrom sqlalchemy",
+              )
+
+          old_json = '''    if isinstance(value, StrEnum):
+              return value.value
+          if isinstance(value, Mapping):'''
+          new_json = '''    if isinstance(value, StrEnum):
+              return value.value
+          if isinstance(value, BaseModel):
+              return _json_value(value.model_dump(mode="json"))
+          if isinstance(value, Mapping):'''
+          if old_json in text:
+              text = text.replace(old_json, new_json, 1)
+
+          old_column = '''    except (AttributeError, NotImplementedError):
+              return value
+          if python_type is UUID and not isinstance(value, UUID):'''
+          new_column = '''    except (AttributeError, NotImplementedError):
+              return value
+          if isinstance(python_type, type) and issubclass(python_type, BaseModel):
+              return python_type.model_validate(value)
+          if python_type is UUID and not isinstance(value, UUID):'''
+          if old_column in text:
+              text = text.replace(old_column, new_column, 1)
+
+          path.write_text(text)
+          PY
+
+      - name: Validate patch
+        working-directory: backend
+        run: |
+          uv run --frozen ruff format src/sidebyside/transfer/service.py
+          uv run --frozen ruff check src/sidebyside/transfer/service.py
+          uv run --frozen mypy src/sidebyside/transfer/service.py
+          uv run --frozen pytest tests/unit/test_transfer_archive.py -q
+
+      - name: Commit patch
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/src/sidebyside/transfer/service.py
+          git commit -m "fix(transfer): preserve protected payloads across bundles (#345)"
+          git fetch origin feat/345-transfer-bundle
+          git rebase origin/feat/345-transfer-bundle
+          git push origin HEAD:feat/345-transfer-bundle
