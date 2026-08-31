@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sidebyside.api.deps import DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.auth import action_tokens, rate_limit
+from sidebyside.auth import action_tokens, passkey_abuse, rate_limit
 from sidebyside.config import get_settings
 from sidebyside.core.errors import NotFoundError
 from sidebyside.demo.service import ALEX_EMAIL, ALEX_NAME, LEA_EMAIL, LEA_NAME
@@ -65,11 +65,12 @@ def create_demo_entry(
     if not settings.demo_mode:
         raise NotFoundError("Demo entry is not available.", "DEMO_MODE_DISABLED")
 
-    client = request.client.host if request.client is not None else "unknown"
+    client_host = request.client.host if request.client is not None else None
+    network_key = passkey_abuse.network_key(client_host)
     rate_limit.check(
         session,
         DEMO_ENTRY_ACTION,
-        f"{client}:{body.persona.value}",
+        f"{network_key}:{body.persona.value}",
         DEMO_ENTRY_LIMIT,
     )
 
