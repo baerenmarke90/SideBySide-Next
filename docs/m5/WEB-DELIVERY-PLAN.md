@@ -22,7 +22,12 @@ S1 Identity + relationship context (#298)
   +--> S5 Stable M4 Web surfaces (#302)
   |
   v
-S6 Read Cache + portability prerequisites (#303)
+S6 prerequisite decisions: cache + portability contract (#303)
+  |
+  +--> Transfer Bundle backend/OpenAPI runtime (#345)
+  |
+  v
+S6 Web runtime: Deep Links + hardened Read Cache + portability UI (#346)
   |
   v
 M5 Web evidence -> combined M5/G4 parity and release evidence
@@ -31,6 +36,11 @@ M5 Web evidence -> combined M5/G4 parity and release evidence
 S2-S5 may use controlled parallelism only after S0B and the required S1 Space
 context are delivered. Two branches must not independently redefine the route
 registry, cache key policy, error mapping, generated client, or global tokens.
+
+The Android offline/read-cache product runtime remains separately owned by #328.
+It consumes the same M2-D18 decision as Web but may persist current-owner
+`OWNER_ONLY` data only under the Android Keystore-backed encryption boundary
+frozen by #303.
 
 ## Slice contracts
 
@@ -90,10 +100,52 @@ registry, cache key policy, error mapping, generated client, or global tokens.
 
 ### S6 — Read Cache, Deep Links, and portability
 
-Runtime starts only after #303 resolves M2-D17/M2-D18 and the versioned
-Export/Import contract. Offline Read Cache must be owner/Space-bound, show data
-age/read-only state, clear completely on logout/account/Space change, and never
-promise Offline Write.
+S6 is deliberately split at the security/API boundary instead of inventing
+runtime semantics inside the Web client.
+
+#### S6 prerequisite decisions — #303
+
+#303 freezes M2-D17 and M2-D18 plus the versioned neutral Transfer Bundle
+contract in `S6-CACHE-PORTABILITY-DECISIONS.md`.
+
+The binding decisions include:
+
+- user portability scopes `SHARED` and `PERSONAL` with strict `OWNER_ONLY`
+  isolation;
+- essential portability as non-paywallable;
+- a hard seven-day persistent read-cache maximum age;
+- complete cache clearing on logout, Account change, and Space change;
+- no Offline Write;
+- Web persistent cache limited to explicitly approved `SPACE_SHARED` snapshots;
+- no persistent Web `OWNER_ONLY` ProtectedPayload;
+- Android owner-only persistence only behind Room plus a Keystore-protected
+  encryption key;
+- canonical Deep Links that contain identity but no protected presentation data;
+- an asynchronous, server-owned Transfer Bundle Export/Import API with 24-hour
+  temporary export artifacts and fail-closed archive validation.
+
+#### Transfer Bundle runtime — #345
+
+#345 owns the production FastAPI/PostgreSQL/Job/MediaStore implementation, the
+v1 bundle manifest, Export/Import authorization, archive abuse protection,
+cleanup, ProblemDetails, OpenAPI snapshot, and regenerated TypeScript/Kotlin
+clients.
+
+Web must not create a competing archive or transport contract while #345 is
+unmerged.
+
+#### Web S6 runtime — #346
+
+#346 owns:
+
+- the canonical/tested Deep Link registry and safe authentication return target;
+- invalidation of the provisional S2 IndexedDB schema;
+- Account/Space/scope-bound cache v2 with seven-day expiry;
+- complete logout/Account/Space clearing and `SHARED -> PRIVATE` eviction;
+- cache fallback only for availability failures, never 401/403/404/409;
+- localized cache age/read-only UX and no offline mutation queue;
+- generated-client Export/Import UI after #345 is on `main`;
+- focused i18n, Accessibility, Privacy, routing, cache, and browser evidence.
 
 ## Reuse-before-build decision
 
@@ -106,7 +158,10 @@ Selected foundations:
 - generated OpenAPI clients as the DTO/transport authority;
 - CSS custom properties and the existing theme bootstrap for semantic tokens;
 - the current Vitest/static rendering strategy for S0A, and #192 for the single
-  Browser E2E/accessibility strategy.
+  Browser E2E/accessibility strategy;
+- IndexedDB for the bounded Web read cache under the M2-D18 policy;
+- existing PostgreSQL Job/Worker and private MediaStore infrastructure for the
+  server-owned Transfer Bundle runtime.
 
 Alternatives considered for S0A included a new component system, CSS utility
 framework, icon package, form framework, web-font delivery, and a second browser
@@ -116,14 +171,18 @@ bundle, license, CSP, privacy, maintenance, or competing-test-architecture cost
 without solving a current gap. Later complex primitives such as dialogs may
 receive a separate reuse decision when their requirements are concrete.
 
-No external provider, user configuration, runtime data flow, or new license is
-introduced by S0A.
+For S6, a second Web persistence framework, client-side application ZIP
+implementation, custom offline-write/sync engine, separate router, public object
+export link, direct predecessor database importer, and portability SaaS are
+explicitly rejected. Any later dependency still requires the repository's
+current Reuse/License/Privacy/Cloud/Self-Hosted/Cost/Fallback review.
 
 ## Business and freemium result
 
 - official Web access and standard Light/Dark/System appearance: Free/Core;
-- Accessibility, localization, account security, Privacy enforcement, and
-  essential data portability: non-paywallable;
+- Accessibility, localization, account security, Privacy enforcement, cache
+  isolation, and essential data portability: non-paywallable;
+- basic offline read access to supported Core cached data: Free/Core;
 - implemented M1-M3 capabilities: retain their authoritative Free/Core or
   documented Mixed baseline;
 - no M5 slice may add ad-hoc Premium flags or infer entitlement in the client;
