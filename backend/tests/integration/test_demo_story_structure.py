@@ -14,6 +14,7 @@ from sidebyside.chapters.models import Chapter
 from sidebyside.config import Environment
 from sidebyside.demo import create_demo_space, reset_demo_space
 from sidebyside.demo.story import CHAPTERS, MEMORIES
+from sidebyside.memories import service as memory_service
 from sidebyside.memories.models import Memory
 from sidebyside.places import service as place_service
 from sidebyside.places.models import Place
@@ -101,6 +102,36 @@ def test_completed_demo_links_every_chapter_to_its_declared_story(session: Sessi
     assert set(snapshot) == set(expected)
     assert all(snapshot[title] for title in expected)
     assert snapshot == expected
+
+
+def test_existing_demo_ensure_does_not_require_unchanged_story_titles(session: Session) -> None:
+    result = _seed(session)
+    context = AuthorizationContext(account_id=result.lea_id, space_id=result.space_id)
+    movie_night = _memory_by_title(session, result.space_id, "Filmabend auf dem Sofa")
+    memory_service.update_memory(
+        session,
+        context,
+        movie_night.id,
+        expected_version=movie_night.version,
+        changed_fields=frozenset({"title"}),
+        title="Unser Besucher-Filmabend",
+        body=None,
+        happened_on=None,
+    )
+
+    ensured = create_demo_space(
+        session,
+        environment=Environment.TEST,
+        lea_password=DEMO_PASSWORD,
+        alex_password=DEMO_PASSWORD,
+        reference_date=REFERENCE_DATE,
+    )
+
+    assert ensured.space_id == result.space_id
+    assert ensured.created is False
+    changed = session.get(Memory, movie_night.id)
+    assert changed is not None
+    assert changed.payload.title == "Unser Besucher-Filmabend"
 
 
 def test_reset_restores_story_links_and_coordinate_fixture(session: Session) -> None:
