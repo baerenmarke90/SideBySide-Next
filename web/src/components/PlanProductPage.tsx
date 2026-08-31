@@ -173,6 +173,7 @@ export function PlanProductPage({
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!plan) return;
     const data = new FormData(event.currentTarget);
     const description = String(data.get('description')).trim();
     const placeId = String(data.get('placeId')).trim();
@@ -188,6 +189,7 @@ export function PlanProductPage({
 
   function submitSchedule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!plan) return;
     const data = new FormData(event.currentTarget);
     const start = dateTimeFromInput(String(data.get('plannedStart')));
     const end = dateTimeFromInput(String(data.get('plannedEnd')));
@@ -197,6 +199,7 @@ export function PlanProductPage({
 
   function submitComplete(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!plan) return;
     const data = new FormData(event.currentTarget);
     const experiencedOn = dateFromInput(String(data.get('experiencedOn')));
     if (!experiencedOn) return;
@@ -271,7 +274,7 @@ export function PlanProductPage({
 
             <form className="form-grid planning-action-form" onSubmit={submitComplete}>
               <label htmlFor="plan-complete-date">{t('m5s3.plan.experiencedOn')}</label>
-              <input id="plan-complete-date" name="experiencedOn" type="date" required defaultValue={localDateTimeInput(new Date()).slice(0, 10)} />
+              <input id="plan-complete-date" name="experiencedOn" type="date" required defaultValue={dateOnlyInput(new Date())} />
               <button type="submit" disabled={completeMutation.isPending}>{t('m5s3.plan.complete')}</button>
             </form>
 

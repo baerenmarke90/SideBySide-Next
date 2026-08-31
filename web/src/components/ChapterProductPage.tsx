@@ -112,6 +112,7 @@ export function ChapterProductPage({
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!chapter) return;
     const data = new FormData(event.currentTarget);
     const description = String(data.get('description')).trim();
     const startOn = dateFromInput(String(data.get('startOn')).trim()) ?? null;

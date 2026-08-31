@@ -231,7 +231,7 @@ function MemoryCreatePage({
     mutation.mutate({
       title: String(data.get('title')),
       body: String(data.get('body')),
-      happenedOnValue: happenedOnValue
+      happenedOn: happenedOnValue
         ? new Date(`${happenedOnValue}T00:00:00Z`)
         : undefined,
     });
@@ -250,6 +250,7 @@ function MemoryCreatePage({
         description={t('memory.intro')}
         className="create-heading"
       />
+
       <section className="form-card" aria-labelledby="memory-form-heading">
         <h2 id="memory-form-heading" className="sr-only">
           {t('memory.formAria')}
@@ -355,7 +356,7 @@ function AuthenticatedApp({
   const planningApis = useMemo(
     () => createSharedPlanningApis(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
-  );
+   );
 
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
@@ -469,11 +470,11 @@ function AuthenticatedApp({
             element={<PlanProductPage {...planningProductProps} />}
           />
           <Route
-            path={PLACE_DETAIL_ROUTE_PATTERN}
+            path={PLACE_DETÁIL_ROUTE_PATTERN}
             element={<PlaceProductPage {...planningProductProps} />}
           />
           <Route
-            path={CHAPTER_DETAIL_ROUTE_PATTERN}
+            path={CHAPTER_DETÁIL_ROUTE_PATTERN}
             element={<ChapterProductPage {...planningProductProps} />}
           />
           <Route

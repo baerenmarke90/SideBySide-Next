@@ -166,6 +166,7 @@ export function CollectionProductPage({
 
   function submitCollection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!collection) return;
     const data = new FormData(event.currentTarget);
     const icon = String(data.get('icon')).trim();
     updateCollection.mutate({
@@ -177,6 +178,7 @@ export function CollectionProductPage({
 
   function submitItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!collection) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     createItem.mutate(
@@ -187,6 +189,7 @@ export function CollectionProductPage({
 
   function submitItemTitle(event: FormEvent<HTMLFormElement>, item: CollectionItemDetail) {
     event.preventDefault();
+    if (!collection) return;
     const data = new FormData(event.currentTarget);
     updateItem.mutate({
       collection,
@@ -196,6 +199,7 @@ export function CollectionProductPage({
   }
 
   function move(itemIndex: number, direction: -1 | 1) {
+    if (!collection) return;
     const itemIds = moveItemIds(items.map((item) => item.id), itemIndex, direction);
     reorderItems.mutate({ collection, itemIds });
   }

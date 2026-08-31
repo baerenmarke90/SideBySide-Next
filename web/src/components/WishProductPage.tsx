@@ -126,12 +126,14 @@ export function WishProductPage({
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!wish) return;
     const data = new FormData(event.currentTarget);
     updateMutation.mutate({ wish, title: String(data.get('title')).trim() });
   }
 
   function submitConvert(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!wish) return;
     const data = new FormData(event.currentTarget);
     const title = String(data.get('title')).trim();
     const description = String(data.get('description')).trim();

@@ -102,6 +102,7 @@ export function PlaceProductPage({
 
   function submitEdit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!place) return;
     const data = new FormData(event.currentTarget);
     const latitudeRaw = String(data.get('latitude')).trim();
     const longitudeRaw = String(data.get('longitude')).trim();
