@@ -17,6 +17,7 @@ from sidebyside.api.v1 import (
     collections,
     comments,
     dashboard,
+    demo,
     engagement,
     health,
     heart_moments,
@@ -36,6 +37,7 @@ from sidebyside.api.v1 import (
     session_context,
     spaces,
     story,
+    transfer,
     wishes,
 )
 
@@ -43,6 +45,7 @@ router = APIRouter()
 router.include_router(auth.router)
 router.include_router(session_context.router)
 router.include_router(health.router)
+router.include_router(demo.router)
 router.include_router(invitations.router)
 router.include_router(attachments.router)
 router.include_router(story.router)
@@ -67,3 +70,4 @@ router.include_router(private_area.router)
 router.include_router(private_collections.router)
 router.include_router(reminders.router)
 router.include_router(rules.router)
+router.include_router(transfer.router)

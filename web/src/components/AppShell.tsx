@@ -75,6 +75,13 @@ export function AppShell({
   const { t } = useTranslation();
   const online = useOnlineStatus();
 
+  function logout(): void {
+    onLogout();
+    if (import.meta.env.VITE_SBS_DEMO_MODE === 'true') {
+      window.location.assign('/');
+    }
+  }
+
   return (
     <div className="product-shell">
       <a className="skip-link" href="#main-content">
@@ -103,7 +110,7 @@ export function AppShell({
             <span aria-hidden="true">♥</span> {t('header.sharedArea')}
           </span>
           <ThemeControl variant="inline" />
-          <button type="button" className="tertiary" onClick={onLogout}>
+          <button type="button" className="tertiary" onClick={logout}>
             {t('header.logout')}
           </button>
         </div>

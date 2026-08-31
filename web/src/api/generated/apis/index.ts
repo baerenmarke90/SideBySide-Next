@@ -25,4 +25,5 @@ export * from './RulesApi';
 export * from './SearchApi';
 export * from './SpacesApi';
 export * from './StoryApi';
+export * from './TransferApi';
 export * from './WishesApi';

@@ -131,7 +131,6 @@ const m5s3 = {
     create: 'Liste hinzufügen',
     loading: 'Liste wird geladen …',
     detailEyebrow: 'Gemeinsame Liste',
-    icon: 'Symbol (optional)',
     itemCount_one: '{{count}} Eintrag',
     itemCount_other: '{{count}} Einträge',
     itemsHeading: 'Einträge',
@@ -144,9 +143,11 @@ const m5s3 = {
     itemsEmpty: 'Die Liste ist noch leer.',
     markDone: '„{{title}}“ als erledigt markieren',
     markOpen: '„{{title}}“ wieder als offen markieren',
-    orderActions: 'Reihenfolge für „{{title}}“',
-    moveUp: '„{{title}}“ nach oben verschieben',
-    moveDown: '„{{title}}“ nach unten verschieben',
+    saveItem: '„{{title}}“ speichern',
+    reorderItem:
+      '„{{title}}“ verschieben. Ziehen oder mit den Pfeiltasten neu anordnen.',
+    deleteItem: '„{{title}}“ löschen',
+    reordering: 'Reihenfolge wird gespeichert …',
     deleteConsequence:
       'Die Liste und ihre eigenen Listeneinträge werden gelöscht. Andere SideBySide-Inhalte werden nicht gelöscht.',
   },

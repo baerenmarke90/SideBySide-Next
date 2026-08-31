@@ -11,13 +11,13 @@ import type { PrivateCollectionDetail } from '../api/generated/models/PrivateCol
 import type { PrivateCollectionItemDetail } from '../api/generated/models/PrivateCollectionItemDetail';
 import {
   PRIVATE_COLLECTIONS_PATH,
-  movePrivateCollectionItem,
   privateApiCall,
   privateAreaQueryKeys,
   privateCollectionEditPath,
   privateCollectionPath,
 } from '../client/privateArea';
 import { useTranslation } from '../i18n';
+import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import {
@@ -67,32 +67,18 @@ function CollectionFields({
 }) {
   const { t } = useTranslation();
   return (
-    <>
-      <div className="field-group">
-        <label htmlFor="private-collection-title">
-          {t('privateArea.collections.titleLabel')}
-        </label>
-        <input
-          id="private-collection-title"
-          name="title"
-          required
-          maxLength={200}
-          defaultValue={collection?.title ?? ''}
-        />
-      </div>
-      <div className="field-group">
-        <label htmlFor="private-collection-icon">
-          {t('privateArea.collections.iconLabel')}
-        </label>
-        <input
-          id="private-collection-icon"
-          name="icon"
-          maxLength={32}
-          defaultValue={collection?.icon ?? ''}
-        />
-        <p className="field-help">{t('privateArea.collections.iconHelp')}</p>
-      </div>
-    </>
+    <div className="field-group">
+      <label htmlFor="private-collection-title">
+        {t('privateArea.collections.titleLabel')}
+      </label>
+      <input
+        id="private-collection-title"
+        name="title"
+        required
+        maxLength={200}
+        defaultValue={collection?.title ?? ''}
+      />
+    </div>
   );
 }
 
@@ -148,10 +134,7 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
             {collections.map((collection) => (
               <li key={collection.id} className="private-area-card">
                 <div className="private-area-card-heading">
-                  <h2>
-                    {collection.icon ? `${collection.icon} ` : ''}
-                    {collection.title}
-                  </h2>
+                  <h2>{collection.title}</h2>
                 </div>
                 <Link
                   className="button-link secondary-link"
@@ -182,11 +165,11 @@ export function PrivateCollectionCreatePage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (values: { title: string; icon: string | null }) =>
+    mutationFn: (title: string) =>
       privateApiCall(() =>
         api.createPrivateCollection({
           spaceId,
-          privateCollectionCreate: values,
+          privateCollectionCreate: { title },
         }),
       ),
     onSuccess: async (collection) => {
@@ -200,11 +183,7 @@ export function PrivateCollectionCreatePage({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const icon = String(data.get('icon') || '').trim();
-    mutation.mutate({
-      title: String(data.get('title') || '').trim(),
-      icon: icon || null,
-    });
+    mutation.mutate(String(data.get('title') || '').trim());
   }
 
   return (
@@ -321,7 +300,18 @@ function CollectionItems({
     },
   });
 
-  const items = [...collection.items].sort((a, b) => a.position - b.position);
+  const baseItems = [...collection.items].sort(
+    (left, right) => left.position - right.position,
+  );
+  const reorder = useListItemReorder({
+    itemIds: baseItems.map((item) => item.id),
+    disabled: !collection.capabilities.canEdit || reorderMutation.isPending,
+    onReorder: (itemIds) => reorderMutation.mutate(itemIds),
+  });
+  const itemById = new Map(baseItems.map((item) => [item.id, item]));
+  const items = reorder.orderedItemIds
+    .map((itemId) => itemById.get(itemId))
+    .filter((item): item is PrivateCollectionItemDetail => Boolean(item));
 
   function submitItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -342,13 +332,6 @@ function CollectionItems({
     ).trim();
     if (!title || title === item.title) return;
     updateMutation.mutate({ item, update: { title } });
-  }
-
-  function move(itemId: string, direction: -1 | 1) {
-    const itemIds = items.map((item) => item.id);
-    reorderMutation.mutate(
-      movePrivateCollectionItem(itemIds, itemId, direction),
-    );
   }
 
   return (
@@ -385,8 +368,17 @@ function CollectionItems({
       ) : null}
       {items.length > 0 ? (
         <ol className="private-area-item-list">
-          {items.map((item, index) => (
-            <li key={item.id} className="private-area-item">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              data-sortable-item-id={item.id}
+              className={[
+                'private-area-item',
+                reorder.activeItemId === item.id ? 'list-entry-dragging' : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <div className="private-area-item-main">
                 <span className="private-area-badge">
                   {item.completed
@@ -410,13 +402,17 @@ function CollectionItems({
                     required
                     maxLength={200}
                   />
-                  <button
+                  <ListEntryIconButton
                     type="submit"
-                    className="secondary compact-action"
+                    icon="save"
+                    className="secondary"
+                    label={
+                      updateMutation.isPending
+                        ? t('privateArea.saving')
+                        : t('privateArea.collections.saveItem')
+                    }
                     disabled={updateMutation.isPending}
-                  >
-                    {t('privateArea.collections.saveItem')}
-                  </button>
+                  />
                 </form>
               </div>
               <div className="private-area-actions">
@@ -435,32 +431,21 @@ function CollectionItems({
                     ? t('privateArea.collections.markOpen')
                     : t('privateArea.collections.markComplete')}
                 </button>
-                <button
-                  type="button"
-                  className="tertiary compact-action"
-                  onClick={() => move(item.id, -1)}
-                  disabled={index === 0 || reorderMutation.isPending}
-                >
-                  {t('privateArea.collections.moveUp')}
-                </button>
-                <button
-                  type="button"
-                  className="tertiary compact-action"
-                  onClick={() => move(item.id, 1)}
-                  disabled={
-                    index === items.length - 1 || reorderMutation.isPending
-                  }
-                >
-                  {t('privateArea.collections.moveDown')}
-                </button>
-                <button
-                  type="button"
-                  className="tertiary compact-action"
+                {collection.capabilities.canEdit ? (
+                  <ListEntryIconButton
+                    icon="reorder"
+                    className="tertiary"
+                    label={t('privateArea.collections.reorderItem')}
+                    {...reorder.handleProps(item.id)}
+                  />
+                ) : null}
+                <ListEntryIconButton
+                  icon="delete"
+                  className="tertiary"
+                  label={t('privateArea.collections.removeItem')}
                   onClick={() => deleteMutation.mutate(item)}
                   disabled={deleteMutation.isPending}
-                >
-                  {t('privateArea.collections.removeItem')}
-                </button>
+                />
               </div>
             </li>
           ))}
@@ -539,7 +524,7 @@ export function PrivateCollectionDetailPage({
           </Link>
         }
         eyebrow={t('privateArea.privacyLabel')}
-        title={`${collection.icon ? `${collection.icon} ` : ''}${collection.title}`}
+        title={collection.title}
         action={
           collection.capabilities.canEdit ? (
             <Link
@@ -576,17 +561,17 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
   const mutation = useMutation({
     mutationFn: ({
       collection,
-      values,
+      title,
     }: {
       collection: PrivateCollectionDetail;
-      values: { title: string; icon: string | null };
+      title: string;
     }) =>
       privateApiCall(() =>
         api.updatePrivateCollection({
           spaceId,
           collectionId: collection.id,
           ifMatch: String(collection.version),
-          privateCollectionUpdate: values,
+          privateCollectionUpdate: { title },
         }),
       ),
     onSuccess: async (collection) => {
@@ -627,13 +612,9 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const icon = String(data.get('icon') || '').trim();
     mutation.mutate({
       collection: editableCollection,
-      values: {
-        title: String(data.get('title') || '').trim(),
-        icon: icon || null,
-      },
+      title: String(data.get('title') || '').trim(),
     });
   }
 

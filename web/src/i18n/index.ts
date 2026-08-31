@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import de from './locales/de';
+import demo from './locales/demo';
 import importantDates from './locales/importantDates';
 import m5s3 from './locales/m5s3';
 import m5s5 from './locales/m5s5';
@@ -30,6 +31,7 @@ if (!i18n.isInitialized) {
         translation: {
           ...de,
           navigation: { ...de.navigation, ...navigation },
+          demo,
           importantDates,
           m5s3,
           m5s5,
