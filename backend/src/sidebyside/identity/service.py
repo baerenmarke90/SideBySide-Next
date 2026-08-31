@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -22,8 +24,41 @@ class AccountErrorCode:
     EMAIL_INVALID = "EMAIL_INVALID"
     EMAIL_TAKEN = "EMAIL_ALREADY_REGISTERED"
     DISPLAY_NAME_REQUIRED = "DISPLAY_NAME_REQUIRED"
+    DISPLAY_NAME_TOO_LONG = "DISPLAY_NAME_TOO_LONG"
     OIDC_IDENTITY_INVALID = "OIDC_IDENTITY_INVALID"
     PASSKEY_INVALID = "PASSKEY_INVALID"
+
+
+def _has_visible_display_character(value: str) -> bool:
+    """Return whether a name contains something other than whitespace/control data.
+
+    Unicode format characters such as a zero-width joiner may legitimately
+    occur inside emoji/name sequences, so they are not rejected wholesale.
+    They simply cannot be the only content of a display name.
+    """
+    return any(
+        not character.isspace() and not unicodedata.category(character).startswith("C")
+        for character in value
+    )
+
+
+def normalize_display_name(display_name: str) -> str:
+    """Normalize and validate the account's presentation identity.
+
+    Display names are presentation data only: this function does not touch an
+    email address, authentication subject, account ID, credential, or session.
+    Trimming happens once here so registration and later profile edits cannot
+    gradually acquire different rules.
+    """
+    name = (display_name or "").strip()
+    if not name or not _has_visible_display_character(name):
+        raise ValidationError("A display name is required.", AccountErrorCode.DISPLAY_NAME_REQUIRED)
+    if len(name) > MAX_DISPLAY_NAME:
+        raise ValidationError(
+            f"A display name may contain at most {MAX_DISPLAY_NAME} characters.",
+            AccountErrorCode.DISPLAY_NAME_TOO_LONG,
+        )
+    return name
 
 
 def normalize_email(email: str) -> str:
@@ -67,9 +102,7 @@ def create_account(
     session: Session, *, display_name: str, email: str, password_hash: str
 ) -> Account:
     """Create an account with local authentication."""
-    name = (display_name or "").strip()
-    if not name:
-        raise ValidationError("A display name is required.", AccountErrorCode.DISPLAY_NAME_REQUIRED)
+    name = normalize_display_name(display_name)
 
     email_address = validate_email(email)
     if find_by_email(session, email_address) is not None:
@@ -77,7 +110,7 @@ def create_account(
             "This email address is already registered.", AccountErrorCode.EMAIL_TAKEN
         )
 
-    account = Account(display_name=name[:MAX_DISPLAY_NAME])
+    account = Account(display_name=name)
     session.add(account)
     session.flush()
 
@@ -107,8 +140,14 @@ def create_oidc_account(
     claim is unusable or the address is already assigned. In particular, it
     is never used to find and take over an existing account.
     """
-    name = (display_name or "").strip() or "Partner"
-    account = Account(display_name=name[:MAX_DISPLAY_NAME])
+    try:
+        name = normalize_display_name(display_name)
+    except ValidationError:
+        # An external presentation claim must not make a verified OIDC identity
+        # unusable. Invalid provider display data receives the existing neutral
+        # fallback and can later be edited through the profile contract.
+        name = "Partner"
+    account = Account(display_name=name)
     session.add(account)
     session.flush()
 
@@ -128,6 +167,17 @@ def create_oidc_account(
             )
             session.flush()
 
+    return account
+
+
+def update_display_name(session: Session, account: Account, display_name: str) -> Account:
+    """Change only the account's presentation name.
+
+    Authentication identities, addresses, credentials, and sessions are
+    deliberately not consulted or mutated here.
+    """
+    account.display_name = normalize_display_name(display_name)
+    session.flush()
     return account
 
 
