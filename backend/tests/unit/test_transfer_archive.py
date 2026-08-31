@@ -74,6 +74,25 @@ def test_unsafe_paths_are_rejected(name: str) -> None:
     _assert_code(_bundle({name: b"x"}), ErrorCode.TRANSFER_ARCHIVE_UNSAFE)
 
 
+@pytest.mark.parametrize(
+    "name",
+    [
+        "credentials.json",
+        "sessions.json",
+        "jobs.json",
+        "outbox.json",
+        "entitlements.json",
+        "cache.json",
+    ],
+)
+def test_security_runtime_entitlement_and_cache_entries_are_not_portable(name: str) -> None:
+    entries = {
+        "accounts.json": _json({"members": []}),
+        name: _json({"forbidden": True}),
+    }
+    _assert_code(_bundle(entries), ErrorCode.TRANSFER_ARCHIVE_UNSAFE)
+
+
 def test_duplicate_entry_is_rejected() -> None:
     accounts = _json({"members": []})
     manifest = {
