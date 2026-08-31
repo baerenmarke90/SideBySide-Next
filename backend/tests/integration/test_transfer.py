@@ -5,20 +5,24 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from sidebyside.authorization import AuthorizationContext
+from sidebyside.core.clock import now
 from sidebyside.identity.models import AccountEmail
+from sidebyside.media import get_media_store
 from sidebyside.private_notes import service as private_note_service
 from sidebyside.relationship import service as relationship_service
+from sidebyside.relationship.models import Membership, MembershipStatus
 from sidebyside.reminders.runtime_models import RulePreference
 from sidebyside.transfer import jobs, service
-from sidebyside.transfer.models import ImportStatus, TransferScope
+from sidebyside.transfer.models import ExportStatus, ImportStatus, TransferScope
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -106,6 +110,46 @@ def test_export_descriptor_is_creator_bound(client, session: Session) -> None:  
         headers=auth(ben_token),
     )
     assert partner.status_code == 404
+
+
+def test_foreign_space_transfer_id_is_privacy_safe(client, session: Session) -> None:  # type: ignore[no-untyped-def]
+    anna = make_account(session, "Anna")
+    ben = make_account(session, "Ben")
+    anna_space = make_space(session, anna)
+    ben_space = make_space(session, ben)
+    transfer = service.create_export(
+        session,
+        AuthorizationContext(account_id=anna.id, space_id=anna_space.id),
+        TransferScope.SHARED,
+    )
+    ben_token = sign_in(session, ben)
+
+    response = client.get(
+        f"/api/v1/spaces/{ben_space.id}/transfer/exports/{transfer.id}",
+        headers=auth(ben_token),
+    )
+
+    assert response.status_code == 404
+
+
+def test_export_worker_rechecks_active_membership(session: Session) -> None:
+    anna = make_account(session, "Anna")
+    space = make_space(session, anna)
+    authorization = AuthorizationContext(account_id=anna.id, space_id=space.id)
+    transfer = service.create_export(session, authorization, TransferScope.SHARED)
+    membership = session.execute(
+        select(Membership).where(
+            Membership.space_id == space.id,
+            Membership.account_id == anna.id,
+        )
+    ).scalar_one()
+    membership.status = MembershipStatus.LEFT.value
+    session.flush()
+
+    jobs.handle_export(session, {"exportId": str(transfer.id)})
+
+    assert transfer.status == ExportStatus.FAILED.value
+    assert transfer.error_code == "TRANSFER_EXPORT_FAILED"
 
 
 def test_shared_export_excludes_owner_only_and_personal_keeps_only_requester(
@@ -209,6 +253,9 @@ def test_personal_import_maps_requester_and_apply_is_idempotent(session: Session
     }
 
     service.request_apply(session, authorization, str(transfer.id))
+    apply_job_id = transfer.apply_job_id
+    assert apply_job_id is not None
+    assert service.request_apply(session, authorization, str(transfer.id)).apply_job_id == apply_job_id
     session.flush()
     jobs.handle_apply_import(session, {"importId": str(transfer.id)})
     session.flush()
@@ -243,3 +290,27 @@ def test_personal_import_fails_when_owner_maps_to_other_member(session: Session)
 
     assert transfer.status == ImportStatus.FAILED.value
     assert transfer.error_code == "TRANSFER_MEMBER_MAPPING_INVALID"
+
+
+def test_expired_staged_import_is_physically_deleted_idempotently(session: Session) -> None:
+    target = make_account(session, "Target")
+    space = make_space(session, target)
+    authorization = AuthorizationContext(account_id=target.id, space_id=space.id)
+    source_id = str(uuid4())
+    bundle = _minimal_bundle(source_id, "target@example.test")
+    transfer = service.create_import(
+        session,
+        authorization,
+        bundle,
+        size=len(bundle.getvalue()),
+    )
+    store = get_media_store()
+    key = service.import_storage_key(transfer)
+    assert store.exists(key)
+    transfer.expires_at = now() - timedelta(seconds=1)
+    session.flush()
+
+    assert service.cleanup_expired(session) == 1
+    assert transfer.status == ImportStatus.EXPIRED.value
+    assert not store.exists(key)
+    assert service.cleanup_expired(session) == 0
