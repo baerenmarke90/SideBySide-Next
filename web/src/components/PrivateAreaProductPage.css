@@ -62,7 +62,7 @@
   font-weight: 650;
 }
 
-.private-area-nav a[aria-current='page'] {
+.private-area-nav a[aria-current="page"] {
   border-color: var(--color-accent);
   color: var(--color-text-primary);
 }
