@@ -19,12 +19,17 @@ The reserved demo identities are:
 | Lea Sommer | `demo-lea@sidebyside.invalid` |
 | Alex Winter | `demo-alex@sidebyside.invalid` |
 
-`.invalid` is deliberately non-deliverable. The initial local passwords are supplied only while the
-canonical accounts are first created through `SBS_DEMO_LEA_PASSWORD` and
-`SBS_DEMO_ALEX_PASSWORD`; they are never committed or printed.
+`.invalid` is deliberately non-deliverable. For manual development/QA creation, initial local
+passwords are supplied only while the canonical accounts are first created through
+`SBS_DEMO_LEA_PASSWORD` and `SBS_DEMO_ALEX_PASSWORD`; they are never committed or printed.
 
-Public visitors do **not** receive or enter those passwords. A demo deployment shows a persona
-selection page with:
+The dedicated public demo does not require an operator to provide or persist these seed passwords.
+Its Compose bootstrap creates high-entropy ephemeral initial values in process memory when the
+reserved Accounts do not exist yet. Those values are neither printed nor written to deployment
+configuration and are not used for public entry.
+
+Public visitors do **not** receive or enter passwords. A demo deployment shows a persona selection
+page with:
 
 - the Lea persona action (`demo.joinLea`); and
 - the Alex persona action (`demo.joinAlex`).
@@ -54,7 +59,7 @@ SBS_DEMO_MODE=true
 Conversely, the ordinary `production` environment rejects `SBS_DEMO_MODE=true`. This prevents the
 main production instance from accidentally becoming the public demo.
 
-## Create
+## Manual create for development / QA
 
 Run migrations first. For local development/QA, execute from `backend/`:
 
@@ -76,8 +81,8 @@ uv run python -m scripts.demo_space create --reference-date 2026-08-24
 Without `--reference-date`, the current local date becomes the reference date. The scenario derives
 recent memories, future plans, past milestones, and mixed open/completed states from it.
 
-The same command is used once when bootstrapping the isolated public demo deployment. Automatic
-startup/migrations still never create demo identities implicitly.
+The explicit `create` command intentionally remains available for development and QA. Public demo
+Compose deployments use the automatic `ensure` path described below instead.
 
 ## Permanent public demo deployment
 
@@ -93,7 +98,7 @@ SBS_DEMO_MODE_RESET_TIMER=true
 SBS_DEMO_MODE_RESET_INTERVAL=6h
 
 SBS_PUBLIC_BASE_URL=https://demo.sbs.example
-SBS_ALLOWED_HOSTS=["demo.sbs.example"]
+SBS_ALLOWED_HOSTS=["demo.sbs.example","localhost","127.0.0.1"]
 SBS_CURSOR_SIGNING_KEY=<independent-random-secret-at-least-32-characters>
 SBS_MAIL_TRANSPORT=none
 ```
@@ -102,27 +107,49 @@ Normal production hardening remains mandatory. The demo should additionally be p
 reverse proxy's ordinary request/rate-limit controls because it is intentionally reachable without
 a personal account.
 
-### Arcane / runtime-image bootstrap
+### Automatic Compose bootstrap
 
-The production/demo backend image contains the canonical demo bootstrap entrypoint. After the
-isolated Arcane stack is healthy, create the demo Space once from the running API container. Keep
-the initial passwords ephemeral instead of storing them permanently in the Arcane environment:
+Both supported Compose stacks contain a one-shot `demo-init` service. Startup order is:
 
-```bash
-SBS_DEMO_LEA_PASSWORD="$(openssl rand -base64 32)"
-SBS_DEMO_ALEX_PASSWORD="$(openssl rand -base64 32)"
-
-docker compose -f compose.arcane.yaml exec -T \
-  -e SBS_DEMO_LEA_PASSWORD="$SBS_DEMO_LEA_PASSWORD" \
-  -e SBS_DEMO_ALEX_PASSWORD="$SBS_DEMO_ALEX_PASSWORD" \
-  api python -m scripts.demo_space create
-
-unset SBS_DEMO_LEA_PASSWORD SBS_DEMO_ALEX_PASSWORD
+```text
+postgres -> migrate -> demo-init -> api / worker -> web
 ```
 
-The generated password values are only needed for the initial account creation. Public demo users
-still enter through the Lea/Alex persona selection page, and later canonical resets retain the
-reserved demo Accounts and their password hashes.
+`demo-init` runs `python -m scripts.demo_space ensure` after successful migrations.
+
+- on `SBS_ENVIRONMENT=demo` with `SBS_DEMO_MODE=true`, it creates the canonical Lea/Alex Space if it
+  is missing;
+- creation is idempotent, so ordinary redeploys do not duplicate or replace an existing demo Space;
+- initial Account passwords are generated ephemerally inside the process and are never printed or
+  stored in `.env`/Arcane;
+- on development and ordinary production deployments, `ensure` exits successfully without creating
+  demo data;
+- API and worker start only after this one-shot step has completed successfully;
+- migrations themselves still never seed product data.
+
+This removes the previous manual post-deployment bootstrap command for a public demo instance.
+Manual `create` remains available for local development/QA and explicit troubleshooting.
+
+## Demo-instance banner
+
+When `SBS_DEMO_MODE=true`, the Web build renders a visible notice above the entire demo UI. It states
+that the deployment is a demo and that visitor changes are temporary.
+
+The banner uses the same deployment values as the reset worker:
+
+```env
+SBS_DEMO_MODE_RESET_TIMER=true
+SBS_DEMO_MODE_RESET_INTERVAL=6h
+```
+
+With the example above, the UI states that the demo is reset automatically every **6 hours**. The
+compact interval syntax is formatted into user-facing German text (`30m` -> `30 Minuten`, `1h` ->
+`1 Stunde`, `1d` -> `1 Tag`). If the reset timer is disabled, the banner says so rather than claiming
+a reset cadence that is not active.
+
+The interval is a Web build input as well as a backend runtime setting. Changing the reset timer or
+interval therefore requires rebuilding/redeploying the Web image so the displayed notice remains in
+sync with the worker configuration.
 
 ## Link from the main login
 
@@ -179,6 +206,9 @@ expired/removed, including device sessions, one-time authentication tokens, pass
 non-local identities. Existing visitors therefore re-enter through the persona selection page
 instead of carrying authentication state indefinitely across resets.
 
+Automatic resets use the same complete canonical wrapper as initial creation: presentation cleanup
+and stable Reminder examples are restored before the reset is considered complete.
+
 ## Seed coverage
 
 The canonical dataset is created through normal domain services and currently includes:
@@ -206,15 +236,20 @@ Image bytes are generated locally with Pillow and still pass through upload regi
 upload, finalize, validation/sanitization, and normal binding. No Internet image or real photo is
 required.
 
-## Privacy canaries
+## Privacy canaries and presentation cleanup
 
-The seed deliberately contains owner-only content for both partners. Private data must remain absent
-from the other partner's Story, Search, Activity, Notifications, Dashboard, and other shared read
-models.
+The seed deliberately uses unmistakable owner-only canary tokens while its privacy fixtures are
+assembled. They allow automated tests to detect leakage into the partner's Story, Search, Activity,
+Notifications, Dashboard, and other shared read models.
 
-Automated coverage verifies representative boundaries, including partner denial of private content,
-Search isolation, private Activity exclusion, and Dashboard canary isolation. Do not replace these
-checks with demo-only filtering exceptions.
+Those tokens are **not product copy**. Before the completed canonical demo dataset is returned to
+public callers, the presentation-normalization step replaces them with natural fictional values
+such as private notes, dates, gift ideas, and private-list titles. The privacy class and ownership do
+not change. Automated coverage verifies both properties: the internal tokens are absent from the
+completed public demo data, and the natural private content still remains owner-only.
+
+Do not solve presentation problems by weakening privacy tests or adding demo-only filtering
+exceptions.
 
 ## Freemium / entitlement behavior
 
@@ -224,11 +259,11 @@ rather than a demo-only bypass.
 
 ## Practical QA loop
 
-1. deploy/update the build under test;
-2. reset the canonical demo Space;
+1. deploy/update the build under test; the public demo is ensured automatically;
+2. reset the canonical demo Space when a fresh reference state is needed;
 3. enter once as Lea and once as Alex in separate browser sessions;
 4. exercise the changed screen at compact, medium, and expanded widths;
-5. explicitly check the opposite persona for private-canary leakage; and
+5. explicitly check the opposite persona for owner-only leakage; and
 6. rerun the relevant automated tests before merge.
 
 The canonical demo complements automated tests. It does not replace negative API cases, concurrency

@@ -1,12 +1,13 @@
-"""Explicit create/reset entrypoint for the canonical development demo Space."""
+"""Create, ensure, or reset the canonical SideBySide demo Space."""
 
 from __future__ import annotations
 
 import argparse
 import os
+import secrets
 from datetime import date
 
-from sidebyside.config import get_settings
+from sidebyside.config import Environment, get_settings
 from sidebyside.db.session import unit_of_work
 from sidebyside.demo import create_demo_space, reset_demo_space
 
@@ -30,14 +31,22 @@ def _required_secret(name: str) -> str:
     return value
 
 
+def _ephemeral_seed_password() -> str:
+    """Return a high-entropy bootstrap password that is never printed or persisted."""
+    return secrets.token_urlsafe(32)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Create or reset the canonical SideBySide demo Space."
+        description="Create, ensure, or reset the canonical SideBySide demo Space."
     )
     parser.add_argument(
         "action",
-        choices=("create", "reset"),
-        help="create is idempotent; reset replaces only the verified demo Space",
+        choices=("create", "ensure", "reset"),
+        help=(
+            "create is explicit; ensure bootstraps only an enabled demo deployment; "
+            "reset replaces only the verified demo Space"
+        ),
     )
     parser.add_argument(
         "--reference-date",
@@ -51,13 +60,25 @@ def main() -> int:
     settings = get_settings()
     reference_date = _reference_date(args.reference_date)
 
+    if args.action == "ensure" and not (
+        settings.environment is Environment.DEMO and settings.demo_mode
+    ):
+        print("Demo bootstrap skipped: this is not an enabled demo deployment.")
+        return 0
+
     with unit_of_work() as session:
-        if args.action == "create":
+        if args.action in {"create", "ensure"}:
+            if args.action == "ensure":
+                lea_password = _ephemeral_seed_password()
+                alex_password = _ephemeral_seed_password()
+            else:
+                lea_password = _required_secret(LEA_PASSWORD_ENV)
+                alex_password = _required_secret(ALEX_PASSWORD_ENV)
             result = create_demo_space(
                 session,
                 environment=settings.environment,
-                lea_password=_required_secret(LEA_PASSWORD_ENV),
-                alex_password=_required_secret(ALEX_PASSWORD_ENV),
+                lea_password=lea_password,
+                alex_password=alex_password,
                 reference_date=reference_date,
             )
         else:

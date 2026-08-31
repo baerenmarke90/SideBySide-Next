@@ -46,6 +46,8 @@ x-web-build: &web-build
       VITE_SBS_API_BASE_URL: ""
       VITE_SBS_DEMO_MODE: "${SBS_DEMO_MODE:-false}"
       VITE_SBS_DEMO_URL: "${SBS_DEMO_PUBLIC_URL:-}"
+      VITE_SBS_DEMO_RESET_TIMER: "${SBS_DEMO_MODE_RESET_TIMER:-false}"
+      VITE_SBS_DEMO_RESET_INTERVAL: "${SBS_DEMO_MODE_RESET_INTERVAL:-6h}"
   pull_policy: build
 
 services:
@@ -78,6 +80,20 @@ services:
       postgres:
         condition: service_healthy
 
+  demo-init:
+    <<: *backend-build
+    restart: "no"
+    command: ["python", "-m", "scripts.demo_space", "ensure"]
+    environment:
+      <<: *runtime-environment
+    volumes:
+      - media_data:/var/lib/sidebyside/media
+    networks:
+      - app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   api:
     <<: *backend-build
     restart: unless-stopped
@@ -106,7 +122,7 @@ services:
       retries: 3
       start_period: 10s
     depends_on:
-      migrate:
+      demo-init:
         condition: service_completed_successfully
 
   worker:
@@ -120,7 +136,7 @@ services:
     networks:
       - app
     depends_on:
-      migrate:
+      demo-init:
         condition: service_completed_successfully
 
   web:
