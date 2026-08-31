@@ -1,5 +1,6 @@
 import { PrivateAreaApi } from '../api/generated/apis/PrivateAreaApi';
 import { Configuration } from '../api/generated/runtime';
+import { normalizeClientError } from './problemDetails';
 
 export const PRIVATE_AREA_ROOT_PATH = '/private/notes';
 export const PRIVATE_NOTES_PATH = '/private/notes';
@@ -15,6 +16,14 @@ export function createPrivateAreaApi(
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   return new PrivateAreaApi(configuration);
+}
+
+export async function privateApiCall<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    throw await normalizeClientError(error);
+  }
 }
 
 export const privateAreaQueryKeys = {
