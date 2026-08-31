@@ -91,9 +91,7 @@ def test_create_is_idempotent_and_representative(session: Session) -> None:
     assert _count(session, Notification, first.space_id) >= 2
 
     attachments = list(
-        session.execute(
-            select(Attachment).where(Attachment.space_id == first.space_id)
-        ).scalars()
+        session.execute(select(Attachment).where(Attachment.space_id == first.space_id)).scalars()
     )
     assert len(attachments) == 5
     assert {attachment.status for attachment in attachments} == {AttachmentStatus.READY.value}
@@ -164,9 +162,7 @@ def test_reset_replaces_only_verified_demo_space(session: Session) -> None:
     result = _seed(session)
     old_space_id = result.space_id
     old_attachment_ids = set(
-        session.execute(
-            select(Attachment.id).where(Attachment.space_id == old_space_id)
-        ).scalars()
+        session.execute(select(Attachment.id).where(Attachment.space_id == old_space_id)).scalars()
     )
 
     outsider = make_account(session, "Unrelated User")
@@ -184,9 +180,11 @@ def test_reset_replaces_only_verified_demo_space(session: Session) -> None:
     assert reset.space_id != old_space_id
     assert session.get(Space, old_space_id) is None
     assert session.get(Space, unrelated_space_id) is not None
-    assert not session.execute(
-        select(Attachment.id).where(Attachment.id.in_(old_attachment_ids))
-    ).scalars().all()
+    assert (
+        not session.execute(select(Attachment.id).where(Attachment.id.in_(old_attachment_ids)))
+        .scalars()
+        .all()
+    )
 
     active_demo_memberships = list(
         session.execute(
