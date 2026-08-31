@@ -7,6 +7,7 @@ import m5s5 from './locales/m5s5';
 import memoryProduct from './locales/memoryProduct';
 import partnerConnection from './locales/partnerConnection';
 import people from './locales/people';
+import privateArea from './locales/privateArea';
 import profiles from './locales/profiles';
 import storyProducts from './locales/storyProducts';
 
@@ -43,6 +44,7 @@ if (!i18n.isInitialized) {
           memoryProduct,
           partnerConnection,
           people,
+          privateArea,
           profiles,
           ...storyProducts,
         },
