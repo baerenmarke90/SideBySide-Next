@@ -17,10 +17,7 @@ import {
   privateCollectionPath,
 } from '../client/privateArea';
 import { useTranslation } from '../i18n';
-import {
-  ListEntryIconButton,
-  useListItemReorder,
-} from './ListEntryActions';
+import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import {
