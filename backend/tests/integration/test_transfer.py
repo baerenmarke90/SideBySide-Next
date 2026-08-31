@@ -18,6 +18,7 @@ from sidebyside.core.clock import now
 from sidebyside.identity.models import AccountEmail
 from sidebyside.media import get_media_store
 from sidebyside.private_notes import service as private_note_service
+from sidebyside.profiles.models import PartnerProfile
 from sidebyside.relationship import service as relationship_service
 from sidebyside.relationship.models import Membership, MembershipStatus
 from sidebyside.reminders.runtime_models import RulePreference
@@ -40,7 +41,7 @@ def _verified_email(session: Session, account, address: str) -> None:  # type: i
     session.flush()
 
 
-def _minimal_bundle(source_id: str, email: str) -> io.BytesIO:
+def _minimal_bundle(source_id: str, email: str | None) -> io.BytesIO:
     accounts = (
         json.dumps(
             {
@@ -66,6 +67,7 @@ def _minimal_bundle(source_id: str, email: str) -> io.BytesIO:
         "applicationVersion": "0.1.0",
         "scope": "PERSONAL",
         "sourceSpaceId": str(uuid4()),
+        "exportedBySourceId": source_id,
         "personalOwnerSourceId": source_id,
         "checksums": {"accounts.json": hashlib.sha256(accounts).hexdigest()},
     }
@@ -224,6 +226,60 @@ def test_shared_export_excludes_owner_only_and_personal_keeps_only_requester(
     assert rules[0]["enabled"] is False
 
 
+def test_shared_round_trip_maps_email_less_pair_and_reuses_target_profiles(
+    session: Session,
+) -> None:
+    anna = make_account(session, "Anna")
+    ben = make_account(session, "Ben")
+    source_space = make_space(session, anna)
+    relationship_service.add_member(session, source_space.id, ben)
+    target_space = make_space(session, anna)
+    relationship_service.add_member(session, target_space.id, ben)
+    source_authorization = AuthorizationContext(account_id=anna.id, space_id=source_space.id)
+    target_authorization = AuthorizationContext(account_id=anna.id, space_id=target_space.id)
+    target_profile_ids = set(
+        session.execute(
+            select(PartnerProfile.id).where(PartnerProfile.space_id == target_space.id)
+        ).scalars()
+    )
+    assert len(target_profile_ids) == 2
+
+    with service.build_export_archive(
+        session, source_authorization, TransferScope.SHARED
+    ) as bundle:
+        bundle.seek(0, io.SEEK_END)
+        size = bundle.tell()
+        bundle.seek(0)
+        transfer = service.create_import(
+            session,
+            target_authorization,
+            bundle,
+            size=size,
+        )
+    session.flush()
+    jobs.handle_validate_import(session, {"importId": str(transfer.id)})
+    session.flush()
+
+    assert transfer.status == ImportStatus.READY_TO_APPLY.value
+    assert transfer.member_mapping == {
+        str(anna.id): str(anna.id),
+        str(ben.id): str(ben.id),
+    }
+
+    service.request_apply(session, target_authorization, str(transfer.id))
+    session.flush()
+    jobs.handle_apply_import(session, {"importId": str(transfer.id)})
+    session.flush()
+
+    assert transfer.status == ImportStatus.COMPLETED.value
+    imported_target_profile_ids = set(
+        session.execute(
+            select(PartnerProfile.id).where(PartnerProfile.space_id == target_space.id)
+        ).scalars()
+    )
+    assert imported_target_profile_ids == target_profile_ids
+
+
 def test_personal_import_maps_requester_and_apply_is_idempotent(session: Session) -> None:
     target = make_account(session, "Target")
     _verified_email(session, target, "target@example.test")
@@ -298,7 +354,7 @@ def test_expired_staged_import_is_physically_deleted_idempotently(session: Sessi
     space = make_space(session, target)
     authorization = AuthorizationContext(account_id=target.id, space_id=space.id)
     source_id = str(uuid4())
-    bundle = _minimal_bundle(source_id, "target@example.test")
+    bundle = _minimal_bundle(source_id, None)
     transfer = service.create_import(
         session,
         authorization,
