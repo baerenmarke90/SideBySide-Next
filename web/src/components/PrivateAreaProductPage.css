@@ -1,0 +1,225 @@
+.private-area-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.private-area-context,
+.private-area-section,
+.private-area-detail-card,
+.private-area-editor,
+.private-area-danger {
+  display: grid;
+  gap: var(--space-4);
+  padding: clamp(var(--space-4), 3vw, var(--space-6));
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.private-area-context {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.private-area-context p,
+.private-area-card p,
+.private-area-detail-card p,
+.private-area-section p,
+.private-area-danger p {
+  margin: 0;
+}
+
+.private-area-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.private-area-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.private-area-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-weight: 650;
+}
+
+.private-area-nav a[aria-current="page"] {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.private-area-list,
+.private-area-item-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.private-area-card,
+.private-area-item {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+}
+
+.private-area-card-heading,
+.private-area-actions,
+.private-area-item-main,
+.private-area-delete-confirmation,
+.private-area-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.private-area-card-heading,
+.private-area-delete-confirmation {
+  justify-content: space-between;
+}
+
+.private-area-card-heading h2,
+.private-area-delete-confirmation h2,
+.private-area-section h2 {
+  margin: 0;
+}
+
+.private-area-excerpt,
+.private-area-detail-body {
+  white-space: pre-wrap;
+}
+
+.private-area-excerpt {
+  color: var(--color-text-secondary);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.private-area-detail-body {
+  line-height: 1.65;
+}
+
+.private-area-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  width: fit-content;
+}
+
+.private-area-check input {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.private-area-field-grid,
+.private-area-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.private-area-meta-grid {
+  margin: 0;
+}
+
+.private-area-meta-grid > div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.private-area-meta-grid dt {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.private-area-meta-grid dd {
+  margin: 0;
+}
+
+.private-area-url {
+  overflow-wrap: anywhere;
+}
+
+.private-area-inline-form {
+  align-items: end;
+}
+
+.private-area-inline-form .field-group {
+  flex: 1 1 16rem;
+}
+
+.private-area-item-main {
+  align-items: start;
+}
+
+.private-area-item-title-form {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.private-area-item-title-form input {
+  flex: 1 1 12rem;
+}
+
+.private-area-danger {
+  border-color: var(--color-border-subtle);
+}
+
+.private-area-delete-confirmation > div:first-child {
+  flex: 1 1 18rem;
+}
+
+@media (max-width: 760px) {
+  .private-area-context,
+  .private-area-field-grid,
+  .private-area-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .private-area-context {
+    align-items: start;
+  }
+
+  .private-area-actions,
+  .private-area-inline-form,
+  .private-area-delete-confirmation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .private-area-actions > button,
+  .private-area-inline-form > button,
+  .private-area-delete-confirmation button {
+    width: 100%;
+  }
+}

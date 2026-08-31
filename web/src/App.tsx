@@ -27,6 +27,7 @@ import {
 import { createM4ProductApis } from './client/m4Product';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
 import { createPeopleApi } from './client/peopleApi';
+import { createPrivateAreaApi } from './client/privateArea';
 import { normalizeClientError } from './client/problemDetails';
 import { clearProductReadCache } from './client/productReadCache';
 import {
@@ -67,6 +68,7 @@ import {
 import { MemoryProductPage } from './components/MemoryProductPage';
 import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { PageHeader } from './components/PageHeader';
+import { PrivateAreaProductPage } from './components/PrivateAreaProductPage';
 import { ProblemState } from './components/ProblemState';
 import { ProfilePage } from './components/ProfilePage';
 import { RelatedPeoplePage } from './components/RelatedPeoplePage';
@@ -341,6 +343,10 @@ function AuthenticatedApp({
     () => createM4ProductApis(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
   );
+  const privateAreaApi = useMemo(
+    () => createPrivateAreaApi(apiBaseUrl, tokens.accessToken),
+    [apiBaseUrl, tokens.accessToken],
+  );
 
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
@@ -468,6 +474,16 @@ function AuthenticatedApp({
                 apiBaseUrl={apiBaseUrl}
                 accessToken={tokens.accessToken}
                 account={account}
+                spaceId={spaceId}
+              />
+            }
+          />
+          <Route
+            path="/private/*"
+            element={
+              <PrivateAreaProductPage
+                api={privateAreaApi}
+                accountId={account.id}
                 spaceId={spaceId}
               />
             }
