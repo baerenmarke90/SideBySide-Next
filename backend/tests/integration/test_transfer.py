@@ -255,7 +255,8 @@ def test_personal_import_maps_requester_and_apply_is_idempotent(session: Session
     service.request_apply(session, authorization, str(transfer.id))
     apply_job_id = transfer.apply_job_id
     assert apply_job_id is not None
-    assert service.request_apply(session, authorization, str(transfer.id)).apply_job_id == apply_job_id
+    second_apply = service.request_apply(session, authorization, str(transfer.id))
+    assert second_apply.apply_job_id == apply_job_id
     session.flush()
     jobs.handle_apply_import(session, {"importId": str(transfer.id)})
     session.flush()
