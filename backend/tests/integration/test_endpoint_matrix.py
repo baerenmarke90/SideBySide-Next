@@ -760,6 +760,36 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         if_match=True,
         resource_absence="PLAN_NOT_FOUND",
     ),
+    Endpoint(
+        "POST",
+        "/api/v1/spaces/{spaceId}/transfer/exports",
+        body={"scope": "SHARED"},
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/transfer/exports/{exportId}",
+        resource_absence="TRANSFER_NOT_FOUND",
+        placeholders=("exportId",),
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/transfer/exports/{exportId}/download",
+        resource_absence="TRANSFER_NOT_FOUND",
+        placeholders=("exportId",),
+    ),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/transfer/imports"),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/transfer/imports/{importId}",
+        resource_absence="TRANSFER_NOT_FOUND",
+        placeholders=("importId",),
+    ),
+    Endpoint(
+        "POST",
+        "/api/v1/spaces/{spaceId}/transfer/imports/{importId}/apply",
+        resource_absence="TRANSFER_NOT_FOUND",
+        placeholders=("importId",),
+    ),
     Endpoint("POST", "/api/v1/spaces/{spaceId}/attachments", body=ATTACHMENT),
     Endpoint(
         "GET",
@@ -945,6 +975,8 @@ def scenario(client, session: Session):  # type: ignore[no-untyped-def]
             "privateCollectionItemId": private_collection_item["id"],
             "noteId": private_note["id"],
             "giftIdeaId": gift_idea["id"],
+            "exportId": str(uuid4()),
+            "importId": str(uuid4()),
             # The target is a typed relation. A memory is enough for all three
             # relation types because this matrix checks occur before target resolution.
             "targetId": memory["id"],
