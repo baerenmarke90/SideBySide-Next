@@ -50,6 +50,21 @@ describe('shared planning client helpers', () => {
     });
   });
 
+  it('stops invalid repeated place pagination cursors', async () => {
+    const listPlaces = vi.fn().mockResolvedValue({
+      items: [],
+      nextCursor: 'cursor-loop',
+    });
+    const apis = { places: { listPlaces } } as unknown as Parameters<
+      typeof loadAllPlaces
+    >[0];
+
+    await expect(loadAllPlaces(apis, 'space-1')).rejects.toThrow(
+      'Place pagination returned a repeated cursor.',
+    );
+    expect(listPlaces).toHaveBeenCalledTimes(2);
+  });
+
   it('moves collection ids without changing the item set', () => {
     expect(moveItemIds(['a', 'b', 'c'], 1, -1)).toEqual(['b', 'a', 'c']);
     expect(moveItemIds(['a', 'b', 'c'], 1, 1)).toEqual(['a', 'c', 'b']);
