@@ -1,13 +1,47 @@
 # Android
 
-The native Kotlin/Jetpack Compose client is intended to become fully
-productized in M5. For **M2-S8 / G2**, it deliberately starts with only a thin
-vertical reference flow. It proves the same Memory/Image/Story contract as the
-Web slice without pulling navigation, offline sync, or client parity forward.
+The native Kotlin/Jetpack Compose client is being productized in M5, planned in
+`docs/m5/ANDROID-DELIVERY-PLAN.md` under #350. The **M2-S8 / G2** vertical
+reference flow below still runs and remains the G2 evidence; the M5 slices
+replace it surface by surface rather than removing it up front.
+
+The M2-S8 slice proves the same Memory/Image/Story contract as the Web slice
+without pulling navigation, offline sync, or client parity forward.
 
 Android communicates exclusively with the shared Application Core through the
 versioned REST/OpenAPI interface and contains no independent domain or privacy
 logic.
+
+## Design foundation
+
+`design/tokens.json` is the single source of truth for colour, spacing, radius
+and typography, in the same way `backend/openapi.json` is for the API client.
+The `generateDesignTokens` Gradle task reads it and writes
+`GeneratedDesignTokens.kt` into `app/build/generated/designTokens`; that file is
+generated, not committed, and must not be edited.
+
+`de.sidebyside.next.design` turns those values into the semantic layer the app
+consumes:
+
+- `SideBySideColors` carries the product roles Material 3 has no slot for —
+  shared, private, discovery, header surface — and `SideBySideTheme` derives the
+  Material 3 scheme from them in one mapping;
+- `SideBySideSpacing` and `SideBySideRadii` expose the 4-unit grid by step name;
+- `SideBySideTypography` maps the token scale onto Material roles, resolving the
+  token line-height ratios and `em` letter spacing against the token font size.
+
+`DesignTokenTest` parses `design/tokens.json` directly and asserts that the
+generated layer still matches it, so a generator regression fails the build
+instead of shipping a stale palette. The same test checks WCAG AA contrast for
+every text-on-surface and text-on-accent pair in both schemes.
+
+Appearance follows the system. A manual light/dark override would have to
+persist a preference, which needs storage that no delivered slice adds yet.
+
+The token file names `Inter` and `Fraunces`. Neither face is delivered with the
+app, so both resolve to their documented fallbacks. Delivering them is a
+provider decision with licensing, size and privacy consequences and has not been
+made.
 
 ## Generated API models
 
@@ -69,6 +103,11 @@ Wrapper JAR against its official SHA-256. CI uses
 install a separate Gradle version.
 
 With JDK 17 and Android SDK 37.1 installed:
+
+On a non-Linux workstation, `--dependency-verification strict` fails on the
+platform-specific `aapt2` artifact, because the committed metadata covers the
+Linux artifact CI resolves. Use `--dependency-verification lenient` locally and
+leave the metadata unchanged; CI remains strict.
 
 ```bash
 ./gradlew --version

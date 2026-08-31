@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SideBySide Next</string>
+    <string name="brand_name">SideBySide</string>
+    <string name="brand_suffix">Next</string>
+
+    <string name="entry_eyebrow">WILLKOMMEN</string>
+    <string name="entry_headline">Euer gemeinsamer Raum für die Dinge, die bleiben.</string>
+    <string name="entry_lede">Erinnerungen, Wünsche und Pläne an einem ruhigen Ort – nur für euch zwei.</string>
+    <string name="entry_sign_in_heading">Anmelden</string>
+    <string name="entry_email">E-Mail</string>
+    <string name="entry_password">Passwort</string>
+    <string name="entry_sign_in">Anmelden</string>
+    <string name="entry_sign_in_pending">Anmeldung läuft …</string>
+    <string name="entry_assurance">Euer gemeinsamer Bereich bleibt nur für euch bestimmt.</string>
 
     <string name="ref_flow_subtitle">M2 · technischer Android-Referenzflow</string>
     <string name="ref_flow_intro">Eine Erinnerung in eurer gemeinsamen Story.</string>

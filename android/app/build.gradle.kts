@@ -6,6 +6,140 @@ plugins {
 
 val sbsApiBaseUrl = providers.gradleProperty("sbsApiBaseUrl").orElse("").get()
 val sbsSpaceId = providers.gradleProperty("sbsSpaceId").orElse("").get()
+// The Material 3 scheme and the semantic scale are derived from the shared
+// token set instead of restating its values. `design/tokens.json` stays the
+// single source of truth, exactly as `backend/openapi.json` is for the API
+// client. Gradle bundles Groovy, so parsing needs no additional dependency.
+abstract class GenerateDesignTokens : DefaultTask() {
+    @get:InputFile
+    abstract val tokensFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    // The design-token format names its payload key "$value".
+    private val valueKey = "\u0024value"
+
+    @TaskAction
+    fun generate() {
+        val parsed = groovy.json.JsonSlurper().parse(tokensFile.get().asFile)
+        val tokens = parsed.asMap()
+        val color = tokens.getValue("color").asMap()
+        val scheme = color.getValue("scheme").asMap()
+        val semantic = color.getValue("semantic").asMap()
+
+        val text = buildString {
+            appendLine("package de.sidebyside.next.design")
+            appendLine()
+            appendLine("// Generated from design/tokens.json by the generateDesignTokens task.")
+            appendLine("// Do not edit; change the token file instead.")
+            appendLine()
+            appendLine("internal object GeneratedColorTokens {")
+            appendColorObject("Light", resolveScheme(scheme, semantic, "light"))
+            appendColorObject("Dark", resolveScheme(scheme, semantic, "dark"))
+            appendLine("}")
+            appendLine()
+            appendDimensionObject(tokens)
+            appendLine()
+            appendTypographyObject(tokens)
+        }
+
+        val target = outputDirectory.get().asFile.resolve("de/sidebyside/next/design")
+        target.mkdirs()
+        target.resolve("GeneratedDesignTokens.kt").writeText(text)
+    }
+
+    /** Scheme entries are aliases such as `{color.semantic.background}`. */
+    private fun resolveScheme(
+        scheme: Map<String, Any?>,
+        semantic: Map<String, Any?>,
+        name: String,
+    ): Map<String, String> {
+        val entries = scheme.getValue(name).asMap()
+        val resolved = LinkedHashMap<String, String>()
+        for ((key, raw) in entries) {
+            val value = raw.asMap().getValue(valueKey) as String
+            resolved[key] = if (value.startsWith("{")) {
+                val alias = value.trim('{', '}').substringAfterLast('.')
+                val target = semantic[alias]
+                    ?: throw GradleException("Token alias cannot be resolved: " + value)
+                target.asMap().getValue(valueKey) as String
+            } else {
+                value
+            }
+        }
+        return resolved
+    }
+
+    private fun StringBuilder.appendColorObject(name: String, entries: Map<String, String>) {
+        appendLine("    object " + name + " {")
+        for ((key, hex) in entries) {
+            appendLine("        const val " + constantName(key) + ": Long = 0x" + argb(hex))
+        }
+        appendLine("    }")
+        appendLine()
+    }
+
+    /** Token colours are `#RRGGBB` or `#RRGGBBAA`; Compose expects `AARRGGBB`. */
+    private fun argb(hex: String): String {
+        val value = hex.removePrefix("#").uppercase()
+        return when (value.length) {
+            6 -> "FF" + value
+            8 -> value.substring(6, 8) + value.substring(0, 6)
+            else -> throw GradleException("Unsupported colour token: " + hex)
+        }
+    }
+
+    private fun StringBuilder.appendDimensionObject(tokens: Map<String, Any?>) {
+        appendLine("internal object GeneratedDimensionTokens {")
+        appendScale(tokens.getValue("spacing").asMap(), "SPACING_")
+        appendScale(tokens.getValue("radius").asMap(), "RADIUS_")
+        appendLine("}")
+    }
+
+    private fun StringBuilder.appendScale(entries: Map<String, Any?>, prefix: String) {
+        for ((key, raw) in entries) {
+            if (!raw.isTokenValue()) continue
+            val size = (raw.asMap().getValue(valueKey) as String).removeSuffix("px")
+            appendLine("    const val " + prefix + constantName(key) + ": Float = " + size + "f")
+        }
+    }
+
+    private fun StringBuilder.appendTypographyObject(tokens: Map<String, Any?>) {
+        appendLine("internal object GeneratedTypographyTokens {")
+        for ((key, raw) in tokens.getValue("typography").asMap()) {
+            if (!raw.isTokenValue()) continue
+            val value = raw.asMap().getValue(valueKey).asMap()
+            val fontSize = (value.getValue("fontSize") as String).removeSuffix("px")
+            val lineHeight = (value.getValue("lineHeight") as Number).toFloat()
+            val fontWeight = (value.getValue("fontWeight") as Number).toInt()
+            val letterSpacing = (value.getValue("letterSpacing") as String).removeSuffix("em")
+            appendLine("    object " + key.replaceFirstChar { it.uppercaseChar() } + " {")
+            appendLine("        const val FONT_SIZE_SP: Float = " + fontSize + "f")
+            appendLine("        const val LINE_HEIGHT_RATIO: Float = " + lineHeight + "f")
+            appendLine("        const val FONT_WEIGHT: Int = " + fontWeight)
+            appendLine("        const val LETTER_SPACING_EM: Float = " + letterSpacing + "f")
+            appendLine("    }")
+        }
+        appendLine("}")
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun Any?.asMap(): Map<String, Any?> =
+        this as? Map<String, Any?> ?: throw GradleException("Expected a token object.")
+
+    private fun Any?.isTokenValue(): Boolean = this is Map<*, *> && containsKey(valueKey)
+
+    private fun constantName(key: String): String =
+        key.replace(Regex("([a-z0-9])([A-Z])"), "$1_$2").uppercase()
+}
+
+val generatedDesignTokens = layout.buildDirectory.dir("generated/designTokens")
+val generateDesignTokens by tasks.registering(GenerateDesignTokens::class) {
+    tokensFile.set(layout.projectDirectory.file("../../design/tokens.json"))
+    outputDirectory.set(generatedDesignTokens)
+}
+
 val preparedGeneratedModels = layout.buildDirectory.dir("generated/s8ApiModels")
 val prepareS8GeneratedModels by tasks.registering(org.gradle.api.tasks.Sync::class) {
     from(layout.projectDirectory.dir("../api/generated"))
@@ -56,10 +190,11 @@ android {
 
 android.sourceSets.named("main") {
     kotlin.directories += preparedGeneratedModels.get().asFile.path
+    kotlin.directories += generatedDesignTokens.get().asFile.path
 }
 
 tasks.named("preBuild").configure {
-    dependsOn(prepareS8GeneratedModels)
+    dependsOn(prepareS8GeneratedModels, generateDesignTokens)
 }
 
 dependencies {
