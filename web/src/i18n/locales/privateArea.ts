@@ -86,8 +86,6 @@ const privateArea = {
     emptyBody: 'Erstelle eine Liste, die nur du sehen kannst.',
     detailBack: '← Zu den privaten Listen',
     titleLabel: 'Titel',
-    iconLabel: 'Symbol',
-    iconHelp: 'Optional, zum Beispiel ein einzelnes Emoji.',
     itemsTitle: 'Einträge',
     itemTitleLabel: 'Neuer Eintrag',
     addItem: 'Eintrag hinzufügen',
