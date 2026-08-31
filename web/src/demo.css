@@ -1,0 +1,35 @@
+.demo-launch {
+  position: fixed;
+  right: clamp(1rem, 3vw, 2rem);
+  bottom: clamp(1rem, 3vw, 2rem);
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow-soft);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+#root:has(.login-shell) .demo-launch {
+  display: inline-flex;
+}
+
+.demo-launch:hover {
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  .demo-launch {
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+  }
+}
