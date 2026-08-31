@@ -19,6 +19,7 @@ import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
+import { ThemeControl } from './ThemeControl';
 
 function NavigationLink({ route }: { route: AppRouteDefinition }) {
   const { t } = useTranslation();
@@ -119,6 +120,7 @@ export function AppShell({
 
   return (
     <div className="product-shell">
+      <ThemeControl />
       <a className="skip-link" href="#main-content">
         {t('navigation.skipToContent')}
       </a>
