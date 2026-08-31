@@ -35,18 +35,28 @@ jobs:
           if [ "${merge_status}" -ne 0 ]; then
             mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
             printf 'Merge conflicts:\n%s\n' "${conflicts[*]}"
-            if [ "${#conflicts[@]}" -ne 2 ]; then
-              echo "Unexpected number of merge conflicts"
+            if [ "${#conflicts[@]}" -lt 1 ]; then
+              echo "Merge failed without an inspectable content conflict"
               exit 1
             fi
-            for expected in web/src/App.tsx web/src/i18n/index.ts; do
-              if ! printf '%s\n' "${conflicts[@]}" | grep -Fxq "${expected}"; then
-                echo "Unexpected merge conflict set; missing ${expected}"
-                exit 1
-              fi
+            for conflict in "${conflicts[@]}"; do
+              case "${conflict}" in
+                web/src/App.tsx|web/src/i18n/index.ts) ;;
+                *)
+                  echo "Unexpected merge conflict: ${conflict}"
+                  exit 1
+                  ;;
+              esac
             done
+            if ! printf '%s\n' "${conflicts[@]}" | grep -Fxq "web/src/App.tsx"; then
+              echo "Expected App.tsx conflict is missing"
+              exit 1
+            fi
 
-            git checkout --theirs -- web/src/App.tsx web/src/i18n/index.ts
+            git checkout --theirs -- web/src/App.tsx
+            if printf '%s\n' "${conflicts[@]}" | grep -Fxq "web/src/i18n/index.ts"; then
+              git checkout --theirs -- web/src/i18n/index.ts
+            fi
 
             python3 - <<'PY'
           from pathlib import Path
@@ -114,24 +124,30 @@ jobs:
           )
 
           i18n = "web/src/i18n/index.ts"
-          i18n_text = Path(i18n).read_text(encoding="utf-8")
+          i18n_path = Path(i18n)
+          i18n_text = i18n_path.read_text(encoding="utf-8")
           if "privateArea" not in i18n_text:
-              raise SystemExit("Current main is missing expected M5-S4 private-area locale registration")
-          replace_once(
-              i18n,
-              "import importantDates from './locales/importantDates';\nimport m5s5",
-              "import importantDates from './locales/importantDates';\nimport m5s3 from './locales/m5s3';\nimport m5s5",
-          )
-          replace_once(
-              i18n,
-              "          navigation: {\n            ...de.navigation,\n            people:",
-              "          navigation: {\n            ...de.navigation,\n            planning: 'Planen',\n            people:",
-          )
-          replace_once(
-              i18n,
-              "          importantDates,\n          m5s5,",
-              "          importantDates,\n          m5s3,\n          m5s5,",
-          )
+              raise SystemExit("Merged i18n registry lost the M5-S4 private-area locale")
+          if "./locales/m5s3" not in i18n_text:
+              replace_once(
+                  i18n,
+                  "import importantDates from './locales/importantDates';\nimport m5s5",
+                  "import importantDates from './locales/importantDates';\nimport m5s3 from './locales/m5s3';\nimport m5s5",
+              )
+          i18n_text = i18n_path.read_text(encoding="utf-8")
+          if "planning: 'Planen'" not in i18n_text:
+              replace_once(
+                  i18n,
+                  "          navigation: {\n            ...de.navigation,\n            people:",
+                  "          navigation: {\n            ...de.navigation,\n            planning: 'Planen',\n            people:",
+              )
+          i18n_text = i18n_path.read_text(encoding="utf-8")
+          if "\n          m5s3,\n" not in i18n_text:
+              replace_once(
+                  i18n,
+                  "          importantDates,\n          m5s5,",
+                  "          importantDates,\n          m5s3,\n          m5s5,",
+              )
           PY
 
             git add web/src/App.tsx web/src/i18n/index.ts
