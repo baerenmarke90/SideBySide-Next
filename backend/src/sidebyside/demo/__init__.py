@@ -32,7 +32,8 @@ def create_demo_space(
         reference_date=reference_date,
     )
     normalize_demo_content(session, result)
-    ensure_story_structure(session, result)
+    if result.created:
+        ensure_story_structure(session, result)
     ensure_reminder_examples(session, result, reference_date=reference_date)
     return result
 
