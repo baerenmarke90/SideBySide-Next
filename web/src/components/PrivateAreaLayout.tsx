@@ -18,9 +18,14 @@ export function PrivateAreaFrame({ children }: { children: ReactNode }) {
           <p className="eyebrow">{t('privateArea.eyebrow')}</p>
           <p>{t('privateArea.intro')}</p>
         </div>
-        <span className="private-area-badge">{t('privateArea.privacyLabel')}</span>
+        <span className="private-area-badge">
+          {t('privateArea.privacyLabel')}
+        </span>
       </div>
-      <nav className="private-area-nav" aria-label={t('privateArea.navigation.aria')}>
+      <nav
+        className="private-area-nav"
+        aria-label={t('privateArea.navigation.aria')}
+      >
         <NavLink to={PRIVATE_NOTES_PATH}>
           {t('privateArea.navigation.notes')}
         </NavLink>
@@ -57,9 +62,16 @@ export function DeleteConfirmation({
   const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
   return (
-    <section className="private-area-danger" aria-label={t('privateArea.delete')}>
+    <section
+      className="private-area-danger"
+      aria-label={t('privateArea.delete')}
+    >
       {!confirming ? (
-        <button type="button" className="secondary" onClick={() => setConfirming(true)}>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setConfirming(true)}
+        >
           {t('privateArea.delete')}
         </button>
       ) : (
@@ -78,7 +90,9 @@ export function DeleteConfirmation({
               {t('privateArea.deleteCancel')}
             </button>
             <button type="button" onClick={onDelete} disabled={pending}>
-              {pending ? t('privateArea.deleting') : t('privateArea.deleteConfirm')}
+              {pending
+                ? t('privateArea.deleting')
+                : t('privateArea.deleteConfirm')}
             </button>
           </div>
         </div>
@@ -100,7 +114,12 @@ export function LoadMoreButton({
   const { t } = useTranslation();
   if (!hasMore) return null;
   return (
-    <button type="button" className="secondary" onClick={onLoadMore} disabled={loading}>
+    <button
+      type="button"
+      className="secondary"
+      onClick={onLoadMore}
+      disabled={loading}
+    >
       {loading ? t('privateArea.loadingMore') : t('privateArea.loadMore')}
     </button>
   );
