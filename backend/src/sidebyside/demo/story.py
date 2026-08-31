@@ -29,6 +29,7 @@ class ChapterStory:
     description: str
     start_days_ago: int
     end_days_ago: int | None
+    memory_keys: tuple[str, ...]
     place: DemoPlace | None = None
 
 
@@ -80,7 +81,7 @@ MEMORIES: tuple[MemoryStory, ...] = (
         title="Filmabend auf dem Sofa",
         body="Decke, Tee und am Ende doch wieder einen alten Lieblingsfilm ausgesucht.",
         days_ago=109,
-        asset_ids=("memory-books",),
+        asset_ids=(),
     ),
     MemoryStory(
         key="sunset-after-work",
@@ -128,7 +129,7 @@ MEMORIES: tuple[MemoryStory, ...] = (
         title="Ein Wochenende am Wasser",
         body="Zwei Tage ohne Wecker, morgens direkt an den See und abends nur noch lesen.",
         days_ago=14,
-        asset_ids=("memory-cabin",),
+        asset_ids=("memory-cabin", "memory-books"),
     ),
 )
 
@@ -139,6 +140,7 @@ CHAPTERS: tuple[ChapterStory, ...] = (
         description="Sonne, See, spontane Ausflüge und lange Abende draußen.",
         start_days_ago=210,
         end_days_ago=45,
+        memory_keys=("lake-walk", "sunset-after-work", "picnic"),
         place="lake",
     ),
     ChapterStory(
@@ -149,24 +151,28 @@ CHAPTERS: tuple[ChapterStory, ...] = (
         ),
         start_days_ago=200,
         end_days_ago=None,
+        memory_keys=("breakfast-saarbruecken", "movie-night", "sunset-after-work"),
     ),
     ChapterStory(
         title="Unterwegs am Wochenende",
         description="Trier, kleine Auszeiten und alles, wofür ein freier Samstag reicht.",
         start_days_ago=150,
         end_days_ago=10,
+        memory_keys=("trier-weekend", "day-trip", "weekend-water"),
     ),
     ChapterStory(
         title="Kochabende",
         description="Neue Rezepte, zu viel Mehl und Gerichte, die wir nochmal machen wollen.",
         start_days_ago=180,
         end_days_ago=None,
+        memory_keys=("ravioli-evening",),
     ),
     ChapterStory(
         title="Draußen unterwegs",
         description="Spaziergänge, Waldwege, Picknick und Zeit am Wasser.",
         start_days_ago=190,
         end_days_ago=14,
+        memory_keys=("lake-walk", "picnic", "day-trip", "weekend-water"),
         place="lake",
     ),
 )
