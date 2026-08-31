@@ -39,7 +39,11 @@ def ensure_reminder_examples(
         ).scalars()
     )
     manual = next(
-        (reminder for reminder in manual_reminders if reminder.payload.title == MANUAL_REMINDER_TITLE),
+        (
+            reminder
+            for reminder in manual_reminders
+            if reminder.payload.title == MANUAL_REMINDER_TITLE
+        ),
         None,
     )
     if manual is None:
