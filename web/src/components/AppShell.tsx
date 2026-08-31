@@ -6,6 +6,7 @@ import {
   PRODUCT_CACHE_NETWORK_EVENT,
   type ProductCacheEventDetail,
 } from '../client/productReadCache';
+import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import {
   APP_ROUTES,
   DEFAULT_APP_ROUTE,
@@ -113,9 +114,7 @@ export function AppShell({
 
   function logout(): void {
     onLogout();
-    if (import.meta.env.VITE_SBS_DEMO_MODE === 'true') {
-      window.location.assign('/');
-    }
+    window.location.assign(PUBLIC_START_ROUTE);
   }
 
   return (
