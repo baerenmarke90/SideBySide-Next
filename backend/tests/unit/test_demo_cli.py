@@ -10,9 +10,9 @@ from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
+from scripts import demo_space
 from sidebyside.config import Environment
 from sidebyside.demo.service import DemoSeedResult
-from scripts import demo_space
 
 
 def test_ensure_skips_non_demo_deployment(monkeypatch: Any) -> None:
