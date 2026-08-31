@@ -34,12 +34,132 @@ jobs:
           python -m pip install "uv==$UV_VERSION"
           uv sync --frozen
 
-      - name: Format transfer implementation
+      - name: Normalize transfer source
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          service = Path("src/sidebyside/transfer/service.py")
+          text = service.read_text()
+          text = text.replace(
+              "from collections.abc import BinaryIO, Iterable, Mapping",
+              "from collections.abc import Mapping",
+          )
+          text = text.replace("from typing import Any", "from typing import Any, IO")
+          text = text.replace("BinaryIO", "IO[bytes]")
+          text = text.replace("TransferNotFound", "TransferNotFoundError")
+          text = text.replace(
+              '    output = tempfile.SpooledTemporaryFile(max_size=16 * 1024 * 1024, mode="w+b")',
+              '    output = tempfile.SpooledTemporaryFile(  # noqa: SIM115\n'
+              '        max_size=16 * 1024 * 1024, mode="w+b"\n'
+              '    )',
+          )
+          replacement = '''def get_import(
+              session: Session,
+              authorization: AuthorizationContext,
+              import_id: str,
+          ) -> TransferImport:
+              parsed = _transfer_id(import_id, kind="Transfer import")
+              transfer = session.execute(
+                  select(TransferImport).where(
+                      TransferImport.id == parsed,
+                      TransferImport.space_id == authorization.space_id,
+                      TransferImport.created_by == authorization.account_id,
+                  )
+              ).scalar_one_or_none()
+              if transfer is None:
+                  raise TransferNotFoundError("Transfer import not found.", "TRANSFER_NOT_FOUND")
+              validation_job_failed = transfer.status in {
+                  ImportStatus.QUEUED.value,
+                  ImportStatus.VALIDATING.value,
+              } and _job_failed(session, transfer.validation_job_id)
+              apply_job_failed = (
+                  transfer.status == ImportStatus.APPLYING.value
+                  and _job_failed(session, transfer.apply_job_id)
+              )
+              if transfer.expires_at <= now() and transfer.status not in {
+                  ImportStatus.COMPLETED.value,
+                  ImportStatus.EXPIRED.value,
+              }:
+                  _expire_import(session, transfer)
+              elif validation_job_failed or apply_job_failed:
+                  transfer.status = ImportStatus.FAILED.value
+                  transfer.error_code = ErrorCode.TRANSFER_IMPORT_FAILED
+              return transfer
+          '''
+          text, count = re.subn(
+              r"def get_import\(.*?\n    return transfer\n(?=\n\ndef request_apply)",
+              replacement.rstrip(),
+              text,
+              flags=re.S,
+          )
+          if count != 1:
+              raise SystemExit(f"expected one get_import replacement, got {count}")
+          service.write_text(text)
+
+          archive = Path("src/sidebyside/transfer/archive.py")
+          text = archive.read_text()
+          text = text.replace(
+              "from collections.abc import BinaryIO, Mapping",
+              "from collections.abc import Mapping",
+          )
+          text = text.replace("from typing import Any", "from typing import Any, IO")
+          text = text.replace("BinaryIO", "IO[bytes]")
+          archive.write_text(text)
+
+          api = Path("src/sidebyside/api/v1/transfer.py")
+          text = api.read_text()
+          text = text.replace(
+              '    temporary = tempfile.SpooledTemporaryFile(max_size=16 * 1024 * 1024, mode="w+b")',
+              '    temporary = tempfile.SpooledTemporaryFile(  # noqa: SIM115\n'
+              '        max_size=16 * 1024 * 1024, mode="w+b"\n'
+              '    )',
+          )
+          api.write_text(text)
+
+          jobs = Path("src/sidebyside/transfer/jobs.py")
+          text = jobs.read_text()
+          text = text.replace(
+              '''        with bind.connect().execution_options(isolation_level="REPEATABLE READ") as connection:
+                      with Session(bind=connection) as snapshot:
+                          with snapshot.begin():
+                              archive = service.build_export_archive(
+                                  snapshot,
+                                  authorization,
+                                  TransferScope(transfer.scope),
+                              )''',
+              '''        with (
+                      bind.connect().execution_options(
+                          isolation_level="REPEATABLE READ"
+                      ) as connection,
+                      Session(bind=connection) as snapshot,
+                      snapshot.begin(),
+                  ):
+                      archive = service.build_export_archive(
+                          snapshot,
+                          authorization,
+                          TransferScope(transfer.scope),
+                      )''',
+          )
+          jobs.write_text(text)
+
+          migration = Path("alembic/versions/0033_m5_transfer_bundle.py")
+          text = migration.read_text()
+          for table in ("transfer_exports", "transfer_imports"):
+              for suffix in ("scope_is_known", "status_is_known", "size_is_non_negative"):
+                  text = text.replace(f'"ck_{table}_{suffix}"', f'"{suffix}"')
+          migration.write_text(text)
+          PY
+
+      - name: Format and lint transfer implementation
         working-directory: backend
         run: |
           uv run --frozen ruff format src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py
-          uv run --frozen ruff check --fix --unsafe-fixes src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py || true
+          uv run --frozen ruff check --fix --unsafe-fixes src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py
           uv run --frozen ruff format src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py
+          uv run --frozen ruff check src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py
 
       - name: Regenerate canonical OpenAPI contract
         working-directory: backend
