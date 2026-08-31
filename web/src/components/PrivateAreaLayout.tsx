@@ -41,11 +41,11 @@ export function PrivateAreaFrame({ children }: { children: ReactNode }) {
   );
 }
 
-export function PrivateAreaBackToProfile() {
+export function PrivateAreaBackToMore() {
   const { t } = useTranslation();
   return (
-    <Link className="back-link" to={appRoutePath('profile')}>
-      {t('privateArea.backToProfile')}
+    <Link className="back-link" to={appRoutePath('more')}>
+      {t('privateArea.backToMore')}
     </Link>
   );
 }

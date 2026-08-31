@@ -8,24 +8,20 @@ import {
 describe('M5 S5/S3 product navigation', () => {
   it('links productized search targets and keeps private S4 targets closed', () => {
     expect(searchResultPath('MEMORY', 'memory/with space')).toBe(
-      '/memory/memory%2Fwith%20space',
+      '/story/memories/memory%2Fwith%20space',
     );
     expect(searchResultPath('HEART_MOMENT', 'heart-id')).toBe('/story');
     expect(searchResultPath('MILESTONE', 'milestone-id')).toBe('/story');
-    expect(searchResultPath('WISH', 'wish-id')).toBe(
-      '/planning/wishes/wish-id',
-    );
-    expect(searchResultPath('PLAN', 'plan-id')).toBe('/planning/plans/plan-id');
-    expect(searchResultPath('PLACE', 'place-id')).toBe(
-      '/planning/places/place-id',
-    );
+    expect(searchResultPath('WISH', 'wish-id')).toBe('/plan/wishes/wish-id');
+    expect(searchResultPath('PLAN', 'plan-id')).toBe('/plan/plans/plan-id');
+    expect(searchResultPath('PLACE', 'place-id')).toBe('/plan/places/place-id');
     expect(searchResultPath('CHAPTER', 'chapter-id')).toBe(
-      '/planning/chapters/chapter-id',
+      '/plan/chapters/chapter-id',
     );
     expect(searchResultPath('COLLECTION', 'collection-id')).toBe(
-      '/planning/collections/collection-id',
+      '/plan/collections/collection-id',
     );
-    expect(searchResultPath('COLLECTION_ITEM', 'item-id')).toBe('/planning');
+    expect(searchResultPath('COLLECTION_ITEM', 'item-id')).toBe('/plan');
 
     expect(searchResultPath('PRIVATE_NOTE', 'private-id')).toBeNull();
     expect(searchResultPath('GIFT_IDEA', 'gift-id')).toBeNull();
@@ -34,7 +30,7 @@ describe('M5 S5/S3 product navigation', () => {
 
   it('does not invent direct engagement routes for unsupported target types', () => {
     expect(engagementTargetPath('MEMORY', 'memory-id')).toBe(
-      '/memory/memory-id',
+      '/story/memories/memory-id',
     );
     expect(engagementTargetPath('HEART_MOMENT', 'heart-id')).toBe('/story');
     expect(engagementTargetPath('MILESTONE', 'milestone-id')).toBe('/story');
@@ -46,23 +42,21 @@ describe('M5 S5/S3 product navigation', () => {
   });
 
   it('routes dashboard entries through the productized domain surfaces', () => {
-    expect(dashboardItemPath('IMPORTANT_DATE', 'date-id')).toBe('/people');
-    expect(dashboardItemPath('BIRTHDAY', 'birthday-id')).toBe('/people');
-    expect(dashboardItemPath('ANNIVERSARY', 'anniversary-id')).toBe('/people');
-    expect(dashboardItemPath('WISH', 'wish-id')).toBe(
-      '/planning/wishes/wish-id',
+    expect(dashboardItemPath('IMPORTANT_DATE', 'date-id')).toBe('/more/people');
+    expect(dashboardItemPath('BIRTHDAY', 'birthday-id')).toBe('/more/people');
+    expect(dashboardItemPath('ANNIVERSARY', 'anniversary-id')).toBe(
+      '/more/people',
     );
-    expect(dashboardItemPath('PLAN', 'plan-id')).toBe(
-      '/planning/plans/plan-id',
-    );
+    expect(dashboardItemPath('WISH', 'wish-id')).toBe('/plan/wishes/wish-id');
+    expect(dashboardItemPath('PLAN', 'plan-id')).toBe('/plan/plans/plan-id');
     expect(dashboardItemPath('PLACE', 'place-id')).toBe(
-      '/planning/places/place-id',
+      '/plan/places/place-id',
     );
     expect(dashboardItemPath('CHAPTER', 'chapter-id')).toBe(
-      '/planning/chapters/chapter-id',
+      '/plan/chapters/chapter-id',
     );
     expect(dashboardItemPath('COLLECTION', 'collection-id')).toBe(
-      '/planning/collections/collection-id',
+      '/plan/collections/collection-id',
     );
   });
 });

@@ -1,6 +1,7 @@
 const m5s5 = {
   dashboard: {
-    eyebrow: 'Übersicht',
+    // The area is named Heute per docs/INFORMATION-ARCHITECTURE.md section 2.
+    eyebrow: 'Heute',
     title: 'Euer gemeinsamer Ort',
     intro: 'Das Wichtigste aus eurem gemeinsamen Raum auf einen Blick.',
     partner: 'Gemeinsam mit {{name}}',

@@ -1,28 +1,25 @@
-export type AppRouteId =
-  | 'story'
-  | 'planning'
-  | 'dashboard'
-  | 'search'
-  | 'activity'
-  | 'notifications'
-  | 'people'
-  | 'profile'
-  | 'memoryCreate';
 /*
- * Sidebar grouping for the Web client. The App keeps a flat set of primary
- * destinations; the browser sidebar shows all of them at once and needs the
- * grouping to stay readable.
+ * Route registry.
+ *
+ * The model is decided in
+ * `docs/decisions/0003-primary-navigation-and-route-model.md` and mirrored by
+ * `docs/INFORMATION-ARCHITECTURE.md` section 5. Web and Android use the same
+ * route IDs, so this file is the Web half of a cross-client contract rather
+ * than a client-local convention.
  */
-export type AppRouteGroup = 'together' | 'keepUpToDate' | 'you';
+
+export type AppRouteId = 'today' | 'story' | 'plan' | 'more';
 
 export type AppRouteIcon =
+  | 'today'
   | 'story'
-  | 'planning'
-  | 'dashboard'
+  | 'plan'
+  | 'more'
   | 'search'
   | 'activity'
   | 'notifications'
   | 'people'
+  | 'private'
   | 'profile'
   | 'add';
 
@@ -31,119 +28,59 @@ export interface AppRouteDefinition {
   path: string;
   labelKey: string;
   icon: AppRouteIcon;
+  /** False where the destination owns sub-routes and must stay active in them. */
   end: boolean;
-  /** Omitted for routes that are offered as an action rather than a section. */
-  group?: AppRouteGroup;
 }
 
-export const APP_ROUTE_GROUPS = [
-  { id: 'together', labelKey: 'navigation.groups.together' },
-  { id: 'keepUpToDate', labelKey: 'navigation.groups.keepUpToDate' },
-  { id: 'you', labelKey: 'navigation.groups.you' },
-] as const satisfies readonly { id: AppRouteGroup; labelKey: string }[];
-
+/**
+ * Primary navigation. At most five destinations, in the documented order.
+ *
+ * `discover` belongs here from M7 and is reserved by
+ * [RESERVED_DISCOVER_ROUTE]; it is deliberately absent until its domain
+ * exists, because a visible area with no Core behind it is dead navigation.
+ */
 export const APP_ROUTES = [
+  {
+    id: 'today',
+    path: '/today',
+    labelKey: 'navigation.today',
+    icon: 'today',
+    end: false,
+  },
   {
     id: 'story',
     path: '/story',
     labelKey: 'navigation.story',
     icon: 'story',
     end: true,
-    group: 'together',
   },
   {
-    id: 'planning',
-    path: '/planning',
-    labelKey: 'navigation.planning',
-    icon: 'planning',
+    id: 'plan',
+    path: '/plan',
+    labelKey: 'navigation.plan',
+    icon: 'plan',
     end: false,
-    group: 'together',
   },
   {
-    id: 'dashboard',
-    path: '/dashboard',
-    labelKey: 'navigation.dashboard',
-    icon: 'dashboard',
-    end: true,
-    group: 'together',
-  },
-  {
-    id: 'search',
-    path: '/search',
-    labelKey: 'navigation.search',
-    icon: 'search',
-    end: true,
-    group: 'keepUpToDate',
-  },
-  {
-    id: 'activity',
-    path: '/activity',
-    labelKey: 'navigation.activity',
-    icon: 'activity',
-    end: true,
-    group: 'keepUpToDate',
-  },
-  {
-    id: 'notifications',
-    path: '/notifications',
-    labelKey: 'navigation.notifications',
-    icon: 'notifications',
-    end: true,
-    group: 'keepUpToDate',
-  },
-  {
-    id: 'people',
-    path: '/people',
-    labelKey: 'navigation.people',
-    icon: 'people',
-    end: true,
-    group: 'you',
-  },
-  {
-    id: 'profile',
-    path: '/profile',
-    labelKey: 'navigation.profile',
-    icon: 'profile',
-    end: true,
-    group: 'you',
-  },
-  {
-    id: 'memoryCreate',
-    path: '/memory/new',
-    labelKey: 'navigation.newMemory',
-    icon: 'add',
-    end: true,
+    id: 'more',
+    path: '/more',
+    labelKey: 'navigation.more',
+    icon: 'more',
+    end: false,
   },
 ] as const satisfies readonly AppRouteDefinition[];
 
-export const DEFAULT_APP_ROUTE = APP_ROUTES[0].path;
-
 /**
- * Destinations of one sidebar group, in declaration order. Routes without a
- * group are offered as an action instead of a section and are not listed here.
+ * Reserved for the M7 Discover domain. Declared so the path and label cannot be
+ * reused for anything else, and not routed until the domain exists.
  */
-export function appRoutesInGroup(
-  group: AppRouteGroup,
-): readonly AppRouteDefinition[] {
-  return (APP_ROUTES as readonly AppRouteDefinition[]).filter(
-    (route) => route.group === group,
-  );
-}
-export const MEMORY_DETAIL_ROUTE_PATTERN = '/memory/:memoryId';
-export const MEMORY_EDIT_ROUTE_PATTERN = '/memory/:memoryId/edit';
-export const HEART_MOMENT_CREATE_ROUTE = '/heart-moment/new';
-export const HEART_MOMENT_DETAIL_ROUTE_PATTERN = '/heart-moment/:heartMomentId';
-export const HEART_MOMENT_EDIT_ROUTE_PATTERN =
-  '/heart-moment/:heartMomentId/edit';
-export const MILESTONE_CREATE_ROUTE = '/milestone/new';
-export const MILESTONE_DETAIL_ROUTE_PATTERN = '/milestone/:milestoneId';
-export const MILESTONE_EDIT_ROUTE_PATTERN = '/milestone/:milestoneId/edit';
-export const WISH_DETAIL_ROUTE_PATTERN = '/planning/wishes/:wishId';
-export const PLAN_DETAIL_ROUTE_PATTERN = '/planning/plans/:planId';
-export const PLACE_DETAIL_ROUTE_PATTERN = '/planning/places/:placeId';
-export const CHAPTER_DETAIL_ROUTE_PATTERN = '/planning/chapters/:chapterId';
-export const COLLECTION_DETAIL_ROUTE_PATTERN =
-  '/planning/collections/:collectionId';
+export const RESERVED_DISCOVER_ROUTE = {
+  id: 'discover',
+  path: '/discover',
+  labelKey: 'navigation.discover',
+} as const;
+
+export const DEFAULT_APP_ROUTE = APP_ROUTES[0].path;
 
 export function appRoutePath(id: AppRouteId): string {
   const route = APP_ROUTES.find((candidate) => candidate.id === id);
@@ -151,8 +88,83 @@ export function appRoutePath(id: AppRouteId): string {
   return route.path;
 }
 
+/* Secondary destinations ------------------------------------------------- */
+
+/** A global utility rather than an area; reachable from the app bar. */
+export const SEARCH_ROUTE = '/search';
+
+/** What happened between the partners, which is what Heute is for. */
+export const ACTIVITY_ROUTE = '/today/activity';
+
+export const MORE_PEOPLE_ROUTE = '/more/people';
+export const MORE_NOTIFICATIONS_ROUTE = '/more/notifications';
+export const MORE_PROFILE_ROUTE = '/more/profile';
+export const MORE_PRIVATE_ROUTE = '/more/private';
+
+/* Story content ---------------------------------------------------------- */
+
+export const MEMORY_CREATE_ROUTE = '/story/memories/new';
+export const MEMORY_DETAIL_ROUTE_PATTERN = '/story/memories/:memoryId';
+export const MEMORY_EDIT_ROUTE_PATTERN = '/story/memories/:memoryId/edit';
+export const HEART_MOMENT_CREATE_ROUTE = '/story/heart-moments/new';
+export const HEART_MOMENT_DETAIL_ROUTE_PATTERN =
+  '/story/heart-moments/:heartMomentId';
+export const HEART_MOMENT_EDIT_ROUTE_PATTERN =
+  '/story/heart-moments/:heartMomentId/edit';
+export const MILESTONE_CREATE_ROUTE = '/story/milestones/new';
+export const MILESTONE_DETAIL_ROUTE_PATTERN = '/story/milestones/:milestoneId';
+export const MILESTONE_EDIT_ROUTE_PATTERN =
+  '/story/milestones/:milestoneId/edit';
+
+/* Planning content -------------------------------------------------------- */
+
+export const WISH_DETAIL_ROUTE_PATTERN = '/plan/wishes/:wishId';
+export const PLAN_DETAIL_ROUTE_PATTERN = '/plan/plans/:planId';
+export const PLACE_DETAIL_ROUTE_PATTERN = '/plan/places/:placeId';
+export const CHAPTER_DETAIL_ROUTE_PATTERN = '/plan/chapters/:chapterId';
+export const COLLECTION_DETAIL_ROUTE_PATTERN =
+  '/plan/collections/:collectionId';
+
+/* Legacy paths ------------------------------------------------------------ */
+
+/**
+ * Paths the client shipped before the route model was decided. They are
+ * rewritten by prefix and kept permanently: Deep Links to them have already
+ * been shared, and a shared link that stops working is a broken promise rather
+ * than a tidy-up.
+ */
+export const LEGACY_ROUTE_REWRITES = [
+  { from: '/dashboard', to: '/today' },
+  { from: '/activity', to: ACTIVITY_ROUTE },
+  { from: '/planning', to: '/plan' },
+  { from: '/people', to: MORE_PEOPLE_ROUTE },
+  { from: '/notifications', to: MORE_NOTIFICATIONS_ROUTE },
+  { from: '/profile', to: MORE_PROFILE_ROUTE },
+  { from: '/private', to: MORE_PRIVATE_ROUTE },
+  { from: '/memory', to: '/story/memories' },
+  { from: '/heart-moment', to: '/story/heart-moments' },
+  { from: '/milestone', to: '/story/milestones' },
+] as const satisfies readonly { from: string; to: string }[];
+
+/**
+ * Rewrites a legacy path, or returns null when the path is already current.
+ * Only a whole leading segment is replaced, so `/memory-of-us` is never
+ * mistaken for the `/memory` prefix.
+ */
+export function rewriteLegacyPath(pathname: string): string | null {
+  for (const { from, to } of LEGACY_ROUTE_REWRITES) {
+    if (pathname === from) return to;
+    if (pathname.startsWith(`${from}/`)) {
+      return to + pathname.slice(from.length);
+    }
+  }
+  return null;
+}
+
+/* Path builders ----------------------------------------------------------- */
+
 export function memoryDetailPath(memoryId: string): string {
-  return `/memory/${encodeURIComponent(memoryId)}`;
+  return `/story/memories/${encodeURIComponent(memoryId)}`;
 }
 
 export function memoryEditPath(memoryId: string): string {
@@ -160,7 +172,7 @@ export function memoryEditPath(memoryId: string): string {
 }
 
 export function heartMomentDetailPath(heartMomentId: string): string {
-  return `/heart-moment/${encodeURIComponent(heartMomentId)}`;
+  return `/story/heart-moments/${encodeURIComponent(heartMomentId)}`;
 }
 
 export function heartMomentEditPath(heartMomentId: string): string {
@@ -168,7 +180,7 @@ export function heartMomentEditPath(heartMomentId: string): string {
 }
 
 export function milestoneDetailPath(milestoneId: string): string {
-  return `/milestone/${encodeURIComponent(milestoneId)}`;
+  return `/story/milestones/${encodeURIComponent(milestoneId)}`;
 }
 
 export function milestoneEditPath(milestoneId: string): string {
@@ -176,21 +188,21 @@ export function milestoneEditPath(milestoneId: string): string {
 }
 
 export function wishDetailPath(wishId: string): string {
-  return `/planning/wishes/${encodeURIComponent(wishId)}`;
+  return `/plan/wishes/${encodeURIComponent(wishId)}`;
 }
 
 export function planDetailPath(planId: string): string {
-  return `/planning/plans/${encodeURIComponent(planId)}`;
+  return `/plan/plans/${encodeURIComponent(planId)}`;
 }
 
 export function placeDetailPath(placeId: string): string {
-  return `/planning/places/${encodeURIComponent(placeId)}`;
+  return `/plan/places/${encodeURIComponent(placeId)}`;
 }
 
 export function chapterDetailPath(chapterId: string): string {
-  return `/planning/chapters/${encodeURIComponent(chapterId)}`;
+  return `/plan/chapters/${encodeURIComponent(chapterId)}`;
 }
 
 export function collectionDetailPath(collectionId: string): string {
-  return `/planning/collections/${encodeURIComponent(collectionId)}`;
+  return `/plan/collections/${encodeURIComponent(collectionId)}`;
 }

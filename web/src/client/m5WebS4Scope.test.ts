@@ -1,4 +1,4 @@
-import { APP_ROUTES } from './routes';
+import { APP_ROUTES, MORE_PRIVATE_ROUTE } from './routes';
 import {
   PRIVATE_COLLECTIONS_PATH,
   PRIVATE_GIFT_IDEAS_PATH,
@@ -9,17 +9,19 @@ import {
 
 describe('SBS-M5-Web-S4-SCOPE', () => {
   it('keeps the owner-only area out of shared primary navigation', () => {
-    expect(APP_ROUTES.some((route) => route.path.startsWith('/private'))).toBe(
-      false,
-    );
+    // The area is reachable under More rather than as a primary destination,
+    // so its existence is never advertised beside the shared areas.
+    expect(
+      APP_ROUTES.some((route) => route.path.startsWith(MORE_PRIVATE_ROUTE)),
+    ).toBe(false);
     expect([
       PRIVATE_NOTES_PATH,
       PRIVATE_GIFT_IDEAS_PATH,
       PRIVATE_COLLECTIONS_PATH,
     ]).toEqual([
-      '/private/notes',
-      '/private/gift-ideas',
-      '/private/collections',
+      '/more/private/notes',
+      '/more/private/gift-ideas',
+      '/more/private/collections',
     ]);
   });
 

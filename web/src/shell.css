@@ -30,6 +30,43 @@
 }
 
 /*
+ * Search reaches every area, so it sits in the app bar rather than taking one
+ * of the five primary destinations.
+ */
+.shell-search-link {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.shell-search-link:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+.shell-search-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.shell-search-link-active {
+  border-color: transparent;
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+}
+
+/*
  * Creating content is the primary desktop action and belongs in the sidebar
  * rather than in the destination list. On compact viewports the same route
  * stays in the bottom navigation, so it is never lost.
@@ -45,20 +82,6 @@
   box-shadow: 0 8px 20px var(--color-shadow-brand);
 }
 
-.shell-nav-group-label {
-  margin: var(--space-5) 0 var(--space-1);
-  padding-inline: var(--space-4);
-  color: var(--color-text-muted);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.shell-nav-group:first-child .shell-nav-group-label {
-  margin-top: 0;
-}
-
 .product-main {
   width: calc(100% - 2rem);
   margin: 0 auto;
@@ -71,11 +94,6 @@
 }
 
 .shell-nav {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.shell-nav-group {
   display: grid;
   gap: var(--space-1);
 }
@@ -143,6 +161,16 @@
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.shell-search-link .shell-nav-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.shell-search-link .shell-nav-icon svg {
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 .mobile-bottom-nav {
@@ -266,6 +294,7 @@
 
 @media (max-width: 839px) {
   .product-topbar .brand-name,
+  .product-topbar .shell-search-link span:not(.shell-nav-icon),
   .product-topbar .shared-context,
   .product-topbar .theme-control label,
   .product-topbar .theme-control-icon {
