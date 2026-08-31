@@ -132,7 +132,16 @@ jobs:
           ref: feat/368-profile-contract-api
 
       - name: Apply deterministic patch
-        run: python3 tools/ci/profile_identity_concurrency_fix.py
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("tools/ci/profile_identity_concurrency_fix.py")
+          text = path.read_text(encoding="utf-8")
+          start = text.index("# Account is the aggregate that owns presentation identity across Spaces.\n")
+          end = text.index("service_path = Path(\"backend/src/sidebyside/profiles/service.py\")\n", start)
+          path.write_text(text[:start] + text[end:], encoding="utf-8")
+          PY
+          python3 tools/ci/profile_identity_concurrency_fix.py
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
