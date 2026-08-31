@@ -18,6 +18,7 @@ from types import FrameType
 
 from sidebyside.attachments import cleanup as media_cleanup
 from sidebyside.db.session import unit_of_work
+from sidebyside.demo import reset as demo_reset
 from sidebyside.engagement import push as push_delivery
 from sidebyside.engagement import service as engagement_service
 from sidebyside.jobs import maintenance
@@ -56,6 +57,7 @@ def _ensure_maintenance() -> None:
             maintenance.ensure_scheduled(session)
             media_cleanup.ensure_scheduled(session)
             reminder_runtime.ensure_scheduled(session)
+            demo_reset.ensure_scheduled(session)
     except Exception:
         log.exception("could not schedule maintenance")
 
@@ -82,6 +84,7 @@ def main() -> None:
     media_cleanup.register_handlers()
     push_delivery.register_handlers()
     reminder_runtime.register_handlers()
+    demo_reset.register_handlers()
     _ensure_maintenance()
     last_checked = time.monotonic()
 
