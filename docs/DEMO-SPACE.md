@@ -102,6 +102,28 @@ Normal production hardening remains mandatory. The demo should additionally be p
 reverse proxy's ordinary request/rate-limit controls because it is intentionally reachable without
 a personal account.
 
+### Arcane / runtime-image bootstrap
+
+The production/demo backend image contains the canonical demo bootstrap entrypoint. After the
+isolated Arcane stack is healthy, create the demo Space once from the running API container. Keep
+the initial passwords ephemeral instead of storing them permanently in the Arcane environment:
+
+```bash
+SBS_DEMO_LEA_PASSWORD="$(openssl rand -base64 32)"
+SBS_DEMO_ALEX_PASSWORD="$(openssl rand -base64 32)"
+
+docker compose -f compose.arcane.yaml exec -T \
+  -e SBS_DEMO_LEA_PASSWORD="$SBS_DEMO_LEA_PASSWORD" \
+  -e SBS_DEMO_ALEX_PASSWORD="$SBS_DEMO_ALEX_PASSWORD" \
+  api python -m scripts.demo_space create
+
+unset SBS_DEMO_LEA_PASSWORD SBS_DEMO_ALEX_PASSWORD
+```
+
+The generated password values are only needed for the initial account creation. Public demo users
+still enter through the Lea/Alex persona selection page, and later canonical resets retain the
+reserved demo Accounts and their password hashes.
+
 ## Link from the main login
 
 The normal/main Web build can advertise the isolated demo without enabling demo mode itself:
