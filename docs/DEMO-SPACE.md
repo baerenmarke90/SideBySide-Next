@@ -1,33 +1,62 @@
 # Canonical Demo & Manual Test Space
 
 Issue: #304  
-Status: development/QA facility; required before Go Live
+Status: development/QA and public product-demo facility; required before Go Live
 
 The canonical demo Space turns the scenario in `docs/m2/DEMO-SCENARIO.md` into a repeatable,
-fictional dataset that can be used for manual Web/Android QA, screenshots, demonstrations,
-and automated privacy/regression coverage.
+fictional dataset for manual Web/Android QA, screenshots, demonstrations, privacy regression
+coverage, and a permanently reachable public demo deployment.
 
-It is **not** a production feature, an authentication bypass, a separate domain implementation,
-or a database dump.
+It is not a database dump or a parallel domain implementation. Seeded product data still uses the
+normal domain, media, privacy, outbox, reminder, and entitlement paths.
 
 ## Identities
 
 The reserved demo identities are:
 
-| Person | Local demo address |
+| Person | Reserved address |
 |---|---|
 | Lea Sommer | `demo-lea@sidebyside.invalid` |
 | Alex Winter | `demo-alex@sidebyside.invalid` |
 
-`.invalid` is deliberately non-deliverable. Passwords are never stored in the repository and are
-never printed by the command. For initial creation they must be supplied explicitly through
-`SBS_DEMO_LEA_PASSWORD` and `SBS_DEMO_ALEX_PASSWORD`.
+`.invalid` is deliberately non-deliverable. The initial local passwords are supplied only while the
+canonical accounts are first created through `SBS_DEMO_LEA_PASSWORD` and
+`SBS_DEMO_ALEX_PASSWORD`; they are never committed or printed.
 
-The demo implementation refuses to operate when `SBS_ENVIRONMENT=production`.
+Public visitors do **not** receive or enter those passwords. A demo deployment shows a persona
+selection page with:
+
+- **Als Lea beitreten**
+- **Als Alex beitreten**
+
+The selected persona receives a rate-limited, one-time authentication proof. That proof is then
+consumed through the ordinary magic-link session path. The deployment-only entry endpoint is
+intentionally excluded from the product OpenAPI contract so generated Android/Web API clients do
+not treat public-demo entry as a normal authentication capability.
+
+## Environments
+
+`SBS_ENVIRONMENT` has three operational meanings relevant here:
+
+- `development`: local development and QA;
+- `demo`: isolated public demo deployment;
+- `production`: ordinary production deployment.
+
+`demo` receives the same public-runtime hardening as `production`: HTTPS public URL, explicit
+allowed hosts, a real cursor signing key, and no logging mail transport are required.
+
+`SBS_ENVIRONMENT=demo` requires:
+
+```env
+SBS_DEMO_MODE=true
+```
+
+Conversely, the ordinary `production` environment rejects `SBS_DEMO_MODE=true`. This prevents the
+main production instance from accidentally becoming the public demo.
 
 ## Create
 
-Run migrations first, then execute from `backend/` in a development or test environment:
+Run migrations first. For local development/QA, execute from `backend/`:
 
 ```bash
 export SBS_DEMO_LEA_PASSWORD='choose-a-local-demo-password'
@@ -35,24 +64,65 @@ export SBS_DEMO_ALEX_PASSWORD='choose-a-different-local-demo-password'
 uv run python -m scripts.demo_space create
 ```
 
-Creation is idempotent. If the verified reserved accounts already share their one canonical demo
-Space, the command returns that Space and does not duplicate data.
+Creation is idempotent. If the verified reserved accounts already share their canonical Space, the
+command returns that Space instead of duplicating data.
 
-For a deterministic acceptance run, pin the scenario reference date:
+For deterministic acceptance runs:
 
 ```bash
 uv run python -m scripts.demo_space create --reference-date 2026-08-24
 ```
 
-Without `--reference-date`, the local current day becomes the reference date. Dates in the seed
-are derived from that reference so a freshly reset Space continues to contain recent memories,
-past milestones, open/completed work, and upcoming plans rather than permanently aging fixture
-dates.
+Without `--reference-date`, the current local date becomes the reference date. The scenario derives
+recent memories, future plans, past milestones, and mixed open/completed states from it.
 
-## Reset
+The same command is used once when bootstrapping the isolated public demo deployment. Automatic
+startup/migrations still never create demo identities implicitly.
 
-Reset keeps the two reserved demo Accounts and their local credentials, removes only the verified
-canonical demo Space, and recreates its content:
+## Permanent public demo deployment
+
+Run the demo as a **separate stack/database/media store/domain**, for example
+`https://demo.sbs.example`. Never reuse the production database or media volume.
+
+A representative demo environment is:
+
+```env
+SBS_ENVIRONMENT=demo
+SBS_DEMO_MODE=true
+SBS_DEMO_MODE_RESET_TIMER=true
+SBS_DEMO_MODE_RESET_INTERVAL=6h
+
+SBS_PUBLIC_BASE_URL=https://demo.sbs.example
+SBS_ALLOWED_HOSTS=["demo.sbs.example"]
+SBS_CURSOR_SIGNING_KEY=<independent-random-secret-at-least-32-characters>
+SBS_MAIL_TRANSPORT=none
+```
+
+Normal production hardening remains mandatory. The demo should additionally be protected by the
+reverse proxy's ordinary request/rate-limit controls because it is intentionally reachable without
+a personal account.
+
+## Link from the main login
+
+The normal/main Web build can advertise the isolated demo without enabling demo mode itself:
+
+```env
+SBS_ENVIRONMENT=production
+SBS_DEMO_MODE=false
+SBS_DEMO_PUBLIC_URL=https://demo.sbs.example
+```
+
+`SBS_DEMO_PUBLIC_URL` is a Web build input. When present, the login screen shows
+**Demo ausprobieren** and links to the separate demo deployment. Changing the value therefore
+requires rebuilding the Web image.
+
+On the demo deployment, `SBS_DEMO_MODE=true` replaces the normal unauthenticated entry screen with
+the Lea/Alex selection page.
+
+## Manual reset
+
+Reset keeps the two reserved demo Accounts and their local seed credentials, removes only the
+verified canonical demo Space, and recreates its product data:
 
 ```bash
 uv run python -m scripts.demo_space reset
@@ -64,16 +134,28 @@ A deterministic reset is also possible:
 uv run python -m scripts.demo_space reset --reference-date 2026-08-24
 ```
 
-The reset fails closed if:
+The reset refuses ambiguous/partial reserved-account state, a demo Account in another active Space,
+or unsafe media cleanup. It never accepts an arbitrary Space ID.
 
-- either reserved demo Account is missing;
-- only one reserved Account exists;
-- a reserved address belongs to an Account with an unexpected display name;
-- the two reserved Accounts do not share exactly one active Space;
-- either reserved Account also belongs to another active Space; or
-- generated demo media cannot be purged safely.
+## Automatic reset timer
 
-The command never accepts an arbitrary Space ID to delete.
+The public demo can reset itself through the existing durable PostgreSQL job queue:
+
+```env
+SBS_DEMO_MODE_RESET_TIMER=true
+SBS_DEMO_MODE_RESET_INTERVAL=6h
+```
+
+Supported interval syntax is `m`, `h`, or `d`, for example `30m`, `6h`, or `1d`. Values below `5m`
+or above `7d` are rejected.
+
+The timer is independent from `SBS_DEMO_MODE`: demo mode may be enabled while automatic reset is
+disabled. The timer itself requires demo mode.
+
+After a successful automatic reset, public-demo authentication artifacts for Lea and Alex are
+expired/removed, including device sessions, one-time authentication tokens, passkeys, and linked
+non-local identities. Existing visitors therefore re-enter through the persona selection page
+instead of carrying authentication state indefinitely across resets.
 
 ## Seed coverage
 
@@ -83,69 +165,49 @@ The canonical dataset is created through normal domain services and currently in
 - shared self-profile preferences for Lea and Alex;
 - private partner notes for both owners;
 - shared and owner-only RelatedPerson / ImportantDate examples;
-- three Memories, including Memories with and without images;
-- generated, repository-owned JPEG demo media processed through the normal attachment pipeline;
-- one shared and one owner-only HeartMoment;
-- the private HeartMoment canary `CANARY-PRIVATE-LEA-7421`;
-- two Milestones;
-- comments that produce normal recipient notifications;
+- Memories with and without generated images;
+- shared and owner-only HeartMoments;
+- Milestones and Comments;
 - Wishes in OPEN, PLANNED, and COMPLETED states;
-- Plans in IDEA, PLANNED, and COMPLETED states, including upcoming schedules;
+- Plans in IDEA, PLANNED, and COMPLETED states, including scheduled examples;
 - Places with and without coordinates;
-- Chapters, including a Place-linked chapter;
-- a shared Collection with completed/open items;
-- independent PrivateNote, GiftIdea, and PrivateCollection content for both demo Accounts;
-- Search-visible shared/private material; and
-- Activity and in-app Notification projections generated from the normal transactional outbox.
+- Chapters, including Place-linked content;
+- shared Collections/items;
+- independent PrivateNote, GiftIdea, and PrivateCollection content for both Accounts;
+- Search-visible shared/private material;
+- Activity and in-app Notification projections;
+- generated M4-C Reminder examples for ImportantDate, birthday, relationship anniversary, and
+  planned Plan rules;
+- one manual Reminder plus recipient-specific mute/rule-preference examples.
 
-The image bytes are generated locally with Pillow. No Internet image, real photo, external asset,
-or redistributable binary fixture is required. The images still pass through upload registration,
-stream upload, finalize, validation/sanitization, and normal Memory/HeartMoment binding.
+Image bytes are generated locally with Pillow and still pass through upload registration, stream
+upload, finalize, validation/sanitization, and normal binding. No Internet image or real photo is
+required.
 
 ## Privacy canaries
 
-The seed deliberately contains owner-only content for both partners. Private data must remain
-absent from the other partner's shared Story, Search, Activity, Notifications, Dashboard, and
-other shared read models.
+The seed deliberately contains owner-only content for both partners. Private data must remain absent
+from the other partner's Story, Search, Activity, Notifications, Dashboard, and other shared read
+models.
 
-The integration suite in `backend/tests/integration/test_demo_space.py` verifies representative
-boundaries, including partner denial of the private HeartMoment, Search isolation, no private
-Activity target, and no private canary in the partner Dashboard.
-
-Do not replace these tests with a demo-only filtering exception. The point of the seed is to
-exercise the production privacy model.
-
-## Media lifecycle during reset
-
-Reset first detaches Memory media through normal Memory attachment replacement, removes the seeded
-attached HeartMoment through its domain service, and then purges the now-unbound demo attachments
-from the configured media provider. Only after that cleanup succeeds is the verified demo Space
-deleted and recreated.
-
-This prevents repeated manual QA resets from accumulating orphaned demo media.
+Automated coverage verifies representative boundaries, including partner denial of private content,
+Search isolation, private Activity exclusion, and Dashboard canary isolation. Do not replace these
+checks with demo-only filtering exceptions.
 
 ## Freemium / entitlement behavior
 
-The demo does not unlock, hide, or special-case capabilities. It uses the same domain and
-entitlement behavior as ordinary users. A future Premium demo scenario must use the real
-capability/entitlement model; it must not add a demo-only bypass.
+The demo does not unlock, hide, or special-case product capabilities. Free/Core behavior remains the
+same as for ordinary users. Future Premium scenarios must use the real capability/entitlement model
+rather than a demo-only bypass.
 
-## Manual QA workflow
+## Practical QA loop
 
-A practical development loop is:
-
-1. merge/update the application build under test;
-2. run `scripts.demo_space reset`;
-3. sign in as Lea and Alex in separate sessions;
+1. deploy/update the build under test;
+2. reset the canonical demo Space;
+3. enter once as Lea and once as Alex in separate browser sessions;
 4. exercise the changed screen at compact, medium, and expanded widths;
-5. explicitly check the opposite partner for private-canary leakage; and
+5. explicitly check the opposite persona for private-canary leakage; and
 6. rerun the relevant automated tests before merge.
 
-The canonical seed complements automated tests. It does not replace API negative cases,
-concurrency tests, migration checks, authorization tests, or CI gates.
-
-## Web layout note
-
-The demo implementation does not modify Web components or CSS. It can therefore be developed in
-parallel with #348. Once the Web layout change is on `main`, reset the demo Space and perform the
-visual verification against that merged layout.
+The canonical demo complements automated tests. It does not replace negative API cases, concurrency
+tests, migration checks, authorization tests, or CI/security gates.
