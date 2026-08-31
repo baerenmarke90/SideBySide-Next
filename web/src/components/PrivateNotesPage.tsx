@@ -296,12 +296,13 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
   if (!note.capabilities.canEdit) {
     return <UiState kind="permission" title={t('states.permission.title')} body={t('states.permission.body')} />;
   }
+  const editableNote: PrivateNoteDetail = note;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     mutation.mutate({
-      note,
+      note: editableNote,
       values: {
         title: String(data.get('title') || '').trim(),
         body: String(data.get('body') || '').trim(),
