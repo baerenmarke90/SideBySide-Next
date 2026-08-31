@@ -10,6 +10,7 @@ from datetime import date
 from sidebyside.config import Environment, get_settings
 from sidebyside.db.session import unit_of_work
 from sidebyside.demo import create_demo_space, reset_demo_space
+from sidebyside.demo.assets import load_and_validate_assets
 
 LEA_PASSWORD_ENV = "SBS_DEMO_LEA_PASSWORD"
 ALEX_PASSWORD_ENV = "SBS_DEMO_ALEX_PASSWORD"
@@ -42,10 +43,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "action",
-        choices=("create", "ensure", "reset"),
+        choices=("create", "ensure", "reset", "validate-assets"),
         help=(
             "create is explicit; ensure bootstraps only an enabled demo deployment; "
-            "reset replaces only the verified demo Space"
+            "reset replaces only the verified demo Space; validate-assets checks local media only"
         ),
     )
     parser.add_argument(
@@ -57,6 +58,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
+    if args.action == "validate-assets":
+        catalog = load_and_validate_assets()
+        print(f"Demo assets valid: {len(catalog.assets)} curated files.")
+        return 0
+
     settings = get_settings()
     reference_date = _reference_date(args.reference_date)
 

@@ -217,12 +217,12 @@ The canonical dataset is created through normal domain services and currently in
 - shared self-profile preferences for Lea and Alex;
 - private partner notes for both owners;
 - shared and owner-only RelatedPerson / ImportantDate examples;
-- Memories with and without generated images;
+- Memories with and without curated local stock photos;
 - shared and owner-only HeartMoments;
 - Milestones and Comments;
 - Wishes in OPEN, PLANNED, and COMPLETED states;
 - Plans in IDEA, PLANNED, and COMPLETED states, including scheduled examples;
-- Places with and without coordinates;
+- Places used by the canonical planning and Chapter examples;
 - Chapters, including Place-linked content;
 - shared Collections/items;
 - independent PrivateNote, GiftIdea, and PrivateCollection content for both Accounts;
@@ -232,9 +232,46 @@ The canonical dataset is created through normal domain services and currently in
   planned Plan rules;
 - one manual Reminder plus recipient-specific mute/rule-preference examples.
 
-Image bytes are generated locally with Pillow and still pass through upload registration, stream
-upload, finalize, validation/sanitization, and normal binding. No Internet image or real photo is
-required.
+The canonical demo ships a hash-pinned set of curated real stock photos under
+`backend/demo_assets/`. They are imported locally through upload registration, normal MediaStore
+storage, finalize, validation/sanitization, thumbnailing, and normal binding. Runtime bootstrap and
+reset never download media from a stock provider or hotlink an external CDN.
+
+## Curated demo media
+
+The repository carries the canonical media set in:
+
+```text
+backend/demo_assets/manifest.json
+backend/demo_assets/images/
+backend/demo_assets/README.md
+```
+
+The current set contains twelve real Pixabay stock photos. Each concrete source page was checked individually. The selected files were published before **2019-01-09**; Pixabay's current terms identify content published before that date as CC0 content. The manifest records the real asset id, creator, source publication date, source-page URL, `CC0 1.0 Universal`, the Pixabay terms as the licensing basis, the date of the license check, SHA-256, MIME type, German alt text, and intended usage. Source URLs are provenance only and are never used as media URLs.
+
+Do not infer redistribution permission merely from the provider name. Current provider licenses may restrict standalone redistribution. A maintainer adding an image must check the concrete source page and applicable terms, commit the approved bytes locally, compute the exact hash, update all provenance fields, and run:
+
+```bash
+uv run python -m scripts.demo_space validate-assets
+```
+
+`validate-assets` does not open the database. Creation and reset run the same complete asset preflight before any demo mutation: manifest schema, required provenance, provider/source URL, local file existence, exact directory membership, SHA-256, decodable image type, MIME agreement, alt text, and the historical Pixabay CC0 cutoff used by this curated set. A failure aborts before accounts are created or existing demo media is purged.
+
+The runtime image copies `demo_assets` explicitly and validates it during image build. There are no stock-site downloads at container startup. Seeding calls the existing attachment service (`create_upload` -> `open_upload` -> `complete_upload` -> `finalize_upload` -> validation) so normal size/type checks, image sanitization, thumbnails, MediaStore, and database bindings remain authoritative. No parallel demo storage exists.
+
+Reset first validates the local catalog, then detaches all demo bindings and purges every attachment provider object before replacing the verified demo Space. The same local asset ids are re-imported in the same deterministic order, so repeated resets do not accumulate duplicate or orphaned media.
+
+The five album-like demo themes declared by `sidebyside.demo.story.CHAPTERS` use the existing Chapter model. SideBySide currently has no separate Album product model, and this demo change intentionally does not add a DB column, API, or Web feature solely to simulate one.
+
+### Maintainer flow for a new image
+
+1. Inspect the concrete Pexels/Pixabay source page and its applicable redistribution terms.
+2. Avoid identifiable people, logos, trademarks, and other third-party rights unless reviewed separately.
+3. Download the approved image once into `backend/demo_assets/images/`; never add a runtime CDN URL.
+4. Record real provider/asset/creator/license metadata and meaningful `alt_text_de`/`usage_context` values.
+5. Compute SHA-256 over the exact committed file and update `manifest.json`.
+6. Run `uv run python -m scripts.demo_space validate-assets` plus demo unit/integration tests.
+7. Build the backend image to prove the packaged runtime contains exactly the validated set.
 
 ## Privacy canaries and presentation cleanup
 
@@ -254,8 +291,9 @@ exceptions.
 ## Freemium / entitlement behavior
 
 The demo does not unlock, hide, or special-case product capabilities. Free/Core behavior remains the
-same as for ordinary users. Future Premium scenarios must use the real capability/entitlement model
-rather than a demo-only bypass.
+same as for ordinary users. Curated media, richer seed content, and reset behavior add no entitlement,
+paywall, storage-tier, billing, or Premium capability change. Future Premium scenarios must use the real
+capability/entitlement model rather than a demo-only bypass.
 
 ## Practical QA loop
 
