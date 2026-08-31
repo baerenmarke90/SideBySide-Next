@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import de.sidebyside.next.demo.DemoEndpoint
 import de.sidebyside.next.demo.DemoPersona
+import de.sidebyside.next.story.StoryImageRef
+import de.sidebyside.next.story.StoryImageStore
+import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
@@ -92,6 +95,38 @@ class ReferenceViewModel(
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
     val uiState: StateFlow<ReferenceUiState> = _uiState.asStateFlow()
 
+    /**
+     * Story photographs, held in memory for the current Space only.
+     *
+     * It is given the session's own read path rather than an endpoint, so it
+     * cannot outlive the session it was filled from: once [sessionEpoch] moves
+     * on, both the cache and anything still in flight are void.
+     */
+    val storyImages: StoryImageStore = StoryImageStore(scope = viewModelScope) { ref ->
+        readStoryImage(ref)
+    }
+
+    /**
+     * Changes whenever the Space or the session does, so the screen re-asks
+     * for every image instead of showing the previous couple's.
+     */
+    val storyGeneration: Long get() = sessionEpoch
+
+    private suspend fun readStoryImage(ref: StoryImageRef): ByteArray {
+        val api = checkNotNull(contract) { "A Story image is only read inside a session." }
+        val currentSession = checkNotNull(session) { "A Story image needs a session." }
+        val spaceId = checkNotNull(activeSpaceId) { "A Story image belongs to a Space." }
+        val accessToken = currentSession.tokens.accessToken
+
+        val descriptor = api.createReadAccess(
+            spaceId,
+            accessToken,
+            ref.attachmentId,
+            AttachmentReadRequest(parentId = ref.parentId, parentType = ref.parentType),
+        )
+        return api.readImageBytes(accessToken, descriptor)
+    }
+
     fun signIn(email: String, password: String) {
         val api = contract ?: return configurationError()
         if (!config.isConfigured) return configurationError()
@@ -101,6 +136,7 @@ class ReferenceViewModel(
         }
 
         sessionEpoch += 1
+        storyImages.reset()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -159,6 +195,7 @@ class ReferenceViewModel(
         val demoApi = apiFor(DemoEndpoint.BASE_URL) ?: return configurationError()
 
         sessionEpoch += 1
+        storyImages.reset()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -202,6 +239,7 @@ class ReferenceViewModel(
         contract = apiFor(config.apiBaseUrl)
         activeSpaceId = null
         sessionEpoch += 1
+        storyImages.reset()
         session = null
         imageDrafts = emptyList()
         _uiState.value = ReferenceUiState(
@@ -233,6 +271,7 @@ class ReferenceViewModel(
         if (state.availableSpaces.none { it.spaceId == spaceId }) return
 
         sessionEpoch += 1
+        storyImages.reset()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
         mutate {
@@ -414,6 +453,7 @@ class ReferenceViewModel(
         if (_uiState.value.demoMode) return leaveDemo()
 
         sessionEpoch += 1
+        storyImages.reset()
         session = null
         activeSpaceId = null
         imageDrafts = emptyList()
