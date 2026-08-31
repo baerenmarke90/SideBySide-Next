@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -17,7 +16,6 @@ from sidebyside.places import service as place_service
 from sidebyside.places.models import Place
 from sidebyside.relations import service as relation_service
 
-_T = TypeVar("_T")
 _CAFE_NAME = "Café am Markt"
 # Approximate public-square coordinates are intentional: the demo exercises the
 # coordinate-capable Place path without pretending that the fictional café is a
@@ -26,7 +24,12 @@ _CAFE_LATITUDE = 49.233000
 _CAFE_LONGITUDE = 6.996000
 
 
-def _only_by_title(items: list[_T], *, title_of: Callable[[_T], str], title: str) -> _T:
+def _only_by_title[T](
+    items: list[T],
+    *,
+    title_of: Callable[[T], str],
+    title: str,
+) -> T:
     matches = [item for item in items if title_of(item) == title]
     if len(matches) != 1:
         raise RuntimeError(f"Canonical demo expected exactly one {title!r}; found {len(matches)}.")
@@ -81,7 +84,8 @@ def _ensure_chapter_story_links(
             memory = memory_by_key.get(memory_key)
             if memory is None:
                 raise RuntimeError(
-                    f"Canonical Chapter {story.title!r} references unknown Memory key {memory_key!r}."
+                    f"Canonical Chapter {story.title!r} references unknown "
+                    f"Memory key {memory_key!r}."
                 )
             relation_service.link(
                 session,
