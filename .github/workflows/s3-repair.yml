@@ -13,47 +13,35 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Restore verified App source and remove repair workflow
+      - name: Repair App source and remove one-shot workflows
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
-          APP_BLOB_SHA: bca10f291806b376fb2c79e4df5e24d91a696575
         run: |
           set -euo pipefail
           git clone --quiet "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" repo
           cd repo
           git checkout --quiet "${BRANCH}"
           python3 - <<'PY'
-          import base64
-          import json
-          import os
-          import urllib.request
           from pathlib import Path
 
-          repository = os.environ["REPOSITORY"]
-          blob_sha = os.environ["APP_BLOB_SHA"]
-          request = urllib.request.Request(
-              f"https://api.github.com/repos/{repository}/git/blobs/{blob_sha}",
-              headers={
-                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
-                  "Accept": "application/vnd.github+json",
-                  "X-GitHub-Api-Version": "2022-11-28",
-              },
-          )
-          with urllib.request.urlopen(request) as response:
-              payload = json.load(response)
-          content = base64.b64decode(payload["content"])
-          Path("web/src/App.tsx").write_bytes(content)
+          path = Path("web/src/App.tsx")
+          content = path.read_bytes()
+          broken = b"DET\xc1IL"
+          occurrences = content.count(broken)
+          if occurrences != 2:
+              raise SystemExit(
+                  f"Expected exactly two corrupted DETAIL identifiers, found {occurrences}"
+              )
+          content = content.replace(broken, b"DETAIL")
+          path.write_bytes(content)
+          path.read_text(encoding="utf-8")
           PY
-          rm .github/workflows/s3-repair.yml
-          python3 - <<'PY'
-          from pathlib import Path
-          Path("web/src/App.tsx").read_text(encoding="utf-8")
-          PY
+          rm .github/workflows/s3-repair.yml .github/workflows/s3-quality-fix.yml
           git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/src/App.tsx .github/workflows/s3-repair.yml
-          git commit -m "fix(web): restore verified App source"
+          git add web/src/App.tsx .github/workflows/s3-repair.yml .github/workflows/s3-quality-fix.yml
+          git commit -m "fix(web): repair M5-S3 App source"
           git push --quiet origin "HEAD:${BRANCH}"
