@@ -4,6 +4,7 @@ import type { AccountView } from '../api/generated/models/AccountView';
 import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
 import { useTranslation } from '../i18n';
 import { PartnerConnectionPanel } from './PartnerConnectionPanel';
+import { PartnerIdentityPanel } from './PartnerIdentityPanel';
 import { ProfileIdentityPanel } from './ProfileIdentityPanel';
 import { ProfilePage as ProfilePageBase } from './ProfilePageBase';
 import { TransferPanel } from './TransferPanel';
@@ -35,6 +36,7 @@ export function ProfilePage(props: ProfilePageProps) {
           setDisplayName(nextDisplayName);
         }}
       />
+      <PartnerIdentityPanel {...currentProps} />
       <PartnerConnectionPanel {...currentProps} />
       <TransferPanel
         apiBaseUrl={props.apiBaseUrl}
