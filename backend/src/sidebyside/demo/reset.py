@@ -6,11 +6,22 @@ import logging
 from datetime import date, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from sidebyside.config import get_settings
 from sidebyside.demo.service import reset_demo_space
+from sidebyside.identity.models import (
+    AccountEmail,
+    AccountRecoveryToken,
+    AuthIdentity,
+    AuthProvider,
+    DeviceSession,
+    EmailVerificationToken,
+    MagicLinkToken,
+    WebAuthnChallenge,
+    WebAuthnCredential,
+)
 from sidebyside.jobs import queue
 from sidebyside.jobs.models import Job, JobStatus
 from sidebyside.jobs.worker import JobRegistry, registry
@@ -43,6 +54,32 @@ def _lock(session: Session) -> None:
     session.execute(select(func.pg_advisory_xact_lock(_LOCK_KEY)))
 
 
+def _clear_demo_auth_state(session: Session, account_ids: list[Any]) -> None:
+    """Remove public-demo authentication artifacts while preserving local seed passwords."""
+    email_ids = select(AccountEmail.id).where(AccountEmail.account_id.in_(account_ids))
+    session.execute(
+        delete(EmailVerificationToken).where(
+            EmailVerificationToken.account_email_id.in_(email_ids)
+        )
+    )
+    session.execute(delete(MagicLinkToken).where(MagicLinkToken.account_email_id.in_(email_ids)))
+    session.execute(
+        delete(AccountRecoveryToken).where(AccountRecoveryToken.account_id.in_(account_ids))
+    )
+    session.execute(delete(WebAuthnChallenge).where(WebAuthnChallenge.account_id.in_(account_ids)))
+    session.execute(
+        delete(WebAuthnCredential).where(WebAuthnCredential.account_id.in_(account_ids))
+    )
+    session.execute(
+        delete(AuthIdentity).where(
+            AuthIdentity.account_id.in_(account_ids),
+            AuthIdentity.provider != AuthProvider.LOCAL_PASSWORD.value,
+        )
+    )
+    session.execute(delete(DeviceSession).where(DeviceSession.account_id.in_(account_ids)))
+    session.flush()
+
+
 def ensure_scheduled(session: Session, *, delay: timedelta | None = None) -> Job | None:
     """Ensure one reset chain exists when the deployment opted into the timer."""
     if not _enabled():
@@ -73,7 +110,7 @@ def schedule_next(session: Session) -> Job | None:
 
 
 def run_demo_reset(session: Session, payload: dict[str, Any]) -> None:
-    """Restore canonical demo content and continue the bounded reset chain."""
+    """Restore canonical demo content, expire sessions, and continue the reset chain."""
     del payload
     settings = get_settings()
     if not settings.demo_mode or not settings.demo_mode_reset_timer:
@@ -84,6 +121,7 @@ def run_demo_reset(session: Session, payload: dict[str, Any]) -> None:
         environment=settings.environment,
         reference_date=date.today(),
     )
+    _clear_demo_auth_state(session, [result.lea_id, result.alex_id])
     log.info(
         "canonical demo Space reset",
         extra={
