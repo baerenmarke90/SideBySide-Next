@@ -34,6 +34,8 @@ const profileIdentity = {
   settingsNotifications: 'Benachrichtigungen',
   settingsPrivacy: 'Privater Bereich',
   settingsData: 'Daten und Portabilität',
+  appearanceIntro:
+    'Wähle, ob SideBySide der Systemeinstellung folgen oder dauerhaft hell beziehungsweise dunkel dargestellt werden soll.',
 } as const;
 
 export default profileIdentity;
