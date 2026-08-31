@@ -7,6 +7,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from sidebyside.config import Environment
+from sidebyside.demo.finalize import ensure_story_structure
 from sidebyside.demo.presentation import normalize_demo_content
 from sidebyside.demo.reminders import ensure_reminder_examples
 from sidebyside.demo.service import DemoSeedResult
@@ -31,6 +32,7 @@ def create_demo_space(
         reference_date=reference_date,
     )
     normalize_demo_content(session, result)
+    ensure_story_structure(session, result)
     ensure_reminder_examples(session, result, reference_date=reference_date)
     return result
 
@@ -48,6 +50,7 @@ def reset_demo_space(
         reference_date=reference_date,
     )
     normalize_demo_content(session, result)
+    ensure_story_structure(session, result)
     ensure_reminder_examples(session, result, reference_date=reference_date)
     return result
 
