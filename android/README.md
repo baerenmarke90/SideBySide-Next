@@ -79,6 +79,25 @@ string resources only — a ProblemDetails `detail` may name resources or
 internal reasons and never reaches the user — and 403 and 404 deliberately
 share one state so the difference cannot disclose that a resource exists.
 
+## Demo mode
+
+The entry screen offers the public demo alongside sign-in. Entering it points
+the session at `DemoEndpoint.BASE_URL` for that session only; the configured
+production or Self-Hosted endpoint is never rewritten, so leaving the demo
+returns to it unchanged.
+
+The server issues a one-time proof for a persona rather than a password, so no
+reusable credential exists in the app, the source or the assets.
+`POST /api/v1/demo/entry` is deliberately absent from the OpenAPI contract — it
+is a facility of the isolated demo deployment, not a supported authentication
+method for a normal installation — so it is the one call in this client written
+by hand instead of generated.
+
+The demo Space comes from the account's memberships rather than from the build
+configuration, because a persona's Space cannot be known at build time. Only an
+`ACTIVE` membership is accepted. #353 replaces the build-time Space for the
+ordinary sign-in path as well.
+
 ## Generated API models
 
 `api/generated/` contains the Kotlin data classes generated from

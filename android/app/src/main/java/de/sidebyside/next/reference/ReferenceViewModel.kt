@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import de.sidebyside.next.demo.DemoEndpoint
+import de.sidebyside.next.demo.DemoPersona
+import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
 
@@ -32,6 +35,9 @@ data class DraftImageUiItem(
 data class ReferenceUiState(
     val configured: Boolean = false,
     val loggedIn: Boolean = false,
+    /** True while the session belongs to the public demo rather than the configured server. */
+    val demoMode: Boolean = false,
+    val demoPersona: DemoPersona? = null,
     val busy: Boolean = false,
     val status: UiMessage? = null,
     val error: UiMessage? = null,
@@ -53,8 +59,28 @@ private data class ImageDraft(
 class ReferenceViewModel(
     private val config: ReferenceConfig = ReferenceConfig.fromBuildConfig(),
     api: ReferenceContract? = null,
+    private val apiFactory: (String) -> ReferenceContract = ::OkHttpReferenceApi,
 ) : ViewModel() {
-    private val contract: ReferenceContract? = api ?: config.apiBaseUrl.takeIf(String::isNotBlank)?.let(::OkHttpReferenceApi)
+    private val injectedApi: ReferenceContract? = api
+
+    /**
+     * The endpoint the current session talks to.
+     *
+     * Entering the demo points this at the demo deployment for the duration of
+     * that session only; the configured production or Self-Hosted endpoint is
+     * never rewritten, so leaving the demo returns to it unchanged.
+     */
+    private var contract: ReferenceContract? = apiFor(config.apiBaseUrl)
+
+    /**
+     * The Space the current session works in.
+     *
+     * A normal session still starts from the build configuration; a demo
+     * session resolves it from the account's memberships, because a demo
+     * persona's Space cannot be known at build time. #353 replaces the
+     * build-time value for the normal path as well.
+     */
+    private var activeSpaceId: java.util.UUID? = config.spaceId
     private var session: SessionView? = null
     private var imageDrafts: List<ImageDraft> = emptyList()
     private var sessionEpoch: Long = 0
@@ -105,12 +131,86 @@ class ReferenceViewModel(
         }
     }
 
+    /**
+     * Enters the public demo as one of the canonical personas.
+     *
+     * The server issues a one-time proof rather than a password, so nothing
+     * reusable is stored in the app. The Space comes from the account's
+     * memberships, because a demo persona's Space cannot be configured at build
+     * time.
+     */
+    fun enterDemo(persona: DemoPersona) {
+        val demoApi = apiFor(DemoEndpoint.BASE_URL) ?: return configurationError()
+
+        sessionEpoch += 1
+        val attemptEpoch = sessionEpoch
+        viewModelScope.launch {
+            if (attemptEpoch != sessionEpoch) return@launch
+            mutate { it.copy(busy = true, error = null, status = message(R.string.demo_entering)) }
+            runCatching {
+                val token = demoApi.createDemoEntry(DemoEndpoint.BASE_URL, persona)
+                val signedIn = demoApi.consumeMagicLink(token)
+                val memberships = demoApi.listMemberships(signedIn.tokens.accessToken)
+                val space = activeSpaceOf(memberships)
+                    ?: throw IllegalStateException("The demo account has no active Space.")
+                Triple(signedIn, space, demoApi)
+            }
+                .onSuccess { (signedIn, space, activeApi) ->
+                    if (attemptEpoch != sessionEpoch) return@onSuccess
+                    contract = activeApi
+                    activeSpaceId = space
+                    session = signedIn
+                    imageDrafts = emptyList()
+                    _uiState.value = ReferenceUiState(
+                        configured = true,
+                        loggedIn = true,
+                        demoMode = true,
+                        demoPersona = persona,
+                        status = message(R.string.demo_entered),
+                    )
+                    refreshStory()
+                }
+                .onFailure {
+                    if (attemptEpoch == sessionEpoch) {
+                        contract = apiFor(config.apiBaseUrl)
+                        activeSpaceId = config.spaceId
+                        failure(R.string.demo_entry_failed)
+                    }
+                }
+        }
+    }
+
+    /** Leaves the demo and returns to the configured server, carrying nothing over. */
+    fun leaveDemo() {
+        contract = apiFor(config.apiBaseUrl)
+        activeSpaceId = config.spaceId
+        sessionEpoch += 1
+        session = null
+        imageDrafts = emptyList()
+        _uiState.value = ReferenceUiState(
+            configured = config.isConfigured,
+            status = message(R.string.demo_left),
+        )
+    }
+
+    /**
+     * The Space to open, as the server authorises it.
+     *
+     * Only an active membership counts; an invited or removed one must not
+     * silently become the working context.
+     */
+    private fun activeSpaceOf(memberships: List<AccountMembershipView>): java.util.UUID? =
+        memberships.firstOrNull { it.status.equals("ACTIVE", ignoreCase = true) }?.spaceId
+
+    private fun apiFor(baseUrl: String): ReferenceContract? =
+        injectedApi ?: baseUrl.takeIf(String::isNotBlank)?.let(apiFactory)
+
     fun beginImageSelection(): Long? = session?.let { sessionEpoch }
 
     fun selectImages(images: List<SelectedImage>, selectionEpoch: Long) {
         val api = contract ?: return configurationError()
         val currentSession = session ?: return
-        val spaceId = config.spaceId ?: return configurationError()
+        val spaceId = activeSpaceId ?: return configurationError()
         if (selectionEpoch != sessionEpoch || images.isEmpty()) return
 
         val newDrafts = images.map { image ->
@@ -139,7 +239,7 @@ class ReferenceViewModel(
     fun retryImage(draftId: Long) {
         val api = contract ?: return configurationError()
         val currentSession = session ?: return
-        val spaceId = config.spaceId ?: return configurationError()
+        val spaceId = activeSpaceId ?: return configurationError()
         val index = imageDrafts.indexOfFirst { it.id == draftId }
         if (index < 0) return
 
@@ -168,7 +268,7 @@ class ReferenceViewModel(
             return
         }
         val drafts = imageDrafts.toList()
-        val spaceId = config.spaceId ?: return configurationError()
+        val spaceId = activeSpaceId ?: return configurationError()
         if (title.isBlank()) {
             setError(message(R.string.ref_error_memory_fields_required))
             return
@@ -236,7 +336,7 @@ class ReferenceViewModel(
     fun refreshStory() {
         val api = contract ?: return
         val currentSession = session ?: return
-        val spaceId = config.spaceId ?: return
+        val spaceId = activeSpaceId ?: return
         val operationEpoch = sessionEpoch
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
@@ -255,6 +355,10 @@ class ReferenceViewModel(
     }
 
     fun logout() {
+        // Leaving the demo is a different exit: it also has to put the endpoint
+        // back, so a later normal sign-in does not silently reach the demo.
+        if (_uiState.value.demoMode) return leaveDemo()
+
         sessionEpoch += 1
         session = null
         imageDrafts = emptyList()
