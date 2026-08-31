@@ -1,0 +1,296 @@
+name: M5 S3 one-shot review fixes
+
+on:
+  push:
+    branches:
+      - feat/300-m5-web-shared-planning
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply review fixes and validate the Web slice
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git clone --quiet "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" repo
+          cd repo
+          git checkout --quiet "${BRANCH}"
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file_path = Path(path)
+              text = file_path.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one match in {path}, found {count}: {old[:80]!r}")
+              file_path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          shared_planning = "web/src/client/sharedPlanning.ts"
+          replace_once(
+              shared_planning,
+              "import type { StoryItem } from '../api/generated/models/StoryItem';",
+              "import type { PlaceDetail } from '../api/generated/models/PlaceDetail';\n"
+              "import type { StoryItem } from '../api/generated/models/StoryItem';",
+          )
+          replace_once(
+              shared_planning,
+              "export function dateTimeFromInput(value: string): Date | undefined {\n"
+              "  return value ? new Date(value) : undefined;\n"
+              "}\n\n"
+              "export function moveItemIds(",
+              "export function dateTimeFromInput(value: string): Date | undefined {\n"
+              "  return value ? new Date(value) : undefined;\n"
+              "}\n\n"
+              "export async function loadAllPlaces(\n"
+              "  apis: Pick<SharedPlanningApis, 'places'>,\n"
+              "  spaceId: string,\n"
+              "): Promise<PlaceDetail[]> {\n"
+              "  const items: PlaceDetail[] = [];\n"
+              "  let cursor: string | null | undefined = null;\n"
+              "  const seenCursors = new Set<string>();\n\n"
+              "  do {\n"
+              "    const page = await apis.places.listPlaces({\n"
+              "      spaceId,\n"
+              "      cursor,\n"
+              "      limit: 50,\n"
+              "    });\n"
+              "    items.push(...page.items);\n"
+              "    cursor = page.nextCursor;\n"
+              "    if (cursor) {\n"
+              "      if (seenCursors.has(cursor)) {\n"
+              "        throw new Error('Place pagination returned a repeated cursor.');\n"
+              "      }\n"
+              "      seenCursors.add(cursor);\n"
+              "    }\n"
+              "  } while (cursor);\n\n"
+              "  return items;\n"
+              "}\n\n"
+              "export function moveItemIds(",
+          )
+
+          plan = "web/src/components/PlanProductPage.tsx"
+          replace_once(
+              plan,
+              "  localDateTimeInput,\n  planningIfMatch,",
+              "  localDateTimeInput,\n  loadAllPlaces,\n  planningIfMatch,",
+          )
+          replace_once(
+              plan,
+              "queryFn: () => apiCall(() => apis.places.listPlaces({ spaceId, limit: 50 })),",
+              "queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),",
+          )
+          replace_once(plan, "placesQuery.data?.items.map", "placesQuery.data?.map")
+
+          wish = "web/src/components/WishProductPage.tsx"
+          replace_once(
+              wish,
+              "import { planningIfMatch, type SharedPlanningApis } from '../client/sharedPlanning';",
+              "import {\n"
+              "  loadAllPlaces,\n"
+              "  planningIfMatch,\n"
+              "  type SharedPlanningApis,\n"
+              "} from '../client/sharedPlanning';",
+          )
+          replace_once(
+              wish,
+              "queryFn: () => apiCall(() => apis.places.listPlaces({ spaceId, limit: 50 })),",
+              "queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),",
+          )
+          replace_once(wish, "placesQuery.data?.items.map", "placesQuery.data?.map")
+
+          chapter = "web/src/components/ChapterProductPage.tsx"
+          replace_once(
+              chapter,
+              "  dateOnlyInput,\n  planningIfMatch,",
+              "  dateOnlyInput,\n  loadAllPlaces,\n  planningIfMatch,",
+          )
+          replace_once(
+              chapter,
+              "queryFn: () => apiCall(() => apis.places.listPlaces({ spaceId, limit: 50 })),",
+              "queryFn: () => apiCall(() => loadAllPlaces(apis, spaceId)),",
+          )
+          replace_once(chapter, "placesQuery.data?.items.map", "placesQuery.data?.map")
+
+          overview = "web/src/components/SharedPlanningOverviewPage.tsx"
+          replace_once(
+              overview,
+              "import { type FormEvent, type ReactNode } from 'react';",
+              "import { type FormEvent, type ReactNode, useState } from 'react';",
+          )
+          replace_once(
+              overview,
+              "  return new Intl.DateTimeFormat(resolvedLocale(), {\n"
+              "    dateStyle: 'medium',\n"
+              "  }).format(value);",
+              "  return new Intl.DateTimeFormat(resolvedLocale(), {\n"
+              "    dateStyle: 'medium',\n"
+              "    timeZone: 'UTC',\n"
+              "  }).format(value);",
+          )
+          replace_once(
+              overview,
+              "  const { t } = useTranslation();\n"
+              "  const queryClient = useQueryClient();\n\n"
+              "  const wishes = useInfiniteQuery({",
+              "  const { t } = useTranslation();\n"
+              "  const queryClient = useQueryClient();\n"
+              "  const [placeCoordinateError, setPlaceCoordinateError] = useState(false);\n\n"
+              "  const wishes = useInfiniteQuery({",
+          )
+          replace_once(
+              overview,
+              "    if (Boolean(latitudeRaw) !== Boolean(longitudeRaw)) return;",
+              "    if (Boolean(latitudeRaw) !== Boolean(longitudeRaw)) {\n"
+              "      setPlaceCoordinateError(true);\n"
+              "      return;\n"
+              "    }\n"
+              "    setPlaceCoordinateError(false);",
+          )
+          replace_once(
+              overview,
+              "        longitude: longitudeRaw ? Number(longitudeRaw) : undefined,\n"
+              "      },\n"
+              "      { onSuccess: () => form.reset() },\n"
+              "    );",
+              "        longitude: longitudeRaw ? Number(longitudeRaw) : undefined,\n"
+              "      },\n"
+              "      {\n"
+              "        onSuccess: () => {\n"
+              "          form.reset();\n"
+              "          setPlaceCoordinateError(false);\n"
+              "        },\n"
+              "      },\n"
+              "    );",
+          )
+          replace_once(
+              overview,
+              "<input id=\"place-latitude\" name=\"latitude\" type=\"number\" step=\"any\" min=\"-90\" max=\"90\" />",
+              "<input\n"
+              "  id=\"place-latitude\"\n"
+              "  name=\"latitude\"\n"
+              "  type=\"number\"\n"
+              "  step=\"any\"\n"
+              "  min=\"-90\"\n"
+              "  max=\"90\"\n"
+              "  aria-invalid={placeCoordinateError}\n"
+              "  aria-describedby={\n"
+              "    placeCoordinateError\n"
+              "      ? 'place-coordinate-help place-coordinate-error'\n"
+              "      : 'place-coordinate-help'\n"
+              "  }\n"
+              "/>"
+          )
+          replace_once(
+              overview,
+              "<input id=\"place-longitude\" name=\"longitude\" type=\"number\" step=\"any\" min=\"-180\" max=\"180\" />",
+              "<input\n"
+              "  id=\"place-longitude\"\n"
+              "  name=\"longitude\"\n"
+              "  type=\"number\"\n"
+              "  step=\"any\"\n"
+              "  min=\"-180\"\n"
+              "  max=\"180\"\n"
+              "  aria-invalid={placeCoordinateError}\n"
+              "  aria-describedby={\n"
+              "    placeCoordinateError\n"
+              "      ? 'place-coordinate-help place-coordinate-error'\n"
+              "      : 'place-coordinate-help'\n"
+              "  }\n"
+              "/>"
+          )
+          replace_once(
+              overview,
+              "<p className=\"field-help\">{t('m5s3.place.coordinateHelp')}</p>",
+              "<p id=\"place-coordinate-help\" className=\"field-help\">\n"
+              "  {t('m5s3.place.coordinateHelp')}\n"
+              "</p>\n"
+              "{placeCoordinateError ? (\n"
+              "  <p id=\"place-coordinate-error\" className=\"field-error\" role=\"alert\">\n"
+              "    {t('m5s3.place.coordinatePairError')}\n"
+              "  </p>\n"
+              ") : null}",
+          )
+
+          relation_manager = "web/src/components/PlanningRelationManager.tsx"
+          replace_once(
+              relation_manager,
+              "  return new Intl.DateTimeFormat(resolvedLocale(), {\n"
+              "    dateStyle: 'medium',\n"
+              "  }).format(value);",
+              "  return new Intl.DateTimeFormat(resolvedLocale(), {\n"
+              "    dateStyle: 'medium',\n"
+              "    timeZone: 'UTC',\n"
+              "  }).format(value);",
+          )
+
+          tests = "web/src/client/sharedPlanning.test.ts"
+          replace_once(
+              tests,
+              "import { describe, expect, it } from 'vitest';",
+              "import { describe, expect, it, vi } from 'vitest';",
+          )
+          replace_once(
+              tests,
+              "  dateOnlyInput,\n  moveItemIds,",
+              "  dateOnlyInput,\n  loadAllPlaces,\n  moveItemIds,",
+          )
+          replace_once(
+              tests,
+              "  it('moves collection ids without changing the item set', () => {",
+              "  it('loads every page of selectable places', async () => {\n"
+              "    const listPlaces = vi\n"
+              "      .fn()\n"
+              "      .mockResolvedValueOnce({\n"
+              "        items: [{ id: 'place-1', name: 'First place' }],\n"
+              "        nextCursor: 'cursor-2',\n"
+              "      })\n"
+              "      .mockResolvedValueOnce({\n"
+              "        items: [{ id: 'place-2', name: 'Second place' }],\n"
+              "        nextCursor: null,\n"
+              "      });\n"
+              "    const apis = { places: { listPlaces } } as unknown as Parameters<\n"
+              "      typeof loadAllPlaces\n"
+              "    >[0];\n\n"
+              "    const places = await loadAllPlaces(apis, 'space-1');\n\n"
+              "    expect(places.map((place) => place.id)).toEqual(['place-1', 'place-2']);\n"
+              "    expect(listPlaces).toHaveBeenNthCalledWith(1, {\n"
+              "      spaceId: 'space-1',\n"
+              "      cursor: null,\n"
+              "      limit: 50,\n"
+              "    });\n"
+              "    expect(listPlaces).toHaveBeenNthCalledWith(2, {\n"
+              "      spaceId: 'space-1',\n"
+              "      cursor: 'cursor-2',\n"
+              "      limit: 50,\n"
+              "    });\n"
+              "  });\n\n"
+              "  it('moves collection ids without changing the item set', () => {",
+          )
+          PY
+
+          cd web
+          npm ci
+          npm run format
+          npm run format:check
+          npm run typecheck
+          npm run lint
+          npm test -- --run
+          npm run build
+          cd ..
+          python3 tools/ci/engineering_language_audit.py
+          git diff --check
+          rm .github/workflows/s3-review-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src .github/workflows/s3-review-fix.yml
+          git commit -m "fix(web): resolve M5-S3 review findings"
+          git push --quiet origin "HEAD:${BRANCH}"
