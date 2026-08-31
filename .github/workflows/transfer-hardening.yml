@@ -58,8 +58,6 @@ jobs:
 
           json_marker = "    if isinstance(value, Mapping):\n"
           if "    if isinstance(value, BaseModel):\n" not in text:
-              if json_marker not in text:
-                  raise SystemExit("JSON conversion marker not found")
               text = text.replace(
                   json_marker,
                   "    if isinstance(value, BaseModel):\n"
@@ -70,8 +68,6 @@ jobs:
 
           column_marker = "    if python_type is UUID and not isinstance(value, UUID):\n"
           if "issubclass(python_type, BaseModel)" not in text:
-              if column_marker not in text:
-                  raise SystemExit("column conversion marker not found")
               text = text.replace(
                   column_marker,
                   "    if isinstance(python_type, type) and issubclass(python_type, BaseModel):\n"
@@ -89,8 +85,8 @@ jobs:
               )
               if count != 1:
                   raise SystemExit(f"reminder target assignment matches: {count}")
-              marker = "ids.get(target_table, set())"
               pos = text.find("reminder_target_table = generated_sources.get(source_type)")
+              marker = "ids.get(target_table, set())"
               relation_pos = text.find(marker, pos)
               if relation_pos < 0:
                   raise SystemExit("reminder target relation marker missing")
@@ -98,6 +94,19 @@ jobs:
                   text[:relation_pos]
                   + "ids.get(reminder_target_table, set())"
                   + text[relation_pos + len(marker):]
+              )
+
+          combined_guard = "        if reminder_target_table is None or _uuid(\n"
+          if combined_guard in text:
+              text = text.replace(
+                  combined_guard,
+                  "        if reminder_target_table is None:\n"
+                  "            raise TransferArchiveError(\n"
+                  "                \"Transfer reminder relation is invalid.\",\n"
+                  "                ErrorCode.TRANSFER_RELATION_INVALID,\n"
+                  "            )\n"
+                  "        if _uuid(\n",
+                  1,
               )
 
           if "for transfer_export in exports:" not in text:
@@ -140,6 +149,7 @@ jobs:
               "    if isinstance(value, BaseModel):\n",
               "issubclass(python_type, BaseModel)",
               "reminder_target_table = generated_sources.get(source_type)",
+              "if reminder_target_table is None:",
               "ids.get(reminder_target_table, set())",
               "for transfer_export in exports:",
               "for transfer_import in imports:",
