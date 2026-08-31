@@ -1,4 +1,4 @@
-"""Privacy-boundary regression tests for account-scoped Transfer data."""
+"""Transfer privacy regression tests for account-scoped configuration."""
 
 from uuid import uuid4
 
@@ -13,17 +13,10 @@ from sidebyside.transfer.models import TransferScope
 @pytest.mark.parametrize("table_name", ["rule_preferences", "reminder_preferences"])
 def test_shared_import_rejects_account_scoped_configuration(table_name: str) -> None:
     member_id = uuid4()
-    tables = {
-        table_name: [
-            {
-                "id": str(uuid4()),
-                "accountId": str(member_id),
-            }
-        ]
-    }
+    tables = {table_name: [{"id": str(uuid4()), "accountId": str(member_id)}]}
 
     with pytest.raises(TransferArchiveError) as exc_info:
-        service._validate_ids_and_privacy(  # noqa: SLF001
+        service._validate_ids_and_privacy(
             TransferScope.SHARED,
             None,
             tables,
@@ -37,17 +30,10 @@ def test_shared_import_rejects_account_scoped_configuration(table_name: str) -> 
 def test_personal_import_rejects_partner_account_scoped_configuration(table_name: str) -> None:
     requester_id = uuid4()
     partner_id = uuid4()
-    tables = {
-        table_name: [
-            {
-                "id": str(uuid4()),
-                "accountId": str(partner_id),
-            }
-        ]
-    }
+    tables = {table_name: [{"id": str(uuid4()), "accountId": str(partner_id)}]}
 
     with pytest.raises(TransferArchiveError) as exc_info:
-        service._validate_ids_and_privacy(  # noqa: SLF001
+        service._validate_ids_and_privacy(
             TransferScope.PERSONAL,
             requester_id,
             tables,
