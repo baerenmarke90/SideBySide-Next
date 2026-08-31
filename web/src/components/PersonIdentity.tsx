@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import './PersonIdentity.css';
 
 export type PersonIdentitySize = 'small' | 'medium' | 'large';
@@ -35,13 +35,9 @@ export function PersonIdentity({
   fallbackAlt: string;
   onImageError?: () => void;
 }) {
-  const [broken, setBroken] = useState(false);
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const initials = useMemo(() => personInitials(displayName), [displayName]);
-
-  useEffect(() => {
-    setBroken(false);
-  }, [imageUrl]);
-
+  const broken = imageUrl !== null && imageUrl === failedImageUrl;
   const avatarLabel = imageUrl && !broken ? imageAlt : fallbackAlt;
 
   return (
@@ -57,7 +53,7 @@ export function PersonIdentity({
             alt=""
             aria-hidden="true"
             onError={() => {
-              setBroken(true);
+              setFailedImageUrl(imageUrl);
               onImageError?.();
             }}
           />
