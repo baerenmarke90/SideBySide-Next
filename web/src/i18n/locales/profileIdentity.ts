@@ -26,6 +26,14 @@ const profileIdentity = {
   partnerTitle: 'Dein Partner',
   partnerIntro:
     'So wird dein Partner aktuell in SideBySide dargestellt. Änderungen am eigenen Profil erscheinen hier automatisch.',
+  settingsTitle: 'Einstellungen',
+  settingsIntro:
+    'Profil ist der zentrale Einstieg für persönliche Einstellungen. Bestehende Bereiche bleiben an ihrer fachlich passenden Stelle verlinkt.',
+  settingsIdentity: 'Profilbild und Anzeigename',
+  settingsRelationship: 'Partner und Verbindung',
+  settingsNotifications: 'Benachrichtigungen',
+  settingsPrivacy: 'Privater Bereich',
+  settingsData: 'Daten und Portabilität',
 } as const;
 
 export default profileIdentity;
