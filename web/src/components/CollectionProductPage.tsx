@@ -5,12 +5,12 @@ import type { CollectionDetail } from '../api/generated/models/CollectionDetail'
 import type { CollectionItemDetail } from '../api/generated/models/CollectionItemDetail';
 import { normalizeClientError } from '../client/problemDetails';
 import {
-  moveItemIds,
   planningIfMatch,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
 import { appRoutePath } from '../client/routes';
 import { useTranslation } from '../i18n';
+import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -189,6 +189,20 @@ export function CollectionProductPage({
     },
   });
 
+  const baseItemIds = [...(collectionQuery.data?.items ?? [])]
+    .sort((left, right) => left.position - right.position)
+    .map((item) => item.id);
+  const reorder = useListItemReorder({
+    itemIds: baseItemIds,
+    disabled:
+      !collectionQuery.data?.capabilities.canEdit || reorderItems.isPending,
+    onReorder: (itemIds) => {
+      const currentCollection = collectionQuery.data;
+      if (!currentCollection) return;
+      reorderItems.mutate({ collection: currentCollection, itemIds });
+    },
+  });
+
   if (!collectionId)
     return (
       <UiState
@@ -208,9 +222,10 @@ export function CollectionProductPage({
     );
   const collection = collectionQuery.data;
   if (!collection) return null;
-  const items = [...collection.items].sort(
-    (left, right) => left.position - right.position,
-  );
+  const itemById = new Map(collection.items.map((item) => [item.id, item]));
+  const items = reorder.orderedItemIds
+    .map((itemId) => itemById.get(itemId))
+    .filter((item): item is CollectionItemDetail => Boolean(item));
 
   function submitCollection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -245,16 +260,6 @@ export function CollectionProductPage({
       item,
       title: String(data.get('title')).trim(),
     });
-  }
-
-  function move(itemIndex: number, direction: -1 | 1) {
-    if (!collection) return;
-    const itemIds = moveItemIds(
-      items.map((item) => item.id),
-      itemIndex,
-      direction,
-    );
-    reorderItems.mutate({ collection, itemIds });
   }
 
   const itemMutationError =
@@ -340,12 +345,18 @@ export function CollectionProductPage({
 
         {items.length > 0 ? (
           <ol className="planning-collection-items">
-            {items.map((item, index) => (
+            {items.map((item) => (
               <li
                 key={item.id}
-                className={
-                  item.completed ? 'planning-item-completed' : undefined
-                }
+                data-sortable-item-id={item.id}
+                className={[
+                  item.completed ? 'planning-item-completed' : null,
+                  reorder.activeItemId === item.id
+                    ? 'list-entry-dragging'
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
                 <button
                   type="button"
@@ -386,59 +397,41 @@ export function CollectionProductPage({
                     disabled={!item.capabilities.canEdit}
                   />
                   {item.capabilities.canEdit ? (
-                    <button
+                    <ListEntryIconButton
                       type="submit"
-                      className="tertiary compact-action"
+                      icon="save"
+                      className="tertiary"
+                      label={
+                        updateItem.isPending
+                          ? t('m5s3.common.saving')
+                          : t('m5s3.collection.saveItem', {
+                              title: item.title,
+                            })
+                      }
                       disabled={updateItem.isPending}
-                    >
-                      {t('m5s3.common.save')}
-                    </button>
+                    />
                   ) : null}
                 </form>
-                <fieldset className="planning-order-actions">
-                  <legend className="sr-only">
-                    {t('m5s3.collection.orderActions', { title: item.title })}
-                  </legend>
-                  <button
-                    type="button"
-                    className="tertiary compact-action"
-                    onClick={() => move(index, -1)}
-                    disabled={
-                      index === 0 ||
-                      reorderItems.isPending ||
-                      !collection.capabilities.canEdit
-                    }
-                    aria-label={t('m5s3.collection.moveUp', {
+                {collection.capabilities.canEdit ? (
+                  <ListEntryIconButton
+                    icon="reorder"
+                    className="tertiary"
+                    label={t('m5s3.collection.reorderItem', {
                       title: item.title,
                     })}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className="tertiary compact-action"
-                    onClick={() => move(index, 1)}
-                    disabled={
-                      index === items.length - 1 ||
-                      reorderItems.isPending ||
-                      !collection.capabilities.canEdit
-                    }
-                    aria-label={t('m5s3.collection.moveDown', {
-                      title: item.title,
-                    })}
-                  >
-                    ↓
-                  </button>
-                </fieldset>
+                    {...reorder.handleProps(item.id)}
+                  />
+                ) : null}
                 {item.capabilities.canDelete ? (
-                  <button
-                    type="button"
-                    className="tertiary compact-action"
+                  <ListEntryIconButton
+                    icon="delete"
+                    className="tertiary"
+                    label={t('m5s3.collection.deleteItem', {
+                      title: item.title,
+                    })}
                     onClick={() => deleteItem.mutate({ collection, item })}
                     disabled={deleteItem.isPending}
-                  >
-                    {t('m5s3.common.delete')}
-                  </button>
+                  />
                 ) : null}
               </li>
             ))}
@@ -446,6 +439,9 @@ export function CollectionProductPage({
         ) : (
           <p className="planning-empty">{t('m5s3.collection.itemsEmpty')}</p>
         )}
+        {reorderItems.isPending ? (
+          <p role="status">{t('m5s3.collection.reordering')}</p>
+        ) : null}
         {itemMutationError ? (
           <ProblemState
             error={itemMutationError}
