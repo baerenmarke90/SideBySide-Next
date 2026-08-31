@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 
-from sidebyside.config import Environment, get_settings
+from sidebyside.config import get_settings
 from sidebyside.mail.base import MailMessage, MailSender
 
 log = logging.getLogger(__name__)
@@ -20,11 +20,10 @@ class LoggingMailSender(MailSender):
         self.sender_address = sender_address
 
     def send(self, message: MailMessage) -> None:
-        environment = get_settings().environment
-        if environment is Environment.PRODUCTION:
+        if get_settings().is_production:
             # Defense in depth. Configuration already prevents this adapter in
-            # production; if it still reaches this path, do not expose content.
-            raise RuntimeError("The logging mail adapter is not allowed in production.")
+            # production/demo; if it still reaches this path, do not expose content.
+            raise RuntimeError("The logging mail adapter is not allowed in a public runtime.")
 
         log.info(
             "mail (development transport)",

@@ -7,12 +7,22 @@ where a missing value would be security-relevant.
 
 from __future__ import annotations
 
+import re
+from datetime import timedelta
 from enum import StrEnum
 from functools import lru_cache
 from typing import Annotated, Self
 from urllib.parse import urlsplit
 
-from pydantic import AfterValidator, BaseModel, Field, SecretStr, field_validator, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    Field,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +36,7 @@ class Deployment(StrEnum):
 class Environment(StrEnum):
     DEVELOPMENT = "development"
     TEST = "test"
+    DEMO = "demo"
     PRODUCTION = "production"
 
 
@@ -99,6 +110,33 @@ def _database_url_is_usable(value: str) -> str:
 
 _DatabaseUrl = Annotated[str, AfterValidator(_database_url_is_usable)]
 
+_DEMO_RESET_INTERVAL_PATTERN = re.compile(r"^(?P<value>[1-9][0-9]*)(?P<unit>[mhd])$")
+
+
+def _demo_reset_interval(value: object) -> timedelta:
+    """Parse a compact reset interval such as ``30m``, ``6h`` or ``1d``."""
+    if isinstance(value, timedelta):
+        interval = value
+    else:
+        match = _DEMO_RESET_INTERVAL_PATTERN.fullmatch(str(value).strip().lower())
+        if match is None:
+            raise ValueError("SBS_DEMO_MODE_RESET_INTERVAL must look like 30m, 6h or 1d.")
+        amount = int(match.group("value"))
+        unit = match.group("unit")
+        if unit == "m":
+            interval = timedelta(minutes=amount)
+        elif unit == "h":
+            interval = timedelta(hours=amount)
+        else:
+            interval = timedelta(days=amount)
+
+    if interval < timedelta(minutes=5) or interval > timedelta(days=7):
+        raise ValueError("SBS_DEMO_MODE_RESET_INTERVAL must be between 5m and 7d.")
+    return interval
+
+
+_DemoResetInterval = Annotated[timedelta, BeforeValidator(_demo_reset_interval)]
+
 
 class DatabaseSettings(BaseSettings):
     """Database connection only, for paths that do not run the application.
@@ -122,6 +160,14 @@ class Settings(BaseSettings):
 
     environment: Environment = Environment.DEVELOPMENT
     deployment: Deployment = Deployment.SELF_HOSTED
+
+    # A demo deployment is isolated from ordinary production data but remains
+    # internet-facing, so Environment.DEMO receives the same hardening as
+    # Environment.PRODUCTION. This explicit capability gates its public entry
+    # route and optional reset scheduler.
+    demo_mode: bool = False
+    demo_mode_reset_timer: bool = False
+    demo_mode_reset_interval: _DemoResetInterval = timedelta(hours=6)
 
     # No SQLite fallback: the data model uses PostgreSQL properties, and a
     # second test dialect would not verify what actually runs in production.
@@ -190,7 +236,8 @@ class Settings(BaseSettings):
 
     @property
     def is_production(self) -> bool:
-        return self.environment is Environment.PRODUCTION
+        """Whether public-runtime hardening is mandatory."""
+        return self.environment in {Environment.DEMO, Environment.PRODUCTION}
 
     @property
     def cursor_signing_secret(self) -> bytes:
@@ -219,6 +266,18 @@ class Settings(BaseSettings):
             if connection.id == connection_id:
                 return connection
         return None
+
+    @model_validator(mode="after")
+    def demo_mode_matches_environment(self) -> Self:
+        if self.environment is Environment.DEMO and not self.demo_mode:
+            raise ValueError("SBS_ENVIRONMENT=demo requires SBS_DEMO_MODE=true.")
+        if self.environment is Environment.PRODUCTION and self.demo_mode:
+            raise ValueError(
+                "SBS_DEMO_MODE must not be enabled on the ordinary production environment."
+            )
+        if self.demo_mode_reset_timer and not self.demo_mode:
+            raise ValueError("SBS_DEMO_MODE_RESET_TIMER requires SBS_DEMO_MODE=true.")
+        return self
 
     @model_validator(mode="after")
     def media_store_is_complete(self) -> Self:

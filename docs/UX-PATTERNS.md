@@ -33,7 +33,12 @@ width, and input method.
 | Expanded, from 840 px | persistent Sidebar/Rail | local navigation in content area | second or third pane |
 
 - Primary destinations are the intentional de-DE product labels **Heute, Story,
-  Planen, Entdecken, Mehr**.
+  Planen, Entdecken, Mehr**. `Entdecken` depends on the M7 Discover domain: its
+  position is reserved and it is not rendered before that domain exists, so the
+  primary navigation carries four destinations until then. See
+  `decisions/0003-primary-navigation-and-route-model.md`.
+- Search and Activity are not primary destinations. Search is a global utility
+  in the app bar; Activity lives underneath `Heute`.
 - The active destination is identifiable through shape, color, and text state,
   never through color alone.
 - Badge counts are used only for current, actionable information.
