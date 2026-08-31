@@ -1,0 +1,40 @@
+name: M5 S3 one-shot quality fix
+
+on:
+  push:
+    branches:
+      - feat/300-m5-web-shared-planning
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Format and validate M5 S3 Web client
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git clone --quiet "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" repo
+          cd repo
+          git checkout --quiet "${BRANCH}"
+          cd web
+          npm ci
+          npm run format
+          npm run format:check
+          npm run typecheck
+          npm test -- --run
+          npm run build
+          cd ..
+          git diff --check
+          rm .github/workflows/s3-quality-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src .github/workflows/s3-quality-fix.yml
+          git commit -m "fix(web): format validated M5-S3 client"
+          git push --quiet origin "HEAD:${BRANCH}"
