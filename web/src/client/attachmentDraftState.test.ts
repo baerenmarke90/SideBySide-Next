@@ -11,6 +11,7 @@ function draft(id: string): AttachmentDraft {
     previewUrl: `blob:${id}`,
     status: 'uploading',
     attempt: 0,
+    progress: 0,
   };
 }
 
@@ -25,7 +26,48 @@ describe('attachmentDraftReducer', () => {
       previewUrl: 'blob:one',
       status: 'uploading',
       attempt: 0,
+      progress: 0,
     });
+  });
+
+  it('tracks upload progress only for the active attempt', () => {
+    let state = attachmentDraftReducer([], {
+      type: 'add',
+      draft: draft('one'),
+    });
+    state = attachmentDraftReducer(state, {
+      type: 'start',
+      id: 'one',
+      attempt: 1,
+    });
+    state = attachmentDraftReducer(state, {
+      type: 'progress',
+      id: 'one',
+      attempt: 1,
+      progress: 37,
+    });
+    expect(state[0]?.progress).toBe(37);
+
+    state = attachmentDraftReducer(state, {
+      type: 'start',
+      id: 'one',
+      attempt: 2,
+    });
+    state = attachmentDraftReducer(state, {
+      type: 'progress',
+      id: 'one',
+      attempt: 1,
+      progress: 99,
+    });
+    expect(state[0]).toMatchObject({ attempt: 2, progress: 0 });
+
+    state = attachmentDraftReducer(state, {
+      type: 'phase',
+      id: 'one',
+      attempt: 2,
+      status: 'validating',
+    });
+    expect(state[0]).toMatchObject({ status: 'validating', progress: 100 });
   });
 
   it('ignores a late READY result after the draft was removed', () => {
@@ -99,6 +141,7 @@ describe('attachmentDraftReducer', () => {
     expect(state[0]).toMatchObject({
       status: 'ready',
       attempt: 2,
+      progress: 100,
       attachmentId: 'attachment-current',
     });
   });

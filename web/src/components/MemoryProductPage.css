@@ -59,6 +59,68 @@
   object-fit: cover;
 }
 
+.memory-existing-attachments {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+
+.memory-existing-attachments legend,
+.memory-new-attachments-heading strong {
+  font-weight: 750;
+}
+
+.memory-edit-attachment-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-edit-attachment {
+  display: grid;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  padding: var(--space-3);
+  background: var(--color-surface-subtle);
+}
+
+.memory-edit-attachment .story-media-preview,
+.memory-edit-attachment .story-media-skeleton,
+.memory-edit-attachment .story-media-placeholder {
+  width: 100%;
+  min-height: 9rem;
+  margin: 0;
+  border-radius: var(--radius-medium);
+  object-fit: cover;
+}
+
+.memory-edit-attachment-removed .story-media-preview {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.memory-edit-attachment-actions,
+.memory-new-attachments-heading {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.memory-edit-attachment-actions span {
+  color: var(--color-error);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.memory-edit-attachment-actions button {
+  justify-self: start;
+}
+
 .memory-danger-zone {
   border-top: 1px solid var(--color-border-subtle);
   padding-top: var(--space-6);

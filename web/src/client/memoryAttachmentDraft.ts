@@ -3,7 +3,7 @@ import type { MemoryCreate } from '../api/generated/models/MemoryCreate';
 import { i18n } from '../i18n';
 import {
   ReferenceFlowError,
-  uploadAttachmentBytes,
+  uploadAttachmentBytesWithProgress,
   type FlowResult,
   type ReferenceApis,
 } from './referenceFlow';
@@ -14,13 +14,19 @@ export interface ReadyDraftAttachment {
   attachmentId: string;
 }
 
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException('Upload aborted.', 'AbortError');
+}
+
 async function waitUntilReady(
   apis: ReferenceApis,
   spaceId: string,
   attachmentId: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
+    throwIfAborted(signal);
     const attachment = await apis.attachments.getAttachment({
       spaceId,
       attachmentId,
@@ -48,12 +54,18 @@ export async function uploadMemoryDraftAttachment(
   file: File,
   onPhase?: (phase: DraftUploadPhase) => void,
   fetchApi: typeof fetch = fetch,
+  options: {
+    signal?: AbortSignal;
+    onProgress?: (progress: number) => void;
+  } = {},
 ): Promise<ReadyDraftAttachment> {
   if (!file.type.startsWith('image/'))
     throw new ReferenceFlowError(i18n.t('flow.imageOnly'));
   if (file.size === 0) throw new ReferenceFlowError(i18n.t('flow.imageEmpty'));
 
+  let createdAttachment: { id: string; version: number } | null = null;
   try {
+    throwIfAborted(options.signal);
     onPhase?.('uploading');
     const upload = await apis.attachments.createAttachmentUpload({
       spaceId,
@@ -64,24 +76,44 @@ export async function uploadMemoryDraftAttachment(
         originalName: file.name,
       },
     });
+    createdAttachment = {
+      id: upload.attachment.id,
+      version: upload.attachment.version,
+    };
 
-    await uploadAttachmentBytes(
+    await uploadAttachmentBytesWithProgress(
       apiBaseUrl,
       accessToken,
       upload,
       file,
+      options,
       fetchApi,
     );
+    throwIfAborted(options.signal);
     onPhase?.('validating');
     await apis.attachments.finalizeAttachmentUpload({
       spaceId,
       attachmentId: upload.attachment.id,
       body: {},
     });
-    await waitUntilReady(apis, spaceId, upload.attachment.id);
+    await waitUntilReady(apis, spaceId, upload.attachment.id, options.signal);
 
     return { attachmentId: upload.attachment.id };
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      if (createdAttachment) {
+        try {
+          await apis.attachments.deleteAttachment({
+            spaceId,
+            attachmentId: createdAttachment.id,
+            ifMatch: String(createdAttachment.version),
+          });
+        } catch {
+          // Server-side pending-upload cleanup remains the fallback.
+        }
+      }
+      throw error;
+    }
     if (error instanceof ReferenceFlowError) throw error;
     throw new ReferenceFlowError(i18n.t('flow.uploadFailed'));
   }

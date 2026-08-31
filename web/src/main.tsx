@@ -10,9 +10,12 @@ import './story-media.css';
 import './theme.css';
 import './shell.css';
 import './attachment-drafts.css';
+import './components/CommentsPanel.css';
+import './components/MediaGallery.css';
 import './components/MemoryProductPage.css';
-import './components/RelatedPeoplePage.css';
 import './components/ProfilePage.css';
+import './components/RelatedPeoplePage.css';
+import './components/StoryProductPages.css';
 
 initializeTheme();
 

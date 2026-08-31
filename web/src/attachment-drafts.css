@@ -55,6 +55,11 @@
   overflow-wrap: anywhere;
 }
 
+.attachment-draft-meta progress {
+  width: min(100%, 20rem);
+  accent-color: var(--color-brand-strong);
+}
+
 .attachment-status {
   color: var(--color-text-secondary);
   font-size: 0.82rem;
