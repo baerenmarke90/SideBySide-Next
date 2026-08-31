@@ -22,6 +22,16 @@ The database additionally enforces:
 
 Therefore a private partner note cannot become part of the visible partner profile through faulty serialization.
 
+### Avatar media binding
+
+Profile avatars reuse the existing Attachment/MediaStore lifecycle. `account_profile_attachments` is a one-to-one attachment-parent relation: one Account has at most one current avatar and one Attachment can belong to at most one Account profile. It is a media binding only, not a second Account/Profile aggregate.
+
+The relation stores only stable IDs. No temporary or signed provider URL becomes profile state. Upload validation, sanitization, thumbnail generation, storage keys, retention and physical cleanup remain owned by the existing attachment pipeline.
+
+The central attachment binding resolver reports profile media as `ACCOUNT_PROFILE`. This means avatar attachments participate in the same cross-parent exclusivity rule as Memory and HeartMoment media and are no longer considered unbound once attached to a profile. Replacing/removing an avatar must detach the old relation before that attachment enters the existing deletion lifecycle.
+
+Read authorization and the public profile update contract are added by the owning #368 follow-up slices; this foundation does not make an attachment public or add an alternate media endpoint.
+
 ## Authorization
 
 Every endpoint begins with the existing Tenant Context. Lists and detail access then use the central Owner/Privacy Guard. The filter condition is part of the SQL query; invisible rows are not loaded first and discarded afterward.
