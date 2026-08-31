@@ -58,6 +58,12 @@
     <string name="demo_banner">Demo · du siehst SideBySide als %1$s</string>
     <string name="demo_leave">Demo verlassen</string>
 
+    <string name="error_no_active_space">Für dieses Konto ist noch kein gemeinsamer Bereich aktiv.</string>
+    <string name="space_switched">Bereich gewechselt.</string>
+    <string name="more_space_title">Gemeinsamer Bereich</string>
+    <string name="more_space_body">Dein Konto ist in mehreren Bereichen aktiv. Der gewählte Bereich bestimmt, welche Erinnerungen du siehst.</string>
+    <string name="more_space_option">Bereich %1$d</string>
+
     <string name="ref_flow_subtitle">M2 · technischer Android-Referenzflow</string>
     <string name="ref_flow_intro">Eine Erinnerung in eurer gemeinsamen Story.</string>
     <string name="ref_not_configured">Der M2-Referenzflow ist operatorseitig noch nicht konfiguriert.</string>

@@ -122,12 +122,12 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
                     WindowInsets.safeDrawing.only(WindowInsetsSides.Top),
                 ),
             )
-            DemoShell(state, signOut, storyFlow)
+            DemoShell(state, signOut, referenceViewModel::selectSpace, storyFlow)
         }
         return
     }
 
-    DemoShell(state, signOut, storyFlow)
+    DemoShell(state, signOut, referenceViewModel::selectSpace, storyFlow)
 }
 
 /**
@@ -140,6 +140,7 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
 private fun DemoShell(
     state: ReferenceUiState,
     onSignOut: () -> Unit,
+    onSelectSpace: (java.util.UUID) -> Unit,
     storyFlow: @Composable () -> Unit,
 ) {
     AppNavigation(
@@ -149,6 +150,9 @@ private fun DemoShell(
             AppDestination.More -> MoreScreen(
                 onSignOut = onSignOut,
                 signOutEnabled = !state.busy,
+                spaces = state.availableSpaces,
+                activeSpaceId = state.activeSpaceId,
+                onSelectSpace = onSelectSpace,
             )
 
             else -> storyFlow()
