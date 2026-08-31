@@ -6,8 +6,8 @@ import pytest
 
 from sidebyside.core.errors import ValidationError
 from sidebyside.identity.service import (
-    MAX_DISPLAY_NAME,
     AccountErrorCode,
+    MAX_DISPLAY_NAME,
     normalize_display_name,
 )
 
