@@ -18,9 +18,8 @@ COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --frozen --no-install-project --no-editable
 
 COPY src ./src
-# Explicit operational entrypoints such as the canonical demo create/reset
-# command must also be available in the production/demo runtime image.
-COPY scripts ./scripts
+# Ship only the operational demo entrypoint, not the development/CI scripts.
+COPY scripts/__init__.py scripts/demo_space.py ./scripts/
 COPY alembic ./alembic
 COPY alembic.ini ./
 
