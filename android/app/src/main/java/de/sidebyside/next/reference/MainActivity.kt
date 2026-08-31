@@ -22,6 +22,14 @@ import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.ui.Modifier
+import de.sidebyside.next.demo.DemoBanner
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,6 +101,7 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
             onRefreshStory = referenceViewModel::refreshStory,
             onRetryImage = referenceViewModel::retryImage,
             onRemoveImage = referenceViewModel::removeImage,
+            onEnterDemo = referenceViewModel::enterDemo,
         )
     }
 
@@ -103,14 +112,42 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
         return
     }
 
-    // Only destinations that have something to show are rendered; the slice
-    // contract forbids dead navigation. Heute and Planen join in their slices.
+    val demoPersona = state.demoPersona
+    if (state.demoMode && demoPersona != null) {
+        Column {
+            DemoBanner(
+                persona = demoPersona,
+                onLeave = referenceViewModel::leaveDemo,
+                modifier = Modifier.windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top),
+                ),
+            )
+            DemoShell(state, signOut, storyFlow)
+        }
+        return
+    }
+
+    DemoShell(state, signOut, storyFlow)
+}
+
+/**
+ * The signed-in shell.
+ *
+ * Only destinations that have something to show are rendered; the slice
+ * contract forbids dead navigation. Heute and Planen join in their slices.
+ */
+@Composable
+private fun DemoShell(
+    state: ReferenceUiState,
+    onSignOut: () -> Unit,
+    storyFlow: @Composable () -> Unit,
+) {
     AppNavigation(
         destinations = listOf(AppDestination.Story, AppDestination.More),
     ) { destination ->
         when (destination) {
             AppDestination.More -> MoreScreen(
-                onSignOut = signOut,
+                onSignOut = onSignOut,
                 signOutEnabled = !state.busy,
             )
 

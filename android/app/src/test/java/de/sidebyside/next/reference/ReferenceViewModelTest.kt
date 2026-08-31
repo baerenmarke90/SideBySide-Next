@@ -1,5 +1,7 @@
 package de.sidebyside.next.reference
 
+import de.sidebyside.next.demo.DemoPersona
+import sidebyside.api.models.AccountMembershipView
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.coroutines.CompletableDeferred
@@ -50,6 +52,15 @@ class ReferenceViewModelTest {
         var timelineCalls = 0
         val api = object : ReferenceContract {
             override suspend fun signIn(email: String, password: String): SessionView = session()
+
+            override suspend fun consumeMagicLink(token: String): SessionView =
+                error("Magic-link entry is not exercised by this test.")
+
+            override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+                error("Memberships are not exercised by this test.")
+
+            override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
+                error("Demo entry is not exercised by this test.")
 
             override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
                 timelineCalls += 1

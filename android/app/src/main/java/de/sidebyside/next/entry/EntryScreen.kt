@@ -11,6 +11,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -30,6 +32,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import de.sidebyside.next.demo.DemoPersona
 import de.sidebyside.next.design.BrandLockup
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
@@ -51,6 +54,7 @@ fun EntryScreen(
     modifier: Modifier = Modifier,
     notice: String? = null,
     signInEnabled: Boolean = true,
+    onEnterDemo: ((DemoPersona) -> Unit)? = null,
 ) {
     // The email survives configuration change; the password deliberately does
     // not, because saved instance state is written to disk by the system.
@@ -156,12 +160,62 @@ fun EntryScreen(
             }
         }
 
+        if (onEnterDemo != null) {
+            DemoEntrySection(onEnterDemo = onEnterDemo, busy = busy)
+        }
+
         Text(
             text = stringResource(R.string.entry_assurance),
             style = MaterialTheme.typography.bodySmall,
             color = SideBySideTheme.colors.textMuted,
             modifier = Modifier.widthIn(max = ReadingMeasure),
         )
+    }
+}
+
+/**
+ * The way into the public demo.
+ *
+ * Kept visually secondary to sign-in: it is a way to look around, not the way
+ * into your own Space. The personas are named because the demo content is
+ * written from their point of view.
+ */
+@Composable
+private fun DemoEntrySection(onEnterDemo: (DemoPersona) -> Unit, busy: Boolean) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+    ) {
+        HorizontalDivider(color = SideBySideTheme.colors.borderSubtle)
+        Text(
+            text = stringResource(R.string.demo_heading),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            text = stringResource(R.string.demo_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = SideBySideTheme.colors.textSecondary,
+            modifier = Modifier.widthIn(max = ReadingMeasure),
+        )
+        for (persona in DemoPersona.entries) {
+            OutlinedButton(
+                onClick = { onEnterDemo(persona) },
+                enabled = !busy,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(
+                    stringResource(
+                        when (persona) {
+                            DemoPersona.Lea -> R.string.demo_join_as_lea
+                            DemoPersona.Alex -> R.string.demo_join_as_alex
+                        },
+                    ),
+                )
+            }
+        }
     }
 }
 

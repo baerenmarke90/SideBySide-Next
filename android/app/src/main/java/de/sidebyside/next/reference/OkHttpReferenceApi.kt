@@ -10,18 +10,29 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import de.sidebyside.next.demo.DemoPersona
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import sidebyside.api.models.AccountMembershipView
+import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.ProblemDetails
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.SignInRequest
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
+
+/** The demo entry response. It is not part of the generated contract. */
+@Serializable
+private data class DemoEntryPayload(val token: String)
 
 /**
  * A failed API call.
@@ -64,6 +75,51 @@ class OkHttpReferenceApi(
                 .build(),
             SessionView.serializer(),
         )
+    }
+
+    override suspend fun consumeMagicLink(token: String): SessionView {
+        val payload = MagicLinkConsumeRequest(
+            token = token,
+            deviceName = "SideBySide Android",
+            platform = "android",
+        )
+        return executeJson(
+            Request.Builder()
+                .url("$baseUrl/api/v1/auth/magic-link/consume")
+                .post(
+                    SideBySideJson
+                        .encodeToString(MagicLinkConsumeRequest.serializer(), payload)
+                        .toRequestBody(jsonMediaType),
+                )
+                .build(),
+            SessionView.serializer(),
+        )
+    }
+
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        executeJson(
+            authenticatedRequest("$baseUrl/api/v1/auth/memberships", accessToken)
+                .get()
+                .build(),
+            ListSerializer(AccountMembershipView.serializer()),
+        )
+
+    /*
+     * Hand-written on purpose: the demo entry is excluded from the OpenAPI
+     * contract, so no generated call exists. The base URL is passed in rather
+     * than taken from this client, because entering the demo must not depend on
+     * the configured endpoint and must not overwrite it.
+     */
+    override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String {
+        val payload = buildJsonObject { put("persona", JsonPrimitive(persona.wireValue)) }
+        val entry = executeJson(
+            Request.Builder()
+                .url("${baseUrl.trimEnd('/')}/api/v1/demo/entry")
+                .post(payload.toString().toRequestBody(jsonMediaType))
+                .build(),
+            DemoEntryPayload.serializer(),
+        )
+        return entry.token
     }
 
     override suspend fun createMemory(

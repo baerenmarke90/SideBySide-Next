@@ -45,6 +45,19 @@
     <string name="more_session_body">Du bist auf diesem Gerät angemeldet. Beim Abmelden werden alle geladenen Inhalte aus dem Speicher entfernt.</string>
     <string name="more_sign_out">Abmelden</string>
 
+    <string name="demo_heading">Erst mal ansehen?</string>
+    <string name="demo_body">Probiert SideBySide mit erfundenen Inhalten aus. Ihr braucht kein Konto, und es wird nichts von euch gespeichert.</string>
+    <string name="demo_join_as_lea">Als Lea beitreten</string>
+    <string name="demo_join_as_alex">Als Alex beitreten</string>
+    <string name="demo_persona_lea">Lea</string>
+    <string name="demo_persona_alex">Alex</string>
+    <string name="demo_entering">Demo wird geöffnet …</string>
+    <string name="demo_entered">Du bist in der Demo.</string>
+    <string name="demo_entry_failed">Die Demo ist gerade nicht erreichbar. Versuche es später noch einmal.</string>
+    <string name="demo_left">Du hast die Demo verlassen.</string>
+    <string name="demo_banner">Demo · du siehst SideBySide als %1$s</string>
+    <string name="demo_leave">Demo verlassen</string>
+
     <string name="ref_flow_subtitle">M2 · technischer Android-Referenzflow</string>
     <string name="ref_flow_intro">Eine Erinnerung in eurer gemeinsamen Story.</string>
     <string name="ref_not_configured">Der M2-Referenzflow ist operatorseitig noch nicht konfiguriert.</string>

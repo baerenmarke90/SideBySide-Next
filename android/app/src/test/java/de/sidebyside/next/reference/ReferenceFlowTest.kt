@@ -1,5 +1,7 @@
 package de.sidebyside.next.reference
 
+import de.sidebyside.next.demo.DemoPersona
+import sidebyside.api.models.AccountMembershipView
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.coroutines.test.runTest
@@ -34,6 +36,15 @@ class ReferenceFlowTest {
         val story = StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
 
         val api = object : ReferenceContract {
+            override suspend fun consumeMagicLink(token: String): SessionView =
+                error("Magic-link entry is not exercised by this test.")
+
+            override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+                error("Memberships are not exercised by this test.")
+
+            override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
+                error("Demo entry is not exercised by this test.")
+
             override suspend fun signIn(email: String, password: String): SessionView = error("not used")
 
             override suspend fun createMemory(spaceId: UUID, accessToken: String, memory: MemoryCreate): MemoryDetail {
@@ -112,6 +123,15 @@ class ReferenceFlowTest {
         val story = StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
 
         val api = object : ReferenceContract {
+            override suspend fun consumeMagicLink(token: String): SessionView =
+                error("Magic-link entry is not exercised by this test.")
+
+            override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+                error("Memberships are not exercised by this test.")
+
+            override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
+                error("Demo entry is not exercised by this test.")
+
             var boundSet: MemoryAttachmentSet? = null
             var boundIfMatch: Int? = null
             var readRequest: AttachmentReadRequest? = null

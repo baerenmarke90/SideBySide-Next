@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import de.sidebyside.next.demo.DemoPersona
 import de.sidebyside.next.entry.EntryScreen
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -46,6 +47,7 @@ fun ReferenceFlowScreen(
     modifier: Modifier = Modifier,
     onRetryImage: (Long) -> Unit = { _ -> },
     onRemoveImage: (Long) -> Unit = { _ -> },
+    onEnterDemo: ((DemoPersona) -> Unit)? = null,
 ) {
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
@@ -59,6 +61,7 @@ fun ReferenceFlowScreen(
             busy = state.busy,
             signInEnabled = state.configured,
             notice = if (state.configured) null else stringResource(R.string.ref_not_configured),
+            onEnterDemo = onEnterDemo,
             modifier = modifier.fillMaxSize(),
         )
         return

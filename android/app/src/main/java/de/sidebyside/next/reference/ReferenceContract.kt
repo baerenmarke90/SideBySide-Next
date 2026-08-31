@@ -1,6 +1,8 @@
 package de.sidebyside.next.reference
 
 import java.util.UUID
+import de.sidebyside.next.demo.DemoPersona
+import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
@@ -26,6 +28,33 @@ data class ReferenceFlowResult(
 
 interface ReferenceContract {
     suspend fun signIn(email: String, password: String): SessionView
+
+    /**
+     * Exchanges a one-time entry proof for a session.
+     *
+     * The demo entry issues such a proof, so the demo never needs a password
+     * that could be embedded in the app.
+     */
+    suspend fun consumeMagicLink(token: String): SessionView
+
+    /**
+     * The Spaces this account may open, as the server sees them.
+     *
+     * The active Space is derived from this rather than configured, because a
+     * demo persona's Space is not known at build time.
+     */
+    suspend fun listMemberships(accessToken: String): List<AccountMembershipView>
+
+    /**
+     * Requests a one-time entry proof for a canonical demo persona.
+     *
+     * `POST /api/v1/demo/entry` is deliberately absent from the OpenAPI
+     * contract: it is a facility of the isolated demo deployment, not a
+     * supported authentication method for a normal installation. It is
+     * therefore declared here by hand instead of through the generated client,
+     * and it is the only call in this client that is.
+     */
+    suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String
 
     suspend fun createMemory(spaceId: UUID, accessToken: String, memory: MemoryCreate): MemoryDetail
 
