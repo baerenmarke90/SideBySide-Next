@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { AppShell } from './AppShell';
@@ -19,12 +20,23 @@ function navigationLinkFor(html: string, href: string): string {
 }
 
 function renderShell(route: string): string {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return renderToStaticMarkup(
-    <MemoryRouter initialEntries={[route]}>
-      <AppShell onLogout={() => undefined}>
-        <h1>Content fixture</h1>
-      </AppShell>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[route]}>
+        <AppShell
+          onLogout={() => undefined}
+          apiBaseUrl="http://api.example.test"
+          accessToken="test-token"
+          account={{ id: 'account-1', displayName: 'Alex Example' }}
+          spaceId="space-1"
+        >
+          <h1>Content fixture</h1>
+        </AppShell>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -37,6 +49,7 @@ describe('AppShell', () => {
     expect(html).toContain('<main');
     expect(html).toContain('<nav');
     expect(html).toContain('href="/today"');
+    expect(html).toContain('>Übersicht<');
     expect(html).toContain('href="/story"');
     expect(html).toContain('href="/plan"');
     expect(html).toContain('href="/more"');
@@ -45,22 +58,63 @@ describe('AppShell', () => {
     expect(html).not.toContain('/rules');
   });
 
+  it('keeps Übersicht first in the primary navigation', () => {
+    const html = renderShell('/story');
+    const sidebar = html.slice(
+      html.indexOf('<nav class="shell-nav"'),
+      html.indexOf('</nav>', html.indexOf('<nav class="shell-nav"')),
+    );
+
+    expect(sidebar.indexOf('href="/today"')).toBeGreaterThanOrEqual(0);
+    expect(sidebar.indexOf('href="/today"')).toBeLessThan(
+      sidebar.indexOf('href="/story"'),
+    );
+  });
+
   it('does not render Discover before its domain exists', () => {
     expect(renderShell('/story')).not.toContain('href="/discover"');
   });
 
-  it('offers Search from the app bar rather than as a destination', () => {
+  it('offers Search and Notifications as icon utilities rather than destinations', () => {
     const html = renderShell('/story');
+    const header = html.slice(
+      html.indexOf('<header'),
+      html.indexOf('</header>') + '</header>'.length,
+    );
 
-    expect(html).toContain('href="/search"');
-    // The link belongs to the header, not to either navigation landmark.
+    expect(header).toContain('href="/search"');
+    expect(header).toContain('aria-label="Suche"');
+    expect(header).toContain('href="/more/notifications"');
+    expect(header).toContain('aria-label="Benachrichtigungen"');
+
     const compact = html.slice(html.indexOf('mobile-bottom-nav'));
     expect(compact).not.toContain('href="/search"');
+    expect(compact).not.toContain('href="/more/notifications"');
     const sidebar = html.slice(
       html.indexOf('shell-sidebar'),
       html.indexOf('main-content'),
     );
     expect(sidebar).not.toContain('href="/search"');
+    expect(sidebar).not.toContain('href="/more/notifications"');
+  });
+
+  it('keeps Profile and Activity in the account tree rather than primary navigation', () => {
+    const html = renderShell('/story');
+    const header = html.slice(
+      html.indexOf('<header'),
+      html.indexOf('</header>') + '</header>'.length,
+    );
+    const sidebar = html.slice(
+      html.indexOf('shell-sidebar'),
+      html.indexOf('main-content'),
+    );
+
+    expect(header).toContain('aria-label="Profil und Konto"');
+    expect(header).toContain('href="/more/profile"');
+    expect(header).toContain('href="/today/activity"');
+    expect(header).toContain('>Abmelden<');
+    expect(sidebar).not.toContain('href="/more/profile"');
+    expect(sidebar).not.toContain('href="/today/activity"');
   });
 
   it('offers creation as a shell action and keeps every destination compact', () => {
