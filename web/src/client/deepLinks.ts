@@ -113,9 +113,19 @@ export function canonicalDeepLink(
   }
 }
 
+function containsControlCharacter(value: string): boolean {
+  for (const character of value) {
+    const codePoint = character.codePointAt(0);
+    if (codePoint !== undefined && (codePoint < 0x20 || codePoint === 0x7f)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function validateAppRelativeReturnTarget(target: string): string | null {
   if (!target.startsWith('/') || target.startsWith('//')) return null;
-  if (target.includes('\\') || /[\u0000-\u001f\u007f]/.test(target)) return null;
+  if (target.includes('\\') || containsControlCharacter(target)) return null;
   if (target.includes('?') || target.includes('#')) return null;
 
   let parsed: URL;
