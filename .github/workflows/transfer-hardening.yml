@@ -96,18 +96,21 @@ jobs:
                   + text[relation_pos + len(marker):]
               )
 
-          combined_guard = "        if reminder_target_table is None or _uuid(\n"
-          if combined_guard in text:
-              text = text.replace(
-                  combined_guard,
-                  "        if reminder_target_table is None:\n"
-                  "            raise TransferArchiveError(\n"
-                  "                \"Transfer reminder relation is invalid.\",\n"
-                  "                ErrorCode.TRANSFER_RELATION_INVALID,\n"
-                  "            )\n"
-                  "        if _uuid(\n",
-                  1,
-              )
+          text = text.replace(
+              "        if target_table is None or _uuid(\n",
+              "        if reminder_target_table is None or _uuid(\n",
+              1,
+          )
+          text = text.replace(
+              "        if reminder_target_table is None or _uuid(\n",
+              "        if reminder_target_table is None:\n"
+              "            raise TransferArchiveError(\n"
+              "                \"Transfer reminder relation is invalid.\",\n"
+              "                ErrorCode.TRANSFER_RELATION_INVALID,\n"
+              "            )\n"
+              "        if _uuid(\n",
+              1,
+          )
 
           if "for transfer_export in exports:" not in text:
               text, count = re.subn(
