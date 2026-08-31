@@ -48,7 +48,18 @@ fun ReferenceFlowScreen(
     onRetryImage: (Long) -> Unit = { _ -> },
     onRemoveImage: (Long) -> Unit = { _ -> },
     onEnterDemo: ((DemoPersona) -> Unit)? = null,
+    /**
+     * Set where this screen is the Story's capture step rather than the whole
+     * M2 reference flow.
+     *
+     * Being non-null both provides the way back and marks the screen as
+     * embedded: the technical M2 heading, the session row and the Story
+     * summary all belong to the standalone flow, and inside the product they
+     * would be a second identity, a second sign-out and a second Story.
+     */
+    onCancelCapture: (() -> Unit)? = null,
 ) {
+    val embedded = onCancelCapture != null
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
     var happenedOn by remember { mutableStateOf("") }
@@ -72,29 +83,39 @@ fun ReferenceFlowScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         run {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    Text(
-                        text = stringResource(R.string.ref_flow_subtitle),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                    Text(stringResource(R.string.ref_flow_intro))
+            if (onCancelCapture != null) {
+                item {
+                    TextButton(onClick = onCancelCapture, enabled = !state.busy) {
+                        Text(stringResource(R.string.story_capture_cancel))
+                    }
                 }
             }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(stringResource(R.string.ref_authenticated))
-                    TextButton(onClick = onLogout, enabled = !state.busy) {
-                        Text(stringResource(R.string.ref_logout))
+            if (!embedded) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.semantics { heading() },
+                        )
+                        Text(
+                            text = stringResource(R.string.ref_flow_subtitle),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                        Text(stringResource(R.string.ref_flow_intro))
+                    }
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(stringResource(R.string.ref_authenticated))
+                        TextButton(onClick = onLogout, enabled = !state.busy) {
+                            Text(stringResource(R.string.ref_logout))
+                        }
                     }
                 }
             }
@@ -250,29 +271,31 @@ fun ReferenceFlowScreen(
                 }
             }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource(R.string.ref_story_heading),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.semantics { heading() },
-                    )
-                    TextButton(onClick = onRefreshStory, enabled = !state.busy) {
-                        Text(stringResource(R.string.ref_refresh))
+            if (!embedded) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.ref_story_heading),
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.semantics { heading() },
+                        )
+                        TextButton(onClick = onRefreshStory, enabled = !state.busy) {
+                            Text(stringResource(R.string.ref_refresh))
+                        }
                     }
                 }
-            }
 
-            if (state.storyItems.isEmpty()) {
-                item { Text(stringResource(R.string.ref_story_empty)) }
-            } else {
-                itemsIndexed(state.storyItems) { _, storyItem ->
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text(storyItemLabel(storyItem).resolve(), style = MaterialTheme.typography.titleSmall)
-                        Text(storyItemDate(storyItem))
+                if (state.storyItems.isEmpty()) {
+                    item { Text(stringResource(R.string.ref_story_empty)) }
+                } else {
+                    itemsIndexed(state.storyItems) { _, storyItem ->
+                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Text(storyItemLabel(storyItem).resolve(), style = MaterialTheme.typography.titleSmall)
+                            Text(storyItemDate(storyItem))
+                        }
                     }
                 }
             }

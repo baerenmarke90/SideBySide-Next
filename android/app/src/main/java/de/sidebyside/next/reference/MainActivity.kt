@@ -2,6 +2,7 @@ package de.sidebyside.next.reference
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -17,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
@@ -29,7 +31,19 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import de.sidebyside.next.demo.DemoBanner
+import de.sidebyside.next.story.StoryScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,22 +95,27 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
         referenceViewModel.logout()
     }
 
+    // Shared by the reference flow and the Story's capture step, so a picked
+    // image is bound to the same session epoch either way.
+    val pickImage = {
+        referenceViewModel.beginImageSelection()?.let { selectionEpoch ->
+            imageSelectionEpoch = selectionEpoch
+            imagePicker.launch(
+                PickVisualMediaRequest.Builder()
+                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    .setOrderedSelection(true)
+                    .build(),
+            )
+        }
+        Unit
+    }
+
     val storyFlow = @Composable {
         ReferenceFlowScreen(
             state = state,
             onLogin = referenceViewModel::signIn,
             onLogout = signOut,
-            onPickImage = {
-                referenceViewModel.beginImageSelection()?.let { selectionEpoch ->
-                    imageSelectionEpoch = selectionEpoch
-                    imagePicker.launch(
-                        PickVisualMediaRequest.Builder()
-                            .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            .setOrderedSelection(true)
-                            .build(),
-                    )
-                }
-            },
+            onPickImage = pickImage,
             onCreateMemory = referenceViewModel::createMemory,
             onRefreshStory = referenceViewModel::refreshStory,
             onRetryImage = referenceViewModel::retryImage,
@@ -114,20 +133,38 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
 
     val demoPersona = state.demoPersona
     if (state.demoMode && demoPersona != null) {
-        Column {
+        // The inset is consumed once, here, for the banner and the shell
+        // together. Applied to the banner alone it would be padding for the
+        // banner and then again for the shell beside it.
+        Column(
+            modifier = Modifier.windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Top),
+            ),
+        ) {
             DemoBanner(
                 persona = demoPersona,
                 onLeave = referenceViewModel::leaveDemo,
-                modifier = Modifier.windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(WindowInsetsSides.Top),
-                ),
             )
-            DemoShell(state, signOut, referenceViewModel::selectSpace, storyFlow)
+            DemoShell(state, signOut, referenceViewModel::selectSpace) {
+                StoryDestination(
+                    state = state,
+                    viewModel = referenceViewModel,
+                    onPickImage = pickImage,
+                    onSignOut = signOut,
+                )
+            }
         }
         return
     }
 
-    DemoShell(state, signOut, referenceViewModel::selectSpace, storyFlow)
+    DemoShell(state, signOut, referenceViewModel::selectSpace) {
+                StoryDestination(
+                    state = state,
+                    viewModel = referenceViewModel,
+                    onPickImage = pickImage,
+                    onSignOut = signOut,
+                )
+            }
 }
 
 /**
@@ -141,7 +178,7 @@ private fun DemoShell(
     state: ReferenceUiState,
     onSignOut: () -> Unit,
     onSelectSpace: (java.util.UUID) -> Unit,
-    storyFlow: @Composable () -> Unit,
+    story: @Composable () -> Unit,
 ) {
     AppNavigation(
         destinations = listOf(AppDestination.Story, AppDestination.More),
@@ -155,7 +192,72 @@ private fun DemoShell(
                 onSelectSpace = onSelectSpace,
             )
 
-            else -> storyFlow()
+            else -> story()
+        }
+    }
+}
+
+/**
+ * The Story destination.
+ *
+ * Reading is the default and capturing is a deliberate step away from it,
+ * because a couple opens their history far more often than they add to it.
+ * The capture form is still the M2 reference form; giving it a product shape
+ * belongs to the authoring slice.
+ */
+@Composable
+private fun StoryDestination(
+    state: ReferenceUiState,
+    viewModel: ReferenceViewModel,
+    onPickImage: () -> Unit,
+    onSignOut: () -> Unit,
+) {
+    var capturing by rememberSaveable { mutableStateOf(false) }
+
+    if (capturing) {
+        // The system back gesture is how someone leaves a step like this on
+        // Android; the visible action exists for anyone who does not use it.
+        BackHandler { capturing = false }
+        ReferenceFlowScreen(
+            state = state,
+            onLogin = { _, _ -> },
+            onLogout = onSignOut,
+            onPickImage = onPickImage,
+            onCreateMemory = { title, body, date ->
+                viewModel.createMemory(title, body, date)
+                capturing = false
+            },
+            onRefreshStory = viewModel::refreshStory,
+            onRetryImage = viewModel::retryImage,
+            onRemoveImage = viewModel::removeImage,
+            onCancelCapture = { capturing = false },
+        )
+        return
+    }
+
+    StoryScreen(
+        items = state.storyItems,
+        imageStore = viewModel.storyImages,
+        generation = viewModel.storyGeneration,
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+        ) {
+            Text(
+                text = stringResource(R.string.story_title),
+                style = MaterialTheme.typography.headlineMedium,
+                color = SideBySideTheme.colors.textPrimary,
+                modifier = Modifier.semantics { heading() },
+            )
+            // Below the title rather than beside it: the action's label is a
+            // whole phrase, and squeezing it next to a headline wrapped both.
+            FilledTonalButton(
+                onClick = { capturing = true },
+                enabled = !state.busy,
+                modifier = Modifier.heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.ref_memory_heading))
+            }
         }
     }
 }
