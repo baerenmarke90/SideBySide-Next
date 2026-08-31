@@ -23,6 +23,7 @@ pre-commit open M4 contracts, and it does not declare M5 or G4 complete.
 - `docs/BUSINESS-MODEL.md`
 - `docs/FREEMIUM-FEATURE-MATRIX.md`
 - `docs/m5/S6-CACHE-PORTABILITY-DECISIONS.md`
+- `docs/m5/WEB-DESKTOP-UX-AUDIT.md`
 - the relevant M1-M4 decisions and the authoritative generated Web client
 
 The two independently created clickable product references supplied for this

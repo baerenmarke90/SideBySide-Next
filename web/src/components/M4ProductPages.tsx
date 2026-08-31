@@ -97,20 +97,20 @@ function DashboardSection({
   title,
   items,
   empty,
-  wide = false,
 }: {
   title: string;
   items: DashboardItem[];
   empty: string;
-  wide?: boolean;
 }) {
   return (
-    <section className={`m4-section${wide ? ' m4-section-wide' : ''}`}>
-      <div className="m4-section-head">
-        <h2>{title}</h2>
+    <section className="layout-panel">
+      <div className="layout-section-head">
+        <div>
+          <h2>{title}</h2>
+        </div>
       </div>
       {items.length > 0 ? (
-        <ul className="m4-list">
+        <ul className="m4-list m4-list-rows">
           {items.map((item) => (
             <DashboardItemCard key={`${item.type}:${item.id}`} item={item} />
           ))}
@@ -172,53 +172,60 @@ export function DashboardProductPage({
             className="m4-summary-card"
             aria-labelledby="m4-summary-heading"
           >
-            <h2 id="m4-summary-heading">
-              {dashboardQuery.data.space.partner
-                ? t('m5s5.dashboard.partner', {
-                    name: dashboardQuery.data.space.partner.displayName,
-                  })
-                : t('m5s5.dashboard.durationTitle')}
-            </h2>
+            <div className="m4-summary-copy">
+              <h2 id="m4-summary-heading">
+                {dashboardQuery.data.space.partner
+                  ? t('m5s5.dashboard.partner', {
+                      name: dashboardQuery.data.space.partner.displayName,
+                    })
+                  : t('m5s5.dashboard.durationTitle')}
+              </h2>
+              <p className="m4-muted">
+                {dashboardQuery.data.relationshipDuration
+                  ? t('m5s5.dashboard.durationSince', {
+                      date: formatDate(
+                        dashboardQuery.data.relationshipDuration.startedOn,
+                      ),
+                    })
+                  : t('m5s5.dashboard.durationEmpty')}
+              </p>
+            </div>
             {dashboardQuery.data.relationshipDuration ? (
-              <>
-                <p className="m4-summary-value">
-                  {t('m5s5.dashboard.durationDays', {
-                    count:
-                      dashboardQuery.data.relationshipDuration.daysTogether,
-                  })}
-                </p>
-                <p className="m4-muted">
-                  {t('m5s5.dashboard.durationSince', {
-                    date: formatDate(
-                      dashboardQuery.data.relationshipDuration.startedOn,
-                    ),
-                  })}
-                </p>
-              </>
+              <p className="m4-summary-value">
+                {t('m5s5.dashboard.durationDays', {
+                  count: dashboardQuery.data.relationshipDuration.daysTogether,
+                })}
+              </p>
             ) : null}
           </section>
 
-          <div className="m4-dashboard-grid">
-            <DashboardSection
-              title={t('m5s5.dashboard.retrospectiveTitle')}
-              items={
-                dashboardQuery.data.retrospective
-                  ? [dashboardQuery.data.retrospective]
-                  : []
-              }
-              empty={t('m5s5.dashboard.retrospectiveEmpty')}
-            />
-            <DashboardSection
-              title={t('m5s5.dashboard.upcomingTitle')}
-              items={dashboardQuery.data.upcoming}
-              empty={t('m5s5.dashboard.upcomingEmpty')}
-            />
-            <DashboardSection
-              title={t('m5s5.dashboard.recentTitle')}
-              items={dashboardQuery.data.recentShared}
-              empty={t('m5s5.dashboard.recentEmpty')}
-              wide
-            />
+          <div className="layout-split">
+            <div className="layout-main">
+              <DashboardSection
+                title={t('m5s5.dashboard.recentTitle')}
+                items={dashboardQuery.data.recentShared}
+                empty={t('m5s5.dashboard.recentEmpty')}
+              />
+            </div>
+            <aside
+              className="layout-rail"
+              aria-label={t('m5s5.dashboard.railAria')}
+            >
+              <DashboardSection
+                title={t('m5s5.dashboard.upcomingTitle')}
+                items={dashboardQuery.data.upcoming}
+                empty={t('m5s5.dashboard.upcomingEmpty')}
+              />
+              <DashboardSection
+                title={t('m5s5.dashboard.retrospectiveTitle')}
+                items={
+                  dashboardQuery.data.retrospective
+                    ? [dashboardQuery.data.retrospective]
+                    : []
+                }
+                empty={t('m5s5.dashboard.retrospectiveEmpty')}
+              />
+            </aside>
           </div>
         </>
       ) : null}
@@ -299,9 +306,9 @@ export function SearchProductPage({
         description={t('m5s5.search.intro')}
       />
 
-      <form className="m4-toolbar" onSubmit={submit}>
+      <form className="layout-panel m4-toolbar" onSubmit={submit}>
         <div className="m4-toolbar-row">
-          <div className="field-group">
+          <div className="field-group m4-search-field">
             <label htmlFor="m4-search-query">{t('m5s5.search.label')}</label>
             <input
               id="m4-search-query"
@@ -329,16 +336,16 @@ export function SearchProductPage({
               ))}
             </select>
           </div>
-        </div>
-        <div className="m4-item-actions">
-          <button
-            type="submit"
-            disabled={!draftQuery.trim() || searchQuery.isFetching}
-          >
-            {searchQuery.isFetching && !searchQuery.isFetchingNextPage
-              ? t('m5s5.search.searching')
-              : t('m5s5.search.submit')}
-          </button>
+          <div className="m4-toolbar-submit">
+            <button
+              type="submit"
+              disabled={!draftQuery.trim() || searchQuery.isFetching}
+            >
+              {searchQuery.isFetching && !searchQuery.isFetchingNextPage
+                ? t('m5s5.search.searching')
+                : t('m5s5.search.submit')}
+            </button>
+          </div>
         </div>
       </form>
 
@@ -366,8 +373,11 @@ export function SearchProductPage({
         />
       ) : null}
       {items.length > 0 ? (
-        <section className="m4-section" aria-live="polite">
-          <ul className="m4-list">
+        <section className="m4-results" aria-live="polite">
+          <h2 className="m4-results-heading">
+            {t('m5s5.search.resultsHeading')}
+          </h2>
+          <ul className="m4-list layout-columns layout-columns-dense">
             {items.map((item) => (
               <SearchResultCard key={`${item.type}:${item.id}`} item={item} />
             ))}
@@ -475,8 +485,8 @@ export function ActivityProductPage({
         />
       ) : null}
       {items.length > 0 ? (
-        <section className="m4-section" aria-live="polite">
-          <ul className="m4-list">
+        <section className="layout-panel" aria-live="polite">
+          <ul className="m4-list m4-list-rows">
             {items.map((item) => (
               <ActivityCard key={item.id} item={item} />
             ))}
@@ -586,7 +596,10 @@ export function NotificationsProductPage({
         }
       />
 
-      <section className="m4-section" aria-labelledby="m4-notification-summary">
+      <section
+        className="layout-panel layout-panel-quiet"
+        aria-labelledby="m4-notification-summary"
+      >
         <div className="m4-notification-summary">
           <h2
             id="m4-notification-summary"
@@ -635,8 +648,8 @@ export function NotificationsProductPage({
       ) : null}
 
       {items.length > 0 ? (
-        <section className="m4-section" aria-live="polite">
-          <ul className="m4-list">
+        <section className="layout-panel" aria-live="polite">
+          <ul className="m4-list m4-list-rows">
             {items.map((item) => {
               const path = engagementTargetPath(item.targetType, item.targetId);
               const markingThis =

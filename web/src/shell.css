@@ -26,13 +26,43 @@
 }
 
 .product-shell-body {
-  min-height: calc(100vh - 72px);
+  min-height: calc(100vh - var(--topbar-height));
+}
+
+/*
+ * Creating content is the primary desktop action and belongs in the sidebar
+ * rather than in the destination list. On compact viewports the same route
+ * stays in the bottom navigation, so it is never lost.
+ */
+.shell-primary-action {
+  display: none;
+  margin-bottom: var(--space-6);
+}
+
+.shell-primary-action .button-link {
+  width: 100%;
+  gap: var(--space-2);
+  box-shadow: 0 8px 20px var(--color-shadow-brand);
+}
+
+.shell-nav-group-label {
+  margin: var(--space-5) 0 var(--space-1);
+  padding-inline: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.shell-nav-group:first-child .shell-nav-group-label {
+  margin-top: 0;
 }
 
 .product-main {
-  width: min(var(--reading-max), calc(100% - 2rem));
+  width: calc(100% - 2rem);
   margin: 0 auto;
-  padding: clamp(var(--space-8), 5vw, var(--space-16)) 0
+  padding: clamp(var(--space-6), 4vw, var(--space-10)) 0
     calc(7rem + env(safe-area-inset-bottom));
 }
 
@@ -42,7 +72,12 @@
 
 .shell-nav {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
+}
+
+.shell-nav-group {
+  display: grid;
+  gap: var(--space-1);
 }
 
 .shell-nav-link {
@@ -72,8 +107,24 @@
 }
 
 .shell-nav-link-active {
+  position: relative;
   background: var(--color-brand-surface);
   color: var(--color-brand-text);
+}
+
+.shell-nav-link-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-strong);
+}
+
+.mobile-bottom-nav .shell-nav-link-active::before {
+  display: none;
 }
 
 .shell-nav-icon {
@@ -101,7 +152,15 @@
   bottom: 0;
   left: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /*
+   * All primary destinations stay reachable on a compact viewport. The row
+   * scrolls horizontally rather than shrinking targets below 44 px.
+   */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(4.75rem, 1fr);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
   gap: var(--space-2);
   border-top: 1px solid var(--color-header-border);
   padding: var(--space-2) var(--space-3)
@@ -133,17 +192,6 @@
   font-size: 0.86rem;
   font-weight: 700;
   text-align: center;
-}
-
-.shared-page-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-6);
-}
-
-.shared-page-heading > div:first-child {
-  min-width: 0;
 }
 
 .page-heading-action {
@@ -235,12 +283,6 @@
 }
 
 @media (max-width: 599px) {
-  .shared-page-heading {
-    align-items: stretch;
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
   .page-heading-action,
   .page-heading-action .button-link {
     width: 100%;
@@ -272,14 +314,18 @@
     background: var(--color-surface);
   }
 
-  .shell-nav {
+  .shell-sidebar-inner {
     position: sticky;
-    top: calc(72px + var(--space-6));
+    top: calc(var(--topbar-height) + var(--space-6));
   }
 
   .product-main {
     width: min(var(--content-max), calc(100% - 4rem));
     padding-bottom: var(--space-16);
+  }
+
+  .shell-primary-action {
+    display: grid;
   }
 
   .mobile-bottom-nav {

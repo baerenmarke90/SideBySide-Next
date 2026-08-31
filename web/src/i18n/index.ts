@@ -37,6 +37,11 @@ if (!i18n.isInitialized) {
             search: 'Suche',
             activity: 'Aktivität',
             notifications: 'Benachrichtigungen',
+            groups: {
+              together: 'Gemeinsam',
+              discover: 'Entdecken',
+              you: 'Ihr zwei',
+            },
           },
           importantDates,
           m5s3,

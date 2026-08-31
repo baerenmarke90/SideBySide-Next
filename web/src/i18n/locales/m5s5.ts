@@ -7,6 +7,9 @@ const m5s5 = {
     durationTitle: 'Eure Zeit',
     durationDays: '{{count}} Tage zusammen',
     durationSince: 'Seit {{date}}',
+    durationEmpty:
+      'Sobald ihr euer gemeinsames Startdatum hinterlegt habt, seht ihr eure Zeit hier.',
+    railAria: 'Weitere Übersicht',
     retrospectiveTitle: 'Weißt du noch?',
     retrospectiveEmpty:
       'Hier erscheint eine gemeinsame Erinnerung, sobald es etwas Passendes gibt.',
@@ -32,6 +35,7 @@ const m5s5 = {
     emptyTitle: 'Nichts gefunden',
     emptyBody: 'Versuche einen anderen Begriff oder einen anderen Inhaltstyp.',
     resultFallback: 'Eintrag ohne Titel',
+    resultsHeading: 'Ergebnisse',
     loadMore: 'Mehr Ergebnisse',
     loadingMore: 'Weitere Ergebnisse werden geladen …',
   },

@@ -9,6 +9,7 @@ import './styles.css';
 import './story-media.css';
 import './theme.css';
 import './shell.css';
+import './layout.css';
 import './attachment-drafts.css';
 import './components/CommentsPanel.css';
 import './components/MediaGallery.css';

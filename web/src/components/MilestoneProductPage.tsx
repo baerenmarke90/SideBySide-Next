@@ -193,7 +193,7 @@ export function MilestoneProductPage({
     }
 
     return (
-      <div className="page create-page product-editor-page">
+      <div className="page page-reading create-page product-editor-page">
         <PageHeader
           before={
             <Link className="back-link" to={appRoutePath('story')}>
@@ -263,7 +263,7 @@ export function MilestoneProductPage({
   if (mode === 'edit') {
     if (!milestone.capabilities.canEdit || offline) {
       return (
-        <div className="page">
+        <div className="page page-reading">
           <PageHeader
             before={
               <Link
@@ -310,7 +310,7 @@ export function MilestoneProductPage({
     }
 
     return (
-      <div className="page create-page product-editor-page">
+      <div className="page page-reading create-page product-editor-page">
         <PageHeader
           before={
             <Link className="back-link" to={milestoneDetailPath(milestone.id)}>
@@ -380,82 +380,93 @@ export function MilestoneProductPage({
         }
       />
 
-      <article className="story-surface product-detail-card">
-        <dl className="memory-meta-grid">
-          <div>
-            <dt>{t('milestoneProduct.authorLabel')}</dt>
-            <dd>{milestone.author.displayName}</dd>
-          </div>
-          <div>
-            <dt>{t('milestoneProduct.happenedOnLabel')}</dt>
-            <dd>{formatDateOnly(milestone.happenedOn)}</dd>
-          </div>
-          <div>
-            <dt>{t('milestoneProduct.createdAtLabel')}</dt>
-            <dd>{formatCreatedAt(milestone.createdAt)}</dd>
-          </div>
-        </dl>
-
-        <p className="memory-detail-body">
-          {milestone.body || t('milestoneProduct.noBody')}
-        </p>
-
-        <CommentsPanel
-          commentsApi={apis.comments}
-          spaceId={spaceId}
-          parentKind="milestone"
-          parentId={milestone.id}
-          currentAccountId={currentAccountId}
-          canComment={milestone.capabilities.canComment}
-          offline={offline}
-        />
-
-        {milestone.capabilities.canDelete && !offline ? (
-          <section
-            className="memory-danger-zone"
-            aria-label={t('milestoneProduct.delete')}
-          >
-            {!confirmDelete ? (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setConfirmDelete(true)}
-              >
-                {t('milestoneProduct.delete')}
-              </button>
-            ) : (
-              <div className="memory-delete-confirmation" role="alert">
-                <div>
-                  <h2>{t('milestoneProduct.deleteConfirmTitle')}</h2>
-                  <p>{t('milestoneProduct.deleteConfirmBody')}</p>
-                </div>
-                <div className="memory-actions">
-                  <button
-                    type="button"
-                    className="tertiary"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {t('milestoneProduct.deleteCancel')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteMutation.mutate(milestone)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {deleteMutation.isPending
-                      ? t('milestoneProduct.deleting')
-                      : t('milestoneProduct.deleteConfirm')}
-                  </button>
-                </div>
+      <div className="layout-split layout-split-lead-rail">
+        <aside
+          className="layout-rail layout-rail-sticky"
+          aria-label={t('milestoneProduct.detailMetaAria')}
+        >
+          <div className="layout-panel">
+            <dl className="detail-meta-list">
+              <div>
+                <dt>{t('milestoneProduct.authorLabel')}</dt>
+                <dd>{milestone.author.displayName}</dd>
               </div>
-            )}
-            {deleteMutation.error ? (
-              <ProblemState error={deleteMutation.error} />
+              <div>
+                <dt>{t('milestoneProduct.happenedOnLabel')}</dt>
+                <dd>{formatDateOnly(milestone.happenedOn)}</dd>
+              </div>
+              <div>
+                <dt>{t('milestoneProduct.createdAtLabel')}</dt>
+                <dd>{formatCreatedAt(milestone.createdAt)}</dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+
+        <div className="layout-main">
+          <article className="story-surface product-detail-card">
+            <p className="memory-detail-body">
+              {milestone.body || t('milestoneProduct.noBody')}
+            </p>
+
+            <CommentsPanel
+              commentsApi={apis.comments}
+              spaceId={spaceId}
+              parentKind="milestone"
+              parentId={milestone.id}
+              currentAccountId={currentAccountId}
+              canComment={milestone.capabilities.canComment}
+              offline={offline}
+            />
+
+            {milestone.capabilities.canDelete && !offline ? (
+              <section
+                className="memory-danger-zone"
+                aria-label={t('milestoneProduct.delete')}
+              >
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    {t('milestoneProduct.delete')}
+                  </button>
+                ) : (
+                  <div className="memory-delete-confirmation" role="alert">
+                    <div>
+                      <h2>{t('milestoneProduct.deleteConfirmTitle')}</h2>
+                      <p>{t('milestoneProduct.deleteConfirmBody')}</p>
+                    </div>
+                    <div className="memory-actions">
+                      <button
+                        type="button"
+                        className="tertiary"
+                        onClick={() => setConfirmDelete(false)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {t('milestoneProduct.deleteCancel')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteMutation.mutate(milestone)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending
+                          ? t('milestoneProduct.deleting')
+                          : t('milestoneProduct.deleteConfirm')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {deleteMutation.error ? (
+                  <ProblemState error={deleteMutation.error} />
+                ) : null}
+              </section>
             ) : null}
-          </section>
-        ) : null}
-      </article>
+          </article>
+        </div>
+      </div>
     </div>
   );
 }

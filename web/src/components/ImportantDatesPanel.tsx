@@ -58,123 +58,122 @@ function ImportantDateForm({
   }
 
   return (
-    <section className="form-card" aria-labelledby="important-date-form-title">
-      <h3 id="important-date-form-title">
-        {date ? t('importantDates.editTitle') : t('importantDates.createTitle')}
-      </h3>
-      <form key={date?.id ?? 'new'} className="form-grid" onSubmit={submit}>
-        <div className="field-group">
-          <label htmlFor="important-date-label">
-            {t('importantDates.labelLabel')}
-          </label>
-          <input
-            id="important-date-label"
-            name="label"
-            required
-            maxLength={160}
-            defaultValue={date?.label ?? ''}
-          />
-        </div>
+    <form
+      key={date?.id ?? 'new'}
+      className="form-grid planning-create-form"
+      onSubmit={submit}
+    >
+      <div className="field-group">
+        <label htmlFor="important-date-label">
+          {t('importantDates.labelLabel')}
+        </label>
+        <input
+          id="important-date-label"
+          name="label"
+          required
+          maxLength={160}
+          defaultValue={date?.label ?? ''}
+        />
+      </div>
 
-        <div className="field-group">
-          <label htmlFor="important-date-date">
-            {t('importantDates.dateLabel')}
-          </label>
-          <input
-            id="important-date-date"
-            name="date"
-            type="date"
-            required
-            defaultValue={dateInputValue(date?.date)}
-          />
-        </div>
+      <div className="field-group">
+        <label htmlFor="important-date-date">
+          {t('importantDates.dateLabel')}
+        </label>
+        <input
+          id="important-date-date"
+          name="date"
+          type="date"
+          required
+          defaultValue={dateInputValue(date?.date)}
+        />
+      </div>
 
-        <div className="field-group">
-          <label htmlFor="important-date-type">
-            {t('importantDates.typeLabel')}
-          </label>
-          <select
-            id="important-date-type"
-            name="type"
-            defaultValue={date?.type ?? ImportantDateType.CUSTOM}
-          >
-            {DATE_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {t(`importantDates.type.${type}`)}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="field-group">
+        <label htmlFor="important-date-type">
+          {t('importantDates.typeLabel')}
+        </label>
+        <select
+          id="important-date-type"
+          name="type"
+          defaultValue={date?.type ?? ImportantDateType.CUSTOM}
+        >
+          {DATE_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {t(`importantDates.type.${type}`)}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div className="field-group">
-          <label htmlFor="important-date-repeat">
-            {t('importantDates.repeatLabel')}
-          </label>
-          <select
-            id="important-date-repeat"
-            name="repeats"
-            defaultValue={date?.repeats ?? DateRepeat.ANNUALLY}
-          >
-            {DATE_REPEATS.map((repeat) => (
-              <option key={repeat} value={repeat}>
-                {t(`importantDates.repeats.${repeat}`)}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="field-group">
+        <label htmlFor="important-date-repeat">
+          {t('importantDates.repeatLabel')}
+        </label>
+        <select
+          id="important-date-repeat"
+          name="repeats"
+          defaultValue={date?.repeats ?? DateRepeat.ANNUALLY}
+        >
+          {DATE_REPEATS.map((repeat) => (
+            <option key={repeat} value={repeat}>
+              {t(`importantDates.repeats.${repeat}`)}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div className="field-group">
-          <label htmlFor="important-date-person">
-            {t('importantDates.personLabel')}
-          </label>
-          <select
-            id="important-date-person"
-            name="relatedPersonId"
-            defaultValue={date?.relatedPersonId ?? ''}
-          >
-            <option value="">{t('importantDates.personNone')}</option>
-            {people.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="field-group">
+        <label htmlFor="important-date-person">
+          {t('importantDates.personLabel')}
+        </label>
+        <select
+          id="important-date-person"
+          name="relatedPersonId"
+          defaultValue={date?.relatedPersonId ?? ''}
+        >
+          <option value="">{t('importantDates.personNone')}</option>
+          {people.map((person) => (
+            <option key={person.id} value={person.id}>
+              {person.displayName}
+            </option>
+          ))}
+        </select>
+      </div>
 
-        <div className="field-group">
-          <label htmlFor="important-date-visibility">
-            {t('importantDates.visibilityLabel')}
-          </label>
-          <select
-            id="important-date-visibility"
-            name="visibility"
-            defaultValue={date?.visibility ?? ContentVisibility.SHARED}
-          >
-            {VISIBILITIES.map((visibility) => (
-              <option key={visibility} value={visibility}>
-                {t(`importantDates.visibility.${visibility}`)}
-              </option>
-            ))}
-          </select>
-          <p className="field-help">{t('importantDates.visibilityHelp')}</p>
-        </div>
+      <div className="field-group">
+        <label htmlFor="important-date-visibility">
+          {t('importantDates.visibilityLabel')}
+        </label>
+        <select
+          id="important-date-visibility"
+          name="visibility"
+          defaultValue={date?.visibility ?? ContentVisibility.SHARED}
+        >
+          {VISIBILITIES.map((visibility) => (
+            <option key={visibility} value={visibility}>
+              {t(`importantDates.visibility.${visibility}`)}
+            </option>
+          ))}
+        </select>
+        <p className="field-help">{t('importantDates.visibilityHelp')}</p>
+      </div>
 
-        <div className="form-actions">
-          {date ? (
-            <button type="button" className="secondary" onClick={onCancel}>
-              {t('common.cancel')}
-            </button>
-          ) : null}
-          <button type="submit" disabled={pending}>
-            {pending
-              ? t('importantDates.saving')
-              : date
-                ? t('importantDates.saveChanges')
-                : t('importantDates.create')}
+      <div className="form-actions">
+        {date ? (
+          <button type="button" className="secondary" onClick={onCancel}>
+            {t('common.cancel')}
           </button>
-        </div>
-      </form>
-    </section>
+        ) : null}
+        <button type="submit" disabled={pending}>
+          {pending
+            ? t('importantDates.saving')
+            : date
+              ? t('importantDates.saveChanges')
+              : t('importantDates.create')}
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -306,34 +305,42 @@ export function ImportantDatesPanel({
         </div>
       ) : null}
 
-      <ImportantDateForm
-        date={editing}
-        people={people}
-        pending={saveMutation.isPending}
-        onCancel={() => {
-          setEditing(null);
-          saveMutation.reset();
-        }}
-        onSubmit={(draft) => {
-          setSavedMessage(null);
-          saveMutation.mutate(draft);
-        }}
-      />
-      {saveMutation.error ? (
-        <ProblemState
-          error={saveMutation.error}
-          onRetry={() => {
+      <details
+        className="planning-create important-dates-create"
+        key={editing?.id ?? 'new'}
+        open={Boolean(editing)}
+      >
+        <summary>
+          {editing
+            ? t('importantDates.editTitle')
+            : t('importantDates.createTitle')}
+        </summary>
+        <ImportantDateForm
+          date={editing}
+          people={people}
+          pending={saveMutation.isPending}
+          onCancel={() => {
+            setEditing(null);
             saveMutation.reset();
-            void datesQuery.refetch();
+          }}
+          onSubmit={(draft) => {
+            setSavedMessage(null);
+            saveMutation.mutate(draft);
           }}
         />
-      ) : null}
+        {saveMutation.error ? (
+          <ProblemState
+            error={saveMutation.error}
+            onRetry={() => {
+              saveMutation.reset();
+              void datesQuery.refetch();
+            }}
+          />
+        ) : null}
+      </details>
 
-      <section
-        className="story-surface"
-        aria-labelledby="important-dates-list-title"
-      >
-        <div className="section-head">
+      <section aria-labelledby="important-dates-list-title">
+        <div className="layout-section-head">
           <h3 id="important-dates-list-title">
             {t('importantDates.listTitle')}
           </h3>

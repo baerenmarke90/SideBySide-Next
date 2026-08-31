@@ -143,7 +143,7 @@ function RelationshipProfileSection({
 
   return (
     <section
-      className="profile-section"
+      className="layout-panel profile-section"
       aria-labelledby="relationship-profile-title"
     >
       <h2 id="relationship-profile-title">{t('profiles.relationshipTitle')}</h2>
@@ -466,7 +466,7 @@ function PreferenceManager({
 
   return (
     <section
-      className="profile-section"
+      className="layout-panel profile-section"
       aria-labelledby={`profile-manager-${visibility}`}
     >
       <div className="section-head">
@@ -609,7 +609,7 @@ function PartnerProfileSection({
 
   return (
     <section
-      className="profile-section"
+      className="layout-panel profile-section"
       aria-labelledby="partner-profile-title"
     >
       <h2 id="partner-profile-title">
@@ -731,83 +731,94 @@ export function ProfilePage({
         description={t('profiles.intro')}
       />
 
-      <section
-        className="profile-section"
-        aria-labelledby="account-profile-title"
-      >
-        <h2 id="account-profile-title">{t('profiles.accountTitle')}</h2>
-        <dl className="profile-account-list">
-          <div>
-            <dt>{t('profiles.accountName')}</dt>
-            <dd>{account.displayName}</dd>
-          </div>
-        </dl>
-      </section>
+      <div className="layout-split layout-split-lead-rail">
+        <aside
+          className="layout-rail layout-rail-sticky"
+          aria-label={t('profiles.settingsRailAria')}
+        >
+          <section
+            className="layout-panel profile-section"
+            aria-labelledby="account-profile-title"
+          >
+            <h2 id="account-profile-title">{t('profiles.accountTitle')}</h2>
+            <dl className="profile-account-list">
+              <div>
+                <dt>{t('profiles.accountName')}</dt>
+                <dd>{account.displayName}</dd>
+              </div>
+            </dl>
+          </section>
 
-      <RelationshipProfileSection spacesApi={spacesApi} spaceId={spaceId} />
+          <RelationshipProfileSection spacesApi={spacesApi} spaceId={spaceId} />
+        </aside>
 
-      {preferencesQuery.isLoading ? (
-        <UiState kind="loading" title={t('profiles.preferencesLoading')} />
-      ) : null}
-      {preferencesQuery.error ? (
-        <ProblemState
-          error={preferencesQuery.error}
-          onRetry={() => void preferencesQuery.refetch()}
-        />
-      ) : null}
-      {preferencesQuery.data ? (
-        <PreferenceManager
-          profilesApi={profilesApi}
-          spaceId={spaceId}
-          accountId={account.id}
-          visibility={ProfileVisibility.SELF_PROFILE}
-          items={selfPreferences}
-          title={t('profiles.selfTitle')}
-          intro={t('profiles.selfIntro')}
-          emptyTitle={t('profiles.emptySelfTitle')}
-          emptyBody={t('profiles.emptySelfBody')}
-        />
-      ) : null}
-
-      {spaceQuery.isLoading ? (
-        <UiState kind="loading" title={t('profiles.loading')} />
-      ) : null}
-      {spaceQuery.error ? (
-        <ProblemState
-          error={spaceQuery.error}
-          onRetry={() => void spaceQuery.refetch()}
-        />
-      ) : null}
-      {spaceQuery.data && !partner ? (
-        <UiState
-          kind="empty"
-          title={t('profiles.noPartnerTitle')}
-          body={t('profiles.noPartnerBody')}
-        />
-      ) : null}
-      {partner ? (
-        <>
-          <PartnerProfileSection
-            profilesApi={profilesApi}
-            spaceId={spaceId}
-            partnerId={partner.id}
-            partnerName={partner.displayName}
-          />
+        <div className="layout-main">
+          {preferencesQuery.isLoading ? (
+            <UiState kind="loading" title={t('profiles.preferencesLoading')} />
+          ) : null}
+          {preferencesQuery.error ? (
+            <ProblemState
+              error={preferencesQuery.error}
+              onRetry={() => void preferencesQuery.refetch()}
+            />
+          ) : null}
           {preferencesQuery.data ? (
             <PreferenceManager
               profilesApi={profilesApi}
               spaceId={spaceId}
-              accountId={partner.id}
-              visibility={ProfileVisibility.PRIVATE_PARTNER_NOTE}
-              items={privatePartnerNotes}
-              title={t('profiles.privateTitle', { name: partner.displayName })}
-              intro={t('profiles.privateIntro')}
-              emptyTitle={t('profiles.emptyPrivateTitle')}
-              emptyBody={t('profiles.emptyPrivateBody')}
+              accountId={account.id}
+              visibility={ProfileVisibility.SELF_PROFILE}
+              items={selfPreferences}
+              title={t('profiles.selfTitle')}
+              intro={t('profiles.selfIntro')}
+              emptyTitle={t('profiles.emptySelfTitle')}
+              emptyBody={t('profiles.emptySelfBody')}
             />
           ) : null}
-        </>
-      ) : null}
+
+          {spaceQuery.isLoading ? (
+            <UiState kind="loading" title={t('profiles.loading')} />
+          ) : null}
+          {spaceQuery.error ? (
+            <ProblemState
+              error={spaceQuery.error}
+              onRetry={() => void spaceQuery.refetch()}
+            />
+          ) : null}
+          {spaceQuery.data && !partner ? (
+            <UiState
+              kind="empty"
+              title={t('profiles.noPartnerTitle')}
+              body={t('profiles.noPartnerBody')}
+            />
+          ) : null}
+          {partner ? (
+            <>
+              <PartnerProfileSection
+                profilesApi={profilesApi}
+                spaceId={spaceId}
+                partnerId={partner.id}
+                partnerName={partner.displayName}
+              />
+              {preferencesQuery.data ? (
+                <PreferenceManager
+                  profilesApi={profilesApi}
+                  spaceId={spaceId}
+                  accountId={partner.id}
+                  visibility={ProfileVisibility.PRIVATE_PARTNER_NOTE}
+                  items={privatePartnerNotes}
+                  title={t('profiles.privateTitle', {
+                    name: partner.displayName,
+                  })}
+                  intro={t('profiles.privateIntro')}
+                  emptyTitle={t('profiles.emptyPrivateTitle')}
+                  emptyBody={t('profiles.emptyPrivateBody')}
+                />
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

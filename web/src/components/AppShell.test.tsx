@@ -30,6 +30,32 @@ describe('AppShell', () => {
     expect(html).not.toContain('/rules');
   });
 
+  it('groups desktop destinations and offers creation as a shell action', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter initialEntries={['/story']}>
+        <AppShell onLogout={() => undefined}>Content</AppShell>
+      </MemoryRouter>,
+    );
+
+    expect(html).toContain('shell-primary-action');
+    expect(html).toContain('shell-nav-group-label');
+    // Every destination stays reachable in the compact navigation.
+    const compact = html.slice(html.indexOf('mobile-bottom-nav'));
+    for (const path of [
+      '/story',
+      '/planning',
+      '/dashboard',
+      '/search',
+      '/activity',
+      '/notifications',
+      '/people',
+      '/profile',
+      '/memory/new',
+    ]) {
+      expect(compact).toContain(`href="${path}"`);
+    }
+  });
+
   it.each([
     '/memory/new',
     '/planning',

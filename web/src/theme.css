@@ -49,6 +49,10 @@
   --color-brand-strong: #7c4dff;
   --color-brand-text: #bda7ff;
   --color-brand-surface: #3d2e55;
+  --color-surface-panel: #302640;
+  --color-surface-panel-tint: #271e33;
+  --color-page-tint-brand: #7c4dff1f;
+  --color-page-tint-shared: #36ae9714;
   --color-brand-glow: #7c4dff24;
   --color-entry-panel: #1c1525;
   --color-entry-hero-start: #2c1b4d;
@@ -98,6 +102,10 @@
     --color-brand-strong: #7c4dff;
     --color-brand-text: #bda7ff;
     --color-brand-surface: #3d2e55;
+    --color-surface-panel: #302640;
+    --color-surface-panel-tint: #271e33;
+    --color-page-tint-brand: #7c4dff1f;
+    --color-page-tint-shared: #36ae9714;
     --color-brand-glow: #7c4dff24;
     --color-entry-panel: #1c1525;
     --color-entry-hero-start: #2c1b4d;
@@ -133,11 +141,17 @@ body {
   color: var(--color-text);
   background:
     radial-gradient(
-      circle at 10% 0%,
-      var(--color-brand-glow) 0,
-      transparent 28rem
+      circle at 8% -6%,
+      var(--color-page-tint-brand) 0,
+      transparent 34rem
+    ),
+    radial-gradient(
+      circle at 96% 4%,
+      var(--color-page-tint-shared) 0,
+      transparent 30rem
     ),
     var(--color-background);
+  background-attachment: fixed;
 }
 
 button,
@@ -181,54 +195,6 @@ button.secondary,
   background: var(--color-header-surface);
 }
 
-.story-surface,
-.form-card {
-  box-shadow: 0 12px 40px var(--color-shadow-card);
-}
-
-.inline-message-success {
-  border-color: var(--color-shared-border);
-}
-
-.inline-message-error {
-  border-color: var(--color-error-border);
-}
-
-.story-loading span,
-.story-media-skeleton {
-  background: linear-gradient(
-    100deg,
-    var(--color-shimmer-base) 25%,
-    var(--color-shimmer-highlight) 45%,
-    var(--color-shimmer-base) 65%
-  );
-  background-size: 200% 100%;
-}
-
-.story-card:hover {
-  box-shadow: 0 8px 24px var(--color-shadow-soft);
-}
-
-.story-card-heart-moment {
-  background: linear-gradient(
-    135deg,
-    var(--color-surface) 60%,
-    var(--color-private-surface-soft)
-  );
-}
-
-.story-card-milestone {
-  background: linear-gradient(
-    135deg,
-    var(--color-surface) 60%,
-    var(--color-discovery-surface-soft)
-  );
-}
-
-.sharing-icon {
-  background: var(--color-surface-raised);
-}
-
 .theme-control {
   position: fixed;
   z-index: 100;
@@ -266,17 +232,18 @@ button.secondary,
   font-weight: 700;
 }
 
+/* Keeps the shared select affordance and only changes the compact metrics. */
 .theme-control select {
+  width: auto;
   min-height: 36px;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  padding: 0 2rem 0 0.75rem;
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-  font: inherit;
+  padding: 0 var(--space-8) 0 var(--space-3);
+  background-color: var(--color-surface-raised);
+  background-position:
+    right 1.05rem center,
+    right 0.7rem center;
   font-size: 0.8rem;
   font-weight: 700;
-  cursor: pointer;
 }
 
 .theme-control select:focus-visible {

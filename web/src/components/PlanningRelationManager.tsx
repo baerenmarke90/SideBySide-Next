@@ -304,7 +304,7 @@ export function PlanningRelationManager({
       className="planning-subsection"
       aria-labelledby={`${ownerKind}-relations-heading`}
     >
-      <div className="planning-section-head">
+      <div className="layout-section-head">
         <div>
           <h2 id={`${ownerKind}-relations-heading`}>
             {t('m5s3.relations.heading')}
