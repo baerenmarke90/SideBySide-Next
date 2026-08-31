@@ -4,6 +4,7 @@ import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
 import { useTranslation } from '../i18n';
 import { PartnerConnectionPanel } from './PartnerConnectionPanel';
 import { ProfilePage as ProfilePageBase } from './ProfilePageBase';
+import { TransferPanel } from './TransferPanel';
 
 export interface ProfilePageProps {
   apiBaseUrl: string;
@@ -18,6 +19,11 @@ export function ProfilePage(props: ProfilePageProps) {
     <>
       <ProfilePageBase {...props} />
       <PartnerConnectionPanel {...props} />
+      <TransferPanel
+        apiBaseUrl={props.apiBaseUrl}
+        accessToken={props.accessToken}
+        spaceId={props.spaceId}
+      />
       <section className="form-card" aria-labelledby="private-area-entry-title">
         <p className="eyebrow">{t('privateArea.privacyLabel')}</p>
         <h2 id="private-area-entry-title">{t('privateArea.entry.title')}</h2>

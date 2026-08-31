@@ -1,13 +1,18 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import {
+  PRODUCT_CACHE_FALLBACK_EVENT,
+  PRODUCT_CACHE_NETWORK_EVENT,
+  type ProductCacheEventDetail,
+} from '../client/productReadCache';
+import {
   APP_ROUTES,
   DEFAULT_APP_ROUTE,
   MEMORY_CREATE_ROUTE,
   SEARCH_ROUTE,
   type AppRouteDefinition,
 } from '../client/routes';
-import { useTranslation } from '../i18n';
+import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
 import { ThemeControl } from './ThemeControl';
@@ -31,12 +36,6 @@ function NavigationLink({ route }: { route: AppRouteDefinition }) {
   );
 }
 
-/**
- * The primary destinations, in the order fixed by
- * `docs/INFORMATION-ARCHITECTURE.md` section 2. Sidebar and compact bottom
- * navigation render the same set from the same source, so the two cannot
- * drift, and four destinations no longer need grouping to stay readable.
- */
 function PrimaryNavigationLinks() {
   return (
     <>
@@ -65,6 +64,26 @@ function useOnlineStatus(): boolean {
   return online;
 }
 
+function useCachedReadTimestamp(): string | null {
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onFallback = (event: Event) => {
+      const detail = (event as CustomEvent<ProductCacheEventDetail>).detail;
+      if (detail?.refreshedAt) setCachedAt(detail.refreshedAt);
+    };
+    const onNetwork = () => setCachedAt(null);
+    window.addEventListener(PRODUCT_CACHE_FALLBACK_EVENT, onFallback);
+    window.addEventListener(PRODUCT_CACHE_NETWORK_EVENT, onNetwork);
+    return () => {
+      window.removeEventListener(PRODUCT_CACHE_FALLBACK_EVENT, onFallback);
+      window.removeEventListener(PRODUCT_CACHE_NETWORK_EVENT, onNetwork);
+    };
+  }, []);
+
+  return cachedAt;
+}
+
 export function AppShell({
   children,
   onLogout,
@@ -74,6 +93,13 @@ export function AppShell({
 }) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
+  const cachedAt = useCachedReadTimestamp();
+  const cachedAtLabel = cachedAt
+    ? new Intl.DateTimeFormat(resolvedLocale(), {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(cachedAt))
+    : null;
 
   function logout(): void {
     onLogout();
@@ -91,10 +117,6 @@ export function AppShell({
       <header className="app-header product-topbar">
         <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
         <div className="header-actions">
-          {/*
-            Search is a global utility rather than an area, so it sits in the
-            app bar instead of consuming one of the five primary destinations.
-          */}
           <NavLink
             to={SEARCH_ROUTE}
             className={({ isActive }) =>
@@ -116,7 +138,14 @@ export function AppShell({
         </div>
       </header>
 
-      {!online ? (
+      {cachedAtLabel ? (
+        <div className="offline-banner" role="status">
+          <span aria-hidden="true">↯</span>
+          <span>
+            {t('cacheRuntime.cachedBanner', { timestamp: cachedAtLabel })}
+          </span>
+        </div>
+      ) : !online ? (
         <div className="offline-banner" role="status">
           <span aria-hidden="true">↯</span>
           <span>{t('states.offline.banner')}</span>
