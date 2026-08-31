@@ -60,6 +60,33 @@ class MemoryAttachment(IdMixin, Base):
     )
 
 
+class AccountProfileAttachment(IdMixin, Base):
+    """The single current avatar attachment for one account.
+
+    This is an attachment-parent relation, not a second profile or media model.
+    Keeping it beside the other attachment bindings lets the same exclusivity,
+    cleanup, validation, and storage lifecycle apply to avatars.
+    """
+
+    __tablename__ = "account_profile_attachments"
+
+    account_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    attachment_id: Mapped[UUID] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("attachments.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("account_id", name="uq_account_profile_attachments_account"),
+        UniqueConstraint("attachment_id", name="uq_account_profile_attachments_attachment"),
+    )
+
+
 @dataclass(frozen=True)
 class BoundAttachment:
     attachment: Attachment
@@ -129,6 +156,14 @@ def parent_of(session: Session, attachment_id: UUID) -> tuple[str, UUID] | None:
     ).scalar_one_or_none()
     if heart_moment_id is not None:
         return "HEART_MOMENT", heart_moment_id
+
+    account_id = session.execute(
+        select(AccountProfileAttachment.account_id).where(
+            AccountProfileAttachment.attachment_id == attachment_id
+        )
+    ).scalar_one_or_none()
+    if account_id is not None:
+        return "ACCOUNT_PROFILE", account_id
     return None
 
 
@@ -139,12 +174,12 @@ def ensure_unlinked(
 
     Per-table unique constraints ensure an attachment does not appear twice in
     the same relation type. No individual table can ensure it is not bound to a
-    memory and a heart moment simultaneously, so this cross-table check runs
-    under the lock acquired by ``lock_for_binding``.
+    memory, heart moment, and account profile simultaneously, so this cross-table
+    check runs under the lock acquired by ``lock_for_binding``.
 
     ``allow`` names a binding that may remain in place. When replacing a
-    memory's attachment set, an attachment already bound to that same memory is
-    therefore not treated as a conflict.
+    resource's attachment set, an attachment already bound to that same resource
+    is therefore not treated as a conflict.
     """
     existing = parent_of(session, attachment_id)
     if existing is None or existing == allow:
