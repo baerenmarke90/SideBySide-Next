@@ -1,26 +1,26 @@
 .profile-identity-panel {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--space-5);
 }
 
 .profile-identity-preview {
   display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
-  border: 1px solid var(--border-subtle, rgba(120, 120, 120, 0.24));
-  border-radius: var(--radius-card, 1rem);
-  background: var(--surface-subtle, rgba(120, 120, 120, 0.08));
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-subtle);
 }
 
 .profile-identity-preview > small {
-  color: var(--text-secondary, currentColor);
+  color: var(--color-text-secondary);
 }
 
 .profile-identity-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .profile-identity-file-input {
