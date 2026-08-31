@@ -69,7 +69,9 @@ def test_replacing_avatar_binds_new_image_and_retires_old_media(session: Session
 
     assert result is not None
     assert result.id == new.id
-    assert service.profile_attachment(session, account.id).id == new.id  # type: ignore[union-attr]
+    current = service.profile_attachment(session, account.id)
+    assert current is not None
+    assert current.id == new.id
     assert old.status == AttachmentStatus.DELETING.value
     assert new.status == AttachmentStatus.READY.value
 
