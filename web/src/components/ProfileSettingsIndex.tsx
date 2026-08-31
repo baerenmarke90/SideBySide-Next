@@ -8,26 +8,41 @@ export function ProfileSettingsIndex() {
   const { t } = useTranslation();
 
   return (
-    <nav className="form-card profile-settings-index" aria-labelledby="profile-settings-title">
+    <nav
+      className="form-card profile-settings-index"
+      aria-labelledby="profile-settings-title"
+    >
       <div>
-        <h2 id="profile-settings-title">{t('profileIdentity.settingsTitle')}</h2>
+        <h2 id="profile-settings-title">
+          {t('profileIdentity.settingsTitle')}
+        </h2>
         <p>{t('profileIdentity.settingsIntro')}</p>
       </div>
       <ul className="profile-settings-links">
         <li>
-          <a href="#profile-identity-settings">{t('profileIdentity.settingsIdentity')}</a>
+          <a href="#profile-identity-settings">
+            {t('profileIdentity.settingsIdentity')}
+          </a>
         </li>
         <li>
-          <a href="#profile-partner-settings">{t('profileIdentity.settingsRelationship')}</a>
+          <a href="#profile-partner-settings">
+            {t('profileIdentity.settingsRelationship')}
+          </a>
         </li>
         <li>
-          <Link to={MORE_NOTIFICATIONS_ROUTE}>{t('profileIdentity.settingsNotifications')}</Link>
+          <Link to={MORE_NOTIFICATIONS_ROUTE}>
+            {t('profileIdentity.settingsNotifications')}
+          </Link>
         </li>
         <li>
-          <Link to={PRIVATE_AREA_ROOT_PATH}>{t('profileIdentity.settingsPrivacy')}</Link>
+          <Link to={PRIVATE_AREA_ROOT_PATH}>
+            {t('profileIdentity.settingsPrivacy')}
+          </Link>
         </li>
         <li>
-          <a href="#profile-data-settings">{t('profileIdentity.settingsData')}</a>
+          <a href="#profile-data-settings">
+            {t('profileIdentity.settingsData')}
+          </a>
         </li>
       </ul>
     </nav>
