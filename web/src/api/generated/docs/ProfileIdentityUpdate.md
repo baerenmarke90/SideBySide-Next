@@ -1,34 +1,25 @@
 
-# PartnerProfileView
+# ProfileIdentityUpdate
 
+Partial update of the authenticated account\'s presentation identity.  Omission means unchanged. An explicit null ``profileAttachmentId`` removes the current avatar. ``displayName`` deliberately has no competing request- layer normalization; the identity domain remains the single authority.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
-`accountId` | string
-`createdAt` | Date
 `displayName` | string
-`id` | string
-`preferences` | [Array&lt;ProfilePreferenceView&gt;](ProfilePreferenceView.md)
 `profileAttachmentId` | string
-`updatedAt` | Date
 
 ## Example
 
 ```typescript
-import type { PartnerProfileView } from ''
+import type { ProfileIdentityUpdate } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "accountId": null,
-  "createdAt": null,
   "displayName": null,
-  "id": null,
-  "preferences": null,
   "profileAttachmentId": null,
-  "updatedAt": null,
-} satisfies PartnerProfileView
+} satisfies ProfileIdentityUpdate
 
 console.log(example)
 
@@ -37,7 +28,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as PartnerProfileView
+const exampleParsed = JSON.parse(exampleJSON) as ProfileIdentityUpdate
 console.log(exampleParsed)
 ```
 
