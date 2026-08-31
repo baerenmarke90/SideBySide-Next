@@ -23,51 +23,26 @@
 
 package sidebyside.api.models
 
-import sidebyside.api.models.ProfilePreferenceView
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * 
+ * Partial update of the authenticated account's presentation identity.  Omission means unchanged. An explicit null ``profileAttachmentId`` removes the current avatar. ``displayName`` deliberately has no competing request- layer normalization; the identity domain remains the single authority.
  *
- * @param accountId 
- * @param createdAt 
  * @param displayName 
- * @param id 
- * @param preferences 
  * @param profileAttachmentId 
- * @param updatedAt 
- * @param version 
  */
 @Serializable
 
-data class PartnerProfileView (
-
-    @Contextual @SerialName(value = "accountId")
-    val accountId: java.util.UUID,
-
-    @Contextual @SerialName(value = "createdAt")
-    val createdAt: java.time.OffsetDateTime,
+data class ProfileIdentityUpdate (
 
     @SerialName(value = "displayName")
-    val displayName: kotlin.String,
-
-    @Contextual @SerialName(value = "id")
-    val id: java.util.UUID,
-
-    @SerialName(value = "preferences")
-    val preferences: kotlin.collections.List<ProfilePreferenceView>,
+    val displayName: kotlin.String? = null,
 
     @Contextual @SerialName(value = "profileAttachmentId")
-    val profileAttachmentId: java.util.UUID?,
-
-    @Contextual @SerialName(value = "updatedAt")
-    val updatedAt: java.time.OffsetDateTime,
-
-    @SerialName(value = "version")
-    val version: kotlin.Int
+    val profileAttachmentId: java.util.UUID? = null
 
 ) {
 

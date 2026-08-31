@@ -3106,16 +3106,34 @@
             "title": "Preferences",
             "type": "array"
           },
+          "profileAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileattachmentid"
+          },
           "updatedAt": {
             "format": "date-time",
             "title": "Updatedat",
             "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
           "id",
           "accountId",
           "displayName",
+          "profileAttachmentId",
+          "version",
           "createdAt",
           "updatedAt",
           "preferences"
@@ -4201,6 +4219,36 @@
           "code"
         ],
         "title": "ProblemDetails",
+        "type": "object"
+      },
+      "ProfileIdentityUpdate": {
+        "description": "Partial update of the authenticated account's presentation identity.\n\nOmission means unchanged. An explicit null ``profileAttachmentId`` removes\nthe current avatar. ``displayName`` deliberately has no competing request-\nlayer normalization; the identity domain remains the single authority.",
+        "properties": {
+          "displayName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Displayname"
+          },
+          "profileAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profileattachmentid"
+          }
+        },
+        "title": "ProfileIdentityUpdate",
         "type": "object"
       },
       "ProfilePreferenceCreate": {
@@ -17296,7 +17344,7 @@
             "description": "Successful Response",
             "headers": {
               "ETag": {
-                "description": "ProfilePreference version to use for the next If-Match write request.",
+                "description": "Resource version to use for the next If-Match write request.",
                 "schema": {
                   "type": "string"
                 }
@@ -17478,7 +17526,7 @@
             "description": "Successful Response",
             "headers": {
               "ETag": {
-                "description": "ProfilePreference version to use for the next If-Match write request.",
+                "description": "Resource version to use for the next If-Match write request.",
                 "schema": {
                   "type": "string"
                 }
@@ -17566,7 +17614,7 @@
             "description": "Successful Response",
             "headers": {
               "ETag": {
-                "description": "ProfilePreference version to use for the next If-Match write request.",
+                "description": "Resource version to use for the next If-Match write request.",
                 "schema": {
                   "type": "string"
                 }
@@ -17662,7 +17710,15 @@
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
           "401": {
             "content": {
@@ -17686,6 +17742,180 @@
           }
         },
         "summary": "Get Partner Profile",
+        "tags": [
+          "profiles"
+        ]
+      },
+      "patch": {
+        "description": "Change only the authenticated account's current presentation identity.",
+        "operationId": "updateProfileIdentity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "description": "The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.",
+              "title": "If-Match",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileIdentityUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerProfileView"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "ETag": {
+                "description": "Resource version to use for the next If-Match write request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request conflicts with the current state of the resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Update Profile Identity",
+        "tags": [
+          "profiles"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/profiles/{accountId}/avatar/content": {
+      "get": {
+        "description": "Stream only the current avatar after current-Space profile authorization.\n\nAvatar identity is Account-global while its backing Attachment remains\nSpace-scoped. The caller therefore never supplies an arbitrary attachment\nID here. We first prove that the subject has a readable profile in the\ncaller's current Space and only then resolve that Account's one current\navatar binding. This deliberately permits the same current avatar to appear\nin another Space where the same Account is an active member without making\nany other source-Space attachment readable.",
+        "operationId": "getProfileAvatarContent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Profile Avatar Content",
         "tags": [
           "profiles"
         ]

@@ -59,10 +59,22 @@ export interface PartnerProfileView {
     preferences: Array<ProfilePreferenceView>;
     /**
      * 
+     * @type {string}
+     * @memberof PartnerProfileView
+     */
+    profileAttachmentId: string | null;
+    /**
+     * 
      * @type {Date}
      * @memberof PartnerProfileView
      */
     updatedAt: Date;
+    /**
+     * 
+     * @type {number}
+     * @memberof PartnerProfileView
+     */
+    version: number;
 }
 
 /**
@@ -74,7 +86,9 @@ export function instanceOfPartnerProfileView(value: object): value is PartnerPro
     if (!('displayName' in value) || value['displayName'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('preferences' in value) || value['preferences'] === undefined) return false;
+    if (!('profileAttachmentId' in value) || value['profileAttachmentId'] === undefined) return false;
     if (!('updatedAt' in value) || value['updatedAt'] === undefined) return false;
+    if (!('version' in value) || value['version'] === undefined) return false;
     return true;
 }
 
@@ -93,7 +107,9 @@ export function PartnerProfileViewFromJSONTyped(json: any, ignoreDiscriminator: 
         'displayName': json['displayName'],
         'id': json['id'],
         'preferences': ((json['preferences'] as Array<any>).map(ProfilePreferenceViewFromJSON)),
+        'profileAttachmentId': json['profileAttachmentId'],
         'updatedAt': (new Date(json['updatedAt'])),
+        'version': json['version'],
     };
 }
 
@@ -113,7 +129,9 @@ export function PartnerProfileViewToJSONTyped(value?: PartnerProfileView | null,
         'displayName': value['displayName'],
         'id': value['id'],
         'preferences': ((value['preferences'] as Array<any>).map(ProfilePreferenceViewToJSON)),
+        'profileAttachmentId': value['profileAttachmentId'],
         'updatedAt': value['updatedAt'].toISOString(),
+        'version': value['version'],
     };
 }
 

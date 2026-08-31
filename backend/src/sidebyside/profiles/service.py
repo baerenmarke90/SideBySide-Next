@@ -23,8 +23,10 @@ from sidebyside.authorization import (
     require_readable,
     require_writable,
 )
+from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, ErrorCode, ForbiddenError, ValidationError
 from sidebyside.core.ids import parse_id
+from sidebyside.identity import service as identity_service
 from sidebyside.identity.models import Account
 from sidebyside.profiles.models import (
     PartnerProfile,
@@ -130,23 +132,18 @@ def _locked_self_account(session: Session, context: AuthorizationContext) -> Acc
     ).scalar_one()
 
 
-def set_profile_attachment(
+def _set_profile_attachment_for_account(
     session: Session,
     context: AuthorizationContext,
+    account: Account,
     attachment_id: UUID | None,
-) -> Attachment | None:
-    """Replace or remove the authenticated Account's avatar atomically.
+) -> tuple[Attachment | None, bool]:
+    """Apply an avatar binding for an already locked Account.
 
-    Candidate media must be a READY image uploaded by the same Account in the
-    currently authorized Space. The Account row serializes changes across
-    multiple active Spaces because the resulting avatar is Account-global.
-
-    Replacement first detaches the old parent relation, then binds the new
-    Attachment, and finally marks the obsolete media for the existing cleanup
-    job. Provider deletion therefore remains in the normal Attachment lifecycle
-    and never becomes a second profile-specific cleanup path.
+    The boolean reports whether presentation identity actually changed.
+    Keeping the Account clean during the attachment flushes lets the
+    caller advance the Account-global version exactly once afterwards.
     """
-    account = _locked_self_account(session, context)
     current = session.execute(
         select(attachment_binding.AccountProfileAttachment).where(
             attachment_binding.AccountProfileAttachment.account_id == account.id
@@ -155,14 +152,14 @@ def set_profile_attachment(
 
     if attachment_id is None:
         if current is None:
-            return None
+            return None, False
         previous = session.get(Attachment, current.attachment_id)
         session.delete(current)
         session.flush()
         if previous is not None:
             attachment_service.mark_for_deletion(session, previous)
             session.flush()
-        return None
+        return None, True
 
     candidates = attachment_binding.lock_for_binding(session, [attachment_id])
     candidate = attachment_binding.ensure_bindable(
@@ -177,7 +174,7 @@ def set_profile_attachment(
         )
 
     if current is not None and current.attachment_id == candidate.id:
-        return candidate
+        return candidate, False
 
     attachment_binding.ensure_unlinked(
         session,
@@ -201,7 +198,81 @@ def set_profile_attachment(
     if previous is not None:
         attachment_service.mark_for_deletion(session, previous)
         session.flush()
-    return candidate
+    return candidate, True
+
+
+def set_profile_attachment(
+    session: Session,
+    context: AuthorizationContext,
+    attachment_id: UUID | None,
+) -> Attachment | None:
+    """Replace or remove the authenticated Account's avatar atomically."""
+    account = _locked_self_account(session, context)
+    attachment, _changed = _set_profile_attachment_for_account(
+        session,
+        context,
+        account,
+        attachment_id,
+    )
+    return attachment
+
+
+def update_profile_identity(
+    session: Session,
+    context: AuthorizationContext,
+    account_id: UUID | str,
+    *,
+    expected_version: int,
+    changed_fields: frozenset[str],
+    display_name: str | None,
+    profile_attachment_id: UUID | None,
+) -> Account:
+    """Update Account-global presentation identity under one version boundary.
+
+    The Account row is the concurrency authority because display name and
+    avatar follow the person across Spaces. Avatar binding may flush its own
+    rows while the Account remains clean; the Account is dirtied only after
+    those operations, so a combined name+avatar request increments one ETag.
+    """
+    subject = active_subject(session, context, account_id)
+    if subject.id != context.account_id:
+        raise ForbiddenError(
+            "Only your own self profile can be changed.",
+            ProfileErrorCode.SELF_WRITE_ONLY,
+        )
+
+    account = _locked_self_account(session, context)
+    if account.version != expected_version:
+        raise ConflictError(
+            "The profile identity was changed by another request.",
+            ErrorCode.VERSION_CONFLICT,
+        )
+
+    avatar_changed = False
+    if "profile_attachment_id" in changed_fields:
+        _attachment, avatar_changed = _set_profile_attachment_for_account(
+            session,
+            context,
+            account,
+            profile_attachment_id,
+        )
+
+    if "display_name" in changed_fields:
+        account.display_name = identity_service.normalize_display_name(display_name or "")
+
+    # The avatar relation is a separate table. Mark the Account aggregate
+    # dirty so an avatar-only mutation advances the same global version.
+    if avatar_changed:
+        account.updated_at = now()
+
+    try:
+        session.flush()
+    except StaleDataError as stale:
+        raise ConflictError(
+            "The profile identity was changed by another request.",
+            ErrorCode.VERSION_CONFLICT,
+        ) from stale
+    return account
 
 
 def profile_preferences(

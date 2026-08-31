@@ -38,7 +38,11 @@ The relation stores only stable IDs. No temporary or signed provider URL becomes
 
 The central attachment binding resolver reports profile media as `ACCOUNT_PROFILE`. This means avatar attachments participate in the same cross-parent exclusivity rule as Memory and HeartMoment media and are no longer considered unbound once attached to a profile. Normal replacement/removal detaches the old relation before that attachment enters the existing deletion lifecycle. Because every Attachment is Space-scoped, deleting its Space cascades the Attachment and avatar binding together; the profile then deterministically falls back to its no-image representation instead of blocking Space deletion.
 
-Read authorization and the public profile update contract are added by the owning #368 follow-up slices; this foundation does not make an attachment public or add an alternate media endpoint.
+The visible profile contract exposes only the stable nullable `profileAttachmentId`. The authenticated owner can set another READY image Attachment that they own in the currently authorized Space, or send an explicit `null` to remove the current avatar. Replacement/removal uses the existing `DELETING` and media-cleanup lifecycle; the Profile domain never deletes provider objects synchronously and never creates avatar-specific storage keys.
+
+Avatar bytes are served only through the authorized profile-avatar route. The caller first proves that the Account has a readable profile in the caller's current Space. The server then resolves exactly that Account's current avatar binding; the caller cannot supply an arbitrary Attachment ID. The route prefers the existing thumbnail when available, otherwise serves the sanitized original, and returns `private, no-store` cache semantics. It never turns the avatar into a public unauthenticated URL or profile-stored signed URL.
+
+Avatar presentation identity is Account-global while the backing Attachment remains Space-scoped. If the same Account is an active member of another Space, that Space may render the same current avatar after its own profile/membership authorization succeeds. This exception applies only to the exact current Account-profile binding and does not make any other Attachment from the source Space readable.
 
 ## Authorization
 
@@ -51,7 +55,7 @@ For `SPACE_SHARED`:
 
 For `OWNER_ONLY`:
 
-- only the owner may read, write, or delete,
+- only the owner may read, write or delete,
 - for the affected partner and Cross-Tenant caller the resource is indistinguishable from a missing resource (`404`).
 
 The visible endpoint:
@@ -60,16 +64,22 @@ The visible endpoint:
 
 always filters to `SELF_PROFILE`. The owner's own private notes about this person therefore cannot accidentally appear in this profile view.
 
+`PATCH /api/v1/spaces/{spaceId}/profiles/{accountId}` is self-write only and requires the last-read Account presentation `ETag` in `If-Match`. Omitted identity fields remain unchanged. `displayName` is normalized and validated only by the authoritative identity-domain rule; changing it does not change authentication identity or sessions. An explicit `profileAttachmentId: null` removes the avatar, while a non-null ID must pass the existing READY/owner/current-Space/image validation. Display name and avatar share one Account-global `version`, because both follow the Account across Spaces; avatar-only changes advance that version too. A stale write returns `409 VERSION_CONFLICT` rather than silently overwriting a newer edit.
+
+`GET /api/v1/spaces/{spaceId}/profiles/{accountId}/avatar/content` requires an authenticated caller with readable current-Space profile access and returns `404` for a missing/invisible/non-ready current avatar. It does not accept an Attachment ID and therefore cannot be used as a cross-tenant media guessing oracle.
+
 ## API
 
 - `GET /api/v1/spaces/{spaceId}/profiles/{accountId}`
+- `PATCH /api/v1/spaces/{spaceId}/profiles/{accountId}`
+- `GET /api/v1/spaces/{spaceId}/profiles/{accountId}/avatar/content`
 - `GET /api/v1/spaces/{spaceId}/profile-preferences`
 - `POST /api/v1/spaces/{spaceId}/profile-preferences`
 - `GET /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`
 - `PUT /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`
 - `DELETE /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId}`
 
-Changes and deletes use ETag/`If-Match`. Stale versions return `409 VERSION_CONFLICT` instead of a silent Lost Update.
+Profile identity changes as well as ProfilePreference changes/deletes use ETag/`If-Match`. Stale versions return `409 VERSION_CONFLICT` instead of a silent Lost Update. The identity ETag is Account-global; preference ETags remain resource-local.
 
 ## Stable enums
 

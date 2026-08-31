@@ -120,6 +120,7 @@ export * from './PrivateNoteDetail';
 export * from './PrivateNotePage';
 export * from './PrivateNoteUpdate';
 export * from './ProblemDetails';
+export * from './ProfileIdentityUpdate';
 export * from './ProfilePreferenceCreate';
 export * from './ProfilePreferenceUpdate';
 export * from './ProfilePreferenceView';

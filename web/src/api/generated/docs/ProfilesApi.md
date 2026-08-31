@@ -7,8 +7,10 @@ All URIs are relative to *http://localhost*
 | [**createProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPost**](ProfilesApi.md#createprofilepreferenceapiv1spacesspaceidprofilepreferencespost) | **POST** /api/v1/spaces/{spaceId}/profile-preferences | Create Profile Preference |
 | [**deleteProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdDelete**](ProfilesApi.md#deleteprofilepreferenceapiv1spacesspaceidprofilepreferencespreferenceiddelete) | **DELETE** /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId} | Delete Profile Preference |
 | [**getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet**](ProfilesApi.md#getpartnerprofileapiv1spacesspaceidprofilesaccountidget) | **GET** /api/v1/spaces/{spaceId}/profiles/{accountId} | Get Partner Profile |
+| [**getProfileAvatarContent**](ProfilesApi.md#getprofileavatarcontent) | **GET** /api/v1/spaces/{spaceId}/profiles/{accountId}/avatar/content | Get Profile Avatar Content |
 | [**getProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdGet**](ProfilesApi.md#getprofilepreferenceapiv1spacesspaceidprofilepreferencespreferenceidget) | **GET** /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId} | Get Profile Preference |
 | [**listProfilePreferencesApiV1SpacesSpaceIdProfilePreferencesGet**](ProfilesApi.md#listprofilepreferencesapiv1spacesspaceidprofilepreferencesget) | **GET** /api/v1/spaces/{spaceId}/profile-preferences | List Profile Preferences |
+| [**updateProfileIdentity**](ProfilesApi.md#updateprofileidentity) | **PATCH** /api/v1/spaces/{spaceId}/profiles/{accountId} | Update Profile Identity |
 | [**updateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPut**](ProfilesApi.md#updateprofilepreferenceapiv1spacesspaceidprofilepreferencespreferenceidput) | **PUT** /api/v1/spaces/{spaceId}/profile-preferences/{preferenceId} | Update Profile Preference |
 
 
@@ -76,7 +78,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **201** | Successful Response |  * ETag - ProfilePreference version to use for the next If-Match write request. <br>  |
+| **201** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
@@ -224,6 +226,78 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getProfileAvatarContent
+
+> getProfileAvatarContent(accountId, spaceId)
+
+Get Profile Avatar Content
+
+Stream only the current avatar after current-Space profile authorization.  Avatar identity is Account-global while its backing Attachment remains Space-scoped. The caller therefore never supplies an arbitrary attachment ID here. We first prove that the subject has a readable profile in the caller\&#39;s current Space and only then resolve that Account\&#39;s one current avatar binding. This deliberately permits the same current avatar to appear in another Space where the same Account is an active member without making any other source-Space attachment readable.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ProfilesApi,
+} from '';
+import type { GetProfileAvatarContentRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ProfilesApi();
+
+  const body = {
+    // string
+    accountId: accountId_example,
+    // string
+    spaceId: spaceId_example,
+  } satisfies GetProfileAvatarContentRequest;
+
+  try {
+    const data = await api.getProfileAvatarContent(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **accountId** | `string` |  | [Defaults to `undefined`] |
+| **spaceId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+`void` (Empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
@@ -294,7 +368,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  * ETag - ProfilePreference version to use for the next If-Match write request. <br>  |
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
 
@@ -368,6 +442,87 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## updateProfileIdentity
+
+> PartnerProfileView updateProfileIdentity(accountId, spaceId, ifMatch, profileIdentityUpdate)
+
+Update Profile Identity
+
+Change only the authenticated account\&#39;s current presentation identity.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ProfilesApi,
+} from '';
+import type { UpdateProfileIdentityRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ProfilesApi();
+
+  const body = {
+    // string
+    accountId: accountId_example,
+    // string
+    spaceId: spaceId_example,
+    // string | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header.
+    ifMatch: ifMatch_example,
+    // ProfileIdentityUpdate
+    profileIdentityUpdate: ...,
+  } satisfies UpdateProfileIdentityRequest;
+
+  try {
+    const data = await api.updateProfileIdentity(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **accountId** | `string` |  | [Defaults to `undefined`] |
+| **spaceId** | `string` |  | [Defaults to `undefined`] |
+| **ifMatch** | `string` | The last-read resource version, encoded as a strong ETag. Writes are rejected without this header. | [Defaults to `undefined`] |
+| **profileIdentityUpdate** | [ProfileIdentityUpdate](ProfileIdentityUpdate.md) |  | |
+
+### Return type
+
+[**PartnerProfileView**](PartnerProfileView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **409** | The request conflicts with the current state of the resource. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## updateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPut
 
 > ProfilePreferenceView updateProfilePreferenceApiV1SpacesSpaceIdProfilePreferencesPreferenceIdPut(preferenceId, spaceId, ifMatch, profilePreferenceUpdate)
@@ -437,7 +592,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Successful Response |  * ETag - ProfilePreference version to use for the next If-Match write request. <br>  |
+| **200** | Successful Response |  * ETag - Resource version to use for the next If-Match write request. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
