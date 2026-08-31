@@ -79,6 +79,38 @@ def test_demo_entry_issues_one_time_proof_for_selected_persona(
     assert repeated.status_code == 422
 
 
+def test_demo_entry_reuses_normalized_network_rate_limit_key(
+    client,
+    session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:  # type: ignore[no-untyped-def]
+    _seed(session)
+    monkeypatch.setattr(
+        demo_api,
+        "get_settings",
+        lambda: Settings.model_validate({"demo_mode": True}),
+    )
+    monkeypatch.setattr(
+        demo_api.passkey_abuse,
+        "network_key",
+        lambda client_host: "normalized-demo-peer",
+    )
+    original_check = demo_api.rate_limit.check
+    observed: dict[str, str] = {}
+
+    def capture_check(session_arg, action, key, limit):  # type: ignore[no-untyped-def]
+        if action == demo_api.DEMO_ENTRY_ACTION:
+            observed["key"] = key
+        return original_check(session_arg, action, key, limit)
+
+    monkeypatch.setattr(demo_api.rate_limit, "check", capture_check)
+
+    response = client.post("/api/v1/demo/entry", json={"persona": "LEA"})
+
+    assert response.status_code == 200
+    assert observed["key"] == "normalized-demo-peer:LEA"
+
+
 def test_demo_entry_is_not_published_in_product_openapi(client) -> None:  # type: ignore[no-untyped-def]
     document = client.get("/openapi.json").json()
 
