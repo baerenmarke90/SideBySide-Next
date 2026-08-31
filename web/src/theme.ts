@@ -48,11 +48,16 @@ export function storeThemePreference(preference: ThemePreference): void {
     // Storage can be unavailable in hardened/private browser contexts. The
     // active document still changes theme; only persistence is skipped.
   }
-  window.dispatchEvent(
-    new CustomEvent<ThemePreference>(THEME_PREFERENCE_EVENT, {
-      detail: preference,
-    }),
-  );
+  if (
+    typeof window.dispatchEvent === 'function' &&
+    typeof CustomEvent === 'function'
+  ) {
+    window.dispatchEvent(
+      new CustomEvent<ThemePreference>(THEME_PREFERENCE_EVENT, {
+        detail: preference,
+      }),
+    );
+  }
 }
 
 export function applyResolvedTheme(
