@@ -73,15 +73,14 @@ def test_profile_binding_allows_only_one_current_avatar_per_account(session: Ses
     )
     session.flush()
 
-    with pytest.raises(IntegrityError):
-        with session.begin_nested():
-            session.add(
-                binding.AccountProfileAttachment(
-                    account_id=account.id,
-                    attachment_id=second.id,
-                )
+    with pytest.raises(IntegrityError), session.begin_nested():
+        session.add(
+            binding.AccountProfileAttachment(
+                account_id=account.id,
+                attachment_id=second.id,
             )
-            session.flush()
+        )
+        session.flush()
 
 
 def test_profile_attachment_cannot_belong_to_two_accounts(session: Session) -> None:
@@ -97,12 +96,11 @@ def test_profile_attachment_cannot_belong_to_two_accounts(session: Session) -> N
     )
     session.flush()
 
-    with pytest.raises(IntegrityError):
-        with session.begin_nested():
-            session.add(
-                binding.AccountProfileAttachment(
-                    account_id=ben.id,
-                    attachment_id=attachment.id,
-                )
+    with pytest.raises(IntegrityError), session.begin_nested():
+        session.add(
+            binding.AccountProfileAttachment(
+                account_id=ben.id,
+                attachment_id=attachment.id,
             )
-            session.flush()
+        )
+        session.flush()
