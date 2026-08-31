@@ -37,7 +37,8 @@ export function useProfileAvatarUrl(
         setAvatarUrl(objectUrl);
       })
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
+        if (error instanceof DOMException && error.name === 'AbortError')
+          return;
         if (!disposed) setLoadFailed(true);
       });
 
