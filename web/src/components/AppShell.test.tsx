@@ -23,6 +23,12 @@ function renderShell(route: string): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  queryClient.setQueryData(['profile-identity', 'space-1', 'account-1'], {
+    accountId: 'account-1',
+    displayName: 'Alex Example',
+    profileAttachmentId: null,
+    version: 1,
+  });
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[route]}>
