@@ -24,7 +24,10 @@ export function ProfilePage(props: ProfilePageProps) {
         <p>{t('privateArea.entry.body')}</p>
         <p className="field-help">{t('privateArea.entry.privacy')}</p>
         <div className="form-actions">
-          <Link className="button-link secondary-link" to={PRIVATE_AREA_ROOT_PATH}>
+          <Link
+            className="button-link secondary-link"
+            to={PRIVATE_AREA_ROOT_PATH}
+          >
             {t('privateArea.entry.action')}
           </Link>
         </div>
