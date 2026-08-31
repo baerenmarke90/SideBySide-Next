@@ -9,10 +9,14 @@ import {
   type ThemePreference,
 } from '../theme';
 
+/**
+ * Keeps the effective theme synchronized everywhere while exposing the actual
+ * preference control only where the profile settings hierarchy requests it.
+ */
 export function ThemeControl({
-  variant = 'floating',
+  variant = 'runtime',
 }: {
-  variant?: 'floating' | 'inline';
+  variant?: 'runtime' | 'inline';
 }) {
   const { t } = useTranslation();
   const [preference, setPreference] =
@@ -33,8 +37,10 @@ export function ThemeControl({
     setPreference(next);
   }
 
+  if (variant === 'runtime') return null;
+
   return (
-    <div className={`theme-control theme-control-${variant}`}>
+    <div className="theme-control theme-control-inline">
       <span className="theme-control-icon" aria-hidden="true">
         ◐
       </span>
