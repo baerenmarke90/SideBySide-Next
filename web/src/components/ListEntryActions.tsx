@@ -31,11 +31,7 @@ export function moveSortableItemByOffset(
 ): string[] {
   const currentIndex = itemIds.indexOf(itemId);
   const targetIndex = currentIndex + direction;
-  if (
-    currentIndex < 0 ||
-    targetIndex < 0 ||
-    targetIndex >= itemIds.length
-  ) {
+  if (currentIndex < 0 || targetIndex < 0 || targetIndex >= itemIds.length) {
     return [...itemIds];
   }
 
@@ -94,7 +90,9 @@ export function useListItemReorder({
     }
   }
 
-  function handleProps(itemId: string): ButtonHTMLAttributes<HTMLButtonElement> {
+  function handleProps(
+    itemId: string,
+  ): ButtonHTMLAttributes<HTMLButtonElement> {
     return {
       disabled,
       onKeyDown: (event) => {
@@ -130,7 +128,9 @@ export function useListItemReorder({
         if (!drag || drag.pointerId !== event.pointerId) return;
 
         const element = document.elementFromPoint(event.clientX, event.clientY);
-        const row = element?.closest('[data-sortable-item-id]') as HTMLElement | null;
+        const row = element?.closest(
+          '[data-sortable-item-id]',
+        ) as HTMLElement | null;
         const targetId = row?.dataset.sortableItemId;
         if (!row || !targetId || targetId === drag.itemId) return;
         if (!drag.order.includes(targetId)) return;
