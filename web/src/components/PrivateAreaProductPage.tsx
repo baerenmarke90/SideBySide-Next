@@ -36,11 +36,23 @@ export function PrivateAreaProductPage({
       <Routes>
         <Route index element={<Navigate replace to="notes" />} />
         <Route path="notes" element={<PrivateNotesListPage {...props} />} />
-        <Route path="notes/new" element={<PrivateNoteCreatePage {...props} />} />
-        <Route path="notes/:noteId/edit" element={<PrivateNoteEditPage {...props} />} />
-        <Route path="notes/:noteId" element={<PrivateNoteDetailPage {...props} />} />
+        <Route
+          path="notes/new"
+          element={<PrivateNoteCreatePage {...props} />}
+        />
+        <Route
+          path="notes/:noteId/edit"
+          element={<PrivateNoteEditPage {...props} />}
+        />
+        <Route
+          path="notes/:noteId"
+          element={<PrivateNoteDetailPage {...props} />}
+        />
         <Route path="gift-ideas" element={<GiftIdeasListPage {...props} />} />
-        <Route path="gift-ideas/new" element={<GiftIdeaCreatePage {...props} />} />
+        <Route
+          path="gift-ideas/new"
+          element={<GiftIdeaCreatePage {...props} />}
+        />
         <Route
           path="gift-ideas/:giftIdeaId/edit"
           element={<GiftIdeaEditPage {...props} />}
