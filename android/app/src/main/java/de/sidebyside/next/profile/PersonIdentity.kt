@@ -1,6 +1,6 @@
 package de.sidebyside.next.profile
 
-import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +11,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,7 +23,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.story.decodeBounded
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+private const val AVATAR_MAX_DECODED_EDGE = 512
 
 internal enum class PersonIdentitySize(val diameter: Dp) {
     SMALL(32.dp),
@@ -40,8 +46,9 @@ internal fun personInitials(displayName: String): String {
 /**
  * One presentation primitive for self and partner identity.
  *
- * Avatar bytes never become a public URL. If decoding fails or no avatar is
- * present, the same deterministic initials fallback is used everywhere.
+ * Avatar bytes never become a public URL. Decoding is bounded and runs away
+ * from the UI thread. If decoding fails or no avatar is present, the same
+ * deterministic initials fallback is used everywhere.
  */
 @Composable
 internal fun PersonIdentity(
@@ -52,9 +59,12 @@ internal fun PersonIdentity(
     size: PersonIdentitySize = PersonIdentitySize.MEDIUM,
     showName: Boolean = true,
 ) {
-    val bitmap = remember(avatarBytes) {
-        avatarBytes?.let { bytes ->
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+    val bitmap by produceState<Bitmap?>(initialValue = null, avatarBytes) {
+        value = null
+        if (avatarBytes != null) {
+            value = withContext(Dispatchers.Default) {
+                decodeBounded(avatarBytes, AVATAR_MAX_DECODED_EDGE)
+            }
         }
     }
 
@@ -73,7 +83,7 @@ internal fun PersonIdentity(
         ) {
             if (bitmap != null) {
                 Image(
-                    bitmap = bitmap,
+                    bitmap = bitmap!!.asImageBitmap(),
                     contentDescription = contentDescription,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.size(size.diameter),
