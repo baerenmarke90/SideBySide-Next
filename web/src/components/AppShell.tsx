@@ -18,7 +18,6 @@ import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
-import { ThemeControl } from './ThemeControl';
 
 function NavigationLink({ route }: { route: AppRouteDefinition }) {
   const { t } = useTranslation();
@@ -131,7 +130,6 @@ export function AppShell({
           <span className="shared-context">
             <span aria-hidden="true">♥</span> {t('header.sharedArea')}
           </span>
-          <ThemeControl variant="inline" />
           <NavLink
             to={SEARCH_ROUTE}
             className={({ isActive }) =>
