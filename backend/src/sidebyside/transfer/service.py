@@ -12,6 +12,7 @@ from typing import IO, Any
 from uuid import UUID
 from zipfile import ZIP_DEFLATED, ZipFile
 
+from pydantic import BaseModel
 from sqlalchemy import MetaData, Table, and_, or_, select
 from sqlalchemy.orm import Session
 
@@ -178,10 +179,14 @@ def _camel_to_snake(value: str) -> str:
 
 
 def _json_value(value: Any) -> Any:
-    if isinstance(value, (UUID, datetime, date, time)):
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, (datetime, date, time)):
         return value.isoformat()
     if isinstance(value, StrEnum):
         return value.value
+    if isinstance(value, BaseModel):
+        return _json_value(value.model_dump(mode="json"))
     if isinstance(value, Mapping):
         return {str(key): _json_value(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):
@@ -1052,10 +1057,15 @@ def _validate_domain_schema_and_links(
         if row.get("source") != "GENERATED":
             continue
         source_type = str(row.get("source_type"))
-        target_table = generated_sources.get(source_type)
-        if target_table is None or _uuid(
-            row.get("source_id"), ErrorCode.TRANSFER_RELATION_INVALID
-        ) not in ids.get(target_table, set()):
+        reminder_target_table = generated_sources.get(source_type)
+        if reminder_target_table is None:
+            raise TransferArchiveError(
+                "Transfer reminder relation is invalid.",
+                ErrorCode.TRANSFER_RELATION_INVALID,
+            )
+        if _uuid(row.get("source_id"), ErrorCode.TRANSFER_RELATION_INVALID) not in ids.get(
+            reminder_target_table, set()
+        ):
             raise TransferArchiveError(
                 "Transfer reminder relation is invalid.",
                 ErrorCode.TRANSFER_RELATION_INVALID,
@@ -1145,6 +1155,8 @@ def _column_value(column: Any, value: Any) -> Any:
         python_type = column.type.python_type
     except (AttributeError, NotImplementedError):
         return value
+    if isinstance(python_type, type) and issubclass(python_type, BaseModel):
+        return python_type.model_validate(value)
     if python_type is UUID and not isinstance(value, UUID):
         return UUID(str(value))
     if python_type is datetime and isinstance(value, str):
@@ -1358,10 +1370,10 @@ def cleanup_expired(session: Session, *, at: datetime | None = None) -> int:
             TransferExport.status != ExportStatus.EXPIRED.value,
         )
     ).scalars()
-    for transfer in exports:
-        store.delete(export_storage_key(transfer))
-        transfer.status = ExportStatus.EXPIRED.value
-        transfer.artifact_size = None
+    for transfer_export in exports:
+        store.delete(export_storage_key(transfer_export))
+        transfer_export.status = ExportStatus.EXPIRED.value
+        transfer_export.artifact_size = None
         count += 1
     imports = session.execute(
         select(TransferImport).where(
@@ -1371,8 +1383,8 @@ def cleanup_expired(session: Session, *, at: datetime | None = None) -> int:
             ),
         )
     ).scalars()
-    for transfer in imports:
-        store.delete(import_storage_key(transfer))
-        transfer.status = ImportStatus.EXPIRED.value
+    for transfer_import in imports:
+        store.delete(import_storage_key(transfer_import))
+        transfer_import.status = ImportStatus.EXPIRED.value
         count += 1
     return count
