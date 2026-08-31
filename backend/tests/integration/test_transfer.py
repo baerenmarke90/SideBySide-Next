@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.authorization import AuthorizationContext
 from sidebyside.identity.models import AccountEmail
+from sidebyside.private_notes import service as private_note_service
 from sidebyside.relationship import service as relationship_service
 from sidebyside.transfer import jobs, service
 from sidebyside.transfer.models import ImportStatus, TransferScope
@@ -106,9 +107,48 @@ def test_export_descriptor_is_creator_bound(client, session: Session) -> None:  
     assert partner.status_code == 404
 
 
-def test_personal_import_maps_only_requester_and_becomes_ready_to_apply(
+def test_shared_export_excludes_owner_only_and_personal_keeps_only_requester(
     session: Session,
 ) -> None:
+    anna = make_account(session, "Anna")
+    ben = make_account(session, "Ben")
+    space = make_space(session, anna)
+    relationship_service.add_member(session, space.id, ben)
+    anna_context = AuthorizationContext(account_id=anna.id, space_id=space.id)
+    ben_context = AuthorizationContext(account_id=ben.id, space_id=space.id)
+
+    private_note_service.create_note(
+        session,
+        anna_context,
+        title="Anna secret",
+        body="Only Anna may export this.",
+        pinned=False,
+    )
+    private_note_service.create_note(
+        session,
+        ben_context,
+        title="Ben secret",
+        body="Anna must never export this.",
+        pinned=False,
+    )
+
+    with service.build_export_archive(session, anna_context, TransferScope.SHARED) as bundle:
+        with ZipFile(bundle, "r") as archive:
+            assert "private/notes.json" not in archive.namelist()
+
+    with service.build_export_archive(session, anna_context, TransferScope.PERSONAL) as bundle:
+        with ZipFile(bundle, "r") as archive:
+            document = json.loads(archive.read("private/notes.json"))
+
+    notes = next(group for group in document["tables"] if group["name"] == "private_notes")[
+        "rows"
+    ]
+    assert len(notes) == 1
+    assert notes[0]["ownerId"] == str(anna.id)
+    assert notes[0]["payload"]["title"] == "Anna secret"
+
+
+def test_personal_import_maps_requester_and_apply_is_idempotent(session: Session) -> None:
     target = make_account(session, "Target")
     _verified_email(session, target, "target@example.test")
     space = make_space(session, target)
@@ -135,6 +175,17 @@ def test_personal_import_maps_only_requester_and_becomes_ready_to_apply(
         "mediaCount": 0,
         "sourceMemberCount": 1,
     }
+
+    service.request_apply(session, authorization, str(transfer.id))
+    session.flush()
+    jobs.handle_apply_import(session, {"importId": str(transfer.id)})
+    session.flush()
+
+    assert transfer.status == ImportStatus.COMPLETED.value
+    assert transfer.artifact_size == 0
+    assert service.request_apply(session, authorization, str(transfer.id)).status == (
+        ImportStatus.COMPLETED.value
+    )
 
 
 def test_personal_import_fails_when_owner_maps_to_other_member(session: Session) -> None:
