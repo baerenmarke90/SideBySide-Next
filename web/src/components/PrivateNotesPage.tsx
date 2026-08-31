@@ -113,7 +113,6 @@ export function PrivateNotesListPage({ api, accountId, spaceId }: Props) {
     <>
       <PageHeader
         before={<PrivateAreaBackToProfile />}
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.notes.title')}
         description={t('privateArea.notes.intro')}
         action={
@@ -139,8 +138,8 @@ export function PrivateNotesListPage({ api, accountId, spaceId }: Props) {
         />
       ) : null}
       {notes.length > 0 ? (
-        <section className="private-area-section" aria-live="polite">
-          <ul className="private-area-list">
+        <section className="private-area-results" aria-live="polite">
+          <ul className="private-area-list layout-columns layout-columns-dense">
             {notes.map((note) => (
               <li key={note.id} className="private-area-card">
                 <div className="private-area-card-heading">
@@ -209,7 +208,6 @@ export function PrivateNoteCreatePage({ api, accountId, spaceId }: Props) {
             {t('privateArea.notes.detailBack')}
           </Link>
         }
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.notes.createTitle')}
         description={t('privateArea.notes.intro')}
       />
@@ -387,7 +385,6 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
             {t('privateArea.notes.detailBack')}
           </Link>
         }
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.notes.editTitle')}
         description={t('privateArea.notes.intro')}
       />

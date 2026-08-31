@@ -240,7 +240,7 @@ function MemoryCreatePage({
   }
 
   return (
-    <div className="page create-page">
+    <div className="page page-reading create-page">
       <PageHeader
         before={
           <Link className="back-link" to={appRoutePath('story')}>

@@ -35,6 +35,7 @@
 }
 
 .memory-detail-body {
+  max-width: var(--reading-max);
   margin: 0;
   white-space: pre-wrap;
 }

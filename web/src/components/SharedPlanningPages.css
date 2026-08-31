@@ -3,42 +3,20 @@
   gap: var(--space-8);
 }
 
-.planning-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-  gap: var(--space-6);
-  align-items: start;
-}
-
-.planning-section,
 .planning-subsection,
 .planning-danger-zone,
 .planning-facts {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
-  padding: clamp(var(--space-5), 3vw, var(--space-7));
+  padding: clamp(var(--space-5), 3vw, var(--space-6));
   background: var(--color-surface);
 }
 
-.planning-section {
-  display: grid;
-  gap: var(--space-5);
-}
-
-.planning-section-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.planning-section-head h2,
 .planning-subsection h2,
 .planning-danger-zone h2 {
   margin: 0;
 }
 
-.planning-section-head p,
 .planning-subsection > p,
 .planning-danger-zone > p {
   margin: var(--space-2) 0 0;
@@ -100,7 +78,8 @@
 }
 
 .planning-create[open] {
-  width: min(100%, 30rem);
+  flex: 1 1 100%;
+  width: 100%;
 }
 
 .planning-create-form {
@@ -233,7 +212,6 @@
 }
 
 @media (max-width: 599px) {
-  .planning-section-head,
   .planning-card,
   .planning-relation-list li,
   .planning-collection-items li {

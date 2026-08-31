@@ -587,116 +587,127 @@ export function RelatedPeoplePage({
         </div>
       ) : null}
 
-      <RelatedPersonForm
-        key={editing?.id ?? 'new'}
-        person={editing}
-        pending={saveMutation.isPending}
-        onCancel={() => {
-          setEditing(null);
-          saveMutation.reset();
-        }}
-        onSubmit={(fields) => {
-          setSavedMessage(null);
-          saveMutation.mutate(fields);
-        }}
-      />
-      {saveMutation.error ? <ProblemState error={saveMutation.error} /> : null}
+      <div className="layout-split layout-split-lead-rail">
+        <aside
+          className="layout-rail layout-rail-sticky"
+          aria-label={t('people.formRailAria')}
+        >
+          <RelatedPersonForm
+            key={editing?.id ?? 'new'}
+            person={editing}
+            pending={saveMutation.isPending}
+            onCancel={() => {
+              setEditing(null);
+              saveMutation.reset();
+            }}
+            onSubmit={(fields) => {
+              setSavedMessage(null);
+              saveMutation.mutate(fields);
+            }}
+          />
+          {saveMutation.error ? (
+            <ProblemState error={saveMutation.error} />
+          ) : null}
+        </aside>
 
-      <section
-        className="story-surface"
-        aria-labelledby="related-people-list-title"
-      >
-        <div className="section-head">
-          <div>
-            <p className="section-kicker">{t('people.listKicker')}</p>
-            <h2 id="related-people-list-title">{t('people.listTitle')}</h2>
-          </div>
-          <button
-            type="button"
-            className="secondary compact-action"
-            onClick={() => void peopleQuery.refetch()}
-            disabled={peopleQuery.isFetching}
+        <div className="layout-main">
+          <section
+            className="story-surface"
+            aria-labelledby="related-people-list-title"
           >
-            {peopleQuery.isFetching
-              ? t('common.refreshing')
-              : t('common.refresh')}
-          </button>
+            <div className="section-head">
+              <div>
+                <p className="section-kicker">{t('people.listKicker')}</p>
+                <h2 id="related-people-list-title">{t('people.listTitle')}</h2>
+              </div>
+              <button
+                type="button"
+                className="secondary compact-action"
+                onClick={() => void peopleQuery.refetch()}
+                disabled={peopleQuery.isFetching}
+              >
+                {peopleQuery.isFetching
+                  ? t('common.refreshing')
+                  : t('common.refresh')}
+              </button>
+            </div>
+
+            {peopleQuery.isLoading ? (
+              <UiState kind="loading" title={t('people.loading')} />
+            ) : null}
+            {peopleQuery.error ? (
+              <ProblemState
+                error={peopleQuery.error}
+                onRetry={() => void peopleQuery.refetch()}
+              />
+            ) : null}
+            {peopleQuery.data?.length === 0 ? (
+              <UiState
+                kind="empty"
+                title={t('people.emptyTitle')}
+                body={t('people.emptyBody')}
+              />
+            ) : null}
+            {peopleQuery.data?.length ? (
+              <ul className="story-list" aria-label={t('people.listAria')}>
+                {peopleQuery.data.map((person) => (
+                  <li key={person.id} className="story-card">
+                    <div className="section-head">
+                      <div>
+                        <h3>{person.displayName}</h3>
+                        <p>
+                          {t(`people.relationship.${person.relationship}`)} ·{' '}
+                          {t(`people.visibility.${person.visibility}`)}
+                        </p>
+                        {person.birthday ? (
+                          <p>
+                            {t('people.birthdayValue', {
+                              date: person.birthdayYearKnown
+                                ? birthdayFormatter.format(person.birthday)
+                                : birthdayWithoutYearFormatter.format(
+                                    person.birthday,
+                                  ),
+                            })}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="form-actions">
+                        <button
+                          type="button"
+                          className="secondary compact-action"
+                          onClick={() => {
+                            setEditing(person);
+                            saveMutation.reset();
+                            setSavedMessage(null);
+                          }}
+                        >
+                          {t('people.edit')}
+                        </button>
+                        <button
+                          type="button"
+                          className="tertiary compact-action"
+                          onClick={() => {
+                            setDeleteTarget(person);
+                            deleteMutation.reset();
+                          }}
+                        >
+                          {t('people.delete')}
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+
+          <ImportantDatesPanel
+            peopleApi={peopleApi}
+            spaceId={spaceId}
+            people={peopleQuery.data ?? []}
+          />
         </div>
-
-        {peopleQuery.isLoading ? (
-          <UiState kind="loading" title={t('people.loading')} />
-        ) : null}
-        {peopleQuery.error ? (
-          <ProblemState
-            error={peopleQuery.error}
-            onRetry={() => void peopleQuery.refetch()}
-          />
-        ) : null}
-        {peopleQuery.data?.length === 0 ? (
-          <UiState
-            kind="empty"
-            title={t('people.emptyTitle')}
-            body={t('people.emptyBody')}
-          />
-        ) : null}
-        {peopleQuery.data?.length ? (
-          <ul className="story-list" aria-label={t('people.listAria')}>
-            {peopleQuery.data.map((person) => (
-              <li key={person.id} className="story-card">
-                <div className="section-head">
-                  <div>
-                    <h3>{person.displayName}</h3>
-                    <p>
-                      {t(`people.relationship.${person.relationship}`)} ·{' '}
-                      {t(`people.visibility.${person.visibility}`)}
-                    </p>
-                    {person.birthday ? (
-                      <p>
-                        {t('people.birthdayValue', {
-                          date: person.birthdayYearKnown
-                            ? birthdayFormatter.format(person.birthday)
-                            : birthdayWithoutYearFormatter.format(
-                                person.birthday,
-                              ),
-                        })}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="form-actions">
-                    <button
-                      type="button"
-                      className="secondary compact-action"
-                      onClick={() => {
-                        setEditing(person);
-                        saveMutation.reset();
-                        setSavedMessage(null);
-                      }}
-                    >
-                      {t('people.edit')}
-                    </button>
-                    <button
-                      type="button"
-                      className="tertiary compact-action"
-                      onClick={() => {
-                        setDeleteTarget(person);
-                        deleteMutation.reset();
-                      }}
-                    >
-                      {t('people.delete')}
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
-
-      <ImportantDatesPanel
-        peopleApi={peopleApi}
-        spaceId={spaceId}
-        people={peopleQuery.data ?? []}
-      />
+      </div>
 
       {deleteTarget ? (
         <DeleteRelatedPersonDialog

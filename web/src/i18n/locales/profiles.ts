@@ -3,6 +3,7 @@ const profiles = {
   title: 'Eure Profile und Vorlieben',
   intro:
     'Verwaltet eure Beziehungsanzeige, eigene Vorlieben und private Notizen über euren Partner an einem Ort.',
+  settingsRailAria: 'Konto und Beziehung',
   accountTitle: 'Mein Konto',
   accountName: 'Anzeigename',
   relationshipTitle: 'Eure Beziehung',

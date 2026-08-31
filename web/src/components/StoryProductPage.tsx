@@ -170,144 +170,160 @@ export function StoryProductPage({
         eyebrow={t('story.eyebrow')}
         title={t('story.title')}
         description={t('story.intro')}
-        className="story-heading"
-        action={
-          <nav
-            className="story-create-actions"
-            aria-label={t('storyActions.addAria')}
-          >
-            <Link
-              className="button-link primary-action"
-              to={appRoutePath('memoryCreate')}
-            >
-              {t('story.addMemory')}
-            </Link>
-            <Link
-              className="button-link secondary-link"
-              to={HEART_MOMENT_CREATE_ROUTE}
-            >
-              {t('storyActions.addHeartMoment')}
-            </Link>
-            <Link
-              className="button-link secondary-link"
-              to={MILESTONE_CREATE_ROUTE}
-            >
-              {t('storyActions.addMilestone')}
-            </Link>
-          </nav>
-        }
       />
 
-      <section className="story-surface" aria-labelledby="timeline-heading">
-        <form
-          className="story-filter-bar"
-          onSubmit={applyFilters}
-          key={cacheResourceId}
-          aria-label={t('storyFilters.aria')}
+      <div className="layout-split layout-split-lead-rail">
+        <aside
+          className="layout-rail layout-rail-sticky"
+          aria-label={t('storyActions.addAria')}
         >
-          <div className="field-group">
-            <label htmlFor="story-filter-type">{t('storyFilters.type')}</label>
-            <select
-              id="story-filter-type"
-              name="type"
-              defaultValue={filters.kind ?? ''}
-            >
-              <option value="">{t('storyFilters.allTypes')}</option>
-              <option value={StoryKind.MEMORY}>{t('story.kind.memory')}</option>
-              <option value={StoryKind.HEART_MOMENT}>
-                {t('story.kind.heartMoment')}
-              </option>
-              <option value={StoryKind.MILESTONE}>
-                {t('story.kind.milestone')}
-              </option>
-            </select>
-          </div>
-          <div className="field-group">
-            <label htmlFor="story-filter-year">{t('storyFilters.year')}</label>
-            <input
-              id="story-filter-year"
-              name="year"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              defaultValue={filters.year ?? ''}
-              placeholder={t('storyFilters.anyYear')}
-            />
-          </div>
-          <div className="field-group">
-            <label htmlFor="story-filter-order">
-              {t('storyFilters.order')}
-            </label>
-            <select
-              id="story-filter-order"
-              name="order"
-              defaultValue={filters.order}
-            >
-              <option value={StoryOrder.DESC}>
-                {t('storyFilters.newest')}
-              </option>
-              <option value={StoryOrder.ASC}>{t('storyFilters.oldest')}</option>
-            </select>
-          </div>
-          <div className="story-filter-actions">
-            <button type="submit">{t('storyFilters.apply')}</button>
-            <button
-              type="button"
-              className="tertiary"
-              onClick={() => setSearchParams({}, { replace: true })}
-            >
-              {t('storyFilters.reset')}
-            </button>
-          </div>
-        </form>
+          <section className="layout-panel">
+            <h2 className="rail-heading">{t('storyActions.railHeading')}</h2>
+            <div className="layout-action-list">
+              <Link
+                className="button-link primary-action"
+                to={appRoutePath('memoryCreate')}
+              >
+                {t('story.addMemory')}
+              </Link>
+              <Link
+                className="button-link secondary-link"
+                to={HEART_MOMENT_CREATE_ROUTE}
+              >
+                {t('storyActions.addHeartMoment')}
+              </Link>
+              <Link
+                className="button-link secondary-link"
+                to={MILESTONE_CREATE_ROUTE}
+              >
+                {t('storyActions.addMilestone')}
+              </Link>
+            </div>
+          </section>
 
-        <div className="section-head">
-          <div>
-            <p className="section-kicker">{t('story.timelineKicker')}</p>
-            <h2 id="timeline-heading">{t('story.timelineHeading')}</h2>
-          </div>
-          <button
-            type="button"
-            className="secondary compact-action"
-            onClick={() => void storyQuery.refetch()}
-            disabled={storyQuery.isFetching}
+          <form
+            className="layout-panel story-filter-panel"
+            onSubmit={applyFilters}
+            key={cacheResourceId}
+            aria-label={t('storyFilters.aria')}
           >
-            {storyQuery.isFetching && !storyQuery.isFetchingNextPage
-              ? t('common.refreshing')
-              : t('common.refresh')}
-          </button>
-        </div>
+            <h2 className="rail-heading">{t('storyFilters.heading')}</h2>
+            <div className="field-group">
+              <label htmlFor="story-filter-type">
+                {t('storyFilters.type')}
+              </label>
+              <select
+                id="story-filter-type"
+                name="type"
+                defaultValue={filters.kind ?? ''}
+              >
+                <option value="">{t('storyFilters.allTypes')}</option>
+                <option value={StoryKind.MEMORY}>
+                  {t('story.kind.memory')}
+                </option>
+                <option value={StoryKind.HEART_MOMENT}>
+                  {t('story.kind.heartMoment')}
+                </option>
+                <option value={StoryKind.MILESTONE}>
+                  {t('story.kind.milestone')}
+                </option>
+              </select>
+            </div>
+            <div className="field-group">
+              <label htmlFor="story-filter-year">
+                {t('storyFilters.year')}
+              </label>
+              <input
+                id="story-filter-year"
+                name="year"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                defaultValue={filters.year ?? ''}
+                placeholder={t('storyFilters.anyYear')}
+              />
+            </div>
+            <div className="field-group">
+              <label htmlFor="story-filter-order">
+                {t('storyFilters.order')}
+              </label>
+              <select
+                id="story-filter-order"
+                name="order"
+                defaultValue={filters.order}
+              >
+                <option value={StoryOrder.DESC}>
+                  {t('storyFilters.newest')}
+                </option>
+                <option value={StoryOrder.ASC}>
+                  {t('storyFilters.oldest')}
+                </option>
+              </select>
+            </div>
+            <div className="story-filter-actions">
+              <button type="submit">{t('storyFilters.apply')}</button>
+              <button
+                type="button"
+                className="tertiary"
+                onClick={() => setSearchParams({}, { replace: true })}
+              >
+                {t('storyFilters.reset')}
+              </button>
+            </div>
+          </form>
+        </aside>
 
-        {storyQuery.isLoading ? (
-          <UiState kind="loading" title={t('story.loadingAria')} />
-        ) : null}
-        {storyQuery.error ? (
-          <ProblemState
-            error={storyQuery.error}
-            onRetry={() => void storyQuery.refetch()}
-          />
-        ) : null}
-        {combinedStory ? (
-          <StoryList
-            items={combinedStory.items}
-            loadMemoryImage={loadMemoryImage}
-          />
-        ) : null}
-        {storyQuery.hasNextPage ? (
-          <div className="story-pagination">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => void storyQuery.fetchNextPage()}
-              disabled={storyQuery.isFetchingNextPage}
-            >
-              {storyQuery.isFetchingNextPage
-                ? t('storyFilters.loadingMore')
-                : t('storyFilters.loadMore')}
-            </button>
-          </div>
-        ) : null}
-      </section>
+        <div className="layout-main">
+          <section className="story-surface" aria-labelledby="timeline-heading">
+            <div className="section-head">
+              <div>
+                <p className="section-kicker">{t('story.timelineKicker')}</p>
+                <h2 id="timeline-heading">{t('story.timelineHeading')}</h2>
+              </div>
+              <button
+                type="button"
+                className="secondary compact-action"
+                onClick={() => void storyQuery.refetch()}
+                disabled={storyQuery.isFetching}
+              >
+                {storyQuery.isFetching && !storyQuery.isFetchingNextPage
+                  ? t('common.refreshing')
+                  : t('common.refresh')}
+              </button>
+            </div>
+
+            {storyQuery.isLoading ? (
+              <UiState kind="loading" title={t('story.loadingAria')} />
+            ) : null}
+            {storyQuery.error ? (
+              <ProblemState
+                error={storyQuery.error}
+                onRetry={() => void storyQuery.refetch()}
+              />
+            ) : null}
+            {combinedStory ? (
+              <StoryList
+                items={combinedStory.items}
+                loadMemoryImage={loadMemoryImage}
+              />
+            ) : null}
+            {storyQuery.hasNextPage ? (
+              <div className="story-pagination">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => void storyQuery.fetchNextPage()}
+                  disabled={storyQuery.isFetchingNextPage}
+                >
+                  {storyQuery.isFetchingNextPage
+                    ? t('storyFilters.loadingMore')
+                    : t('storyFilters.loadMore')}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

@@ -268,7 +268,7 @@ export function HeartMomentProductPage({
     }
 
     return (
-      <div className="page create-page product-editor-page">
+      <div className="page page-reading create-page product-editor-page">
         <PageHeader
           before={
             <Link className="back-link" to={appRoutePath('story')}>
@@ -363,7 +363,7 @@ export function HeartMomentProductPage({
   if (mode === 'edit') {
     if (!heartMoment.capabilities.canEdit || offline) {
       return (
-        <div className="page">
+        <div className="page page-reading">
           <PageHeader
             before={
               <Link
@@ -413,7 +413,7 @@ export function HeartMomentProductPage({
     }
 
     return (
-      <div className="page create-page product-editor-page">
+      <div className="page page-reading create-page product-editor-page">
         <PageHeader
           before={
             <Link
@@ -520,154 +520,165 @@ export function HeartMomentProductPage({
         }
       />
 
-      <article className="story-surface product-detail-card">
-        <dl className="memory-meta-grid">
-          <div>
-            <dt>{t('heartMomentProduct.authorLabel')}</dt>
-            <dd>{heartMoment.author.displayName}</dd>
-          </div>
-          <div>
-            <dt>{t('heartMomentProduct.happenedOnLabel')}</dt>
-            <dd>{formatDateOnly(heartMoment.happenedOn)}</dd>
-          </div>
-          <div>
-            <dt>{t('heartMomentProduct.createdAtLabel')}</dt>
-            <dd>{formatCreatedAt(heartMoment.createdAt)}</dd>
-          </div>
-          <div>
-            <dt>{t('heartMomentProduct.visibilityLabel')}</dt>
-            <dd>
-              <span
-                className={`visibility-badge ${
-                  shared
-                    ? 'visibility-badge-shared'
-                    : 'visibility-badge-private'
-                }`}
-              >
-                {shared
-                  ? t('heartMomentProduct.visibilityShared')
-                  : t('heartMomentProduct.visibilityPrivate')}
-              </span>
-            </dd>
-          </div>
-        </dl>
-
-        {heartMoment.attachment ? (
-          <section aria-label={t('heartMomentProduct.photoLabel')}>
-            <MediaGallery
-              items={[
-                {
-                  id: heartMoment.attachment.id,
-                  mediaType: heartMoment.attachment.mediaType,
-                },
-              ]}
-              loadMedia={(attachmentId) =>
-                loadAttachment(heartMoment.id, attachmentId)
-              }
-            />
-          </section>
-        ) : (
-          <p className="muted">{t('heartMomentProduct.noPhoto')}</p>
-        )}
-
-        {heartMoment.capabilities.canEdit && !offline ? (
-          <section
-            className="visibility-panel"
-            aria-labelledby="visibility-change-heading"
-          >
-            <h2 id="visibility-change-heading">
-              {t('heartMomentProduct.visibilityChangeHeading')}
-            </h2>
-            <p>{t('heartMomentProduct.visibilityChangeWarning')}</p>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() =>
-                visibilityMutation.mutate({
-                  current: heartMoment,
-                  visibility: shared
-                    ? ContentVisibility.PRIVATE
-                    : ContentVisibility.SHARED,
-                })
-              }
-              disabled={changingVisibility}
-            >
-              {changingVisibility
-                ? t('heartMomentProduct.visibilityChanging')
-                : shared
-                  ? t('heartMomentProduct.makePrivate')
-                  : t('heartMomentProduct.makeShared')}
-            </button>
-            {visibilityMutation.error ? (
-              <ProblemState error={visibilityMutation.error} />
-            ) : null}
-          </section>
-        ) : null}
-
-        {changingVisibility ? (
-          <p className="muted" role="status">
-            {t('heartMomentProduct.visibilityChanging')}
-          </p>
-        ) : shared ? (
-          <CommentsPanel
-            commentsApi={apis.comments}
-            spaceId={spaceId}
-            parentKind="heartMoment"
-            parentId={heartMoment.id}
-            currentAccountId={currentAccountId}
-            canComment={heartMoment.capabilities.canComment}
-            offline={offline}
-          />
-        ) : (
-          <p className="muted">{t('heartMomentProduct.commentsPrivate')}</p>
-        )}
-
-        {heartMoment.capabilities.canDelete && !offline ? (
-          <section
-            className="memory-danger-zone"
-            aria-label={t('heartMomentProduct.delete')}
-          >
-            {!confirmDelete ? (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setConfirmDelete(true)}
-              >
-                {t('heartMomentProduct.delete')}
-              </button>
-            ) : (
-              <div className="memory-delete-confirmation" role="alert">
-                <div>
-                  <h2>{t('heartMomentProduct.deleteConfirmTitle')}</h2>
-                  <p>{t('heartMomentProduct.deleteConfirmBody')}</p>
-                </div>
-                <div className="memory-actions">
-                  <button
-                    type="button"
-                    className="tertiary"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {t('heartMomentProduct.deleteCancel')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteMutation.mutate(heartMoment)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {deleteMutation.isPending
-                      ? t('heartMomentProduct.deleting')
-                      : t('heartMomentProduct.deleteConfirm')}
-                  </button>
-                </div>
+      <div className="layout-split layout-split-lead-rail">
+        <aside
+          className="layout-rail layout-rail-sticky"
+          aria-label={t('heartMomentProduct.detailMetaAria')}
+        >
+          <div className="layout-panel">
+            <dl className="detail-meta-list">
+              <div>
+                <dt>{t('heartMomentProduct.authorLabel')}</dt>
+                <dd>{heartMoment.author.displayName}</dd>
               </div>
+              <div>
+                <dt>{t('heartMomentProduct.happenedOnLabel')}</dt>
+                <dd>{formatDateOnly(heartMoment.happenedOn)}</dd>
+              </div>
+              <div>
+                <dt>{t('heartMomentProduct.createdAtLabel')}</dt>
+                <dd>{formatCreatedAt(heartMoment.createdAt)}</dd>
+              </div>
+              <div>
+                <dt>{t('heartMomentProduct.visibilityLabel')}</dt>
+                <dd>
+                  <span
+                    className={`visibility-badge ${
+                      shared
+                        ? 'visibility-badge-shared'
+                        : 'visibility-badge-private'
+                    }`}
+                  >
+                    {shared
+                      ? t('heartMomentProduct.visibilityShared')
+                      : t('heartMomentProduct.visibilityPrivate')}
+                  </span>
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </aside>
+
+        <div className="layout-main">
+          <article className="story-surface product-detail-card">
+            {heartMoment.attachment ? (
+              <section aria-label={t('heartMomentProduct.photoLabel')}>
+                <MediaGallery
+                  items={[
+                    {
+                      id: heartMoment.attachment.id,
+                      mediaType: heartMoment.attachment.mediaType,
+                    },
+                  ]}
+                  loadMedia={(attachmentId) =>
+                    loadAttachment(heartMoment.id, attachmentId)
+                  }
+                />
+              </section>
+            ) : (
+              <p className="muted">{t('heartMomentProduct.noPhoto')}</p>
             )}
-            {deleteMutation.error ? (
-              <ProblemState error={deleteMutation.error} />
+
+            {heartMoment.capabilities.canEdit && !offline ? (
+              <section
+                className="visibility-panel"
+                aria-labelledby="visibility-change-heading"
+              >
+                <h2 id="visibility-change-heading">
+                  {t('heartMomentProduct.visibilityChangeHeading')}
+                </h2>
+                <p>{t('heartMomentProduct.visibilityChangeWarning')}</p>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() =>
+                    visibilityMutation.mutate({
+                      current: heartMoment,
+                      visibility: shared
+                        ? ContentVisibility.PRIVATE
+                        : ContentVisibility.SHARED,
+                    })
+                  }
+                  disabled={changingVisibility}
+                >
+                  {changingVisibility
+                    ? t('heartMomentProduct.visibilityChanging')
+                    : shared
+                      ? t('heartMomentProduct.makePrivate')
+                      : t('heartMomentProduct.makeShared')}
+                </button>
+                {visibilityMutation.error ? (
+                  <ProblemState error={visibilityMutation.error} />
+                ) : null}
+              </section>
             ) : null}
-          </section>
-        ) : null}
-      </article>
+
+            {changingVisibility ? (
+              <p className="muted" role="status">
+                {t('heartMomentProduct.visibilityChanging')}
+              </p>
+            ) : shared ? (
+              <CommentsPanel
+                commentsApi={apis.comments}
+                spaceId={spaceId}
+                parentKind="heartMoment"
+                parentId={heartMoment.id}
+                currentAccountId={currentAccountId}
+                canComment={heartMoment.capabilities.canComment}
+                offline={offline}
+              />
+            ) : (
+              <p className="muted">{t('heartMomentProduct.commentsPrivate')}</p>
+            )}
+
+            {heartMoment.capabilities.canDelete && !offline ? (
+              <section
+                className="memory-danger-zone"
+                aria-label={t('heartMomentProduct.delete')}
+              >
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    {t('heartMomentProduct.delete')}
+                  </button>
+                ) : (
+                  <div className="memory-delete-confirmation" role="alert">
+                    <div>
+                      <h2>{t('heartMomentProduct.deleteConfirmTitle')}</h2>
+                      <p>{t('heartMomentProduct.deleteConfirmBody')}</p>
+                    </div>
+                    <div className="memory-actions">
+                      <button
+                        type="button"
+                        className="tertiary"
+                        onClick={() => setConfirmDelete(false)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {t('heartMomentProduct.deleteCancel')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteMutation.mutate(heartMoment)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending
+                          ? t('heartMomentProduct.deleting')
+                          : t('heartMomentProduct.deleteConfirm')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {deleteMutation.error ? (
+                  <ProblemState error={deleteMutation.error} />
+                ) : null}
+              </section>
+            ) : null}
+          </article>
+        </div>
+      </div>
     </div>
   );
 }

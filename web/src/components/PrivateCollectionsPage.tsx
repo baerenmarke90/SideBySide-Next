@@ -118,7 +118,6 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
     <>
       <PageHeader
         before={<PrivateAreaBackToProfile />}
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.collections.title')}
         description={t('privateArea.collections.intro')}
         action={
@@ -144,8 +143,8 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
         />
       ) : null}
       {collections.length > 0 ? (
-        <section className="private-area-section" aria-live="polite">
-          <ul className="private-area-list">
+        <section className="private-area-results" aria-live="polite">
+          <ul className="private-area-list layout-columns layout-columns-dense">
             {collections.map((collection) => (
               <li key={collection.id} className="private-area-card">
                 <div className="private-area-card-heading">
@@ -216,7 +215,6 @@ export function PrivateCollectionCreatePage({
             {t('privateArea.collections.detailBack')}
           </Link>
         }
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.collections.createTitle')}
         description={t('privateArea.collections.intro')}
       />
@@ -647,7 +645,6 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
             {t('privateArea.collections.detailBack')}
           </Link>
         }
-        eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.collections.editTitle')}
         description={t('privateArea.collections.intro')}
       />

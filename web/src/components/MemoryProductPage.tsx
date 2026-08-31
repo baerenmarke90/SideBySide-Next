@@ -249,7 +249,7 @@ export function MemoryProductPage({
   if (mode === 'edit') {
     if (!memory.capabilities.canEdit || offline) {
       return (
-        <div className="page">
+        <div className="page page-reading">
           <PageHeader
             before={
               <Link className="back-link" to={memoryDetailPath(memory.id)}>
@@ -294,7 +294,7 @@ export function MemoryProductPage({
     }
 
     return (
-      <div className="page create-page product-editor-page">
+      <div className="page page-reading create-page product-editor-page">
         <PageHeader
           before={
             <Link className="back-link" to={memoryDetailPath(memory.id)}>
@@ -466,113 +466,124 @@ export function MemoryProductPage({
         }
       />
 
-      <article className="story-surface memory-detail-card">
-        <dl className="memory-meta-grid">
-          <div>
-            <dt>{t('memoryProduct.authorLabel')}</dt>
-            <dd>{memory.author.displayName}</dd>
+      <div className="layout-split layout-split-lead-rail">
+        <aside
+          className="layout-rail layout-rail-sticky"
+          aria-label={t('memoryProduct.detailMetaAria')}
+        >
+          <div className="layout-panel">
+            <dl className="detail-meta-list">
+              <div>
+                <dt>{t('memoryProduct.authorLabel')}</dt>
+                <dd>{memory.author.displayName}</dd>
+              </div>
+              <div>
+                <dt>{t('memoryProduct.happenedOnLabel')}</dt>
+                <dd>
+                  {memory.happenedOn
+                    ? formatDateOnly(memory.happenedOn)
+                    : t('memoryProduct.noDate')}
+                </dd>
+              </div>
+              <div>
+                <dt>{t('memoryProduct.createdAtLabel')}</dt>
+                <dd>{formatCreatedAt(memory.createdAt)}</dd>
+              </div>
+            </dl>
           </div>
-          <div>
-            <dt>{t('memoryProduct.happenedOnLabel')}</dt>
-            <dd>
-              {memory.happenedOn
-                ? formatDateOnly(memory.happenedOn)
-                : t('memoryProduct.noDate')}
-            </dd>
-          </div>
-          <div>
-            <dt>{t('memoryProduct.createdAtLabel')}</dt>
-            <dd>{formatCreatedAt(memory.createdAt)}</dd>
-          </div>
-        </dl>
+        </aside>
 
-        <p className="memory-detail-body">
-          {memory.body || t('memoryProduct.noBody')}
-        </p>
+        <div className="layout-main">
+          <article className="story-surface memory-detail-card">
+            <p className="memory-detail-body">
+              {memory.body || t('memoryProduct.noBody')}
+            </p>
 
-        <section aria-labelledby="memory-photos-heading">
-          <div className="section-head memory-section-head">
-            <div>
-              <p className="section-kicker">{t('memory.photoLabel')}</p>
-              <h2 id="memory-photos-heading">
-                {t('memoryProduct.photosHeading')}
-              </h2>
-            </div>
-          </div>
-          {readyAttachments.length > 0 ? (
-            <MediaGallery
-              items={readyAttachments.map((attachment) => ({
-                id: attachment.id,
-                mediaType: attachment.mediaType,
-              }))}
-              loadMedia={(attachmentId) =>
-                loadMemoryImage(memory.id, attachmentId)
-              }
-            />
-          ) : (
-            <p className="muted">{t('memoryProduct.noPhotos')}</p>
-          )}
-        </section>
-
-        <CommentsPanel
-          commentsApi={apis.comments}
-          spaceId={spaceId}
-          parentKind="memory"
-          parentId={memory.id}
-          currentAccountId={currentAccountId}
-          canComment={memory.capabilities.canComment}
-          offline={offline}
-        />
-
-        {memory.capabilities.canDelete && !offline ? (
-          <section
-            className="memory-danger-zone"
-            aria-label={t('memoryProduct.delete')}
-          >
-            {!confirmDelete ? (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setConfirmDelete(true)}
-              >
-                {t('memoryProduct.delete')}
-              </button>
-            ) : (
-              <div className="memory-delete-confirmation" role="alert">
+            <section aria-labelledby="memory-photos-heading">
+              <div className="section-head memory-section-head">
                 <div>
-                  <h2>{t('memoryProduct.deleteConfirmTitle')}</h2>
-                  <p>{t('memoryProduct.deleteConfirmBody')}</p>
-                </div>
-                <div className="memory-actions">
-                  <button
-                    type="button"
-                    className="tertiary"
-                    onClick={() => setConfirmDelete(false)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {t('memoryProduct.deleteCancel')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteMutation.mutate(memory)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {deleteMutation.isPending
-                      ? t('memoryProduct.deleting')
-                      : t('memoryProduct.deleteConfirm')}
-                  </button>
+                  <p className="section-kicker">{t('memory.photoLabel')}</p>
+                  <h2 id="memory-photos-heading">
+                    {t('memoryProduct.photosHeading')}
+                  </h2>
                 </div>
               </div>
-            )}
-            {deleteMutation.error ? (
-              <ProblemState
-                error={deleteMutation.error}
-                onRetry={() => void reloadCurrentMemory()}
-              />
+              {readyAttachments.length > 0 ? (
+                <MediaGallery
+                  items={readyAttachments.map((attachment) => ({
+                    id: attachment.id,
+                    mediaType: attachment.mediaType,
+                  }))}
+                  loadMedia={(attachmentId) =>
+                    loadMemoryImage(memory.id, attachmentId)
+                  }
+                />
+              ) : (
+                <p className="muted">{t('memoryProduct.noPhotos')}</p>
+              )}
+            </section>
+
+            <CommentsPanel
+              commentsApi={apis.comments}
+              spaceId={spaceId}
+              parentKind="memory"
+              parentId={memory.id}
+              currentAccountId={currentAccountId}
+              canComment={memory.capabilities.canComment}
+              offline={offline}
+            />
+
+            {memory.capabilities.canDelete && !offline ? (
+              <section
+                className="memory-danger-zone"
+                aria-label={t('memoryProduct.delete')}
+              >
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    {t('memoryProduct.delete')}
+                  </button>
+                ) : (
+                  <div className="memory-delete-confirmation" role="alert">
+                    <div>
+                      <h2>{t('memoryProduct.deleteConfirmTitle')}</h2>
+                      <p>{t('memoryProduct.deleteConfirmBody')}</p>
+                    </div>
+                    <div className="memory-actions">
+                      <button
+                        type="button"
+                        className="tertiary"
+                        onClick={() => setConfirmDelete(false)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {t('memoryProduct.deleteCancel')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteMutation.mutate(memory)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending
+                          ? t('memoryProduct.deleting')
+                          : t('memoryProduct.deleteConfirm')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {deleteMutation.error ? (
+                  <ProblemState
+                    error={deleteMutation.error}
+                    onRetry={() => void reloadCurrentMemory()}
+                  />
+                ) : null}
+              </section>
             ) : null}
-          </section>
-        ) : null}
-      </article>
+          </article>
+        </div>
+      </div>
     </div>
   );
 }

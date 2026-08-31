@@ -109,8 +109,8 @@ function PlanningSection({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="planning-section" aria-labelledby={`${id}-heading`}>
-      <div className="planning-section-head">
+    <section className="layout-panel" aria-labelledby={`${id}-heading`}>
+      <div className="layout-section-head">
         <div>
           <h2 id={`${id}-heading`}>{title}</h2>
           <p>{intro}</p>
@@ -377,7 +377,7 @@ export function SharedPlanningOverviewPage({
         description={t('m5s3.overview.intro')}
       />
 
-      <div className="planning-grid">
+      <div className="layout-columns planning-grid">
         <PlanningSection
           id="wishes"
           title={t('m5s3.wish.heading')}

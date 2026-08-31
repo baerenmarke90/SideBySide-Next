@@ -1,8 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import {
+  APP_ROUTE_GROUPS,
   APP_ROUTES,
+  appRoutePath,
+  appRoutesInGroup,
   DEFAULT_APP_ROUTE,
+  type AppRouteDefinition,
   type AppRouteIcon,
 } from '../client/routes';
 import { useTranslation } from '../i18n';
@@ -83,26 +87,58 @@ function NavigationIcon({ icon }: { icon: AppRouteIcon }) {
   );
 }
 
-function NavigationLinks() {
+function NavigationLink({ route }: { route: AppRouteDefinition }) {
+  const { t } = useTranslation();
+
+  return (
+    <NavLink
+      to={route.path}
+      end={route.end}
+      className={({ isActive }) =>
+        `shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`
+      }
+    >
+      <span className="shell-nav-icon">
+        <NavigationIcon icon={route.icon} />
+      </span>
+      <span>{t(route.labelKey)}</span>
+    </NavLink>
+  );
+}
+
+/** Compact navigation: every destination in one flat, thumb-reachable row. */
+function CompactNavigationLinks() {
+  return (
+    <>
+      {APP_ROUTES.map((route) => (
+        <NavigationLink key={route.id} route={route} />
+      ))}
+    </>
+  );
+}
+
+/**
+ * Desktop navigation: the same destinations grouped by intent so a wide
+ * sidebar stays scannable instead of presenting nine equal-weight rows.
+ */
+function GroupedNavigationLinks() {
   const { t } = useTranslation();
 
   return (
     <>
-      {APP_ROUTES.map((route) => (
-        <NavLink
-          key={route.id}
-          to={route.path}
-          end={route.end}
-          className={({ isActive }) =>
-            `shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`
-          }
-        >
-          <span className="shell-nav-icon">
-            <NavigationIcon icon={route.icon} />
-          </span>
-          <span>{t(route.labelKey)}</span>
-        </NavLink>
-      ))}
+      {APP_ROUTE_GROUPS.map((group) => {
+        const routes = appRoutesInGroup(group.id);
+        if (routes.length === 0) return null;
+
+        return (
+          <div key={group.id} className="shell-nav-group">
+            <p className="shell-nav-group-label">{t(group.labelKey)}</p>
+            {routes.map((route) => (
+              <NavigationLink key={route.id} route={route} />
+            ))}
+          </div>
+        );
+      })}
     </>
   );
 }
@@ -163,9 +199,19 @@ export function AppShell({
 
       <div className="product-shell-body">
         <aside className="shell-sidebar">
-          <nav className="shell-nav" aria-label={t('navigation.primary')}>
-            <NavigationLinks />
-          </nav>
+          <div className="shell-sidebar-inner">
+            <div className="shell-primary-action">
+              <Link className="button-link" to={appRoutePath('memoryCreate')}>
+                <span className="shell-nav-icon">
+                  <NavigationIcon icon="add" />
+                </span>
+                <span>{t('navigation.newMemory')}</span>
+              </Link>
+            </div>
+            <nav className="shell-nav" aria-label={t('navigation.primary')}>
+              <GroupedNavigationLinks />
+            </nav>
+          </div>
         </aside>
 
         <main id="main-content" className="product-main" tabIndex={-1}>
@@ -174,7 +220,7 @@ export function AppShell({
       </div>
 
       <nav className="mobile-bottom-nav" aria-label={t('navigation.primary')}>
-        <NavigationLinks />
+        <CompactNavigationLinks />
       </nav>
     </div>
   );

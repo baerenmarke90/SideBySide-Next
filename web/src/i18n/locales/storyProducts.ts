@@ -1,11 +1,13 @@
 const storyProducts = {
   storyActions: {
     addAria: 'Neuen Story-Inhalt hinzufügen',
+    railHeading: 'Neu festhalten',
     addHeartMoment: 'Herzmoment',
     addMilestone: 'Meilenstein',
   },
   storyFilters: {
     aria: 'Story filtern und sortieren',
+    heading: 'Filter',
     type: 'Inhalt',
     allTypes: 'Alle Inhalte',
     year: 'Jahr',
@@ -64,6 +66,7 @@ const storyProducts = {
     editIntro:
       'Passe Text, Gefühl, Datum oder Bild an. Die Sichtbarkeit wird separat geändert.',
     detailEyebrow: 'Herzmoment',
+    detailMetaAria: 'Angaben zu diesem Herzmoment',
     loading: 'Herzmoment wird geladen …',
     textLabel: 'Moment',
     textPlaceholder: 'Was hat diesen Moment besonders gemacht?',
@@ -114,6 +117,7 @@ const storyProducts = {
     editIntro:
       'Passe Titel, Beschreibung oder Datum an. Änderungen werden auf Basis des aktuellen Stands gespeichert.',
     detailEyebrow: 'Meilenstein',
+    detailMetaAria: 'Angaben zu diesem Meilenstein',
     loading: 'Meilenstein wird geladen …',
     titleLabel: 'Titel',
     titlePlaceholder: 'Zum Beispiel: Erste gemeinsame Wohnung',

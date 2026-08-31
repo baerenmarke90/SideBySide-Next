@@ -322,7 +322,7 @@ export function CollectionProductPage({
         className="planning-subsection"
         aria-labelledby="collection-items-heading"
       >
-        <div className="planning-section-head">
+        <div className="layout-section-head">
           <div>
             <h2 id="collection-items-heading">
               {t('m5s3.collection.itemsHeading')}
