@@ -93,7 +93,10 @@ async function clearCacheStore(): Promise<void> {
   });
 }
 
-async function ensureCacheContext(accountId: string, spaceId: string): Promise<void> {
+async function ensureCacheContext(
+  accountId: string,
+  spaceId: string,
+): Promise<void> {
   if (typeof localStorage === 'undefined') return;
   const nextContext = `${accountId}:${spaceId}`;
   const currentContext = localStorage.getItem(CONTEXT_STORAGE_KEY);
@@ -224,7 +227,8 @@ async function writeRecord(record: ProductCacheRecord): Promise<void> {
 }
 
 function emitCacheEvent(type: string, refreshedAt: string): void {
-  if (typeof window === 'undefined' || typeof CustomEvent === 'undefined') return;
+  if (typeof window === 'undefined' || typeof CustomEvent === 'undefined')
+    return;
   window.dispatchEvent(
     new CustomEvent<ProductCacheEventDetail>(type, {
       detail: { refreshedAt },

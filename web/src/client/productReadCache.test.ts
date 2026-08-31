@@ -57,8 +57,8 @@ describe('M5 Web S6 persistent read cache policy', () => {
       canPersistProductReadPayload('heartMoment', { visibility: 'PRIVATE' }),
     ).toBe(false);
     expect(canPersistProductReadPayload('heartMoment', {})).toBe(false);
-    expect(canPersistProductReadPayload('memory', { visibility: 'PRIVATE' })).toBe(
-      true,
-    );
+    expect(
+      canPersistProductReadPayload('memory', { visibility: 'PRIVATE' }),
+    ).toBe(true);
   });
 });

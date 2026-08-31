@@ -141,7 +141,9 @@ export function AppShell({
       {cachedAtLabel ? (
         <div className="offline-banner" role="status">
           <span aria-hidden="true">↯</span>
-          <span>{t('cacheRuntime.cachedBanner', { timestamp: cachedAtLabel })}</span>
+          <span>
+            {t('cacheRuntime.cachedBanner', { timestamp: cachedAtLabel })}
+          </span>
         </div>
       ) : !online ? (
         <div className="offline-banner" role="status">

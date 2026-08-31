@@ -18,13 +18,15 @@ describe('M5 Web S6 canonical Deep Links', () => {
     expect(validateAppRelativeReturnTarget('/story/memories/abc')).toBe(
       '/story/memories/abc',
     );
-    expect(validateAppRelativeReturnTarget('/more/private/gift-ideas/abc')).toBe(
-      '/more/private/gift-ideas/abc',
-    );
+    expect(
+      validateAppRelativeReturnTarget('/more/private/gift-ideas/abc'),
+    ).toBe('/more/private/gift-ideas/abc');
   });
 
   it('rejects external, legacy, normalized and content-bearing return targets', () => {
-    expect(validateAppRelativeReturnTarget('https://example.test/today')).toBeNull();
+    expect(
+      validateAppRelativeReturnTarget('https://example.test/today'),
+    ).toBeNull();
     expect(validateAppRelativeReturnTarget('//example.test/today')).toBeNull();
     expect(validateAppRelativeReturnTarget('/dashboard')).toBeNull();
     expect(validateAppRelativeReturnTarget('/story/../today')).toBeNull();

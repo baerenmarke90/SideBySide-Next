@@ -124,8 +124,10 @@ export function TransferPanel({
 
   const exportDetail = exportQuery.data ?? createExport.data;
   const importDetail = importQuery.data ?? createImport.data;
-  const exportError = createExport.error ?? exportQuery.error ?? downloadExport.error;
-  const importError = createImport.error ?? importQuery.error ?? applyImport.error;
+  const exportError =
+    createExport.error ?? exportQuery.error ?? downloadExport.error;
+  const importError =
+    createImport.error ?? importQuery.error ?? applyImport.error;
 
   function submitExport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -146,7 +148,11 @@ export function TransferPanel({
   }
 
   return (
-    <section id="data-transfer" className="form-card transfer-panel" aria-labelledby="transfer-title">
+    <section
+      id="data-transfer"
+      className="form-card transfer-panel"
+      aria-labelledby="transfer-title"
+    >
       <p className="eyebrow">{t('transfer.eyebrow')}</p>
       <h2 id="transfer-title">{t('transfer.title')}</h2>
       <p>{t('transfer.intro')}</p>
@@ -195,7 +201,10 @@ export function TransferPanel({
             <div className="transfer-status" role="status" aria-live="polite">
               <strong>{t('transfer.export.statusLabel')}</strong>
               <span>{t(`transfer.export.status.${exportDetail.status}`)}</span>
-              <small>{t('transfer.export.expires')} {formatDate(exportDetail.expiresAt)}</small>
+              <small>
+                {t('transfer.export.expires')}{' '}
+                {formatDate(exportDetail.expiresAt)}
+              </small>
               {exportDetail.status === ExportStatus.READY ? (
                 <button
                   type="button"
@@ -221,7 +230,9 @@ export function TransferPanel({
           <h3 id="transfer-import-heading">{t('transfer.import.heading')}</h3>
           <form className="form-grid" onSubmit={submitImport}>
             <div className="field-group">
-              <label htmlFor="transfer-import-file">{t('transfer.import.fileLabel')}</label>
+              <label htmlFor="transfer-import-file">
+                {t('transfer.import.fileLabel')}
+              </label>
               <input
                 id="transfer-import-file"
                 type="file"
@@ -234,7 +245,10 @@ export function TransferPanel({
               />
               <p className="field-help">{t('transfer.import.fileHelp')}</p>
             </div>
-            <button type="submit" disabled={!importFile || createImport.isPending}>
+            <button
+              type="submit"
+              disabled={!importFile || createImport.isPending}
+            >
               {createImport.isPending
                 ? t('transfer.import.uploading')
                 : t('transfer.import.upload')}
@@ -248,7 +262,8 @@ export function TransferPanel({
             </div>
           ) : null}
 
-          {importDetail?.status === ImportStatus.READY_TO_APPLY && importDetail.summary ? (
+          {importDetail?.status === ImportStatus.READY_TO_APPLY &&
+          importDetail.summary ? (
             <div className="transfer-summary">
               <h4>{t('transfer.import.summaryHeading')}</h4>
               <dl>
@@ -280,7 +295,9 @@ export function TransferPanel({
                 <input
                   type="checkbox"
                   checked={applyConfirmed}
-                  onChange={(event) => setApplyConfirmed(event.currentTarget.checked)}
+                  onChange={(event) =>
+                    setApplyConfirmed(event.currentTarget.checked)
+                  }
                   aria-describedby="transfer-apply-help"
                 />
                 <span>{t('transfer.import.confirm')}</span>
@@ -299,7 +316,9 @@ export function TransferPanel({
 
           {importDetail?.status === ImportStatus.FAILED ||
           importDetail?.status === ImportStatus.EXPIRED ? (
-            <p className="status status-error">{t('transfer.genericFailure')}</p>
+            <p className="status status-error">
+              {t('transfer.genericFailure')}
+            </p>
           ) : null}
           {importError ? <ProblemState error={importError} /> : null}
         </section>
