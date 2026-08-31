@@ -1,0 +1,71 @@
+.transfer-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.transfer-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.transfer-columns > section {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+}
+
+.transfer-scope-option,
+.transfer-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-block: var(--space-2);
+}
+
+.transfer-scope-option span {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.transfer-scope-option small,
+.transfer-status small {
+  color: var(--color-text-muted);
+}
+
+.transfer-status,
+.transfer-summary {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-subtle);
+}
+
+.transfer-summary dl {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.transfer-summary dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.transfer-summary dt {
+  color: var(--color-text-muted);
+}
+
+.transfer-summary dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .transfer-columns {
+    grid-template-columns: 1fr;
+  }
+}

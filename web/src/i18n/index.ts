@@ -5,6 +5,7 @@ import demo from './locales/demo';
 import importantDates from './locales/importantDates';
 import m5s3 from './locales/m5s3';
 import m5s5 from './locales/m5s5';
+import m5s6 from './locales/m5s6';
 import memoryProduct from './locales/memoryProduct';
 import navigation from './locales/navigation';
 import partnerConnection from './locales/partnerConnection';
@@ -35,6 +36,7 @@ if (!i18n.isInitialized) {
           importantDates,
           m5s3,
           m5s5,
+          ...m5s6,
           memoryProduct,
           partnerConnection,
           people,

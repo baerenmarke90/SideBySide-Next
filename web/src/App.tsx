@@ -376,6 +376,7 @@ function AuthenticatedApp({
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
     queryClient.clear();
+    void clearProductReadCache();
     previousSpaceId.current = spaceId;
   }, [queryClient, spaceId]);
 
@@ -702,6 +703,12 @@ export function App() {
     void clearProductReadCache();
   }
 
+  function selectSpace(selectedSpaceId: string) {
+    queryClient.clear();
+    void clearProductReadCache();
+    setSpaceId(selectedSpaceId);
+  }
+
   if (!tokens || !account) {
     return (
       <>
@@ -716,6 +723,7 @@ export function App() {
             setAccount(session.account);
             setTokens(session.tokens);
             queryClient.clear();
+            void clearProductReadCache();
           }}
         />
       </>
@@ -761,7 +769,7 @@ export function App() {
     return (
       <>
         <ThemeControl />
-        <SpacePicker spaces={spacesQuery.data} onSelect={setSpaceId} />
+        <SpacePicker spaces={spacesQuery.data} onSelect={selectSpace} />
       </>
     );
   }
