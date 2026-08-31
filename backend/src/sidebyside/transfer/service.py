@@ -839,9 +839,7 @@ def _validate_ids_and_privacy(
                         "Transfer privacy scope is invalid.",
                         ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID,
                     )
-                account_id = _uuid(
-                    row.get("account_id"), ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
-                )
+                account_id = _uuid(row.get("account_id"), ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID)
                 if account_id != personal_owner:
                     raise TransferArchiveError(
                         "Transfer privacy scope is invalid.",
