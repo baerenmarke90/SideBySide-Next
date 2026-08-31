@@ -144,4 +144,17 @@
     <string name="story_title">Eure Geschichte</string>
     <string name="story_capture_cancel">Zurück zur Geschichte</string>
     <string name="story_loading">Eure Geschichte wird geladen.</string>
+    <string name="memory_saved">Erinnerung gespeichert.</string>
+    <string name="memory_deleted">Erinnerung gelöscht.</string>
+    <string name="memory_edit">Bearbeiten</string>
+    <string name="memory_delete">Löschen</string>
+    <string name="memory_delete_confirm_title">Diese Erinnerung löschen?</string>
+    <string name="memory_delete_confirm_body">Sie verschwindet aus eurer gemeinsamen Geschichte. Das lässt sich nicht rückgängig machen.</string>
+    <string name="memory_delete_confirm">Endgültig löschen</string>
+    <string name="memory_cancel">Abbrechen</string>
+    <string name="memory_save">Änderungen speichern</string>
+    <string name="memory_back">Zurück zur Geschichte</string>
+    <string name="memory_gone_title">Diese Erinnerung gibt es nicht mehr</string>
+    <string name="memory_gone_body">Sie wurde gelöscht. Eure übrige Geschichte ist unverändert.</string>
+    <string name="memory_written_by">Festgehalten von %1$s</string>
 </resources>

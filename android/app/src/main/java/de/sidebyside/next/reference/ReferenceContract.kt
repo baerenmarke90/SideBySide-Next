@@ -9,6 +9,7 @@ import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryPage
@@ -57,6 +58,26 @@ interface ReferenceContract {
     suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String
 
     suspend fun createMemory(spaceId: UUID, accessToken: String, memory: MemoryCreate): MemoryDetail
+
+    suspend fun getMemory(spaceId: UUID, accessToken: String, memoryId: UUID): MemoryDetail
+
+    /**
+     * Changes a memory.
+     *
+     * [ifMatch] is the version the change was written against. The server
+     * answers 409 when the partner changed the memory in the meantime, which is
+     * the point: without it the later write would silently overwrite the
+     * earlier one.
+     */
+    suspend fun updateMemory(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+        ifMatch: Int,
+        update: MemoryUpdate,
+    ): MemoryDetail
+
+    suspend fun deleteMemory(spaceId: UUID, accessToken: String, memoryId: UUID, ifMatch: Int)
 
     suspend fun createAttachmentUpload(
         spaceId: UUID,

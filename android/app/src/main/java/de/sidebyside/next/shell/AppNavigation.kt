@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,6 +27,14 @@ fun AppNavigation(
     destinations: List<AppDestination>,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
+    /**
+     * Routes below a primary destination, such as a single memory.
+     *
+     * They live in the same host so the system back gesture unwinds them, and
+     * so the bottom navigation keeps showing the destination they belong under
+     * rather than losing its selection on the way into a detail.
+     */
+    detailRoutes: NavGraphBuilder.(NavHostController) -> Unit = {},
     destinationContent: @Composable (AppDestination) -> Unit,
 ) {
     require(destinations.isNotEmpty()) { "The shell needs at least one destination." }
@@ -51,6 +60,7 @@ fun AppNavigation(
                 for (destination in destinations) {
                     composable(destination.route) { destinationContent(destination) }
                 }
+                detailRoutes(navController)
             }
         }
     }
@@ -77,4 +87,8 @@ fun destinationForRoute(
     route: String?,
     destinations: List<AppDestination> = declaredDestinations,
 ): AppDestination =
-    destinations.firstOrNull { it.route == route } ?: destinations.first()
+    destinations.firstOrNull { it.route == route }
+        // A detail route sits under the destination it belongs to, so opening
+        // a memory keeps Story selected instead of dropping the selection.
+        ?: destinations.firstOrNull { route != null && route.startsWith("${it.route}/") }
+        ?: destinations.first()

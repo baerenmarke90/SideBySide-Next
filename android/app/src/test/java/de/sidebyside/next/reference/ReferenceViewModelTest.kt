@@ -50,11 +50,9 @@ class ReferenceViewModelTest {
     fun logoutIgnoresLateTimelineAndPickerResultsFromPreviousSession() = runTest(dispatcher) {
         val releaseSecondTimeline = CompletableDeferred<Unit>()
         var timelineCalls = 0
-        val api = object : ReferenceContract {
+        val api = object : FakeReferenceContract() {
             override suspend fun signIn(email: String, password: String): SessionView = session()
 
-            override suspend fun consumeMagicLink(token: String): SessionView =
-                error("Magic-link entry is not exercised by this test.")
 
             override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
                 listOf(
@@ -65,8 +63,6 @@ class ReferenceViewModelTest {
                     ),
                 )
 
-            override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
-                error("Demo entry is not exercised by this test.")
 
             override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
                 timelineCalls += 1
@@ -77,50 +73,13 @@ class ReferenceViewModelTest {
                 error("late timeline failure")
             }
 
-            override suspend fun createMemory(spaceId: UUID, accessToken: String, memory: MemoryCreate): MemoryDetail =
-                error("not used")
 
-            override suspend fun createAttachmentUpload(
-                spaceId: UUID,
-                accessToken: String,
-                request: AttachmentUploadCreate,
-            ): UploadDescriptor = error("not used")
 
-            override suspend fun uploadAttachmentBytes(
-                accessToken: String,
-                descriptor: UploadDescriptor,
-                image: SelectedImage,
-            ) = error("not used")
 
-            override suspend fun finalizeAttachment(
-                spaceId: UUID,
-                accessToken: String,
-                attachmentId: UUID,
-            ): AttachmentDetail = error("not used")
 
-            override suspend fun getAttachment(
-                spaceId: UUID,
-                accessToken: String,
-                attachmentId: UUID,
-            ): AttachmentDetail = error("not used")
 
-            override suspend fun replaceMemoryAttachments(
-                spaceId: UUID,
-                accessToken: String,
-                memoryId: UUID,
-                ifMatch: Int,
-                attachments: MemoryAttachmentSet,
-            ): MemoryDetail = error("not used")
 
-            override suspend fun createReadAccess(
-                spaceId: UUID,
-                accessToken: String,
-                attachmentId: UUID,
-                request: AttachmentReadRequest,
-            ): ReadDescriptor = error("not used")
 
-            override suspend fun readImageBytes(accessToken: String, descriptor: ReadDescriptor): ByteArray =
-                error("not used")
         }
         val viewModel = ReferenceViewModel(
             config = ReferenceConfig(apiBaseUrl = "https://sidebyside.invalid"),

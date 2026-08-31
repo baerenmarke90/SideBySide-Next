@@ -14,7 +14,11 @@ import de.sidebyside.next.story.StoryImageStore
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.SessionView
+import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.StoryItem
+import de.sidebyside.next.shell.UiProblem
+import de.sidebyside.next.shell.problemFor
 
 data class UiMessage(
     val resourceId: Int,
@@ -52,6 +56,32 @@ data class ReferenceUiState(
     val lastMemoryBody: String? = null,
     val lastImageBytes: ByteArray? = null,
     val storyItems: List<StoryItem> = emptyList(),
+    /** The memory currently open, if any. */
+    val openMemory: MemoryDetail? = null,
+    val memoryBusy: Boolean = false,
+    /**
+     * Whether the open memory is being changed.
+     *
+     * Owned here rather than by the screen because only this knows how a save
+     * ended: success closes the form, a conflict deliberately leaves it open
+     * with the text still in it.
+     */
+    val editingMemory: Boolean = false,
+    /**
+     * Confirmation belonging to the open memory alone.
+     *
+     * Separate from [status], which carries messages from signing in, entering
+     * the demo and switching Space. Reusing it put the demo-entry notice on a
+     * memory screen dressed as a save confirmation.
+     */
+    val memoryStatus: UiMessage? = null,
+    /** A problem belonging to the open memory rather than to the whole screen. */
+    val memoryProblem: UiProblem? = null,
+    /**
+     * Set once the open memory no longer exists, so its screen can close
+     * instead of showing a memory that was just deleted.
+     */
+    val openMemoryGone: Boolean = false,
 )
 
 private data class ImageDraft(
@@ -426,6 +456,176 @@ class ReferenceViewModel(
         }
     }
 
+    /**
+     * Loads one memory for its own screen.
+     *
+     * The Story carries a summary; the full text and every photograph come from
+     * here, as does the version a change has to be written against.
+     */
+    fun openMemory(memoryId: java.util.UUID) {
+        mutate { it.copy(memoryProblem = null, memoryStatus = null, openMemoryGone = false) }
+        reloadMemory(memoryId)
+    }
+
+    /**
+     * Reads the memory again without clearing what is already being reported.
+     *
+     * A conflict reloads to pick up the partner's version, and clearing the
+     * problem on the way would make the explanation flash past: the write would
+     * have been refused and the screen would look as though nothing happened.
+     */
+    private fun reloadMemory(memoryId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(memoryBusy = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getMemory(spaceId, currentSession.tokens.accessToken, memoryId) }
+                .onSuccess { memory ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(openMemory = memory, memoryBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(memoryBusy = false, memoryProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun beginEditingMemory() {
+        mutate { it.copy(editingMemory = true, memoryProblem = null, memoryStatus = null) }
+    }
+
+    fun cancelEditingMemory() {
+        mutate { it.copy(editingMemory = false, memoryProblem = null) }
+    }
+
+    /** Forgets the open memory when its screen is left. */
+    fun closeMemory() {
+        mutate {
+            it.copy(
+                openMemory = null,
+                memoryBusy = false,
+                memoryProblem = null,
+                openMemoryGone = false,
+                editingMemory = false,
+                memoryStatus = null,
+            )
+        }
+    }
+
+    /**
+     * Writes a change to the open memory.
+     *
+     * The change is sent against the version it was written from. If the
+     * partner changed the memory meanwhile the server refuses, and the refusal
+     * is reported **without** touching what was typed — the newly written text
+     * is the thing worth protecting here, not the request. The memory is then
+     * reloaded so a second attempt carries the current version.
+     */
+    fun saveMemory(title: String, body: String, happenedOn: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val memory = _uiState.value.openMemory ?: return
+        val operationEpoch = sessionEpoch
+
+        val happenedOnDate = parseHappenedOn(happenedOn)
+        if (happenedOn.isNotBlank() && happenedOnDate == null) {
+            mutate { it.copy(error = message(R.string.ref_error_date_format)) }
+            return
+        }
+
+        mutate { it.copy(memoryBusy = true, memoryProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateMemory(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    memory.id,
+                    memory.version,
+                    MemoryUpdate(
+                        body = body,
+                        happenedOn = happenedOnDate,
+                        title = title,
+                    ),
+                )
+            }
+                .onSuccess { updated ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            openMemory = updated,
+                            memoryBusy = false,
+                            memoryProblem = null,
+                            // The change is written, so the form has done its
+                            // job; leaving it open would look as if nothing had
+                            // happened.
+                            editingMemory = false,
+                            memoryStatus = message(R.string.memory_saved),
+                        )
+                    }
+                    refreshStory()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(memoryBusy = false, memoryProblem = problemFor(throwable))
+                    }
+                    // Reload so a retry carries the version the partner left
+                    // behind. The typed text lives in the form and is untouched,
+                    // and the refusal stays on screen.
+                    reloadMemory(memory.id)
+                }
+        }
+    }
+
+    /** Removes the open memory, and the Story entry that showed it. */
+    fun deleteMemory() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val memory = _uiState.value.openMemory ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(memoryBusy = true, memoryProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteMemory(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    memory.id,
+                    memory.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            openMemory = null,
+                            memoryBusy = false,
+                            openMemoryGone = true,
+                            status = message(R.string.memory_deleted),
+                        )
+                    }
+                    refreshStory()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(memoryBusy = false, memoryProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
     fun refreshStory() {
         val api = contract ?: return
         val currentSession = session ?: return
@@ -590,6 +790,10 @@ class ReferenceViewModel(
     private inline fun mutate(update: (ReferenceUiState) -> ReferenceUiState) {
         _uiState.value = update(_uiState.value)
     }
+
+    /** Null for a blank date, which is allowed, and for an unparseable one. */
+    private fun parseHappenedOn(text: String): LocalDate? =
+        if (text.isBlank()) null else runCatching { LocalDate.parse(text.trim()) }.getOrNull()
 
     private fun message(resourceId: Int, vararg args: Any): UiMessage =
         UiMessage(resourceId = resourceId, args = args.toList())

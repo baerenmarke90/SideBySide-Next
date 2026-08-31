@@ -43,6 +43,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import de.sidebyside.next.demo.DemoBanner
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.NavType
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import de.sidebyside.next.story.MemoryScreen
 import de.sidebyside.next.story.StoryScreen
 
 class MainActivity : ComponentActivity() {
@@ -145,26 +152,28 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
                 persona = demoPersona,
                 onLeave = referenceViewModel::leaveDemo,
             )
-            DemoShell(state, signOut, referenceViewModel::selectSpace) {
+            DemoShell(state, referenceViewModel, signOut, referenceViewModel::selectSpace) { open ->
                 StoryDestination(
                     state = state,
                     viewModel = referenceViewModel,
                     onPickImage = pickImage,
                     onSignOut = signOut,
+                    onOpenMemory = open,
                 )
             }
         }
         return
     }
 
-    DemoShell(state, signOut, referenceViewModel::selectSpace) {
-                StoryDestination(
-                    state = state,
-                    viewModel = referenceViewModel,
-                    onPickImage = pickImage,
-                    onSignOut = signOut,
-                )
-            }
+    DemoShell(state, referenceViewModel, signOut, referenceViewModel::selectSpace) { open ->
+        StoryDestination(
+            state = state,
+            viewModel = referenceViewModel,
+            onPickImage = pickImage,
+            onSignOut = signOut,
+            onOpenMemory = open,
+        )
+    }
 }
 
 /**
@@ -176,12 +185,49 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
 @Composable
 private fun DemoShell(
     state: ReferenceUiState,
+    viewModel: ReferenceViewModel,
     onSignOut: () -> Unit,
     onSelectSpace: (java.util.UUID) -> Unit,
-    story: @Composable () -> Unit,
+    story: @Composable (onOpenMemory: (java.util.UUID) -> Unit) -> Unit,
 ) {
+    val navController = rememberNavController()
     AppNavigation(
         destinations = listOf(AppDestination.Story, AppDestination.More),
+        navController = navController,
+        detailRoutes = { controller ->
+            composable(
+                route = MEMORY_ROUTE,
+                arguments = listOf(navArgument(MEMORY_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val memoryId = entry.arguments?.getString(MEMORY_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+
+                // Loading is tied to the route rather than to the tap, so
+                // returning to this screen after process death still shows the
+                // memory instead of an empty one.
+                LaunchedEffect(memoryId, state.activeSpaceId) {
+                    memoryId?.let(viewModel::openMemory)
+                }
+                DisposableEffect(memoryId) { onDispose(viewModel::closeMemory) }
+
+                MemoryScreen(
+                    memory = state.openMemory,
+                    imageStore = viewModel.storyImages,
+                    generation = viewModel.storyGeneration,
+                    busy = state.memoryBusy,
+                    problem = state.memoryProblem,
+                    gone = state.openMemoryGone,
+                    editing = state.editingMemory,
+                    savedMessage = state.memoryStatus
+                        ?.let { stringResource(it.resourceId, *it.args.toTypedArray()) },
+                    onBack = { controller.popBackStack() },
+                    onBeginEditing = viewModel::beginEditingMemory,
+                    onCancelEditing = viewModel::cancelEditingMemory,
+                    onSave = viewModel::saveMemory,
+                    onDelete = viewModel::deleteMemory,
+                )
+            }
+        },
     ) { destination ->
         when (destination) {
             AppDestination.More -> MoreScreen(
@@ -192,10 +238,18 @@ private fun DemoShell(
                 onSelectSpace = onSelectSpace,
             )
 
-            else -> story()
+            else -> story { memoryId -> navController.navigate("story/memories/$memoryId") }
         }
     }
 }
+
+/**
+ * Matches the Web path from
+ * `docs/decisions/0003-primary-navigation-and-route-model.md`, so the Deep Link
+ * registry can be built on it without a second mapping.
+ */
+private const val MEMORY_ID_ARGUMENT = "memoryId"
+private const val MEMORY_ROUTE = "story/memories/{$MEMORY_ID_ARGUMENT}"
 
 /**
  * The Story destination.
@@ -211,6 +265,7 @@ private fun StoryDestination(
     viewModel: ReferenceViewModel,
     onPickImage: () -> Unit,
     onSignOut: () -> Unit,
+    onOpenMemory: (java.util.UUID) -> Unit,
 ) {
     var capturing by rememberSaveable { mutableStateOf(false) }
 
@@ -239,6 +294,7 @@ private fun StoryDestination(
         items = state.storyItems,
         imageStore = viewModel.storyImages,
         generation = viewModel.storyGeneration,
+        onOpenMemory = onOpenMemory,
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
