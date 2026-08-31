@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from sidebyside.config import Environment
 from sidebyside.demo import create_demo_space
 from sidebyside.demo.reminders import MANUAL_REMINDER_TITLE
 from sidebyside.reminders import rules
@@ -24,14 +25,14 @@ DEMO_PASSWORD = "canonical-demo-reminder-test-password"
 def test_complete_demo_includes_stable_reminder_and_rule_examples(session: Session) -> None:
     first = create_demo_space(
         session,
-        environment="test",  # type: ignore[arg-type]
+        environment=Environment.TEST,
         lea_password=DEMO_PASSWORD,
         alex_password=DEMO_PASSWORD,
         reference_date=REFERENCE_DATE,
     )
     second = create_demo_space(
         session,
-        environment="test",  # type: ignore[arg-type]
+        environment=Environment.TEST,
         lea_password=DEMO_PASSWORD,
         alex_password=DEMO_PASSWORD,
         reference_date=REFERENCE_DATE,
