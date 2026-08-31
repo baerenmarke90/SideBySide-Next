@@ -1,4 +1,4 @@
-import { type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -33,10 +33,18 @@ type Props = {
   spaceId: string;
 };
 
-function usePrivateNote(api: PrivateAreaApi, accountId: string, spaceId: string) {
+function usePrivateNote(
+  api: PrivateAreaApi,
+  accountId: string,
+  spaceId: string,
+) {
   const { noteId } = useParams();
   const query = useQuery({
-    queryKey: privateAreaQueryKeys.note(accountId, spaceId, noteId ?? 'missing'),
+    queryKey: privateAreaQueryKeys.note(
+      accountId,
+      spaceId,
+      noteId ?? 'missing',
+    ),
     queryFn: () => {
       if (!noteId) throw new Error('Missing private note route parameter.');
       return privateApiCall(() => api.getPrivateNote({ spaceId, noteId }));
@@ -52,7 +60,9 @@ function PrivateNoteFields({ note }: { note?: PrivateNoteDetail }) {
   return (
     <>
       <div className="field-group">
-        <label htmlFor="private-note-title">{t('privateArea.notes.titleLabel')}</label>
+        <label htmlFor="private-note-title">
+          {t('privateArea.notes.titleLabel')}
+        </label>
         <input
           id="private-note-title"
           name="title"
@@ -62,7 +72,9 @@ function PrivateNoteFields({ note }: { note?: PrivateNoteDetail }) {
         />
       </div>
       <div className="field-group">
-        <label htmlFor="private-note-body">{t('privateArea.notes.bodyLabel')}</label>
+        <label htmlFor="private-note-body">
+          {t('privateArea.notes.bodyLabel')}
+        </label>
         <textarea
           id="private-note-body"
           name="body"
@@ -110,9 +122,14 @@ export function PrivateNotesListPage({ api, accountId, spaceId }: Props) {
           </Link>
         }
       />
-      {query.isLoading ? <UiState kind="loading" title={t('privateArea.notes.loading')} /> : null}
+      {query.isLoading ? (
+        <UiState kind="loading" title={t('privateArea.notes.loading')} />
+      ) : null}
       {query.error ? (
-        <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+        <ProblemState
+          error={query.error}
+          onRetry={() => void query.refetch()}
+        />
       ) : null}
       {query.data && notes.length === 0 ? (
         <UiState
@@ -129,11 +146,18 @@ export function PrivateNotesListPage({ api, accountId, spaceId }: Props) {
                 <div className="private-area-card-heading">
                   <h2>{note.title}</h2>
                   {note.pinned ? (
-                    <span className="private-area-badge">{t('privateArea.notes.pinned')}</span>
+                    <span className="private-area-badge">
+                      {t('privateArea.notes.pinned')}
+                    </span>
                   ) : null}
                 </div>
-                {note.body ? <p className="private-area-excerpt">{note.body}</p> : null}
-                <Link className="button-link secondary-link" to={privateNotePath(note.id)}>
+                {note.body ? (
+                  <p className="private-area-excerpt">{note.body}</p>
+                ) : null}
+                <Link
+                  className="button-link secondary-link"
+                  to={privateNotePath(note.id)}
+                >
                   {t('privateArea.edit')}
                 </Link>
               </li>
@@ -180,7 +204,11 @@ export function PrivateNoteCreatePage({ api, accountId, spaceId }: Props) {
   return (
     <>
       <PageHeader
-        before={<Link className="back-link" to={PRIVATE_NOTES_PATH}>{t('privateArea.notes.detailBack')}</Link>}
+        before={
+          <Link className="back-link" to={PRIVATE_NOTES_PATH}>
+            {t('privateArea.notes.detailBack')}
+          </Link>
+        }
         eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.notes.createTitle')}
         description={t('privateArea.notes.intro')}
@@ -189,9 +217,16 @@ export function PrivateNoteCreatePage({ api, accountId, spaceId }: Props) {
         <form className="form-grid" onSubmit={submit}>
           <PrivateNoteFields />
           <div className="form-actions">
-            <Link className="button-link secondary-link" to={PRIVATE_NOTES_PATH}>{t('common.cancel')}</Link>
+            <Link
+              className="button-link secondary-link"
+              to={PRIVATE_NOTES_PATH}
+            >
+              {t('common.cancel')}
+            </Link>
             <button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? t('privateArea.saving') : t('privateArea.save')}
+              {mutation.isPending
+                ? t('privateArea.saving')
+                : t('privateArea.save')}
             </button>
           </div>
         </form>
@@ -228,28 +263,45 @@ export function PrivateNoteDetailPage({ api, accountId, spaceId }: Props) {
     },
   });
 
-  if (query.isLoading) return <UiState kind="loading" title={t('privateArea.notes.loading')} />;
-  if (query.error) return <ProblemState error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isLoading)
+    return <UiState kind="loading" title={t('privateArea.notes.loading')} />;
+  if (query.error)
+    return (
+      <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+    );
   const note = query.data;
   if (!note) return null;
 
   return (
     <>
       <PageHeader
-        before={<Link className="back-link" to={PRIVATE_NOTES_PATH}>{t('privateArea.notes.detailBack')}</Link>}
+        before={
+          <Link className="back-link" to={PRIVATE_NOTES_PATH}>
+            {t('privateArea.notes.detailBack')}
+          </Link>
+        }
         eyebrow={t('privateArea.privacyLabel')}
         title={note.title}
         action={
           note.capabilities.canEdit ? (
-            <Link className="button-link secondary-link" to={privateNoteEditPath(note.id)}>
+            <Link
+              className="button-link secondary-link"
+              to={privateNoteEditPath(note.id)}
+            >
               {t('privateArea.edit')}
             </Link>
           ) : undefined
         }
       />
       <article className="private-area-detail-card">
-        {note.pinned ? <span className="private-area-badge">{t('privateArea.notes.pinned')}</span> : null}
-        <p className="private-area-detail-body">{note.body || t('privateArea.notes.noBody')}</p>
+        {note.pinned ? (
+          <span className="private-area-badge">
+            {t('privateArea.notes.pinned')}
+          </span>
+        ) : null}
+        <p className="private-area-detail-body">
+          {note.body || t('privateArea.notes.noBody')}
+        </p>
         {note.capabilities.canDelete ? (
           <DeleteConfirmation
             onDelete={() => deleteMutation.mutate(note)}
@@ -268,7 +320,13 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
   const queryClient = useQueryClient();
   const { query } = usePrivateNote(api, accountId, spaceId);
   const mutation = useMutation({
-    mutationFn: ({ note, values }: { note: PrivateNoteDetail; values: { title: string; body: string; pinned: boolean } }) =>
+    mutationFn: ({
+      note,
+      values,
+    }: {
+      note: PrivateNoteDetail;
+      values: { title: string; body: string; pinned: boolean };
+    }) =>
       privateApiCall(() =>
         api.updatePrivateNote({
           spaceId,
@@ -289,12 +347,22 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
     },
   });
 
-  if (query.isLoading) return <UiState kind="loading" title={t('privateArea.notes.loading')} />;
-  if (query.error) return <ProblemState error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isLoading)
+    return <UiState kind="loading" title={t('privateArea.notes.loading')} />;
+  if (query.error)
+    return (
+      <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+    );
   const note = query.data;
   if (!note) return null;
   if (!note.capabilities.canEdit) {
-    return <UiState kind="permission" title={t('states.permission.title')} body={t('states.permission.body')} />;
+    return (
+      <UiState
+        kind="permission"
+        title={t('states.permission.title')}
+        body={t('states.permission.body')}
+      />
+    );
   }
   const editableNote: PrivateNoteDetail = note;
 
@@ -314,7 +382,11 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
   return (
     <>
       <PageHeader
-        before={<Link className="back-link" to={privateNotePath(note.id)}>{t('privateArea.notes.detailBack')}</Link>}
+        before={
+          <Link className="back-link" to={privateNotePath(note.id)}>
+            {t('privateArea.notes.detailBack')}
+          </Link>
+        }
         eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.notes.editTitle')}
         description={t('privateArea.notes.intro')}
@@ -323,9 +395,16 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
         <form className="form-grid" onSubmit={submit}>
           <PrivateNoteFields note={note} />
           <div className="form-actions">
-            <Link className="button-link secondary-link" to={privateNotePath(note.id)}>{t('common.cancel')}</Link>
+            <Link
+              className="button-link secondary-link"
+              to={privateNotePath(note.id)}
+            >
+              {t('common.cancel')}
+            </Link>
             <button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? t('privateArea.saving') : t('privateArea.save')}
+              {mutation.isPending
+                ? t('privateArea.saving')
+                : t('privateArea.save')}
             </button>
           </div>
         </form>
