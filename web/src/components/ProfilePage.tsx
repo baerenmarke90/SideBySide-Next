@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
@@ -18,11 +18,6 @@ export interface ProfilePageProps {
 export function ProfilePage(props: ProfilePageProps) {
   const { t } = useTranslation();
   const [displayName, setDisplayName] = useState(props.account.displayName);
-
-  useEffect(() => {
-    setDisplayName(props.account.displayName);
-  }, [props.account.id, props.account.displayName]);
-
   const currentAccount = { ...props.account, displayName };
   const currentProps = { ...props, account: currentAccount };
 
