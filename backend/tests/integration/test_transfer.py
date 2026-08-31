@@ -210,12 +210,12 @@ def test_shared_export_excludes_owner_only_and_personal_keeps_only_requester(
         private_document = json.loads(archive.read("private/notes.json"))
         rule_document = json.loads(archive.read("rules.json"))
 
-    notes = next(
-        group for group in private_document["tables"] if group["name"] == "private_notes"
-    )["rows"]
-    rules = next(
-        group for group in rule_document["tables"] if group["name"] == "rule_preferences"
-    )["rows"]
+    notes = next(group for group in private_document["tables"] if group["name"] == "private_notes")[
+        "rows"
+    ]
+    rules = next(group for group in rule_document["tables"] if group["name"] == "rule_preferences")[
+        "rows"
+    ]
     assert len(notes) == 1
     assert notes[0]["ownerId"] == str(anna.id)
     assert notes[0]["payload"]["title"] == "Anna secret"
