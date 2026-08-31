@@ -10,10 +10,7 @@ import {
 } from '../client/sharedPlanning';
 import { appRoutePath } from '../client/routes';
 import { useTranslation } from '../i18n';
-import {
-  ListEntryIconButton,
-  useListItemReorder,
-} from './ListEntryActions';
+import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
