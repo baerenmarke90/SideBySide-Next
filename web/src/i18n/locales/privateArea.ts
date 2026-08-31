@@ -65,7 +65,7 @@ const privateArea = {
     priceLabel: 'Preisnotiz',
     urlLabel: 'Link',
     urlHelp:
-      'Der Link wird nur gespeichert. SideBySide lädt keine Vorschau dafür.',
+      'Der Link wird nur gespeichert. SidebySide lädt keine Vorschau dafür.',
     pinnedLabel: 'Oben anheften',
     statusLabel: 'Status',
     status: {

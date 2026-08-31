@@ -14,7 +14,7 @@ const people = {
   birthdayMonthLabel: 'Monat',
   birthdayMonthPlaceholder: 'Monat auswählen',
   birthdayUnknownYearHelp:
-    'Wenn das Geburtsjahr unbekannt ist, speichert und zeigt SideBySide nur Tag und Monat.',
+    'Wenn das Geburtsjahr unbekannt ist, speichert und zeigt SidebySide nur Tag und Monat.',
   visibilityLabel: 'Sichtbarkeit',
   visibilityHelp:
     'Geteilte Personen sind für euch beide sichtbar. Private Personen bleiben nur bei dir.',
