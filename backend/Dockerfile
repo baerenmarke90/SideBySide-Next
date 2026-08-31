@@ -25,6 +25,9 @@ COPY alembic ./alembic
 COPY alembic.ini ./
 
 RUN uv sync --locked --no-editable
+# Keep the deployment-time demo bootstrap contract covered by every production
+# image build without creating data or requiring demo credentials.
+RUN python -m scripts.demo_space --help >/dev/null
 
 # Do not run as root: a process escape must not immediately own the container.
 RUN useradd --system --uid 10001 sidebyside \
