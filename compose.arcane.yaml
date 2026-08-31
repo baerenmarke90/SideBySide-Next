@@ -9,6 +9,9 @@ x-runtime-environment: &runtime-environment
   <<: *database-environment
   SBS_ENVIRONMENT: "${SBS_ENVIRONMENT:-development}"
   SBS_DEPLOYMENT: self_hosted
+  SBS_DEMO_MODE: "${SBS_DEMO_MODE:-false}"
+  SBS_DEMO_MODE_RESET_TIMER: "${SBS_DEMO_MODE_RESET_TIMER:-false}"
+  SBS_DEMO_MODE_RESET_INTERVAL: "${SBS_DEMO_MODE_RESET_INTERVAL:-6h}"
   SBS_CURSOR_SIGNING_KEY: "${SBS_CURSOR_SIGNING_KEY:-}"
   SBS_MEDIA_STORE: "${SBS_MEDIA_STORE:-local}"
   SBS_MEDIA_ROOT: /var/lib/sidebyside/media
@@ -42,6 +45,8 @@ x-web-build: &web-build
     context: "${SBS_SOURCE_REPOSITORY:-https://github.com/baerenmarke90/SideBySide-Next.git}#${SBS_SOURCE_REF:-main}:web"
     args:
       VITE_SBS_API_BASE_URL: ""
+      VITE_SBS_DEMO_MODE: "${SBS_DEMO_MODE:-false}"
+      VITE_SBS_DEMO_URL: "${SBS_DEMO_PUBLIC_URL:-}"
   pull_policy: build
 
 services:
