@@ -185,7 +185,7 @@ jobs:
       - name: Web proof of concept through published port
         run: |
           curl --fail --silent --show-error http://127.0.0.1:18082/healthz
-          curl --fail --silent --show-error http://127.0.0.1:18082/ | grep -Fq "<title>SideBySide Next"
+          curl --fail --silent --show-error http://127.0.0.1:18082/ | grep -Fq "<title>SidebySide</title>"
 
       - name: Runtime containers are healthy
         run: |

@@ -66,7 +66,7 @@ const de = {
         'Offline – Änderungen und neue Inhalte benötigen eine Verbindung.',
     },
     server: {
-      title: 'SideBySide ist gerade nicht erreichbar.',
+      title: 'SidebySide ist gerade nicht erreichbar.',
       body: 'Versuche es in einem Moment erneut.',
     },
     unknown: {
@@ -85,8 +85,8 @@ const de = {
     dark: 'Dunkel',
   },
   brand: {
-    suffix: 'Next',
-    homeAria: 'SideBySide – zum gemeinsamen Start',
+    suffix: '',
+    homeAria: 'SidebySide – zum gemeinsamen Start',
   },
   spaceContext: {
     eyebrow: 'Gemeinsamer Bereich',
@@ -101,9 +101,9 @@ const de = {
     spaceFallback: 'Gemeinsamer Bereich {{index}}',
   },
   identity: {
-    entryAria: 'Zugang zu SideBySide',
-    invitationEyebrow: 'Einladung zu SideBySide',
-    invitationTitle: 'Ihr möchtet SideBySide gemeinsam nutzen',
+    entryAria: 'Zugang zu SidebySide',
+    invitationEyebrow: 'Einladung zu SidebySide',
+    invitationTitle: 'Ihr möchtet SidebySide gemeinsam nutzen',
     invitationBody:
       'Melde dich mit deinem bestehenden Konto an oder erstelle über diese Einladung ein neues Konto.',
     createAccount: 'Neues Konto erstellen',
@@ -129,7 +129,7 @@ const de = {
     recoveryRequestEyebrow: 'Kontozugang wiederherstellen',
     recoveryRequestTitle: 'Passwort zurücksetzen',
     recoveryRequestBody:
-      'Gib deine E-Mail-Adresse ein. Wenn dafür ein lokales SideBySide-Konto existiert, erhältst du einen zeitlich begrenzten Link.',
+      'Gib deine E-Mail-Adresse ein. Wenn dafür ein lokales SidebySide-Konto existiert, erhältst du einen zeitlich begrenzten Link.',
     recoveryRequestSubmit: 'Wiederherstellungslink anfordern',
     recoveryRequestPending: 'Anfrage wird gesendet …',
     mailRequestedTitle: 'Prüfe dein Postfach',
@@ -161,7 +161,7 @@ const de = {
       'Erinnerungen, Wünsche und Pläne an einem ruhigen Ort – nur für euch zwei.',
     eyebrow: 'Willkommen zurück',
     heading: 'Anmelden',
-    body: 'Melde dich mit deinem SideBySide-Konto an.',
+    body: 'Melde dich mit deinem SidebySide-Konto an.',
     email: 'E-Mail',
     password: 'Passwort',
     submit: 'Anmelden',
