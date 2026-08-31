@@ -9,6 +9,14 @@ The M1 Profiles Domain strictly separates two technically different kinds of inf
 
 There is no `PUBLIC` visibility and the request cannot freely set `privacyClass`. The API derives the Privacy class server-side from the Domain `visibility`.
 
+### Account presentation identity
+
+`Account.display_name` is the authoritative current presentation name for an authenticated person. It is not an authentication identifier and changing it does not change the Account ID, email address, OIDC issuer/subject, Passkey credentials, password identity, or active sessions.
+
+Display names are normalized in the identity service: surrounding whitespace is removed, at least one visible non-control character is required, Unicode content is preserved, and names longer than 120 characters are rejected rather than silently truncated. Local registration and later profile edits use the same rule. An unusable external OIDC display-name claim falls back to the neutral `Partner` name instead of making an otherwise verified identity unusable.
+
+Person/author projections use the **current Account presentation identity** unless a domain explicitly documents a historical snapshot field. A stored historical event remains historical content, but an ordinary author label/avatar is not a second authoritative copy of the old display name.
+
 ## Persistence
 
 `partner_profiles` is the visible profile aggregate root of an Account in a Space. At most one row exists per `(space_id, owner_id)` and the database enforces `SPACE_SHARED`.
