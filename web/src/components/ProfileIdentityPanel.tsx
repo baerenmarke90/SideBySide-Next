@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
@@ -10,6 +10,7 @@ import {
 } from '../client/memoryAttachmentDraft';
 import { normalizeClientError } from '../client/problemDetails';
 import { createReferenceApis } from '../client/referenceFlow';
+import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import { useTranslation } from '../i18n';
 import { PersonIdentity } from './PersonIdentity';
 import { ProblemState } from './ProblemState';
@@ -39,8 +40,6 @@ export function ProfileIdentityPanel({
   const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
   const [uploadPhase, setUploadPhase] = useState<DraftUploadPhase | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   const configuration = useMemo(
     () =>
@@ -71,44 +70,12 @@ export function ProfileIdentityPanel({
     retry: false,
   });
 
-  useEffect(() => {
-    const attachmentId = profileQuery.data?.profileAttachmentId;
-    let objectUrl: string | null = null;
-    let disposed = false;
-    const controller = new AbortController();
-
-    setAvatarLoadFailed(false);
-    setAvatarUrl(null);
-    if (!attachmentId) {
-      return () => controller.abort();
-    }
-
-    void profilesApi
-      .getProfileAvatarContentRaw(
-        { accountId: account.id, spaceId },
-        { signal: controller.signal },
-      )
-      .then(async (response) => {
-        const blob = await response.raw.blob();
-        objectUrl = URL.createObjectURL(blob);
-        if (disposed) {
-          URL.revokeObjectURL(objectUrl);
-          objectUrl = null;
-          return;
-        }
-        setAvatarUrl(objectUrl);
-      })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-        if (!disposed) setAvatarLoadFailed(true);
-      });
-
-    return () => {
-      disposed = true;
-      controller.abort();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [account.id, profileQuery.data?.profileAttachmentId, profilesApi, spaceId]);
+  const { avatarUrl, loadFailed: avatarLoadFailed } = useProfileAvatarUrl(
+    profilesApi,
+    spaceId,
+    account.id,
+    profileQuery.data?.profileAttachmentId,
+  );
 
   async function updateIdentity(body: ProfileIdentityUpdate) {
     if (!profileQuery.data) throw new Error(t('profiles.loading'));
@@ -219,7 +186,6 @@ export function ProfileIdentityPanel({
               size="large"
               imageAlt={t('profileIdentity.imageAlt', { name: visibleName })}
               fallbackAlt={t('profileIdentity.fallbackAlt', { name: visibleName })}
-              onImageError={() => setAvatarLoadFailed(true)}
             />
           </div>
 
