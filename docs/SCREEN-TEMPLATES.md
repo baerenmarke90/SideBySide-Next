@@ -11,8 +11,12 @@ Screen Templates translate Information Architecture, UX Patterns, and Components
 | Class | Width | Navigation | Content |
 |---|---:|---|---|
 | Compact | 0–599 px | Bottom Navigation | one primary pane |
-| Medium | 600–839 px | Navigation Rail | one to two panes |
-| Expanded | from 840 px | Rail or Sidebar | two to three panes |
+| Medium | 600–839 px | Web: Sidebar · App: Bottom Navigation | one to two panes |
+| Expanded | from 840 px | Web: Sidebar · App: Bottom Navigation | two to three panes |
+
+The App keeps Bottom Navigation at every size; see
+`decisions/0004-android-uses-bottom-navigation-at-every-size.md`. The class
+still selects the content composition on both platforms.
 
 - Switching is based on available window width, not device category.
 - Content is preserved across resize; selection and input are not lost.
