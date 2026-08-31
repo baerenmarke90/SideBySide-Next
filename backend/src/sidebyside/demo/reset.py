@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from datetime import date, timedelta
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
@@ -54,13 +56,11 @@ def _lock(session: Session) -> None:
     session.execute(select(func.pg_advisory_xact_lock(_LOCK_KEY)))
 
 
-def _clear_demo_auth_state(session: Session, account_ids: list[Any]) -> None:
+def _clear_demo_auth_state(session: Session, account_ids: Sequence[UUID]) -> None:
     """Remove public-demo authentication artifacts while preserving local seed passwords."""
     email_ids = select(AccountEmail.id).where(AccountEmail.account_id.in_(account_ids))
     session.execute(
-        delete(EmailVerificationToken).where(
-            EmailVerificationToken.account_email_id.in_(email_ids)
-        )
+        delete(EmailVerificationToken).where(EmailVerificationToken.account_email_id.in_(email_ids))
     )
     session.execute(delete(MagicLinkToken).where(MagicLinkToken.account_email_id.in_(email_ids)))
     session.execute(
