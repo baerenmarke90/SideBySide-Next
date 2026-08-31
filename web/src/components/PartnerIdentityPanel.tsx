@@ -90,9 +90,7 @@ export function PartnerIdentityPanel({
       aria-labelledby="partner-identity-title"
     >
       <div>
-        <h2 id="partner-identity-title">
-          {t('profileIdentity.partnerTitle')}
-        </h2>
+        <h2 id="partner-identity-title">{t('profileIdentity.partnerTitle')}</h2>
         <p>{t('profileIdentity.partnerIntro')}</p>
       </div>
       {profileQuery.error ? (
