@@ -12,7 +12,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from sidebyside.config import get_settings
-from sidebyside.demo.service import reset_demo_space
+from sidebyside.demo import reset_demo_space
 from sidebyside.identity.models import (
     AccountEmail,
     AccountRecoveryToken,
