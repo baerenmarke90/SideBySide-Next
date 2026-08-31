@@ -18,6 +18,14 @@ function NavigationIcon({ icon }: { icon: AppRouteIcon }) {
     );
   }
 
+  if (icon === 'planning') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 5h12v15H6V5Zm3-2h6v4H9V3Zm0 8 2 2 4-4m-6 8h6" />
+      </svg>
+    );
+  }
+
   if (icon === 'dashboard') {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true">

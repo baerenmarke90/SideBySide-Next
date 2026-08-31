@@ -1,5 +1,6 @@
 export type AppRouteId =
   | 'story'
+  | 'planning'
   | 'dashboard'
   | 'search'
   | 'activity'
@@ -9,6 +10,7 @@ export type AppRouteId =
   | 'memoryCreate';
 export type AppRouteIcon =
   | 'story'
+  | 'planning'
   | 'dashboard'
   | 'search'
   | 'activity'
@@ -32,6 +34,13 @@ export const APP_ROUTES = [
     labelKey: 'navigation.story',
     icon: 'story',
     end: true,
+  },
+  {
+    id: 'planning',
+    path: '/planning',
+    labelKey: 'navigation.planning',
+    icon: 'planning',
+    end: false,
   },
   {
     id: 'dashboard',
@@ -94,6 +103,12 @@ export const HEART_MOMENT_EDIT_ROUTE_PATTERN =
 export const MILESTONE_CREATE_ROUTE = '/milestone/new';
 export const MILESTONE_DETAIL_ROUTE_PATTERN = '/milestone/:milestoneId';
 export const MILESTONE_EDIT_ROUTE_PATTERN = '/milestone/:milestoneId/edit';
+export const WISH_DETAIL_ROUTE_PATTERN = '/planning/wishes/:wishId';
+export const PLAN_DETAIL_ROUTE_PATTERN = '/planning/plans/:planId';
+export const PLACE_DETAIL_ROUTE_PATTERN = '/planning/places/:placeId';
+export const CHAPTER_DETAIL_ROUTE_PATTERN = '/planning/chapters/:chapterId';
+export const COLLECTION_DETAIL_ROUTE_PATTERN =
+  '/planning/collections/:collectionId';
 
 export function appRoutePath(id: AppRouteId): string {
   const route = APP_ROUTES.find((candidate) => candidate.id === id);
@@ -123,4 +138,24 @@ export function milestoneDetailPath(milestoneId: string): string {
 
 export function milestoneEditPath(milestoneId: string): string {
   return `${milestoneDetailPath(milestoneId)}/edit`;
+}
+
+export function wishDetailPath(wishId: string): string {
+  return `/planning/wishes/${encodeURIComponent(wishId)}`;
+}
+
+export function planDetailPath(planId: string): string {
+  return `/planning/plans/${encodeURIComponent(planId)}`;
+}
+
+export function placeDetailPath(placeId: string): string {
+  return `/planning/places/${encodeURIComponent(placeId)}`;
+}
+
+export function chapterDetailPath(chapterId: string): string {
+  return `/planning/chapters/${encodeURIComponent(chapterId)}`;
+}
+
+export function collectionDetailPath(collectionId: string): string {
+  return `/planning/collections/${encodeURIComponent(collectionId)}`;
 }

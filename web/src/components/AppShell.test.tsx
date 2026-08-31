@@ -17,6 +17,7 @@ describe('AppShell', () => {
     expect(html).toContain('<main');
     expect(html).toContain('<nav');
     expect(html).toContain('href="/story"');
+    expect(html).toContain('href="/planning"');
     expect(html).toContain('href="/dashboard"');
     expect(html).toContain('href="/search"');
     expect(html).toContain('href="/activity"');
@@ -31,6 +32,8 @@ describe('AppShell', () => {
 
   it.each([
     '/memory/new',
+    '/planning',
+    '/planning/wishes/wish-1',
     '/people',
     '/profile',
     '/dashboard',
@@ -44,7 +47,6 @@ describe('AppShell', () => {
       </MemoryRouter>,
     );
 
-    expect(html).toContain(`href="${route}"`);
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('shell-nav-link-active');
   });

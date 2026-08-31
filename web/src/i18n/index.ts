@@ -2,6 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import de from './locales/de';
 import importantDates from './locales/importantDates';
+import m5s3 from './locales/m5s3';
 import m5s5 from './locales/m5s5';
 import memoryProduct from './locales/memoryProduct';
 import partnerConnection from './locales/partnerConnection';
@@ -29,6 +30,7 @@ if (!i18n.isInitialized) {
           ...de,
           navigation: {
             ...de.navigation,
+            planning: 'Planen',
             people: 'Menschen',
             profile: 'Profil',
             dashboard: 'Übersicht',
@@ -37,6 +39,7 @@ if (!i18n.isInitialized) {
             notifications: 'Benachrichtigungen',
           },
           importantDates,
+          m5s3,
           m5s5,
           memoryProduct,
           partnerConnection,
