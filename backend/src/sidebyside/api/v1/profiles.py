@@ -140,7 +140,6 @@ def _profile_view(
 @router.get(
     "/spaces/{spaceId}/profiles/{accountId}",
     response_model=PartnerProfileView,
-    operation_id="getPartnerProfile",
     responses=problem_responses(401, 404),
 )
 def get_partner_profile(
