@@ -1430,6 +1430,17 @@
         "title": "EngagementTarget",
         "type": "string"
       },
+      "ExportStatus": {
+        "enum": [
+          "QUEUED",
+          "RUNNING",
+          "READY",
+          "FAILED",
+          "EXPIRED"
+        ],
+        "title": "ExportStatus",
+        "type": "string"
+      },
       "GiftIdeaCreate": {
         "additionalProperties": false,
         "properties": {
@@ -2024,6 +2035,19 @@
         ],
         "title": "HeartMomentVisibilityChange",
         "type": "object"
+      },
+      "ImportStatus": {
+        "enum": [
+          "QUEUED",
+          "VALIDATING",
+          "READY_TO_APPLY",
+          "APPLYING",
+          "COMPLETED",
+          "FAILED",
+          "EXPIRED"
+        ],
+        "title": "ImportStatus",
+        "type": "string"
       },
       "ImportantDateFields": {
         "properties": {
@@ -5680,6 +5704,235 @@
         ],
         "title": "TokenView",
         "type": "object"
+      },
+      "TransferExportCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/TransferScope"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "TransferExportCreate",
+        "type": "object"
+      },
+      "TransferExportDetail": {
+        "properties": {
+          "artifactSize": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifactsize"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "downloadUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Downloadurl"
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorcode"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "readyAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readyat"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/TransferScope"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExportStatus"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "status",
+          "createdAt",
+          "readyAt",
+          "expiresAt",
+          "artifactSize",
+          "errorCode",
+          "downloadUrl"
+        ],
+        "title": "TransferExportDetail",
+        "type": "object"
+      },
+      "TransferImportDetail": {
+        "properties": {
+          "artifactSize": {
+            "title": "Artifactsize",
+            "type": "integer"
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "errorCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errorcode"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransferScope"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ImportStatus"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransferImportSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "validatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validatedat"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "scope",
+          "createdAt",
+          "validatedAt",
+          "completedAt",
+          "expiresAt",
+          "artifactSize",
+          "errorCode",
+          "summary"
+        ],
+        "title": "TransferImportDetail",
+        "type": "object"
+      },
+      "TransferImportSummary": {
+        "properties": {
+          "mediaCount": {
+            "title": "Mediacount",
+            "type": "integer"
+          },
+          "recordCounts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Recordcounts",
+            "type": "object"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/TransferScope"
+          },
+          "sourceMemberCount": {
+            "title": "Sourcemembercount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scope",
+          "recordCounts",
+          "mediaCount",
+          "sourceMemberCount"
+        ],
+        "title": "TransferImportSummary",
+        "type": "object"
+      },
+      "TransferScope": {
+        "enum": [
+          "SHARED",
+          "PERSONAL"
+        ],
+        "title": "TransferScope",
+        "type": "string"
       },
       "UploadDescriptor": {
         "properties": {
@@ -18900,6 +19153,436 @@
         "summary": "Get Story Timeline",
         "tags": [
           "story"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/transfer/exports": {
+      "post": {
+        "operationId": "createTransferExport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferExportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferExportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Create Transfer Export",
+        "tags": [
+          "transfer"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/transfer/exports/{exportId}": {
+      "get": {
+        "operationId": "getTransferExport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exportId",
+            "required": true,
+            "schema": {
+              "title": "Exportid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferExportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Transfer Export",
+        "tags": [
+          "transfer"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/transfer/exports/{exportId}/download": {
+      "get": {
+        "operationId": "downloadTransferExport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "exportId",
+            "required": true,
+            "schema": {
+              "title": "Exportid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Authorized Transfer Bundle download."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request conflicts with the current state of the resource."
+          }
+        },
+        "summary": "Download Transfer Export",
+        "tags": [
+          "transfer"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/transfer/imports": {
+      "post": {
+        "operationId": "createTransferImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/zip": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferImportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The content exceeds the server-side size limit."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The media type is not on the allowlist."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Create Transfer Import",
+        "tags": [
+          "transfer"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/transfer/imports/{importId}": {
+      "get": {
+        "operationId": "getTransferImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "importId",
+            "required": true,
+            "schema": {
+              "title": "Importid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferImportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Transfer Import",
+        "tags": [
+          "transfer"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/transfer/imports/{importId}/apply": {
+      "post": {
+        "operationId": "applyTransferImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "importId",
+            "required": true,
+            "schema": {
+              "title": "Importid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferImportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The request conflicts with the current state of the resource."
+          }
+        },
+        "summary": "Apply Transfer Import",
+        "tags": [
+          "transfer"
         ]
       }
     },

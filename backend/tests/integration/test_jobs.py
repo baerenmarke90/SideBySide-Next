@@ -21,6 +21,16 @@ pytestmark = [pytest.mark.integration, requires_database]
 
 
 class TestEnqueueAndClaim:
+    def test_enqueued_job_has_id_before_flush(self, engine: Engine) -> None:
+        factory = sessionmaker(bind=engine, expire_on_commit=False)
+        session = factory()
+        try:
+            job = queue.enqueue(session, "referenced_job")
+            assert job.id is not None
+            session.rollback()
+        finally:
+            session.close()
+
     def test_enqueued_job_is_claimed(self, engine: Engine) -> None:
         factory = sessionmaker(bind=engine, expire_on_commit=False)
         session = factory()

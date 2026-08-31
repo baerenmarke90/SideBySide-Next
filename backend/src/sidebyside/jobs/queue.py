@@ -10,6 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from sidebyside.core.clock import now
+from sidebyside.core.ids import new_id
 from sidebyside.jobs.models import Job, JobStatus
 
 DEFAULT_LEASE = timedelta(minutes=5)
@@ -27,8 +28,12 @@ def enqueue(
 
     Deliberately does not commit: a job resulting from a domain mutation
     belongs in the same transaction as that mutation.
+
+    Materialize the UUID before the first flush so callers can safely persist
+    references to the job in the same unit of work.
     """
     job = Job(
+        id=new_id(),
         kind=kind,
         payload=payload or {},
         max_attempts=max_attempts,
