@@ -417,10 +417,11 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
   if (!gift.capabilities.canEdit) {
     return <UiState kind="permission" title={t('states.permission.title')} body={t('states.permission.body')} />;
   }
+  const editableGift: GiftIdeaDetail = gift;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    mutation.mutate({ gift, data: new FormData(event.currentTarget) });
+    mutation.mutate({ gift: editableGift, data: new FormData(event.currentTarget) });
   }
 
   return (
