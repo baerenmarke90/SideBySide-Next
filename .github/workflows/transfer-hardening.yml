@@ -35,6 +35,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("src/sidebyside/transfer/service.py")
           text = path.read_text()
@@ -45,16 +46,15 @@ jobs:
                   "from zipfile import ZIP_DEFLATED, ZipFile\n\nfrom pydantic import BaseModel\nfrom sqlalchemy",
               )
 
-          old_scalar = '''    if isinstance(value, (UUID, datetime, date, time)):
-              return value.isoformat()
-          '''
-          new_scalar = '''    if isinstance(value, UUID):
-              return str(value)
-          if isinstance(value, (datetime, date, time)):
-              return value.isoformat()
-          '''
-          if old_scalar in text:
-              text = text.replace(old_scalar, new_scalar, 1)
+          text = text.replace(
+              "    if isinstance(value, (UUID, datetime, date, time)):\n"
+              "        return value.isoformat()\n",
+              "    if isinstance(value, UUID):\n"
+              "        return str(value)\n"
+              "    if isinstance(value, (datetime, date, time)):\n"
+              "        return value.isoformat()\n",
+              1,
+          )
 
           json_marker = "    if isinstance(value, Mapping):\n"
           if "    if isinstance(value, BaseModel):\n" not in text:
@@ -80,48 +80,67 @@ jobs:
                   1,
               )
 
-          text = text.replace(
-              '''        target_table = generated_sources.get(source_type)
-          if target_table is None or _uuid(
-              row.get("source_id"), ErrorCode.TRANSFER_RELATION_INVALID
-          ) not in ids.get(target_table, set()):''',
-              '''        reminder_target_table = generated_sources.get(source_type)
-          if reminder_target_table is None or _uuid(
-              row.get("source_id"), ErrorCode.TRANSFER_RELATION_INVALID
-          ) not in ids.get(reminder_target_table, set()):''',
-              1,
-          )
+          if "reminder_target_table = generated_sources.get(source_type)" not in text:
+              text, count = re.subn(
+                  r"(?m)^(\s*)target_table = generated_sources\.get\(source_type\)$",
+                  r"\1reminder_target_table = generated_sources.get(source_type)",
+                  text,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit(f"reminder target assignment matches: {count}")
+              marker = "ids.get(target_table, set())"
+              pos = text.find("reminder_target_table = generated_sources.get(source_type)")
+              relation_pos = text.find(marker, pos)
+              if relation_pos < 0:
+                  raise SystemExit("reminder target relation marker missing")
+              text = (
+                  text[:relation_pos]
+                  + "ids.get(reminder_target_table, set())"
+                  + text[relation_pos + len(marker):]
+              )
 
-          text = text.replace(
-              '''    for transfer in exports:
-              store.delete(export_storage_key(transfer))
-              transfer.status = ExportStatus.EXPIRED.value
-              transfer.artifact_size = None
-              count += 1''',
-              '''    for transfer_export in exports:
-              store.delete(export_storage_key(transfer_export))
-              transfer_export.status = ExportStatus.EXPIRED.value
-              transfer_export.artifact_size = None
-              count += 1''',
-              1,
-          )
-          text = text.replace(
-              '''    for transfer in imports:
-              store.delete(import_storage_key(transfer))
-              transfer.status = ImportStatus.EXPIRED.value
-              count += 1''',
-              '''    for transfer_import in imports:
-              store.delete(import_storage_key(transfer_import))
-              transfer_import.status = ImportStatus.EXPIRED.value
-              count += 1''',
-              1,
-          )
+          if "for transfer_export in exports:" not in text:
+              text, count = re.subn(
+                  r"(?m)^(\s*)for transfer in exports:\n"
+                  r"\1    store\.delete\(export_storage_key\(transfer\)\)\n"
+                  r"\1    transfer\.status = ExportStatus\.EXPIRED\.value\n"
+                  r"\1    transfer\.artifact_size = None\n"
+                  r"\1    count \+= 1$",
+                  r"\1for transfer_export in exports:\n"
+                  r"\1    store.delete(export_storage_key(transfer_export))\n"
+                  r"\1    transfer_export.status = ExportStatus.EXPIRED.value\n"
+                  r"\1    transfer_export.artifact_size = None\n"
+                  r"\1    count += 1",
+                  text,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit(f"export cleanup matches: {count}")
+
+          if "for transfer_import in imports:" not in text:
+              text, count = re.subn(
+                  r"(?m)^(\s*)for transfer in imports:\n"
+                  r"\1    store\.delete\(import_storage_key\(transfer\)\)\n"
+                  r"\1    transfer\.status = ImportStatus\.EXPIRED\.value\n"
+                  r"\1    count \+= 1$",
+                  r"\1for transfer_import in imports:\n"
+                  r"\1    store.delete(import_storage_key(transfer_import))\n"
+                  r"\1    transfer_import.status = ImportStatus.EXPIRED.value\n"
+                  r"\1    count += 1",
+                  text,
+                  count=1,
+              )
+              if count != 1:
+                  raise SystemExit(f"import cleanup matches: {count}")
 
           required = (
               "from pydantic import BaseModel\n",
+              "    if isinstance(value, UUID):\n",
               "    if isinstance(value, BaseModel):\n",
               "issubclass(python_type, BaseModel)",
               "reminder_target_table = generated_sources.get(source_type)",
+              "ids.get(reminder_target_table, set())",
               "for transfer_export in exports:",
               "for transfer_import in imports:",
           )
