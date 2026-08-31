@@ -122,8 +122,11 @@ def test_space_deletion_cascades_avatar_binding(session: Session) -> None:
     session.delete(space)
     session.flush()
 
-    assert session.execute(
-        select(binding.AccountProfileAttachment).where(
-            binding.AccountProfileAttachment.id == binding_id
-        )
-    ).scalar_one_or_none() is None
+    assert (
+        session.execute(
+            select(binding.AccountProfileAttachment).where(
+                binding.AccountProfileAttachment.id == binding_id
+            )
+        ).scalar_one_or_none()
+        is None
+    )
