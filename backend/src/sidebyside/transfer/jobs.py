@@ -128,8 +128,11 @@ def handle_export(session: Session, payload: dict[str, Any]) -> None:
                 authorization,
                 TransferScope(transfer.scope),
             )
-        store = get_media_store()
-        stored = store.put(service.export_storage_key(transfer), archive, "application/zip")
+        try:
+            store = get_media_store()
+            stored = store.put(service.export_storage_key(transfer), archive, "application/zip")
+        finally:
+            archive.close()
     except BadRequestError as error:
         transfer.status = ExportStatus.FAILED.value
         transfer.error_code = error.code
@@ -248,18 +251,40 @@ def handle_apply_import(session: Session, payload: dict[str, Any]) -> None:
     transfer.completed_at = now()
     transfer.error_code = None
     # The source archive is no longer needed after a successful atomic apply.
-    # Deleting it immediately minimizes retained private data; delete is
-    # idempotent and the completed descriptor remains readable.
+    # A failed immediate delete remains marked by artifact_size > 0 so the
+    # scheduled retention cleanup retries it no later than the 24h boundary.
     try:
         get_media_store().delete(service.import_storage_key(transfer))
+        transfer.artifact_size = 0
     except OSError:
         log.warning("completed transfer import archive cleanup failed")
     log.info("transfer import applied", extra={"transfer_id": str(transfer.id)})
 
 
+def _cleanup_completed_import_archives(session: Session) -> int:
+    transfers = session.execute(
+        select(TransferImport).where(
+            TransferImport.status == ImportStatus.COMPLETED.value,
+            TransferImport.expires_at <= now(),
+            TransferImport.artifact_size > 0,
+        )
+    ).scalars()
+    count = 0
+    store = get_media_store()
+    for transfer in transfers:
+        store.delete(service.import_storage_key(transfer))
+        transfer.artifact_size = 0
+        count += 1
+    return count
+
+
 def handle_cleanup(session: Session, payload: dict[str, Any]) -> None:
     del payload
-    affected = service.cleanup_expired(session)
+    try:
+        affected = service.cleanup_expired(session)
+        affected += _cleanup_completed_import_archives(session)
+    except OSError as error:
+        raise RetryableJobError("Transfer cleanup storage is temporarily unavailable.") from error
     log.info("transfer cleanup completed", extra={"expired_transfers": affected})
     schedule_next(session)
 
