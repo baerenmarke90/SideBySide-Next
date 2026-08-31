@@ -28,6 +28,7 @@ export function ProfilePage(props: ProfilePageProps) {
 
   return (
     <>
+      <ProfilePageBase {...currentProps} />
       <ProfileIdentityPanel
         {...currentProps}
         onDisplayNameChanged={(nextDisplayName) => {
@@ -39,7 +40,6 @@ export function ProfilePage(props: ProfilePageProps) {
           setDisplayName(nextDisplayName);
         }}
       />
-      <ProfilePageBase {...currentProps} />
       <PartnerConnectionPanel {...currentProps} />
       <TransferPanel
         apiBaseUrl={props.apiBaseUrl}
