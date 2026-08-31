@@ -1,5 +1,7 @@
 import {
   APP_ROUTES,
+  CHAPTER_DETAIL_ROUTE_PATTERN,
+  COLLECTION_DETAIL_ROUTE_PATTERN,
   DEFAULT_APP_ROUTE,
   HEART_MOMENT_CREATE_ROUTE,
   HEART_MOMENT_DETAIL_ROUTE_PATTERN,
@@ -9,19 +11,28 @@ import {
   MILESTONE_CREATE_ROUTE,
   MILESTONE_DETAIL_ROUTE_PATTERN,
   MILESTONE_EDIT_ROUTE_PATTERN,
+  PLAN_DETAIL_ROUTE_PATTERN,
+  PLACE_DETAIL_ROUTE_PATTERN,
+  WISH_DETAIL_ROUTE_PATTERN,
   appRoutePath,
+  chapterDetailPath,
+  collectionDetailPath,
   heartMomentDetailPath,
   heartMomentEditPath,
   memoryDetailPath,
   memoryEditPath,
   milestoneDetailPath,
   milestoneEditPath,
+  planDetailPath,
+  placeDetailPath,
+  wishDetailPath,
 } from './routes';
 
 describe('app route registry', () => {
   it('contains only the primary authenticated routes', () => {
     expect(APP_ROUTES.map((route) => route.path)).toEqual([
       '/story',
+      '/planning',
       '/dashboard',
       '/search',
       '/activity',
@@ -35,6 +46,7 @@ describe('app route registry', () => {
 
   it('resolves primary route paths from stable ids', () => {
     expect(appRoutePath('story')).toBe('/story');
+    expect(appRoutePath('planning')).toBe('/planning');
     expect(appRoutePath('dashboard')).toBe('/dashboard');
     expect(appRoutePath('search')).toBe('/search');
     expect(appRoutePath('activity')).toBe('/activity');
@@ -70,6 +82,23 @@ describe('app route registry', () => {
     expect(milestoneDetailPath('mile/stone')).toBe('/milestone/mile%2Fstone');
     expect(milestoneEditPath('milestone-1')).toBe(
       '/milestone/milestone-1/edit',
+    );
+  });
+
+  it('builds encoded shared-planning deep links', () => {
+    expect(WISH_DETAIL_ROUTE_PATTERN).toBe('/planning/wishes/:wishId');
+    expect(PLAN_DETAIL_ROUTE_PATTERN).toBe('/planning/plans/:planId');
+    expect(PLACE_DETAIL_ROUTE_PATTERN).toBe('/planning/places/:placeId');
+    expect(CHAPTER_DETAIL_ROUTE_PATTERN).toBe('/planning/chapters/:chapterId');
+    expect(COLLECTION_DETAIL_ROUTE_PATTERN).toBe(
+      '/planning/collections/:collectionId',
+    );
+    expect(wishDetailPath('wish/one')).toBe('/planning/wishes/wish%2Fone');
+    expect(planDetailPath('plan one')).toBe('/planning/plans/plan%20one');
+    expect(placeDetailPath('place-1')).toBe('/planning/places/place-1');
+    expect(chapterDetailPath('chapter-1')).toBe('/planning/chapters/chapter-1');
+    expect(collectionDetailPath('collection-1')).toBe(
+      '/planning/collections/collection-1',
     );
   });
 });

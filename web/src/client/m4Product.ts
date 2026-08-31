@@ -6,7 +6,15 @@ import { Configuration } from '../api/generated/runtime';
 import type { DashboardItemType } from '../api/generated/models/DashboardItemType';
 import type { EngagementTarget } from '../api/generated/models/EngagementTarget';
 import type { SearchKind } from '../api/generated/models/SearchKind';
-import { appRoutePath, memoryDetailPath } from './routes';
+import {
+  appRoutePath,
+  chapterDetailPath,
+  collectionDetailPath,
+  memoryDetailPath,
+  planDetailPath,
+  placeDetailPath,
+  wishDetailPath,
+} from './routes';
 
 export interface M4ProductApis {
   activity: ActivityApi;
@@ -39,6 +47,18 @@ export function searchResultPath(type: SearchKind, id: string): string | null {
     case 'HEART_MOMENT':
     case 'MILESTONE':
       return appRoutePath('story');
+    case 'WISH':
+      return wishDetailPath(id);
+    case 'PLAN':
+      return planDetailPath(id);
+    case 'PLACE':
+      return placeDetailPath(id);
+    case 'CHAPTER':
+      return chapterDetailPath(id);
+    case 'COLLECTION':
+      return collectionDetailPath(id);
+    case 'COLLECTION_ITEM':
+      return appRoutePath('planning');
     default:
       return null;
   }
@@ -54,6 +74,16 @@ export function dashboardItemPath(
     case 'HEART_MOMENT':
     case 'MILESTONE':
       return appRoutePath('story');
+    case 'WISH':
+      return wishDetailPath(id);
+    case 'PLAN':
+      return planDetailPath(id);
+    case 'PLACE':
+      return placeDetailPath(id);
+    case 'CHAPTER':
+      return chapterDetailPath(id);
+    case 'COLLECTION':
+      return collectionDetailPath(id);
     case 'IMPORTANT_DATE':
     case 'BIRTHDAY':
     case 'ANNIVERSARY':

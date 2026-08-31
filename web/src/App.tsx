@@ -36,6 +36,8 @@ import {
 } from './client/referenceFlow';
 import {
   appRoutePath,
+  CHAPTER_DETAIL_ROUTE_PATTERN,
+  COLLECTION_DETAIL_ROUTE_PATTERN,
   DEFAULT_APP_ROUTE,
   HEART_MOMENT_CREATE_ROUTE,
   HEART_MOMENT_DETAIL_ROUTE_PATTERN,
@@ -45,7 +47,11 @@ import {
   MILESTONE_CREATE_ROUTE,
   MILESTONE_DETAIL_ROUTE_PATTERN,
   MILESTONE_EDIT_ROUTE_PATTERN,
+  PLAN_DETAIL_ROUTE_PATTERN,
+  PLACE_DETAIL_ROUTE_PATTERN,
+  WISH_DETAIL_ROUTE_PATTERN,
 } from './client/routes';
+import { createSharedPlanningApis } from './client/sharedPlanning';
 import {
   loadAuthorizedMemberships,
   loadAuthorizedSpaces,
@@ -56,6 +62,8 @@ import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppShell } from './components/AppShell';
 import { AttachmentDraftPicker } from './components/AttachmentDraftPicker';
 import { Brand } from './components/Brand';
+import { ChapterProductPage } from './components/ChapterProductPage';
+import { CollectionProductPage } from './components/CollectionProductPage';
 import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
 import {
@@ -67,12 +75,16 @@ import {
 import { MemoryProductPage } from './components/MemoryProductPage';
 import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { PageHeader } from './components/PageHeader';
+import { PlaceProductPage } from './components/PlaceProductPage';
+import { PlanProductPage } from './components/PlanProductPage';
 import { ProblemState } from './components/ProblemState';
 import { ProfilePage } from './components/ProfilePage';
 import { RelatedPeoplePage } from './components/RelatedPeoplePage';
+import { SharedPlanningOverviewPage } from './components/SharedPlanningOverviewPage';
 import { StoryProductPage } from './components/StoryProductPage';
 import { ThemeControl } from './components/ThemeControl';
 import { UiState } from './components/UiState';
+import { WishProductPage } from './components/WishProductPage';
 import { useTranslation } from './i18n';
 
 function SpaceContextGate({
@@ -219,7 +231,7 @@ function MemoryCreatePage({
     mutation.mutate({
       title: String(data.get('title')),
       body: String(data.get('body')),
-      happenedOn: happenedOnValue
+      happenedOnValue: happenedOnValue
         ? new Date(`${happenedOnValue}T00:00:00Z`)
         : undefined,
     });
@@ -238,7 +250,6 @@ function MemoryCreatePage({
         description={t('memory.intro')}
         className="create-heading"
       />
-
       <section className="form-card" aria-labelledby="memory-form-heading">
         <h2 id="memory-form-heading" className="sr-only">
           {t('memory.formAria')}
@@ -341,6 +352,10 @@ function AuthenticatedApp({
     () => createM4ProductApis(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
   );
+  const planningApis = useMemo(
+    () => createSharedPlanningApis(apiBaseUrl, tokens.accessToken),
+    [apiBaseUrl, tokens.accessToken],
+  );
 
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
@@ -400,6 +415,10 @@ function AuthenticatedApp({
     spaceId,
     currentAccountId: account.id,
   };
+  const planningProductProps = {
+    apis: planningApis,
+    spaceId,
+  };
 
   return (
     <AppShell onLogout={logout}>
@@ -436,6 +455,30 @@ function AuthenticatedApp({
                 loadMemoryImage={loadMemoryImage}
               />
             }
+          />
+          <Route
+            path={appRoutePath('planning')}
+            element={<SharedPlanningOverviewPage {...planningProductProps} />}
+          />
+          <Route
+            path={WISH_DETAIL_ROUTE_PATTERN}
+            element={<WishProductPage {...planningProductProps} />}
+          />
+          <Route
+            path={PLAN_DETAIL_ROUTE_PATTERN}
+            element={<PlanProductPage {...planningProductProps} />}
+          />
+          <Route
+            path={PLACE_DETAIL_ROUTE_PATTERN}
+            element={<PlaceProductPage {...planningProductProps} />}
+          />
+          <Route
+            path={CHAPTER_DETAIL_ROUTE_PATTERN}
+            element={<ChapterProductPage {...planningProductProps} />}
+          />
+          <Route
+            path={COLLECTION_DETAIL_ROUTE_PATTERN}
+            element={<CollectionProductPage {...planningProductProps} />}
           />
           <Route
             path={appRoutePath('dashboard')}

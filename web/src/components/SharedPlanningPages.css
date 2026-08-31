@@ -1,0 +1,260 @@
+.planning-page {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.planning-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.planning-section,
+.planning-subsection,
+.planning-danger-zone,
+.planning-facts {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: clamp(var(--space-5), 3vw, var(--space-7));
+  background: var(--color-surface);
+}
+
+.planning-section {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.planning-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.planning-section-head h2,
+.planning-subsection h2,
+.planning-danger-zone h2 {
+  margin: 0;
+}
+
+.planning-section-head p,
+.planning-subsection > p,
+.planning-danger-zone > p {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.planning-list,
+.planning-relation-list,
+.planning-collection-items {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.planning-card {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  padding: var(--space-4);
+  background: var(--color-surface-raised);
+}
+
+.planning-card-copy {
+  min-width: 0;
+}
+
+.planning-card h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.planning-meta,
+.planning-empty {
+  display: block;
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.planning-create {
+  flex: 0 0 auto;
+}
+
+.planning-create summary {
+  cursor: pointer;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-weight: 700;
+  list-style-position: inside;
+}
+
+.planning-create[open] {
+  width: min(100%, 30rem);
+}
+
+.planning-create-form {
+  margin-top: var(--space-4);
+}
+
+.planning-coordinate-grid,
+.planning-detail-grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.planning-coordinate-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.planning-detail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  align-items: start;
+}
+
+.planning-subsection {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.planning-action-form {
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.planning-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+}
+
+.planning-facts p {
+  margin: 0;
+}
+
+.planning-danger-zone {
+  border-color: var(--color-error);
+}
+
+.planning-confirm-row,
+.planning-order-actions,
+.planning-inline-create,
+.planning-relation-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.planning-relation-list li,
+.planning-collection-items li {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  padding: var(--space-3);
+  background: var(--color-surface-raised);
+}
+
+.planning-relation-list li > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+  flex: 1 1 auto;
+}
+
+.planning-relation-list strong {
+  overflow-wrap: anywhere;
+}
+
+.planning-relation-form label {
+  flex: 1 1 100%;
+  font-weight: 700;
+}
+
+.planning-relation-form select,
+.planning-inline-create input {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.planning-item-title-form {
+  min-width: 0;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex: 1 1 16rem;
+}
+
+.planning-item-title-form input {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.planning-check {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.planning-item-completed .planning-item-title-form input {
+  text-decoration: line-through;
+  color: var(--color-text-secondary);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+@media (max-width: 599px) {
+  .planning-section-head,
+  .planning-card,
+  .planning-relation-list li,
+  .planning-collection-items li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .planning-create,
+  .planning-create[open],
+  .planning-card .button-link,
+  .planning-inline-create input,
+  .planning-inline-create button,
+  .planning-relation-form select,
+  .planning-relation-form button {
+    width: 100%;
+  }
+
+  .planning-coordinate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-item-title-form {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planning-create summary {
+    scroll-behavior: auto;
+  }
+}
