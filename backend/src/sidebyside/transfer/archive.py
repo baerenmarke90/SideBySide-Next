@@ -199,6 +199,9 @@ def validate_zip(fileobj: IO[bytes], *, compressed_size: int | None = None) -> V
         source_space = manifest.get("sourceSpaceId")
         if not isinstance(source_space, str) or not source_space:
             raise _archive_error(ErrorCode.TRANSFER_MANIFEST_INVALID)
+        exported_by = manifest.get("exportedBySourceId")
+        if exported_by is not None and (not isinstance(exported_by, str) or not exported_by):
+            raise _archive_error(ErrorCode.TRANSFER_MANIFEST_INVALID)
         if not isinstance(manifest.get("exportedAt"), str) or not isinstance(
             manifest.get("applicationVersion"), str
         ):
@@ -265,6 +268,7 @@ def manifest_bytes(
     scope: str,
     source_space_id: str,
     checksums: Mapping[str, str],
+    exported_by_source_id: str,
     personal_owner_source_id: str | None,
 ) -> bytes:
     manifest: dict[str, object] = {
@@ -273,6 +277,7 @@ def manifest_bytes(
         "applicationVersion": application_version,
         "scope": scope,
         "sourceSpaceId": source_space_id,
+        "exportedBySourceId": exported_by_source_id,
         "checksums": dict(sorted(checksums.items())),
     }
     if personal_owner_source_id is not None:
