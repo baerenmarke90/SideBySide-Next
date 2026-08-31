@@ -61,7 +61,9 @@ export function PersonIdentity({
           <span aria-hidden="true">{initials}</span>
         )}
       </span>
-      {showName ? <span className="person-identity-name">{displayName}</span> : null}
+      {showName ? (
+        <span className="person-identity-name">{displayName}</span>
+      ) : null}
     </span>
   );
 }
