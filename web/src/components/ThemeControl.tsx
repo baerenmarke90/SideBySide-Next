@@ -6,18 +6,40 @@ import {
   readThemePreference,
   resolveTheme,
   storeThemePreference,
+  THEME_PREFERENCE_EVENT,
+  THEME_STORAGE_KEY,
   type ThemePreference,
 } from '../theme';
 
-/**
- * Keeps the effective theme synchronized everywhere while exposing the actual
- * preference control only where the profile settings hierarchy requests it.
- */
-export function ThemeControl({
-  variant = 'runtime',
-}: {
-  variant?: 'runtime' | 'inline';
-}) {
+function applyCurrentTheme(systemPrefersDark: boolean): ThemePreference {
+  const preference = readThemePreference();
+  applyResolvedTheme(resolveTheme(preference, systemPrefersDark), preference);
+  return preference;
+}
+
+function ThemeRuntime() {
+  useEffect(() => {
+    const media = window.matchMedia(DARK_MODE_QUERY);
+    const syncTheme = () => applyCurrentTheme(media.matches);
+    const syncStoredTheme = (event: StorageEvent) => {
+      if (event.key === null || event.key === THEME_STORAGE_KEY) syncTheme();
+    };
+
+    syncTheme();
+    media.addEventListener('change', syncTheme);
+    window.addEventListener(THEME_PREFERENCE_EVENT, syncTheme);
+    window.addEventListener('storage', syncStoredTheme);
+    return () => {
+      media.removeEventListener('change', syncTheme);
+      window.removeEventListener(THEME_PREFERENCE_EVENT, syncTheme);
+      window.removeEventListener('storage', syncStoredTheme);
+    };
+  }, []);
+
+  return null;
+}
+
+function ThemePreferenceSelector() {
   const { t } = useTranslation();
   const [preference, setPreference] =
     useState<ThemePreference>(readThemePreference);
@@ -32,12 +54,29 @@ export function ThemeControl({
     return () => media.removeEventListener('change', syncTheme);
   }, [preference]);
 
+  useEffect(() => {
+    const syncPreference = (event: Event) => {
+      if (event instanceof StorageEvent) {
+        if (event.key !== null && event.key !== THEME_STORAGE_KEY) return;
+        setPreference(readThemePreference());
+        return;
+      }
+      const detail = (event as CustomEvent<ThemePreference>).detail;
+      setPreference(detail ?? readThemePreference());
+    };
+
+    window.addEventListener(THEME_PREFERENCE_EVENT, syncPreference);
+    window.addEventListener('storage', syncPreference);
+    return () => {
+      window.removeEventListener(THEME_PREFERENCE_EVENT, syncPreference);
+      window.removeEventListener('storage', syncPreference);
+    };
+  }, []);
+
   function changePreference(next: ThemePreference) {
     storeThemePreference(next);
     setPreference(next);
   }
-
-  if (variant === 'runtime') return null;
 
   return (
     <div className="theme-control theme-control-inline">
@@ -59,4 +98,16 @@ export function ThemeControl({
       </select>
     </div>
   );
+}
+
+/**
+ * Keeps the effective theme synchronized everywhere while exposing the actual
+ * preference control only where the profile settings hierarchy requests it.
+ */
+export function ThemeControl({
+  variant = 'runtime',
+}: {
+  variant?: 'runtime' | 'inline';
+}) {
+  return variant === 'runtime' ? <ThemeRuntime /> : <ThemePreferenceSelector />;
 }
