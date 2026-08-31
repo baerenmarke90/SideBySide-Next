@@ -97,8 +97,8 @@ const privateArea = {
     saveItem: 'Eintrag speichern',
     markComplete: 'Als erledigt markieren',
     markOpen: 'Wieder öffnen',
-    moveUp: 'Nach oben',
-    moveDown: 'Nach unten',
+    reorderItem:
+      'Eintrag verschieben. Ziehen oder mit den Pfeiltasten neu anordnen.',
     removeItem: 'Eintrag löschen',
     reordering: 'Reihenfolge wird gespeichert …',
   },
