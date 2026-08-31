@@ -26,8 +26,8 @@ canonical accounts are first created through `SBS_DEMO_LEA_PASSWORD` and
 Public visitors do **not** receive or enter those passwords. A demo deployment shows a persona
 selection page with:
 
-- **Als Lea beitreten**
-- **Als Alex beitreten**
+- the Lea persona action (`demo.joinLea`); and
+- the Alex persona action (`demo.joinAlex`).
 
 The selected persona receives a rate-limited, one-time authentication proof. That proof is then
 consumed through the ordinary magic-link session path. The deployment-only entry endpoint is
@@ -112,8 +112,8 @@ SBS_DEMO_MODE=false
 SBS_DEMO_PUBLIC_URL=https://demo.sbs.example
 ```
 
-`SBS_DEMO_PUBLIC_URL` is a Web build input. When present, the login screen shows
-**Demo ausprobieren** and links to the separate demo deployment. Changing the value therefore
+`SBS_DEMO_PUBLIC_URL` is a Web build input. When present, the login screen shows the configured demo
+launch action (`demo.launch`) and links to the separate demo deployment. Changing the value therefore
 requires rebuilding the Web image.
 
 On the demo deployment, `SBS_DEMO_MODE=true` replaces the normal unauthenticated entry screen with
