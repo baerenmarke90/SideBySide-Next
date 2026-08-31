@@ -32,14 +32,15 @@ def upgrade() -> None:
             name="fk_account_profile_attachments_account_id_accounts",
             ondelete="CASCADE",
         ),
-        # Bound profile media must be detached before physical provider cleanup.
-        # RESTRICT preserves that ordering instead of silently dropping the
-        # current-avatar relation when an attachment row is deleted.
+        # Attachments are space-scoped and already cascade with their Space.
+        # The profile binding must follow that lifecycle instead of blocking a
+        # Space deletion. Normal avatar replacement still explicitly detaches
+        # the relation before the old attachment enters provider cleanup.
         sa.ForeignKeyConstraint(
             ["attachment_id"],
             ["attachments.id"],
             name="fk_account_profile_attachments_attachment_id_attachments",
-            ondelete="RESTRICT",
+            ondelete="CASCADE",
         ),
         sa.UniqueConstraint(
             "account_id",
