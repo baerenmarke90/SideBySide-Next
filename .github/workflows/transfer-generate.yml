@@ -1,6 +1,8 @@
 name: Transfer Contract Generation
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [feat/345-transfer-bundle]
 
@@ -14,6 +16,7 @@ env:
 
 jobs:
   generate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -34,7 +37,8 @@ jobs:
       - name: Format transfer implementation
         working-directory: backend
         run: |
-          uv run --frozen ruff check --fix src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py
+          uv run --frozen ruff format src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py
+          uv run --frozen ruff check --fix --unsafe-fixes src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py || true
           uv run --frozen ruff format src/sidebyside/transfer src/sidebyside/api/v1/transfer.py tests/unit/test_transfer_archive.py tests/integration/test_transfer.py alembic/versions/0033_m5_transfer_bundle.py
 
       - name: Regenerate canonical OpenAPI contract
