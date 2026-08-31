@@ -18,6 +18,7 @@ COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --frozen --no-install-project --no-editable
 
 COPY src ./src
+COPY demo_assets ./demo_assets
 # Ship only the operational demo entrypoint, not the development/CI scripts.
 COPY scripts/__init__.py scripts/demo_space.py ./scripts/
 COPY alembic ./alembic
@@ -27,6 +28,7 @@ RUN uv sync --locked --no-editable
 # Keep the deployment-time demo bootstrap contract covered by every production
 # image build without creating data or requiring demo credentials.
 RUN python -m scripts.demo_space --help >/dev/null
+RUN python -m scripts.demo_space validate-assets >/dev/null
 
 # Do not run as root: a process escape must not immediately own the container.
 RUN useradd --system --uid 10001 sidebyside \

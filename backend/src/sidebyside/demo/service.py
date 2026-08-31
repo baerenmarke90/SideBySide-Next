@@ -9,18 +9,16 @@ does not leave provider objects behind.
 
 from __future__ import annotations
 
-import io
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 
-from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from sidebyside.attachments import binding as attachment_binding
 from sidebyside.attachments import service as attachment_service
-from sidebyside.attachments.models import Attachment, AttachmentStatus, MediaType
+from sidebyside.attachments.models import Attachment
 from sidebyside.auth import passwords
 from sidebyside.authorization import AuthorizationContext, ContentVisibility
 from sidebyside.chapters import service as chapter_service
@@ -28,6 +26,12 @@ from sidebyside.collections import service as collection_service
 from sidebyside.comments import service as comment_service
 from sidebyside.comments.models import CommentTarget
 from sidebyside.config import Environment
+from sidebyside.demo.assets import (
+    DemoAssetCatalog,
+    import_demo_asset,
+    load_and_validate_assets,
+)
+from sidebyside.demo.story import CHAPTERS, MEMORIES
 from sidebyside.engagement import service as engagement_service
 from sidebyside.gift_ideas import service as gift_idea_service
 from sidebyside.heart_moments import service as heart_moment_service
@@ -180,42 +184,6 @@ def _context(account: Account, space: Space) -> AuthorizationContext:
 
 def _instant(day: date, hour: int) -> datetime:
     return datetime.combine(day, time(hour=hour, tzinfo=UTC))
-
-
-def _demo_jpeg(*, portrait: bool, tone: tuple[int, int, int]) -> bytes:
-    """Generate a tiny repository-owned image without committed binary assets."""
-    size = (240, 320) if portrait else (320, 240)
-    image = Image.new("RGB", size, tone)
-    buffer = io.BytesIO()
-    image.save(buffer, "JPEG", quality=84, optimize=True)
-    return buffer.getvalue()
-
-
-def _ready_demo_image(
-    session: Session,
-    context: AuthorizationContext,
-    *,
-    original_name: str,
-    portrait: bool,
-    tone: tuple[int, int, int],
-) -> Attachment:
-    content = _demo_jpeg(portrait=portrait, tone=tone)
-    attachment = attachment_service.create_upload(
-        session,
-        context,
-        media_type=MediaType.IMAGE,
-        original_name=original_name,
-        expected_mime_type="image/jpeg",
-        expected_size=len(content),
-    )
-    attachment, rule = attachment_service.open_upload(session, context, attachment.id)
-    attachment_service.complete_upload(session, attachment, rule, content)
-    attachment_service.finalize_upload(session, context, attachment.id)
-    attachment_service.validate(session, attachment.id)
-    session.flush()
-    if attachment.status != AttachmentStatus.READY.value:
-        raise RuntimeError(f"Generated demo image {original_name} did not become READY.")
-    return attachment
 
 
 def _seed_relationship(
@@ -378,75 +346,32 @@ def _seed_story(
     lea_context: AuthorizationContext,
     alex_context: AuthorizationContext,
     *,
+    assets: DemoAssetCatalog,
     reference_date: date,
 ) -> None:
-    lake = memory_service.create_memory(
-        session,
-        lea_context,
-        title="Sonnenaufgang am See",
-        body="Wir waren viel zu früh wach, aber das Licht über dem Wasser war es wert.",
-        happened_on=reference_date - timedelta(days=71),
-    )
-    lake_images = [
-        _ready_demo_image(
+    contexts = {"lea": lea_context, "alex": alex_context}
+    memories: dict[str, Memory] = {}
+    for story in MEMORIES:
+        context = contexts[story.owner]
+        memory = memory_service.create_memory(
             session,
-            lea_context,
-            original_name="lake-01.jpg",
-            portrait=False,
-            tone=(201, 150, 92),
-        ),
-        _ready_demo_image(
+            context,
+            title=story.title,
+            body=story.body,
+            happened_on=reference_date - timedelta(days=story.days_ago),
+        )
+        memories[story.key] = memory
+        attachments = [
+            import_demo_asset(session, context, assets.require(asset_id))
+            for asset_id in story.asset_ids
+        ]
+        memory_service.replace_attachments(
             session,
-            lea_context,
-            original_name="lake-02.jpg",
-            portrait=True,
-            tone=(102, 151, 143),
-        ),
-        _ready_demo_image(
-            session,
-            lea_context,
-            original_name="lake-03.jpg",
-            portrait=False,
-            tone=(124, 137, 174),
-        ),
-    ]
-    memory_service.replace_attachments(
-        session,
-        lea_context,
-        lake.id,
-        expected_version=lake.version,
-        entries=[(attachment.id, index) for index, attachment in enumerate(lake_images)],
-    )
-
-    kitchen = memory_service.create_memory(
-        session,
-        alex_context,
-        title="Unser erster Pastateig",
-        body="Die Küche war voller Mehl. Die zweite Portion wurde dafür richtig gut.",
-        happened_on=reference_date - timedelta(days=113),
-    )
-    pasta = _ready_demo_image(
-        session,
-        alex_context,
-        original_name="pasta.jpg",
-        portrait=False,
-        tone=(194, 164, 105),
-    )
-    memory_service.replace_attachments(
-        session,
-        alex_context,
-        kitchen.id,
-        expected_version=kitchen.version,
-        entries=[(pasta.id, 0)],
-    )
-
-    memory_service.create_memory(
-        session,
-        lea_context,
-        title="Spaziergang im Sommerregen",
-        body="Ohne Schirm losgelaufen und trotzdem nicht umgedreht.",
-        happened_on=reference_date - timedelta(days=36),
-    )
+            context,
+            memory.id,
+            expected_version=memory.version,
+            entries=[(attachment.id, index) for index, attachment in enumerate(attachments)],
+        )
 
     shared_heart = heart_moment_service.create_heart_moment(
         session,
@@ -456,13 +381,7 @@ def _seed_story(
         visibility=ContentVisibility.SHARED,
         happened_on=reference_date - timedelta(days=3),
     )
-    private_image = _ready_demo_image(
-        session,
-        lea_context,
-        original_name="private-lea-7421.jpg",
-        portrait=True,
-        tone=(158, 124, 146),
-    )
+    private_image = import_demo_asset(session, lea_context, assets.require("private-flowers"))
     heart_moment_service.create_heart_moment(
         session,
         lea_context,
@@ -487,20 +406,34 @@ def _seed_story(
         body="Noch immer unser liebster Ort für einen ruhigen Sonntag.",
         happened_on=reference_date - timedelta(days=23),
     )
+    milestone_service.create_milestone(
+        session,
+        alex_context,
+        title="Drei Jahre wir",
+        body="Kein großes Programm, nur unser Lieblingsessen und ein langer Spaziergang.",
+        happened_on=reference_date - timedelta(days=83),
+    )
 
+    comment_service.create_comment(
+        session,
+        lea_context,
+        target_type=CommentTarget.MEMORY,
+        target_id=memories["lake-walk"].id,
+        body="Nächstes Mal nehmen wir wieder Kaffee mit.",
+    )
     comment_service.create_comment(
         session,
         alex_context,
         target_type=CommentTarget.MEMORY,
-        target_id=lake.id,
-        body="Den frühen Wecker war es wert.",
+        target_id=memories["ravioli-evening"].id,
+        body="Die krummen waren trotzdem die besten.",
     )
     comment_service.create_comment(
         session,
         lea_context,
         target_type=CommentTarget.MEMORY,
-        target_id=lake.id,
-        body="Nächstes Mal mit heißem Kaffee.",
+        target_id=memories["trier-weekend"].id,
+        body="Da müssen wir nochmal hin, aber diesmal zwei Nächte.",
     )
     comment_service.create_comment(
         session,
@@ -522,33 +455,31 @@ def _seed_planning(
         session,
         lea_context,
         name="Café am Markt",
-        description="Kleines fiktives Café für den Demo-Space.",
-        address="Marktplatz 7, 12345 Demostadt",
-        latitude=49.470000,
-        longitude=7.170000,
+        description="Unser Treffpunkt für Kaffee und ein langes Frühstück.",
+        address=None,
+        latitude=None,
+        longitude=None,
     )
     lake = place_service.create_place(
         session,
         alex_context,
         name="Waldsee",
-        description="Fiktiver Ort für Spaziergänge und Picknick.",
+        description="Ruhige Runde am Wasser für Spaziergänge und Picknick.",
         address=None,
         latitude=None,
         longitude=None,
     )
 
     wish_service.create_wish(session, lea_context, title="Zusammen einen Töpferkurs machen")
-    planned_wish = wish_service.create_wish(
-        session, alex_context, title="Ein Wochenende ohne Termine"
-    )
+    planned_wish = wish_service.create_wish(session, alex_context, title="Herbstwanderung")
     planned = plan_service.convert_wish_to_plan(
         session,
         alex_context,
         planned_wish.id,
         expected_version=planned_wish.version,
         title=None,
-        description="Samstag frei halten und spontan entscheiden.",
-        place_id=None,
+        description="Wenn die Blätter bunt werden, einen ganzen Tag für den Wald freihalten.",
+        place_id=lake.id,
     ).plan
     plan_service.schedule_plan(
         session,
@@ -556,11 +487,11 @@ def _seed_planning(
         planned.id,
         expected_version=planned.version,
         planned_start=_instant(reference_date + timedelta(days=18), 10),
-        planned_end=_instant(reference_date + timedelta(days=19), 18),
+        planned_end=_instant(reference_date + timedelta(days=18), 17),
     )
 
     completed_wish = wish_service.create_wish(
-        session, lea_context, title="Zusammen einen neuen Aussichtspunkt entdecken"
+        session, lea_context, title="Gemeinsamer Tagesausflug"
     )
     completed = plan_service.convert_wish_to_plan(
         session,
@@ -568,7 +499,7 @@ def _seed_planning(
         completed_wish.id,
         expected_version=completed_wish.version,
         title=None,
-        description="Den Weg am Waldsee ausprobieren.",
+        description="Morgens los und erst unterwegs entscheiden, wo wir landen.",
         place_id=lake.id,
     ).plan
     plan_service.complete_plan(
@@ -576,50 +507,70 @@ def _seed_planning(
         lea_context,
         completed.id,
         expected_version=completed.version,
-        experienced_on=reference_date - timedelta(days=8),
+        experienced_on=reference_date - timedelta(days=43),
     )
 
     plan_service.create_plan(
         session,
         alex_context,
-        title="Neue Pastasorte ausprobieren",
-        description="Noch ohne Termin - einfach eine Idee für später.",
+        title="Wellness-Wochenende",
+        description="Eine Nacht, Sauna und das Handy möglichst lange in der Tasche lassen.",
         place_id=None,
     )
-    scheduled = plan_service.create_plan(
+    plan_service.create_plan(
         session,
         lea_context,
-        title="Frühstück im Café am Markt",
-        description="Fensterplatz reservieren.",
+        title="Neues Rezept ausprobieren",
+        description="Etwas kochen, das wir beide noch nie gemacht haben.",
+        place_id=None,
+    )
+    concert = plan_service.create_plan(
+        session,
+        alex_context,
+        title="Konzert im Herbst",
+        description="Tickets liegen schon bereit.",
+        place_id=None,
+    )
+    plan_service.schedule_plan(
+        session,
+        alex_context,
+        concert.id,
+        expected_version=concert.version,
+        planned_start=_instant(reference_date + timedelta(days=34), 19),
+        planned_end=_instant(reference_date + timedelta(days=34), 23),
+    )
+    flea_market = plan_service.create_plan(
+        session,
+        lea_context,
+        title="Flohmarkt am Samstag",
+        description="Früh los, danach Kaffee und schauen, was wir finden.",
         place_id=cafe.id,
     )
     plan_service.schedule_plan(
         session,
         lea_context,
-        scheduled.id,
-        expected_version=scheduled.version,
-        planned_start=_instant(reference_date + timedelta(days=4), 9),
-        planned_end=_instant(reference_date + timedelta(days=4), 11),
+        flea_market.id,
+        expected_version=flea_market.version,
+        planned_start=_instant(reference_date + timedelta(days=11), 9),
+        planned_end=_instant(reference_date + timedelta(days=11), 13),
     )
 
-    chapter_service.create_chapter(
-        session,
-        lea_context,
-        title="Unser Sommer am See",
-        description="Ausflüge, Regen und die Tage, die länger wirkten als sie waren.",
-        start_on=reference_date - timedelta(days=92),
-        end_on=reference_date - timedelta(days=25),
-        place_id=lake.id,
-    )
-    chapter_service.create_chapter(
-        session,
-        alex_context,
-        title="Was als Nächstes kommt",
-        description="Ein offenes Kapitel für die nächsten gemeinsamen Pläne.",
-        start_on=reference_date,
-        end_on=None,
-        place_id=None,
-    )
+    places = {"cafe": cafe, "lake": lake}
+    for chapter in CHAPTERS:
+        place = places.get(chapter.place) if chapter.place is not None else None
+        chapter_service.create_chapter(
+            session,
+            lea_context if chapter.title in {"Unser Sommer", "Kochabende"} else alex_context,
+            title=chapter.title,
+            description=chapter.description,
+            start_on=reference_date - timedelta(days=chapter.start_days_ago),
+            end_on=(
+                reference_date - timedelta(days=chapter.end_days_ago)
+                if chapter.end_days_ago is not None
+                else None
+            ),
+            place_id=place.id if place is not None else None,
+        )
 
     shared_collection = collection_service.create_collection(
         session,
@@ -640,6 +591,26 @@ def _seed_planning(
         shared_collection.id,
         title="Eine neue Komödie aussuchen",
         completed=False,
+    )
+    recipes = collection_service.create_collection(
+        session,
+        alex_context,
+        title="Rezepte für lange Abende",
+        icon="utensils",
+    )
+    collection_service.create_item(
+        session,
+        lea_context,
+        recipes.id,
+        title="Ravioli mit neuer Füllung",
+        completed=False,
+    )
+    collection_service.create_item(
+        session,
+        alex_context,
+        recipes.id,
+        title="Ofengemüse mit Feta",
+        completed=True,
     )
 
 
@@ -664,6 +635,21 @@ def _seed_private_area(
         body=f"{PRIVATE_CANARY_ALEX} - Frühstück und Spaziergang vorbereiten.",
         pinned=False,
     )
+    private_note_service.create_note(
+        session,
+        lea_context,
+        title="Für den nächsten freien Sonntag",
+        body="Kaffee holen, Handy zu Hause lassen und eine große Runde am See drehen.",
+        pinned=False,
+    )
+    private_note_service.create_note(
+        session,
+        alex_context,
+        title="Kleine Überraschung",
+        body="Die Blumen vom Markt mitbringen, wenn Lea einen langen Tag hatte.",
+        pinned=True,
+    )
+
     gift_idea_service.create_idea(
         session,
         lea_context,
@@ -688,6 +674,30 @@ def _seed_private_area(
         url=None,
         pinned=False,
     )
+    gift_idea_service.create_idea(
+        session,
+        lea_context,
+        title="Konzertposter rahmen",
+        description="Eine schöne Erinnerung an unseren Konzertabend.",
+        recipient=ALEX_NAME,
+        occasion=None,
+        target_on=None,
+        price_text="ca. 20 €",
+        url=None,
+        pinned=False,
+    )
+    gift_idea_service.create_idea(
+        session,
+        alex_context,
+        title="Frühstückskorb",
+        description="Croissants, Marmelade und der Kaffee, den Lea am liebsten mag.",
+        recipient=LEA_NAME,
+        occasion="Freier Sonntag",
+        target_on=reference_date + timedelta(days=26),
+        price_text="ca. 30 €",
+        url=None,
+        pinned=True,
+    )
 
     lea_collection = private_collection_service.create_collection(
         session,
@@ -702,6 +712,13 @@ def _seed_private_area(
         title="Fotobuch bestellen",
         completed=False,
     )
+    private_collection_service.create_item(
+        session,
+        lea_context,
+        lea_collection.id,
+        title="Rahmen fürs Konzertposter aussuchen",
+        completed=False,
+    )
     alex_collection = private_collection_service.create_collection(
         session,
         alex_context,
@@ -714,6 +731,13 @@ def _seed_private_area(
         alex_collection.id,
         title="Tisch fürs Frühstück vorbereiten",
         completed=True,
+    )
+    private_collection_service.create_item(
+        session,
+        alex_context,
+        alex_collection.id,
+        title="Blumen auf dem Markt holen",
+        completed=False,
     )
 
 
@@ -733,6 +757,7 @@ def _seed(
     alex: Account,
     space: Space,
     *,
+    assets: DemoAssetCatalog,
     reference_date: date,
 ) -> None:
     lea_context = _context(lea, space)
@@ -749,6 +774,7 @@ def _seed(
         session,
         lea_context,
         alex_context,
+        assets=assets,
         reference_date=reference_date,
     )
     _seed_planning(
@@ -776,6 +802,7 @@ def create_demo_space(
 ) -> DemoSeedResult:
     """Create the canonical demo dataset once; repeat calls are idempotent."""
     _ensure_allowed(environment)
+    assets = load_and_validate_assets()
     lea, alex = _existing_accounts(session)
     if lea is None or alex is None:
         lea, alex = _create_accounts(
@@ -795,7 +822,7 @@ def create_demo_space(
         )
 
     space = _new_space(session, lea, alex)
-    _seed(session, lea, alex, space, reference_date=reference_date)
+    _seed(session, lea, alex, space, assets=assets, reference_date=reference_date)
     return DemoSeedResult(
         lea_id=lea.id,
         alex_id=alex.id,
@@ -868,6 +895,7 @@ def reset_demo_space(
 ) -> DemoSeedResult:
     """Replace only the verified canonical demo Space with a fresh scenario."""
     _ensure_allowed(environment)
+    assets = load_and_validate_assets()
     lea, alex = _existing_accounts(session)
     if lea is None or alex is None:
         raise RuntimeError("Canonical demo accounts do not exist; run create first.")
@@ -879,7 +907,7 @@ def reset_demo_space(
     session.flush()
 
     replacement = _new_space(session, lea, alex)
-    _seed(session, lea, alex, replacement, reference_date=reference_date)
+    _seed(session, lea, alex, replacement, assets=assets, reference_date=reference_date)
     return DemoSeedResult(
         lea_id=lea.id,
         alex_id=alex.id,

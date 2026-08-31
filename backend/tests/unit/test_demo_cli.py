@@ -91,3 +91,21 @@ def test_ensure_bootstraps_demo_with_ephemeral_passwords(monkeypatch: Any) -> No
     assert len(lea_password) >= 32
     assert len(alex_password) >= 32
     assert lea_password != alex_password
+
+
+def test_validate_assets_avoids_settings_and_database(monkeypatch: Any, capsys: Any) -> None:
+    monkeypatch.setattr(sys, "argv", ["demo_space", "validate-assets"])
+    monkeypatch.setattr(
+        demo_space,
+        "load_and_validate_assets",
+        lambda: SimpleNamespace(assets=(object(), object())),
+    )
+
+    def fail_if_called() -> None:
+        raise AssertionError("asset validation must not need settings or a database")
+
+    monkeypatch.setattr(demo_space, "get_settings", fail_if_called)
+    monkeypatch.setattr(demo_space, "unit_of_work", fail_if_called)
+
+    assert demo_space.main() == 0
+    assert "Demo assets valid: 2 curated files." in capsys.readouterr().out
