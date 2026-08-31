@@ -29,47 +29,122 @@
   min-height: calc(100vh - var(--topbar-height));
 }
 
-/*
- * Search reaches every area, so it sits in the app bar rather than taking one
- * of the five primary destinations.
- */
-.shell-search-link {
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+/* Global utilities live in the app bar and stay icon-only in persistent chrome. */
+.shell-utility-link,
+.header-profile-trigger {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  display: inline-grid;
+  place-items: center;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-pill);
-  padding: var(--space-2) var(--space-4);
+  padding: 0;
+  background: transparent;
   color: var(--color-text-secondary);
-  font-size: 0.88rem;
-  font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
   transition:
     background var(--motion-fast),
+    border-color var(--motion-fast),
     color var(--motion-fast);
 }
 
-.shell-search-link:hover {
+.shell-utility-link:hover,
+.header-profile-trigger:hover {
   background: var(--color-surface-subtle);
   color: var(--color-text);
 }
 
-.shell-search-link:focus-visible {
+.shell-utility-link:focus-visible,
+.header-profile-trigger:focus-visible,
+.header-profile-menu-item:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
-.shell-search-link-active {
+.shell-utility-link-active {
   border-color: transparent;
   background: var(--color-brand-surface);
   color: var(--color-brand-text);
 }
 
+.shell-utility-link .shell-nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.shell-utility-link .shell-nav-icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.header-profile-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.header-profile-trigger {
+  list-style: none;
+}
+
+.header-profile-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.header-profile-trigger .person-identity {
+  gap: 0;
+}
+
+.header-profile-popover {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(18rem, calc(100vw - 2rem));
+  display: grid;
+  gap: var(--space-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: var(--space-2);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
+}
+
+.header-profile-menu-item {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-medium);
+  padding: var(--space-3);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header-profile-menu-item:hover {
+  background: var(--color-surface-subtle);
+}
+
+.header-profile-menu-logout {
+  width: 100%;
+  border-top: 1px solid var(--color-border-subtle);
+  border-radius: 0 0 var(--radius-medium) var(--radius-medium);
+  margin-top: var(--space-1);
+  color: var(--color-text-secondary);
+}
+
 /*
  * Creating content is the primary desktop action and belongs in the sidebar
  * rather than in the destination list. On compact viewports the same route
- * stays in the bottom navigation, so it is never lost.
+ * stays reachable through the product flow rather than becoming a utility.
  */
 .shell-primary-action {
   display: none;
@@ -161,16 +236,6 @@
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.shell-search-link .shell-nav-icon {
-  width: 1.15rem;
-  height: 1.15rem;
-}
-
-.shell-search-link .shell-nav-icon svg {
-  width: 1.05rem;
-  height: 1.05rem;
 }
 
 .mobile-bottom-nav {
@@ -294,7 +359,6 @@
 
 @media (max-width: 839px) {
   .product-topbar .brand-name,
-  .product-topbar .shell-search-link span:not(.shell-nav-icon),
   .product-topbar .shared-context,
   .product-topbar .theme-control label,
   .product-topbar .theme-control-icon {
@@ -312,6 +376,22 @@
 }
 
 @media (max-width: 599px) {
+  .header-actions {
+    gap: var(--space-1);
+  }
+
+  .shell-utility-link,
+  .header-profile-trigger {
+    width: 44px;
+    min-width: 44px;
+  }
+
+  .header-profile-popover {
+    position: fixed;
+    top: calc(var(--topbar-height) - var(--space-1));
+    right: var(--space-3);
+  }
+
   .page-heading-action,
   .page-heading-action .button-link {
     width: 100%;
@@ -364,7 +444,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .skip-link,
-  .shell-nav-link {
+  .shell-nav-link,
+  .shell-utility-link,
+  .header-profile-trigger {
     transition: none;
   }
 }
