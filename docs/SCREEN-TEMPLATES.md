@@ -113,6 +113,10 @@ On Compact, a Floating Action Button-like action is used only when it is unambig
 
 ## 7. Template: Discover
 
+**Availability:** M7. The Discover domain does not exist in Core yet, so this
+template is a reserved target rather than a screen to build. See
+`decisions/0003-primary-navigation-and-route-model.md`.
+
 **Purpose:** Offer inspiration without overshadowing private core tasks.
 
 ### Compact

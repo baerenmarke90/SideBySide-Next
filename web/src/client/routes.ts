@@ -13,7 +13,7 @@ export type AppRouteId =
  * destinations; the browser sidebar shows all of them at once and needs the
  * grouping to stay readable.
  */
-export type AppRouteGroup = 'together' | 'discover' | 'you';
+export type AppRouteGroup = 'together' | 'keepUpToDate' | 'you';
 
 export type AppRouteIcon =
   | 'story'
@@ -38,7 +38,7 @@ export interface AppRouteDefinition {
 
 export const APP_ROUTE_GROUPS = [
   { id: 'together', labelKey: 'navigation.groups.together' },
-  { id: 'discover', labelKey: 'navigation.groups.discover' },
+  { id: 'keepUpToDate', labelKey: 'navigation.groups.keepUpToDate' },
   { id: 'you', labelKey: 'navigation.groups.you' },
 ] as const satisfies readonly { id: AppRouteGroup; labelKey: string }[];
 
@@ -73,7 +73,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.search',
     icon: 'search',
     end: true,
-    group: 'discover',
+    group: 'keepUpToDate',
   },
   {
     id: 'activity',
@@ -81,7 +81,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.activity',
     icon: 'activity',
     end: true,
-    group: 'discover',
+    group: 'keepUpToDate',
   },
   {
     id: 'notifications',
@@ -89,7 +89,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.notifications',
     icon: 'notifications',
     end: true,
-    group: 'discover',
+    group: 'keepUpToDate',
   },
   {
     id: 'people',
