@@ -19,14 +19,16 @@ describe('private area client boundary', () => {
     expect(privateAreaQueryKeys.notes('account-a', 'space-a')).not.toEqual(
       privateAreaQueryKeys.notes('account-b', 'space-a'),
     );
-    expect(privateAreaQueryKeys.collections('account-a', 'space-a')).not.toEqual(
-      privateAreaQueryKeys.collections('account-a', 'space-b'),
-    );
+    expect(
+      privateAreaQueryKeys.collections('account-a', 'space-a'),
+    ).not.toEqual(privateAreaQueryKeys.collections('account-a', 'space-b'));
   });
 
   it('keeps private resource identifiers in the personal route namespace', () => {
     expect(privateNotePath('note/one')).toBe('/private/notes/note%2Fone');
-    expect(privateGiftIdeaPath('gift one')).toBe('/private/gift-ideas/gift%20one');
+    expect(privateGiftIdeaPath('gift one')).toBe(
+      '/private/gift-ideas/gift%20one',
+    );
     expect(privateCollectionPath('list#one')).toBe(
       '/private/collections/list%23one',
     );
