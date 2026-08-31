@@ -23,6 +23,7 @@ from sidebyside.engagement import service as engagement_service
 from sidebyside.jobs import maintenance
 from sidebyside.jobs.worker import run_once
 from sidebyside.reminders import runtime as reminder_runtime
+from sidebyside.transfer import jobs as transfer_jobs
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ def _ensure_maintenance() -> None:
             maintenance.ensure_scheduled(session)
             media_cleanup.ensure_scheduled(session)
             reminder_runtime.ensure_scheduled(session)
+            transfer_jobs.ensure_scheduled(session)
     except Exception:
         log.exception("could not schedule maintenance")
 
@@ -82,6 +84,7 @@ def main() -> None:
     media_cleanup.register_handlers()
     push_delivery.register_handlers()
     reminder_runtime.register_handlers()
+    transfer_jobs.register_handlers()
     _ensure_maintenance()
     last_checked = time.monotonic()
 
