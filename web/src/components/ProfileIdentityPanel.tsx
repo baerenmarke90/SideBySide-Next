@@ -227,7 +227,7 @@ export function ProfileIdentityPanel({
           ) : null}
 
           <form
-            key={`name-${profile.version}`}
+            key={`name-${profile.displayName}`}
             className="form-grid"
             onSubmit={submitDisplayName}
           >
