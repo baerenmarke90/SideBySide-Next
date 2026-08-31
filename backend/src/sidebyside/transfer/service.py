@@ -86,6 +86,7 @@ FILE_TABLES: dict[str, tuple[str, ...]] = {
 }
 PRIVATE_FILES = frozenset(name for name in FILE_TABLES if name.startswith("private/"))
 PRIVATE_ROOTS = frozenset({"private_notes", "gift_ideas", "private_collections"})
+ACCOUNT_SCOPED_CONFIG_TABLES = frozenset({"rule_preferences", "reminder_preferences"})
 CHILD_PARENT: dict[str, tuple[str, str]] = {
     "collection_items": ("collection_id", "collections"),
     "private_collection_items": ("collection_id", "private_collections"),
@@ -310,24 +311,38 @@ def _portable_rows(
             rows[child_name] = []
             continue
         table = _table(session, child_name, metadata)
-        rows[child_name] = _load_child_rows(
+        loaded = _load_child_rows(
             session,
             table,
             parent_column=parent_column,
             parent_ids=_selected_ids(rows, parent_table),
         )
+        if child_name == "reminder_preferences":
+            loaded = [
+                row
+                for row in loaded
+                if scope is TransferScope.PERSONAL
+                and row.get("account_id") == authorization.account_id
+            ]
+        rows[child_name] = loaded
 
-    # rule_preferences is keyed directly by account/space and has no privacy
-    # class. It is safe configuration, not protected content. Include active
-    # members' preferences; imported account IDs are still remapped later.
+    # Rule and reminder preferences are account-scoped user configuration even
+    # though their persistence tables predate the generic privacy_class column.
+    # They are portable only in PERSONAL and only for the requesting account.
     if "rule_preferences" in rows:
-        table = _table(session, "rule_preferences", metadata)
-        rows["rule_preferences"] = [
-            dict(row)
-            for row in session.execute(
-                select(table).where(table.c.space_id == authorization.space_id)
-            ).mappings()
-        ]
+        if scope is TransferScope.SHARED:
+            rows["rule_preferences"] = []
+        else:
+            table = _table(session, "rule_preferences", metadata)
+            rows["rule_preferences"] = [
+                dict(row)
+                for row in session.execute(
+                    select(table).where(
+                        table.c.space_id == authorization.space_id,
+                        table.c.account_id == authorization.account_id,
+                    )
+                ).mappings()
+            ]
 
     _prune_relations(rows)
     return rows
@@ -818,6 +833,20 @@ def _validate_ids_and_privacy(
                 raise TransferArchiveError(
                     "Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
                 )
+            if table_name in ACCOUNT_SCOPED_CONFIG_TABLES:
+                if scope is TransferScope.SHARED or personal_owner is None:
+                    raise TransferArchiveError(
+                        "Transfer privacy scope is invalid.",
+                        ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID,
+                    )
+                account_id = _uuid(
+                    row.get("account_id"), ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
+                )
+                if account_id != personal_owner:
+                    raise TransferArchiveError(
+                        "Transfer privacy scope is invalid.",
+                        ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID,
+                    )
             for column in ACCOUNT_REFERENCE_COLUMNS:
                 if (
                     row.get(column) is not None
