@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  moveSortableItem,
-  moveSortableItemByOffset,
-} from './ListEntryActions';
+import { moveSortableItem, moveSortableItemByOffset } from './ListEntryActions';
 
 describe('list entry reorder helpers', () => {
   it('moves an item before another item', () => {
