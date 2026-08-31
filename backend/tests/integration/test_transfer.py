@@ -132,13 +132,17 @@ def test_shared_export_excludes_owner_only_and_personal_keeps_only_requester(
         pinned=False,
     )
 
-    with service.build_export_archive(session, anna_context, TransferScope.SHARED) as bundle:
-        with ZipFile(bundle, "r") as archive:
-            assert "private/notes.json" not in archive.namelist()
+    with (
+        service.build_export_archive(session, anna_context, TransferScope.SHARED) as bundle,
+        ZipFile(bundle, "r") as archive,
+    ):
+        assert "private/notes.json" not in archive.namelist()
 
-    with service.build_export_archive(session, anna_context, TransferScope.PERSONAL) as bundle:
-        with ZipFile(bundle, "r") as archive:
-            document = json.loads(archive.read("private/notes.json"))
+    with (
+        service.build_export_archive(session, anna_context, TransferScope.PERSONAL) as bundle,
+        ZipFile(bundle, "r") as archive,
+    ):
+        document = json.loads(archive.read("private/notes.json"))
 
     notes = next(group for group in document["tables"] if group["name"] == "private_notes")[
         "rows"
