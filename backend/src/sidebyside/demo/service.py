@@ -91,9 +91,7 @@ def _active_space_ids(session: Session, account: Account) -> set[UUID]:
 
 def _validate_demo_account(account: Account, *, expected_name: str, email: str) -> None:
     if account.display_name != expected_name:
-        raise RuntimeError(
-            f"Refusing demo operation: {email} exists with a non-demo display name."
-        )
+        raise RuntimeError(f"Refusing demo operation: {email} exists with a non-demo display name.")
 
 
 def _existing_accounts(session: Session) -> tuple[Account | None, Account | None]:
@@ -818,9 +816,7 @@ def _detach_and_purge_media(
         alex.id: _context(alex, space),
     }
 
-    memories = list(
-        session.execute(select(Memory).where(Memory.space_id == space.id)).scalars()
-    )
+    memories = list(session.execute(select(Memory).where(Memory.space_id == space.id)).scalars())
     for memory in memories:
         if not attachment_binding.attachments_of_memory(session, memory.id):
             continue
@@ -860,9 +856,7 @@ def _detach_and_purge_media(
     for attachment in attachments:
         attachment_service.mark_for_deletion(session, attachment)
         if not attachment_service.purge(session, attachment):
-            raise RuntimeError(
-                f"Could not purge demo attachment {attachment.id}; reset aborted."
-            )
+            raise RuntimeError(f"Could not purge demo attachment {attachment.id}; reset aborted.")
     session.flush()
 
 
