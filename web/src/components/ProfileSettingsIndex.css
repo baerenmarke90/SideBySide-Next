@@ -1,12 +1,12 @@
 .profile-settings-index {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .profile-settings-links {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: 0.75rem;
+  gap: var(--space-3);
   padding: 0;
   margin: 0;
   list-style: none;
@@ -16,11 +16,11 @@
   display: flex;
   min-height: 3rem;
   align-items: center;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border-subtle, rgba(120, 120, 120, 0.24));
-  border-radius: var(--radius-card, 1rem);
-  background: var(--surface-subtle, rgba(120, 120, 120, 0.08));
-  color: inherit;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
   font-weight: 650;
   text-decoration: none;
 }
