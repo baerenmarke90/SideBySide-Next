@@ -37,7 +37,7 @@ fun ProfileSettingsContent(
     modifier: Modifier = Modifier,
 ) {
     val self = state.self
-    var displayName by remember(self?.version, self?.displayName) {
+    var displayName by remember(self?.displayName) {
         mutableStateOf(self?.displayName.orEmpty())
     }
 
