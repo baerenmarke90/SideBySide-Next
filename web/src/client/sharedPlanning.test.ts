@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { StoryItem } from '../api/generated/models/StoryItem';
 import {
   dateFromInput,
   dateOnlyInput,
+  loadAllPlaces,
   moveItemIds,
   planningIfMatch,
   storyRelationTarget,
@@ -17,6 +18,36 @@ describe('shared planning client helpers', () => {
     const value = dateFromInput('2026-08-31');
     expect(value?.toISOString()).toBe('2026-08-31T00:00:00.000Z');
     expect(dateOnlyInput(value)).toBe('2026-08-31');
+  });
+
+  it('loads every page of selectable places', async () => {
+    const listPlaces = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [{ id: 'place-1', name: 'First place' }],
+        nextCursor: 'cursor-2',
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: 'place-2', name: 'Second place' }],
+        nextCursor: null,
+      });
+    const apis = { places: { listPlaces } } as unknown as Parameters<
+      typeof loadAllPlaces
+    >[0];
+
+    const places = await loadAllPlaces(apis, 'space-1');
+
+    expect(places.map((place) => place.id)).toEqual(['place-1', 'place-2']);
+    expect(listPlaces).toHaveBeenNthCalledWith(1, {
+      spaceId: 'space-1',
+      cursor: null,
+      limit: 50,
+    });
+    expect(listPlaces).toHaveBeenNthCalledWith(2, {
+      spaceId: 'space-1',
+      cursor: 'cursor-2',
+      limit: 50,
+    });
   });
 
   it('moves collection ids without changing the item set', () => {

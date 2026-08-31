@@ -12,10 +12,16 @@ describe('M5 S5/S3 product navigation', () => {
     );
     expect(searchResultPath('HEART_MOMENT', 'heart-id')).toBe('/story');
     expect(searchResultPath('MILESTONE', 'milestone-id')).toBe('/story');
-    expect(searchResultPath('WISH', 'wish-id')).toBe('/planning/wishes/wish-id');
+    expect(searchResultPath('WISH', 'wish-id')).toBe(
+      '/planning/wishes/wish-id',
+    );
     expect(searchResultPath('PLAN', 'plan-id')).toBe('/planning/plans/plan-id');
-    expect(searchResultPath('PLACE', 'place-id')).toBe('/planning/places/place-id');
-    expect(searchResultPath('CHAPTER', 'chapter-id')).toBe('/planning/chapters/chapter-id');
+    expect(searchResultPath('PLACE', 'place-id')).toBe(
+      '/planning/places/place-id',
+    );
+    expect(searchResultPath('CHAPTER', 'chapter-id')).toBe(
+      '/planning/chapters/chapter-id',
+    );
     expect(searchResultPath('COLLECTION', 'collection-id')).toBe(
       '/planning/collections/collection-id',
     );
@@ -43,10 +49,18 @@ describe('M5 S5/S3 product navigation', () => {
     expect(dashboardItemPath('IMPORTANT_DATE', 'date-id')).toBe('/people');
     expect(dashboardItemPath('BIRTHDAY', 'birthday-id')).toBe('/people');
     expect(dashboardItemPath('ANNIVERSARY', 'anniversary-id')).toBe('/people');
-    expect(dashboardItemPath('WISH', 'wish-id')).toBe('/planning/wishes/wish-id');
-    expect(dashboardItemPath('PLAN', 'plan-id')).toBe('/planning/plans/plan-id');
-    expect(dashboardItemPath('PLACE', 'place-id')).toBe('/planning/places/place-id');
-    expect(dashboardItemPath('CHAPTER', 'chapter-id')).toBe('/planning/chapters/chapter-id');
+    expect(dashboardItemPath('WISH', 'wish-id')).toBe(
+      '/planning/wishes/wish-id',
+    );
+    expect(dashboardItemPath('PLAN', 'plan-id')).toBe(
+      '/planning/plans/plan-id',
+    );
+    expect(dashboardItemPath('PLACE', 'place-id')).toBe(
+      '/planning/places/place-id',
+    );
+    expect(dashboardItemPath('CHAPTER', 'chapter-id')).toBe(
+      '/planning/chapters/chapter-id',
+    );
     expect(dashboardItemPath('COLLECTION', 'collection-id')).toBe(
       '/planning/collections/collection-id',
     );

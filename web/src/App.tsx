@@ -356,7 +356,7 @@ function AuthenticatedApp({
   const planningApis = useMemo(
     () => createSharedPlanningApis(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
-   );
+  );
 
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;

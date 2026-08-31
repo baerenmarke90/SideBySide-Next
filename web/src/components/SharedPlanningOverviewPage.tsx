@@ -1,5 +1,9 @@
-import { type FormEvent, type ReactNode } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { type FormEvent, type ReactNode, useState } from 'react';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { WishDetail } from '../api/generated/models/WishDetail';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
@@ -41,6 +45,7 @@ function formatDate(value: Date | null): string | null {
   if (!value) return null;
   return new Intl.DateTimeFormat(resolvedLocale(), {
     dateStyle: 'medium',
+    timeZone: 'UTC',
   }).format(value);
 }
 
@@ -112,7 +117,9 @@ function PlanningSection({
         </div>
         {create}
       </div>
-      {loading ? <UiState kind="loading" title={t('m5s3.common.loading')} /> : null}
+      {loading ? (
+        <UiState kind="loading" title={t('m5s3.common.loading')} />
+      ) : null}
       {error ? <ProblemState error={error} onRetry={onRetry} /> : null}
       {!loading && !error && empty ? (
         <p className="planning-empty">{t('m5s3.common.empty')}</p>
@@ -125,7 +132,9 @@ function PlanningSection({
           onClick={onLoadMore}
           disabled={loadingMore}
         >
-          {loadingMore ? t('m5s3.common.loadingMore') : t('m5s3.common.loadMore')}
+          {loadingMore
+            ? t('m5s3.common.loadingMore')
+            : t('m5s3.common.loadMore')}
         </button>
       ) : null}
     </section>
@@ -141,12 +150,17 @@ export function SharedPlanningOverviewPage({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [placeCoordinateError, setPlaceCoordinateError] = useState(false);
 
   const wishes = useInfiniteQuery({
     queryKey: ['m5-s3', 'wishes', spaceId],
     queryFn: ({ pageParam }) =>
       apiCall(() =>
-        apis.wishes.listWishes({ spaceId, cursor: pageParam, limit: PAGE_SIZE }),
+        apis.wishes.listWishes({
+          spaceId,
+          cursor: pageParam,
+          limit: PAGE_SIZE,
+        }),
       ),
     initialPageParam: null as string | null,
     getNextPageParam: nextCursor<WishDetail>,
@@ -166,7 +180,11 @@ export function SharedPlanningOverviewPage({
     queryKey: ['m5-s3', 'places', spaceId],
     queryFn: ({ pageParam }) =>
       apiCall(() =>
-        apis.places.listPlaces({ spaceId, cursor: pageParam, limit: PAGE_SIZE }),
+        apis.places.listPlaces({
+          spaceId,
+          cursor: pageParam,
+          limit: PAGE_SIZE,
+        }),
       ),
     initialPageParam: null as string | null,
     getNextPageParam: nextCursor<PlaceDetail>,
@@ -176,7 +194,11 @@ export function SharedPlanningOverviewPage({
     queryKey: ['m5-s3', 'chapters', spaceId],
     queryFn: ({ pageParam }) =>
       apiCall(() =>
-        apis.chapters.listChapters({ spaceId, cursor: pageParam, limit: PAGE_SIZE }),
+        apis.chapters.listChapters({
+          spaceId,
+          cursor: pageParam,
+          limit: PAGE_SIZE,
+        }),
       ),
     initialPageParam: null as string | null,
     getNextPageParam: nextCursor<ChapterDetail>,
@@ -206,8 +228,11 @@ export function SharedPlanningOverviewPage({
     onSuccess: () => invalidate('wishes'),
   });
   const createPlan = useMutation({
-    mutationFn: (values: { title: string; description?: string; placeId?: string }) =>
-      apiCall(() => apis.plans.createPlan({ spaceId, planCreate: values })),
+    mutationFn: (values: {
+      title: string;
+      description?: string;
+      placeId?: string;
+    }) => apiCall(() => apis.plans.createPlan({ spaceId, planCreate: values })),
     onSuccess: () => invalidate('plans'),
   });
   const createPlace = useMutation({
@@ -217,7 +242,8 @@ export function SharedPlanningOverviewPage({
       address?: string;
       latitude?: number;
       longitude?: number;
-    }) => apiCall(() => apis.places.createPlace({ spaceId, placeCreate: values })),
+    }) =>
+      apiCall(() => apis.places.createPlace({ spaceId, placeCreate: values })),
     onSuccess: () => invalidate('places'),
   });
   const createChapter = useMutation({
@@ -236,7 +262,10 @@ export function SharedPlanningOverviewPage({
   const createCollection = useMutation({
     mutationFn: (values: { title: string; icon?: string | null }) =>
       apiCall(() =>
-        apis.collections.createCollection({ spaceId, collectionCreate: values }),
+        apis.collections.createCollection({
+          spaceId,
+          collectionCreate: values,
+        }),
       ),
     onSuccess: () => invalidate('collections'),
   });
@@ -245,7 +274,8 @@ export function SharedPlanningOverviewPage({
   const planItems = plans.data?.pages.flatMap((page) => page.items) ?? [];
   const placeItems = places.data?.pages.flatMap((page) => page.items) ?? [];
   const chapterItems = chapters.data?.pages.flatMap((page) => page.items) ?? [];
-  const collectionItems = collections.data?.pages.flatMap((page) => page.items) ?? [];
+  const collectionItems =
+    collections.data?.pages.flatMap((page) => page.items) ?? [];
 
   function submitWish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -278,7 +308,11 @@ export function SharedPlanningOverviewPage({
     const data = new FormData(form);
     const latitudeRaw = String(data.get('latitude')).trim();
     const longitudeRaw = String(data.get('longitude')).trim();
-    if (Boolean(latitudeRaw) !== Boolean(longitudeRaw)) return;
+    if (Boolean(latitudeRaw) !== Boolean(longitudeRaw)) {
+      setPlaceCoordinateError(true);
+      return;
+    }
+    setPlaceCoordinateError(false);
     const description = String(data.get('description')).trim();
     const address = String(data.get('address')).trim();
     createPlace.mutate(
@@ -289,7 +323,12 @@ export function SharedPlanningOverviewPage({
         latitude: latitudeRaw ? Number(latitudeRaw) : undefined,
         longitude: longitudeRaw ? Number(longitudeRaw) : undefined,
       },
-      { onSuccess: () => form.reset() },
+      {
+        onSuccess: () => {
+          form.reset();
+          setPlaceCoordinateError(false);
+        },
+      },
     );
   }
 
@@ -353,13 +392,20 @@ export function SharedPlanningOverviewPage({
           create={
             <details className="planning-create">
               <summary>{t('m5s3.wish.create')}</summary>
-              <form onSubmit={submitWish} className="form-grid planning-create-form">
+              <form
+                onSubmit={submitWish}
+                className="form-grid planning-create-form"
+              >
                 <label htmlFor="wish-title">{t('m5s3.common.title')}</label>
                 <input id="wish-title" name="title" required maxLength={200} />
                 <button type="submit" disabled={createWish.isPending}>
-                  {createWish.isPending ? t('m5s3.common.saving') : t('m5s3.common.save')}
+                  {createWish.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.save')}
                 </button>
-                {createWish.error ? <ProblemState error={createWish.error} /> : null}
+                {createWish.error ? (
+                  <ProblemState error={createWish.error} />
+                ) : null}
               </form>
             </details>
           }
@@ -392,10 +438,15 @@ export function SharedPlanningOverviewPage({
           create={
             <details className="planning-create">
               <summary>{t('m5s3.plan.create')}</summary>
-              <form onSubmit={submitPlan} className="form-grid planning-create-form">
+              <form
+                onSubmit={submitPlan}
+                className="form-grid planning-create-form"
+              >
                 <label htmlFor="plan-title">{t('m5s3.common.title')}</label>
                 <input id="plan-title" name="title" required maxLength={200} />
-                <label htmlFor="plan-description">{t('m5s3.common.description')}</label>
+                <label htmlFor="plan-description">
+                  {t('m5s3.common.description')}
+                </label>
                 <textarea id="plan-description" name="description" rows={3} />
                 <label htmlFor="plan-place">{t('m5s3.common.place')}</label>
                 <select id="plan-place" name="placeId" defaultValue="">
@@ -403,9 +454,13 @@ export function SharedPlanningOverviewPage({
                   {placeChoices}
                 </select>
                 <button type="submit" disabled={createPlan.isPending}>
-                  {createPlan.isPending ? t('m5s3.common.saving') : t('m5s3.common.save')}
+                  {createPlan.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.save')}
                 </button>
-                {createPlan.error ? <ProblemState error={createPlan.error} /> : null}
+                {createPlan.error ? (
+                  <ProblemState error={createPlan.error} />
+                ) : null}
               </form>
             </details>
           }
@@ -438,28 +493,78 @@ export function SharedPlanningOverviewPage({
           create={
             <details className="planning-create">
               <summary>{t('m5s3.place.create')}</summary>
-              <form onSubmit={submitPlace} className="form-grid planning-create-form">
+              <form
+                onSubmit={submitPlace}
+                className="form-grid planning-create-form"
+              >
                 <label htmlFor="place-name">{t('m5s3.place.name')}</label>
                 <input id="place-name" name="name" required maxLength={200} />
-                <label htmlFor="place-description">{t('m5s3.common.description')}</label>
+                <label htmlFor="place-description">
+                  {t('m5s3.common.description')}
+                </label>
                 <textarea id="place-description" name="description" rows={3} />
                 <label htmlFor="place-address">{t('m5s3.place.address')}</label>
                 <input id="place-address" name="address" />
                 <div className="planning-coordinate-grid">
                   <div className="field-group">
-                    <label htmlFor="place-latitude">{t('m5s3.place.latitude')}</label>
-                    <input id="place-latitude" name="latitude" type="number" step="any" min="-90" max="90" />
+                    <label htmlFor="place-latitude">
+                      {t('m5s3.place.latitude')}
+                    </label>
+                    <input
+                      id="place-latitude"
+                      name="latitude"
+                      type="number"
+                      step="any"
+                      min="-90"
+                      max="90"
+                      aria-invalid={placeCoordinateError}
+                      aria-describedby={
+                        placeCoordinateError
+                          ? 'place-coordinate-help place-coordinate-error'
+                          : 'place-coordinate-help'
+                      }
+                    />
                   </div>
                   <div className="field-group">
-                    <label htmlFor="place-longitude">{t('m5s3.place.longitude')}</label>
-                    <input id="place-longitude" name="longitude" type="number" step="any" min="-180" max="180" />
+                    <label htmlFor="place-longitude">
+                      {t('m5s3.place.longitude')}
+                    </label>
+                    <input
+                      id="place-longitude"
+                      name="longitude"
+                      type="number"
+                      step="any"
+                      min="-180"
+                      max="180"
+                      aria-invalid={placeCoordinateError}
+                      aria-describedby={
+                        placeCoordinateError
+                          ? 'place-coordinate-help place-coordinate-error'
+                          : 'place-coordinate-help'
+                      }
+                    />
                   </div>
                 </div>
-                <p className="field-help">{t('m5s3.place.coordinateHelp')}</p>
+                <p id="place-coordinate-help" className="field-help">
+                  {t('m5s3.place.coordinateHelp')}
+                </p>
+                {placeCoordinateError ? (
+                  <p
+                    id="place-coordinate-error"
+                    className="field-error"
+                    role="alert"
+                  >
+                    {t('m5s3.place.coordinatePairError')}
+                  </p>
+                ) : null}
                 <button type="submit" disabled={createPlace.isPending}>
-                  {createPlace.isPending ? t('m5s3.common.saving') : t('m5s3.common.save')}
+                  {createPlace.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.save')}
                 </button>
-                {createPlace.error ? <ProblemState error={createPlace.error} /> : null}
+                {createPlace.error ? (
+                  <ProblemState error={createPlace.error} />
+                ) : null}
               </form>
             </details>
           }
@@ -492,18 +597,36 @@ export function SharedPlanningOverviewPage({
           create={
             <details className="planning-create">
               <summary>{t('m5s3.chapter.create')}</summary>
-              <form onSubmit={submitChapter} className="form-grid planning-create-form">
+              <form
+                onSubmit={submitChapter}
+                className="form-grid planning-create-form"
+              >
                 <label htmlFor="chapter-title">{t('m5s3.common.title')}</label>
-                <input id="chapter-title" name="title" required maxLength={200} />
-                <label htmlFor="chapter-description">{t('m5s3.common.description')}</label>
-                <textarea id="chapter-description" name="description" rows={3} />
+                <input
+                  id="chapter-title"
+                  name="title"
+                  required
+                  maxLength={200}
+                />
+                <label htmlFor="chapter-description">
+                  {t('m5s3.common.description')}
+                </label>
+                <textarea
+                  id="chapter-description"
+                  name="description"
+                  rows={3}
+                />
                 <div className="planning-coordinate-grid">
                   <div className="field-group">
-                    <label htmlFor="chapter-start">{t('m5s3.chapter.startOn')}</label>
+                    <label htmlFor="chapter-start">
+                      {t('m5s3.chapter.startOn')}
+                    </label>
                     <input id="chapter-start" name="startOn" type="date" />
                   </div>
                   <div className="field-group">
-                    <label htmlFor="chapter-end">{t('m5s3.chapter.endOn')}</label>
+                    <label htmlFor="chapter-end">
+                      {t('m5s3.chapter.endOn')}
+                    </label>
                     <input id="chapter-end" name="endOn" type="date" />
                   </div>
                 </div>
@@ -513,9 +636,13 @@ export function SharedPlanningOverviewPage({
                   {placeChoices}
                 </select>
                 <button type="submit" disabled={createChapter.isPending}>
-                  {createChapter.isPending ? t('m5s3.common.saving') : t('m5s3.common.save')}
+                  {createChapter.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.save')}
                 </button>
-                {createChapter.error ? <ProblemState error={createChapter.error} /> : null}
+                {createChapter.error ? (
+                  <ProblemState error={createChapter.error} />
+                ) : null}
               </form>
             </details>
           }
@@ -525,7 +652,8 @@ export function SharedPlanningOverviewPage({
               {chapterItems.map((chapter) => {
                 const start = formatDate(chapter.startOn);
                 const end = formatDate(chapter.endOn);
-                const meta = start && end ? `${start} – ${end}` : start ?? end;
+                const meta =
+                  start && end ? `${start} – ${end}` : (start ?? end);
                 return (
                   <PlanningCard
                     key={chapter.id}
@@ -553,15 +681,31 @@ export function SharedPlanningOverviewPage({
           create={
             <details className="planning-create">
               <summary>{t('m5s3.collection.create')}</summary>
-              <form onSubmit={submitCollection} className="form-grid planning-create-form">
-                <label htmlFor="collection-title">{t('m5s3.common.title')}</label>
-                <input id="collection-title" name="title" required maxLength={200} />
-                <label htmlFor="collection-icon">{t('m5s3.collection.icon')}</label>
+              <form
+                onSubmit={submitCollection}
+                className="form-grid planning-create-form"
+              >
+                <label htmlFor="collection-title">
+                  {t('m5s3.common.title')}
+                </label>
+                <input
+                  id="collection-title"
+                  name="title"
+                  required
+                  maxLength={200}
+                />
+                <label htmlFor="collection-icon">
+                  {t('m5s3.collection.icon')}
+                </label>
                 <input id="collection-icon" name="icon" maxLength={32} />
                 <button type="submit" disabled={createCollection.isPending}>
-                  {createCollection.isPending ? t('m5s3.common.saving') : t('m5s3.common.save')}
+                  {createCollection.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.save')}
                 </button>
-                {createCollection.error ? <ProblemState error={createCollection.error} /> : null}
+                {createCollection.error ? (
+                  <ProblemState error={createCollection.error} />
+                ) : null}
               </form>
             </details>
           }
@@ -572,7 +716,9 @@ export function SharedPlanningOverviewPage({
                 <PlanningCard
                   key={collection.id}
                   title={`${collection.icon ? `${collection.icon} ` : ''}${collection.title}`}
-                  meta={t('m5s3.collection.itemCount', { count: collection.items.length })}
+                  meta={t('m5s3.collection.itemCount', {
+                    count: collection.items.length,
+                  })}
                   to={collectionDetailPath(collection.id)}
                 />
               ))}

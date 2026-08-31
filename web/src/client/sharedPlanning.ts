@@ -6,6 +6,7 @@ import { PlacesApi } from '../api/generated/apis/PlacesApi';
 import { PlansApi } from '../api/generated/apis/PlansApi';
 import { StoryApi } from '../api/generated/apis/StoryApi';
 import { WishesApi } from '../api/generated/apis/WishesApi';
+import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import type { StoryItem } from '../api/generated/models/StoryItem';
 import { Configuration } from '../api/generated/runtime';
 
@@ -74,6 +75,33 @@ export function localDateTimeInput(value: Date | null | undefined): string {
 
 export function dateTimeFromInput(value: string): Date | undefined {
   return value ? new Date(value) : undefined;
+}
+
+export async function loadAllPlaces(
+  apis: Pick<SharedPlanningApis, 'places'>,
+  spaceId: string,
+): Promise<PlaceDetail[]> {
+  const items: PlaceDetail[] = [];
+  let cursor: string | null | undefined = null;
+  const seenCursors = new Set<string>();
+
+  do {
+    const page = await apis.places.listPlaces({
+      spaceId,
+      cursor,
+      limit: 50,
+    });
+    items.push(...page.items);
+    cursor = page.nextCursor;
+    if (cursor) {
+      if (seenCursors.has(cursor)) {
+        throw new Error('Place pagination returned a repeated cursor.');
+      }
+      seenCursors.add(cursor);
+    }
+  } while (cursor);
+
+  return items;
 }
 
 export function moveItemIds(

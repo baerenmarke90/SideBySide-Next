@@ -86,6 +86,7 @@ async function loadPlaceRelations(
 function formatDate(value: Date): string {
   return new Intl.DateTimeFormat(resolvedLocale(), {
     dateStyle: 'medium',
+    timeZone: 'UTC',
   }).format(value);
 }
 
@@ -102,7 +103,13 @@ export function PlanningRelationManager({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const relationKey = ['m5-s3', 'relations', ownerKind, spaceId, ownerId] as const;
+  const relationKey = [
+    'm5-s3',
+    'relations',
+    ownerKind,
+    spaceId,
+    ownerId,
+  ] as const;
 
   const targetsQuery = useQuery({
     queryKey: ['m5-s3', 'relation-targets', spaceId],
@@ -126,7 +133,13 @@ export function PlanningRelationManager({
   });
 
   const linkMutation = useMutation({
-    mutationFn: async ({ kind, targetId }: { kind: PlanningRelationKind; targetId: string }) => {
+    mutationFn: async ({
+      kind,
+      targetId,
+    }: {
+      kind: PlanningRelationKind;
+      targetId: string;
+    }) => {
       if (ownerKind === 'chapter') {
         switch (kind) {
           case 'MEMORY':
@@ -187,7 +200,13 @@ export function PlanningRelationManager({
   });
 
   const unlinkMutation = useMutation({
-    mutationFn: async ({ kind, targetId }: { kind: PlanningRelationKind; targetId: string }) => {
+    mutationFn: async ({
+      kind,
+      targetId,
+    }: {
+      kind: PlanningRelationKind;
+      targetId: string;
+    }) => {
       if (ownerKind === 'chapter') {
         switch (kind) {
           case 'MEMORY':
@@ -281,10 +300,15 @@ export function PlanningRelationManager({
   }
 
   return (
-    <section className="planning-subsection" aria-labelledby={`${ownerKind}-relations-heading`}>
+    <section
+      className="planning-subsection"
+      aria-labelledby={`${ownerKind}-relations-heading`}
+    >
       <div className="planning-section-head">
         <div>
-          <h2 id={`${ownerKind}-relations-heading`}>{t('m5s3.relations.heading')}</h2>
+          <h2 id={`${ownerKind}-relations-heading`}>
+            {t('m5s3.relations.heading')}
+          </h2>
           <p>{t('m5s3.relations.intro')}</p>
         </div>
       </div>
@@ -294,17 +318,24 @@ export function PlanningRelationManager({
       ) : null}
       {targetsQuery.error ? <ProblemState error={targetsQuery.error} /> : null}
       {relationsQuery.error ? (
-        <ProblemState error={relationsQuery.error} onRetry={() => void relationsQuery.refetch()} />
+        <ProblemState
+          error={relationsQuery.error}
+          onRetry={() => void relationsQuery.refetch()}
+        />
       ) : null}
 
       {relationsQuery.data && relationsQuery.data.length > 0 ? (
         <ul className="planning-relation-list">
           {relationsQuery.data.map((relation) => {
-            const target = targetMap.get(targetKey(relation.targetType, relation.targetId));
+            const target = targetMap.get(
+              targetKey(relation.targetType, relation.targetId),
+            );
             return (
               <li key={targetKey(relation.targetType, relation.targetId)}>
                 <div>
-                  <strong>{target?.label || t('m5s3.relations.contentFallback')}</strong>
+                  <strong>
+                    {target?.label || t('m5s3.relations.contentFallback')}
+                  </strong>
                   <span className="planning-meta">
                     {t(`m5s3.relations.kind.${relation.targetType}`)}
                     {target ? ` · ${formatDate(target.effectiveDate)}` : ''}
@@ -355,7 +386,9 @@ export function PlanningRelationManager({
             ))}
           </select>
           <button type="submit" disabled={linkMutation.isPending}>
-            {linkMutation.isPending ? t('m5s3.common.saving') : t('m5s3.relations.link')}
+            {linkMutation.isPending
+              ? t('m5s3.common.saving')
+              : t('m5s3.relations.link')}
           </button>
         </form>
       ) : targetsQuery.data ? (
@@ -363,7 +396,9 @@ export function PlanningRelationManager({
       ) : null}
 
       {linkMutation.error ? <ProblemState error={linkMutation.error} /> : null}
-      {unlinkMutation.error ? <ProblemState error={unlinkMutation.error} /> : null}
+      {unlinkMutation.error ? (
+        <ProblemState error={unlinkMutation.error} />
+      ) : null}
     </section>
   );
 }

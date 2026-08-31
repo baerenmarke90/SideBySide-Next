@@ -3,7 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import { normalizeClientError } from '../client/problemDetails';
-import { planningIfMatch, type SharedPlanningApis } from '../client/sharedPlanning';
+import {
+  planningIfMatch,
+  type SharedPlanningApis,
+} from '../client/sharedPlanning';
 import { appRoutePath } from '../client/routes';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
@@ -72,7 +75,9 @@ export function PlaceProductPage({
     onSuccess: async (place) => {
       queryClient.setQueryData(key, place);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['m5-s3', 'places', spaceId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['m5-s3', 'places', spaceId],
+        }),
         queryClient.invalidateQueries({ queryKey: key }),
       ]);
     },
@@ -89,14 +94,30 @@ export function PlaceProductPage({
       ),
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: key });
-      await queryClient.invalidateQueries({ queryKey: ['m5-s3', 'places', spaceId] });
+      await queryClient.invalidateQueries({
+        queryKey: ['m5-s3', 'places', spaceId],
+      });
       navigate(appRoutePath('planning'), { replace: true });
     },
   });
 
-  if (!placeId) return <UiState kind="error" title={t('states.unknown.title')} body={t('states.unknown.body')} />;
-  if (placeQuery.isLoading) return <UiState kind="loading" title={t('m5s3.place.loading')} />;
-  if (placeQuery.error) return <ProblemState error={placeQuery.error} onRetry={() => void placeQuery.refetch()} />;
+  if (!placeId)
+    return (
+      <UiState
+        kind="error"
+        title={t('states.unknown.title')}
+        body={t('states.unknown.body')}
+      />
+    );
+  if (placeQuery.isLoading)
+    return <UiState kind="loading" title={t('m5s3.place.loading')} />;
+  if (placeQuery.error)
+    return (
+      <ProblemState
+        error={placeQuery.error}
+        onRetry={() => void placeQuery.refetch()}
+      />
+    );
   const place = placeQuery.data;
   if (!place) return null;
 
@@ -126,7 +147,11 @@ export function PlaceProductPage({
   return (
     <div className="page planning-page">
       <PageHeader
-        before={<Link className="back-link" to={appRoutePath('planning')}>{t('m5s3.common.back')}</Link>}
+        before={
+          <Link className="back-link" to={appRoutePath('planning')}>
+            {t('m5s3.common.back')}
+          </Link>
+        }
         eyebrow={t('m5s3.place.detailEyebrow')}
         title={place.name}
         description={place.address || t('m5s3.place.noAddress')}
@@ -138,35 +163,92 @@ export function PlaceProductPage({
           {place.capabilities.canEdit ? (
             <form className="form-grid" onSubmit={submitEdit}>
               <label htmlFor="place-edit-name">{t('m5s3.place.name')}</label>
-              <input id="place-edit-name" name="name" required maxLength={200} defaultValue={place.name} />
-              <label htmlFor="place-edit-description">{t('m5s3.common.description')}</label>
-              <textarea id="place-edit-description" name="description" rows={4} defaultValue={place.description ?? ''} />
-              <label htmlFor="place-edit-address">{t('m5s3.place.address')}</label>
-              <input id="place-edit-address" name="address" defaultValue={place.address ?? ''} />
+              <input
+                id="place-edit-name"
+                name="name"
+                required
+                maxLength={200}
+                defaultValue={place.name}
+              />
+              <label htmlFor="place-edit-description">
+                {t('m5s3.common.description')}
+              </label>
+              <textarea
+                id="place-edit-description"
+                name="description"
+                rows={4}
+                defaultValue={place.description ?? ''}
+              />
+              <label htmlFor="place-edit-address">
+                {t('m5s3.place.address')}
+              </label>
+              <input
+                id="place-edit-address"
+                name="address"
+                defaultValue={place.address ?? ''}
+              />
               <div className="planning-coordinate-grid">
                 <div className="field-group">
-                  <label htmlFor="place-edit-latitude">{t('m5s3.place.latitude')}</label>
-                  <input id="place-edit-latitude" name="latitude" type="number" step="any" min="-90" max="90" defaultValue={place.latitude ?? ''} />
+                  <label htmlFor="place-edit-latitude">
+                    {t('m5s3.place.latitude')}
+                  </label>
+                  <input
+                    id="place-edit-latitude"
+                    name="latitude"
+                    type="number"
+                    step="any"
+                    min="-90"
+                    max="90"
+                    defaultValue={place.latitude ?? ''}
+                  />
                 </div>
                 <div className="field-group">
-                  <label htmlFor="place-edit-longitude">{t('m5s3.place.longitude')}</label>
-                  <input id="place-edit-longitude" name="longitude" type="number" step="any" min="-180" max="180" defaultValue={place.longitude ?? ''} />
+                  <label htmlFor="place-edit-longitude">
+                    {t('m5s3.place.longitude')}
+                  </label>
+                  <input
+                    id="place-edit-longitude"
+                    name="longitude"
+                    type="number"
+                    step="any"
+                    min="-180"
+                    max="180"
+                    defaultValue={place.longitude ?? ''}
+                  />
                 </div>
               </div>
               <p className="field-help">{t('m5s3.place.coordinateHelp')}</p>
-              {coordinateError ? <p className="field-error" role="alert">{t('m5s3.place.coordinatePairError')}</p> : null}
+              {coordinateError ? (
+                <p className="field-error" role="alert">
+                  {t('m5s3.place.coordinatePairError')}
+                </p>
+              ) : null}
               <button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? t('m5s3.common.saving') : t('m5s3.common.saveChanges')}
+                {updateMutation.isPending
+                  ? t('m5s3.common.saving')
+                  : t('m5s3.common.saveChanges')}
               </button>
-              {updateMutation.error ? <ProblemState error={updateMutation.error} onRetry={() => void placeQuery.refetch()} /> : null}
+              {updateMutation.error ? (
+                <ProblemState
+                  error={updateMutation.error}
+                  onRetry={() => void placeQuery.refetch()}
+                />
+              ) : null}
             </form>
-          ) : <p className="planning-meta">{t('m5s3.common.readOnly')}</p>}
+          ) : (
+            <p className="planning-meta">{t('m5s3.common.readOnly')}</p>
+          )}
         </section>
 
         <section className="planning-subsection">
           <h2>{t('m5s3.place.locationHeading')}</h2>
           {place.latitude != null && place.longitude != null ? (
-            <p>{t('m5s3.place.coordinates', { latitude: place.latitude, longitude: place.longitude })}</p>
+            <p>
+              {t('m5s3.place.coordinates', {
+                latitude: place.latitude,
+                longitude: place.longitude,
+              })}
+            </p>
           ) : (
             <p className="planning-meta">{t('m5s3.place.nameOnly')}</p>
           )}
@@ -174,23 +256,55 @@ export function PlaceProductPage({
         </section>
       </div>
 
-      <PlanningRelationManager apis={apis} spaceId={spaceId} ownerKind="place" ownerId={place.id} />
+      <PlanningRelationManager
+        apis={apis}
+        spaceId={spaceId}
+        ownerKind="place"
+        ownerId={place.id}
+      />
 
       {place.capabilities.canDelete ? (
-        <section className="planning-danger-zone" aria-labelledby="place-delete-heading">
+        <section
+          className="planning-danger-zone"
+          aria-labelledby="place-delete-heading"
+        >
           <h2 id="place-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
           <p>{t('m5s3.place.deleteConsequence')}</p>
           {!confirmDelete ? (
-            <button type="button" className="danger" onClick={() => setConfirmDelete(true)}>{t('m5s3.common.delete')}</button>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => setConfirmDelete(true)}
+            >
+              {t('m5s3.common.delete')}
+            </button>
           ) : (
             <div className="planning-confirm-row">
-              <button type="button" className="danger" onClick={() => deleteMutation.mutate(place)} disabled={deleteMutation.isPending}>
-                {deleteMutation.isPending ? t('m5s3.common.deleting') : t('m5s3.common.confirmDelete')}
+              <button
+                type="button"
+                className="danger"
+                onClick={() => deleteMutation.mutate(place)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending
+                  ? t('m5s3.common.deleting')
+                  : t('m5s3.common.confirmDelete')}
               </button>
-              <button type="button" className="tertiary" onClick={() => setConfirmDelete(false)}>{t('common.cancel')}</button>
+              <button
+                type="button"
+                className="tertiary"
+                onClick={() => setConfirmDelete(false)}
+              >
+                {t('common.cancel')}
+              </button>
             </div>
           )}
-          {deleteMutation.error ? <ProblemState error={deleteMutation.error} onRetry={() => void placeQuery.refetch()} /> : null}
+          {deleteMutation.error ? (
+            <ProblemState
+              error={deleteMutation.error}
+              onRetry={() => void placeQuery.refetch()}
+            />
+          ) : null}
         </section>
       ) : null}
     </div>

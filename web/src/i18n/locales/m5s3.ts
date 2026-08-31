@@ -14,7 +14,8 @@ const m5s3 = {
     loadMore: 'Weitere laden',
     loadingMore: 'Weitere werden geladen …',
     empty: 'Hier gibt es noch keine Einträge.',
-    readOnly: 'Dieser Eintrag kann mit deinem aktuellen Zugriff nur gelesen werden.',
+    readOnly:
+      'Dieser Eintrag kann mit deinem aktuellen Zugriff nur gelesen werden.',
     deleteHeading: 'Löschen',
     delete: 'Löschen',
     deleting: 'Wird gelöscht …',
@@ -71,7 +72,8 @@ const m5s3 = {
   },
   place: {
     heading: 'Orte',
-    intro: 'Gemeinsame Orte funktionieren auch nur mit einem Namen – Koordinaten sind optional.',
+    intro:
+      'Gemeinsame Orte funktionieren auch nur mit einem Namen – Koordinaten sind optional.',
     create: 'Ort hinzufügen',
     loading: 'Ort wird geladen …',
     detailEyebrow: 'Gemeinsamer Ort',
@@ -115,7 +117,8 @@ const m5s3 = {
     choose: 'Inhalt auswählen',
     link: 'Verknüpfen',
     unlink: 'Verknüpfung lösen',
-    noMoreTargets: 'Alle aktuell verfügbaren gemeinsamen Story-Inhalte sind bereits verknüpft.',
+    noMoreTargets:
+      'Alle aktuell verfügbaren gemeinsamen Story-Inhalte sind bereits verknüpft.',
     kind: {
       MEMORY: 'Erinnerung',
       HEART_MOMENT: 'Herzmoment',
