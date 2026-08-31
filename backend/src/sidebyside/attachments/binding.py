@@ -77,7 +77,7 @@ class AccountProfileAttachment(IdMixin, Base):
     )
     attachment_id: Mapped[UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),
-        ForeignKey("attachments.id", ondelete="RESTRICT"),
+        ForeignKey("attachments.id", ondelete="CASCADE"),
         nullable=False,
     )
 
