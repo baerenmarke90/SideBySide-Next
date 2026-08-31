@@ -11,13 +11,16 @@ import type { PrivateCollectionDetail } from '../api/generated/models/PrivateCol
 import type { PrivateCollectionItemDetail } from '../api/generated/models/PrivateCollectionItemDetail';
 import {
   PRIVATE_COLLECTIONS_PATH,
-  movePrivateCollectionItem,
   privateApiCall,
   privateAreaQueryKeys,
   privateCollectionEditPath,
   privateCollectionPath,
 } from '../client/privateArea';
 import { useTranslation } from '../i18n';
+import {
+  ListEntryIconButton,
+  useListItemReorder,
+} from './ListEntryActions';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import {
@@ -300,7 +303,18 @@ function CollectionItems({
     },
   });
 
-  const items = [...collection.items].sort((a, b) => a.position - b.position);
+  const baseItems = [...collection.items].sort(
+    (left, right) => left.position - right.position,
+  );
+  const reorder = useListItemReorder({
+    itemIds: baseItems.map((item) => item.id),
+    disabled: !collection.capabilities.canEdit || reorderMutation.isPending,
+    onReorder: (itemIds) => reorderMutation.mutate(itemIds),
+  });
+  const itemById = new Map(baseItems.map((item) => [item.id, item]));
+  const items = reorder.orderedItemIds
+    .map((itemId) => itemById.get(itemId))
+    .filter((item): item is PrivateCollectionItemDetail => Boolean(item));
 
   function submitItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -321,13 +335,6 @@ function CollectionItems({
     ).trim();
     if (!title || title === item.title) return;
     updateMutation.mutate({ item, update: { title } });
-  }
-
-  function move(itemId: string, direction: -1 | 1) {
-    const itemIds = items.map((item) => item.id);
-    reorderMutation.mutate(
-      movePrivateCollectionItem(itemIds, itemId, direction),
-    );
   }
 
   return (
@@ -364,8 +371,17 @@ function CollectionItems({
       ) : null}
       {items.length > 0 ? (
         <ol className="private-area-item-list">
-          {items.map((item, index) => (
-            <li key={item.id} className="private-area-item">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              data-sortable-item-id={item.id}
+              className={[
+                'private-area-item',
+                reorder.activeItemId === item.id ? 'list-entry-dragging' : null,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <div className="private-area-item-main">
                 <span className="private-area-badge">
                   {item.completed
@@ -389,13 +405,17 @@ function CollectionItems({
                     required
                     maxLength={200}
                   />
-                  <button
+                  <ListEntryIconButton
                     type="submit"
-                    className="secondary compact-action"
+                    icon="save"
+                    className="secondary"
+                    label={
+                      updateMutation.isPending
+                        ? t('privateArea.saving')
+                        : t('privateArea.collections.saveItem')
+                    }
                     disabled={updateMutation.isPending}
-                  >
-                    {t('privateArea.collections.saveItem')}
-                  </button>
+                  />
                 </form>
               </div>
               <div className="private-area-actions">
@@ -414,32 +434,21 @@ function CollectionItems({
                     ? t('privateArea.collections.markOpen')
                     : t('privateArea.collections.markComplete')}
                 </button>
-                <button
-                  type="button"
-                  className="tertiary compact-action"
-                  onClick={() => move(item.id, -1)}
-                  disabled={index === 0 || reorderMutation.isPending}
-                >
-                  {t('privateArea.collections.moveUp')}
-                </button>
-                <button
-                  type="button"
-                  className="tertiary compact-action"
-                  onClick={() => move(item.id, 1)}
-                  disabled={
-                    index === items.length - 1 || reorderMutation.isPending
-                  }
-                >
-                  {t('privateArea.collections.moveDown')}
-                </button>
-                <button
-                  type="button"
-                  className="tertiary compact-action"
+                {collection.capabilities.canEdit ? (
+                  <ListEntryIconButton
+                    icon="reorder"
+                    className="tertiary"
+                    label={t('privateArea.collections.reorderItem')}
+                    {...reorder.handleProps(item.id)}
+                  />
+                ) : null}
+                <ListEntryIconButton
+                  icon="delete"
+                  className="tertiary"
+                  label={t('privateArea.collections.removeItem')}
                   onClick={() => deleteMutation.mutate(item)}
                   disabled={deleteMutation.isPending}
-                >
-                  {t('privateArea.collections.removeItem')}
-                </button>
+                />
               </div>
             </li>
           ))}
