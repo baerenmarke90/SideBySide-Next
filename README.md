@@ -280,6 +280,21 @@ Issues, separate branches, and Pull Requests. While Branch Protection cannot
 be enforced technically for this private repository under the current plan,
 the PR/CI requirement remains a project rule.
 
+## Security
+
+Do not report suspected security vulnerabilities through public issues,
+discussions, or pull requests. Follow the repository
+[Security Policy](.github/SECURITY.md) for the supported branch, private
+reporting path, triage process, and coordinated-disclosure guidance.
+
+When GitHub provides the **Report a vulnerability** action for this repository,
+use that private channel. Never include secrets, private user data, production
+data, or exploit details that would materially enable abuse in public
+contributions.
+
+The technical security architecture and application security invariants remain
+documented separately in [docs/SECURITY.md](docs/SECURITY.md).
+
 ## License
 
 SideBySide Next's own source code is provided under the **PolyForm
