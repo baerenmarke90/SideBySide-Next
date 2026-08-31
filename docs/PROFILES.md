@@ -28,7 +28,7 @@ Profile avatars reuse the existing Attachment/MediaStore lifecycle. `account_pro
 
 The relation stores only stable IDs. No temporary or signed provider URL becomes profile state. Upload validation, sanitization, thumbnail generation, storage keys, retention and physical cleanup remain owned by the existing attachment pipeline.
 
-The central attachment binding resolver reports profile media as `ACCOUNT_PROFILE`. This means avatar attachments participate in the same cross-parent exclusivity rule as Memory and HeartMoment media and are no longer considered unbound once attached to a profile. Replacing/removing an avatar must detach the old relation before that attachment enters the existing deletion lifecycle.
+The central attachment binding resolver reports profile media as `ACCOUNT_PROFILE`. This means avatar attachments participate in the same cross-parent exclusivity rule as Memory and HeartMoment media and are no longer considered unbound once attached to a profile. Normal replacement/removal detaches the old relation before that attachment enters the existing deletion lifecycle. Because every Attachment is Space-scoped, deleting its Space cascades the Attachment and avatar binding together; the profile then deterministically falls back to its no-image representation instead of blocking Space deletion.
 
 Read authorization and the public profile update contract are added by the owning #368 follow-up slices; this foundation does not make an attachment public or add an alternate media endpoint.
 
