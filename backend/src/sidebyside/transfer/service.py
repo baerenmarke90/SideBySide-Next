@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import io
 import logging
 import tempfile
-from collections.abc import BinaryIO, Iterable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from enum import StrEnum
-from typing import Any
+from typing import IO, Any
 from uuid import UUID
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -28,7 +27,6 @@ from sidebyside.media import build_storage_key, get_media_store
 from sidebyside.relationship.models import Membership, MembershipStatus, SpaceProfile
 from sidebyside.transfer.archive import (
     MAX_COMPRESSED_BYTES,
-    STREAM_CHUNK,
     TransferArchiveError,
     add_bytes,
     add_stream,
@@ -86,9 +84,7 @@ FILE_TABLES: dict[str, tuple[str, ...]] = {
     "private/collections.json": ("private_collections", "private_collection_items"),
 }
 PRIVATE_FILES = frozenset(name for name in FILE_TABLES if name.startswith("private/"))
-PRIVATE_ROOTS = frozenset(
-    {"private_notes", "gift_ideas", "private_collections"}
-)
+PRIVATE_ROOTS = frozenset({"private_notes", "gift_ideas", "private_collections"})
 CHILD_PARENT: dict[str, tuple[str, str]] = {
     "collection_items": ("collection_id", "collections"),
     "private_collection_items": ("collection_id", "private_collections"),
@@ -142,7 +138,7 @@ INSERT_ORDER = (
 )
 
 
-class TransferNotFound(NotFoundError):
+class TransferNotFoundError(NotFoundError):
     pass
 
 
@@ -292,9 +288,7 @@ def _portable_rows(
         if table_name in CHILD_PARENT or table_name in RELATION_REQUIREMENTS:
             continue
         table = _table(session, table_name, metadata)
-        rows[table_name] = _load_root_rows(
-            session, table, authorization=authorization, scope=scope
-        )
+        rows[table_name] = _load_root_rows(session, table, authorization=authorization, scope=scope)
 
     # Relation tables carry space_id but derive visibility from both targets.
     for table_name in RELATION_REQUIREMENTS:
@@ -346,14 +340,18 @@ def _source_accounts(session: Session, space_id: UUID) -> list[dict[str, Any]]:
         account = session.get(Account, membership.account_id)
         if account is None:
             continue
-        email = session.execute(
-            select(AccountEmail)
-            .where(
-                AccountEmail.account_id == account.id,
-                AccountEmail.verified_at.is_not(None),
+        email = (
+            session.execute(
+                select(AccountEmail)
+                .where(
+                    AccountEmail.account_id == account.id,
+                    AccountEmail.verified_at.is_not(None),
+                )
+                .order_by(AccountEmail.is_primary.desc(), AccountEmail.created_at, AccountEmail.id)
             )
-            .order_by(AccountEmail.is_primary.desc(), AccountEmail.created_at, AccountEmail.id)
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         result.append(
             {
                 "sourceId": str(account.id),
@@ -418,12 +416,14 @@ def build_export_archive(
     session: Session,
     authorization: AuthorizationContext,
     scope: TransferScope,
-) -> BinaryIO:
+) -> IO[bytes]:
     """Build one deterministic snapshot archive in a spooled temporary file."""
     rows = _portable_rows(session, authorization, scope)
     media = _media_rows(session, rows)
     accounts = _source_accounts(session, authorization.space_id)
-    output = tempfile.SpooledTemporaryFile(max_size=16 * 1024 * 1024, mode="w+b")
+    output = tempfile.SpooledTemporaryFile(  # noqa: SIM115
+        max_size=16 * 1024 * 1024, mode="w+b"
+    )
     checksums: dict[str, str] = {}
     store = get_media_store()
     with ZipFile(output, mode="w", compression=ZIP_DEFLATED, allowZip64=True) as archive:
@@ -456,7 +456,9 @@ def build_export_archive(
                 if not store.exists(key):
                     if variant == "thumbnail":
                         continue
-                    raise BadRequestError("Portable media is missing.", ErrorCode.TRANSFER_EXPORT_FAILED)
+                    raise BadRequestError(
+                        "Portable media is missing.", ErrorCode.TRANSFER_EXPORT_FAILED
+                    )
                 entry_name = f"media/{source_id}/{variant}"
                 with store.open(key) as source:
                     add_stream(archive, entry_name, source, checksums)
@@ -505,7 +507,7 @@ def create_export(
 def _transfer_id(raw: str, *, kind: str) -> UUID:
     parsed = parse_id(raw)
     if parsed is None:
-        raise TransferNotFound(f"{kind} not found.", "TRANSFER_NOT_FOUND")
+        raise TransferNotFoundError(f"{kind} not found.", "TRANSFER_NOT_FOUND")
     return parsed
 
 
@@ -545,7 +547,7 @@ def get_export(
         )
     ).scalar_one_or_none()
     if transfer is None:
-        raise TransferNotFound("Transfer export not found.", "TRANSFER_NOT_FOUND")
+        raise TransferNotFoundError("Transfer export not found.", "TRANSFER_NOT_FOUND")
     if transfer.expires_at <= now() and transfer.status != ExportStatus.EXPIRED.value:
         _expire_export(session, transfer)
     elif transfer.status not in {
@@ -562,7 +564,7 @@ def open_export_download(
     session: Session,
     authorization: AuthorizationContext,
     export_id: str,
-) -> tuple[TransferExport, BinaryIO]:
+) -> tuple[TransferExport, IO[bytes]]:
     transfer = get_export(session, authorization, export_id)
     if transfer.status == ExportStatus.EXPIRED.value:
         raise ConflictError("Transfer export has expired.", ErrorCode.TRANSFER_EXPIRED)
@@ -580,12 +582,14 @@ def open_export_download(
 def create_import(
     session: Session,
     authorization: AuthorizationContext,
-    source: BinaryIO,
+    source: IO[bytes],
     *,
     size: int,
 ) -> TransferImport:
     if size <= 0:
-        raise TransferArchiveError("Transfer archive is empty.", ErrorCode.TRANSFER_MANIFEST_INVALID)
+        raise TransferArchiveError(
+            "Transfer archive is empty.", ErrorCode.TRANSFER_MANIFEST_INVALID
+        )
     if size > MAX_COMPRESSED_BYTES:
         from sidebyside.core.errors import PayloadTooLargeError
 
@@ -623,18 +627,20 @@ def get_import(
         )
     ).scalar_one_or_none()
     if transfer is None:
-        raise TransferNotFound("Transfer import not found.", "TRANSFER_NOT_FOUND")
+        raise TransferNotFoundError("Transfer import not found.", "TRANSFER_NOT_FOUND")
+    validation_job_failed = transfer.status in {
+        ImportStatus.QUEUED.value,
+        ImportStatus.VALIDATING.value,
+    } and _job_failed(session, transfer.validation_job_id)
+    apply_job_failed = transfer.status == ImportStatus.APPLYING.value and _job_failed(
+        session, transfer.apply_job_id
+    )
     if transfer.expires_at <= now() and transfer.status not in {
         ImportStatus.COMPLETED.value,
         ImportStatus.EXPIRED.value,
     }:
         _expire_import(session, transfer)
-    elif transfer.status in {ImportStatus.QUEUED.value, ImportStatus.VALIDATING.value} and _job_failed(
-        session, transfer.validation_job_id
-    ):
-        transfer.status = ImportStatus.FAILED.value
-        transfer.error_code = ErrorCode.TRANSFER_IMPORT_FAILED
-    elif transfer.status == ImportStatus.APPLYING.value and _job_failed(session, transfer.apply_job_id):
+    elif validation_job_failed or apply_job_failed:
         transfer.status = ImportStatus.FAILED.value
         transfer.error_code = ErrorCode.TRANSFER_IMPORT_FAILED
     return transfer
@@ -656,7 +662,7 @@ def request_apply(
         .with_for_update()
     ).scalar_one_or_none()
     if transfer is None:
-        raise TransferNotFound("Transfer import not found.", "TRANSFER_NOT_FOUND")
+        raise TransferNotFoundError("Transfer import not found.", "TRANSFER_NOT_FOUND")
     if transfer.expires_at <= now() and transfer.status not in {
         ImportStatus.COMPLETED.value,
         ImportStatus.EXPIRED.value,
@@ -676,7 +682,9 @@ def request_apply(
     return transfer
 
 
-def _load_documents(fileobj: BinaryIO) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+def _load_documents(
+    fileobj: IO[bytes],
+) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
     fileobj.seek(0)
     validated = validate_zip(fileobj)
     manifest = validated.manifest
@@ -686,35 +694,59 @@ def _load_documents(fileobj: BinaryIO) -> tuple[dict[str, Any], dict[str, list[d
 
     fileobj.seek(0)
     with ZipFile(fileobj, mode="r") as archive:
-        accounts_value = parse_json_bytes(archive.read("accounts.json")) if "accounts.json" in validated.entries else None
-        if not isinstance(accounts_value, dict) or not isinstance(accounts_value.get("members"), list):
-            raise TransferArchiveError("Transfer member metadata is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED)
+        accounts_value = (
+            parse_json_bytes(archive.read("accounts.json"))
+            if "accounts.json" in validated.entries
+            else None
+        )
+        if not isinstance(accounts_value, dict) or not isinstance(
+            accounts_value.get("members"), list
+        ):
+            raise TransferArchiveError(
+                "Transfer member metadata is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED
+            )
         accounts = accounts_value
         for file_name, allowed_tables in allowed_by_file.items():
             if file_name not in validated.entries:
                 continue
             document = parse_json_bytes(archive.read(file_name))
             if not isinstance(document, dict) or not isinstance(document.get("tables"), list):
-                raise TransferArchiveError("Transfer domain document is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+                raise TransferArchiveError(
+                    "Transfer domain document is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                )
             for group in document["tables"]:
                 if not isinstance(group, dict):
-                    raise TransferArchiveError("Transfer domain document is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+                    raise TransferArchiveError(
+                        "Transfer domain document is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                    )
                 table_name = group.get("name")
                 rows = group.get("rows")
-                if table_name not in allowed_tables or table_name in seen_tables or not isinstance(rows, list):
-                    raise TransferArchiveError("Transfer domain document is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+                if (
+                    table_name not in allowed_tables
+                    or table_name in seen_tables
+                    or not isinstance(rows, list)
+                ):
+                    raise TransferArchiveError(
+                        "Transfer domain document is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                    )
                 if not all(isinstance(row, dict) for row in rows):
-                    raise TransferArchiveError("Transfer domain document is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+                    raise TransferArchiveError(
+                        "Transfer domain document is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                    )
                 seen_tables.add(table_name)
                 tables[table_name] = rows
         media: list[dict[str, Any]] = []
         if "media/index.json" in validated.entries:
             media_doc = parse_json_bytes(archive.read("media/index.json"))
             if not isinstance(media_doc, dict) or not isinstance(media_doc.get("items"), list):
-                raise TransferArchiveError("Transfer media index is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+                raise TransferArchiveError(
+                    "Transfer media index is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                )
             media = media_doc["items"]
             if not all(isinstance(item, dict) for item in media):
-                raise TransferArchiveError("Transfer media index is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+                raise TransferArchiveError(
+                    "Transfer media index is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                )
     return {"manifest": manifest, "accounts": accounts}, tables, media
 
 
@@ -745,7 +777,9 @@ def _validate_ids_and_privacy(
             if raw_id is not None:
                 row_id = _uuid(raw_id, ErrorCode.TRANSFER_RELATION_INVALID)
                 if row_id in globally_seen:
-                    raise TransferArchiveError("Transfer source IDs are not unique.", ErrorCode.TRANSFER_RELATION_INVALID)
+                    raise TransferArchiveError(
+                        "Transfer source IDs are not unique.", ErrorCode.TRANSFER_RELATION_INVALID
+                    )
                 globally_seen.add(row_id)
                 table_ids.add(row_id)
             privacy = row.get("privacy_class")
@@ -754,21 +788,41 @@ def _validate_ids_and_privacy(
                 PrivacyClass.SPACE_SHARED.value,
                 PrivacyClass.OWNER_ONLY.value,
             }:
-                raise TransferArchiveError("Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID)
-            if scope is TransferScope.SHARED and privacy not in {None, PrivacyClass.SPACE_SHARED.value}:
-                raise TransferArchiveError("Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID)
+                raise TransferArchiveError(
+                    "Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
+                )
+            if scope is TransferScope.SHARED and privacy not in {
+                None,
+                PrivacyClass.SPACE_SHARED.value,
+            }:
+                raise TransferArchiveError(
+                    "Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
+                )
             if privacy == PrivacyClass.OWNER_ONLY.value:
                 if scope is TransferScope.SHARED or personal_owner is None:
-                    raise TransferArchiveError("Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID)
+                    raise TransferArchiveError(
+                        "Transfer privacy scope is invalid.",
+                        ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID,
+                    )
                 if _uuid(owner, ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID) != personal_owner:
-                    raise TransferArchiveError("Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID)
+                    raise TransferArchiveError(
+                        "Transfer privacy scope is invalid.",
+                        ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID,
+                    )
             elif table_name in PRIVATE_ROOTS:
-                raise TransferArchiveError("Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID)
+                raise TransferArchiveError(
+                    "Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
+                )
             for column in ACCOUNT_REFERENCE_COLUMNS:
-                if row.get(column) is not None and _uuid(
-                    row[column], ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
-                ) not in source_member_ids:
-                    raise TransferArchiveError("Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+                if (
+                    row.get(column) is not None
+                    and _uuid(row[column], ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+                    not in source_member_ids
+                ):
+                    raise TransferArchiveError(
+                        "Transfer member mapping is invalid.",
+                        ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID,
+                    )
         ids[table_name] = table_ids
     return ids
 
@@ -780,14 +834,22 @@ def _validate_relations(
     for child, (column, parent) in CHILD_PARENT.items():
         for raw in tables.get(child, []):
             row = _row_snake(raw)
-            if _uuid(row.get(column), ErrorCode.TRANSFER_RELATION_INVALID) not in ids.get(parent, set()):
-                raise TransferArchiveError("Transfer relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+            if _uuid(row.get(column), ErrorCode.TRANSFER_RELATION_INVALID) not in ids.get(
+                parent, set()
+            ):
+                raise TransferArchiveError(
+                    "Transfer relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                )
     for table_name, requirements in RELATION_REQUIREMENTS.items():
         for raw in tables.get(table_name, []):
             row = _row_snake(raw)
             for column, target in requirements:
-                if _uuid(row.get(column), ErrorCode.TRANSFER_RELATION_INVALID) not in ids.get(target, set()):
-                    raise TransferArchiveError("Transfer relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+                if _uuid(row.get(column), ErrorCode.TRANSFER_RELATION_INVALID) not in ids.get(
+                    target, set()
+                ):
+                    raise TransferArchiveError(
+                        "Transfer relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                    )
     comment_targets = {
         "MEMORY": ids.get("memories", set()),
         "HEART_MOMENT": ids.get("heart_moments", set()),
@@ -796,8 +858,13 @@ def _validate_relations(
     for raw in tables.get("comments", []):
         row = _row_snake(raw)
         target_ids = comment_targets.get(str(row.get("target_type")))
-        if target_ids is None or _uuid(row.get("target_id"), ErrorCode.TRANSFER_RELATION_INVALID) not in target_ids:
-            raise TransferArchiveError("Transfer relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+        if (
+            target_ids is None
+            or _uuid(row.get("target_id"), ErrorCode.TRANSFER_RELATION_INVALID) not in target_ids
+        ):
+            raise TransferArchiveError(
+                "Transfer relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+            )
 
 
 def _active_target_mapping(
@@ -807,13 +874,19 @@ def _active_target_mapping(
 ) -> tuple[set[UUID], dict[UUID, UUID]]:
     members = accounts.get("members")
     if not isinstance(members, list) or not members:
-        raise TransferArchiveError("Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED)
-    target_members = session.execute(
-        select(Membership).where(
-            Membership.space_id == target_space,
-            Membership.status == MembershipStatus.ACTIVE.value,
+        raise TransferArchiveError(
+            "Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED
         )
-    ).scalars().all()
+    target_members = (
+        session.execute(
+            select(Membership).where(
+                Membership.space_id == target_space,
+                Membership.status == MembershipStatus.ACTIVE.value,
+            )
+        )
+        .scalars()
+        .all()
+    )
     target_ids = {membership.account_id for membership in target_members}
     target_by_email: dict[str, UUID] = {}
     for email, account_id in session.execute(
@@ -828,19 +901,29 @@ def _active_target_mapping(
     mapping: dict[UUID, UUID] = {}
     for member in members:
         if not isinstance(member, dict):
-            raise TransferArchiveError("Transfer member metadata is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+            raise TransferArchiveError(
+                "Transfer member metadata is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+            )
         source_id = _uuid(member.get("sourceId"), ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
         if source_id in source_ids:
-            raise TransferArchiveError("Transfer member metadata is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+            raise TransferArchiveError(
+                "Transfer member metadata is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+            )
         source_ids.add(source_id)
         email = member.get("verifiedEmail")
         if not isinstance(email, str) or email.lower() != email:
-            raise TransferArchiveError("Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED)
+            raise TransferArchiveError(
+                "Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED
+            )
         target = target_by_email.get(email)
         if target is None:
-            raise TransferArchiveError("Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED)
+            raise TransferArchiveError(
+                "Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED
+            )
         if target in mapping.values():
-            raise TransferArchiveError("Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+            raise TransferArchiveError(
+                "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+            )
         mapping[source_id] = target
     return source_ids, mapping
 
@@ -866,22 +949,31 @@ def _validate_media(
         source_id = _uuid(item.get("sourceId"), ErrorCode.TRANSFER_RELATION_INVALID)
         owner_id = _uuid(item.get("ownerSourceId"), ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
         if source_id in indexed or source_id not in referenced or owner_id not in source_member_ids:
-            raise TransferArchiveError("Transfer media relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+            raise TransferArchiveError(
+                "Transfer media relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+            )
         indexed.add(source_id)
         variants = item.get("variants")
-        if not isinstance(variants, list) or "original" not in variants or any(
-            variant not in {"original", "thumbnail"} for variant in variants
+        if (
+            not isinstance(variants, list)
+            or "original" not in variants
+            or any(variant not in {"original", "thumbnail"} for variant in variants)
         ):
-            raise TransferArchiveError("Transfer media relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+            raise TransferArchiveError(
+                "Transfer media relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+            )
         for variant in variants:
             if f"media/{source_id}/{variant}" not in archive_names:
-                raise TransferArchiveError("Transfer media relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+                raise TransferArchiveError(
+                    "Transfer media relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+                )
     if indexed != referenced:
-        raise TransferArchiveError("Transfer media relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+        raise TransferArchiveError(
+            "Transfer media relation is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+        )
     # Media existence is inherited from an included parent, not the attachment
     # row's internal OWNER_ONLY staging class. No orphan media is accepted.
     del scope, personal_owner
-
 
 
 def _validate_domain_schema_and_links(
@@ -916,9 +1008,10 @@ def _validate_domain_schema_and_links(
                     "Transfer domain schema is invalid.",
                     ErrorCode.TRANSFER_RELATION_INVALID,
                 )
-            if "space_id" in row and _uuid(
-                row["space_id"], ErrorCode.TRANSFER_RELATION_INVALID
-            ) != source_space_id:
+            if (
+                "space_id" in row
+                and _uuid(row["space_id"], ErrorCode.TRANSFER_RELATION_INVALID) != source_space_id
+            ):
                 raise TransferArchiveError(
                     "Transfer tenant relation is invalid.",
                     ErrorCode.TRANSFER_RELATION_INVALID,
@@ -968,10 +1061,11 @@ def _validate_domain_schema_and_links(
                 ErrorCode.TRANSFER_RELATION_INVALID,
             )
 
+
 def validate_import_bundle(
     session: Session,
     authorization: AuthorizationContext,
-    fileobj: BinaryIO,
+    fileobj: IO[bytes],
     *,
     compressed_size: int,
 ) -> ValidatedGraph:
@@ -984,19 +1078,23 @@ def validate_import_bundle(
     try:
         scope = TransferScope(str(manifest["scope"]))
     except ValueError:
-        raise TransferArchiveError("Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID) from None
+        raise TransferArchiveError(
+            "Transfer privacy scope is invalid.", ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
+        ) from None
     source_space = _uuid(manifest.get("sourceSpaceId"), ErrorCode.TRANSFER_MANIFEST_INVALID)
     personal_owner: UUID | None = None
     if scope is TransferScope.PERSONAL:
         personal_owner = _uuid(
             manifest.get("personalOwnerSourceId"), ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
         )
-    source_members, mapping = _active_target_mapping(
-        session, authorization.space_id, accounts
-    )
-    if personal_owner is not None:
-        if personal_owner not in source_members or mapping.get(personal_owner) != authorization.account_id:
-            raise TransferArchiveError("Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+    source_members, mapping = _active_target_mapping(session, authorization.space_id, accounts)
+    if personal_owner is not None and (
+        personal_owner not in source_members
+        or mapping.get(personal_owner) != authorization.account_id
+    ):
+        raise TransferArchiveError(
+            "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+        )
     ids = _validate_ids_and_privacy(scope, personal_owner, tables, source_members)
     _validate_relations(tables, ids)
     _validate_media(
@@ -1007,10 +1105,7 @@ def validate_import_bundle(
         media,
         set(validated_zip.entries),
     )
-    media_ids = {
-        _uuid(item.get("sourceId"), ErrorCode.TRANSFER_RELATION_INVALID)
-        for item in media
-    }
+    media_ids = {_uuid(item.get("sourceId"), ErrorCode.TRANSFER_RELATION_INVALID) for item in media}
     _validate_domain_schema_and_links(
         session,
         source_space_id=source_space,
@@ -1108,13 +1203,17 @@ def _prepare_row(
     result: dict[str, Any] = {}
     for name, value in row.items():
         if name not in table.c:
-            raise TransferArchiveError("Transfer domain schema is invalid.", ErrorCode.TRANSFER_RELATION_INVALID)
+            raise TransferArchiveError(
+                "Transfer domain schema is invalid.", ErrorCode.TRANSFER_RELATION_INVALID
+            )
         if name == "space_id":
             value = authorization.space_id
         elif name in ACCOUNT_REFERENCE_COLUMNS:
             source = _uuid(value, ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
             if source not in graph.mapping:
-                raise TransferArchiveError("Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+                raise TransferArchiveError(
+                    "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+                )
             value = graph.mapping[source]
         elif name == "id":
             source = _uuid(value, ErrorCode.TRANSFER_RELATION_INVALID)
@@ -1135,7 +1234,7 @@ def apply_import_bundle(
     session: Session,
     authorization: AuthorizationContext,
     transfer: TransferImport,
-    fileobj: BinaryIO,
+    fileobj: IO[bytes],
 ) -> list[str]:
     """Revalidate then add the complete graph in the caller's transaction.
 
@@ -1149,7 +1248,9 @@ def apply_import_bundle(
         compressed_size=transfer.artifact_size,
     )
     if transfer.member_mapping != {str(key): str(value) for key, value in graph.mapping.items()}:
-        raise TransferArchiveError("Transfer member mapping changed.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+        raise TransferArchiveError(
+            "Transfer member mapping changed.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+        )
     ids = _new_id_map(graph)
 
     # SpaceProfile is a singleton on the target Space. Additive import must not
@@ -1160,16 +1261,12 @@ def apply_import_bundle(
     ).scalar_one_or_none()
     source_profiles = graph.tables.get("space_profiles", [])
     if existing_profile_id is not None and source_profiles:
-        source_profile_id = _uuid(
-            source_profiles[0].get("id"), ErrorCode.TRANSFER_RELATION_INVALID
-        )
+        source_profile_id = _uuid(source_profiles[0].get("id"), ErrorCode.TRANSFER_RELATION_INVALID)
         ids[source_profile_id] = existing_profile_id
 
     metadata = MetaData()
     tables = {
-        name: _table(session, name, metadata)
-        for names in FILE_TABLES.values()
-        for name in names
+        name: _table(session, name, metadata) for names in FILE_TABLES.values() for name in names
     }
     attachment_table = _table(session, "attachments", metadata)
     store = get_media_store()
@@ -1184,13 +1281,17 @@ def apply_import_bundle(
             for item in graph.media:
                 source_id = _uuid(item["sourceId"], ErrorCode.TRANSFER_RELATION_INVALID)
                 target_id = ids[source_id]
-                owner_source = _uuid(item["ownerSourceId"], ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+                owner_source = _uuid(
+                    item["ownerSourceId"], ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+                )
                 target_owner = graph.mapping[owner_source]
                 for variant in item["variants"]:
                     key = build_storage_key(authorization.space_id, target_id, variant)
                     entry_name = f"media/{source_id}/{variant}"
                     with archive.open(entry_name, "r") as source:
-                        store.put(key, source, str(item.get("mimeType") or "application/octet-stream"))
+                        store.put(
+                            key, source, str(item.get("mimeType") or "application/octet-stream")
+                        )
                     written_keys.append(key)
                 moment = now()
                 attachment_values = {

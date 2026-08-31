@@ -6,11 +6,11 @@ import hashlib
 import json
 import re
 import stat
-from collections.abc import BinaryIO, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import PurePosixPath
-from typing import Any
-from zipfile import BadZipFile, ZIP_DEFLATED, ZipFile, ZipInfo
+from typing import IO, Any
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile, ZipInfo
 
 from sidebyside.core.errors import BadRequestError, ErrorCode, PayloadTooLargeError
 
@@ -24,7 +24,14 @@ MAX_JSON_BYTES = 64 * 1024 * 1024
 STREAM_CHUNK = 64 * 1024
 
 _DRIVE = re.compile(r"^[A-Za-z]:")
-_RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+_RESERVED = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
 _ALLOWED_ROOT_FILES = {
     "accounts.json",
     "space.json",
@@ -60,7 +67,9 @@ def _archive_error(code: str, detail: str = "Transfer archive is invalid.") -> T
 
 
 def _too_large() -> PayloadTooLargeError:
-    return PayloadTooLargeError("Transfer archive exceeds the supported resource limits.", ErrorCode.TRANSFER_TOO_LARGE)
+    return PayloadTooLargeError(
+        "Transfer archive exceeds the supported resource limits.", ErrorCode.TRANSFER_TOO_LARGE
+    )
 
 
 def canonical_name(name: str) -> str:
@@ -140,12 +149,16 @@ def _validate_entry_shape(info: ZipInfo, seen: set[str]) -> str:
     denominator = max(info.compress_size, 1)
     if info.file_size > denominator * MAX_COMPRESSION_RATIO:
         raise _too_large()
-    if name != "manifest.json" and name not in _ALLOWED_ROOT_FILES and not _MEDIA_ENTRY.fullmatch(name):
+    if (
+        name != "manifest.json"
+        and name not in _ALLOWED_ROOT_FILES
+        and not _MEDIA_ENTRY.fullmatch(name)
+    ):
         raise _archive_error(ErrorCode.TRANSFER_ARCHIVE_UNSAFE)
     return name
 
 
-def validate_zip(fileobj: BinaryIO, *, compressed_size: int | None = None) -> ValidatedBundle:
+def validate_zip(fileobj: IO[bytes], *, compressed_size: int | None = None) -> ValidatedBundle:
     """Validate paths/resource limits and integrity without extracting to disk."""
     if compressed_size is not None and compressed_size > MAX_COMPRESSED_BYTES:
         raise _too_large()
@@ -211,7 +224,7 @@ def validate_zip(fileobj: BinaryIO, *, compressed_size: int | None = None) -> Va
         return ValidatedBundle(manifest=manifest, entries=entries)
 
 
-def read_json_entry(fileobj: BinaryIO, entry: ZipInfo) -> Any:
+def read_json_entry(fileobj: IO[bytes], entry: ZipInfo) -> Any:
     fileobj.seek(0)
     with ZipFile(fileobj, mode="r") as archive:
         return parse_json_bytes(archive.read(entry))
@@ -228,7 +241,7 @@ def add_bytes(archive: ZipFile, name: str, data: bytes, checksums: dict[str, str
 def add_stream(
     archive: ZipFile,
     name: str,
-    source: BinaryIO,
+    source: IO[bytes],
     checksums: dict[str, str],
 ) -> int:
     canonical_name(name)

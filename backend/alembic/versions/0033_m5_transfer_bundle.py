@@ -23,8 +23,12 @@ def upgrade() -> None:
     op.create_table(
         "transfer_exports",
         sa.Column("id", UUID, nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("space_id", UUID, nullable=False),
         sa.Column("created_by", UUID, nullable=False),
         sa.Column("scope", sa.String(length=16), nullable=False),
@@ -34,14 +38,14 @@ def upgrade() -> None:
         sa.Column("error_code", sa.String(length=64)),
         sa.Column("ready_at", sa.DateTime(timezone=True)),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.CheckConstraint("scope IN ('SHARED', 'PERSONAL')", name="ck_transfer_exports_scope_is_known"),
+        sa.CheckConstraint("scope IN ('SHARED', 'PERSONAL')", name="scope_is_known"),
         sa.CheckConstraint(
             "status IN ('QUEUED', 'RUNNING', 'READY', 'FAILED', 'EXPIRED')",
-            name="ck_transfer_exports_status_is_known",
+            name="status_is_known",
         ),
         sa.CheckConstraint(
             "artifact_size IS NULL OR artifact_size >= 0",
-            name="ck_transfer_exports_size_is_non_negative",
+            name="size_is_non_negative",
         ),
         sa.ForeignKeyConstraint(["space_id"], ["spaces.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["created_by"], ["accounts.id"], ondelete="CASCADE"),
@@ -61,8 +65,12 @@ def upgrade() -> None:
     op.create_table(
         "transfer_imports",
         sa.Column("id", UUID, nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("space_id", UUID, nullable=False),
         sa.Column("created_by", UUID, nullable=False),
         sa.Column("status", sa.String(length=24), nullable=False),
@@ -80,14 +88,14 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint(
             "scope IS NULL OR scope IN ('SHARED', 'PERSONAL')",
-            name="ck_transfer_imports_scope_is_known",
+            name="scope_is_known",
         ),
         sa.CheckConstraint(
             "status IN ('QUEUED', 'VALIDATING', 'READY_TO_APPLY', 'APPLYING', "
             "'COMPLETED', 'FAILED', 'EXPIRED')",
-            name="ck_transfer_imports_status_is_known",
+            name="status_is_known",
         ),
-        sa.CheckConstraint("artifact_size >= 0", name="ck_transfer_imports_size_is_non_negative"),
+        sa.CheckConstraint("artifact_size >= 0", name="size_is_non_negative"),
         sa.ForeignKeyConstraint(["space_id"], ["spaces.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["created_by"], ["accounts.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),

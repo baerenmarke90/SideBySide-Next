@@ -20,7 +20,13 @@ from sidebyside.jobs.worker import JobRegistry, registry
 from sidebyside.media import get_media_store
 from sidebyside.relationship.models import Membership, MembershipStatus
 from sidebyside.transfer import service
-from sidebyside.transfer.models import ExportStatus, ImportStatus, TransferExport, TransferImport, TransferScope
+from sidebyside.transfer.models import (
+    ExportStatus,
+    ImportStatus,
+    TransferExport,
+    TransferImport,
+    TransferScope,
+)
 
 log = logging.getLogger(__name__)
 CLEANUP_INTERVAL = timedelta(minutes=30)
@@ -58,7 +64,9 @@ def schedule_next(session: Session) -> Job | None:
     return queue.enqueue(session, service.CLEANUP_JOB_KIND, delay=CLEANUP_INTERVAL)
 
 
-def _active_authorization(session: Session, *, space_id: UUID, account_id: UUID) -> AuthorizationContext | None:
+def _active_authorization(
+    session: Session, *, space_id: UUID, account_id: UUID
+) -> AuthorizationContext | None:
     active = session.execute(
         select(Membership.id).where(
             Membership.space_id == space_id,
@@ -110,14 +118,16 @@ def handle_export(session: Session, payload: dict[str, Any]) -> None:
         # the archive one deterministic snapshot even though the worker's Job
         # row was claimed in a separate transaction.
         bind = session.get_bind()
-        with bind.connect().execution_options(isolation_level="REPEATABLE READ") as connection:
-            with Session(bind=connection) as snapshot:
-                with snapshot.begin():
-                    archive = service.build_export_archive(
-                        snapshot,
-                        authorization,
-                        TransferScope(transfer.scope),
-                    )
+        with (
+            bind.connect().execution_options(isolation_level="REPEATABLE READ") as connection,
+            Session(bind=connection) as snapshot,
+            snapshot.begin(),
+        ):
+            archive = service.build_export_archive(
+                snapshot,
+                authorization,
+                TransferScope(transfer.scope),
+            )
         store = get_media_store()
         stored = store.put(service.export_storage_key(transfer), archive, "application/zip")
     except BadRequestError as error:

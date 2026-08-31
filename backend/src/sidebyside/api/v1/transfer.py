@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 import tempfile
+from collections.abc import Iterator
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
@@ -18,7 +18,13 @@ from sidebyside.api.schema import ApiModel
 from sidebyside.core.errors import ErrorCode, PayloadTooLargeError, UnsupportedMediaTypeError
 from sidebyside.transfer import service
 from sidebyside.transfer.archive import MAX_COMPRESSED_BYTES, STREAM_CHUNK
-from sidebyside.transfer.models import ExportStatus, ImportStatus, TransferExport, TransferImport, TransferScope
+from sidebyside.transfer.models import (
+    ExportStatus,
+    ImportStatus,
+    TransferExport,
+    TransferImport,
+    TransferScope,
+)
 
 router = APIRouter(tags=["transfer"])
 
@@ -187,11 +193,7 @@ def download_transfer_export(
     openapi_extra={
         "requestBody": {
             "required": True,
-            "content": {
-                "application/zip": {
-                    "schema": {"type": "string", "format": "binary"}
-                }
-            },
+            "content": {"application/zip": {"schema": {"type": "string", "format": "binary"}}},
         }
     },
 )
@@ -208,7 +210,9 @@ async def create_transfer_import(
             ErrorCode.TRANSFER_MANIFEST_INVALID,
         )
 
-    temporary = tempfile.SpooledTemporaryFile(max_size=16 * 1024 * 1024, mode="w+b")
+    temporary = tempfile.SpooledTemporaryFile(  # noqa: SIM115
+        max_size=16 * 1024 * 1024, mode="w+b"
+    )
     size = 0
     try:
         async for chunk in request.stream():
