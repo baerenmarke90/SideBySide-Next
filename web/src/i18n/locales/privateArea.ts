@@ -3,7 +3,7 @@ const privateArea = {
   intro:
     'Dieser Bereich gehört nur dir. Inhalte hier werden nicht mit deinem Partner geteilt.',
   privacyLabel: 'Nur für mich',
-  backToProfile: '← Zurück zum Profil',
+  backToMore: '← Zurück zu Mehr',
   refresh: 'Aktualisieren',
   refreshing: 'Aktualisiert …',
   loadMore: 'Mehr laden',

@@ -14,6 +14,7 @@ import './attachment-drafts.css';
 import './components/CommentsPanel.css';
 import './components/MediaGallery.css';
 import './components/MemoryProductPage.css';
+import './components/MoreOverviewPage.css';
 import './components/ProfilePage.css';
 import './components/RelatedPeoplePage.css';
 import './components/StoryProductPages.css';

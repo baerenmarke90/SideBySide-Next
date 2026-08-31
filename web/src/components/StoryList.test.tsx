@@ -36,7 +36,7 @@ describe('StoryList', () => {
     expect(html).toContain('Am See');
     expect(html).toContain('<time');
     expect(html).toContain(
-      'href="/memory/00000000-0000-0000-0000-000000000002"',
+      'href="/story/memories/00000000-0000-0000-0000-000000000002"',
     );
     expect(html).toContain('Erinnerung öffnen');
   });
@@ -73,9 +73,9 @@ describe('StoryList', () => {
       </MemoryRouter>,
     );
 
-    expect(html).toContain('href="/heart-moment/heart-1"');
+    expect(html).toContain('href="/story/heart-moments/heart-1"');
     expect(html).toContain('Herzmoment öffnen');
-    expect(html).toContain('href="/milestone/milestone-1"');
+    expect(html).toContain('href="/story/milestones/milestone-1"');
     expect(html).toContain('Meilenstein öffnen');
   });
 

@@ -22,7 +22,7 @@ import { ProblemState } from './ProblemState';
 import {
   DeleteConfirmation,
   LoadMoreButton,
-  PrivateAreaBackToProfile,
+  PrivateAreaBackToMore,
 } from './PrivateAreaLayout';
 import { UiState } from './UiState';
 
@@ -220,7 +220,7 @@ export function GiftIdeasListPage({ api, accountId, spaceId }: Props) {
   return (
     <>
       <PageHeader
-        before={<PrivateAreaBackToProfile />}
+        before={<PrivateAreaBackToMore />}
         title={t('privateArea.gifts.title')}
         description={t('privateArea.gifts.intro')}
         action={

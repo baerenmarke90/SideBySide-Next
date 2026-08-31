@@ -8,6 +8,7 @@ import type { EngagementTarget } from '../api/generated/models/EngagementTarget'
 import type { SearchKind } from '../api/generated/models/SearchKind';
 import {
   appRoutePath,
+  MORE_PEOPLE_ROUTE,
   chapterDetailPath,
   collectionDetailPath,
   memoryDetailPath,
@@ -58,7 +59,7 @@ export function searchResultPath(type: SearchKind, id: string): string | null {
     case 'COLLECTION':
       return collectionDetailPath(id);
     case 'COLLECTION_ITEM':
-      return appRoutePath('planning');
+      return appRoutePath('plan');
     default:
       return null;
   }
@@ -87,7 +88,7 @@ export function dashboardItemPath(
     case 'IMPORTANT_DATE':
     case 'BIRTHDAY':
     case 'ANNIVERSARY':
-      return appRoutePath('people');
+      return MORE_PEOPLE_ROUTE;
     default:
       return null;
   }

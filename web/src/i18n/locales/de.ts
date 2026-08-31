@@ -11,6 +11,30 @@ const de = {
     story: 'Story',
     newMemory: 'Neue Erinnerung',
   },
+  more: {
+    eyebrow: 'Mehr',
+    title: 'Alles Weitere',
+    intro:
+      'Menschen, euer privater Bereich, Benachrichtigungen und euer Profil.',
+    people: {
+      title: 'Menschen',
+      description:
+        'Personen, die euch wichtig sind, mit Geburtstagen und Jahrestagen.',
+    },
+    private: {
+      title: 'Mein Bereich',
+      description:
+        'Notizen, Geschenkideen und Listen, die nur für dich sichtbar sind.',
+    },
+    notifications: {
+      title: 'Benachrichtigungen',
+      description: 'Was es seit deinem letzten Besuch Neues für dich gibt.',
+    },
+    profile: {
+      title: 'Profil',
+      description: 'Eure Beziehungsanzeige, Vorlieben und Darstellung.',
+    },
+  },
   states: {
     loading: {
       title: 'Wird geladen …',
@@ -62,7 +86,7 @@ const de = {
   },
   brand: {
     suffix: 'Next',
-    storyAria: 'SideBySide – zur Story',
+    homeAria: 'SideBySide – zum gemeinsamen Start',
   },
   spaceContext: {
     eyebrow: 'Gemeinsamer Bereich',
