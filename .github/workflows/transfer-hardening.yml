@@ -45,27 +45,34 @@ jobs:
                   "from zipfile import ZIP_DEFLATED, ZipFile\n\nfrom pydantic import BaseModel\nfrom sqlalchemy",
               )
 
-          old_json = '''    if isinstance(value, StrEnum):
-              return value.value
-          if isinstance(value, Mapping):'''
-          new_json = '''    if isinstance(value, StrEnum):
-              return value.value
-          if isinstance(value, BaseModel):
-              return _json_value(value.model_dump(mode="json"))
-          if isinstance(value, Mapping):'''
-          if old_json in text:
-              text = text.replace(old_json, new_json, 1)
+          json_marker = "    if isinstance(value, Mapping):\n"
+          if "    if isinstance(value, BaseModel):\n" not in text:
+              if json_marker not in text:
+                  raise SystemExit("JSON conversion marker not found")
+              text = text.replace(
+                  json_marker,
+                  "    if isinstance(value, BaseModel):\n"
+                  "        return _json_value(value.model_dump(mode=\"json\"))\n"
+                  + json_marker,
+                  1,
+              )
 
-          old_column = '''    except (AttributeError, NotImplementedError):
-              return value
-          if python_type is UUID and not isinstance(value, UUID):'''
-          new_column = '''    except (AttributeError, NotImplementedError):
-              return value
-          if isinstance(python_type, type) and issubclass(python_type, BaseModel):
-              return python_type.model_validate(value)
-          if python_type is UUID and not isinstance(value, UUID):'''
-          if old_column in text:
-              text = text.replace(old_column, new_column, 1)
+          column_marker = "    if python_type is UUID and not isinstance(value, UUID):\n"
+          if "issubclass(python_type, BaseModel)" not in text:
+              if column_marker not in text:
+                  raise SystemExit("column conversion marker not found")
+              text = text.replace(
+                  column_marker,
+                  "    if isinstance(python_type, type) and issubclass(python_type, BaseModel):\n"
+                  "        return python_type.model_validate(value)\n"
+                  + column_marker,
+                  1,
+              )
+
+          if "    if isinstance(value, BaseModel):\n" not in text:
+              raise SystemExit("protected payload export conversion missing")
+          if "issubclass(python_type, BaseModel)" not in text:
+              raise SystemExit("protected payload import conversion missing")
 
           path.write_text(text)
           PY
