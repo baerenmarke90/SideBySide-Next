@@ -131,7 +131,6 @@ const m5s3 = {
     create: 'Liste hinzufügen',
     loading: 'Liste wird geladen …',
     detailEyebrow: 'Gemeinsame Liste',
-    icon: 'Symbol (optional)',
     itemCount_one: '{{count}} Eintrag',
     itemCount_other: '{{count}} Einträge',
     itemsHeading: 'Einträge',
