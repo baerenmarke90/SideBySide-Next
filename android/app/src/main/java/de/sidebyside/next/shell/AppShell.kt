@@ -1,7 +1,6 @@
 package de.sidebyside.next.shell
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,10 +12,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.NavigationRailItemColors
-import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,9 +71,14 @@ fun ShellSurface(
  * display cutout and the keyboard. Content laid out without them ends up
  * underneath the clock, which is exactly what happened before this slice.
  *
- * **The navigation surface.** Bottom navigation on a compact window, a
- * navigation rail from the medium class upwards, from one destination list so
- * the two cannot drift.
+ * **The navigation surface.** Bottom navigation at every window size. A rail or
+ * sidebar spends horizontal space on a handful of destinations that the content
+ * needs more, and on a foldable it changes where the user reaches every time
+ * the device opens or closes. See ADR 0004.
+ *
+ * [widthClass] stays in the signature because later slices choose their content
+ * composition by it — list versus list-plus-detail — even though the navigation
+ * surface no longer varies.
  */
 @Composable
 fun AppShell(
@@ -89,7 +89,6 @@ fun AppShell(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val compact = widthClass == WindowWidthClass.Compact
     // A single destination is not a choice, so no navigation surface is drawn
     // for it. This also keeps the shell honest while later slices are still
     // filling their areas.
@@ -99,29 +98,19 @@ fun AppShell(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets.safeDrawing,
         bottomBar = {
-            if (compact && navigable) {
-                CompactNavigation(destinations, currentDestination, onSelectDestination)
+            if (navigable) {
+                BottomNavigation(destinations, currentDestination, onSelectDestination)
             }
         },
     ) { padding ->
-        Row(modifier = Modifier.fillMaxSize()) {
-            if (!compact && navigable) {
-                MediumNavigation(
-                    destinations = destinations,
-                    currentDestination = currentDestination,
-                    onSelectDestination = onSelectDestination,
-                    modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing),
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    // The content area must not apply the same insets again.
-                    .consumeWindowInsets(padding),
-            ) {
-                content()
-            }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                // The content area must not apply the same insets again.
+                .consumeWindowInsets(padding),
+        ) {
+            content()
         }
     }
 }
@@ -143,17 +132,7 @@ private fun navigationBarItemColors(): NavigationBarItemColors =
     )
 
 @Composable
-private fun navigationRailItemColors(): NavigationRailItemColors =
-    NavigationRailItemDefaults.colors(
-        selectedIconColor = SideBySideTheme.colors.brandStrong,
-        selectedTextColor = SideBySideTheme.colors.brandStrong,
-        indicatorColor = SideBySideTheme.colors.brandSurface,
-        unselectedIconColor = SideBySideTheme.colors.textSecondary,
-        unselectedTextColor = SideBySideTheme.colors.textSecondary,
-    )
-
-@Composable
-private fun CompactNavigation(
+private fun BottomNavigation(
     destinations: List<AppDestination>,
     currentDestination: AppDestination,
     onSelectDestination: (AppDestination) -> Unit,
@@ -173,27 +152,3 @@ private fun CompactNavigation(
     }
 }
 
-@Composable
-private fun MediumNavigation(
-    destinations: List<AppDestination>,
-    currentDestination: AppDestination,
-    onSelectDestination: (AppDestination) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    NavigationRail(
-        modifier = modifier,
-        containerColor = SideBySideTheme.colors.surface,
-    ) {
-        val colors = navigationRailItemColors()
-        for (destination in destinations) {
-            NavigationRailItem(
-                selected = destination == currentDestination,
-                onClick = { onSelectDestination(destination) },
-                icon = { DestinationGlyph(destination.icon, LocalContentColor.current) },
-                label = { Text(stringResource(destination.labelRes)) },
-                alwaysShowLabel = true,
-                colors = colors,
-            )
-        }
-    }
-}

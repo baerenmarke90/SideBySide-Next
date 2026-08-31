@@ -114,7 +114,30 @@ class AppShellSemanticsTest {
     }
 
     @Test
-    fun rendersTheSameDestinationsInTheMediumLayout() {
+    fun rendersTheSameNavigationInTheExpandedLayout() {
+        // ADR 0004: the App keeps bottom navigation at every size, so a wider
+        // window changes the content composition but never the surface.
+        composeRule.setContent {
+            SideBySideTheme {
+                AppShell(
+                    widthClass = WindowWidthClass.Expanded,
+                    destinations = declaredDestinations,
+                    currentDestination = AppDestination.More,
+                    onSelectDestination = {},
+                ) { Text("content") }
+            }
+        }
+
+        for (destination in declaredDestinations) {
+            composeRule.onNodeWithText(label(destination)).assertIsDisplayed()
+        }
+        composeRule
+            .onNode(hasText(label(AppDestination.More)) and hasClickAction())
+            .assertIsSelected()
+    }
+
+    @Test
+    fun rendersTheSameNavigationInTheMediumLayout() {
         composeRule.setContent {
             SideBySideTheme {
                 AppShell(

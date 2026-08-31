@@ -1,9 +1,10 @@
 # Information Architecture for SideBySide Next
 
 **Status:** Binding foundation for Web and App  
-**Version:** 1.2  
+**Version:** 1.3  
 **Effective from:** August 31, 2026  
-**Route model decided by:** `decisions/0003-primary-navigation-and-route-model.md`
+**Route model decided by:** `decisions/0003-primary-navigation-and-route-model.md`  
+**Navigation surface decided by:** `decisions/0004-android-uses-bottom-navigation-at-every-size.md`
 
 This document defines navigation, naming, routes, and product-function
 assignment. Web and Android use the same domain architecture while adapting
@@ -42,12 +43,21 @@ navigation group, a section heading, or any other surface.
 
 ### Platform representation
 
-- **Compact windows:** Bottom Navigation with icon and text label.
-- **Medium windows:** Navigation Rail.
-- **Large Web windows:** fixed sidebar with text labels; secondary targets may
-  appear indented.
+The surface is a platform adaptation; the destinations, their order and their
+route IDs are not.
+
+- **App:** Bottom Navigation with icon and text label, at every window size.
+  See `decisions/0004-android-uses-bottom-navigation-at-every-size.md`: the
+  product has at most five destinations, and on a foldable a size-dependent
+  surface would move where the user reaches every time the device opens.
+- **Web, compact windows:** Bottom Navigation with icon and text label.
+- **Web, from the medium window class:** fixed sidebar with text labels;
+  secondary targets may appear indented.
 - Order remains identical on all platforms.
 - Current area is recognizable through color, icon, and text state.
+
+Window size classes still choose the *content* composition on both platforms;
+see section 6. Only the navigation surface is platform-specific.
 
 ## 3. Structure tree
 

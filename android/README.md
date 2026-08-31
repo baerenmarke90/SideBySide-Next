@@ -58,8 +58,11 @@ the clock.
 **Navigation.** `AppDestination` is the registry; its route IDs and order come
 from `docs/decisions/0003-primary-navigation-and-route-model.md`, so Web and
 Android address the same destinations and a Deep Link registry can be built on
-one mapping. Bottom navigation below 600 dp, a navigation rail above it, both
-from the same list.
+one mapping. Bottom navigation at every window size, from one list; see
+`docs/decisions/0004-android-uses-bottom-navigation-at-every-size.md`. A rail or
+sidebar would spend width the content needs on a handful of destinations, and on
+a foldable it would move where the user reaches each time the device opens. The
+window size class still selects the content composition.
 
 A destination is only rendered once it has something to show. `declaredDestinations`
 is the full contract; the shell receives the implemented subset, so an area
