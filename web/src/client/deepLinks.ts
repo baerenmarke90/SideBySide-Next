@@ -167,10 +167,16 @@ export function consumeAuthReturnTarget(now = Date.now()): string | null {
 
   try {
     const stored = JSON.parse(raw) as { path?: unknown; createdAt?: unknown };
-    if (typeof stored.path !== 'string' || typeof stored.createdAt !== 'number') {
+    if (
+      typeof stored.path !== 'string' ||
+      typeof stored.createdAt !== 'number'
+    ) {
       return null;
     }
-    if (stored.createdAt > now || now - stored.createdAt > AUTH_RETURN_MAX_AGE_MS) {
+    if (
+      stored.createdAt > now ||
+      now - stored.createdAt > AUTH_RETURN_MAX_AGE_MS
+    ) {
       return null;
     }
     return validateAppRelativeReturnTarget(stored.path);
