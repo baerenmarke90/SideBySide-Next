@@ -67,6 +67,7 @@ internal fun PersonIdentity(
             }
         }
     }
+    val loaded = bitmap
 
     Row(
         modifier = modifier,
@@ -81,9 +82,9 @@ internal fun PersonIdentity(
             color = SideBySideTheme.colors.surfaceSubtle,
             contentColor = SideBySideTheme.colors.textPrimary,
         ) {
-            if (bitmap != null) {
+            if (loaded != null) {
                 Image(
-                    bitmap = bitmap!!.asImageBitmap(),
+                    bitmap = loaded.asImageBitmap(),
                     contentDescription = contentDescription,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.size(size.diameter),
