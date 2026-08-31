@@ -16,6 +16,7 @@ from sidebyside.authorization import AuthorizationContext
 from sidebyside.identity.models import AccountEmail
 from sidebyside.private_notes import service as private_note_service
 from sidebyside.relationship import service as relationship_service
+from sidebyside.reminders.runtime_models import RulePreference
 from sidebyside.transfer import jobs, service
 from sidebyside.transfer.models import ImportStatus, TransferScope
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
@@ -131,25 +132,52 @@ def test_shared_export_excludes_owner_only_and_personal_keeps_only_requester(
         body="Anna must never export this.",
         pinned=False,
     )
+    session.add_all(
+        [
+            RulePreference(
+                account_id=anna.id,
+                space_id=space.id,
+                rule_key="portable-test-rule",
+                enabled=False,
+                parameters={"days_before": [7]},
+            ),
+            RulePreference(
+                account_id=ben.id,
+                space_id=space.id,
+                rule_key="portable-test-rule",
+                enabled=True,
+                parameters={"days_before": [1]},
+            ),
+        ]
+    )
+    session.flush()
 
     with (
         service.build_export_archive(session, anna_context, TransferScope.SHARED) as bundle,
         ZipFile(bundle, "r") as archive,
     ):
         assert "private/notes.json" not in archive.namelist()
+        assert "rules.json" not in archive.namelist()
 
     with (
         service.build_export_archive(session, anna_context, TransferScope.PERSONAL) as bundle,
         ZipFile(bundle, "r") as archive,
     ):
-        document = json.loads(archive.read("private/notes.json"))
+        private_document = json.loads(archive.read("private/notes.json"))
+        rule_document = json.loads(archive.read("rules.json"))
 
-    notes = next(group for group in document["tables"] if group["name"] == "private_notes")[
-        "rows"
-    ]
+    notes = next(
+        group for group in private_document["tables"] if group["name"] == "private_notes"
+    )["rows"]
+    rules = next(
+        group for group in rule_document["tables"] if group["name"] == "rule_preferences"
+    )["rows"]
     assert len(notes) == 1
     assert notes[0]["ownerId"] == str(anna.id)
     assert notes[0]["payload"]["title"] == "Anna secret"
+    assert len(rules) == 1
+    assert rules[0]["accountId"] == str(anna.id)
+    assert rules[0]["enabled"] is False
 
 
 def test_personal_import_maps_requester_and_apply_is_idempotent(session: Session) -> None:
