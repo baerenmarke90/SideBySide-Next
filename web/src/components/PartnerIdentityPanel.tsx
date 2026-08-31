@@ -30,8 +30,14 @@ export function PartnerIdentityPanel({
       }),
     [accessToken, apiBaseUrl],
   );
-  const spacesApi = useMemo(() => new SpacesApi(configuration), [configuration]);
-  const profilesApi = useMemo(() => new ProfilesApi(configuration), [configuration]);
+  const spacesApi = useMemo(
+    () => new SpacesApi(configuration),
+    [configuration],
+  );
+  const profilesApi = useMemo(
+    () => new ProfilesApi(configuration),
+    [configuration],
+  );
 
   const spaceQuery = useQuery({
     queryKey: ['space', spaceId],
@@ -46,16 +52,20 @@ export function PartnerIdentityPanel({
   });
 
   const partner =
-    spaceQuery.data?.partners.find((candidate) => candidate.id !== account.id) ?? null;
+    spaceQuery.data?.partners.find(
+      (candidate) => candidate.id !== account.id,
+    ) ?? null;
   const partnerId = partner?.id ?? '';
   const profileQuery = useQuery({
     queryKey: ['partner-profile', spaceId, partnerId],
     queryFn: async () => {
       try {
-        return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet({
-          accountId: partnerId,
-          spaceId,
-        });
+        return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet(
+          {
+            accountId: partnerId,
+            spaceId,
+          },
+        );
       } catch (error) {
         throw await normalizeClientError(error);
       }
@@ -75,13 +85,21 @@ export function PartnerIdentityPanel({
 
   const displayName = profileQuery.data?.displayName ?? partner.displayName;
   return (
-    <section className="form-card profile-identity-panel" aria-labelledby="partner-identity-title">
+    <section
+      className="form-card profile-identity-panel"
+      aria-labelledby="partner-identity-title"
+    >
       <div>
-        <h2 id="partner-identity-title">{t('profileIdentity.partnerTitle')}</h2>
+        <h2 id="partner-identity-title">
+          {t('profileIdentity.partnerTitle')}
+        </h2>
         <p>{t('profileIdentity.partnerIntro')}</p>
       </div>
       {profileQuery.error ? (
-        <ProblemState error={profileQuery.error} onRetry={() => void profileQuery.refetch()} />
+        <ProblemState
+          error={profileQuery.error}
+          onRetry={() => void profileQuery.refetch()}
+        />
       ) : (
         <PersonIdentity
           displayName={displayName}
