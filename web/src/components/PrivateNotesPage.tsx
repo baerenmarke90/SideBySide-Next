@@ -21,7 +21,7 @@ import { ProblemState } from './ProblemState';
 import {
   DeleteConfirmation,
   LoadMoreButton,
-  PrivateAreaBackToProfile,
+  PrivateAreaBackToMore,
 } from './PrivateAreaLayout';
 import { UiState } from './UiState';
 
@@ -112,7 +112,7 @@ export function PrivateNotesListPage({ api, accountId, spaceId }: Props) {
   return (
     <>
       <PageHeader
-        before={<PrivateAreaBackToProfile />}
+        before={<PrivateAreaBackToMore />}
         title={t('privateArea.notes.title')}
         description={t('privateArea.notes.intro')}
         action={

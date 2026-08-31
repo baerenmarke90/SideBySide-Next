@@ -97,7 +97,7 @@ export function PlaceProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'places', spaceId],
       });
-      navigate(appRoutePath('planning'), { replace: true });
+      navigate(appRoutePath('plan'), { replace: true });
     },
   });
 
@@ -148,7 +148,7 @@ export function PlaceProductPage({
     <div className="page planning-page">
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('planning')}>
+          <Link className="back-link" to={appRoutePath('plan')}>
             {t('m5s3.common.back')}
           </Link>
         }

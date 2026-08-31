@@ -23,14 +23,14 @@ describe('SBS-M5-Web-S2-SCOPE', () => {
       MILESTONE_DETAIL_ROUTE_PATTERN,
       MILESTONE_EDIT_ROUTE_PATTERN,
     ]).toEqual([
-      '/memory/:memoryId',
-      '/memory/:memoryId/edit',
-      '/heart-moment/new',
-      '/heart-moment/:heartMomentId',
-      '/heart-moment/:heartMomentId/edit',
-      '/milestone/new',
-      '/milestone/:milestoneId',
-      '/milestone/:milestoneId/edit',
+      '/story/memories/:memoryId',
+      '/story/memories/:memoryId/edit',
+      '/story/heart-moments/new',
+      '/story/heart-moments/:heartMomentId',
+      '/story/heart-moments/:heartMomentId/edit',
+      '/story/milestones/new',
+      '/story/milestones/:milestoneId',
+      '/story/milestones/:milestoneId/edit',
     ]);
   });
 

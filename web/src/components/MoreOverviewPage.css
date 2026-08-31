@@ -1,0 +1,72 @@
+.more-destinations {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.more-destination {
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-soft);
+  color: var(--color-text);
+  text-decoration: none;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.more-destination:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.more-destination-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: var(--radius-large);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+}
+
+.more-destination-icon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.more-destination-copy {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.more-destination-copy strong {
+  font-size: 1.05rem;
+}
+
+.more-destination-copy span {
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more-destination {
+    transition: none;
+  }
+}

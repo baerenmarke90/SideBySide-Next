@@ -22,7 +22,7 @@ import {
 import { normalizeClientError } from '../client/problemDetails';
 import type { ReferenceApis } from '../client/referenceFlow';
 import {
-  appRoutePath,
+  MEMORY_CREATE_ROUTE,
   HEART_MOMENT_CREATE_ROUTE,
   MILESTONE_CREATE_ROUTE,
 } from '../client/routes';
@@ -182,7 +182,7 @@ export function StoryProductPage({
             <div className="layout-action-list">
               <Link
                 className="button-link primary-action"
-                to={appRoutePath('memoryCreate')}
+                to={MEMORY_CREATE_ROUTE}
               >
                 {t('story.addMemory')}
               </Link>

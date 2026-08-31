@@ -165,7 +165,7 @@ export function PlanProductPage({
           queryKey: ['m5-s3', 'wishes', spaceId],
         }),
       ]);
-      navigate(appRoutePath('planning'), { replace: true });
+      navigate(appRoutePath('plan'), { replace: true });
     },
   });
   const deleteMutation = useMutation({
@@ -182,7 +182,7 @@ export function PlanProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'plans', spaceId],
       });
-      navigate(appRoutePath('planning'), { replace: true });
+      navigate(appRoutePath('plan'), { replace: true });
     },
   });
 
@@ -251,7 +251,7 @@ export function PlanProductPage({
     <div className="page planning-page">
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('planning')}>
+          <Link className="back-link" to={appRoutePath('plan')}>
             {t('m5s3.common.back')}
           </Link>
         }

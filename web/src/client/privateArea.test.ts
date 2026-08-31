@@ -25,12 +25,12 @@ describe('private area client boundary', () => {
   });
 
   it('keeps private resource identifiers in the personal route namespace', () => {
-    expect(privateNotePath('note/one')).toBe('/private/notes/note%2Fone');
+    expect(privateNotePath('note/one')).toBe('/more/private/notes/note%2Fone');
     expect(privateGiftIdeaPath('gift one')).toBe(
-      '/private/gift-ideas/gift%20one',
+      '/more/private/gift-ideas/gift%20one',
     );
     expect(privateCollectionPath('list#one')).toBe(
-      '/private/collections/list%23one',
+      '/more/private/collections/list%23one',
     );
   });
 

@@ -36,6 +36,7 @@ import {
   loadAuthorizedMedia,
 } from './client/referenceFlow';
 import {
+  ACTIVITY_ROUTE,
   appRoutePath,
   CHAPTER_DETAIL_ROUTE_PATTERN,
   COLLECTION_DETAIL_ROUTE_PATTERN,
@@ -43,13 +44,19 @@ import {
   HEART_MOMENT_CREATE_ROUTE,
   HEART_MOMENT_DETAIL_ROUTE_PATTERN,
   HEART_MOMENT_EDIT_ROUTE_PATTERN,
+  LEGACY_ROUTE_REWRITES,
+  MEMORY_CREATE_ROUTE,
   MEMORY_DETAIL_ROUTE_PATTERN,
   MEMORY_EDIT_ROUTE_PATTERN,
   MILESTONE_CREATE_ROUTE,
   MILESTONE_DETAIL_ROUTE_PATTERN,
   MILESTONE_EDIT_ROUTE_PATTERN,
+  MORE_NOTIFICATIONS_ROUTE,
+  MORE_PEOPLE_ROUTE,
+  MORE_PROFILE_ROUTE,
   PLAN_DETAIL_ROUTE_PATTERN,
   PLACE_DETAIL_ROUTE_PATTERN,
+  SEARCH_ROUTE,
   WISH_DETAIL_ROUTE_PATTERN,
 } from './client/routes';
 import { createSharedPlanningApis } from './client/sharedPlanning';
@@ -67,6 +74,7 @@ import { ChapterProductPage } from './components/ChapterProductPage';
 import { CollectionProductPage } from './components/CollectionProductPage';
 import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
+import { LegacyPathRedirect } from './components/LegacyPathRedirect';
 import {
   ActivityProductPage,
   DashboardProductPage,
@@ -75,6 +83,7 @@ import {
 } from './components/M4ProductPages';
 import { MemoryProductPage } from './components/MemoryProductPage';
 import { MilestoneProductPage } from './components/MilestoneProductPage';
+import { MoreOverviewPage } from './components/MoreOverviewPage';
 import { PageHeader } from './components/PageHeader';
 import { PlaceProductPage } from './components/PlaceProductPage';
 import { PlanProductPage } from './components/PlanProductPage';
@@ -464,7 +473,7 @@ function AuthenticatedApp({
             }
           />
           <Route
-            path={appRoutePath('planning')}
+            path={appRoutePath('plan')}
             element={<SharedPlanningOverviewPage {...planningProductProps} />}
           />
           <Route
@@ -488,31 +497,32 @@ function AuthenticatedApp({
             element={<CollectionProductPage {...planningProductProps} />}
           />
           <Route
-            path={appRoutePath('dashboard')}
+            path={appRoutePath('today')}
             element={<DashboardProductPage apis={m4Apis} spaceId={spaceId} />}
           />
           <Route
-            path={appRoutePath('search')}
-            element={<SearchProductPage apis={m4Apis} spaceId={spaceId} />}
-          />
-          <Route
-            path={appRoutePath('activity')}
+            path={ACTIVITY_ROUTE}
             element={<ActivityProductPage apis={m4Apis} spaceId={spaceId} />}
           />
           <Route
-            path={appRoutePath('notifications')}
+            path={SEARCH_ROUTE}
+            element={<SearchProductPage apis={m4Apis} spaceId={spaceId} />}
+          />
+          <Route path={appRoutePath('more')} element={<MoreOverviewPage />} />
+          <Route
+            path={MORE_NOTIFICATIONS_ROUTE}
             element={
               <NotificationsProductPage apis={m4Apis} spaceId={spaceId} />
             }
           />
           <Route
-            path={appRoutePath('people')}
+            path={MORE_PEOPLE_ROUTE}
             element={
               <RelatedPeoplePage peopleApi={peopleApi} spaceId={spaceId} />
             }
           />
           <Route
-            path={appRoutePath('profile')}
+            path={MORE_PROFILE_ROUTE}
             element={
               <ProfilePage
                 apiBaseUrl={apiBaseUrl}
@@ -523,7 +533,7 @@ function AuthenticatedApp({
             }
           />
           <Route
-            path="/private/*"
+            path="/more/private/*"
             element={
               <PrivateAreaProductPage
                 api={privateAreaApi}
@@ -533,7 +543,7 @@ function AuthenticatedApp({
             }
           />
           <Route
-            path={appRoutePath('memoryCreate')}
+            path={MEMORY_CREATE_ROUTE}
             element={
               <MemoryCreatePage
                 accessToken={tokens.accessToken}
@@ -598,6 +608,25 @@ function AuthenticatedApp({
               <MilestoneProductPage mode="detail" {...milestoneProductProps} />
             }
           />
+          {/*
+            Paths the client shipped before the route model was decided. Deep
+            Links to them are already shared, so they redirect permanently
+            instead of falling through to the catch-all.
+          */}
+          {LEGACY_ROUTE_REWRITES.map(({ from }) => (
+            <Route
+              key={from}
+              path={`${from}/*`}
+              element={<LegacyPathRedirect />}
+            />
+          ))}
+          {LEGACY_ROUTE_REWRITES.map(({ from }) => (
+            <Route
+              key={`${from}-exact`}
+              path={from}
+              element={<LegacyPathRedirect />}
+            />
+          ))}
           <Route
             path="*"
             element={<Navigate replace to={DEFAULT_APP_ROUTE} />}
