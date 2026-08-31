@@ -23,6 +23,9 @@ const profileIdentity = {
   fallbackAlt: 'Profilbild-Platzhalter für {{name}}',
   loadAvatarFailed:
     'Das Profilbild konnte nicht geladen werden. Die Initialen werden stattdessen angezeigt.',
+  partnerTitle: 'Dein Partner',
+  partnerIntro:
+    'So wird dein Partner aktuell in SideBySide dargestellt. Änderungen am eigenen Profil erscheinen hier automatisch.',
 } as const;
 
 export default profileIdentity;
