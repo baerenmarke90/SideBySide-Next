@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
 import { useTranslation } from '../i18n';
 import { PartnerConnectionPanel } from './PartnerConnectionPanel';
+import { PartnerIdentityPanel } from './PartnerIdentityPanel';
+import { ProfileIdentityPanel } from './ProfileIdentityPanel';
 import { ProfilePage as ProfilePageBase } from './ProfilePageBase';
+import { ProfileSettingsIndex } from './ProfileSettingsIndex';
 import { TransferPanel } from './TransferPanel';
 
 export interface ProfilePageProps {
@@ -15,15 +19,38 @@ export interface ProfilePageProps {
 
 export function ProfilePage(props: ProfilePageProps) {
   const { t } = useTranslation();
+  const [displayName, setDisplayName] = useState(props.account.displayName);
+  const currentAccount = { ...props.account, displayName };
+  const currentProps = { ...props, account: currentAccount };
+
   return (
     <>
-      <ProfilePageBase {...props} />
-      <PartnerConnectionPanel {...props} />
-      <TransferPanel
-        apiBaseUrl={props.apiBaseUrl}
-        accessToken={props.accessToken}
-        spaceId={props.spaceId}
-      />
+      <ProfilePageBase {...currentProps} />
+      <ProfileSettingsIndex />
+      <div id="profile-identity-settings">
+        <ProfileIdentityPanel
+          {...currentProps}
+          onDisplayNameChanged={(nextDisplayName) => {
+            // AccountView is the current in-memory session projection. Updating the
+            // existing object keeps subsequent routes in this session from showing
+            // the pre-edit name; Space/Profile queries are invalidated separately by
+            // ProfileIdentityPanel and remain server-authoritative.
+            props.account.displayName = nextDisplayName;
+            setDisplayName(nextDisplayName);
+          }}
+        />
+      </div>
+      <div id="profile-partner-settings">
+        <PartnerIdentityPanel {...currentProps} />
+        <PartnerConnectionPanel {...currentProps} />
+      </div>
+      <div id="profile-data-settings">
+        <TransferPanel
+          apiBaseUrl={props.apiBaseUrl}
+          accessToken={props.accessToken}
+          spaceId={props.spaceId}
+        />
+      </div>
       <section className="form-card" aria-labelledby="private-area-entry-title">
         <p className="eyebrow">{t('privateArea.privacyLabel')}</p>
         <h2 id="private-area-entry-title">{t('privateArea.entry.title')}</h2>
