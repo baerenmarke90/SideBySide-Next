@@ -45,6 +45,17 @@ jobs:
                   "from zipfile import ZIP_DEFLATED, ZipFile\n\nfrom pydantic import BaseModel\nfrom sqlalchemy",
               )
 
+          old_scalar = '''    if isinstance(value, (UUID, datetime, date, time)):
+              return value.isoformat()
+          '''
+          new_scalar = '''    if isinstance(value, UUID):
+              return str(value)
+          if isinstance(value, (datetime, date, time)):
+              return value.isoformat()
+          '''
+          if old_scalar in text:
+              text = text.replace(old_scalar, new_scalar, 1)
+
           json_marker = "    if isinstance(value, Mapping):\n"
           if "    if isinstance(value, BaseModel):\n" not in text:
               if json_marker not in text:
@@ -69,10 +80,54 @@ jobs:
                   1,
               )
 
-          if "    if isinstance(value, BaseModel):\n" not in text:
-              raise SystemExit("protected payload export conversion missing")
-          if "issubclass(python_type, BaseModel)" not in text:
-              raise SystemExit("protected payload import conversion missing")
+          text = text.replace(
+              '''        target_table = generated_sources.get(source_type)
+          if target_table is None or _uuid(
+              row.get("source_id"), ErrorCode.TRANSFER_RELATION_INVALID
+          ) not in ids.get(target_table, set()):''',
+              '''        reminder_target_table = generated_sources.get(source_type)
+          if reminder_target_table is None or _uuid(
+              row.get("source_id"), ErrorCode.TRANSFER_RELATION_INVALID
+          ) not in ids.get(reminder_target_table, set()):''',
+              1,
+          )
+
+          text = text.replace(
+              '''    for transfer in exports:
+              store.delete(export_storage_key(transfer))
+              transfer.status = ExportStatus.EXPIRED.value
+              transfer.artifact_size = None
+              count += 1''',
+              '''    for transfer_export in exports:
+              store.delete(export_storage_key(transfer_export))
+              transfer_export.status = ExportStatus.EXPIRED.value
+              transfer_export.artifact_size = None
+              count += 1''',
+              1,
+          )
+          text = text.replace(
+              '''    for transfer in imports:
+              store.delete(import_storage_key(transfer))
+              transfer.status = ImportStatus.EXPIRED.value
+              count += 1''',
+              '''    for transfer_import in imports:
+              store.delete(import_storage_key(transfer_import))
+              transfer_import.status = ImportStatus.EXPIRED.value
+              count += 1''',
+              1,
+          )
+
+          required = (
+              "from pydantic import BaseModel\n",
+              "    if isinstance(value, BaseModel):\n",
+              "issubclass(python_type, BaseModel)",
+              "reminder_target_table = generated_sources.get(source_type)",
+              "for transfer_export in exports:",
+              "for transfer_import in imports:",
+          )
+          missing = [marker for marker in required if marker not in text]
+          if missing:
+              raise SystemExit(f"hardening markers missing: {missing}")
 
           path.write_text(text)
           PY
