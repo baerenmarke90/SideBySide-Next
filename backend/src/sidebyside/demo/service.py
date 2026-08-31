@@ -128,7 +128,8 @@ def _shared_demo_space(
         space_id = next(iter(shared))
         if lea_spaces != {space_id} or alex_spaces != {space_id}:
             raise RuntimeError(
-                "Refusing demo operation: a reserved demo account also belongs to another active Space."
+                "Refusing demo operation: a reserved demo account also belongs to "
+                "another active Space."
             )
         space = session.get(Space, space_id)
         if space is None:
@@ -294,7 +295,7 @@ def _seed_profiles(
         category=PreferenceCategory.OTHER,
         topic="Überraschung",
         sentiment=PreferenceSentiment.LOVE,
-        value=f"{PRIVATE_CANARY_LEA} – Alex freut sich über handgeschriebene Karten.",
+        value=f"{PRIVATE_CANARY_LEA} - Alex freut sich über handgeschriebene Karten.",
     )
     profile_service.create_preference(
         session,
@@ -304,7 +305,7 @@ def _seed_profiles(
         category=PreferenceCategory.OTHER,
         topic="Überraschung",
         sentiment=PreferenceSentiment.LOVE,
-        value=f"{PRIVATE_CANARY_ALEX} – Lea mag Frühstück als kleine Überraschung.",
+        value=f"{PRIVATE_CANARY_ALEX} - Lea mag Frühstück als kleine Überraschung.",
     )
 
 
@@ -584,7 +585,7 @@ def _seed_planning(
         session,
         alex_context,
         title="Neue Pastasorte ausprobieren",
-        description="Noch ohne Termin – einfach eine Idee für später.",
+        description="Noch ohne Termin - einfach eine Idee für später.",
         place_id=None,
     )
     scheduled = plan_service.create_plan(
@@ -655,21 +656,21 @@ def _seed_private_area(
         session,
         lea_context,
         title="Idee für Alex",
-        body=f"{PRIVATE_CANARY_LEA} – Den alten Fotostreifen rahmen lassen.",
+        body=f"{PRIVATE_CANARY_LEA} - Den alten Fotostreifen rahmen lassen.",
         pinned=True,
     )
     private_note_service.create_note(
         session,
         alex_context,
         title="Idee für Lea",
-        body=f"{PRIVATE_CANARY_ALEX} – Frühstück und Spaziergang vorbereiten.",
+        body=f"{PRIVATE_CANARY_ALEX} - Frühstück und Spaziergang vorbereiten.",
         pinned=False,
     )
     gift_idea_service.create_idea(
         session,
         lea_context,
         title="Kleines Fotobuch",
-        description=f"{PRIVATE_CANARY_LEA} – mit den Bildern vom See.",
+        description=f"{PRIVATE_CANARY_LEA} - mit den Bildern vom See.",
         recipient=ALEX_NAME,
         occasion="Einfach so",
         target_on=reference_date + timedelta(days=45),
@@ -681,7 +682,7 @@ def _seed_private_area(
         session,
         alex_context,
         title="Keramikbecher",
-        description=f"{PRIVATE_CANARY_ALEX} – passend zum Sonntagskaffee.",
+        description=f"{PRIVATE_CANARY_ALEX} - passend zum Sonntagskaffee.",
         recipient=LEA_NAME,
         occasion=None,
         target_on=None,
