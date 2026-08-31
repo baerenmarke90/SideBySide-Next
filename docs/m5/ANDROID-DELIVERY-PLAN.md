@@ -69,7 +69,7 @@ transport contract while #345 is unmerged.
 
 ## Slice contracts
 
-### S0A — Design foundation and product entry (#351)
+### S0A — Design foundation and product entry (#351) — delivered
 
 - a real semantic token layer derived from `design/tokens.json`, replacing the
   literal colour constants, and the Material 3 scheme built from it;
@@ -96,13 +96,23 @@ transport contract while #345 is unmerged.
 - Deep-Link-safe destination identity prepared, without activating S6 links;
 - no dead or future-contract navigation.
 
-**Open question this slice must resolve, not defer:** the canonical route model
-in `docs/INFORMATION-ARCHITECTURE.md` section 5 (`today`, `story`, `plan`,
-`discover`, `more`) does not match the destinations the Web client actually
-ships (`story`, `planning`, `dashboard`, `search`, `activity`, `notifications`,
-`people`, `profile`). Android must not silently pick one side. S0B has to route
-this through an explicit decision that either updates the binding IA document or
-realigns both clients; otherwise the M5 parity gate inherits a contradiction.
+**Route model:** decided in
+`docs/decisions/0003-primary-navigation-and-route-model.md` (#360). Android
+builds its destination registry directly against that model, so no Android
+route is ever migrated:
+
+| Route ID | de-DE | Path | Availability |
+|---|---|---|---|
+| `today` | Heute | `/today` | now |
+| `story` | Story | `/story` | now |
+| `plan` | Planen | `/plan` | now |
+| `discover` | Entdecken | `/discover` | M7, reserved and not rendered |
+| `more` | Mehr | `/more` | now |
+
+Four destinations until M7. Search is a global utility rather than a
+destination, Activity lives at `/today/activity`, and people, the owner-only
+area, notifications and profile live under `/more`. Web migrates onto the same
+model in #364; Android does not wait for it.
 
 ### S1 — Identity and relationship (#353)
 
@@ -172,6 +182,11 @@ discovered late:
   request models from the compile copy because `Map<String, Any>` has no
   concrete kotlinx.serialization serializer. #138 owns the generator fix; any
   slice that needs Passkey registration or authentication is blocked on it.
+- **Locale resolution.** The supported locale set is implied by the default
+  resource folder rather than declared, so library-provided strings can mix
+  languages on a non-German device. Owned by #362.
+- **Typography delivery.** The specified Inter and Fraunces faces are declared
+  by both clients and delivered by neither. Owned by #361.
 - **Dependency verification.** `android/gradle/verification-metadata.xml` is
   enforced in strict mode. Every added dependency requires verified checksums in
   the same change, which is a further reason to prefer platform capabilities.
