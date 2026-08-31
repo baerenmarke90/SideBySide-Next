@@ -217,12 +217,12 @@ The canonical dataset is created through normal domain services and currently in
 - shared self-profile preferences for Lea and Alex;
 - private partner notes for both owners;
 - shared and owner-only RelatedPerson / ImportantDate examples;
-- Memories with and without generated images;
+- Memories with and without curated local stock photos;
 - shared and owner-only HeartMoments;
 - Milestones and Comments;
 - Wishes in OPEN, PLANNED, and COMPLETED states;
 - Plans in IDEA, PLANNED, and COMPLETED states, including scheduled examples;
-- Places with and without coordinates;
+- Places used by the canonical planning and Chapter examples;
 - Chapters, including Place-linked content;
 - shared Collections/items;
 - independent PrivateNote, GiftIdea, and PrivateCollection content for both Accounts;
@@ -261,7 +261,7 @@ The runtime image copies `demo_assets` explicitly and validates it during image 
 
 Reset first validates the local catalog, then detaches all demo bindings and purges every attachment provider object before replacing the verified demo Space. The same local asset ids are re-imported in the same deterministic order, so repeated resets do not accumulate duplicate or orphaned media.
 
-The five album-like demo themes (`Unser Sommer`, `Kleine Alltagsmomente`, `Unterwegs am Wochenende`, `Kochabende`, `Draußen unterwegs`) use the existing Chapter model. SideBySide currently has no separate Album product model, and this demo change intentionally does not add a DB column, API, or Web feature solely to simulate one.
+The five album-like demo themes declared by `sidebyside.demo.story.CHAPTERS` use the existing Chapter model. SideBySide currently has no separate Album product model, and this demo change intentionally does not add a DB column, API, or Web feature solely to simulate one.
 
 ### Maintainer flow for a new image
 
