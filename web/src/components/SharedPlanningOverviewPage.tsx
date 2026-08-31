@@ -260,11 +260,11 @@ export function SharedPlanningOverviewPage({
     onSuccess: () => invalidate('chapters'),
   });
   const createCollection = useMutation({
-    mutationFn: (values: { title: string; icon?: string | null }) =>
+    mutationFn: (title: string) =>
       apiCall(() =>
         apis.collections.createCollection({
           spaceId,
-          collectionCreate: values,
+          collectionCreate: { title },
         }),
       ),
     onSuccess: () => invalidate('collections'),
@@ -356,11 +356,9 @@ export function SharedPlanningOverviewPage({
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const icon = String(data.get('icon')).trim();
-    createCollection.mutate(
-      { title: String(data.get('title')).trim(), icon: icon || undefined },
-      { onSuccess: () => form.reset() },
-    );
+    createCollection.mutate(String(data.get('title')).trim(), {
+      onSuccess: () => form.reset(),
+    });
   }
 
   const placeChoices = placeItems.map((place) => (
@@ -694,10 +692,6 @@ export function SharedPlanningOverviewPage({
                   required
                   maxLength={200}
                 />
-                <label htmlFor="collection-icon">
-                  {t('m5s3.collection.icon')}
-                </label>
-                <input id="collection-icon" name="icon" maxLength={32} />
                 <button type="submit" disabled={createCollection.isPending}>
                   {createCollection.isPending
                     ? t('m5s3.common.saving')
@@ -715,7 +709,7 @@ export function SharedPlanningOverviewPage({
               {collectionItems.map((collection) => (
                 <PlanningCard
                   key={collection.id}
-                  title={`${collection.icon ? `${collection.icon} ` : ''}${collection.title}`}
+                  title={collection.title}
                   meta={t('m5s3.collection.itemCount', {
                     count: collection.items.length,
                   })}
