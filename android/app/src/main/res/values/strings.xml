@@ -14,6 +14,37 @@
     <string name="entry_sign_in_pending">Anmeldung läuft …</string>
     <string name="entry_assurance">Euer gemeinsamer Bereich bleibt nur für euch bestimmt.</string>
 
+    <string name="destination_today">Heute</string>
+    <string name="destination_story">Story</string>
+    <string name="destination_plan">Planen</string>
+    <string name="destination_more">Mehr</string>
+
+    <string name="state_retry">Erneut versuchen</string>
+    <string name="state_offline_title">Du bist gerade offline.</string>
+    <string name="state_offline_body">Stelle die Verbindung wieder her und versuche es erneut.</string>
+    <string name="state_session_title">Deine Sitzung ist nicht mehr gültig.</string>
+    <string name="state_session_body">Bitte melde dich erneut an.</string>
+    <string name="state_permission_title">Dieser Inhalt ist nicht verfügbar.</string>
+    <string name="state_permission_body">Du kannst diesen Inhalt mit deinem aktuellen Zugriff nicht öffnen.</string>
+    <string name="state_conflict_title">Die Daten haben sich inzwischen geändert.</string>
+    <string name="state_conflict_body">Lade den aktuellen Stand neu und wiederhole deine Änderung.</string>
+    <string name="state_validation_title">Einige Angaben passen noch nicht.</string>
+    <string name="state_validation_body">Bitte prüfe deine Eingaben und versuche es erneut.</string>
+    <string name="state_rate_limit_title">Das waren zu viele Anfragen in kurzer Zeit.</string>
+    <string name="state_rate_limit_body">Warte einen Moment und versuche es dann erneut.</string>
+    <string name="state_server_title">SideBySide ist gerade nicht erreichbar.</string>
+    <string name="state_server_body">Versuche es in einem Moment erneut.</string>
+    <string name="state_unknown_title">Etwas ist schiefgegangen.</string>
+    <string name="state_unknown_body">Bitte versuche es erneut.</string>
+    <string name="state_empty_title">Hier ist noch nichts.</string>
+    <string name="state_empty_body">Sobald ihr etwas festhaltet, erscheint es hier.</string>
+    <string name="more_eyebrow">MEHR</string>
+    <string name="more_title">Alles Weitere</string>
+    <string name="more_intro">Hier sammelt sich, was nicht zu Story oder Planen gehört.</string>
+    <string name="more_session_title">Deine Anmeldung</string>
+    <string name="more_session_body">Du bist auf diesem Gerät angemeldet. Beim Abmelden werden alle geladenen Inhalte aus dem Speicher entfernt.</string>
+    <string name="more_sign_out">Abmelden</string>
+
     <string name="ref_flow_subtitle">M2 · technischer Android-Referenzflow</string>
     <string name="ref_flow_intro">Eine Erinnerung in eurer gemeinsamen Story.</string>
     <string name="ref_not_configured">Der M2-Referenzflow ist operatorseitig noch nicht konfiguriert.</string>
