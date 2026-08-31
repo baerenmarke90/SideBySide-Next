@@ -21,6 +21,7 @@ from sidebyside.identity.models import (
     DeviceSession,
     EmailVerificationToken,
     MagicLinkToken,
+    OidcAuthRequest,
     WebAuthnChallenge,
     WebAuthnCredential,
 )
@@ -70,6 +71,7 @@ def _clear_demo_auth_state(session: Session, account_ids: Sequence[UUID]) -> Non
     session.execute(
         delete(WebAuthnCredential).where(WebAuthnCredential.account_id.in_(account_ids))
     )
+    session.execute(delete(OidcAuthRequest).where(OidcAuthRequest.account_id.in_(account_ids)))
     session.execute(
         delete(AuthIdentity).where(
             AuthIdentity.account_id.in_(account_ids),
