@@ -37,6 +37,31 @@ not mutated during staging or validation. Media restored by an apply receives
 new target IDs and remains unreachable through the application until the
 matching database rows commit.
 
+## Member mapping
+
+`accounts.json` carries neutral source member IDs and may carry a verified
+email as a mapping aid. A verified email is not required: OIDC accounts without
+an email claim and local accounts without a verified address remain portable.
+
+New v1 exports also record `exportedBySourceId` in `manifest.json`. During
+import that source member must map to the currently authenticated target member.
+For a normal SideBySide couple Space, which is limited to at most two active
+members, one remaining unmapped source member can then be mapped uniquely to
+one remaining active target member. Verified-email matches are still used as
+additional deterministic evidence and conflicting hints fail closed with a
+stable member-mapping error.
+
+For PERSONAL bundles, `personalOwnerSourceId` must map to the authenticated
+requester and, when `exportedBySourceId` is present, both identifiers must
+refer to the same source member. Source IDs and mapping hints are never treated
+as authorization credentials; target Account + Space membership is rechecked
+before validation and again before apply.
+
+Existing target `SpaceProfile` and `PartnerProfile` singleton rows are reused
+during additive apply. Source profile IDs are remapped to those existing target
+IDs so dependent portable rows can keep valid relations without violating the
+target Space's uniqueness constraints.
+
 ## Retention and cleanup
 
 Exports and staged imports receive an `expires_at` timestamp 24 hours after
