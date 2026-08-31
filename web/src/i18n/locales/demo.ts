@@ -11,6 +11,20 @@ const demo = {
   assurance:
     'Die Demo enthält ausschließlich fiktive Daten und ist technisch von der Hauptinstanz getrennt.',
   launch: 'Demo ausprobieren',
+  bannerAria: 'Hinweis zur Demo-Instanz',
+  bannerTitle: 'Demo-Instanz',
+  bannerReset:
+    'Alle Änderungen sind temporär. Diese Demo wird automatisch alle {{interval}} zurückgesetzt.',
+  bannerResetDisabled:
+    'Alle Änderungen sind temporär. Der automatische Reset ist derzeit deaktiviert.',
+  interval: {
+    minuteOne: 'Minute',
+    minuteMany: 'Minuten',
+    hourOne: 'Stunde',
+    hourMany: 'Stunden',
+    dayOne: 'Tag',
+    dayMany: 'Tage',
+  },
 };
 
 export default demo;

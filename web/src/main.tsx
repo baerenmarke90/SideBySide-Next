@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
+import { DemoBanner } from './components/DemoBanner';
 import { DemoEntry } from './components/DemoEntry';
 import { ThemeControl } from './components/ThemeControl';
 import { i18n } from './i18n';
@@ -28,6 +29,11 @@ const queryClient = new QueryClient({
 });
 
 const demoMode = import.meta.env.VITE_SBS_DEMO_MODE === 'true';
+const demoResetTimerEnabled =
+  import.meta.env.VITE_SBS_DEMO_RESET_TIMER === 'true';
+const demoResetInterval = String(
+  import.meta.env.VITE_SBS_DEMO_RESET_INTERVAL || '6h',
+).trim();
 const demoUrl = String(import.meta.env.VITE_SBS_DEMO_URL || '')
   .trim()
   .replace(/\/+$/, '');
@@ -35,23 +41,32 @@ const demoAuthCallback =
   window.location.pathname.replace(/\/$/, '') === '/auth/magic-link';
 
 function RootApp() {
-  if (demoMode && !demoAuthCallback) {
-    return (
+  const content =
+    demoMode && !demoAuthCallback ? (
       <>
         <ThemeControl />
         <DemoEntry />
       </>
+    ) : (
+      <>
+        <App />
+        {!demoMode && demoUrl ? (
+          <a className="demo-launch" href={demoUrl}>
+            {i18n.t('demo.launch')}
+          </a>
+        ) : null}
+      </>
     );
-  }
 
   return (
     <>
-      <App />
-      {!demoMode && demoUrl ? (
-        <a className="demo-launch" href={demoUrl}>
-          {i18n.t('demo.launch')}
-        </a>
+      {demoMode ? (
+        <DemoBanner
+          resetTimerEnabled={demoResetTimerEnabled}
+          resetInterval={demoResetInterval}
+        />
       ) : null}
+      {content}
     </>
   );
 }
