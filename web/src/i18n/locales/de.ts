@@ -177,7 +177,7 @@ const de = {
     title: 'Eure Story',
     intro:
       'Erinnerungen, Herzmomente und Meilensteine – chronologisch an einem Ort.',
-    addMemory: 'Erinnerung hinzufügen',
+    addMemory: 'Erinnerung',
     timelineKicker: 'Zeitleiste',
     timelineHeading: 'Gemeinsame Geschichte',
     loadingAria: 'Story wird geladen',
