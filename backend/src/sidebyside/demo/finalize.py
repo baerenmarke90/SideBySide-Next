@@ -67,24 +67,24 @@ def _ensure_chapter_story_links(
     chapters: list[Chapter],
 ) -> None:
     memory_by_key: dict[str, Memory] = {}
-    for story in MEMORIES:
-        memory_by_key[story.key] = _only_by_title(
+    for memory_story in MEMORIES:
+        memory_by_key[memory_story.key] = _only_by_title(
             memories,
             title_of=lambda memory: memory.payload.title,
-            title=story.title,
+            title=memory_story.title,
         )
 
-    for story in CHAPTERS:
+    for chapter_story in CHAPTERS:
         chapter = _only_by_title(
             chapters,
             title_of=lambda item: item.payload.title,
-            title=story.title,
+            title=chapter_story.title,
         )
-        for memory_key in story.memory_keys:
+        for memory_key in chapter_story.memory_keys:
             memory = memory_by_key.get(memory_key)
             if memory is None:
                 raise RuntimeError(
-                    f"Canonical Chapter {story.title!r} references unknown "
+                    f"Canonical Chapter {chapter_story.title!r} references unknown "
                     f"Memory key {memory_key!r}."
                 )
             relation_service.link(
