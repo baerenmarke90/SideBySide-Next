@@ -6,6 +6,7 @@ import importantDates from './locales/importantDates';
 import m5s3 from './locales/m5s3';
 import m5s5 from './locales/m5s5';
 import memoryProduct from './locales/memoryProduct';
+import navigation from './locales/navigation';
 import partnerConnection from './locales/partnerConnection';
 import people from './locales/people';
 import privateArea from './locales/privateArea';
@@ -29,16 +30,7 @@ if (!i18n.isInitialized) {
       de: {
         translation: {
           ...de,
-          navigation: {
-            ...de.navigation,
-            planning: 'Planen',
-            people: 'Menschen',
-            profile: 'Profil',
-            dashboard: 'Übersicht',
-            search: 'Suche',
-            activity: 'Aktivität',
-            notifications: 'Benachrichtigungen',
-          },
+          navigation: { ...de.navigation, ...navigation },
           demo,
           importantDates,
           m5s3,

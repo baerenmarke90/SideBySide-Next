@@ -8,6 +8,13 @@ export type AppRouteId =
   | 'people'
   | 'profile'
   | 'memoryCreate';
+/*
+ * Sidebar grouping for the Web client. The App keeps a flat set of primary
+ * destinations; the browser sidebar shows all of them at once and needs the
+ * grouping to stay readable.
+ */
+export type AppRouteGroup = 'together' | 'keepUpToDate' | 'you';
+
 export type AppRouteIcon =
   | 'story'
   | 'planning'
@@ -25,7 +32,15 @@ export interface AppRouteDefinition {
   labelKey: string;
   icon: AppRouteIcon;
   end: boolean;
+  /** Omitted for routes that are offered as an action rather than a section. */
+  group?: AppRouteGroup;
 }
+
+export const APP_ROUTE_GROUPS = [
+  { id: 'together', labelKey: 'navigation.groups.together' },
+  { id: 'keepUpToDate', labelKey: 'navigation.groups.keepUpToDate' },
+  { id: 'you', labelKey: 'navigation.groups.you' },
+] as const satisfies readonly { id: AppRouteGroup; labelKey: string }[];
 
 export const APP_ROUTES = [
   {
@@ -34,6 +49,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.story',
     icon: 'story',
     end: true,
+    group: 'together',
   },
   {
     id: 'planning',
@@ -41,6 +57,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.planning',
     icon: 'planning',
     end: false,
+    group: 'together',
   },
   {
     id: 'dashboard',
@@ -48,6 +65,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.dashboard',
     icon: 'dashboard',
     end: true,
+    group: 'together',
   },
   {
     id: 'search',
@@ -55,6 +73,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.search',
     icon: 'search',
     end: true,
+    group: 'keepUpToDate',
   },
   {
     id: 'activity',
@@ -62,6 +81,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.activity',
     icon: 'activity',
     end: true,
+    group: 'keepUpToDate',
   },
   {
     id: 'notifications',
@@ -69,6 +89,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.notifications',
     icon: 'notifications',
     end: true,
+    group: 'keepUpToDate',
   },
   {
     id: 'people',
@@ -76,6 +97,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.people',
     icon: 'people',
     end: true,
+    group: 'you',
   },
   {
     id: 'profile',
@@ -83,6 +105,7 @@ export const APP_ROUTES = [
     labelKey: 'navigation.profile',
     icon: 'profile',
     end: true,
+    group: 'you',
   },
   {
     id: 'memoryCreate',
@@ -94,6 +117,18 @@ export const APP_ROUTES = [
 ] as const satisfies readonly AppRouteDefinition[];
 
 export const DEFAULT_APP_ROUTE = APP_ROUTES[0].path;
+
+/**
+ * Destinations of one sidebar group, in declaration order. Routes without a
+ * group are offered as an action instead of a section and are not listed here.
+ */
+export function appRoutesInGroup(
+  group: AppRouteGroup,
+): readonly AppRouteDefinition[] {
+  return (APP_ROUTES as readonly AppRouteDefinition[]).filter(
+    (route) => route.group === group,
+  );
+}
 export const MEMORY_DETAIL_ROUTE_PATTERN = '/memory/:memoryId';
 export const MEMORY_EDIT_ROUTE_PATTERN = '/memory/:memoryId/edit';
 export const HEART_MOMENT_CREATE_ROUTE = '/heart-moment/new';
