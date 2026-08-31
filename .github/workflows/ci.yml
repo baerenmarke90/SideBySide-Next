@@ -248,7 +248,7 @@ jobs:
         run: |
           curl --fail --silent --show-error http://127.0.0.1:8000/api/v1/health
           curl --fail --silent --show-error http://127.0.0.1:8080/healthz
-          curl --fail --silent --show-error http://127.0.0.1:8080/ | grep -Fq "<title>SideBySide Next"
+          curl --fail --silent --show-error http://127.0.0.1:8080/ | grep -Fq "<title>SidebySide</title>"
           web/scripts/check_csp_header.sh http://127.0.0.1:8080/
 
       - name: CSP origins are narrowly and fail-closed configurable
