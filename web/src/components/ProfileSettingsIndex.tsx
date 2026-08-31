@@ -25,6 +25,9 @@ export function ProfileSettingsIndex() {
           </a>
         </li>
         <li>
+          <a href="#profile-appearance-settings">{t('theme.label')}</a>
+        </li>
+        <li>
           <a href="#profile-partner-settings">
             {t('profileIdentity.settingsRelationship')}
           </a>
