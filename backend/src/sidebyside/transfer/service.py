@@ -1454,9 +1454,11 @@ def apply_import_bundle(
                 # the target's uniqueness constraints.
                 if table_name == "space_profiles" and existing_profile_id is not None:
                     continue
-                if table_name == "partner_profiles" and _uuid(
-                    raw.get("id"), ErrorCode.TRANSFER_RELATION_INVALID
-                ) in reused_partner_profiles:
+                if (
+                    table_name == "partner_profiles"
+                    and _uuid(raw.get("id"), ErrorCode.TRANSFER_RELATION_INVALID)
+                    in reused_partner_profiles
+                ):
                     continue
                 values = _prepare_row(
                     table,
