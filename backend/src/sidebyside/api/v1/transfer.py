@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
@@ -90,15 +90,30 @@ def _export_detail(transfer: TransferExport) -> TransferExportDetail:
     )
 
 
+def _summary_count(value: object) -> int:
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
+def _summary_record_counts(value: object) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        return {}
+    return {
+        str(key): count
+        for key, count in value.items()
+        if isinstance(count, int) and not isinstance(count, bool)
+    }
+
+
 def _import_detail(transfer: TransferImport) -> TransferImportDetail:
     summary: TransferImportSummary | None = None
     if transfer.summary is not None and transfer.scope is not None:
-        raw_counts = transfer.summary.get("recordCounts", {})
+        raw_scope = transfer.summary.get("scope", transfer.scope)
+        scope = raw_scope if isinstance(raw_scope, str) else transfer.scope
         summary = TransferImportSummary(
-            scope=TransferScope(str(transfer.summary.get("scope", transfer.scope))),
-            record_counts={str(key): int(value) for key, value in dict(raw_counts).items()},
-            media_count=int(transfer.summary.get("mediaCount", 0)),
-            source_member_count=int(transfer.summary.get("sourceMemberCount", 0)),
+            scope=TransferScope(scope),
+            record_counts=_summary_record_counts(transfer.summary.get("recordCounts", {})),
+            media_count=_summary_count(transfer.summary.get("mediaCount", 0)),
+            source_member_count=_summary_count(transfer.summary.get("sourceMemberCount", 0)),
         )
     return TransferImportDetail(
         id=transfer.id,
