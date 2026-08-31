@@ -157,6 +157,13 @@
   align-items: center;
 }
 
+.planning-order-actions {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
 .planning-relation-list li,
 .planning-collection-items li {
   min-width: 0;
