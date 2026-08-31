@@ -5,7 +5,6 @@ plugins {
 }
 
 val sbsApiBaseUrl = providers.gradleProperty("sbsApiBaseUrl").orElse("").get()
-val sbsSpaceId = providers.gradleProperty("sbsSpaceId").orElse("").get()
 // The Material 3 scheme and the semantic scale are derived from the shared
 // token set instead of restating its values. `design/tokens.json` stays the
 // single source of truth, exactly as `backend/openapi.json` is for the API
@@ -170,7 +169,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SBS_API_BASE_URL", quotedBuildConfig(sbsApiBaseUrl))
-        buildConfigField("String", "SBS_SPACE_ID", quotedBuildConfig(sbsSpaceId))
     }
 
     buildFeatures {

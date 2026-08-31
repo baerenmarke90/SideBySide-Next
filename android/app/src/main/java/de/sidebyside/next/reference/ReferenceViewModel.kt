@@ -38,6 +38,9 @@ data class ReferenceUiState(
     /** True while the session belongs to the public demo rather than the configured server. */
     val demoMode: Boolean = false,
     val demoPersona: DemoPersona? = null,
+    /** Every Space the account may open; a choice only exists above one. */
+    val availableSpaces: List<AccountMembershipView> = emptyList(),
+    val activeSpaceId: java.util.UUID? = null,
     val busy: Boolean = false,
     val status: UiMessage? = null,
     val error: UiMessage? = null,
@@ -75,12 +78,11 @@ class ReferenceViewModel(
     /**
      * The Space the current session works in.
      *
-     * A normal session still starts from the build configuration; a demo
-     * session resolves it from the account's memberships, because a demo
-     * persona's Space cannot be known at build time. #353 replaces the
-     * build-time value for the normal path as well.
+     * Always resolved from the account's Memberships after authentication, for
+     * a normal sign-in as much as for a demo persona. Nothing about a Space is
+     * known before someone signs in.
      */
-    private var activeSpaceId: java.util.UUID? = config.spaceId
+    private var activeSpaceId: java.util.UUID? = null
     private var session: SessionView? = null
     private var imageDrafts: List<ImageDraft> = emptyList()
     private var sessionEpoch: Long = 0
@@ -103,9 +105,21 @@ class ReferenceViewModel(
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
             mutate { it.copy(busy = true, error = null, status = message(R.string.ref_login_pending)) }
-            runCatching { api.signIn(email.trim(), password) }
-                .onSuccess { signedIn ->
+            runCatching {
+                val signedIn = api.signIn(email.trim(), password)
+                val memberships = api.listMemberships(signedIn.tokens.accessToken)
+                signedIn to memberships
+            }
+                .onSuccess { (signedIn, memberships) ->
                     if (attemptEpoch != sessionEpoch) return@onSuccess
+                    val space = activeSpaceOf(memberships)
+                    if (space == null) {
+                        // Authenticated, but the account has no Space to open.
+                        // That is a product state, not a sign-in failure.
+                        session = null
+                        return@onSuccess failure(R.string.error_no_active_space)
+                    }
+                    activeSpaceId = space
                     session = signedIn
                     imageDrafts = emptyList()
                     mutate {
@@ -119,6 +133,8 @@ class ReferenceViewModel(
                             lastMemoryBody = null,
                             lastImageBytes = null,
                             storyItems = emptyList(),
+                            availableSpaces = activeMemberships(memberships),
+                            activeSpaceId = space,
                         )
                     }
                     refreshStory()
@@ -166,6 +182,7 @@ class ReferenceViewModel(
                         loggedIn = true,
                         demoMode = true,
                         demoPersona = persona,
+                        activeSpaceId = space,
                         status = message(R.string.demo_entered),
                     )
                     refreshStory()
@@ -173,7 +190,7 @@ class ReferenceViewModel(
                 .onFailure {
                     if (attemptEpoch == sessionEpoch) {
                         contract = apiFor(config.apiBaseUrl)
-                        activeSpaceId = config.spaceId
+                        activeSpaceId = null
                         failure(R.string.demo_entry_failed)
                     }
                 }
@@ -183,7 +200,7 @@ class ReferenceViewModel(
     /** Leaves the demo and returns to the configured server, carrying nothing over. */
     fun leaveDemo() {
         contract = apiFor(config.apiBaseUrl)
-        activeSpaceId = config.spaceId
+        activeSpaceId = null
         sessionEpoch += 1
         session = null
         imageDrafts = emptyList()
@@ -200,7 +217,44 @@ class ReferenceViewModel(
      * silently become the working context.
      */
     private fun activeSpaceOf(memberships: List<AccountMembershipView>): java.util.UUID? =
-        memberships.firstOrNull { it.status.equals("ACTIVE", ignoreCase = true) }?.spaceId
+        activeMemberships(memberships).firstOrNull()?.spaceId
+
+    /**
+     * Switches to another authorized Space.
+     *
+     * Everything bound to the previous Space is dropped rather than filtered:
+     * a draft, a loaded Story or a pending upload belongs to the Space it was
+     * made in. Bumping the session epoch also makes any request still in flight
+     * against the old Space discard its result.
+     */
+    fun selectSpace(spaceId: java.util.UUID) {
+        val state = _uiState.value
+        if (spaceId == activeSpaceId) return
+        if (state.availableSpaces.none { it.spaceId == spaceId }) return
+
+        sessionEpoch += 1
+        activeSpaceId = spaceId
+        imageDrafts = emptyList()
+        mutate {
+            it.copy(
+                activeSpaceId = spaceId,
+                busy = false,
+                error = null,
+                status = message(R.string.space_switched),
+                draftImages = emptyList(),
+                lastMemoryTitle = null,
+                lastMemoryBody = null,
+                lastImageBytes = null,
+                storyItems = emptyList(),
+            )
+        }
+        refreshStory()
+    }
+
+    private fun activeMemberships(
+        memberships: List<AccountMembershipView>,
+    ): List<AccountMembershipView> =
+        memberships.filter { it.status.equals("ACTIVE", ignoreCase = true) }
 
     private fun apiFor(baseUrl: String): ReferenceContract? =
         injectedApi ?: baseUrl.takeIf(String::isNotBlank)?.let(apiFactory)
@@ -361,6 +415,7 @@ class ReferenceViewModel(
 
         sessionEpoch += 1
         session = null
+        activeSpaceId = null
         imageDrafts = emptyList()
         _uiState.value = ReferenceUiState(
             configured = config.isConfigured,

@@ -57,7 +57,13 @@ class ReferenceViewModelTest {
                 error("Magic-link entry is not exercised by this test.")
 
             override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
-                error("Memberships are not exercised by this test.")
+                listOf(
+                    AccountMembershipView(
+                        role = "PARTNER",
+                        spaceId = spaceId,
+                        status = "ACTIVE",
+                    ),
+                )
 
             override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
                 error("Demo entry is not exercised by this test.")
@@ -117,7 +123,7 @@ class ReferenceViewModelTest {
                 error("not used")
         }
         val viewModel = ReferenceViewModel(
-            config = ReferenceConfig(apiBaseUrl = "https://sidebyside.invalid", spaceId = spaceId),
+            config = ReferenceConfig(apiBaseUrl = "https://sidebyside.invalid"),
             api = api,
         )
 

@@ -135,17 +135,25 @@ real remote operation uses HTTPS.
 
 ## Operator configuration
 
-Normal users do not enter technical URLs or IDs. The reference flow receives
-these values as Gradle properties at build time:
+Normal users do not enter technical URLs or IDs. The only operator value is the
+address of the server:
 
 ```bash
-./gradlew -PsbsApiBaseUrl=https://sidebyside.example \
-  -PsbsSpaceId=00000000-0000-0000-0000-000000000000 \
-  :app:assembleDebug
+./gradlew -PsbsApiBaseUrl=https://sidebyside.example :app:assembleDebug
 ```
 
-Without valid configuration, the UI shows only a clear operator notice and
-sends no API request.
+Without it, the UI shows a clear operator notice and sends no API request.
+
+**The Space is not configured.** It is derived after authentication from the
+Memberships the server authorises for the account, so one build serves every
+couple and a demo persona needs no rebuild. Only an `ACTIVE` membership counts;
+an account with none is signed in but has nothing to open, which is a product
+state rather than a sign-in failure.
+
+Where an account is active in more than one Space, all of them are offered and
+switching drops everything bound to the previous one — drafts, the loaded Story,
+and any request still in flight, which would otherwise write into the wrong
+couple's Space.
 
 ## Reproducible Gradle build
 
