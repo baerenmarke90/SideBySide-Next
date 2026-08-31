@@ -3,47 +3,49 @@ package de.sidebyside.next.reference
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.launch
+import de.sidebyside.next.demo.DemoBanner
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import de.sidebyside.next.demo.DemoBanner
 import de.sidebyside.next.story.StoryScreen
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +68,7 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var imageSelectionEpoch by remember { mutableStateOf<Long?>(null) }
+    var profileAvatarSelectionEpoch by remember { mutableStateOf<Long?>(null) }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
         val selectionEpoch = imageSelectionEpoch
         imageSelectionEpoch = null
@@ -89,9 +92,25 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
             }
         }
     }
+    val profileAvatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        val selectionEpoch = profileAvatarSelectionEpoch
+        profileAvatarSelectionEpoch = null
+        if (uri != null && selectionEpoch != null) {
+            scope.launch {
+                runCatching { loadSelectedImage(context, uri) }
+                    .onSuccess { image ->
+                        referenceViewModel.setProfileAvatar(image, selectionEpoch)
+                    }
+                    .onFailure { throwable ->
+                        referenceViewModel.setProfileAvatarSelectionError(throwable, selectionEpoch)
+                    }
+            }
+        }
+    }
 
     val signOut = {
         imageSelectionEpoch = null
+        profileAvatarSelectionEpoch = null
         referenceViewModel.logout()
     }
 
@@ -104,6 +123,17 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
                 PickVisualMediaRequest.Builder()
                     .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
                     .setOrderedSelection(true)
+                    .build(),
+            )
+        }
+        Unit
+    }
+    val pickProfileAvatar = {
+        referenceViewModel.beginProfileAvatarSelection()?.let { selectionEpoch ->
+            profileAvatarSelectionEpoch = selectionEpoch
+            profileAvatarPicker.launch(
+                PickVisualMediaRequest.Builder()
+                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
                     .build(),
             )
         }
@@ -145,7 +175,13 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
                 persona = demoPersona,
                 onLeave = referenceViewModel::leaveDemo,
             )
-            DemoShell(state, signOut, referenceViewModel::selectSpace) {
+            DemoShell(
+                state = state,
+                viewModel = referenceViewModel,
+                onSignOut = signOut,
+                onSelectSpace = referenceViewModel::selectSpace,
+                onPickProfileAvatar = pickProfileAvatar,
+            ) {
                 StoryDestination(
                     state = state,
                     viewModel = referenceViewModel,
@@ -157,14 +193,20 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
         return
     }
 
-    DemoShell(state, signOut, referenceViewModel::selectSpace) {
-                StoryDestination(
-                    state = state,
-                    viewModel = referenceViewModel,
-                    onPickImage = pickImage,
-                    onSignOut = signOut,
-                )
-            }
+    DemoShell(
+        state = state,
+        viewModel = referenceViewModel,
+        onSignOut = signOut,
+        onSelectSpace = referenceViewModel::selectSpace,
+        onPickProfileAvatar = pickProfileAvatar,
+    ) {
+        StoryDestination(
+            state = state,
+            viewModel = referenceViewModel,
+            onPickImage = pickImage,
+            onSignOut = signOut,
+        )
+    }
 }
 
 /**
@@ -176,21 +218,37 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
 @Composable
 private fun DemoShell(
     state: ReferenceUiState,
+    viewModel: ReferenceViewModel,
     onSignOut: () -> Unit,
     onSelectSpace: (java.util.UUID) -> Unit,
+    onPickProfileAvatar: () -> Unit,
     story: @Composable () -> Unit,
 ) {
     AppNavigation(
         destinations = listOf(AppDestination.Story, AppDestination.More),
     ) { destination ->
         when (destination) {
-            AppDestination.More -> MoreScreen(
-                onSignOut = onSignOut,
-                signOutEnabled = !state.busy,
-                spaces = state.availableSpaces,
-                activeSpaceId = state.activeSpaceId,
-                onSelectSpace = onSelectSpace,
-            )
+            AppDestination.More -> {
+                LaunchedEffect(state.activeSpaceId) {
+                    if (state.activeSpaceId != null) viewModel.refreshProfile()
+                }
+                MoreScreen(
+                    onSignOut = onSignOut,
+                    signOutEnabled = !state.busy && !state.profile.busy,
+                    spaces = state.availableSpaces,
+                    activeSpaceId = state.activeSpaceId,
+                    onSelectSpace = onSelectSpace,
+                    profileContent = {
+                        ProfileSettingsContent(
+                            state = state.profile,
+                            onRetry = viewModel::refreshProfile,
+                            onSaveDisplayName = viewModel::saveProfileDisplayName,
+                            onChooseAvatar = onPickProfileAvatar,
+                            onRemoveAvatar = viewModel::removeProfileAvatar,
+                        )
+                    },
+                )
+            }
 
             else -> story()
         }
