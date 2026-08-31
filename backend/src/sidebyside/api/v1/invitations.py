@@ -11,8 +11,7 @@ from fastapi import APIRouter, Path, status
 from sidebyside.api.deps import CurrentAccount, DbSession, Tenant
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.config import get_settings
-from sidebyside.core.errors import ForbiddenError, NotFoundError
+from sidebyside.core.errors import NotFoundError
 from sidebyside.core.ids import parse_id
 from sidebyside.relationship import invitations
 from sidebyside.relationship.invitations import InvitationErrorCode
@@ -41,22 +40,13 @@ class MembershipView(ApiModel):
     status: str
 
 
-def _reject_public_demo_membership_change() -> None:
-    if get_settings().demo_mode:
-        raise ForbiddenError(
-            "Membership changes are disabled on the public demo deployment.",
-            "DEMO_MEMBERSHIP_CHANGE_DISABLED",
-        )
-
-
 @router.post(
     "/spaces/{spaceId}/invitations",
     response_model=IssuedInvitationView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403, 404, 409),
+    responses=problem_responses(401, 404, 409),
 )
 def create_invitation(tenant: Tenant, session: DbSession) -> IssuedInvitationView:
-    _reject_public_demo_membership_change()
     result = invitations.create(session, tenant.space_id, tenant.account)
     return IssuedInvitationView(
         id=result.invitation.id,
@@ -99,7 +89,7 @@ def revoke_invitation(
     "/invitations/accept",
     response_model=MembershipView,
     status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403, 409, 422),
+    responses=problem_responses(401, 409, 422),
 )
 def accept_invitation(
     body: AcceptRequest, account: CurrentAccount, session: DbSession
@@ -109,7 +99,6 @@ def accept_invitation(
     This endpoint lives outside ``/spaces/...`` because the caller does not
     know the space yet; the token identifies it.
     """
-    _reject_public_demo_membership_change()
     membership = invitations.accept(session, body.token, account)
     return MembershipView(
         space_id=membership.space_id,
