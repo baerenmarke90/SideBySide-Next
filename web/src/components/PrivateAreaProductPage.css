@@ -232,16 +232,24 @@
     align-items: start;
   }
 
-  .private-area-actions,
   .private-area-inline-form,
   .private-area-delete-confirmation {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .private-area-actions > button,
+  .private-area-actions {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .private-area-actions > button:not(.list-entry-icon-button),
   .private-area-inline-form > button,
   .private-area-delete-confirmation button {
     width: 100%;
+  }
+
+  .private-area-actions > .list-entry-icon-button {
+    width: 2.75rem;
   }
 }
