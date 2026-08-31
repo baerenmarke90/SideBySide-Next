@@ -1,20 +1,16 @@
 package de.sidebyside.next.reference
 
-import java.util.UUID
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReferenceConfigTest {
     @Test
-    fun requiresApiBaseAndSpaceId() {
-        assertFalse(ReferenceConfig("", null).isConfigured)
-        assertFalse(ReferenceConfig("https://example.invalid", null).isConfigured)
-        assertTrue(
-            ReferenceConfig(
-                "https://example.invalid",
-                UUID.fromString("00000000-0000-0000-0000-000000000001"),
-            ).isConfigured,
-        )
+    fun requiresOnlyTheServerAddress() {
+        // The Space used to be operator configuration. It is now derived from
+        // the account's Memberships after authentication, so a build is not
+        // tied to one couple and a couple never enters a technical value.
+        assertFalse(ReferenceConfig("").isConfigured)
+        assertTrue(ReferenceConfig("https://example.invalid").isConfigured)
     }
 }

@@ -79,7 +79,7 @@ class DemoModeTest {
             val created = mutableListOf<String>()
             val api = RecordingDemoApi()
             val model = ReferenceViewModel(
-                config = ReferenceConfig(PRODUCTION_URL, PRODUCTION_SPACE),
+                config = ReferenceConfig(PRODUCTION_URL),
                 apiFactory = { baseUrl -> created += baseUrl; api },
             )
 
@@ -174,7 +174,7 @@ class DemoModeTest {
     }
 
     private fun viewModel(api: ReferenceContract) = ReferenceViewModel(
-        config = ReferenceConfig(PRODUCTION_URL, PRODUCTION_SPACE),
+        config = ReferenceConfig(PRODUCTION_URL),
         api = api,
     )
 }

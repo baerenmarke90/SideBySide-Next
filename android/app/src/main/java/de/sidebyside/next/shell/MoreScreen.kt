@@ -9,32 +9,43 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
+import java.util.UUID
+import sidebyside.api.models.AccountMembershipView
 
 /**
  * The Mehr area.
  *
- * It carries only what exists today: who is signed in, and how to sign out.
- * Space and partner, people, the owner-only area, notifications and profile
- * join it in their own slices rather than appearing here as empty rows.
+ * It carries only what exists today: who is signed in, which Space is being
+ * read, and how to sign out. People, the owner-only area, notifications and
+ * profile join it in their own slices rather than appearing here as empty rows.
  */
 @Composable
 fun MoreScreen(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
     signOutEnabled: Boolean = true,
+    spaces: List<AccountMembershipView> = emptyList(),
+    activeSpaceId: UUID? = null,
+    onSelectSpace: (UUID) -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -62,6 +73,15 @@ fun MoreScreen(
                 style = MaterialTheme.typography.bodyLarge,
                 color = SideBySideTheme.colors.textSecondary,
                 modifier = Modifier.widthIn(max = ReadingMeasure),
+            )
+        }
+
+        if (spaces.size > 1) {
+            SpaceChoice(
+                spaces = spaces,
+                activeSpaceId = activeSpaceId,
+                enabled = signOutEnabled,
+                onSelectSpace = onSelectSpace,
             )
         }
 
@@ -93,6 +113,75 @@ fun MoreScreen(
                     modifier = Modifier.heightIn(min = MinimumTouchTarget),
                 ) {
                     Text(stringResource(R.string.more_sign_out))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Offered only where the account really is active in more than one Space, so
+ * the ordinary couple never meets a choice they do not have.
+ *
+ * The Spaces are numbered rather than named: a Space ID is a technical value a
+ * couple must never be asked to read, and the human name belongs to the Space
+ * resource, which arrives with the identity surfaces slice.
+ */
+@Composable
+private fun SpaceChoice(
+    spaces: List<AccountMembershipView>,
+    activeSpaceId: UUID?,
+    enabled: Boolean,
+    onSelectSpace: (UUID) -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(SideBySideTheme.radii.card),
+        color = SideBySideTheme.colors.surface,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step4),
+        ) {
+            Text(
+                text = stringResource(R.string.more_space_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = SideBySideTheme.colors.textPrimary,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                text = stringResource(R.string.more_space_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = SideBySideTheme.colors.textSecondary,
+                modifier = Modifier.widthIn(max = ReadingMeasure),
+            )
+            Column(Modifier.selectableGroup()) {
+                spaces.forEachIndexed { index, membership ->
+                    val selected = membership.spaceId == activeSpaceId
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = MinimumTouchTarget)
+                            .selectable(
+                                selected = selected,
+                                enabled = enabled,
+                                role = Role.RadioButton,
+                                onClick = { onSelectSpace(membership.spaceId) },
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // The row carries the click; the button must not take
+                        // a second stop in the screen reader's order.
+                        RadioButton(selected = selected, onClick = null)
+                        Text(
+                            text = stringResource(R.string.more_space_option, index + 1),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = SideBySideTheme.colors.textPrimary,
+                            modifier = Modifier.padding(
+                                start = SideBySideTheme.spacing.step3,
+                            ),
+                        )
+                    }
                 }
             }
         }
