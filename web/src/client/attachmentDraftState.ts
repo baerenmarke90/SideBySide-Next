@@ -10,6 +10,7 @@ export interface AttachmentDraft {
   previewUrl: string;
   status: AttachmentDraftStatus;
   attempt: number;
+  progress: number;
   attachmentId?: string;
   error?: string;
 }
@@ -17,6 +18,7 @@ export interface AttachmentDraft {
 export type AttachmentDraftAction =
   | { type: 'add'; draft: AttachmentDraft }
   | { type: 'start'; id: string; attempt: number }
+  | { type: 'progress'; id: string; attempt: number; progress: number }
   | {
       type: 'phase';
       id: string;
@@ -53,17 +55,33 @@ export function attachmentDraftReducer(
               ...draft,
               status: 'uploading',
               attempt: action.attempt,
+              progress: 0,
               attachmentId: undefined,
               error: undefined,
             }
           : draft,
+      );
+    case 'progress':
+      return updateCurrentAttempt(
+        drafts,
+        action.id,
+        action.attempt,
+        (draft) => ({
+          ...draft,
+          progress: Math.max(0, Math.min(100, action.progress)),
+        }),
       );
     case 'phase':
       return updateCurrentAttempt(
         drafts,
         action.id,
         action.attempt,
-        (draft) => ({ ...draft, status: action.status, error: undefined }),
+        (draft) => ({
+          ...draft,
+          status: action.status,
+          progress: action.status === 'validating' ? 100 : draft.progress,
+          error: undefined,
+        }),
       );
     case 'ready':
       return updateCurrentAttempt(
@@ -73,6 +91,7 @@ export function attachmentDraftReducer(
         (draft) => ({
           ...draft,
           status: 'ready',
+          progress: 100,
           attachmentId: action.attachmentId,
           error: undefined,
         }),

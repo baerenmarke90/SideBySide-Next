@@ -33,12 +33,15 @@ export function useAttachmentDrafts({
   const [items, dispatch] = useReducer(attachmentDraftReducer, []);
   const nextAttempt = useRef(0);
   const previewUrls = useRef(new Map<string, string>());
+  const uploads = useRef(new Map<string, AbortController>());
   const mounted = useRef(true);
 
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      for (const controller of uploads.current.values()) controller.abort();
+      uploads.current.clear();
       for (const previewUrl of previewUrls.current.values()) {
         URL.revokeObjectURL(previewUrl);
       }
@@ -48,12 +51,19 @@ export function useAttachmentDrafts({
 
   const startUpload = useCallback(
     (id: string, file: File) => {
+      uploads.current.get(id)?.abort();
+      const controller = new AbortController();
+      uploads.current.set(id, controller);
       const attempt = ++nextAttempt.current;
       dispatch({ type: 'start', id, attempt });
 
       const updatePhase = (status: DraftUploadPhase) => {
-        if (!mounted.current) return;
+        if (!mounted.current || controller.signal.aborted) return;
         dispatch({ type: 'phase', id, attempt, status });
+      };
+      const updateProgress = (progress: number) => {
+        if (!mounted.current || controller.signal.aborted) return;
+        dispatch({ type: 'progress', id, attempt, progress });
       };
 
       void uploadMemoryDraftAttachment(
@@ -63,13 +73,17 @@ export function useAttachmentDrafts({
         spaceId,
         file,
         updatePhase,
+        fetch,
+        { signal: controller.signal, onProgress: updateProgress },
       )
         .then(({ attachmentId }) => {
-          if (!mounted.current) return;
+          uploads.current.delete(id);
+          if (!mounted.current || controller.signal.aborted) return;
           dispatch({ type: 'ready', id, attempt, attachmentId });
         })
         .catch((error: unknown) => {
-          if (!mounted.current) return;
+          uploads.current.delete(id);
+          if (!mounted.current || controller.signal.aborted) return;
           dispatch({ type: 'failed', id, attempt, error: errorMessage(error) });
         });
     },
@@ -91,6 +105,7 @@ export function useAttachmentDrafts({
             previewUrl,
             status: 'uploading',
             attempt: 0,
+            progress: 0,
           },
         });
         startUpload(id, file);
@@ -99,12 +114,21 @@ export function useAttachmentDrafts({
     [startUpload],
   );
 
-  const remove = useCallback((id: string) => {
-    const previewUrl = previewUrls.current.get(id);
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    previewUrls.current.delete(id);
-    dispatch({ type: 'remove', id });
+  const cancel = useCallback((id: string) => {
+    uploads.current.get(id)?.abort();
+    uploads.current.delete(id);
   }, []);
+
+  const remove = useCallback(
+    (id: string) => {
+      cancel(id);
+      const previewUrl = previewUrls.current.get(id);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrls.current.delete(id);
+      dispatch({ type: 'remove', id });
+    },
+    [cancel],
+  );
 
   const retry = useCallback(
     (draft: AttachmentDraft) => startUpload(draft.id, draft.file),
@@ -112,6 +136,8 @@ export function useAttachmentDrafts({
   );
 
   const clear = useCallback(() => {
+    for (const controller of uploads.current.values()) controller.abort();
+    uploads.current.clear();
     for (const previewUrl of previewUrls.current.values()) {
       URL.revokeObjectURL(previewUrl);
     }
@@ -122,5 +148,14 @@ export function useAttachmentDrafts({
   const readyIds = useMemo(() => readyAttachmentIds(items), [items]);
   const hasPending = useMemo(() => hasPendingAttachments(items), [items]);
 
-  return { items, addFiles, remove, retry, clear, readyIds, hasPending };
+  return {
+    items,
+    addFiles,
+    cancel,
+    remove,
+    retry,
+    clear,
+    readyIds,
+    hasPending,
+  };
 }

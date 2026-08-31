@@ -1,0 +1,123 @@
+.product-detail-page,
+.product-editor-page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.product-detail-card {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.product-sheet {
+  width: min(100%, 54rem);
+  margin-inline: auto;
+  border-radius: var(--radius-large);
+}
+
+.story-create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.story-filter-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: var(--space-3);
+  align-items: end;
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding-bottom: var(--space-5);
+}
+
+.story-filter-actions,
+.story-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.story-filter-actions {
+  align-items: center;
+}
+
+.story-pagination {
+  justify-content: center;
+  margin-top: var(--space-5);
+}
+
+.visibility-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  border-radius: var(--radius-pill);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.visibility-badge-shared {
+  background: var(--color-shared-surface);
+  color: var(--color-shared);
+}
+
+.visibility-badge-private {
+  background: var(--color-private-surface-soft);
+  color: var(--color-private);
+}
+
+.visibility-panel {
+  display: grid;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  padding: var(--space-4);
+  background: var(--color-surface-subtle);
+}
+
+.visibility-panel h2,
+.visibility-panel p {
+  margin: 0;
+}
+
+.visibility-panel button {
+  justify-self: start;
+}
+
+@media (max-width: 860px) {
+  .story-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .story-filter-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .story-create-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .story-create-actions > a {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .story-filter-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .story-filter-actions {
+    grid-column: auto;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .story-filter-actions button {
+    width: 100%;
+  }
+}
