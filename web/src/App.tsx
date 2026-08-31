@@ -438,7 +438,13 @@ function AuthenticatedApp({
   };
 
   return (
-    <AppShell onLogout={logout}>
+    <AppShell
+      onLogout={logout}
+      apiBaseUrl={apiBaseUrl}
+      accessToken={tokens.accessToken}
+      account={account}
+      spaceId={spaceId}
+    >
       <AppErrorBoundary
         resetKey={location.pathname}
         fallback={
@@ -451,7 +457,7 @@ function AuthenticatedApp({
                 className="button-link secondary-link"
                 to={DEFAULT_APP_ROUTE}
               >
-                {t('navigation.story')}
+                {t('navigation.today')}
               </Link>
             }
           />
