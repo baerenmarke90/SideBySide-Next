@@ -9,11 +9,17 @@ from sqlalchemy import select
 
 from sidebyside.auth import action_tokens, sessions
 from sidebyside.config import Environment, Settings
+from sidebyside.core.clock import now
 from sidebyside.core.errors import UnauthenticatedError
 from sidebyside.demo import reset as demo_reset
 from sidebyside.demo.service import LEA_EMAIL, create_demo_space
 from sidebyside.identity import service as identity_service
-from sidebyside.identity.models import AccountEmail, DeviceSession, MagicLinkToken
+from sidebyside.identity.models import (
+    AccountEmail,
+    DeviceSession,
+    MagicLinkToken,
+    OidcAuthRequest,
+)
 from sidebyside.jobs.models import JobStatus
 from tests.conftest import requires_database
 
@@ -82,14 +88,27 @@ def test_reset_job_replaces_space_and_expires_public_demo_auth_state(
         platform="web",
     )
     magic_link, _ = action_tokens.issue_magic_link(session, email.id)
+    oidc_request = OidcAuthRequest(
+        connection_id="demo-test",
+        state_hash="d" * 64,
+        nonce="demo-reset-nonce",
+        code_verifier="demo-reset-verifier",
+        redirect_uri="https://demo.example.invalid/auth/callback",
+        account_id=lea.id,
+        invitation_token_hash=None,
+        expires_at=now() + timedelta(minutes=10),
+    )
+    session.add(oidc_request)
     session.flush()
     device_session_id = device_session.id
     magic_link_id = magic_link.id
+    oidc_request_id = oidc_request.id
 
     demo_reset.run_demo_reset(session, {})
 
     assert session.get(DeviceSession, device_session_id) is None
     assert session.get(MagicLinkToken, magic_link_id) is None
+    assert session.get(OidcAuthRequest, oidc_request_id) is None
     with pytest.raises(UnauthenticatedError):
         sessions.authenticate(session, tokens.access_token)
 
