@@ -96,13 +96,23 @@ transport contract while #345 is unmerged.
 - Deep-Link-safe destination identity prepared, without activating S6 links;
 - no dead or future-contract navigation.
 
-**Blocked by #360.** The canonical route model in
-`docs/INFORMATION-ARCHITECTURE.md` section 5 (`today`, `story`, `plan`,
-`discover`, `more`) does not match the destinations the Web client actually
-ships (`story`, `planning`, `dashboard`, `search`, `activity`, `notifications`,
-`people`, `profile`). That is a cross-client product decision rather than an
-Android task, so it is owned by #360. S0B cannot build a destination registry
-before it lands without baking the contradiction into Android.
+**Route model:** decided in
+`docs/decisions/0003-primary-navigation-and-route-model.md` (#360). Android
+builds its destination registry directly against that model, so no Android
+route is ever migrated:
+
+| Route ID | de-DE | Path | Availability |
+|---|---|---|---|
+| `today` | Heute | `/today` | now |
+| `story` | Story | `/story` | now |
+| `plan` | Planen | `/plan` | now |
+| `discover` | Entdecken | `/discover` | M7, reserved and not rendered |
+| `more` | Mehr | `/more` | now |
+
+Four destinations until M7. Search is a global utility rather than a
+destination, Activity lives at `/today/activity`, and people, the owner-only
+area, notifications and profile live under `/more`. Web migrates onto the same
+model in #364; Android does not wait for it.
 
 ### S1 — Identity and relationship (#353)
 
