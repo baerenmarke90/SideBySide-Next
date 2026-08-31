@@ -495,6 +495,7 @@ def build_export_archive(
                 scope=scope.value,
                 source_space_id=str(authorization.space_id),
                 checksums=checksums,
+                exported_by_source_id=str(authorization.account_id),
                 personal_owner_source_id=(
                     str(authorization.account_id) if scope is TransferScope.PERSONAL else None
                 ),
@@ -902,7 +903,9 @@ def _validate_relations(
 def _active_target_mapping(
     session: Session,
     target_space: UUID,
+    requester_account_id: UUID,
     accounts: dict[str, Any],
+    requester_source_id: UUID | None,
 ) -> tuple[set[UUID], dict[UUID, UUID]]:
     members = accounts.get("members")
     if not isinstance(members, list) or not members:
@@ -920,6 +923,10 @@ def _active_target_mapping(
         .all()
     )
     target_ids = {membership.account_id for membership in target_members}
+    if requester_account_id not in target_ids:
+        raise TransferArchiveError(
+            "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+        )
     target_by_email: dict[str, UUID] = {}
     for email, account_id in session.execute(
         select(AccountEmail.email, AccountEmail.account_id).where(
@@ -930,7 +937,7 @@ def _active_target_mapping(
         target_by_email[email] = account_id
 
     source_ids: set[UUID] = set()
-    mapping: dict[UUID, UUID] = {}
+    source_emails: dict[UUID, str | None] = {}
     for member in members:
         if not isinstance(member, dict):
             raise TransferArchiveError(
@@ -943,20 +950,55 @@ def _active_target_mapping(
             )
         source_ids.add(source_id)
         email = member.get("verifiedEmail")
-        if not isinstance(email, str) or email.lower() != email:
+        if email is not None and (
+            not isinstance(email, str) or not email or email.lower() != email
+        ):
             raise TransferArchiveError(
-                "Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED
+                "Transfer member metadata is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
             )
+        source_emails[source_id] = email
+
+    mapping: dict[UUID, UUID] = {}
+    for source_id, email in source_emails.items():
+        if email is None:
+            continue
         target = target_by_email.get(email)
         if target is None:
-            raise TransferArchiveError(
-                "Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED
-            )
+            continue
         if target in mapping.values():
             raise TransferArchiveError(
                 "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
             )
         mapping[source_id] = target
+
+    if requester_source_id is not None:
+        if requester_source_id not in source_ids:
+            raise TransferArchiveError(
+                "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+            )
+        current_target = mapping.get(requester_source_id)
+        if current_target is not None and current_target != requester_account_id:
+            raise TransferArchiveError(
+                "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+            )
+        source_for_requester = next(
+            (source for source, target in mapping.items() if target == requester_account_id), None
+        )
+        if source_for_requester is not None and source_for_requester != requester_source_id:
+            raise TransferArchiveError(
+                "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+            )
+        mapping[requester_source_id] = requester_account_id
+
+    remaining_sources = source_ids - mapping.keys()
+    remaining_targets = target_ids - set(mapping.values())
+    if len(remaining_sources) == 1 and len(remaining_targets) == 1:
+        mapping[next(iter(remaining_sources))] = next(iter(remaining_targets))
+        remaining_sources = set()
+    if remaining_sources:
+        raise TransferArchiveError(
+            "Transfer member mapping is required.", ErrorCode.TRANSFER_MEMBER_MAPPING_REQUIRED
+        )
     return source_ids, mapping
 
 
@@ -1124,7 +1166,24 @@ def validate_import_bundle(
         personal_owner = _uuid(
             manifest.get("personalOwnerSourceId"), ErrorCode.TRANSFER_PRIVACY_SCOPE_INVALID
         )
-    source_members, mapping = _active_target_mapping(session, authorization.space_id, accounts)
+    exported_by_raw = manifest.get("exportedBySourceId")
+    exported_by = (
+        _uuid(exported_by_raw, ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+        if exported_by_raw is not None
+        else None
+    )
+    if personal_owner is not None and exported_by is not None and personal_owner != exported_by:
+        raise TransferArchiveError(
+            "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+        )
+    requester_source_id = exported_by or personal_owner
+    source_members, mapping = _active_target_mapping(
+        session,
+        authorization.space_id,
+        authorization.account_id,
+        accounts,
+        requester_source_id,
+    )
     if personal_owner is not None and (
         personal_owner not in source_members
         or mapping.get(personal_owner) != authorization.account_id
@@ -1307,6 +1366,30 @@ def apply_import_bundle(
     tables = {
         name: _table(session, name, metadata) for names in FILE_TABLES.values() for name in names
     }
+    partner_profile_table = tables["partner_profiles"]
+    existing_partner_profiles = {
+        owner_id: profile_id
+        for owner_id, profile_id in session.execute(
+            select(partner_profile_table.c.owner_id, partner_profile_table.c.id).where(
+                partner_profile_table.c.space_id == authorization.space_id
+            )
+        )
+    }
+    reused_partner_profiles: set[UUID] = set()
+    for raw in graph.tables.get("partner_profiles", []):
+        row = _row_snake(raw)
+        source_profile_id = _uuid(row.get("id"), ErrorCode.TRANSFER_RELATION_INVALID)
+        source_owner_id = _uuid(row.get("owner_id"), ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID)
+        target_owner_id = graph.mapping.get(source_owner_id)
+        if target_owner_id is None:
+            raise TransferArchiveError(
+                "Transfer member mapping is invalid.", ErrorCode.TRANSFER_MEMBER_MAPPING_INVALID
+            )
+        target_profile_id = existing_partner_profiles.get(target_owner_id)
+        if target_profile_id is not None:
+            ids[source_profile_id] = target_profile_id
+            reused_partner_profiles.add(source_profile_id)
+
     attachment_table = _table(session, "attachments", metadata)
     store = get_media_store()
     written_keys: list[str] = []
@@ -1365,6 +1448,16 @@ def apply_import_bundle(
         for table_name in INSERT_ORDER:
             table = tables[table_name]
             for raw in graph.tables.get(table_name, []):
+                # The target Space and active memberships already own their
+                # singleton profile rows. Reuse those IDs so imported
+                # preferences/reminders can reference them without violating
+                # the target's uniqueness constraints.
+                if table_name == "space_profiles" and existing_profile_id is not None:
+                    continue
+                if table_name == "partner_profiles" and _uuid(
+                    raw.get("id"), ErrorCode.TRANSFER_RELATION_INVALID
+                ) in reused_partner_profiles:
+                    continue
                 values = _prepare_row(
                     table,
                     raw,
@@ -1372,10 +1465,6 @@ def apply_import_bundle(
                     authorization=authorization,
                     ids=ids,
                 )
-                # The target Space row already exists. Importing a source SpaceProfile
-                # is additive only when the target does not already have one.
-                if table_name == "space_profiles" and existing_profile_id is not None:
-                    continue
                 session.execute(table.insert().values(**values))
     except Exception:
         for key in reversed(written_keys):
