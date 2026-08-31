@@ -1,4 +1,4 @@
-import { type FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -136,7 +136,9 @@ function GiftIdeaFields({
           />
         </div>
         <div className="field-group">
-          <label htmlFor="gift-price">{t('privateArea.gifts.priceLabel')}</label>
+          <label htmlFor="gift-price">
+            {t('privateArea.gifts.priceLabel')}
+          </label>
           <input
             id="gift-price"
             name="priceText"
@@ -158,8 +160,14 @@ function GiftIdeaFields({
       </div>
       {includeStatus ? (
         <div className="field-group">
-          <label htmlFor="gift-status">{t('privateArea.gifts.statusLabel')}</label>
-          <select id="gift-status" name="status" defaultValue={giftIdea?.status}>
+          <label htmlFor="gift-status">
+            {t('privateArea.gifts.statusLabel')}
+          </label>
+          <select
+            id="gift-status"
+            name="status"
+            defaultValue={giftIdea?.status}
+          >
             {GIFT_STATUSES.map((status) => (
               <option key={status} value={status}>
                 {t(`privateArea.gifts.status.${status}`)}
@@ -222,8 +230,15 @@ export function GiftIdeasListPage({ api, accountId, spaceId }: Props) {
           </Link>
         }
       />
-      {query.isLoading ? <UiState kind="loading" title={t('privateArea.gifts.loading')} /> : null}
-      {query.error ? <ProblemState error={query.error} onRetry={() => void query.refetch()} /> : null}
+      {query.isLoading ? (
+        <UiState kind="loading" title={t('privateArea.gifts.loading')} />
+      ) : null}
+      {query.error ? (
+        <ProblemState
+          error={query.error}
+          onRetry={() => void query.refetch()}
+        />
+      ) : null}
       {query.data && ideas.length === 0 ? (
         <UiState
           kind="empty"
@@ -246,7 +261,10 @@ export function GiftIdeasListPage({ api, accountId, spaceId }: Props) {
                 {gift.description ? (
                   <p className="private-area-excerpt">{gift.description}</p>
                 ) : null}
-                <Link className="button-link secondary-link" to={privateGiftIdeaPath(gift.id)}>
+                <Link
+                  className="button-link secondary-link"
+                  to={privateGiftIdeaPath(gift.id)}
+                >
                   {t('privateArea.edit')}
                 </Link>
               </li>
@@ -269,7 +287,9 @@ export function GiftIdeaCreatePage({ api, accountId, spaceId }: Props) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (values: ReturnType<typeof giftValues>) =>
-      privateApiCall(() => api.createGiftIdea({ spaceId, giftIdeaCreate: values })),
+      privateApiCall(() =>
+        api.createGiftIdea({ spaceId, giftIdeaCreate: values }),
+      ),
     onSuccess: async (gift) => {
       await queryClient.invalidateQueries({
         queryKey: privateAreaQueryKeys.giftIdeas(accountId, spaceId),
@@ -286,7 +306,11 @@ export function GiftIdeaCreatePage({ api, accountId, spaceId }: Props) {
   return (
     <>
       <PageHeader
-        before={<Link className="back-link" to={PRIVATE_GIFT_IDEAS_PATH}>{t('privateArea.gifts.detailBack')}</Link>}
+        before={
+          <Link className="back-link" to={PRIVATE_GIFT_IDEAS_PATH}>
+            {t('privateArea.gifts.detailBack')}
+          </Link>
+        }
         eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.gifts.createTitle')}
         description={t('privateArea.gifts.intro')}
@@ -295,9 +319,16 @@ export function GiftIdeaCreatePage({ api, accountId, spaceId }: Props) {
         <form className="form-grid" onSubmit={submit}>
           <GiftIdeaFields />
           <div className="form-actions">
-            <Link className="button-link secondary-link" to={PRIVATE_GIFT_IDEAS_PATH}>{t('common.cancel')}</Link>
+            <Link
+              className="button-link secondary-link"
+              to={PRIVATE_GIFT_IDEAS_PATH}
+            >
+              {t('common.cancel')}
+            </Link>
             <button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? t('privateArea.saving') : t('privateArea.save')}
+              {mutation.isPending
+                ? t('privateArea.saving')
+                : t('privateArea.save')}
             </button>
           </div>
         </form>
@@ -324,7 +355,11 @@ export function GiftIdeaDetailPage({ api, accountId, spaceId }: Props) {
     onSuccess: async () => {
       if (giftIdeaId) {
         queryClient.removeQueries({
-          queryKey: privateAreaQueryKeys.giftIdea(accountId, spaceId, giftIdeaId),
+          queryKey: privateAreaQueryKeys.giftIdea(
+            accountId,
+            spaceId,
+            giftIdeaId,
+          ),
         });
       }
       await queryClient.invalidateQueries({
@@ -334,8 +369,12 @@ export function GiftIdeaDetailPage({ api, accountId, spaceId }: Props) {
     },
   });
 
-  if (query.isLoading) return <UiState kind="loading" title={t('privateArea.gifts.loading')} />;
-  if (query.error) return <ProblemState error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isLoading)
+    return <UiState kind="loading" title={t('privateArea.gifts.loading')} />;
+  if (query.error)
+    return (
+      <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+    );
   const gift = query.data;
   if (!gift) return null;
   const targetOn = formatDate(gift.targetOn);
@@ -343,13 +382,20 @@ export function GiftIdeaDetailPage({ api, accountId, spaceId }: Props) {
   return (
     <>
       <PageHeader
-        before={<Link className="back-link" to={PRIVATE_GIFT_IDEAS_PATH}>{t('privateArea.gifts.detailBack')}</Link>}
+        before={
+          <Link className="back-link" to={PRIVATE_GIFT_IDEAS_PATH}>
+            {t('privateArea.gifts.detailBack')}
+          </Link>
+        }
         eyebrow={t('privateArea.privacyLabel')}
         title={gift.title}
         description={t(`privateArea.gifts.status.${gift.status}`)}
         action={
           gift.capabilities.canEdit ? (
-            <Link className="button-link secondary-link" to={privateGiftIdeaEditPath(gift.id)}>
+            <Link
+              className="button-link secondary-link"
+              to={privateGiftIdeaEditPath(gift.id)}
+            >
               {t('privateArea.edit')}
             </Link>
           ) : undefined
@@ -357,11 +403,36 @@ export function GiftIdeaDetailPage({ api, accountId, spaceId }: Props) {
       />
       <article className="private-area-detail-card">
         <dl className="private-area-meta-grid">
-          {gift.recipient ? <div><dt>{t('privateArea.gifts.recipientLabel')}</dt><dd>{gift.recipient}</dd></div> : null}
-          {gift.occasion ? <div><dt>{t('privateArea.gifts.occasionLabel')}</dt><dd>{gift.occasion}</dd></div> : null}
-          {targetOn ? <div><dt>{t('privateArea.gifts.targetOnLabel')}</dt><dd>{targetOn}</dd></div> : null}
-          {gift.priceText ? <div><dt>{t('privateArea.gifts.priceLabel')}</dt><dd>{gift.priceText}</dd></div> : null}
-          {gift.url ? <div><dt>{t('privateArea.gifts.urlLabel')}</dt><dd className="private-area-url">{gift.url}</dd></div> : null}
+          {gift.recipient ? (
+            <div>
+              <dt>{t('privateArea.gifts.recipientLabel')}</dt>
+              <dd>{gift.recipient}</dd>
+            </div>
+          ) : null}
+          {gift.occasion ? (
+            <div>
+              <dt>{t('privateArea.gifts.occasionLabel')}</dt>
+              <dd>{gift.occasion}</dd>
+            </div>
+          ) : null}
+          {targetOn ? (
+            <div>
+              <dt>{t('privateArea.gifts.targetOnLabel')}</dt>
+              <dd>{targetOn}</dd>
+            </div>
+          ) : null}
+          {gift.priceText ? (
+            <div>
+              <dt>{t('privateArea.gifts.priceLabel')}</dt>
+              <dd>{gift.priceText}</dd>
+            </div>
+          ) : null}
+          {gift.url ? (
+            <div>
+              <dt>{t('privateArea.gifts.urlLabel')}</dt>
+              <dd className="private-area-url">{gift.url}</dd>
+            </div>
+          ) : null}
         </dl>
         <p className="private-area-detail-body">
           {gift.description || t('privateArea.gifts.noDetails')}
@@ -393,7 +464,9 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
           ifMatch: String(gift.version),
           giftIdeaUpdate: {
             ...values,
-            status: String(data.get('status') || gift.status) as GiftIdeaDetail['status'],
+            status: String(
+              data.get('status') || gift.status,
+            ) as GiftIdeaDetail['status'],
           },
         }),
       );
@@ -410,24 +483,41 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
     },
   });
 
-  if (query.isLoading) return <UiState kind="loading" title={t('privateArea.gifts.loading')} />;
-  if (query.error) return <ProblemState error={query.error} onRetry={() => void query.refetch()} />;
+  if (query.isLoading)
+    return <UiState kind="loading" title={t('privateArea.gifts.loading')} />;
+  if (query.error)
+    return (
+      <ProblemState error={query.error} onRetry={() => void query.refetch()} />
+    );
   const gift = query.data;
   if (!gift) return null;
   if (!gift.capabilities.canEdit) {
-    return <UiState kind="permission" title={t('states.permission.title')} body={t('states.permission.body')} />;
+    return (
+      <UiState
+        kind="permission"
+        title={t('states.permission.title')}
+        body={t('states.permission.body')}
+      />
+    );
   }
   const editableGift: GiftIdeaDetail = gift;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    mutation.mutate({ gift: editableGift, data: new FormData(event.currentTarget) });
+    mutation.mutate({
+      gift: editableGift,
+      data: new FormData(event.currentTarget),
+    });
   }
 
   return (
     <>
       <PageHeader
-        before={<Link className="back-link" to={privateGiftIdeaPath(gift.id)}>{t('privateArea.gifts.detailBack')}</Link>}
+        before={
+          <Link className="back-link" to={privateGiftIdeaPath(gift.id)}>
+            {t('privateArea.gifts.detailBack')}
+          </Link>
+        }
         eyebrow={t('privateArea.eyebrow')}
         title={t('privateArea.gifts.editTitle')}
         description={t('privateArea.gifts.intro')}
@@ -436,9 +526,16 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
         <form className="form-grid" onSubmit={submit}>
           <GiftIdeaFields giftIdea={gift} includeStatus />
           <div className="form-actions">
-            <Link className="button-link secondary-link" to={privateGiftIdeaPath(gift.id)}>{t('common.cancel')}</Link>
+            <Link
+              className="button-link secondary-link"
+              to={privateGiftIdeaPath(gift.id)}
+            >
+              {t('common.cancel')}
+            </Link>
             <button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? t('privateArea.saving') : t('privateArea.save')}
+              {mutation.isPending
+                ? t('privateArea.saving')
+                : t('privateArea.save')}
             </button>
           </div>
         </form>
