@@ -69,7 +69,7 @@ transport contract while #345 is unmerged.
 
 ## Slice contracts
 
-### S0A — Design foundation and product entry (#351)
+### S0A — Design foundation and product entry (#351) — delivered
 
 - a real semantic token layer derived from `design/tokens.json`, replacing the
   literal colour constants, and the Material 3 scheme built from it;
@@ -96,13 +96,13 @@ transport contract while #345 is unmerged.
 - Deep-Link-safe destination identity prepared, without activating S6 links;
 - no dead or future-contract navigation.
 
-**Open question this slice must resolve, not defer:** the canonical route model
-in `docs/INFORMATION-ARCHITECTURE.md` section 5 (`today`, `story`, `plan`,
+**Blocked by #360.** The canonical route model in
+`docs/INFORMATION-ARCHITECTURE.md` section 5 (`today`, `story`, `plan`,
 `discover`, `more`) does not match the destinations the Web client actually
 ships (`story`, `planning`, `dashboard`, `search`, `activity`, `notifications`,
-`people`, `profile`). Android must not silently pick one side. S0B has to route
-this through an explicit decision that either updates the binding IA document or
-realigns both clients; otherwise the M5 parity gate inherits a contradiction.
+`people`, `profile`). That is a cross-client product decision rather than an
+Android task, so it is owned by #360. S0B cannot build a destination registry
+before it lands without baking the contradiction into Android.
 
 ### S1 — Identity and relationship (#353)
 
@@ -172,6 +172,11 @@ discovered late:
   request models from the compile copy because `Map<String, Any>` has no
   concrete kotlinx.serialization serializer. #138 owns the generator fix; any
   slice that needs Passkey registration or authentication is blocked on it.
+- **Locale resolution.** The supported locale set is implied by the default
+  resource folder rather than declared, so library-provided strings can mix
+  languages on a non-German device. Owned by #362.
+- **Typography delivery.** The specified Inter and Fraunces faces are declared
+  by both clients and delivered by neither. Owned by #361.
 - **Dependency verification.** `android/gradle/verification-metadata.xml` is
   enforced in strict mode. Every added dependency requires verified checksums in
   the same change, which is a further reason to prefer platform capabilities.
