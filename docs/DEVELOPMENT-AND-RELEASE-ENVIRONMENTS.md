@@ -208,6 +208,8 @@ candidate commit:
 12. media read/write behavior is checked in Development when the release changes
     media;
 13. rollback/forward-fix implications of every new migration are known.
+14. the repository recovery gate is green and Production has a fresh coordinated
+    recovery point according to `SELF-HOSTED-RECOVERY.md` before migration.
 
 A failing Development deployment blocks ordinary Production promotion.
 
@@ -269,6 +271,10 @@ a verified pre-change backup plus a compatible application revision.
 High-risk schema changes require a confirmed Production backup/restore point before
 promotion.
 
+The complete PostgreSQL, LocalMediaStore, configuration/secret, and S3 consistency
+contract is defined in `SELF-HOSTED-RECOVERY.md`. A database-only dump is not a
+complete recovery point when the instance stores media.
+
 ## 10. Release and Production promotion
 
 After CI and Development acceptance, resolve and record the immutable candidate:
@@ -319,7 +325,8 @@ Before every Production promotion record:
 
 - current Production commit SHA;
 - candidate commit SHA;
-- latest verified database backup/restore point;
+- latest verified coordinated database/media backup plus separately protected
+  configuration and secrets;
 - migrations introduced between the two commits;
 - whether application rollback is schema-compatible.
 
@@ -362,7 +369,8 @@ guard.
 
 Operators own environment facts CI cannot prove from the repository: actual secret
 separation, persistent Development health, external reverse proxy/TLS behavior,
-backup availability, manual release acceptance, and the final Production promotion.
+offsite archive/key availability, real restore drills and timing, provider-specific
+S3 consistency, manual release acceptance, and the final Production promotion.
 
 ## 14. Completion evidence for #375
 
