@@ -23,6 +23,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
+from sidebyside.administration import service as administration
 from sidebyside.auth import bootstrap, passwords, rate_limit, sessions
 from sidebyside.auth.sessions import IssuedTokens
 from sidebyside.core.errors import ErrorCode, UnauthenticatedError, ValidationError
@@ -62,15 +63,16 @@ def register(
     The first account requires the one-time bootstrap proof and receives its
     own space. Every later account joins through an invitation.
     """
-    # Validate the password before creating the account. Otherwise a database
-    # row could be created only for registration to fail afterward.
     passwords.validate(password)
 
     bootstrap_state = None
     if invitation_token:
+        administration.ensure_new_account_registration_allowed(session)
         rate_limit.check(session, ACTION_ACCEPT, invitation_token, rate_limit.INVITATION_ACCEPT)
         rate_limit.record_attempt(session, ACTION_ACCEPT, invitation_token)
     else:
+        # Bootstrap is the documented lockout-recovery path for a fresh
+        # installation and is intentionally not ordinary self-registration.
         bootstrap_state = bootstrap.claim(
             session,
             presented_token=bootstrap_token,
@@ -115,17 +117,12 @@ def sign_in(
         "Email address or password is incorrect.", AuthErrorCode.INVALID_CREDENTIALS
     )
 
-    # Check before the expensive password operation so it cannot be abused as
-    # a compute-amplification path.
     rate_limit.check(session, ACTION_SIGN_IN, address, rate_limit.SIGN_IN)
     rate_limit.record_attempt(session, ACTION_SIGN_IN, address)
 
     account = accounts.find_by_email(session, address)
     identity = accounts.local_identity(session, account) if account else None
 
-    # Perform one hash verification even without an account. Otherwise unknown
-    # addresses would be measurably faster than wrong passwords and leak which
-    # addresses are registered.
     password_hash = (
         identity.secret_hash
         if identity is not None and identity.secret_hash

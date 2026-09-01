@@ -97,6 +97,12 @@ class RateLimitedError(DomainError):
     title = "Too many requests"
 
 
+class ServiceUnavailableError(DomainError):
+    status = HTTPStatus.SERVICE_UNAVAILABLE
+    type = "service_unavailable"
+    title = "Service unavailable"
+
+
 class ErrorCode:
     """Stable error codes.
 
@@ -113,6 +119,8 @@ class ErrorCode:
     INVALID_CURSOR = "INVALID_CURSOR"
     SEARCH_QUERY_INVALID = "SEARCH_QUERY_INVALID"
     IF_MATCH_MALFORMED = "IF_MATCH_MALFORMED"
+    REGISTRATION_DISABLED = "REGISTRATION_DISABLED"
+    MAINTENANCE_MODE = "MAINTENANCE_MODE"
     ATTACHMENT_TYPE_NOT_ALLOWED = "ATTACHMENT_TYPE_NOT_ALLOWED"
     ATTACHMENT_TOO_LARGE = "ATTACHMENT_TOO_LARGE"
     ATTACHMENT_VALIDATION_FAILED = "ATTACHMENT_VALIDATION_FAILED"

@@ -74,6 +74,7 @@ def engine() -> Iterator[Engine]:
     # here does not exist during create_all. A later import by the app would
     # register the model, but only after the tables have been created, making
     # tests pass or fail accidentally depending on prior imports.
+    from sidebyside.administration import models as _administration  # noqa: F401
     from sidebyside.attachments import binding as _binding  # noqa: F401
     from sidebyside.attachments import models as _attachments  # noqa: F401
     from sidebyside.chapters import models as _chapters  # noqa: F401

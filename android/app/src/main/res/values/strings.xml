@@ -67,6 +67,9 @@
     <string name="ref_flow_subtitle">M2 · technischer Android-Referenzflow</string>
     <string name="ref_flow_intro">Eine Erinnerung in eurer gemeinsamen Story.</string>
     <string name="ref_not_configured">Der M2-Referenzflow ist operatorseitig noch nicht konfiguriert.</string>
+    <string name="ref_maintenance_mode">Wartungsmodus aktiv. Bestehende Konten können sich weiterhin anmelden; neue Konten werden derzeit nicht erstellt.</string>
+    <string name="ref_registration_disabled">Neue Konten sind auf diesem Server deaktiviert. Bestehende Konten können sich weiterhin anmelden.</string>
+    <string name="ref_instance_status_unreachable">Der Serverstatus konnte nicht geprüft werden. Die Anmeldung kann weiterhin versucht werden; eine neue Registrierung wird nicht angeboten.</string>
     <string name="ref_login_heading">Anmelden</string>
     <string name="ref_email">E-Mail</string>
     <string name="ref_password">Passwort</string>

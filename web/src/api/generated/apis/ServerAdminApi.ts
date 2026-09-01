@@ -19,15 +19,75 @@ import {
     ProblemDetailsToJSON,
 } from '../models/ProblemDetails';
 import {
+    type ServerAdminActivityItem,
+    ServerAdminActivityItemFromJSON,
+    ServerAdminActivityItemToJSON,
+} from '../models/ServerAdminActivityItem';
+import {
     type ServerAdminOverview,
     ServerAdminOverviewFromJSON,
     ServerAdminOverviewToJSON,
 } from '../models/ServerAdminOverview';
+import {
+    type ServerAdminSettingUpdate,
+    ServerAdminSettingUpdateFromJSON,
+    ServerAdminSettingUpdateToJSON,
+} from '../models/ServerAdminSettingUpdate';
+import {
+    type ServerAdminSettings,
+    ServerAdminSettingsFromJSON,
+    ServerAdminSettingsToJSON,
+} from '../models/ServerAdminSettings';
+
+export interface UpdateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequest {
+    serverAdminSettingUpdate: ServerAdminSettingUpdate;
+}
+
+export interface UpdateRegistrationSettingApiV1ServerAdminSettingsRegistrationPutRequest {
+    serverAdminSettingUpdate: ServerAdminSettingUpdate;
+}
 
 /**
  * 
  */
 export class ServerAdminApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for getServerAdminActivityApiV1ServerAdminActivityGet without sending the request
+     */
+    async getServerAdminActivityApiV1ServerAdminActivityGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/activity`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get Server Admin Activity
+     */
+    async getServerAdminActivityApiV1ServerAdminActivityGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ServerAdminActivityItem>>> {
+        const requestOptions = await this.getServerAdminActivityApiV1ServerAdminActivityGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ServerAdminActivityItemFromJSON));
+    }
+
+    /**
+     * Get Server Admin Activity
+     */
+    async getServerAdminActivityApiV1ServerAdminActivityGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ServerAdminActivityItem>> {
+        const response = await this.getServerAdminActivityApiV1ServerAdminActivityGetRaw(initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for getServerAdminOverviewApiV1ServerAdminOverviewGet without sending the request
@@ -65,6 +125,137 @@ export class ServerAdminApi extends runtime.BaseAPI {
      */
     async getServerAdminOverviewApiV1ServerAdminOverviewGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminOverview> {
         const response = await this.getServerAdminOverviewApiV1ServerAdminOverviewGetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getServerAdminSettingsApiV1ServerAdminSettingsGet without sending the request
+     */
+    async getServerAdminSettingsApiV1ServerAdminSettingsGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/settings`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get Server Admin Settings
+     */
+    async getServerAdminSettingsApiV1ServerAdminSettingsGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSettings>> {
+        const requestOptions = await this.getServerAdminSettingsApiV1ServerAdminSettingsGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSettingsFromJSON(jsonValue));
+    }
+
+    /**
+     * Get Server Admin Settings
+     */
+    async getServerAdminSettingsApiV1ServerAdminSettingsGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSettings> {
+        const response = await this.getServerAdminSettingsApiV1ServerAdminSettingsGetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut without sending the request
+     */
+    async updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequestOpts(requestParameters: UpdateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['serverAdminSettingUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'serverAdminSettingUpdate',
+                'Required parameter "serverAdminSettingUpdate" was null or undefined when calling updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/server-admin/settings/maintenance`;
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ServerAdminSettingUpdateToJSON(requestParameters['serverAdminSettingUpdate']),
+        };
+    }
+
+    /**
+     * Update Maintenance Setting
+     */
+    async updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRaw(requestParameters: UpdateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSettings>> {
+        const requestOptions = await this.updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSettingsFromJSON(jsonValue));
+    }
+
+    /**
+     * Update Maintenance Setting
+     */
+    async updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut(requestParameters: UpdateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSettings> {
+        const response = await this.updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPut without sending the request
+     */
+    async updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPutRequestOpts(requestParameters: UpdateRegistrationSettingApiV1ServerAdminSettingsRegistrationPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['serverAdminSettingUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'serverAdminSettingUpdate',
+                'Required parameter "serverAdminSettingUpdate" was null or undefined when calling updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/server-admin/settings/registration`;
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ServerAdminSettingUpdateToJSON(requestParameters['serverAdminSettingUpdate']),
+        };
+    }
+
+    /**
+     * Update Registration Setting
+     */
+    async updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPutRaw(requestParameters: UpdateRegistrationSettingApiV1ServerAdminSettingsRegistrationPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSettings>> {
+        const requestOptions = await this.updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSettingsFromJSON(jsonValue));
+    }
+
+    /**
+     * Update Registration Setting
+     */
+    async updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPut(requestParameters: UpdateRegistrationSettingApiV1ServerAdminSettingsRegistrationPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSettings> {
+        const response = await this.updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPutRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

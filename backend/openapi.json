@@ -2184,6 +2184,40 @@
         "title": "ImportantDateView",
         "type": "object"
       },
+      "InstanceAccessStatus": {
+        "properties": {
+          "maintenanceMode": {
+            "title": "Maintenancemode",
+            "type": "boolean"
+          },
+          "registrationAvailable": {
+            "title": "Registrationavailable",
+            "type": "boolean"
+          },
+          "registrationUnavailableReason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "maintenance",
+                  "administrator"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registrationunavailablereason"
+          }
+        },
+        "required": [
+          "maintenanceMode",
+          "registrationAvailable",
+          "registrationUnavailableReason"
+        ],
+        "title": "InstanceAccessStatus",
+        "type": "object"
+      },
       "InvitationView": {
         "properties": {
           "createdAt": {
@@ -5264,6 +5298,54 @@
         "title": "SearchScope",
         "type": "string"
       },
+      "ServerAdminActivityItem": {
+        "properties": {
+          "actorId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "newValue": {
+            "title": "Newvalue",
+            "type": "boolean"
+          },
+          "previousValue": {
+            "title": "Previousvalue",
+            "type": "boolean"
+          },
+          "setting": {
+            "title": "Setting",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actorId",
+          "setting",
+          "previousValue",
+          "newValue",
+          "createdAt"
+        ],
+        "title": "ServerAdminActivityItem",
+        "type": "object"
+      },
       "ServerAdminFailedJob": {
         "description": "Safe queue metadata without payload or raw exception text.",
         "properties": {
@@ -5451,6 +5533,47 @@
           "recentFailedJobs"
         ],
         "title": "ServerAdminOverview",
+        "type": "object"
+      },
+      "ServerAdminSettingUpdate": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "ServerAdminSettingUpdate",
+        "type": "object"
+      },
+      "ServerAdminSettings": {
+        "properties": {
+          "effectiveRegistrationEnabled": {
+            "title": "Effectiveregistrationenabled",
+            "type": "boolean"
+          },
+          "maintenanceMode": {
+            "title": "Maintenancemode",
+            "type": "boolean"
+          },
+          "registrationEnabled": {
+            "title": "Registrationenabled",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "registrationEnabled",
+          "maintenanceMode",
+          "effectiveRegistrationEnabled",
+          "version"
+        ],
+        "title": "ServerAdminSettings",
         "type": "object"
       },
       "SessionView": {
@@ -7482,6 +7605,28 @@
         ]
       }
     },
+    "/api/v1/instance/status": {
+      "get": {
+        "description": "Return the minimum public state required by login/onboarding clients.",
+        "operationId": "instance_status_api_v1_instance_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceAccessStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Instance Status",
+        "tags": [
+          "instance"
+        ]
+      }
+    },
     "/api/v1/invitations/accept": {
       "post": {
         "description": "Accept an invitation.\n\nThis endpoint lives outside ``/spaces/...`` because the caller does not\nknow the space yet; the token identifies it.",
@@ -7544,6 +7689,51 @@
         ]
       }
     },
+    "/api/v1/server-admin/activity": {
+      "get": {
+        "operationId": "get_server_admin_activity_api_v1_server_admin_activity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServerAdminActivityItem"
+                  },
+                  "title": "Response Get Server Admin Activity Api V1 Server Admin Activity Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          }
+        },
+        "summary": "Get Server Admin Activity",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
     "/api/v1/server-admin/overview": {
       "get": {
         "description": "Return safe operational state for an authorized ServerAdmin.",
@@ -7581,6 +7771,169 @@
           }
         },
         "summary": "Get Server Admin Overview",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/settings": {
+      "get": {
+        "operationId": "get_server_admin_settings_api_v1_server_admin_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          }
+        },
+        "summary": "Get Server Admin Settings",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/settings/maintenance": {
+      "put": {
+        "operationId": "update_maintenance_setting_api_v1_server_admin_settings_maintenance_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAdminSettingUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Update Maintenance Setting",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/settings/registration": {
+      "put": {
+        "operationId": "update_registration_setting_api_v1_server_admin_settings_registration_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAdminSettingUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Update Registration Setting",
         "tags": [
           "server-admin"
         ]
