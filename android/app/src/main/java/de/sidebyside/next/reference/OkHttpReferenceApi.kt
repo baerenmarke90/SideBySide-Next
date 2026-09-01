@@ -19,6 +19,7 @@ import okhttp3.Response
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
+import sidebyside.api.models.ActivityPage
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
@@ -1423,6 +1424,18 @@ class OkHttpReferenceApi(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/notifications/read-all", accessToken)
             .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
         NotificationsReadAllResult.serializer(),
+    )
+
+    override suspend fun getActivity(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): ActivityPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/activity?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        ActivityPage.serializer(),
     )
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {

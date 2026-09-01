@@ -262,6 +262,7 @@
     <string name="load_more">Weitere laden</string>
     <string name="load_more_busy">Wird geladen …</string>
     <string name="today_title">Heute</string>
+    <string name="today_open_activity">Aktivität ansehen</string>
     <string name="today_together_years">Seit %1$d Jahren und %2$d Monaten zusammen</string>
     <string name="today_together_years_only">Seit %1$d Jahren zusammen</string>
     <string name="today_together_months">Seit %1$d Monaten zusammen</string>
@@ -525,4 +526,18 @@
     <string name="notification_kind_comment_created">Neuer Kommentar</string>
     <string name="notification_kind_thinking_of_you">„Ich denke an dich“</string>
     <string name="notification_kind_reminder_due">Erinnerung fällig</string>
+
+    <string name="activity_title">Aktivität</string>
+    <string name="activity_intro">Was ihr in eurem gemeinsamen Bereich zuletzt festgehalten habt.</string>
+    <string name="activity_empty">Noch keine Aktivität.</string>
+    <string name="activity_kind_memory_created">Erinnerung festgehalten</string>
+    <string name="activity_kind_milestone_created">Meilenstein festgehalten</string>
+    <string name="activity_kind_heart_moment_created">Herzmoment geteilt</string>
+    <string name="activity_kind_wish_created">Wunsch hinzugefügt</string>
+    <string name="activity_kind_plan_created">Plan erstellt</string>
+    <string name="activity_kind_plan_completed">Plan abgeschlossen</string>
+    <string name="activity_kind_place_created">Ort hinzugefügt</string>
+    <string name="activity_kind_chapter_created">Kapitel erstellt</string>
+    <string name="activity_kind_collection_created">Liste erstellt</string>
+    <string name="activity_kind_comment_created">Kommentar geschrieben</string>
 </resources>
