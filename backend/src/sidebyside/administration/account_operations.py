@@ -7,6 +7,7 @@ It is not a content-moderation surface and never loads relationship payloads.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from urllib.parse import quote
 from uuid import UUID
 
@@ -38,7 +39,7 @@ class OperatorRecoveryProof:
     """One-time recovery proof returned exactly once by the issuing request."""
 
     recovery_url: str
-    expires_at: object
+    expires_at: datetime
 
 
 def require_account(
