@@ -433,3 +433,19 @@
   color: var(--color-text-secondary);
   margin: 0;
 }
+
+.anniversary-glow {
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-panel) 0%,
+    var(--color-brand-surface) 100%
+  );
+  box-shadow: 0 0 40px var(--color-shadow-brand);
+  border: 1px solid var(--color-brand-glow);
+  transform: scale(1.02);
+  transition: all 0.5s ease-out;
+}
+.anniversary-glow h3 {
+  color: var(--color-brand);
+  text-shadow: 0 2px 10px var(--color-brand-glow);
+}

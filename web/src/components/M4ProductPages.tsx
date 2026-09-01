@@ -6,6 +6,8 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import confetti from 'canvas-confetti';
+import { useEffect } from 'react';
 import type { ReferenceApis } from '../client/referenceFlow';
 import { StoryList } from './StoryList';
 import { PRIVATE_AREA_PATH } from '../client/routes';
@@ -197,6 +199,10 @@ function MoodCheckIn({ partnerName }: { partnerName?: string }) {
   );
 }
 
+function randomInRange(min: number, max: number) {
+  return Math.random() * (max - min) + min;
+}
+
 export function DashboardProductPage({
   apis,
   storyApis,
@@ -216,6 +222,43 @@ export function DashboardProductPage({
   });
 
   const partnerName = dashboardQuery.data?.space.partner?.displayName;
+
+  const relationshipDuration = dashboardQuery.data?.relationshipDuration;
+  const daysTogether = relationshipDuration?.daysTogether;
+  const isAnniversary =
+    daysTogether &&
+    daysTogether > 0 &&
+    (daysTogether % 365 === 0 || daysTogether === 100 || daysTogether === 1000);
+
+  useEffect(() => {
+    if (isAnniversary) {
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+      const interval: any = setInterval(function () {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti(
+          Object.assign({}, defaults, {
+            particleCount,
+            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+          }),
+        );
+        confetti(
+          Object.assign({}, defaults, {
+            particleCount,
+            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+          }),
+        );
+      }, 250);
+    }
+  }, [isAnniversary]);
 
   const storyQuery = useQuery({
     queryKey: ['dashboard', 'storyPreview', spaceId],
@@ -261,7 +304,9 @@ export function DashboardProductPage({
           <MoodCheckIn partnerName={partnerName} />
 
           <div className="dashboard-grid">
-            <div className="relationship-duration-card">
+            <div
+              className={`relationship-duration-card ${isAnniversary ? 'anniversary-glow' : ''}`}
+            >
               <p className="eyebrow">{t('m5s5.dashboard.durationTitle')}</p>
               <h3>
                 {dashboardQuery.data.relationshipDuration
