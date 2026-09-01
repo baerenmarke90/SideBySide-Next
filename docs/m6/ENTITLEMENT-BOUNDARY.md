@@ -1,27 +1,24 @@
 # M6 Entitlement Boundary
 
 **Workstream:** M6-F  
-**Product/architecture decision owner:** #262  
-**Runtime owner after #262:** #523  
+**Product/architecture decision owner:** #262 (Finalized via ADR 0006 and `FREEMIUM-FEATURE-MATRIX.md` v1.1)  
+**Runtime owner:** #523  
 **Provider adapters:** one focused follow-up per selected launch source
 
-This document freezes the **runtime boundary** M6 may rely on without pretending
-that #262's still-open product decisions are already accepted.
+This document records the **runtime boundary** and technical architecture defined under ADR 0006 following the resolution of issue #262.
 
 ## 1. Current decision state
 
-The repository has already frozen these commercial principles:
+The repository has frozen these commercial and architectural principles:
 
-- SideBySide uses a freemium model;
-- Self-Hosted vs. Cloud/Managed is separate from Free vs. Premium;
-- essential Security, Privacy, Accessibility, Account/data deletion and portability
-  are non-paywallable;
-- the Free product must remain genuinely usable;
-- downgrade must not destroy user data;
-- provider/payment concepts must not be scattered through feature code;
-- the backend remains authoritative where a Premium capability must be enforced.
-
-#262 still owns the unresolved product semantics. M6-S0 must not guess them.
+- SideBySide uses a genuine freemium model;
+- Commercial entitlements are Space/couple-scoped (one partner purchases, both benefit);
+- Self-Hosted vs. Cloud/Managed is an operating-model axis separate from Free vs. Premium;
+- Essential Security, Privacy, Accessibility, Account/data deletion and portability are non-paywallable;
+- Downgrade is strictly non-destructive: existing content is never deleted or hidden;
+- Domain code checks normalized capabilities (e.g. `recap.pdf_yearbook`), not external store SKUs;
+- Self-Hosted is 100% offline-resilient with Ed25519 offline license key validation;
+- The backend remains authoritative for all capability evaluations.
 
 ## 2. Decisions #262 must freeze before #523
 
