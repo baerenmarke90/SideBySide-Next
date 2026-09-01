@@ -1,14 +1,15 @@
 # Information Architecture for SideBySide Next
 
 **Status:** Binding foundation for Web and App  
-**Version:** 1.3  
-**Effective from:** August 31, 2026  
+**Version:** 1.4  
+**Effective from:** September 1, 2026  
 **Route model decided by:** `decisions/0003-primary-navigation-and-route-model.md`  
 **Navigation surface decided by:** `decisions/0004-android-uses-bottom-navigation-at-every-size.md`
 
 This document defines navigation, naming, routes, and product-function
-assignment. Web and Android use the same domain architecture while adapting
-navigation to window size and platform conventions.
+assignment. Web and Android use the same domain architecture and stable route
+IDs while adapting persistent navigation and utility placement to platform
+conventions.
 
 ## 1. Core rules
 
@@ -20,17 +21,18 @@ navigation to window size and platform conventions.
 - Privacy classes do not change primary navigation; where a domain supports
   multiple classes, the status is shown directly on the content.
 - Navigation must not discard unsaved input without warning.
-- Web and App use the same terminology and stable route IDs.
+- Web and App use the same domain terminology and stable route IDs. Explicitly
+  documented platform shell adaptations may place utilities differently.
 
 ## 2. Mandatory primary navigation
 
 | Route ID | de-DE product name | Purpose | Availability |
 |---|---|---|---|
-| `today` | Heute | shared overview and next meaningful actions | now |
+| `today` | Übersicht | shared overview and next meaningful actions | now |
 | `story` | Story | non-public shared timeline of memories | now |
 | `plan` | Planen | wishes and concrete plans; shopping later | now |
 | `discover` | Entdecken | curated inspiration for shared time | **M7** |
-| `more` | Mehr | Space, privacy, profile, and settings | now |
+| `more` | Mehr | secondary product areas and settings | now |
 
 `discover` depends on the Discover domain, which `docs/ROADMAP.md` places in
 M7. Its route ID, label and position in the order are reserved from now, and it
@@ -41,18 +43,22 @@ therefore carries four destinations.
 The label *Entdecken* is reserved for this area and must not be reused for a
 navigation group, a section heading, or any other surface.
 
+The visible label **Übersicht** intentionally replaces the former **Heute**
+wording while retaining the stable `today` route ID and `/today` path. On Web,
+Übersicht is the first primary destination and the ordinary signed-in landing
+surface.
+
 ### Platform representation
 
-The surface is a platform adaptation; the destinations, their order and their
-route IDs are not.
+The surface is a platform adaptation; the primary destinations, their order and
+their route IDs are not.
 
 - **App:** Bottom Navigation with icon and text label, at every window size.
-  See `decisions/0004-android-uses-bottom-navigation-at-every-size.md`: the
-  product has at most five destinations, and on a foldable a size-dependent
-  surface would move where the user reaches every time the device opens.
+  See `decisions/0004-android-uses-bottom-navigation-at-every-size.md`.
 - **Web, compact windows:** Bottom Navigation with icon and text label.
-- **Web, from the medium window class:** fixed sidebar with text labels;
-  secondary targets may appear indented.
+- **Web, from the medium window class:** fixed sidebar with text labels.
+- **Web persistent header:** global utilities and the current-user account
+  affordance live top-right rather than consuming primary navigation slots.
 - Order remains identical on all platforms.
 - Current area is recognizable through color, icon, and text state.
 
@@ -63,7 +69,7 @@ see section 6. Only the navigation surface is platform-specific.
 
 ```text
 SideBySide Next
-├── Heute
+├── Übersicht
 │   ├── next shared moment
 │   ├── personal and shared recommendations
 │   ├── recaps
@@ -96,11 +102,23 @@ SideBySide Next
 └── Mehr
     ├── Space and partner
     ├── privacy and permissions
-    ├── notifications
-    ├── profile and preferences
+    ├── related people and important dates
+    ├── owner-only area
     ├── data export and account deletion
     └── help, legal, and app information
+
+Web persistent utilities / account tree
+├── Search
+├── Notifications
+└── Avatar / Profil
+    ├── Profil
+    ├── Aktivität
+    └── centralized settings
 ```
+
+The utility/account tree is not an additional primary-navigation level. Its
+items keep canonical routes in the route model below and remain directly
+Deep-Linkable.
 
 ## 4. Planen as shared hub
 
@@ -133,7 +151,7 @@ Links. IDs are opaque, stable identifiers.
 
 | Task | Canonical path |
 |---|---|
-| Open Heute | `/today` |
+| Open Übersicht | `/today` |
 | Activity between the partners | `/today/activity` |
 | Open Story | `/story` |
 | Open memory | `/story/memories/:memoryId` |
@@ -157,11 +175,32 @@ Links. IDs are opaque, stable identifiers.
 | Data and account | `/more/data-account` |
 | Search | `/search` |
 
-**Search and Activity are not primary destinations.** Search is a global
-utility reachable from the app bar rather than an area of its own. Activity
-answers what happened between the partners, which is what `Heute` covers, so it
-lives underneath it. Promoting either to primary navigation would break the
-five-destination rule in section 1.
+### Web utility and account placement
+
+Search, Notifications, Profile and Activity are **not** left-primary
+destinations.
+
+- Search is a global utility reachable through an icon-only magnifying-glass
+  control in the top-right Web header and opens `/search`.
+- Notifications is a global utility reachable through an icon-only bell in the
+  top-right Web header and opens `/more/notifications`.
+- The current-user avatar/profile affordance is top-right and uses the profile
+  photo or deterministic initials fallback from the centralized profile
+  identity model. It opens the personal account tree.
+- Profile (`/more/profile`) and Activity (`/today/activity`) are entries inside
+  that account tree. Their route placement remains stable for compatibility and
+  domain ownership; shell placement does not redefine the route.
+- Search, Notifications, Profile and Activity must not be duplicated as
+  standalone left-primary entries.
+
+### Signed-in landing and Deep-Link return
+
+- The authenticated root/default route resolves to `/today`, whose visible
+  product label is **Übersicht**.
+- A normal successful sign-in therefore lands on Übersicht.
+- A valid protected Deep Link requested before authentication takes precedence
+  and is restored after login instead of being replaced by the default landing
+  route.
 
 ### Deep-Link rules
 
@@ -172,6 +211,8 @@ five-destination rule in section 1.
   destination.
 - Deleted content receives an understandable state instead of a generic empty
   page.
+- Visible label changes and shell-placement changes do not rename stable route
+  IDs merely for presentation reasons.
 
 ## 6. Screen and pane behavior
 
@@ -187,6 +228,11 @@ five-destination rule in section 1.
 On small windows, detail replaces the list. On large windows, the list remains
 visible and selected content appears beside it. Back state must survive window
 size changes.
+
+On responsive Web layouts, the header utilities remain reachable through an
+equivalent compact header/account pattern. They are not pushed back into primary
+navigation to solve space constraints. Interactive header targets remain at
+least 44 CSS pixels and preserve keyboard focus order and accessible names.
 
 ## 7. Naming and language
 
@@ -236,6 +282,8 @@ or `SPACE_SHARED`. `public` is not a valid value.
 - Android System Back and Browser Back have the same domain behavior.
 - Close ends a dialog; Back navigates history.
 - Switching primary navigation does not create stacked detail history.
+- Opening a Web utility/account destination keeps its canonical history entry;
+  closing an account popover itself does not create history.
 
 ## 10. Open product decisions
 
@@ -250,13 +298,16 @@ Before M1, decide:
 
 ## 11. Acceptance criteria
 
-- [ ] Every feature belongs to exactly one primary area.
-- [ ] Web and App use identical route IDs and labels.
-- [ ] Bottom Bar, Rail, and Sidebar use the same order.
+- [ ] Every feature belongs to exactly one primary area or a documented
+      utility/account surface.
+- [ ] Web and App use stable shared route IDs and domain terminology.
+- [ ] Bottom Bar and Sidebar use the same primary destination order.
 - [ ] Detail routes support Deep Links.
 - [ ] Authentication, membership, and deletion states are defined.
 - [ ] Back behavior works across single- and multi-window layouts.
 - [ ] Navigation remains operable with keyboard, screen reader, and text scaling.
+- [ ] Web global/personal utilities do not consume duplicate primary-navigation
+      slots.
 
 ## Related documents
 
