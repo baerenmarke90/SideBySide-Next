@@ -1,5 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import de from '../../src/i18n/locales/de';
+import m5s5 from '../../src/i18n/locales/m5s5';
+import navigation from '../../src/i18n/locales/navigation';
 
 const ACCOUNT_ID = '11111111-1111-4111-8111-111111111111';
 const SPACE_ID = '22222222-2222-4222-8222-222222222222';
@@ -128,9 +131,11 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
 }
 
 async function signIn(page: Page): Promise<void> {
-  await page.getByLabel('E-Mail').fill('anna@example.org');
-  await page.getByLabel('Passwort').fill('ein-ausreichend-langes-passwort');
-  await page.getByRole('button', { name: 'Anmelden' }).click();
+  await page.getByLabel(de.login.email).fill('anna@example.org');
+  await page
+    .getByLabel(de.login.password)
+    .fill('a-long-enough-test-password');
+  await page.getByRole('button', { name: de.login.submit }).click();
 }
 
 test('compact sign-in is keyboard operable, wraps German copy, and is axe-clean', async ({
@@ -142,16 +147,18 @@ test('compact sign-in is keyboard operable, wraps German copy, and is axe-clean'
   await expect(page.locator('html')).toHaveAttribute('lang', 'de');
   await expect(
     page.getByRole('heading', {
-      name: 'Euer gemeinsamer Raum für die Dinge, die bleiben.',
+      name: de.login.introHeading,
       level: 1,
     }),
   ).toBeVisible();
 
-  await page.getByLabel('E-Mail').focus();
+  await page.getByLabel(de.login.email).focus();
   await page.keyboard.press('Tab');
-  await expect(page.getByLabel('Passwort')).toBeFocused();
+  await expect(page.getByLabel(de.login.password)).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Anmelden' })).toBeFocused();
+  await expect(
+    page.getByRole('button', { name: de.login.submit }),
+  ).toBeFocused();
 
   await expectNoHorizontalOverflow(page);
   await expectNoWcagViolations(page);
@@ -170,25 +177,27 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
 
   await expect(page).toHaveURL(/\/today$/);
   await expect(
-    page.getByRole('heading', { name: 'Euer gemeinsamer Ort', level: 1 }),
+    page.getByRole('heading', { name: m5s5.dashboard.title, level: 1 }),
   ).toBeVisible();
-  await expect(page.getByText('Noch keine gemeinsamen Einträge vorhanden.')).toBeVisible();
+  await expect(page.getByText(m5s5.dashboard.recentEmpty)).toBeVisible();
 
-  const skipLink = page.getByRole('link', { name: 'Zum Inhalt springen' });
+  const skipLink = page.getByRole('link', {
+    name: de.navigation.skipToContent,
+  });
   await skipLink.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main-content')).toBeFocused();
 
-  await page.getByRole('link', { name: 'Mehr', exact: true }).click();
+  await page.getByRole('link', { name: navigation.more, exact: true }).click();
   await expect(page).toHaveURL(/\/more$/);
   await expect(
-    page.getByRole('heading', { name: 'Alles Weitere', level: 1 }),
+    page.getByRole('heading', { name: de.more.title, level: 1 }),
   ).toBeVisible();
 
   await page.goBack();
-  await expect(page).toHaveURL(/\/today$/);
+  await expect(page).toHaveURL(/\/today(?:#main-content)?$/);
   await expect(
-    page.getByRole('heading', { name: 'Euer gemeinsamer Ort', level: 1 }),
+    page.getByRole('heading', { name: m5s5.dashboard.title, level: 1 }),
   ).toBeVisible();
 
   await expectNoHorizontalOverflow(page);
