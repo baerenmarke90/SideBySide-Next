@@ -106,14 +106,6 @@ export const MORE_NOTIFICATIONS_ROUTE = '/more/notifications';
 /** Existing surface; the Web shell exposes it through the avatar/account tree. */
 export const MORE_PROFILE_ROUTE = '/more/profile';
 export const MORE_PRIVATE_ROUTE = '/more/private';
-/** Compatibility alias for the emotional-redesign dashboard. */
-export const PRIVATE_AREA_PATH = MORE_PRIVATE_ROUTE;
-
-/**
- * Instance-wide operational administration. It is deliberately outside the
- * partner/product navigation tree and never derives authorization from a Space.
- */
-export const SERVER_ADMIN_ROUTE = '/server-admin';
 
 /**
  * Instance-wide operational administration. It is deliberately outside the

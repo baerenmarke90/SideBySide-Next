@@ -8,14 +8,18 @@
  * The destination names follow `docs/INFORMATION-ARCHITECTURE.md` section 2.
  */
 const navigation = {
-  today: 'Unser Tag',
-  plan: 'Unsere Pläne',
+  today: 'Übersicht',
+  plan: 'Planen',
   more: 'Mehr',
-  search: 'Suchen',
-  notifications: 'Neuigkeiten',
+  search: 'Suche',
+  notifications: 'Benachrichtigungen',
   profileMenu: 'Profil und Konto',
   profile: 'Profil',
   activity: 'Aktivität',
+  newContent: 'Neu festhalten',
+  quickCreateShared: 'Gemeinsam',
+  quickCreatePrivate: 'Privat',
+  quickCreatePrivateNote: 'Private Notiz',
   // Reserved for the M7 Discover area; declared so the label is not reused.
   discover: 'Entdecken',
 };

@@ -360,43 +360,6 @@ function AuthenticatedApp({
   const location = useLocation();
   const queryClient = useQueryClient();
   const previousSpaceId = useRef(spaceId);
-
-  // Fliegende Reaktionen (Herzen) auf Button Klicks
-  useEffect(() => {
-    const handleGlobalClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('button') || target.closest('.button-link')) {
-        // Berechne Klick-Position für Confetti (0-1)
-        const x = e.clientX / window.innerWidth;
-        const y = e.clientY / window.innerHeight;
-
-        // Eigenes Herz-Shape für das Confetti
-        
-        const heart = confetti.shapeFromPath({
-          path: 'M167 72c19,-38 37,-56 75,-56 42,0 76,33 76,75 0,76 -76,151 -151,227 -76,-76 -151,-151 -151,-227 0,-42 33,-75 75,-75 38,0 57,18 76,56z',
-          matrix: [
-            0.03333333333333333, 0, 0, 0.03333333333333333, -5.566666666666666,
-            -5.533333333333333,
-          ],
-        });
-
-        confetti({
-          origin: { x, y },
-          particleCount: 15,
-          spread: 70,
-          scalar: 1.2,
-          startVelocity: 15,
-          shapes: [heart],
-          colors: ['#c24462', '#ffa6c9', '#d65c7a', '#ffe8f0'],
-          zIndex: 9999,
-          disableForReducedMotion: true,
-        });
-      }
-    };
-    document.addEventListener('click', handleGlobalClick);
-    return () => document.removeEventListener('click', handleGlobalClick);
-  }, []);
-
   const apis = useMemo(
     () => createReferenceApis(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
@@ -551,14 +514,7 @@ function AuthenticatedApp({
           />
           <Route
             path={appRoutePath('today')}
-            element={
-              <DashboardProductPage
-                apis={m4Apis}
-                storyApis={apis}
-                spaceId={spaceId}
-                loadMemoryImage={loadMemoryImage}
-              />
-            }
+            element={<DashboardProductPage apis={m4Apis} spaceId={spaceId} />}
           />
           <Route
             path={ACTIVITY_ROUTE}

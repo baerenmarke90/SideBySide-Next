@@ -6,11 +6,6 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import confetti from 'canvas-confetti';
-import { useEffect } from 'react';
-import type { ReferenceApis } from '../client/referenceFlow';
-import { StoryList } from './StoryList';
-import { PRIVATE_AREA_PATH } from '../client/routes';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
@@ -127,164 +122,18 @@ function DashboardSection({
   );
 }
 
-function MoodCheckIn({ partnerName }: { partnerName?: string }) {
-  const { t } = useTranslation();
-  const MOODS = [
-    { id: 'happy', emoji: '😄', label: t('m5s5.dashboard.moodHappy') },
-    { id: 'calm', emoji: '😌', label: t('m5s5.dashboard.moodCalm') },
-    { id: 'stressed', emoji: '😫', label: t('m5s5.dashboard.moodStressed') },
-    { id: 'loving', emoji: '🥰', label: t('m5s5.dashboard.moodLoving') },
-    { id: 'tired', emoji: '😴', label: t('m5s5.dashboard.moodTired') },
-  ];
-  const [myMood, setMyMood] = useState('happy');
-  // For demonstration, partner's mood is static.
-
-  const partnerMood = 'calm';
-
-  useEffect(() => {
-    const MOOD_COLORS: Record<string, string> = {
-      happy: 'rgba(255, 193, 107, 0.35)',
-      calm: 'rgba(138, 203, 216, 0.35)',
-      stressed: 'rgba(182, 147, 201, 0.35)',
-      loving: 'rgba(255, 138, 171, 0.35)',
-      tired: 'rgba(164, 169, 184, 0.35)',
-    };
-    const c1 = MOOD_COLORS[myMood] || 'transparent';
-    const c2 = MOOD_COLORS[partnerMood] || 'transparent';
-
-    document.documentElement.style.setProperty(
-      '--mood-aura',
-      `radial-gradient(circle at 20% 0%, ${c1}, transparent 60%), radial-gradient(circle at 80% 100%, ${c2}, transparent 60%)`,
-    );
-  }, [myMood, partnerMood]);
-
-  return (
-    <section className="layout-panel" aria-labelledby="mood-heading">
-      <div className="layout-section-head">
-        <div>
-          <h2 id="mood-heading">Täglicher Mood Check-In</h2>
-        </div>
-      </div>
-      <div className="mood-checkin-container">
-        <div className="mood-card">
-          <div className="mood-card-header">
-            <h3>{t('m5s5.dashboard.moodYour')}</h3>
-            <span className="mood-percentage">
-              {t('m5s5.dashboard.moodToday')}
-            </span>
-          </div>
-          <div className="mood-emoji-row">
-            {MOODS.map((m) => (
-              <button
-                type="button"
-                key={m.id}
-                className={`mood-emoji-btn ${myMood === m.id ? 'active' : ''}`}
-                onClick={() => setMyMood(m.id)}
-              >
-                {m.emoji}
-                <span className="mood-emoji-label">{m.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="mood-card">
-          <div className="mood-card-header">
-            <h3>
-              {partnerName
-                ? t('m5s5.dashboard.moodPartner', { name: partnerName })
-                : t('m5s5.dashboard.moodPartnerFallback')}
-            </h3>
-            <span className="mood-percentage">
-              {t('m5s5.dashboard.moodToday')}
-            </span>
-          </div>
-          <div className="mood-emoji-row">
-            {MOODS.map((m) => (
-              <button
-                type="button"
-                key={m.id}
-                className={`mood-emoji-btn ${partnerMood === m.id ? 'active' : ''}`}
-                disabled
-              >
-                {m.emoji}
-                <span className="mood-emoji-label">{m.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function randomInRange(min: number, max: number) {
-  return Math.random() * (max - min) + min;
-}
-
 export function DashboardProductPage({
   apis,
-  storyApis,
   spaceId,
-  loadMemoryImage,
 }: {
   apis: M4ProductApis;
-  storyApis?: ReferenceApis;
   spaceId: string;
-  loadMemoryImage?: (m: string, a: string) => Promise<string>;
 }) {
   const { t } = useTranslation();
   const dashboardQuery = useQuery({
     queryKey: ['m5-s5', 'dashboard', spaceId],
     queryFn: () => apiCall(() => apis.dashboard.getDashboard({ spaceId })),
     retry: false,
-  });
-
-  const partnerName = dashboardQuery.data?.space.partner?.displayName;
-
-  const relationshipDuration = dashboardQuery.data?.relationshipDuration;
-  const daysTogether = relationshipDuration?.daysTogether;
-  const isAnniversary =
-    daysTogether &&
-    daysTogether > 0 &&
-    (daysTogether % 365 === 0 || daysTogether === 100 || daysTogether === 1000);
-
-  useEffect(() => {
-    if (isAnniversary) {
-      const duration = 3 * 1000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
-
-      const interval: any = setInterval(function () {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        confetti(
-          Object.assign({}, defaults, {
-            particleCount,
-            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-          }),
-        );
-        confetti(
-          Object.assign({}, defaults, {
-            particleCount,
-            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-          }),
-        );
-      }, 250);
-    }
-  }, [isAnniversary]);
-
-  const storyQuery = useQuery({
-    queryKey: ['dashboard', 'storyPreview', spaceId],
-    queryFn: () =>
-      storyApis
-        ? apiCall(() => storyApis.story.getStoryTimeline({ spaceId, limit: 3 }))
-        : Promise.resolve({ items: [], hasMore: false, nextCursor: null }),
-    enabled: !!storyApis,
   });
 
   return (
@@ -319,14 +168,19 @@ export function DashboardProductPage({
 
       {dashboardQuery.data ? (
         <>
-          <MoodCheckIn partnerName={partnerName} />
-
-          <div className="dashboard-grid">
-            <div
-              className={`relationship-duration-card ${isAnniversary ? 'anniversary-glow' : ''}`}
-            >
-              <p className="eyebrow">{t('m5s5.dashboard.durationTitle')}</p>
-              <h3>
+          <section
+            className="m4-summary-card"
+            aria-labelledby="m4-summary-heading"
+          >
+            <div className="m4-summary-copy">
+              <h2 id="m4-summary-heading">
+                {dashboardQuery.data.space.partner
+                  ? t('m5s5.dashboard.partner', {
+                      name: dashboardQuery.data.space.partner.displayName,
+                    })
+                  : t('m5s5.dashboard.durationTitle')}
+              </h2>
+              <p className="m4-muted">
                 {dashboardQuery.data.relationshipDuration
                   ? t('m5s5.dashboard.durationSince', {
                       date: formatDate(
@@ -334,72 +188,42 @@ export function DashboardProductPage({
                       ),
                     })
                   : t('m5s5.dashboard.durationEmpty')}
-              </h3>
-            </div>
-
-            <Link to={PRIVATE_AREA_PATH} className="private-area-card">
-              <p className="eyebrow" style={{ color: 'var(--color-private)' }}>
-                {t('more.private.title')}
               </p>
-              <h3>Gedanken & Geheimnisse</h3>
-              <p>{t('more.private.description')}</p>
-            </Link>
-
-            <div className="date-night-card">
-              <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                {t('m5s5.dashboard.upcomingTitle')}
-              </p>
-              <h3>{t('m5s5.dashboard.dateNightTitle')}</h3>
-              <p className="date-night-date">
-                {t('m5s5.dashboard.dateNightDate')}
-              </p>
-              <p>{t('m5s5.dashboard.dateNightDesc')}</p>
-              <span className="badge">
-                {t('m5s5.dashboard.dateNightBadge')}
-              </span>
             </div>
+            {dashboardQuery.data.relationshipDuration ? (
+              <p className="m4-summary-value">
+                {t('m5s5.dashboard.durationDays', {
+                  count: dashboardQuery.data.relationshipDuration.daysTogether,
+                })}
+              </p>
+            ) : null}
+          </section>
 
-            <div className="photo-memory-card">
-              <div className="photo-memory-placeholder" />
-              <div className="photo-memory-content">
-                <p
-                  className="eyebrow"
-                  style={{ color: 'rgba(255,255,255,0.8)' }}
-                >
-                  {t('m5s5.dashboard.retrospectiveTitle')}
-                </p>
-                <h3>{t('m5s5.dashboard.memoryTitle')}</h3>
-                <p>{t('m5s5.dashboard.memoryDate')}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="layout-split" style={{ marginTop: '2rem' }}>
+          <div className="layout-split">
             <div className="layout-main">
-              <div className="layout-section-head">
-                <h2>{t('m5s5.dashboard.recentTitle')}</h2>
-              </div>
-              {storyQuery.data && storyQuery.data.items.length > 0 ? (
-                <StoryList
-                  items={storyQuery.data.items}
-                  loadMemoryImage={loadMemoryImage ?? (() => Promise.reject())}
-                />
-              ) : (
-                <DashboardSection
-                  title=""
-                  items={dashboardQuery.data.recentShared}
-                  empty={t('m5s5.dashboard.recentEmpty')}
-                />
-              )}
+              <DashboardSection
+                title={t('m5s5.dashboard.recentTitle')}
+                items={dashboardQuery.data.recentShared}
+                empty={t('m5s5.dashboard.recentEmpty')}
+              />
             </div>
             <aside
               className="layout-rail"
               aria-label={t('m5s5.dashboard.railAria')}
             >
               <DashboardSection
-                title={t('m5s5.dashboard.plansRail')}
+                title={t('m5s5.dashboard.upcomingTitle')}
                 items={dashboardQuery.data.upcoming}
                 empty={t('m5s5.dashboard.upcomingEmpty')}
+              />
+              <DashboardSection
+                title={t('m5s5.dashboard.retrospectiveTitle')}
+                items={
+                  dashboardQuery.data.retrospective
+                    ? [dashboardQuery.data.retrospective]
+                    : []
+                }
+                empty={t('m5s5.dashboard.retrospectiveEmpty')}
               />
             </aside>
           </div>

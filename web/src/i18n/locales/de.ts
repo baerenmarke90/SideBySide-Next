@@ -14,11 +14,11 @@ const de = {
   },
   more: {
     eyebrow: 'Mehr',
-    title: 'Weitere Bereiche',
+    title: 'Alles Weitere',
     intro:
-      'Die Menschen in eurem Leben, dein ganz privater Raum und eure Einstellungen.',
+      'Menschen, euer privater Bereich, Benachrichtigungen und euer Profil.',
     people: {
-      title: 'Wichtige Menschen',
+      title: 'Menschen',
       description:
         'Personen, die euch wichtig sind, mit Geburtstagen und Jahrestagen.',
     },
@@ -32,9 +32,8 @@ const de = {
       description: 'Was es seit deinem letzten Besuch Neues für dich gibt.',
     },
     profile: {
-      title: 'Unser Profil',
-      description:
-        'Wer ihr seid, was ihr liebt und wie ihr euren Raum gestaltet.',
+      title: 'Profil',
+      description: 'Eure Beziehungsanzeige, Vorlieben und Darstellung.',
     },
   },
   states: {
@@ -176,8 +175,9 @@ const de = {
     savedTitle: 'Erinnerung gespeichert.',
     savedBody: 'Sie ist jetzt Teil eurer gemeinsamen Story.',
     eyebrow: 'Gemeinsam erinnern',
-    title: 'Unsere Story',
-    intro: 'Eine Reise unserer gemeinsamen Momente.',
+    title: 'Eure Story',
+    intro:
+      'Erinnerungen, Herzmomente und Meilensteine – chronologisch an einem Ort.',
     addMemory: 'Erinnerung',
     timelineKicker: 'Zeitleiste',
     timelineHeading: 'Gemeinsame Geschichte',
