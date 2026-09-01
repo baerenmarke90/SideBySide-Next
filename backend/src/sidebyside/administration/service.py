@@ -119,7 +119,7 @@ def update_setting(
 def record_action(
     session: Session,
     *,
-    actor_id: UUID,
+    actor_id: UUID | None,
     action: AdministrationAction,
     target_account_id: UUID | None = None,
     effect_count: int | None = None,
