@@ -12,6 +12,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     SmallInteger,
     String,
     func,
@@ -28,6 +29,17 @@ class AdministrationSetting(StrEnum):
 
     REGISTRATION_ENABLED = "registration_enabled"
     MAINTENANCE_MODE = "maintenance_mode"
+
+
+class AdministrationAction(StrEnum):
+    """Privacy-safe privileged actions recorded by ServerAdmin workflows."""
+
+    ACCOUNT_SUSPENDED = "account_suspended"
+    ACCOUNT_UNSUSPENDED = "account_unsuspended"
+    ACCOUNT_SESSIONS_REVOKED = "account_sessions_revoked"
+    ACCOUNT_EMAIL_VERIFIED = "account_email_verified"
+    ACCOUNT_RECOVERY_EMAIL_REQUESTED = "account_recovery_email_requested"
+    ACCOUNT_RECOVERY_ISSUED = "account_recovery_issued"
 
 
 class InstanceAdministrationSettings(TimestampMixin, VersionMixin, Base):
@@ -73,4 +85,45 @@ class InstanceAdministrationEvent(IdMixin, Base):
             name="setting_valid",
         ),
         Index("ix_instance_administration_events_created_at", "created_at"),
+    )
+
+
+class InstanceAdministrationActionEvent(IdMixin, Base):
+    """Content-free audit history for privileged Account operations.
+
+    The event deliberately stores only technical identifiers and an optional
+    effect count. Authentication proofs, free-form reasons, user content, IP
+    history, and other private payloads do not belong in this table.
+    """
+
+    __tablename__ = "instance_administration_action_events"
+
+    actor_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="SET NULL"),
+    )
+    target_account_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="SET NULL"),
+    )
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    effect_count: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "action IN ("
+            "'account_suspended', "
+            "'account_unsuspended', "
+            "'account_sessions_revoked', "
+            "'account_email_verified', "
+            "'account_recovery_email_requested', "
+            "'account_recovery_issued'"
+            ")",
+            name="action_valid",
+        ),
+        Index("ix_instance_administration_action_events_created_at", "created_at"),
+        Index("ix_instance_administration_action_events_target", "target_account_id"),
     )
