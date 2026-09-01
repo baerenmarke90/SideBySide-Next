@@ -579,7 +579,7 @@ M4-C promotes these v1 classifications:
 | Per-account mute and core RulePreference parameters | **Free/Core** | Basic control over notifications must not require Premium. |
 | Advanced multi-condition/multi-step rules, templates, sophisticated automation or external-trigger rules | **Future Mixed/Premium candidate** | Additional automation depth may provide Premium differentiation and maintenance/integration cost. |
 
-M4-C does not add entitlement checks. M9/#262 remains the runtime entitlement/billing boundary.
+M4-C does not add entitlement checks. M6/#262 remains the runtime entitlement/billing boundary under ADR 0006.
 
 Technical limits such as schedule validation, offset bounds, retry windows and API page sizes are safety/correctness constraints, not commercial quotas.
 
