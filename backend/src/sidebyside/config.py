@@ -66,6 +66,13 @@ class MailTransport(StrEnum):
     NONE = "none"
 
 
+class LogFormat(StrEnum):
+    """Structured logging serialization format."""
+
+    TEXT = "text"
+    JSON = "json"
+
+
 class OidcConnection(BaseModel):
     """A configured OIDC connection.
 
@@ -227,6 +234,10 @@ class Settings(BaseSettings):
     smtp_password: SecretStr | None = None
     smtp_starttls: bool = True
 
+    # Observability and logging configuration.
+    log_format: LogFormat | None = None
+    log_level: str = "INFO"
+
     @field_validator(
         "bootstrap_token",
         "cursor_signing_key",
@@ -265,6 +276,15 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         """Whether public-runtime hardening is mandatory."""
         return self.environment in {Environment.DEMO, Environment.PRODUCTION}
+
+    @property
+    def effective_log_format(self) -> LogFormat:
+        """Log serialization format, defaulting to JSON in production and TEXT locally."""
+        if self.log_format is not None:
+            return self.log_format
+        if self.is_production:
+            return LogFormat.JSON
+        return LogFormat.TEXT
 
     @property
     def cursor_signing_secret(self) -> bytes:

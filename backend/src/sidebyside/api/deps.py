@@ -23,6 +23,7 @@ from sidebyside.core.errors import ErrorCode, NotFoundError, UnauthenticatedErro
 from sidebyside.core.ids import parse_id
 from sidebyside.db.session import get_session
 from sidebyside.identity.models import Account, DeviceSession
+from sidebyside.observability import bind_actor_context
 from sidebyside.relationship.models import Membership
 from sidebyside.relationship.service import SpaceErrorCode, require_membership
 
@@ -58,7 +59,9 @@ def current_session(request: Request, session: DbSession) -> DeviceSession:
 
 
 def current_account(request: Request, session: DbSession) -> Account:
-    return resolve(session, _bearer_token(request))[1]
+    account = resolve(session, _bearer_token(request))[1]
+    bind_actor_context(account_id=account.id)
+    return account
 
 
 CurrentAccount = Annotated[Account, Depends(current_account)]
@@ -109,6 +112,7 @@ def tenant_context(
         raise NotFoundError("Space not found.", SpaceErrorCode.NOT_FOUND)
 
     membership = require_membership(session, account, parsed_id)
+    bind_actor_context(account_id=account.id, space_id=parsed_id)
     return TenantContext(account=account, space_id=parsed_id, membership=membership)
 
 

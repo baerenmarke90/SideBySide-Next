@@ -17,12 +17,14 @@ import time
 from types import FrameType
 
 from sidebyside.attachments import cleanup as media_cleanup
+from sidebyside.config import get_settings
 from sidebyside.db.session import unit_of_work
 from sidebyside.demo import reset as demo_reset
 from sidebyside.engagement import push as push_delivery
 from sidebyside.engagement import service as engagement_service
 from sidebyside.jobs import maintenance
 from sidebyside.jobs.worker import run_once
+from sidebyside.observability import configure_logging
 from sidebyside.reminders import runtime as reminder_runtime
 from sidebyside.transfer import jobs as transfer_jobs
 
@@ -71,10 +73,7 @@ def _run_engagement_projection() -> int:
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    )
+    configure_logging(get_settings())
 
     signal.signal(signal.SIGTERM, _request_shutdown)
     signal.signal(signal.SIGINT, _request_shutdown)

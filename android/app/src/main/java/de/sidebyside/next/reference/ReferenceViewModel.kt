@@ -237,6 +237,7 @@ class ReferenceViewModel(
     private val config: ReferenceConfig = ReferenceConfig.fromBuildConfig(),
     api: ReferenceContract? = null,
     private val apiFactory: (String) -> ReferenceContract = ::OkHttpReferenceApi,
+    private val spaceStore: SpacePreferenceStore = InMemorySpacePreferenceStore(),
 ) : ViewModel() {
     private val injectedApi: ReferenceContract? = api
 
@@ -353,7 +354,7 @@ class ReferenceViewModel(
             }
                 .onSuccess { (signedIn, memberships) ->
                     if (attemptEpoch != sessionEpoch) return@onSuccess
-                    val space = activeSpaceOf(memberships)
+                    val space = activeSpaceOf(memberships, signedIn.account.id)
                     if (space == null) {
                         // Authenticated, with nothing to open yet — a product
                         // state, not a sign-in failure. The session is kept
@@ -497,8 +498,21 @@ class ReferenceViewModel(
      * Only an active membership counts; an invited or removed one must not
      * silently become the working context.
      */
-    private fun activeSpaceOf(memberships: List<AccountMembershipView>): java.util.UUID? =
-        activeMemberships(memberships).firstOrNull()?.spaceId
+    /**
+     * The Space to resolve to, preferring [accountId]'s remembered choice.
+     *
+     * [accountId] defaults to null for demo entry, where a fresh persona
+     * account has no launch history worth remembering and gets the same
+     * first-active pick it always has.
+     */
+    private fun activeSpaceOf(
+        memberships: List<AccountMembershipView>,
+        accountId: java.util.UUID? = null,
+    ): java.util.UUID? {
+        val active = activeMemberships(memberships)
+        val remembered = accountId?.let(spaceStore::rememberedSpace)
+        return (active.firstOrNull { it.spaceId == remembered } ?: active.firstOrNull())?.spaceId
+    }
 
     /**
      * Switches to another authorized Space.
@@ -512,6 +526,11 @@ class ReferenceViewModel(
         val state = _uiState.value
         if (spaceId == activeSpaceId) return
         if (state.availableSpaces.none { it.spaceId == spaceId }) return
+
+        // Only an explicit choice is remembered — the automatic first-active
+        // pick on sign-in must not become sticky before the account ever
+        // chose anything.
+        state.accountId?.let { spaceStore.rememberSpace(it, spaceId) }
 
         sessionEpoch += 1
         storyImages.reset()
@@ -1548,7 +1567,7 @@ class ReferenceViewModel(
             }
                 .onSuccess { memberships ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    val space = activeSpaceOf(memberships)
+                    val space = activeSpaceOf(memberships, currentSession.account.id)
                     if (space == null) {
                         // The server accepted the token but the membership is
                         // not active yet by this account's own rules; stay in
