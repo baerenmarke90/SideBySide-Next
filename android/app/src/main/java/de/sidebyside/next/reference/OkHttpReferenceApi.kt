@@ -31,7 +31,10 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MagicLinkConsumeRequest
+import sidebyside.api.models.DashboardView
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.ThinkingOfYouAccepted
+import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
@@ -649,6 +652,28 @@ class OkHttpReferenceApi(
             .header("If-Match", ifMatch.toString())
             .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
         PlanReturnToWishResponse.serializer(),
+    )
+
+    override suspend fun getDashboard(
+        spaceId: UUID,
+        accessToken: String,
+    ): DashboardView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/dashboard", accessToken)
+            .get().build(),
+        DashboardView.serializer(),
+    )
+
+    override suspend fun sendThinkingOfYou(
+        spaceId: UUID,
+        accessToken: String,
+        gesture: ThinkingOfYouCreate,
+    ): ThinkingOfYouAccepted = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/thinking-of-you", accessToken)
+            .post(
+                SideBySideJson.encodeToString(ThinkingOfYouCreate.serializer(), gesture)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ThinkingOfYouAccepted.serializer(),
     )
 
     override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage = executeJson(
