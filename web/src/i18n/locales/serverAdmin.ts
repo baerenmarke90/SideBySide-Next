@@ -1,0 +1,78 @@
+const serverAdmin = {
+  title: 'Serververwaltung',
+  eyebrow: 'SideBySide Betrieb',
+  intro:
+    'Betriebszustand und sichere Anwendungsinformationen dieser SideBySide-Installation.',
+  backToApp: 'Zur Übersicht',
+  logout: 'Abmelden',
+  refresh: 'Aktualisieren',
+  access: {
+    loading: 'Berechtigung wird geprüft …',
+    deniedTitle: 'Kein Zugriff auf die Serververwaltung',
+    deniedBody:
+      'Dieser Account besitzt auf dieser Installation keine ServerAdmin-Berechtigung.',
+    errorTitle: 'Berechtigung konnte nicht geprüft werden',
+    errorBody:
+      'Die ServerAdmin-Berechtigung konnte nicht zuverlässig ermittelt werden.',
+    retry: 'Erneut prüfen',
+  },
+  states: {
+    loadingTitle: 'Betriebsdaten werden geladen',
+    loadingBody: 'Die aktuellen Serverinformationen werden sicher abgefragt.',
+    errorTitle: 'Serverinformationen nicht verfügbar',
+    errorBody: 'Die Betriebsübersicht konnte nicht geladen werden.',
+  },
+  health: {
+    title: 'Systemzustand',
+    application: 'API',
+    database: 'Datenbank',
+    worker: 'Hintergrundjobs',
+    media: 'Medien-Backend',
+    ok: 'Verfügbar',
+    unavailable: 'Nicht verfügbar',
+    noHeartbeat: 'Kein Heartbeat-Signal vorhanden',
+    notProbed: 'Keine aktive Zustandsprüfung vorhanden',
+    unknown: 'Unbekannt',
+  },
+  usage: {
+    title: 'Nutzung',
+    accounts: 'Accounts gesamt',
+    spaces: 'Aktive Spaces',
+    accounts24h: 'Neue Accounts · 24 Stunden',
+    accounts7d: 'Neue Accounts · 7 Tage',
+    mediaObjects: 'Medienobjekte',
+    mediaBytes: 'Gespeicherte Medien',
+  },
+  jobs: {
+    title: 'Hintergrundjobs',
+    pending: 'Ausstehend',
+    running: 'Laufend',
+    failed: 'Fehlgeschlagen',
+    lastSuccess: 'Letzter erfolgreicher Job',
+    noSuccess: 'Noch kein erfolgreicher Job erfasst',
+    failuresTitle: 'Letzte fehlgeschlagene Jobs',
+    noFailures: 'Keine fehlgeschlagenen Jobs vorhanden.',
+    kind: 'Typ',
+    attempts: 'Versuche',
+    finishedAt: 'Beendet',
+  },
+  configuration: {
+    title: 'Laufzeitkonfiguration',
+    deployment: 'Betriebsmodell',
+    environment: 'Umgebung',
+    revision: 'Build-Revision',
+    startedAt: 'API-Prozess gestartet',
+    publicBaseUrl: 'Öffentliche Basis-URL',
+    mediaStore: 'Medien-Backend',
+    mailTransport: 'E-Mail-Transport',
+    oidcConnections: 'OIDC-Verbindungen',
+    databaseProvider: 'Datenbank',
+    demoMode: 'Demo-Modus',
+    enabled: 'Aktiv',
+    disabled: 'Inaktiv',
+  },
+  privacyNote:
+    'Die Serververwaltung zeigt ausschließlich Betriebs- und Aggregatdaten. Private Inhalte, Medieninhalte, Job-Payloads und Zugangsdaten werden nicht angezeigt.',
+};
+
+export default serverAdmin;

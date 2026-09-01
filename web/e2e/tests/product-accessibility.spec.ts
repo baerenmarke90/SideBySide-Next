@@ -70,6 +70,11 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
+    if (method === 'GET' && pathname === '/api/v1/auth/capabilities') {
+      await fulfillJson({ serverAdmin: false });
+      return;
+    }
+
     if (method === 'GET' && pathname === '/api/v1/auth/memberships') {
       await fulfillJson([
         {

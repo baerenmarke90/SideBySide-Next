@@ -34,6 +34,7 @@ from sidebyside.api.v1 import (
     reminders,
     rules,
     search,
+    server_admin,
     session_context,
     spaces,
     story,
@@ -45,6 +46,7 @@ router = APIRouter()
 router.include_router(auth.router)
 router.include_router(session_context.router)
 router.include_router(health.router)
+router.include_router(server_admin.router)
 router.include_router(demo.router)
 router.include_router(invitations.router)
 router.include_router(attachments.router)
