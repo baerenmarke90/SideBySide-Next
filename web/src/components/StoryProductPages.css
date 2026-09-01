@@ -65,10 +65,11 @@
 .visibility-panel {
   display: grid;
   gap: var(--space-3);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid transparent;
   border-radius: var(--radius-large);
   padding: var(--space-4);
-  background: var(--color-surface-subtle);
+  background: var(--color-surface-overlay);
+  box-shadow: inset 0 2px 4px var(--color-shadow-soft);
 }
 
 .visibility-panel h2,
@@ -78,4 +79,31 @@
 
 .visibility-panel button {
   justify-self: start;
+}
+
+.coffee-table-layout {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-10) var(--space-8);
+  background: var(--color-surface);
+  border-radius: var(--radius-sheet);
+  box-shadow: var(--shadow-card);
+}
+
+.drop-cap::first-letter {
+  float: left;
+  font-family: var(--font-display);
+  font-size: 5rem;
+  line-height: 0.8;
+  padding-top: 0.1rem;
+  padding-right: 0.5rem;
+  color: var(--color-brand-strong);
+}
+
+.memory-detail-body {
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: var(--color-text);
+  max-width: 60ch;
+  margin: 0 auto var(--space-8);
 }

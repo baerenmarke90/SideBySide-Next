@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import type { AccountView } from '../api/generated/models/AccountView';
 import {
   PRODUCT_CACHE_FALLBACK_EVENT,
@@ -10,7 +10,6 @@ import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import {
   APP_ROUTES,
   DEFAULT_APP_ROUTE,
-  MEMORY_CREATE_ROUTE,
   MORE_NOTIFICATIONS_ROUTE,
   SEARCH_ROUTE,
   type AppRouteDefinition,
@@ -19,6 +18,7 @@ import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
+import { QuickCreateMenu } from './QuickCreateMenu';
 import { ThemeControl } from './ThemeControl';
 
 function NavigationLink({ route }: { route: AppRouteDefinition }) {
@@ -186,12 +186,7 @@ export function AppShell({
         <aside className="shell-sidebar">
           <div className="shell-sidebar-inner">
             <div className="shell-primary-action">
-              <Link className="button-link" to={MEMORY_CREATE_ROUTE}>
-                <span className="shell-nav-icon">
-                  <DestinationIcon icon="add" />
-                </span>
-                <span>{t('navigation.newMemory')}</span>
-              </Link>
+              <QuickCreateMenu />
             </div>
             <nav className="shell-nav" aria-label={t('navigation.primary')}>
               <PrimaryNavigationLinks />

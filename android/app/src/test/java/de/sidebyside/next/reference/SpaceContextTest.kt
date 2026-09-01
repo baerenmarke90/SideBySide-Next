@@ -91,9 +91,11 @@ class SpaceContextTest {
 
         // Authenticated, but with nothing to open: a product state, not a
         // sign-in failure, and never a silent fallback into a foreign Space.
+        // The session is kept rather than discarded — #391 needs it to accept
+        // an invitation — which is why this is `awaitingSpace`, not an error.
         assertFalse(model.uiState.value.loggedIn)
+        assertTrue(model.uiState.value.awaitingSpace)
         assertNull(model.uiState.value.activeSpaceId)
-        assertTrue(model.uiState.value.error != null)
     }
 
     @Test

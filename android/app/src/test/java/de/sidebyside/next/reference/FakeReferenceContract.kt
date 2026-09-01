@@ -18,7 +18,16 @@ import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.DashboardView
+import sidebyside.api.models.AcceptRequest
+import sidebyside.api.models.IssuedInvitationView
+import sidebyside.api.models.InvitationView
+import sidebyside.api.models.MembershipView
+import sidebyside.api.models.ImportantDateFields
+import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.RelatedPersonDeletePolicy
+import sidebyside.api.models.RelatedPersonFields
+import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -314,6 +323,75 @@ abstract class FakeReferenceContract : ReferenceContract {
         accessToken: String,
         gesture: ThinkingOfYouCreate,
     ): ThinkingOfYouAccepted = notExercised("sendThinkingOfYou")
+
+    override suspend fun acceptInvitation(accessToken: String, token: String): MembershipView =
+        notExercised("acceptInvitation")
+
+    override suspend fun listInvitations(spaceId: UUID, accessToken: String): List<InvitationView> =
+        notExercised("listInvitations")
+
+    override suspend fun createInvitation(spaceId: UUID, accessToken: String): IssuedInvitationView =
+        notExercised("createInvitation")
+
+    override suspend fun revokeInvitation(
+        spaceId: UUID,
+        accessToken: String,
+        invitationId: UUID,
+    ): Unit = notExercised("revokeInvitation")
+
+    override suspend fun listRelatedPersons(
+        spaceId: UUID,
+        accessToken: String,
+    ): List<RelatedPersonView> = notExercised("listRelatedPersons")
+
+    override suspend fun createRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        fields: RelatedPersonFields,
+    ): RelatedPersonView = notExercised("createRelatedPerson")
+
+    override suspend fun updateRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        personId: UUID,
+        ifMatch: Int,
+        fields: RelatedPersonFields,
+    ): RelatedPersonView = notExercised("updateRelatedPerson")
+
+    override suspend fun deleteRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        personId: UUID,
+        deletePolicy: RelatedPersonDeletePolicy,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteRelatedPerson")
+
+    override suspend fun listImportantDates(
+        spaceId: UUID,
+        accessToken: String,
+        relatedPersonId: UUID?,
+    ): List<ImportantDateView> = notExercised("listImportantDates")
+
+    override suspend fun createImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ImportantDateFields,
+    ): ImportantDateView = notExercised("createImportantDate")
+
+    override suspend fun updateImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        dateId: UUID,
+        ifMatch: Int,
+        fields: ImportantDateFields,
+    ): ImportantDateView = notExercised("updateImportantDate")
+
+    override suspend fun deleteImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        dateId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteImportantDate")
 
     override suspend fun getTimeline(
         spaceId: UUID,

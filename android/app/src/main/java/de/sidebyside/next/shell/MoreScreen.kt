@@ -49,9 +49,19 @@ fun MoreScreen(
      * build, which is how this one was lost once already.
      */
     onOpenHeartMoments: () -> Unit,
+    onOpenInvitations: () -> Unit,
+    /**
+     * Opens the people the couple wants to remember dates for.
+     *
+     * Deliberately without a default, for the same reason as
+     * [onOpenHeartMoments]: an optional navigation entry a caller forgets to
+     * pass disappears from the product without breaking the build.
+     */
+    onOpenRelatedPersons: () -> Unit,
     modifier: Modifier = Modifier,
     signOutEnabled: Boolean = true,
     spaces: List<AccountMembershipView> = emptyList(),
+    spacePartnerNames: Map<UUID, String> = emptyMap(),
     activeSpaceId: UUID? = null,
     onSelectSpace: (UUID) -> Unit = {},
     profileContent: @Composable () -> Unit = {},
@@ -117,12 +127,77 @@ fun MoreScreen(
             }
         }
 
+        run {
+            val open = onOpenInvitations
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.invitations_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.invitations_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.invitation_create))
+                    }
+                }
+            }
+        }
+
+        run {
+            val open = onOpenRelatedPersons
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.related_persons_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.related_persons_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.related_persons_open))
+                    }
+                }
+            }
+        }
+
         if (spaces.size > 1) {
             SpaceChoice(
                 spaces = spaces,
                 activeSpaceId = activeSpaceId,
                 enabled = signOutEnabled,
                 onSelectSpace = onSelectSpace,
+                partnerNames = spacePartnerNames,
             )
         }
 
@@ -176,6 +251,8 @@ private fun SpaceChoice(
     activeSpaceId: UUID?,
     enabled: Boolean,
     onSelectSpace: (UUID) -> Unit,
+    /** Falls back to a position where a name has not resolved yet. */
+    partnerNames: Map<UUID, String> = emptyMap(),
 ) {
     Surface(
         shape = RoundedCornerShape(SideBySideTheme.radii.card),
@@ -217,7 +294,8 @@ private fun SpaceChoice(
                         // a second stop in the screen reader's order.
                         RadioButton(selected = selected, onClick = null)
                         Text(
-                            text = stringResource(R.string.more_space_option, index + 1),
+                            text = partnerNames[membership.spaceId]
+                                ?: stringResource(R.string.more_space_option, index + 1),
                             style = MaterialTheme.typography.bodyLarge,
                             color = SideBySideTheme.colors.textPrimary,
                             modifier = Modifier.padding(

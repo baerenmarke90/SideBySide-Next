@@ -10,6 +10,7 @@ import de.sidebyside.next.profile.removeProfileAvatar
 import de.sidebyside.next.profile.updateProfileAvatar
 import de.sidebyside.next.profile.updateProfileDisplayName
 import de.sidebyside.next.shell.UiProblem
+import de.sidebyside.next.shell.UiStateKind
 import de.sidebyside.next.shell.problemFor
 import de.sidebyside.next.story.StoryImageRef
 import de.sidebyside.next.story.StoryImageStore
@@ -31,13 +32,24 @@ import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.DashboardView
+import sidebyside.api.models.DateRepeat
+import sidebyside.api.models.ImportantDateFields
+import sidebyside.api.models.ImportantDateType
+import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.PersonRelationship
+import sidebyside.api.models.RelatedPersonDeletePolicy
+import sidebyside.api.models.RelatedPersonFields
+import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
+import sidebyside.api.models.InvitationView
+import sidebyside.api.models.IssuedInvitationView
+import sidebyside.api.models.MembershipView
 import sidebyside.api.models.PlanSchedule
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
@@ -87,11 +99,33 @@ data class ReferenceUiState(
     val configured: Boolean = false,
     val instanceAvailability: InstanceAvailability = InstanceAvailability.CHECKING,
     val loggedIn: Boolean = false,
+    /**
+     * Authenticated, but with no Space to open yet.
+     *
+     * Distinct from [loggedIn]: the session is real and held, only
+     * `activeSpaceId` is absent. The one thing this state offers is entering
+     * an invitation.
+     */
+    val awaitingSpace: Boolean = false,
+    val invitationBusy: Boolean = false,
+    val invitationProblem: UiProblem? = null,
+    val issuedInvitations: List<InvitationView> = emptyList(),
+    /** The token from a just-created invitation; shown once, per the contract. */
+    val issuedInvitationToken: String? = null,
     /** True while the session belongs to the public demo rather than the configured server. */
     val demoMode: Boolean = false,
     val demoPersona: DemoPersona? = null,
     /** Every Space the account may open; a choice only exists above one. */
     val availableSpaces: List<AccountMembershipView> = emptyList(),
+    /**
+     * The other partner's name per Space, where it is known.
+     *
+     * A Space a couple is a member of is not the same as a Space whose name
+     * has been resolved; this stays empty until [ReferenceViewModel] fetches
+     * it, and a Space missing from it falls back to a position rather than
+     * blocking the picker on a network round trip.
+     */
+    val spacePartnerNames: Map<java.util.UUID, String> = emptyMap(),
     val activeSpaceId: java.util.UUID? = null,
     val profile: ProfileUiState = ProfileUiState(),
     val busy: Boolean = false,
@@ -160,6 +194,11 @@ data class ReferenceUiState(
     val plans: List<PlanDetail> = emptyList(),
     val planningBusy: Boolean = false,
     val planningProblem: UiProblem? = null,
+    val relatedPersons: List<RelatedPersonView> = emptyList(),
+    val relatedPersonsBusy: Boolean = false,
+    val relatedPersonsProblem: UiProblem? = null,
+    /** Dates for whichever person's screen is currently open. */
+    val personImportantDates: List<ImportantDateView> = emptyList(),
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -286,6 +325,8 @@ class ReferenceViewModel(
         clearComments()
         clearPlanning()
         clearToday()
+        clearInvitations()
+        clearRelatedPersons()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -300,10 +341,24 @@ class ReferenceViewModel(
                     if (attemptEpoch != sessionEpoch) return@onSuccess
                     val space = activeSpaceOf(memberships)
                     if (space == null) {
-                        // Authenticated, but the account has no Space to open.
-                        // That is a product state, not a sign-in failure.
-                        session = null
-                        return@onSuccess failure(R.string.error_no_active_space)
+                        // Authenticated, with nothing to open yet — a product
+                        // state, not a sign-in failure. The session is kept
+                        // rather than discarded: entering an invitation needs
+                        // this account's own token, and there is no other way
+                        // to reach it.
+                        session = signedIn
+                        mutate {
+                            it.copy(
+                                loggedIn = false,
+                                awaitingSpace = true,
+                                accountId = signedIn.account.id,
+                                busy = false,
+                                error = null,
+                                status = null,
+                                spacePartnerNames = emptyMap(),
+                            )
+                        }
+                        return@onSuccess
                     }
                     activeSpaceId = space
                     session = signedIn
@@ -311,10 +366,12 @@ class ReferenceViewModel(
                     mutate {
                         it.copy(
                             loggedIn = true,
+                            awaitingSpace = false,
                             accountId = signedIn.account.id,
                             busy = false,
                             status = message(R.string.ref_status_logged_in),
                             error = null,
+                            spacePartnerNames = emptyMap(),
                             profile = ProfileUiState(),
                             draftImages = emptyList(),
                             lastMemoryTitle = null,
@@ -352,6 +409,8 @@ class ReferenceViewModel(
         clearComments()
         clearPlanning()
         clearToday()
+        clearInvitations()
+        clearRelatedPersons()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -402,6 +461,8 @@ class ReferenceViewModel(
         clearComments()
         clearPlanning()
         clearToday()
+        clearInvitations()
+        clearRelatedPersons()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -440,6 +501,8 @@ class ReferenceViewModel(
         clearComments()
         clearPlanning()
         clearToday()
+        clearInvitations()
+        clearRelatedPersons()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -1439,6 +1502,511 @@ class ReferenceViewModel(
                 todayProblem = null,
                 thinkingOfYouSent = false,
             )
+        }
+    }
+
+    /**
+     * Accepts an invitation while `awaitingSpace`.
+     *
+     * Uses the session held from sign-in rather than asking for one again —
+     * that session is the entire reason this state keeps it. Success re-lists
+     * memberships and resolves a Space the same way sign-in itself does.
+     */
+    fun acceptInvitation(token: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        if (!_uiState.value.awaitingSpace) return
+        if (token.isBlank()) return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(invitationBusy = true, invitationProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.acceptInvitation(currentSession.tokens.accessToken, token)
+                api.listMemberships(currentSession.tokens.accessToken)
+            }
+                .onSuccess { memberships ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    val space = activeSpaceOf(memberships)
+                    if (space == null) {
+                        // The server accepted the token but the membership is
+                        // not active yet by this account's own rules; stay in
+                        // the same waiting state rather than guessing.
+                        mutate {
+                            it.copy(
+                                invitationBusy = false,
+                                invitationProblem = problemFor(
+                                    ReferenceApiException(null, "not active", 409),
+                                ),
+                            )
+                        }
+                        return@onSuccess
+                    }
+                    activeSpaceId = space
+                    imageDrafts = emptyList()
+                    mutate {
+                        it.copy(
+                            loggedIn = true,
+                            awaitingSpace = false,
+                            activeSpaceId = space,
+                            invitationBusy = false,
+                            invitationProblem = null,
+                            status = message(R.string.invitation_accepted),
+                        )
+                    }
+                    refreshStory()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(invitationBusy = false, invitationProblem = acceptInvitationProblem(throwable))
+                    }
+                }
+        }
+    }
+
+    /**
+     * The server deliberately answers every bad-token case — unknown, expired,
+     * revoked, already used — the same way, so as not to disclose which tokens
+     * exist. `ACCOUNT_ALREADY_MEMBER` is a different, safe-to-name case: the
+     * account already knows it is a member, so saying so leaks nothing.
+     */
+    private fun acceptInvitationProblem(throwable: Throwable): UiProblem {
+        val code = (throwable as? ReferenceApiException)?.code
+        return when (code) {
+            "ACCOUNT_ALREADY_MEMBER" -> UiProblem(
+                kind = UiStateKind.Conflict,
+                titleRes = R.string.invitation_already_member_title,
+                bodyRes = R.string.invitation_already_member,
+                retryable = false,
+            )
+
+            "INVITATION_INVALID", "CANNOT_ACCEPT_OWN_INVITATION" -> UiProblem(
+                kind = UiStateKind.Conflict,
+                titleRes = R.string.invitation_expired_title,
+                bodyRes = R.string.invitation_expired,
+                retryable = false,
+            )
+
+            else -> problemFor(throwable)
+        }
+    }
+
+    fun loadInvitations() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(invitationBusy = true, invitationProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listInvitations(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { invitations ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(issuedInvitations = invitations, invitationBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(invitationBusy = false, invitationProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /**
+     * Issues a new invitation.
+     *
+     * The token is kept in state so the screen can offer it once; nothing
+     * about it is written to storage or logged, and it is gone from state as
+     * soon as [dismissIssuedInvitationToken] is called.
+     */
+    fun createInvitation() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(invitationBusy = true, invitationProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.createInvitation(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { issued ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(invitationBusy = false, issuedInvitationToken = issued.token)
+                    }
+                    loadInvitations()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    // The server refuses a third partner rather than issuing an
+                    // invitation nobody could ever accept — a specific, named
+                    // state, not a version conflict a retry would fix.
+                    val problem = if ((throwable as? ReferenceApiException)?.code == "SPACE_FULL") {
+                        UiProblem(
+                            kind = UiStateKind.Conflict,
+                            titleRes = R.string.invitation_space_full_title,
+                            bodyRes = R.string.invitation_space_full,
+                            retryable = false,
+                        )
+                    } else {
+                        problemFor(throwable)
+                    }
+                    mutate { it.copy(invitationBusy = false, invitationProblem = problem) }
+                }
+        }
+    }
+
+    fun dismissIssuedInvitationToken() {
+        mutate { it.copy(issuedInvitationToken = null) }
+    }
+
+    fun revokeInvitation(invitationId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(invitationBusy = true, invitationProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.revokeInvitation(spaceId, currentSession.tokens.accessToken, invitationId)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(invitationBusy = false) }
+                    loadInvitations()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(invitationBusy = false, invitationProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun loadRelatedPersons() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listRelatedPersons(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { people ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersons = people, relatedPersonsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun addRelatedPerson(
+        displayName: String,
+        relationship: PersonRelationship,
+        birthday: LocalDate?,
+        birthdayYearKnown: Boolean,
+        visibility: ContentVisibility,
+    ) {
+        if (displayName.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createRelatedPerson(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    RelatedPersonFields(
+                        birthday = birthday,
+                        birthdayYearKnown = birthdayYearKnown,
+                        displayName = displayName,
+                        relationship = relationship,
+                        visibility = visibility,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersonsBusy = false) }
+                    loadRelatedPersons()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun updateRelatedPerson(
+        personId: java.util.UUID,
+        displayName: String,
+        relationship: PersonRelationship,
+        birthday: LocalDate?,
+        birthdayYearKnown: Boolean,
+        visibility: ContentVisibility,
+    ) {
+        if (displayName.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val person = _uiState.value.relatedPersons.firstOrNull { it.id == personId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateRelatedPerson(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    personId,
+                    person.version,
+                    RelatedPersonFields(
+                        birthday = birthday,
+                        birthdayYearKnown = birthdayYearKnown,
+                        displayName = displayName,
+                        relationship = relationship,
+                        visibility = visibility,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersonsBusy = false) }
+                    loadRelatedPersons()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    /**
+     * Resolves the other partner's name for every Space this account may
+     * open, so the picker can show who a Space is with instead of its
+     * position in a list.
+     *
+     * Best-effort: a Space that fails to resolve simply falls back to its
+     * position, rather than the whole picker failing over one request.
+     */
+    fun loadSpaceNames() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaces = _uiState.value.availableSpaces
+        if (spaces.size <= 1) return
+        val operationEpoch = sessionEpoch
+        val selfId = _uiState.value.accountId
+
+        viewModelScope.launch {
+            spaces.forEach { membership ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+                if (_uiState.value.spacePartnerNames.containsKey(membership.spaceId)) return@forEach
+                runCatching {
+                    api.getSpace(membership.spaceId, currentSession.tokens.accessToken)
+                }.onSuccess { space ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+                    val partner = space.partners.firstOrNull { it.id != selfId }
+                        ?: space.partners.firstOrNull()
+                    partner?.let { view ->
+                        mutate {
+                            it.copy(
+                                spacePartnerNames = it.spacePartnerNames +
+                                    (membership.spaceId to view.displayName),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun clearInvitations() {
+        mutate {
+            it.copy(
+                invitationBusy = false,
+                invitationProblem = null,
+                issuedInvitations = emptyList(),
+                issuedInvitationToken = null,
+            )
+        }
+    }
+
+    /**
+     * Deletes a person under an explicit, already-decided policy.
+     *
+     * Deliberately does not read [personImportantDates] or call
+     * [loadImportantDates] first: per #65, the confirmation that led here must
+     * never be built from a query of what is affected, because even a correct,
+     * already-filtered count would disclose the gap between what this account
+     * can see and what `cascade` actually removes.
+     */
+    fun deleteRelatedPerson(personId: java.util.UUID, deletePolicy: RelatedPersonDeletePolicy) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val person = _uiState.value.relatedPersons.firstOrNull { it.id == personId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteRelatedPerson(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    personId,
+                    deletePolicy,
+                    person.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            relatedPersonsBusy = false,
+                            personImportantDates = emptyList(),
+                        )
+                    }
+                    loadRelatedPersons()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun clearRelatedPersons() {
+        mutate {
+            it.copy(
+                relatedPersons = emptyList(),
+                relatedPersonsBusy = false,
+                relatedPersonsProblem = null,
+                personImportantDates = emptyList(),
+            )
+        }
+    }
+
+    /**
+     * Reads a person's ImportantDates for their own screen.
+     *
+     * Only called from that screen, never from the delete confirmation — see
+     * [deleteRelatedPerson].
+     */
+    fun loadImportantDates(relatedPersonId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.listImportantDates(spaceId, currentSession.tokens.accessToken, relatedPersonId)
+            }
+                .onSuccess { dates ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(personImportantDates = dates, relatedPersonsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun addImportantDate(
+        relatedPersonId: java.util.UUID,
+        label: String,
+        type: ImportantDateType,
+        date: LocalDate,
+        repeats: DateRepeat,
+        visibility: ContentVisibility,
+    ) {
+        if (label.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createImportantDate(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    ImportantDateFields(
+                        date = date,
+                        label = label,
+                        relatedPersonId = relatedPersonId,
+                        repeats = repeats,
+                        type = type,
+                        visibility = visibility,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersonsBusy = false) }
+                    loadImportantDates(relatedPersonId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun deleteImportantDate(relatedPersonId: java.util.UUID, dateId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val date = _uiState.value.personImportantDates.firstOrNull { it.id == dateId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteImportantDate(spaceId, currentSession.tokens.accessToken, dateId, date.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersonsBusy = false) }
+                    loadImportantDates(relatedPersonId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
         }
     }
 

@@ -42,9 +42,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.sidebyside.next.demo.DemoBanner
+import de.sidebyside.next.invitation.AwaitingSpaceScreen
+import de.sidebyside.next.invitation.InvitationsScreen
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.people.ImportantDatesScreen
+import de.sidebyside.next.people.RelatedPersonsScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
@@ -165,6 +169,21 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
             onRemoveImage = referenceViewModel::removeImage,
             onEnterDemo = referenceViewModel::enterDemo,
         )
+    }
+
+    // An authenticated account with no Space yet is neither signed out nor
+    // signed in in the sense the rest of the shell means; it gets its own
+    // surface rather than falling into the entry form or the navigated shell.
+    if (state.awaitingSpace) {
+        ShellSurface {
+            AwaitingSpaceScreen(
+                busy = state.invitationBusy,
+                problem = state.invitationProblem,
+                onAcceptInvitation = referenceViewModel::acceptInvitation,
+                onSignOut = signOut,
+            )
+        }
+        return
     }
 
     // Signed out there is nothing to navigate between, but the surface still
@@ -444,6 +463,22 @@ private fun DemoShell(
                 )
             }
 
+            composable(INVITATIONS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadInvitations() }
+                DisposableEffect(Unit) { onDispose(viewModel::clearInvitations) }
+
+                InvitationsScreen(
+                    invitations = state.issuedInvitations,
+                    issuedToken = state.issuedInvitationToken,
+                    busy = state.invitationBusy,
+                    problem = state.invitationProblem,
+                    onBack = { controller.popBackStack() },
+                    onCreate = viewModel::createInvitation,
+                    onDismissToken = viewModel::dismissIssuedInvitationToken,
+                    onRevoke = viewModel::revokeInvitation,
+                )
+            }
+
             composable(HEART_MOMENTS_ROUTE) {
                 // Tied to the route, so returning here after process death
                 // loads again instead of showing an empty list.
@@ -462,6 +497,58 @@ private fun DemoShell(
                     },
                     onChangeVisibility = viewModel::changeHeartMomentVisibility,
                     onDelete = viewModel::deleteHeartMoment,
+                )
+            }
+
+            composable(RELATED_PERSONS_ROUTE) {
+                // Deliberately no dispose-time clear here, unlike HeartMoments:
+                // opening a person's ImportantDates navigates forward to a
+                // child route that reads this same list for the person's
+                // name, and clearing on leave wiped it before that screen
+                // could render. Every session-changing event already calls
+                // clearRelatedPersons() directly, so nothing leaks across
+                // sign-in/demo/Space boundaries without this.
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadRelatedPersons() }
+
+                RelatedPersonsScreen(
+                    people = state.relatedPersons,
+                    busy = state.relatedPersonsBusy,
+                    problem = state.relatedPersonsProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = viewModel::addRelatedPerson,
+                    onOpenDates = { personId ->
+                        controller.navigate("people/related-persons/$personId/important-dates")
+                    },
+                    onDelete = viewModel::deleteRelatedPerson,
+                )
+            }
+
+            composable(
+                route = IMPORTANT_DATES_ROUTE,
+                arguments = listOf(navArgument(PERSON_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val personId = entry.arguments?.getString(PERSON_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val person = state.relatedPersons.firstOrNull { it.id == personId }
+
+                LaunchedEffect(personId, state.activeSpaceId) {
+                    personId?.let(viewModel::loadImportantDates)
+                }
+
+                ImportantDatesScreen(
+                    personName = person?.displayName.orEmpty(),
+                    dates = state.personImportantDates,
+                    busy = state.relatedPersonsBusy,
+                    problem = state.relatedPersonsProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = { label, type, date, repeats, visibility ->
+                        personId?.let {
+                            viewModel.addImportantDate(it, label, type, date, repeats, visibility)
+                        }
+                    },
+                    onDelete = { dateId ->
+                        personId?.let { viewModel.deleteImportantDate(it, dateId) }
+                    },
                 )
             }
         },
@@ -504,11 +591,15 @@ private fun DemoShell(
                 LaunchedEffect(state.activeSpaceId) {
                     if (state.activeSpaceId != null) viewModel.refreshProfile()
                 }
+                LaunchedEffect(state.availableSpaces) { viewModel.loadSpaceNames() }
                 MoreScreen(
                     onSignOut = onSignOut,
                     onOpenHeartMoments = { navController.navigate(HEART_MOMENTS_ROUTE) },
+                    onOpenInvitations = { navController.navigate(INVITATIONS_ROUTE) },
+                    onOpenRelatedPersons = { navController.navigate(RELATED_PERSONS_ROUTE) },
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
+                    spacePartnerNames = state.spacePartnerNames,
                     activeSpaceId = state.activeSpaceId,
                     onSelectSpace = onSelectSpace,
                     profileContent = {
@@ -542,10 +633,16 @@ private const val MEMORY_ROUTE = "story/memories/{$MEMORY_ID_ARGUMENT}"
 
 /** The account's own HeartMoments, private ones included. */
 private const val HEART_MOMENTS_ROUTE = "story/heart-moments"
+private const val INVITATIONS_ROUTE = "more/invitations"
 
 private const val ITEM_ID_ARGUMENT = "itemId"
 private const val MILESTONE_ROUTE = "story/milestones/{$ITEM_ID_ARGUMENT}"
 private const val HEART_MOMENT_ROUTE = "story/heart-moments/{$ITEM_ID_ARGUMENT}"
+
+private const val RELATED_PERSONS_ROUTE = "people/related-persons"
+private const val PERSON_ID_ARGUMENT = "personId"
+private const val IMPORTANT_DATES_ROUTE =
+    "people/related-persons/{$PERSON_ID_ARGUMENT}/important-dates"
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE
