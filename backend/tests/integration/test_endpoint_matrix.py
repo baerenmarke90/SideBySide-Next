@@ -855,9 +855,7 @@ AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
 )
 """Account-scoped but not space-scoped. Anonymous requests receive 401."""
 
-SERVER_ADMIN_ONLY: tuple[tuple[str, str], ...] = (
-    ("GET", "/api/v1/server-admin/overview"),
-)
+SERVER_ADMIN_ONLY: tuple[tuple[str, str], ...] = (("GET", "/api/v1/server-admin/overview"),)
 """Instance-scoped operations that require authenticated ServerAdmin authority."""
 
 PUBLIC_ENDPOINTS: tuple[tuple[str, str], ...] = (
