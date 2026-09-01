@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import type { ServerAdminActivityItem } from '../api/generated/models/ServerAdminActivityItem';
 import type { ServerAdminOverview } from '../api/generated/models/ServerAdminOverview';
+import type { ServerAdminSettings } from '../api/generated/models/ServerAdminSettings';
 import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import { DEFAULT_APP_ROUTE } from '../client/routes';
 import { createServerAdminApis } from '../client/serverAdmin';
@@ -124,6 +126,165 @@ function Metric({ label, value }: { label: string; value: string }) {
       <dt>{label}</dt>
       <dd>{value}</dd>
     </div>
+  );
+}
+
+export function ServerAdminSettingsPanel({
+  settings,
+  registrationPending,
+  maintenancePending,
+  mutationError,
+  onRegistrationChange,
+  onMaintenanceChange,
+}: {
+  settings: ServerAdminSettings;
+  registrationPending: boolean;
+  maintenancePending: boolean;
+  mutationError: Error | null;
+  onRegistrationChange: (enabled: boolean) => void;
+  onMaintenanceChange: (enabled: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section
+      className="server-admin-panel server-admin-panel-wide"
+      aria-labelledby="server-settings-title"
+    >
+      <h2 id="server-settings-title">{t('serverAdmin.settings.title')}</h2>
+      <p className="server-admin-muted">{t('serverAdmin.settings.body')}</p>
+      <div className="server-admin-setting-list">
+        <div className="server-admin-setting-row">
+          <div>
+            <strong>{t('serverAdmin.settings.registrationTitle')}</strong>
+            <p id="server-registration-help" className="server-admin-muted">
+              {t('serverAdmin.settings.registrationBody')}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="server-admin-toggle"
+            aria-pressed={settings.registrationEnabled}
+            aria-describedby="server-registration-help"
+            disabled={registrationPending}
+            onClick={() => onRegistrationChange(!settings.registrationEnabled)}
+          >
+            {t(
+              settings.registrationEnabled
+                ? 'serverAdmin.settings.enabled'
+                : 'serverAdmin.settings.disabled',
+            )}
+          </button>
+        </div>
+
+        <div className="server-admin-setting-row">
+          <div>
+            <strong>{t('serverAdmin.settings.maintenanceTitle')}</strong>
+            <p id="server-maintenance-help" className="server-admin-muted">
+              {t('serverAdmin.settings.maintenanceBody')}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="server-admin-toggle"
+            aria-pressed={settings.maintenanceMode}
+            aria-describedby="server-maintenance-help"
+            disabled={maintenancePending}
+            onClick={() => onMaintenanceChange(!settings.maintenanceMode)}
+          >
+            {t(
+              settings.maintenanceMode
+                ? 'serverAdmin.settings.enabled'
+                : 'serverAdmin.settings.disabled',
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="server-admin-effective-state" role="status">
+        <span>{t('serverAdmin.settings.effectiveRegistration')}</span>
+        <strong>
+          {t(
+            settings.effectiveRegistrationEnabled
+              ? 'serverAdmin.settings.available'
+              : 'serverAdmin.settings.unavailable',
+          )}
+        </strong>
+      </div>
+      <p className="server-admin-muted">
+        {settings.maintenanceMode
+          ? t('serverAdmin.settings.effectiveMaintenanceHint')
+          : t('serverAdmin.settings.effectivePolicyHint')}
+      </p>
+      {mutationError ? (
+        <p className="status status-error" role="alert">
+          {t('serverAdmin.settings.updateError')}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function activitySettingLabel(
+  setting: string,
+  t: (key: string) => string,
+): string {
+  switch (setting) {
+    case 'registration_enabled':
+      return t('serverAdmin.activity.registration');
+    case 'maintenance_mode':
+      return t('serverAdmin.activity.maintenance');
+    default:
+      return t('serverAdmin.activity.unknown');
+  }
+}
+
+function booleanStateLabel(value: boolean, t: (key: string) => string): string {
+  return t(
+    value ? 'serverAdmin.activity.enabled' : 'serverAdmin.activity.disabled',
+  );
+}
+
+export function ServerAdminActivityPanel({
+  activity,
+}: {
+  activity: ServerAdminActivityItem[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <section
+      className="server-admin-panel server-admin-panel-wide"
+      aria-labelledby="server-activity-title"
+    >
+      <h2 id="server-activity-title">{t('serverAdmin.activity.title')}</h2>
+      <p className="server-admin-muted">{t('serverAdmin.activity.body')}</p>
+      {activity.length === 0 ? (
+        <p className="server-admin-muted">{t('serverAdmin.activity.empty')}</p>
+      ) : (
+        <div className="server-admin-table-scroll">
+          <table className="server-admin-table">
+            <thead>
+              <tr>
+                <th scope="col">{t('serverAdmin.activity.setting')}</th>
+                <th scope="col">{t('serverAdmin.activity.change')}</th>
+                <th scope="col">{t('serverAdmin.activity.changedAt')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activity.map((item) => (
+                <tr key={item.id}>
+                  <td>{activitySettingLabel(item.setting, t)}</td>
+                  <td>
+                    {booleanStateLabel(item.previousValue, t)} →{' '}
+                    {booleanStateLabel(item.newValue, t)}
+                  </td>
+                  <td>{formatDate(item.createdAt) ?? '–'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -314,6 +475,7 @@ export function ServerAdminPage({
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const apis = useMemo(
     () => createServerAdminApis(apiBaseUrl, accessToken),
     [accessToken, apiBaseUrl],
@@ -324,6 +486,63 @@ export function ServerAdminPage({
       apis.serverAdmin.getServerAdminOverviewApiV1ServerAdminOverviewGet(),
     retry: false,
   });
+  const settingsQuery = useQuery({
+    queryKey: ['server-admin', 'settings'],
+    queryFn: () =>
+      apis.serverAdmin.getServerAdminSettingsApiV1ServerAdminSettingsGet(),
+    retry: false,
+  });
+  const activityQuery = useQuery({
+    queryKey: ['server-admin', 'activity'],
+    queryFn: () =>
+      apis.serverAdmin.getServerAdminActivityApiV1ServerAdminActivityGet(),
+    retry: false,
+  });
+  const registrationMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      apis.serverAdmin.updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPut(
+        { serverAdminSettingUpdate: { enabled } },
+      ),
+    onSuccess: (settings) => {
+      queryClient.setQueryData(['server-admin', 'settings'], settings);
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'activity'],
+      });
+    },
+  });
+  const maintenanceMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      apis.serverAdmin.updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut(
+        { serverAdminSettingUpdate: { enabled } },
+      ),
+    onSuccess: (settings) => {
+      queryClient.setQueryData(['server-admin', 'settings'], settings);
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'activity'],
+      });
+    },
+  });
+  const refreshing =
+    overviewQuery.isFetching ||
+    settingsQuery.isFetching ||
+    activityQuery.isFetching;
+  const mutationError = registrationMutation.error ?? maintenanceMutation.error;
+
+  function refreshAll() {
+    void overviewQuery.refetch();
+    void settingsQuery.refetch();
+    void activityQuery.refetch();
+  }
+
+  function updateMaintenance(enabled: boolean) {
+    if (
+      enabled &&
+      !window.confirm(t('serverAdmin.settings.maintenanceConfirmEnable'))
+    ) {
+      return;
+    }
+    maintenanceMutation.mutate(enabled);
+  }
 
   function logout() {
     onLogout();
@@ -358,40 +577,105 @@ export function ServerAdminPage({
             <h1>{t('serverAdmin.title')}</h1>
             <p className="server-admin-intro">{t('serverAdmin.intro')}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => void overviewQuery.refetch()}
-            disabled={overviewQuery.isFetching}
-          >
+          <button type="button" onClick={refreshAll} disabled={refreshing}>
             {t('serverAdmin.refresh')}
           </button>
         </div>
 
-        {overviewQuery.isPending ? (
-          <UiState
-            kind="loading"
-            title={t('serverAdmin.states.loadingTitle')}
-            body={t('serverAdmin.states.loadingBody')}
-          />
-        ) : overviewQuery.error ? (
-          <UiState
-            kind="error"
-            title={t('serverAdmin.states.errorTitle')}
-            body={t('serverAdmin.states.errorBody')}
-            action={
-              <button
-                type="button"
-                onClick={() => void overviewQuery.refetch()}
-              >
-                {t('serverAdmin.refresh')}
-              </button>
-            }
-          />
-        ) : overviewQuery.data ? (
-          <div className="server-admin-grid">
+        <div className="server-admin-grid">
+          {settingsQuery.isPending ? (
+            <section className="server-admin-panel server-admin-panel-wide">
+              <UiState
+                kind="loading"
+                title={t('serverAdmin.settings.loadingTitle')}
+                body={t('serverAdmin.settings.loadingBody')}
+              />
+            </section>
+          ) : settingsQuery.error ? (
+            <section className="server-admin-panel server-admin-panel-wide">
+              <UiState
+                kind="error"
+                title={t('serverAdmin.settings.errorTitle')}
+                body={t('serverAdmin.settings.errorBody')}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => void settingsQuery.refetch()}
+                  >
+                    {t('serverAdmin.refresh')}
+                  </button>
+                }
+              />
+            </section>
+          ) : settingsQuery.data ? (
+            <ServerAdminSettingsPanel
+              settings={settingsQuery.data}
+              registrationPending={registrationMutation.isPending}
+              maintenancePending={maintenanceMutation.isPending}
+              mutationError={mutationError}
+              onRegistrationChange={(enabled) =>
+                registrationMutation.mutate(enabled)
+              }
+              onMaintenanceChange={updateMaintenance}
+            />
+          ) : null}
+
+          {overviewQuery.isPending ? (
+            <section className="server-admin-panel server-admin-panel-wide">
+              <UiState
+                kind="loading"
+                title={t('serverAdmin.states.loadingTitle')}
+                body={t('serverAdmin.states.loadingBody')}
+              />
+            </section>
+          ) : overviewQuery.error ? (
+            <section className="server-admin-panel server-admin-panel-wide">
+              <UiState
+                kind="error"
+                title={t('serverAdmin.states.errorTitle')}
+                body={t('serverAdmin.states.errorBody')}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => void overviewQuery.refetch()}
+                  >
+                    {t('serverAdmin.refresh')}
+                  </button>
+                }
+              />
+            </section>
+          ) : overviewQuery.data ? (
             <OverviewContent overview={overviewQuery.data} />
-          </div>
-        ) : null}
+          ) : null}
+
+          {activityQuery.isPending ? (
+            <section className="server-admin-panel server-admin-panel-wide">
+              <UiState
+                kind="loading"
+                title={t('serverAdmin.activity.loadingTitle')}
+                body={t('serverAdmin.activity.loadingBody')}
+              />
+            </section>
+          ) : activityQuery.error ? (
+            <section className="server-admin-panel server-admin-panel-wide">
+              <UiState
+                kind="error"
+                title={t('serverAdmin.activity.errorTitle')}
+                body={t('serverAdmin.activity.errorBody')}
+                action={
+                  <button
+                    type="button"
+                    onClick={() => void activityQuery.refetch()}
+                  >
+                    {t('serverAdmin.refresh')}
+                  </button>
+                }
+              />
+            </section>
+          ) : activityQuery.data ? (
+            <ServerAdminActivityPanel activity={activityQuery.data} />
+          ) : null}
+        </div>
 
         <p className="server-admin-privacy-note">
           {t('serverAdmin.privacyNote')}
