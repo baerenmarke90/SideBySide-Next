@@ -42,6 +42,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.sidebyside.next.demo.DemoBanner
+import de.sidebyside.next.invitation.AwaitingSpaceScreen
+import de.sidebyside.next.invitation.InvitationsScreen
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.SideBySideTheme
@@ -165,6 +167,21 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
             onRemoveImage = referenceViewModel::removeImage,
             onEnterDemo = referenceViewModel::enterDemo,
         )
+    }
+
+    // An authenticated account with no Space yet is neither signed out nor
+    // signed in in the sense the rest of the shell means; it gets its own
+    // surface rather than falling into the entry form or the navigated shell.
+    if (state.awaitingSpace) {
+        ShellSurface {
+            AwaitingSpaceScreen(
+                busy = state.invitationBusy,
+                problem = state.invitationProblem,
+                onAcceptInvitation = referenceViewModel::acceptInvitation,
+                onSignOut = signOut,
+            )
+        }
+        return
     }
 
     // Signed out there is nothing to navigate between, but the surface still
@@ -444,6 +461,22 @@ private fun DemoShell(
                 )
             }
 
+            composable(INVITATIONS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadInvitations() }
+                DisposableEffect(Unit) { onDispose(viewModel::clearInvitations) }
+
+                InvitationsScreen(
+                    invitations = state.issuedInvitations,
+                    issuedToken = state.issuedInvitationToken,
+                    busy = state.invitationBusy,
+                    problem = state.invitationProblem,
+                    onBack = { controller.popBackStack() },
+                    onCreate = viewModel::createInvitation,
+                    onDismissToken = viewModel::dismissIssuedInvitationToken,
+                    onRevoke = viewModel::revokeInvitation,
+                )
+            }
+
             composable(HEART_MOMENTS_ROUTE) {
                 // Tied to the route, so returning here after process death
                 // loads again instead of showing an empty list.
@@ -504,11 +537,14 @@ private fun DemoShell(
                 LaunchedEffect(state.activeSpaceId) {
                     if (state.activeSpaceId != null) viewModel.refreshProfile()
                 }
+                LaunchedEffect(state.availableSpaces) { viewModel.loadSpaceNames() }
                 MoreScreen(
                     onSignOut = onSignOut,
                     onOpenHeartMoments = { navController.navigate(HEART_MOMENTS_ROUTE) },
+                    onOpenInvitations = { navController.navigate(INVITATIONS_ROUTE) },
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
+                    spacePartnerNames = state.spacePartnerNames,
                     activeSpaceId = state.activeSpaceId,
                     onSelectSpace = onSelectSpace,
                     profileContent = {
@@ -542,6 +578,7 @@ private const val MEMORY_ROUTE = "story/memories/{$MEMORY_ID_ARGUMENT}"
 
 /** The account's own HeartMoments, private ones included. */
 private const val HEART_MOMENTS_ROUTE = "story/heart-moments"
+private const val INVITATIONS_ROUTE = "more/invitations"
 
 private const val ITEM_ID_ARGUMENT = "itemId"
 private const val MILESTONE_ROUTE = "story/milestones/{$ITEM_ID_ARGUMENT}"

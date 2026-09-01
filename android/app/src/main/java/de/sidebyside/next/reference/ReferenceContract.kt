@@ -17,7 +17,12 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.DashboardView
+import sidebyside.api.models.AcceptRequest
+import sidebyside.api.models.IssuedInvitationView
+import sidebyside.api.models.InvitationView
+import sidebyside.api.models.MembershipView
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.PartnerView
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -368,6 +373,26 @@ interface ReferenceContract {
      * couple simply stops seeing their own history past the first page, which
      * is the kind of loss nothing on screen would announce.
      */
+    /**
+     * Accepts an invitation and returns the membership it created.
+     *
+     * Requires an authenticated caller: an invited account must keep its
+     * session to reach this at all, which is why this slice exists.
+     */
+    suspend fun acceptInvitation(accessToken: String, token: String): MembershipView
+
+    suspend fun listInvitations(spaceId: UUID, accessToken: String): List<InvitationView>
+
+    /**
+     * Issues a new invitation.
+     *
+     * The token in the response is the only time it is ever readable; the
+     * contract does not expose it again through [listInvitations].
+     */
+    suspend fun createInvitation(spaceId: UUID, accessToken: String): IssuedInvitationView
+
+    suspend fun revokeInvitation(spaceId: UUID, accessToken: String, invitationId: UUID)
+
     suspend fun getTimeline(
         spaceId: UUID,
         accessToken: String,

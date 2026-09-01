@@ -87,6 +87,7 @@ class MoreScreenSpaceTest {
                 MoreScreen(
                     onSignOut = {},
                     onOpenHeartMoments = {},
+                    onOpenInvitations = {},
                     spaces = spaces,
                     activeSpaceId = active,
                     onSelectSpace = onSelectSpace,
