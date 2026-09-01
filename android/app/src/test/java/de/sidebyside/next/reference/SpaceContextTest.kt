@@ -19,17 +19,26 @@ import org.junit.Before
 import org.junit.Test
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AccountView
+import sidebyside.api.models.AuthorSummary
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
+import sidebyside.api.models.DashboardSpaceSummary
+import sidebyside.api.models.DashboardView
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.TokenView
+import sidebyside.api.models.PlanDetail
+import sidebyside.api.models.PlanPage
+import sidebyside.api.models.PlanStatus
 import sidebyside.api.models.UploadDescriptor
+import sidebyside.api.models.WishDetail
+import sidebyside.api.models.WishPage
+import sidebyside.api.models.WishStatus
 
 private val FIRST_SPACE: UUID = UUID.fromString("11111111-1111-4111-8111-111111111111")
 private val SECOND_SPACE: UUID = UUID.fromString("22222222-2222-4222-8222-222222222222")
@@ -166,6 +175,29 @@ class SpaceContextTest {
     }
 
     @Test
+    fun switchingSpaceForgetsThePreviousSpacesPlanningAndToday() = runTest(dispatcher) {
+        // Only the Story was cleared when Planen and Heute did not exist yet.
+        // Both now carry state that must not survive into another Space.
+        val api = SpaceApi(memberships = listOf(active(FIRST_SPACE), active(SECOND_SPACE)))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+        model.loadPlanning()
+        model.loadToday()
+        advanceUntilIdle()
+        assertTrue(model.uiState.value.openWishes.isNotEmpty())
+        assertTrue(model.uiState.value.plans.isNotEmpty())
+        assertEquals(FIRST_SPACE, model.uiState.value.dashboard?.space?.spaceId)
+
+        model.selectSpace(SECOND_SPACE)
+
+        assertTrue(model.uiState.value.openWishes.isEmpty())
+        assertTrue(model.uiState.value.plans.isEmpty())
+        assertNull(model.uiState.value.dashboard)
+    }
+
+    @Test
     fun signingOutForgetsTheSpace() = runTest(dispatcher) {
         val api = SpaceApi(memberships = listOf(active(FIRST_SPACE)))
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
@@ -185,6 +217,12 @@ private fun active(spaceId: UUID) = membership("ACTIVE", spaceId)
 
 private fun membership(status: String, spaceId: UUID) =
     AccountMembershipView(role = "PARTNER", spaceId = spaceId, status = status)
+
+private val FULL_CAPABILITIES = sidebyside.api.models.ResourceCapabilities(
+    canComment = true,
+    canDelete = true,
+    canEdit = true,
+)
 
 private class SpaceApi(
     private val memberships: List<AccountMembershipView>,
@@ -223,6 +261,59 @@ private class SpaceApi(
         }
         return StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
     }
+
+    override suspend fun listWishes(spaceId: UUID, accessToken: String): WishPage = WishPage(
+        hasMore = false,
+        items = listOf(
+            WishDetail(
+                capabilities = FULL_CAPABILITIES,
+                createdAt = java.time.OffsetDateTime.now(),
+                createdBy = UUID.randomUUID(),
+                creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+                id = UUID.randomUUID(),
+                spaceId = spaceId,
+                status = WishStatus.OPEN,
+                title = "Something noted in $spaceId",
+                updatedAt = java.time.OffsetDateTime.now(),
+                version = 1,
+            ),
+        ),
+        nextCursor = null,
+    )
+
+    override suspend fun listPlans(spaceId: UUID, accessToken: String): PlanPage = PlanPage(
+        hasMore = false,
+        items = listOf(
+            PlanDetail(
+                capabilities = FULL_CAPABILITIES,
+                createdAt = java.time.OffsetDateTime.now(),
+                createdBy = UUID.randomUUID(),
+                creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+                description = null,
+                experiencedOn = null,
+                id = UUID.randomUUID(),
+                placeId = null,
+                plannedEnd = null,
+                plannedStart = null,
+                sourceWishId = null,
+                spaceId = spaceId,
+                status = PlanStatus.IDEA,
+                title = "A plan in $spaceId",
+                updatedAt = java.time.OffsetDateTime.now(),
+                version = 1,
+            ),
+        ),
+        nextCursor = null,
+    )
+
+    override suspend fun getDashboard(spaceId: UUID, accessToken: String): DashboardView =
+        DashboardView(
+            recentShared = emptyList(),
+            relationshipDuration = null,
+            retrospective = null,
+            space = DashboardSpaceSummary(partner = null, spaceId = spaceId),
+            upcoming = emptyList(),
+        )
 
 
 
