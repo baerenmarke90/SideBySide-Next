@@ -52,7 +52,10 @@ export function ServerAdminAccessGate({
                   {t('serverAdmin.access.retry')}
                 </button>
               ) : null}
-              <Link className="button-link secondary-link" to={DEFAULT_APP_ROUTE}>
+              <Link
+                className="button-link secondary-link"
+                to={DEFAULT_APP_ROUTE}
+              >
                 {t('serverAdmin.backToApp')}
               </Link>
             </div>
@@ -102,13 +105,7 @@ function healthLabel(status: string, t: (key: string) => string): string {
   }
 }
 
-function StatusRow({
-  label,
-  status,
-}: {
-  label: string;
-  status: string;
-}) {
+function StatusRow({ label, status }: { label: string; status: string }) {
   const { t } = useTranslation();
   const statusClass = status === 'ok' ? 'is-ok' : 'is-neutral';
   return (
@@ -136,7 +133,10 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
 
   return (
     <>
-      <section className="server-admin-panel" aria-labelledby="server-health-title">
+      <section
+        className="server-admin-panel"
+        aria-labelledby="server-health-title"
+      >
         <h2 id="server-health-title">{t('serverAdmin.health.title')}</h2>
         <div className="server-admin-status-list">
           <StatusRow
@@ -158,7 +158,10 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
         </div>
       </section>
 
-      <section className="server-admin-panel" aria-labelledby="server-usage-title">
+      <section
+        className="server-admin-panel"
+        aria-labelledby="server-usage-title"
+      >
         <h2 id="server-usage-title">{t('serverAdmin.usage.title')}</h2>
         <dl className="server-admin-metrics">
           <Metric
@@ -188,7 +191,10 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
         </dl>
       </section>
 
-      <section className="server-admin-panel" aria-labelledby="server-jobs-title">
+      <section
+        className="server-admin-panel"
+        aria-labelledby="server-jobs-title"
+      >
         <h2 id="server-jobs-title">{t('serverAdmin.jobs.title')}</h2>
         <dl className="server-admin-metrics server-admin-job-metrics">
           <Metric
@@ -210,7 +216,9 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
         </dl>
         <h3>{t('serverAdmin.jobs.failuresTitle')}</h3>
         {overview.recentFailedJobs.length === 0 ? (
-          <p className="server-admin-muted">{t('serverAdmin.jobs.noFailures')}</p>
+          <p className="server-admin-muted">
+            {t('serverAdmin.jobs.noFailures')}
+          </p>
         ) : (
           <div className="server-admin-table-scroll">
             <table className="server-admin-table">
@@ -226,7 +234,8 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
                   <tr key={job.id}>
                     <td>{job.kind}</td>
                     <td>
-                      {formatNumber(job.attempts)} / {formatNumber(job.maxAttempts)}
+                      {formatNumber(job.attempts)} /{' '}
+                      {formatNumber(job.maxAttempts)}
                     </td>
                     <td>{formatDate(job.finishedAt) ?? '–'}</td>
                   </tr>
@@ -329,7 +338,10 @@ export function ServerAdminPage({
       </a>
       <header className="server-admin-topbar">
         <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
-        <nav className="server-admin-topbar-actions" aria-label={t('serverAdmin.title')}>
+        <nav
+          className="server-admin-topbar-actions"
+          aria-label={t('serverAdmin.title')}
+        >
           <Link className="secondary-link" to={DEFAULT_APP_ROUTE}>
             {t('serverAdmin.backToApp')}
           </Link>
@@ -367,7 +379,10 @@ export function ServerAdminPage({
             title={t('serverAdmin.states.errorTitle')}
             body={t('serverAdmin.states.errorBody')}
             action={
-              <button type="button" onClick={() => void overviewQuery.refetch()}>
+              <button
+                type="button"
+                onClick={() => void overviewQuery.refetch()}
+              >
                 {t('serverAdmin.refresh')}
               </button>
             }
@@ -378,7 +393,9 @@ export function ServerAdminPage({
           </div>
         ) : null}
 
-        <p className="server-admin-privacy-note">{t('serverAdmin.privacyNote')}</p>
+        <p className="server-admin-privacy-note">
+          {t('serverAdmin.privacyNote')}
+        </p>
       </main>
     </div>
   );

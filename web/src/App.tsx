@@ -35,6 +35,7 @@ import {
   loadAuthorizedImage,
   loadAuthorizedMedia,
 } from './client/referenceFlow';
+import { createServerAdminApis } from './client/serverAdmin';
 import {
   ACTIVITY_ROUTE,
   appRoutePath,
@@ -57,6 +58,7 @@ import {
   PLAN_DETAIL_ROUTE_PATTERN,
   PLACE_DETAIL_ROUTE_PATTERN,
   SEARCH_ROUTE,
+  SERVER_ADMIN_ROUTE,
   WISH_DETAIL_ROUTE_PATTERN,
 } from './client/routes';
 import { createSharedPlanningApis } from './client/sharedPlanning';
@@ -91,6 +93,10 @@ import { PrivateAreaProductPage } from './components/PrivateAreaProductPage';
 import { ProblemState } from './components/ProblemState';
 import { ProfilePage } from './components/ProfilePage';
 import { RelatedPeoplePage } from './components/RelatedPeoplePage';
+import {
+  ServerAdminAccessGate,
+  ServerAdminPage,
+} from './components/ServerAdminPage';
 import { SharedPlanningOverviewPage } from './components/SharedPlanningOverviewPage';
 import { StoryProductPage } from './components/StoryProductPage';
 import { ThemeControl } from './components/ThemeControl';
@@ -341,12 +347,14 @@ function AuthenticatedApp({
   logout,
   apiBaseUrl,
   spaceId,
+  serverAdmin,
 }: {
   tokens: TokenView;
   account: AccountView;
   logout: () => void;
   apiBaseUrl: string;
   spaceId: string;
+  serverAdmin: boolean;
 }) {
   const { t } = useTranslation();
   const location = useLocation();
@@ -444,6 +452,7 @@ function AuthenticatedApp({
       accessToken={tokens.accessToken}
       account={account}
       spaceId={spaceId}
+      serverAdmin={serverAdmin}
     >
       <AppErrorBoundary
         resetKey={location.pathname}
@@ -653,6 +662,7 @@ function AuthenticatedApp({
 
 export function App() {
   const config = useMemo(loadReferenceClientConfig, []);
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [tokens, setTokens] = useState<TokenView | null>(null);
   const [account, setAccount] = useState<AccountView | null>(null);
@@ -660,6 +670,22 @@ export function App() {
   const [entryToken, setEntryToken] = useState(() =>
     readSensitiveEntryToken(window.location.pathname, window.location.search),
   );
+  const serverAdminApis = useMemo(
+    () => createServerAdminApis(config.apiBaseUrl, tokens?.accessToken),
+    [config.apiBaseUrl, tokens?.accessToken],
+  );
+  const capabilitiesQuery = useQuery({
+    queryKey: ['account-capabilities', account?.id],
+    queryFn: async () => {
+      try {
+        return await serverAdminApis.auth.getAccountCapabilitiesApiV1AuthCapabilitiesGet();
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
+    enabled: tokens !== null && account !== null,
+    retry: false,
+  });
 
   useEffect(() => {
     if (!entryToken) return;
@@ -743,6 +769,40 @@ export function App() {
     );
   }
 
+  const serverAdminPath =
+    location.pathname === SERVER_ADMIN_ROUTE ||
+    location.pathname.startsWith(`${SERVER_ADMIN_ROUTE}/`);
+
+  if (serverAdminPath) {
+    if (capabilitiesQuery.isPending || capabilitiesQuery.error) {
+      return (
+        <ServerAdminAccessGate
+          loading={capabilitiesQuery.isPending}
+          error={capabilitiesQuery.error}
+          onRetry={() => void capabilitiesQuery.refetch()}
+        />
+      );
+    }
+
+    if (!capabilitiesQuery.data?.serverAdmin) {
+      return (
+        <ServerAdminAccessGate
+          loading={false}
+          error={null}
+          onRetry={() => void capabilitiesQuery.refetch()}
+        />
+      );
+    }
+
+    return (
+      <ServerAdminPage
+        apiBaseUrl={config.apiBaseUrl}
+        accessToken={tokens.accessToken}
+        onLogout={logout}
+      />
+    );
+  }
+
   const memberships = membershipsQuery.data ?? [];
   if (
     membershipsQuery.isPending ||
@@ -803,6 +863,7 @@ export function App() {
       logout={logout}
       apiBaseUrl={config.apiBaseUrl}
       spaceId={activeSpaceId}
+      serverAdmin={capabilitiesQuery.data?.serverAdmin ?? false}
     />
   );
 }
