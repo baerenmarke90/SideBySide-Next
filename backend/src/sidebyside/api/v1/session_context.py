@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sidebyside.api.deps import CurrentAccount, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
+from sidebyside.authorization.server_admin import is_server_admin
 from sidebyside.relationship.models import Membership, MembershipStatus
 
 router = APIRouter(tags=["auth"])
@@ -26,6 +27,25 @@ class AccountMembershipView(ApiModel):
     space_id: UUID
     role: str
     status: str
+
+
+class AccountCapabilitiesView(ApiModel):
+    """Current account capabilities used only for client presentation."""
+
+    server_admin: bool
+
+
+@router.get(
+    "/auth/capabilities",
+    response_model=AccountCapabilitiesView,
+    responses=problem_responses(401),
+)
+def get_account_capabilities(
+    account: CurrentAccount,
+    session: DbSession,
+) -> AccountCapabilitiesView:
+    """Return presentation capabilities without replacing endpoint authorization."""
+    return AccountCapabilitiesView(server_admin=is_server_admin(session, account))
 
 
 @router.get(
