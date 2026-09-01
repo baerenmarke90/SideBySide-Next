@@ -155,6 +155,29 @@ switching drops everything bound to the previous one — drafts, the loaded Stor
 and any request still in flight, which would otherwise write into the wrong
 couple's Space.
 
+## Supported languages
+
+The product is written in German only. That is declared rather than left to be
+inferred from the unqualified `values/` folder, in two places that must agree:
+
+- `app/src/main/res/xml/locales_config.xml`, referenced by the manifest, tells
+  Android which languages the app supports;
+- `localeFilters` in `app/build.gradle.kts` decides which are packaged.
+
+Without this, AndroidX and Material bring roughly eighty of their own
+translations along. A device set to any of them then reads a screen half in
+German and half in that language — including the content descriptions a screen
+reader announces, which is where it hurts most. Declaring the set took the
+packaged configurations from 94 to 10, `de` being the only locale among them.
+
+Adding a second language means three changes together, or the interface mixes
+languages again: a `values-<tag>` folder with the translated copy, an entry in
+`locales_config.xml`, and the same tag in `localeFilters`. `SupportedLocalesTest`
+fails if the declaration and the packaged set drift apart.
+
+Platform strings — the ones the operating system owns rather than this app —
+follow the device language regardless, and are outside what this can control.
+
 ## Release identity
 
 Decided by #194, before any distribution build, because Google Play binds an

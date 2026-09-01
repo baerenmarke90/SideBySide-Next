@@ -30,7 +30,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sidebyside.db.base import Base
-from sidebyside.db.mixins import IdMixin, TimestampMixin
+from sidebyside.db.mixins import IdMixin, TimestampMixin, VersionMixin
 
 
 class AuthProvider(StrEnum):
@@ -69,7 +69,7 @@ class InstanceBootstrapState(Base):
     __table_args__ = (CheckConstraint("singleton_key = 1", name="singleton_key_is_one"),)
 
 
-class Account(IdMixin, TimestampMixin, Base):
+class Account(IdMixin, TimestampMixin, VersionMixin, Base):
     __tablename__ = "accounts"
 
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)

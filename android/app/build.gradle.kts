@@ -247,6 +247,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    androidResources {
+        // Keeps AndroidX and Material from bringing roughly eighty of their own
+        // translations into the package. Without it a device set to any other
+        // language resolves library strings — dialog buttons, content
+        // descriptions, the text a screen reader announces — to that language
+        // while every string this app owns stays German.
+        localeFilters += "de"
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
     }

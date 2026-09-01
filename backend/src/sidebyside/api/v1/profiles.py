@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Self
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Response, status
-from pydantic import Field, field_validator
+from fastapi.responses import StreamingResponse
+from pydantic import Field, field_validator, model_validator
 
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
+from sidebyside.attachments import service as attachment_service
+from sidebyside.attachments.models import Attachment, AttachmentStatus, MediaType
 from sidebyside.profiles import service
 from sidebyside.profiles.models import (
     PartnerProfile,
@@ -24,9 +27,11 @@ from sidebyside.profiles.models import (
 
 router = APIRouter(tags=["profiles"])
 
+STREAM_CHUNK = 64 * 1024
+
 ETAG_HEADERS = {
     "ETag": {
-        "description": "ProfilePreference version to use for the next If-Match write request.",
+        "description": "Resource version to use for the next If-Match write request.",
         "schema": {"type": "string"},
     }
 }
@@ -56,6 +61,24 @@ class ProfilePreferenceUpdate(PreferenceFields):
     pass
 
 
+class ProfileIdentityUpdate(ApiModel):
+    """Partial update of the authenticated account's presentation identity.
+
+    Omission means unchanged. An explicit null ``profileAttachmentId`` removes
+    the current avatar. ``displayName`` deliberately has no competing request-
+    layer normalization; the identity domain remains the single authority.
+    """
+
+    display_name: str | None = None
+    profile_attachment_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _contains_change(self) -> Self:
+        if not self.model_fields_set.intersection({"display_name", "profile_attachment_id"}):
+            raise ValueError("at least one profile identity field is required")
+        return self
+
+
 class ProfilePreferenceView(ApiModel):
     id: UUID
     account_id: UUID
@@ -73,6 +96,8 @@ class PartnerProfileView(ApiModel):
     id: UUID
     account_id: UUID
     display_name: str
+    profile_attachment_id: UUID | None
+    version: int
     created_at: datetime
     updated_at: datetime
     preferences: list[ProfilePreferenceView]
@@ -97,12 +122,16 @@ def _profile_view(
     profile: PartnerProfile,
     *,
     display_name: str,
+    profile_attachment_id: UUID | None,
+    version: int,
     preferences: list[ProfilePreferenceView],
 ) -> PartnerProfileView:
     return PartnerProfileView(
         id=profile.id,
         account_id=profile.owner_id,
         display_name=display_name,
+        profile_attachment_id=profile_attachment_id,
+        version=version,
         created_at=profile.created_at,
         updated_at=profile.updated_at,
         preferences=preferences,
@@ -112,18 +141,124 @@ def _profile_view(
 @router.get(
     "/spaces/{spaceId}/profiles/{accountId}",
     response_model=PartnerProfileView,
-    responses=problem_responses(401, 404),
+    responses={
+        200: {"headers": ETAG_HEADERS},
+        **problem_responses(401, 404),
+    },
 )
 def get_partner_profile(
     authorization: Authorization,
     session: DbSession,
+    response: Response,
     account_id: Annotated[str, Path(alias="accountId")],
 ) -> PartnerProfileView:
     profile, subject, preferences = service.profile_preferences(session, authorization, account_id)
+    attachment = service.profile_attachment(session, subject.id)
+    response.headers["ETag"] = etag_for(subject.version)
     return _profile_view(
         profile,
         display_name=subject.display_name,
+        profile_attachment_id=attachment.id if attachment is not None else None,
+        version=subject.version,
         preferences=[_preference_view(preference) for preference in preferences],
+    )
+
+
+@router.patch(
+    "/spaces/{spaceId}/profiles/{accountId}",
+    response_model=PartnerProfileView,
+    operation_id="updateProfileIdentity",
+    responses={
+        200: {"headers": ETAG_HEADERS},
+        **problem_responses(401, 403, 404, 409, 422),
+    },
+)
+def update_profile_identity(
+    authorization: Authorization,
+    session: DbSession,
+    response: Response,
+    body: ProfileIdentityUpdate,
+    expected_version: IfMatchVersion,
+    account_id: Annotated[str, Path(alias="accountId")],
+) -> PartnerProfileView:
+    """Change only the authenticated account's current presentation identity."""
+    subject = service.update_profile_identity(
+        session,
+        authorization,
+        account_id,
+        expected_version=expected_version,
+        changed_fields=frozenset(body.model_fields_set),
+        display_name=body.display_name,
+        profile_attachment_id=body.profile_attachment_id,
+    )
+    profile, subject, preferences = service.profile_preferences(session, authorization, subject.id)
+    attachment = service.profile_attachment(session, subject.id)
+    response.headers["ETag"] = etag_for(subject.version)
+    return _profile_view(
+        profile,
+        display_name=subject.display_name,
+        profile_attachment_id=attachment.id if attachment is not None else None,
+        version=subject.version,
+        preferences=[_preference_view(preference) for preference in preferences],
+    )
+
+
+@router.get(
+    "/spaces/{spaceId}/profiles/{accountId}/avatar/content",
+    operation_id="getProfileAvatarContent",
+    response_class=StreamingResponse,
+    responses=problem_responses(401, 404),
+)
+def get_profile_avatar_content(
+    authorization: Authorization,
+    session: DbSession,
+    account_id: Annotated[str, Path(alias="accountId")],
+) -> StreamingResponse:
+    """Stream only the current avatar after current-Space profile authorization.
+
+    Avatar identity is Account-global while its backing Attachment remains
+    Space-scoped. The caller therefore never supplies an arbitrary attachment
+    ID here. We first prove that the subject has a readable profile in the
+    caller's current Space and only then resolve that Account's one current
+    avatar binding. This deliberately permits the same current avatar to appear
+    in another Space where the same Account is an active member without making
+    any other source-Space attachment readable.
+    """
+    _, subject = service.profile_for_subject(session, authorization, account_id)
+    attachment = service.profile_attachment(session, subject.id)
+    if (
+        attachment is None
+        or attachment.status != AttachmentStatus.READY.value
+        or attachment.media_type != MediaType.IMAGE.value
+    ):
+        raise Attachment.privacy_absence.error()
+
+    variant = (
+        attachment_service.THUMBNAIL_VARIANT
+        if attachment.has_thumbnail
+        else attachment_service.ORIGINAL_VARIANT
+    )
+    source = attachment_service.open_content(attachment, variant=variant)
+    media_type = (
+        "image/jpeg"
+        if variant == attachment_service.THUMBNAIL_VARIANT
+        else (attachment.mime_type or "application/octet-stream")
+    )
+
+    def chunks() -> object:
+        try:
+            while chunk := source.read(STREAM_CHUNK):
+                yield chunk
+        finally:
+            source.close()
+
+    return StreamingResponse(
+        chunks(),  # type: ignore[arg-type]
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{attachment.id}"',
+            "Cache-Control": "private, no-store",
+        },
     )
 
 
