@@ -36,14 +36,14 @@ private val ReadingMeasure: Dp = 560.dp
  * one shared "you are in the private area now" moment says that once rather
  * than on every card.
  *
- * Only [onOpenNotes] exists so far: a card with nothing behind it is dead
- * navigation, so Gift Ideas and Collections join here only once their own
- * slices land.
+ * Collections join once their own slice lands: a card with nothing behind
+ * it is dead navigation.
  */
 @Composable
 fun PrivateAreaScreen(
     onBack: () -> Unit,
     onOpenNotes: () -> Unit,
+    onOpenGiftIdeas: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -95,6 +95,35 @@ fun PrivateAreaScreen(
                     modifier = Modifier.heightIn(min = MinimumTouchTarget),
                 ) {
                     Text(stringResource(R.string.private_notes_open))
+                }
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(SideBySideTheme.radii.card),
+            color = SideBySideTheme.colors.surface,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+            ) {
+                Text(
+                    text = stringResource(R.string.gift_ideas_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SideBySideTheme.colors.textPrimary,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text(
+                    text = stringResource(R.string.gift_ideas_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SideBySideTheme.colors.textSecondary,
+                )
+                OutlinedButton(
+                    onClick = onOpenGiftIdeas,
+                    modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                ) {
+                    Text(stringResource(R.string.gift_ideas_open))
                 }
             }
         }

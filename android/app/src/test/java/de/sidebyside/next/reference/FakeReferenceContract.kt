@@ -29,6 +29,10 @@ import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlacePage
 import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.GiftIdeaCreate
+import sidebyside.api.models.GiftIdeaDetail
+import sidebyside.api.models.GiftIdeaPage
+import sidebyside.api.models.GiftIdeaUpdate
 import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNotePage
@@ -524,6 +528,33 @@ abstract class FakeReferenceContract : ReferenceContract {
         noteId: UUID,
         ifMatch: Int,
     ): Unit = notExercised("deletePrivateNote")
+
+    override suspend fun listGiftIdeas(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): GiftIdeaPage = notExercised("listGiftIdeas")
+
+    override suspend fun createGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        fields: GiftIdeaCreate,
+    ): GiftIdeaDetail = notExercised("createGiftIdea")
+
+    override suspend fun updateGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        giftIdeaId: UUID,
+        ifMatch: Int,
+        fields: GiftIdeaUpdate,
+    ): GiftIdeaDetail = notExercised("updateGiftIdea")
+
+    override suspend fun deleteGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        giftIdeaId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteGiftIdea")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

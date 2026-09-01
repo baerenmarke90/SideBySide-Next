@@ -42,6 +42,10 @@ import sidebyside.api.models.PersonRelationship
 import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.GiftIdeaCreate
+import sidebyside.api.models.GiftIdeaDetail
+import sidebyside.api.models.GiftIdeaStatus
+import sidebyside.api.models.GiftIdeaUpdate
 import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNoteUpdate
@@ -225,6 +229,10 @@ data class ReferenceUiState(
     val privateNotes: List<PrivateNoteDetail> = emptyList(),
     val privateNotesBusy: Boolean = false,
     val privateNotesProblem: UiProblem? = null,
+    /** Owner-only: the server already filters this to the caller's own gift ideas. */
+    val giftIdeas: List<GiftIdeaDetail> = emptyList(),
+    val giftIdeasBusy: Boolean = false,
+    val giftIdeasProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -358,6 +366,7 @@ class ReferenceViewModel(
         clearPlaces()
         clearPlaceRelations()
         clearPrivateNotes()
+        clearGiftIdeas()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -446,6 +455,7 @@ class ReferenceViewModel(
         clearPlaces()
         clearPlaceRelations()
         clearPrivateNotes()
+        clearGiftIdeas()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -502,6 +512,7 @@ class ReferenceViewModel(
         clearPlaces()
         clearPlaceRelations()
         clearPrivateNotes()
+        clearGiftIdeas()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -564,6 +575,7 @@ class ReferenceViewModel(
         clearPlaces()
         clearPlaceRelations()
         clearPrivateNotes()
+        clearGiftIdeas()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -3033,6 +3045,188 @@ class ReferenceViewModel(
 
     fun clearPrivateNotes() {
         mutate { it.copy(privateNotes = emptyList(), privateNotesBusy = false, privateNotesProblem = null) }
+    }
+
+    fun loadGiftIdeas() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listGiftIdeas(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeas = page.items, giftIdeasBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addGiftIdea(
+        title: String,
+        description: String,
+        occasion: String,
+        recipient: String,
+        priceText: String,
+        url: String,
+        targetOn: String,
+        pinned: Boolean,
+    ) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createGiftIdea(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    GiftIdeaCreate(
+                        title = title,
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        occasion = occasion.trim().takeIf { it.isNotBlank() },
+                        pinned = pinned,
+                        priceText = priceText.trim().takeIf { it.isNotBlank() },
+                        recipient = recipient.trim().takeIf { it.isNotBlank() },
+                        targetOn = parseHappenedOn(targetOn),
+                        url = url.trim().takeIf { it.isNotBlank() },
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeasBusy = false) }
+                    loadGiftIdeas()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updateGiftIdea(
+        idea: GiftIdeaDetail,
+        title: String,
+        description: String,
+        occasion: String,
+        recipient: String,
+        priceText: String,
+        url: String,
+        targetOn: String,
+        pinned: Boolean,
+    ) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateGiftIdea(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    idea.id,
+                    idea.version,
+                    GiftIdeaUpdate(
+                        title = title,
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        occasion = occasion.trim().takeIf { it.isNotBlank() },
+                        pinned = pinned,
+                        priceText = priceText.trim().takeIf { it.isNotBlank() },
+                        recipient = recipient.trim().takeIf { it.isNotBlank() },
+                        targetOn = parseHappenedOn(targetOn),
+                        url = url.trim().takeIf { it.isNotBlank() },
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeasBusy = false) }
+                    loadGiftIdeas()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /**
+     * A status change alone, sent as its own partial update rather than
+     * folded into [updateGiftIdea]: the server owns M3-D17's transition
+     * graph and rejects an invalid one, so this client never encodes which
+     * transitions are allowed — it only ever proposes a target status.
+     */
+    fun changeGiftIdeaStatus(idea: GiftIdeaDetail, status: GiftIdeaStatus) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateGiftIdea(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    idea.id,
+                    idea.version,
+                    GiftIdeaUpdate(status = status),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeasBusy = false) }
+                    loadGiftIdeas()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deleteGiftIdea(idea: GiftIdeaDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteGiftIdea(spaceId, currentSession.tokens.accessToken, idea.id, idea.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeasBusy = false) }
+                    loadGiftIdeas()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearGiftIdeas() {
+        mutate { it.copy(giftIdeas = emptyList(), giftIdeasBusy = false, giftIdeasProblem = null) }
     }
 
     fun logout() {

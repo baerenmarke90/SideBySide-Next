@@ -59,6 +59,7 @@ import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
 import de.sidebyside.next.place.PlaceRelationsScreen
 import de.sidebyside.next.place.PlacesScreen
+import de.sidebyside.next.privatearea.GiftIdeasScreen
 import de.sidebyside.next.privatearea.PrivateAreaScreen
 import de.sidebyside.next.privatearea.PrivateNotesScreen
 import de.sidebyside.next.plan.PlanScreen
@@ -678,6 +679,7 @@ private fun DemoShell(
                 PrivateAreaScreen(
                     onBack = { controller.popBackStack() },
                     onOpenNotes = { controller.navigate(PRIVATE_NOTES_ROUTE) },
+                    onOpenGiftIdeas = { controller.navigate(GIFT_IDEAS_ROUTE) },
                 )
             }
 
@@ -692,6 +694,21 @@ private fun DemoShell(
                     onAdd = viewModel::addPrivateNote,
                     onEdit = viewModel::updatePrivateNote,
                     onDelete = viewModel::deletePrivateNote,
+                )
+            }
+
+            composable(GIFT_IDEAS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadGiftIdeas() }
+
+                GiftIdeasScreen(
+                    ideas = state.giftIdeas,
+                    busy = state.giftIdeasBusy,
+                    problem = state.giftIdeasProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = viewModel::addGiftIdea,
+                    onEdit = viewModel::updateGiftIdea,
+                    onChangeStatus = viewModel::changeGiftIdeaStatus,
+                    onDelete = viewModel::deleteGiftIdea,
                 )
             }
         },
@@ -798,6 +815,7 @@ private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/
 
 private const val PRIVATE_AREA_ROUTE = "more/private"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
+private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
 
 /**
  * Whether [route] is inside the owner-only Private Area subtree — the hub
