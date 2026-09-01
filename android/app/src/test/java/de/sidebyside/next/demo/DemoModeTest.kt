@@ -227,7 +227,11 @@ private class RecordingDemoApi(
         return "demo-token"
     }
 
-    override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
+    override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage {
         timelineSpaces += spaceId
         return StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
     }

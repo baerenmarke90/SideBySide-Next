@@ -227,7 +227,11 @@ private class DetailApi(
     override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
         listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
 
-    override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage =
+    override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage =
         StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
 
     override suspend fun getMilestone(
@@ -263,6 +267,7 @@ private class DetailApi(
         accessToken: String,
         parent: ReferenceContract.CommentParent,
         parentId: UUID,
+        cursor: String?,
     ): CommentPage {
         commentParents += parent
         commentParentIds += parentId

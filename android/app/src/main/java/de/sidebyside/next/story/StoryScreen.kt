@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -52,6 +53,9 @@ fun StoryScreen(
     onOpenMemory: ((UUID) -> Unit)? = null,
     onOpenMilestone: ((UUID) -> Unit)? = null,
     onOpenHeartMoment: ((UUID) -> Unit)? = null,
+    /** Null where there is no more Story to load. */
+    onLoadMore: (() -> Unit)? = null,
+    loadingMore: Boolean = false,
     header: (@Composable () -> Unit)? = null,
 ) {
     val days = items.toStoryDays()
@@ -86,6 +90,20 @@ fun StoryScreen(
                         StoryEntryKind.HEART_MOMENT -> onOpenHeartMoment
                     }?.let { open -> { open(entry.id) } },
                 )
+            }
+        }
+
+        // A Story that simply stopped after one page would lose history with
+        // nothing on screen to say so.
+        onLoadMore?.let { more ->
+            item(key = "load-more") {
+                TextButton(onClick = more, enabled = !loadingMore) {
+                    Text(
+                        stringResource(
+                            if (loadingMore) R.string.load_more_busy else R.string.load_more,
+                        ),
+                    )
+                }
             }
         }
     }

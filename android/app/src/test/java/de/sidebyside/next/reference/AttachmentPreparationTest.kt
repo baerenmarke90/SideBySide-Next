@@ -141,7 +141,11 @@ class AttachmentPreparationTest {
             return memory(version = 2)
         }
 
-        override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage =
+        override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage =
             StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
 
         override suspend fun createReadAccess(

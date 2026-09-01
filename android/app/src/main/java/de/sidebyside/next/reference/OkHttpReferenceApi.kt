@@ -80,6 +80,15 @@ class ReferenceApiException(
     val status: Int? = null,
 ) : RuntimeException(message)
 
+/**
+ * Appends a cursor, encoded, or nothing at all.
+ *
+ * A cursor is opaque and server-issued; it is passed back exactly as received
+ * rather than parsed or rebuilt.
+ */
+private fun cursorQuery(cursor: String?): String =
+    cursor?.let { "&cursor=" + java.net.URLEncoder.encode(it, "UTF-8") }.orEmpty()
+
 /** A transition that carries no body still has to send valid JSON. */
 private const val EMPTY_JSON_BODY = "{}"
 
@@ -213,9 +222,11 @@ class OkHttpReferenceApi(
         accessToken: String,
         parent: ReferenceContract.CommentParent,
         parentId: UUID,
+        cursor: String?,
     ): CommentPage = executeJson(
         authenticatedRequest(
-            "$baseUrl/api/v1/spaces/$spaceId/${parent.segment}/$parentId/comments?limit=50",
+            "$baseUrl/api/v1/spaces/$spaceId/${parent.segment}/$parentId/comments?limit=50" +
+                cursorQuery(cursor),
             accessToken,
         ).get().build(),
         CommentPage.serializer(),
@@ -676,10 +687,15 @@ class OkHttpReferenceApi(
         ThinkingOfYouAccepted.serializer(),
     )
 
-    override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage = executeJson(
-        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/timeline?limit=25", accessToken)
-            .get()
-            .build(),
+    override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/timeline?limit=25" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
         StoryPage.serializer(),
     )
 

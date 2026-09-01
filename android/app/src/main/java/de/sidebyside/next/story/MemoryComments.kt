@@ -55,6 +55,8 @@ fun MemoryComments(
     onEdit: (UUID, String) -> Unit,
     onDelete: (UUID) -> Unit,
     modifier: Modifier = Modifier,
+    /** Null where the thread has no further pages. */
+    onLoadMore: (() -> Unit)? = null,
 ) {
     var draft by rememberSaveable { mutableStateOf("") }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -160,6 +162,14 @@ fun MemoryComments(
                         }
                     }
                 }
+            }
+        }
+
+        onLoadMore?.let { more ->
+            TextButton(onClick = more, enabled = !busy) {
+                Text(
+                    stringResource(if (busy) R.string.load_more_busy else R.string.load_more),
+                )
             }
         }
 

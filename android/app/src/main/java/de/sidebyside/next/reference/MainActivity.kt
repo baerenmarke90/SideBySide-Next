@@ -313,6 +313,8 @@ private fun DemoShell(
                                 onDelete = { commentId ->
                                     viewModel.removeComment(MEMORY_COMMENTS, id, commentId)
                                 },
+                                onLoadMore = { viewModel.loadMoreComments(MEMORY_COMMENTS, id) }
+                                    .takeIf { state.commentsHaveMore },
                             )
                         }
                     },
@@ -375,6 +377,9 @@ private fun DemoShell(
                                         commentId,
                                     )
                                 },
+                                onLoadMore = {
+                                    viewModel.loadMoreComments(MILESTONE_COMMENTS, parentId)
+                                }.takeIf { state.commentsHaveMore },
                             )
                         }
                     },
@@ -430,6 +435,9 @@ private fun DemoShell(
                                         commentId,
                                     )
                                 },
+                                onLoadMore = {
+                                    viewModel.loadMoreComments(HEART_MOMENT_COMMENTS, parentId)
+                                }.takeIf { state.commentsHaveMore },
                             )
                         }
                     },
@@ -591,6 +599,8 @@ private fun StoryDestination(
         onOpenMemory = onOpenMemory,
         onOpenMilestone = onOpenMilestone,
         onOpenHeartMoment = onOpenHeartMoment,
+        onLoadMore = viewModel::loadMoreStory.takeIf { state.storyHasMore },
+        loadingMore = state.storyLoadingMore,
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),

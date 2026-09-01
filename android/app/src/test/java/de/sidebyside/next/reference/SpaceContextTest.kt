@@ -211,7 +211,11 @@ private class SpaceApi(
         memberships
 
 
-    override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
+    override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage {
         timelineCalls += 1
         timelineSpaces += spaceId
         if (timelineCalls > holdTimelineAfter) {

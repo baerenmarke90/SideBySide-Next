@@ -256,6 +256,8 @@
     <string name="milestone_delete_confirm_title">Diesen Meilenstein löschen?</string>
     <string name="milestone_delete_confirm_body">Er verschwindet aus eurer gemeinsamen Geschichte. Das lässt sich nicht rückgängig machen.</string>
     <string name="heart_moment_shared_by">Von %1$s</string>
+    <string name="load_more">Weitere laden</string>
+    <string name="load_more_busy">Wird geladen …</string>
     <string name="today_title">Heute</string>
     <string name="today_together_years">Seit %1$d Jahren und %2$d Monaten zusammen</string>
     <string name="today_together_years_only">Seit %1$d Jahren zusammen</string>
