@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from sidebyside.auth.sessions import resolve
 from sidebyside.authorization import AuthorizationContext
+from sidebyside.authorization.server_admin import require_server_admin
 from sidebyside.core.errors import ErrorCode, NotFoundError, UnauthenticatedError
 from sidebyside.core.ids import parse_id
 from sidebyside.db.session import get_session
@@ -61,6 +62,14 @@ def current_account(request: Request, session: DbSession) -> Account:
 
 CurrentAccount = Annotated[Account, Depends(current_account)]
 CurrentSession = Annotated[DeviceSession, Depends(current_session)]
+
+
+def current_server_admin(session: DbSession, account: CurrentAccount) -> Account:
+    """Return the caller only after instance-wide ServerAdmin authorization."""
+    return require_server_admin(session, account)
+
+
+CurrentServerAdmin = Annotated[Account, Depends(current_server_admin)]
 
 
 @dataclass(frozen=True)
