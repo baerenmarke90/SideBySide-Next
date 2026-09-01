@@ -12,13 +12,14 @@ from uuid import UUID
 
 from fastapi import APIRouter
 from sqlalchemy import distinct, func, select
+from sqlalchemy.orm import Session
 
 from sidebyside.api.deps import CurrentServerAdmin, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
 from sidebyside.api.v1.health import build_revision
 from sidebyside.attachments.models import Attachment, AttachmentStatus
-from sidebyside.config import MailTransport, get_settings
+from sidebyside.config import get_settings
 from sidebyside.core.clock import now
 from sidebyside.identity.models import Account
 from sidebyside.jobs.models import Job, JobStatus
@@ -68,7 +69,7 @@ class ServerAdminOverview(ApiModel):
     recent_failed_jobs: list[ServerAdminFailedJob]
 
 
-def _job_count(session: DbSession, status: JobStatus) -> int:
+def _job_count(session: Session, status: JobStatus) -> int:
     return session.execute(
         select(func.count()).select_from(Job).where(Job.status == status.value)
     ).scalar_one()
@@ -87,21 +88,23 @@ def get_server_admin_overview(
     settings = get_settings()
     current_time = now()
 
-    account_count = session.execute(select(func.count()).select_from(Account)).scalar_one()
+    account_count = session.execute(
+        select(func.count()).select_from(Account)
+    ).scalar_one()
     active_space_count = session.execute(
         select(func.count(distinct(Membership.space_id))).where(
             Membership.status == MembershipStatus.ACTIVE.value
         )
     ).scalar_one()
     accounts_last_24h = session.execute(
-        select(func.count()).select_from(Account).where(
-            Account.created_at >= current_time - timedelta(hours=24)
-        )
+        select(func.count())
+        .select_from(Account)
+        .where(Account.created_at >= current_time - timedelta(hours=24))
     ).scalar_one()
     accounts_last_7d = session.execute(
-        select(func.count()).select_from(Account).where(
-            Account.created_at >= current_time - timedelta(days=7)
-        )
+        select(func.count())
+        .select_from(Account)
+        .where(Account.created_at >= current_time - timedelta(days=7))
     ).scalar_one()
 
     media_object_count = session.execute(
