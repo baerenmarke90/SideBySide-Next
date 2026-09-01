@@ -13,10 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
     steps:
-      - name: Install git
+      - name: Install git and certificates
         run: |
           apt-get update >/dev/null
-          apt-get install -y --no-install-recommends git >/dev/null
+          apt-get install -y --no-install-recommends git ca-certificates >/dev/null
+          update-ca-certificates >/dev/null
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
