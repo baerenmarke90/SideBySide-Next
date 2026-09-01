@@ -10,6 +10,7 @@ import de.sidebyside.next.profile.removeProfileAvatar
 import de.sidebyside.next.profile.updateProfileAvatar
 import de.sidebyside.next.profile.updateProfileDisplayName
 import de.sidebyside.next.shell.UiProblem
+import de.sidebyside.next.shell.UiStateKind
 import de.sidebyside.next.shell.problemFor
 import de.sidebyside.next.story.StoryImageRef
 import de.sidebyside.next.story.StoryImageStore
@@ -1502,8 +1503,37 @@ class ReferenceViewModel(
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
-                    mutate { it.copy(invitationBusy = false, invitationProblem = problemFor(throwable)) }
+                    mutate {
+                        it.copy(invitationBusy = false, invitationProblem = acceptInvitationProblem(throwable))
+                    }
                 }
+        }
+    }
+
+    /**
+     * The server deliberately answers every bad-token case — unknown, expired,
+     * revoked, already used — the same way, so as not to disclose which tokens
+     * exist. `ACCOUNT_ALREADY_MEMBER` is a different, safe-to-name case: the
+     * account already knows it is a member, so saying so leaks nothing.
+     */
+    private fun acceptInvitationProblem(throwable: Throwable): UiProblem {
+        val code = (throwable as? ReferenceApiException)?.code
+        return when (code) {
+            "ACCOUNT_ALREADY_MEMBER" -> UiProblem(
+                kind = UiStateKind.Conflict,
+                titleRes = R.string.invitation_already_member_title,
+                bodyRes = R.string.invitation_already_member,
+                retryable = false,
+            )
+
+            "INVITATION_INVALID", "CANNOT_ACCEPT_OWN_INVITATION" -> UiProblem(
+                kind = UiStateKind.Conflict,
+                titleRes = R.string.invitation_expired_title,
+                bodyRes = R.string.invitation_expired,
+                retryable = false,
+            )
+
+            else -> problemFor(throwable)
         }
     }
 
@@ -1554,7 +1584,20 @@ class ReferenceViewModel(
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
-                    mutate { it.copy(invitationBusy = false, invitationProblem = problemFor(throwable)) }
+                    // The server refuses a third partner rather than issuing an
+                    // invitation nobody could ever accept — a specific, named
+                    // state, not a version conflict a retry would fix.
+                    val problem = if ((throwable as? ReferenceApiException)?.code == "SPACE_FULL") {
+                        UiProblem(
+                            kind = UiStateKind.Conflict,
+                            titleRes = R.string.invitation_space_full_title,
+                            bodyRes = R.string.invitation_space_full,
+                            retryable = false,
+                        )
+                    } else {
+                        problemFor(throwable)
+                    }
+                    mutate { it.copy(invitationBusy = false, invitationProblem = problem) }
                 }
         }
     }

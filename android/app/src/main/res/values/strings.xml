@@ -290,7 +290,12 @@
     <string name="invitation_code_hint">Einladungscode</string>
     <string name="invitation_accept">Beitreten</string>
     <string name="invitation_accepted">Willkommen im gemeinsamen Bereich.</string>
-    <string name="invitation_expired">Dieser Code ist abgelaufen oder wurde schon benutzt.</string>
+    <string name="invitation_expired_title">Dieser Code funktioniert nicht</string>
+    <string name="invitation_expired">Er ist ungültig, abgelaufen oder wurde schon benutzt.</string>
+    <string name="invitation_already_member_title">Schon dabei</string>
+    <string name="invitation_already_member">Ihr teilt diesen Bereich bereits.</string>
+    <string name="invitation_space_full_title">Bereich schon voll</string>
+    <string name="invitation_space_full">Dieser Bereich hat schon zwei Partner:innen. Eine Einladung ist erst wieder möglich, wenn Platz ist.</string>
     <string name="invitations_title">Einladungen</string>
     <string name="invitations_intro">Lade deinen Partner ein, damit ihr denselben Bereich teilt.</string>
     <string name="invitation_create">Einladung erstellen</string>

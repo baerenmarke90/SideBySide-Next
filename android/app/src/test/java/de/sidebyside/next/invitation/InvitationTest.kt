@@ -1,6 +1,7 @@
 package de.sidebyside.next.invitation
 
 import de.sidebyside.next.reference.FakeReferenceContract
+import de.sidebyside.next.reference.R
 import de.sidebyside.next.reference.ReferenceApiException
 import de.sidebyside.next.reference.ReferenceConfig
 import de.sidebyside.next.reference.ReferenceContract
@@ -113,6 +114,45 @@ class InvitationTest {
     }
 
     @Test
+    fun aFullSpaceIsReportedByNameRatherThanAsAVersionConflict() = runTest(dispatcher) {
+        // Found on the device: SPACE_FULL was falling through to the generic
+        // "the data changed, reload and retry" wording, which is wrong here —
+        // no reload makes room for a third partner.
+        val api = InvitationApi(
+            memberships = listOf(active(SPACE)),
+            createFailure = ReferenceApiException("SPACE_FULL", "full", 409),
+        )
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+        model.createInvitation()
+        advanceUntilIdle()
+
+        assertEquals(R.string.invitation_space_full_title, model.uiState.value.invitationProblem?.titleRes)
+    }
+
+    @Test
+    fun acceptingACodeForASpaceAlreadySharedNamesThatRatherThanCallingItInvalid() =
+        runTest(dispatcher) {
+            val api = InvitationApi(
+                memberships = emptyList(),
+                acceptFailure = ReferenceApiException("ACCOUNT_ALREADY_MEMBER", "member", 409),
+            )
+            val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+            model.signIn("someone@example.test", "secret")
+            advanceUntilIdle()
+            model.acceptInvitation("a-code")
+            advanceUntilIdle()
+
+            assertEquals(
+                R.string.invitation_already_member_title,
+                model.uiState.value.invitationProblem?.titleRes,
+            )
+        }
+
+    @Test
     fun issuingAnInvitationExposesTheTokenExactlyOnce() = runTest(dispatcher) {
         val api = InvitationApi(memberships = listOf(active(SPACE)))
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
@@ -183,6 +223,7 @@ private class InvitationApi(
     private val memberships: List<AccountMembershipView>,
     private val membershipsAfterAccept: List<AccountMembershipView>? = null,
     private val acceptFailure: Throwable? = null,
+    private val createFailure: Throwable? = null,
     private val invitations: List<InvitationView> = emptyList(),
 ) : FakeReferenceContract() {
     val acceptedTokens = mutableListOf<String>()
@@ -221,12 +262,15 @@ private class InvitationApi(
     override suspend fun createInvitation(
         spaceId: UUID,
         accessToken: String,
-    ): IssuedInvitationView = IssuedInvitationView(
+    ): IssuedInvitationView {
+        createFailure?.let { throw it }
+        return IssuedInvitationView(
         createdAt = OffsetDateTime.now(),
         expiresAt = OffsetDateTime.now().plusDays(7),
-        id = UUID.randomUUID(),
-        token = "fresh-token",
-    )
+            id = UUID.randomUUID(),
+            token = "fresh-token",
+        )
+    }
 
     override suspend fun revokeInvitation(spaceId: UUID, accessToken: String, invitationId: UUID) {
         revokedIds += invitationId
