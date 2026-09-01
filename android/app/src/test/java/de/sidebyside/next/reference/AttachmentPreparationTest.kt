@@ -85,19 +85,12 @@ class AttachmentPreparationTest {
     private inner class RecordingContract(
         private val onCreateMemory: () -> Unit = {},
         private val uploadAttachmentId: UUID,
-    ) : ReferenceContract {
-        override suspend fun consumeMagicLink(token: String): SessionView =
-            error("Magic-link entry is not exercised by this test.")
+    ) : FakeReferenceContract() {
 
-        override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
-            error("Memberships are not exercised by this test.")
 
-        override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
-            error("Demo entry is not exercised by this test.")
 
         var boundAttachments: MemoryAttachmentSet? = null
 
-        override suspend fun signIn(email: String, password: String): SessionView = error("not used")
 
         override suspend fun createMemory(
             spaceId: UUID,

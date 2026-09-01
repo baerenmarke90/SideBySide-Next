@@ -1,5 +1,6 @@
 package de.sidebyside.next.story
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
 import java.time.LocalDate
+import java.util.UUID
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -46,6 +48,11 @@ fun StoryScreen(
     imageStore: StoryImageStore,
     generation: Long,
     modifier: Modifier = Modifier,
+    /**
+     * Opens one memory. Only memories have a screen of their own so far, so
+     * only their entries are made to look and behave as if they open.
+     */
+    onOpenMemory: ((UUID) -> Unit)? = null,
     header: (@Composable () -> Unit)? = null,
 ) {
     val days = items.toStoryDays()
@@ -69,10 +76,14 @@ fun StoryScreen(
                 count = day.entries.size,
                 key = { index -> day.entries[index].id.toString() },
             ) { index ->
+                val entry = day.entries[index]
                 StoryEntryCard(
-                    entry = day.entries[index],
+                    entry = entry,
                     imageStore = imageStore,
                     generation = generation,
+                    onOpen = onOpenMemory
+                        ?.takeIf { entry.kind == StoryEntryKind.MEMORY }
+                        ?.let { open -> { open(entry.id) } },
                 )
             }
         }
@@ -99,11 +110,14 @@ private fun StoryEntryCard(
     entry: StoryEntry,
     imageStore: StoryImageStore,
     generation: Long,
+    onOpen: (() -> Unit)? = null,
 ) {
     Surface(
         shape = RoundedCornerShape(SideBySideTheme.radii.card),
         color = SideBySideTheme.colors.surface,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
     ) {
         Column(
             modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),

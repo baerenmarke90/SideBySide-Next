@@ -24,6 +24,7 @@ import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.ProblemDetails
 import sidebyside.api.models.ProfileIdentityUpdate
@@ -135,6 +136,46 @@ class OkHttpReferenceApi(
             .post(SideBySideJson.encodeToString(MemoryCreate.serializer(), memory).toRequestBody(jsonMediaType))
             .build(),
         MemoryDetail.serializer(),
+    )
+
+    override suspend fun getMemory(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+    ): MemoryDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId", accessToken)
+            .get()
+            .build(),
+        MemoryDetail.serializer(),
+    )
+
+    override suspend fun updateMemory(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+        ifMatch: Int,
+        update: MemoryUpdate,
+    ): MemoryDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(MemoryUpdate.serializer(), update)
+                    .toRequestBody(jsonMediaType),
+            )
+            .build(),
+        MemoryDetail.serializer(),
+    )
+
+    override suspend fun deleteMemory(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete()
+            .build(),
     )
 
     override suspend fun createAttachmentUpload(
