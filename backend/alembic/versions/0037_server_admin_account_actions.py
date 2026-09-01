@@ -43,9 +43,7 @@ def upgrade() -> None:
             name="action_valid",
         ),
         sa.ForeignKeyConstraint(["actor_id"], ["accounts.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(
-            ["target_account_id"], ["accounts.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["target_account_id"], ["accounts.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(

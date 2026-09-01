@@ -182,6 +182,14 @@ def test_account_directory_exposes_identity_metadata_only(
         "activeMembershipCount",
     }
 
+    by_id = client.get(
+        f"/api/v1/server-admin/accounts?query={target.id}",
+        headers=auth(token),
+    )
+    assert by_id.status_code == 200
+    assert by_id.json()["total"] == 1
+    assert by_id.json()["items"][0]["id"] == str(target.id)
+
 
 def test_server_admin_can_suspend_account_and_sessions_are_revoked(
     client,
@@ -203,12 +211,16 @@ def test_server_admin_can_suspend_account_and_sessions_are_revoked(
     assert response.json()["disabledAt"] is not None
     session.refresh(target)
     assert target.disabled_at is not None
-    active_sessions = session.execute(
-        select(DeviceSession).where(
-            DeviceSession.account_id == target.id,
-            DeviceSession.revoked_at.is_(None),
+    active_sessions = (
+        session.execute(
+            select(DeviceSession).where(
+                DeviceSession.account_id == target.id,
+                DeviceSession.revoked_at.is_(None),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert active_sessions == []
     assert client.get("/api/v1/auth/me", headers=auth(target_token)).status_code == 401
 
@@ -358,11 +370,15 @@ def test_operator_assisted_recovery_reuses_normal_one_time_recovery_flow(
     )
     assert replay.status_code == 422
 
-    events = session.execute(
-        select(InstanceAdministrationActionEvent).where(
-            InstanceAdministrationActionEvent.target_account_id == target.id
+    events = (
+        session.execute(
+            select(InstanceAdministrationActionEvent).where(
+                InstanceAdministrationActionEvent.target_account_id == target.id
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert [event.action for event in events] == ["account_recovery_issued"]
     assert token not in " ".join(event.action for event in events)
 

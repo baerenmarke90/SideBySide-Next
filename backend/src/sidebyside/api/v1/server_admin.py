@@ -8,10 +8,10 @@ surface.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Path, Query, Response, status
+from fastapi import APIRouter, Path, Query, Response
 from sqlalchemy import distinct, exists, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -28,7 +28,8 @@ from sidebyside.api.schema import ApiModel
 from sidebyside.api.v1.health import build_revision
 from sidebyside.attachments.models import Attachment, AttachmentStatus
 from sidebyside.auth import cloud
-from sidebyside.config import MailTransport, get_settings as get_runtime_settings
+from sidebyside.config import MailTransport
+from sidebyside.config import get_settings as get_runtime_settings
 from sidebyside.core.clock import now
 from sidebyside.core.errors import NotFoundError, ValidationError
 from sidebyside.core.ids import parse_id
@@ -207,7 +208,7 @@ def _job_count(session: Session, job_status: JobStatus) -> int:
     ).scalar_one()
 
 
-def _active_session_filters(current_time: datetime) -> tuple[object, ...]:
+def _active_session_filters(current_time: datetime) -> tuple[Any, ...]:
     return (
         DeviceSession.revoked_at.is_(None),
         DeviceSession.expires_at > current_time,
@@ -386,7 +387,9 @@ def get_server_admin_overview(
     ).scalar_one()
 
     active_session_count = session.execute(
-        select(func.count()).select_from(DeviceSession).where(*_active_session_filters(current_time))
+        select(func.count())
+        .select_from(DeviceSession)
+        .where(*_active_session_filters(current_time))
     ).scalar_one()
     local_password_account_count = session.execute(
         select(func.count(distinct(AuthIdentity.account_id))).where(
@@ -530,15 +533,22 @@ def list_server_admin_accounts(
     normalized_query = (query or "").strip().lower()
     if normalized_query:
         like = f"%{normalized_query}%"
-        statement = statement.where(
-            or_(
-                func.lower(Account.display_name).like(like),
-                exists().where(
-                    AccountEmail.account_id == Account.id,
-                    AccountEmail.email.like(like),
-                ),
-            )
+        display_name_match = func.lower(Account.display_name).like(like)
+        email_match = exists().where(
+            AccountEmail.account_id == Account.id,
+            AccountEmail.email.like(like),
         )
+        account_id_match = parse_id(normalized_query)
+        if account_id_match is None:
+            statement = statement.where(or_(display_name_match, email_match))
+        else:
+            statement = statement.where(
+                or_(
+                    display_name_match,
+                    email_match,
+                    Account.id == account_id_match,
+                )
+            )
     if account_status == "active":
         statement = statement.where(Account.disabled_at.is_(None))
     elif account_status == "suspended":

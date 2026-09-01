@@ -220,10 +220,6 @@ function AccountDetail({
     }
   }
 
-  const unverifiedEmails = account.emails.filter(
-    (email) => email.verifiedAt === null,
-  );
-
   return (
     <div className="server-admin-account-detail">
       <div className="server-admin-account-detail-heading">
