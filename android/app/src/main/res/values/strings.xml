@@ -424,6 +424,20 @@
     <string name="place_cancel">Abbrechen</string>
     <string name="place_save_changes">Änderungen speichern</string>
 
+    <string name="place_relations">Verknüpfte Inhalte</string>
+
+    <string name="place_relations_title">Verknüpfte gemeinsame Inhalte</string>
+    <string name="place_relations_intro">Auswählbar sind ausschließlich Inhalte aus eurer gemeinsamen Story. Private Herzmomente erscheinen hier nicht.</string>
+    <string name="place_relations_empty">Noch keine Inhalte verknüpft.</string>
+    <string name="place_relation_unlink">Verknüpfung lösen</string>
+    <string name="place_relation_add_heading">Gemeinsamen Inhalt verknüpfen</string>
+    <string name="place_relation_choose">Inhalt auswählen</string>
+    <string name="place_relation_link">Verknüpfen</string>
+    <string name="place_relation_none_available">Alle aktuell verfügbaren gemeinsamen Story-Inhalte sind bereits verknüpft.</string>
+    <string name="place_relation_kind_memory">Erinnerung</string>
+    <string name="place_relation_kind_milestone">Meilenstein</string>
+    <string name="place_relation_kind_heart_moment">Herzmoment</string>
+
     <string name="private_area_card_title">Privater Bereich</string>
     <string name="private_area_card_intro">Notizen und Ideen, die nur dir gehören – dein Partner oder deine Partnerin sieht sie nie.</string>
     <string name="private_area_open">Privaten Bereich öffnen</string>

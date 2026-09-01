@@ -59,6 +59,7 @@ import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNotePage
 import sidebyside.api.models.PrivateNoteUpdate
+import sidebyside.api.models.RelationTargets
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
@@ -1103,6 +1104,45 @@ class OkHttpReferenceApi(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/places/$placeId", accessToken)
             .header("If-Match", ifMatch.toString())
             .delete().build(),
+    )
+
+    override suspend fun listPlaceRelationTargets(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+    ): List<UUID> = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/places/$placeId/${kind.segment}",
+            accessToken,
+        ).get().build(),
+        RelationTargets.serializer(),
+    ).items
+
+    override suspend fun linkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/places/$placeId/${kind.segment}/$targetId",
+            accessToken,
+        ).put(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+    )
+
+    override suspend fun unlinkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/places/$placeId/${kind.segment}/$targetId",
+            accessToken,
+        ).delete().build(),
     )
 
     override suspend fun listPrivateNotes(

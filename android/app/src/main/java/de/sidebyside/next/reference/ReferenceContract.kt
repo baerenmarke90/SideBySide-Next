@@ -567,6 +567,48 @@ interface ReferenceContract {
     suspend fun deletePlace(spaceId: UUID, accessToken: String, placeId: UUID, ifMatch: Int)
 
     /**
+     * A Story item kind, with the URL segment its typed-relation endpoints
+     * use. Mirrors [CommentParent] deliberately rather than reusing it: the
+     * two happen to share the same three segments today, but coupling
+     * Place's relation endpoints to a type named for comments would be the
+     * wrong abstraction to reach for.
+     */
+    enum class RelationTargetKind(val segment: String) {
+        MEMORY("memories"),
+        MILESTONE("milestones"),
+        HEART_MOMENT("heart-moments"),
+    }
+
+    /**
+     * The Story items already linked to a place, as IDs only — the server
+     * deliberately does not return their content here (a second, separately
+     * authorized read path), so the caller resolves labels itself from
+     * whatever Story items it can already read, e.g. via [getTimeline].
+     */
+    suspend fun listPlaceRelationTargets(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: RelationTargetKind,
+    ): List<UUID>
+
+    suspend fun linkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: RelationTargetKind,
+        targetId: UUID,
+    )
+
+    suspend fun unlinkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: RelationTargetKind,
+        targetId: UUID,
+    )
+
+    /**
      * Owner-only: the server filters to what the caller owns, so the path
      * carries no accountId and the response never contains another
      * account's PrivateNote.
