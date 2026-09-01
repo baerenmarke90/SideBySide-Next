@@ -187,6 +187,12 @@
 
 .page-heading h1 {
   margin-bottom: var(--space-2);
+  /*
+   * The delivered display face, on the one heading every page has. This is the
+   * "editorial and Story moment" the design principles reserve it for; the
+   * scale is untouched, only the family changes.
+   */
+  font-family: var(--font-display);
 }
 
 .page-heading > p:last-child,
