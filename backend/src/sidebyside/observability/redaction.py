@@ -42,6 +42,9 @@ SENSITIVE_FIELD_NAMES: frozenset[str] = frozenset(
         "longitude",
         "location",
         "coordinates",
+        "q",
+        "query",
+        "search",
     }
 )
 
@@ -69,6 +72,9 @@ SENSITIVE_QUERY_PARAMS: frozenset[str] = frozenset(
         "x-amz-security-token",
         "x-amz-credential",
         "sig",
+        "q",
+        "query",
+        "search",
     }
 )
 

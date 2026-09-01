@@ -14,7 +14,6 @@ from sidebyside.observability.context import (
     set_correlation_id,
     set_request_id,
 )
-from sidebyside.observability.redaction import scrub_url
 
 _REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9_\-\.]{1,64}$")
 _ACCESS_LOG = logging.getLogger("sidebyside.access")
@@ -74,13 +73,6 @@ class RequestLoggingMiddleware:
         status_code = 500
         path = scope.get("path", "")
         method = scope.get("method", "")
-        raw_query = scope.get("query_string", b"").decode("latin1")
-
-        if raw_query:
-            full_url = f"{path}?{raw_query}"
-            sanitized_path = scrub_url(full_url)
-        else:
-            sanitized_path = path
 
         async def send_wrapper(message: Message) -> None:
             nonlocal status_code
@@ -95,12 +87,12 @@ class RequestLoggingMiddleware:
             _ACCESS_LOG.info(
                 "%s %s -> %d (%.2fms)",
                 method,
-                sanitized_path,
+                path,
                 status_code,
                 duration_ms,
                 extra={
                     "http_method": method,
-                    "http_path": sanitized_path,
+                    "http_path": path,
                     "http_status": status_code,
                     "duration_ms": duration_ms,
                 },
