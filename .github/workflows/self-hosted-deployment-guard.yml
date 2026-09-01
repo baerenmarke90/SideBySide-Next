@@ -213,7 +213,7 @@ jobs:
           response=$(curl --fail --silent --show-error -D "$headers" http://127.0.0.1:18081/api/v1/health/ready)
           printf '%s\n' "$response"
           printf '%s\n' "$response" | jq -e '.status == "ok" and .database == "ok"'
-          grep -Eiq '^X-SideBySide-Revision: local-checkout\r?$' "$headers"
+          tr -d '\r' < "$headers" | grep -Fqi 'X-SideBySide-Revision: local-checkout'
 
       - name: Web proof of concept through published port
         run: |
