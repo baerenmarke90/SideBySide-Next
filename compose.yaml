@@ -37,6 +37,8 @@ x-runtime-environment: &runtime-environment
 x-backend-build: &backend-build
   build:
     context: ./backend
+    args:
+      SBS_BUILD_REVISION: "${SBS_BUILD_REVISION:-local-checkout}"
   pull_policy: build
 
 x-web-build: &web-build
