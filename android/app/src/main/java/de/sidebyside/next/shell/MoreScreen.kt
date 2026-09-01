@@ -2,21 +2,21 @@ package de.sidebyside.next.shell
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,9 +34,9 @@ import sidebyside.api.models.AccountMembershipView
 /**
  * The Mehr area.
  *
- * It carries only what exists today: who is signed in, which Space is being
- * read, and how to sign out. People, the owner-only area, notifications and
- * profile join it in their own slices rather than appearing here as empty rows.
+ * It owns the existing signed-in utility surface. Personal settings can insert
+ * their real content through [profileContent] without creating a new top-level
+ * destination or pre-empting the later header/navigation slice.
  */
 @Composable
 fun MoreScreen(
@@ -46,6 +46,7 @@ fun MoreScreen(
     spaces: List<AccountMembershipView> = emptyList(),
     activeSpaceId: UUID? = null,
     onSelectSpace: (UUID) -> Unit = {},
+    profileContent: @Composable () -> Unit = {},
 ) {
     Column(
         modifier = modifier
@@ -84,6 +85,8 @@ fun MoreScreen(
                 onSelectSpace = onSelectSpace,
             )
         }
+
+        profileContent()
 
         Surface(
             shape = RoundedCornerShape(SideBySideTheme.radii.card),

@@ -190,7 +190,7 @@ private class SpaceApi(
     private val memberships: List<AccountMembershipView>,
     private val holdTimelineAfter: Int = Int.MAX_VALUE,
     private val releaseHeldTimeline: CompletableDeferred<Unit>? = null,
-) : ReferenceContract {
+) : FakeReferenceContract() {
     val timelineSpaces = mutableListOf<UUID>()
     private var timelineCalls = 0
 
@@ -210,8 +210,6 @@ private class SpaceApi(
     override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
         memberships
 
-    override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
-        error("Demo entry is not exercised by this test.")
 
     override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
         timelineCalls += 1
@@ -222,53 +220,11 @@ private class SpaceApi(
         return StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
     }
 
-    override suspend fun createMemory(
-        spaceId: UUID,
-        accessToken: String,
-        memory: MemoryCreate,
-    ): MemoryDetail = error("not used")
 
-    override suspend fun createAttachmentUpload(
-        spaceId: UUID,
-        accessToken: String,
-        request: AttachmentUploadCreate,
-    ): UploadDescriptor = error("not used")
 
-    override suspend fun uploadAttachmentBytes(
-        accessToken: String,
-        descriptor: UploadDescriptor,
-        image: SelectedImage,
-    ) = error("not used")
 
-    override suspend fun finalizeAttachment(
-        spaceId: UUID,
-        accessToken: String,
-        attachmentId: UUID,
-    ): AttachmentDetail = error("not used")
 
-    override suspend fun getAttachment(
-        spaceId: UUID,
-        accessToken: String,
-        attachmentId: UUID,
-    ): AttachmentDetail = error("not used")
 
-    override suspend fun replaceMemoryAttachments(
-        spaceId: UUID,
-        accessToken: String,
-        memoryId: UUID,
-        ifMatch: Int,
-        attachments: MemoryAttachmentSet,
-    ): MemoryDetail = error("not used")
 
-    override suspend fun createReadAccess(
-        spaceId: UUID,
-        accessToken: String,
-        attachmentId: UUID,
-        request: AttachmentReadRequest,
-    ): ReadDescriptor = error("not used")
 
-    override suspend fun readImageBytes(
-        accessToken: String,
-        descriptor: ReadDescriptor,
-    ): ByteArray = error("not used")
 }

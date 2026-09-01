@@ -39,6 +39,23 @@ import de.sidebyside.next.reference.R
  */
 @Composable
 fun UiStatePanel(
+    problem: UiProblem,
+    modifier: Modifier = Modifier,
+    onRetry: (() -> Unit)? = null,
+) {
+    UiStatePanel(
+        kind = problem.kind,
+        title = stringResource(problem.titleRes),
+        body = stringResource(problem.bodyRes),
+        modifier = modifier,
+        // A problem the server will answer the same way twice offers no retry;
+        // a button that repeats a refusal is worse than no button.
+        onRetry = onRetry?.takeIf { problem.retryable },
+    )
+}
+
+@Composable
+fun UiStatePanel(
     kind: UiStateKind,
     title: String,
     body: String?,

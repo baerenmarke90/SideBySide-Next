@@ -2,19 +2,28 @@ package de.sidebyside.next.reference
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.sidebyside.next.demo.DemoEndpoint
+import de.sidebyside.next.demo.DemoPersona
+import de.sidebyside.next.profile.ProfileUiState
+import de.sidebyside.next.profile.loadProfileIdentity
+import de.sidebyside.next.profile.removeProfileAvatar
+import de.sidebyside.next.profile.updateProfileAvatar
+import de.sidebyside.next.profile.updateProfileDisplayName
+import de.sidebyside.next.story.StoryImageRef
+import de.sidebyside.next.story.StoryImageStore
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import de.sidebyside.next.demo.DemoEndpoint
-import de.sidebyside.next.demo.DemoPersona
-import de.sidebyside.next.story.StoryImageRef
-import de.sidebyside.next.story.StoryImageStore
-import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AccountMembershipView
+import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.SessionView
+import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.StoryItem
+import de.sidebyside.next.shell.UiProblem
+import de.sidebyside.next.shell.problemFor
 
 data class UiMessage(
     val resourceId: Int,
@@ -44,6 +53,7 @@ data class ReferenceUiState(
     /** Every Space the account may open; a choice only exists above one. */
     val availableSpaces: List<AccountMembershipView> = emptyList(),
     val activeSpaceId: java.util.UUID? = null,
+    val profile: ProfileUiState = ProfileUiState(),
     val busy: Boolean = false,
     val status: UiMessage? = null,
     val error: UiMessage? = null,
@@ -52,6 +62,32 @@ data class ReferenceUiState(
     val lastMemoryBody: String? = null,
     val lastImageBytes: ByteArray? = null,
     val storyItems: List<StoryItem> = emptyList(),
+    /** The memory currently open, if any. */
+    val openMemory: MemoryDetail? = null,
+    val memoryBusy: Boolean = false,
+    /**
+     * Whether the open memory is being changed.
+     *
+     * Owned here rather than by the screen because only this knows how a save
+     * ended: success closes the form, a conflict deliberately leaves it open
+     * with the text still in it.
+     */
+    val editingMemory: Boolean = false,
+    /**
+     * Confirmation belonging to the open memory alone.
+     *
+     * Separate from [status], which carries messages from signing in, entering
+     * the demo and switching Space. Reusing it put the demo-entry notice on a
+     * memory screen dressed as a save confirmation.
+     */
+    val memoryStatus: UiMessage? = null,
+    /** A problem belonging to the open memory rather than to the whole screen. */
+    val memoryProblem: UiProblem? = null,
+    /**
+     * Set once the open memory no longer exists, so its screen can close
+     * instead of showing a memory that was just deleted.
+     */
+    val openMemoryGone: Boolean = false,
 )
 
 private data class ImageDraft(
@@ -164,6 +200,7 @@ class ReferenceViewModel(
                             busy = false,
                             status = message(R.string.ref_status_logged_in),
                             error = null,
+                            profile = ProfileUiState(),
                             draftImages = emptyList(),
                             lastMemoryTitle = null,
                             lastMemoryBody = null,
@@ -277,6 +314,7 @@ class ReferenceViewModel(
         mutate {
             it.copy(
                 activeSpaceId = spaceId,
+                profile = ProfileUiState(),
                 busy = false,
                 error = null,
                 status = message(R.string.space_switched),
@@ -426,6 +464,176 @@ class ReferenceViewModel(
         }
     }
 
+    /**
+     * Loads one memory for its own screen.
+     *
+     * The Story carries a summary; the full text and every photograph come from
+     * here, as does the version a change has to be written against.
+     */
+    fun openMemory(memoryId: java.util.UUID) {
+        mutate { it.copy(memoryProblem = null, memoryStatus = null, openMemoryGone = false) }
+        reloadMemory(memoryId)
+    }
+
+    /**
+     * Reads the memory again without clearing what is already being reported.
+     *
+     * A conflict reloads to pick up the partner's version, and clearing the
+     * problem on the way would make the explanation flash past: the write would
+     * have been refused and the screen would look as though nothing happened.
+     */
+    private fun reloadMemory(memoryId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(memoryBusy = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getMemory(spaceId, currentSession.tokens.accessToken, memoryId) }
+                .onSuccess { memory ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(openMemory = memory, memoryBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(memoryBusy = false, memoryProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun beginEditingMemory() {
+        mutate { it.copy(editingMemory = true, memoryProblem = null, memoryStatus = null) }
+    }
+
+    fun cancelEditingMemory() {
+        mutate { it.copy(editingMemory = false, memoryProblem = null) }
+    }
+
+    /** Forgets the open memory when its screen is left. */
+    fun closeMemory() {
+        mutate {
+            it.copy(
+                openMemory = null,
+                memoryBusy = false,
+                memoryProblem = null,
+                openMemoryGone = false,
+                editingMemory = false,
+                memoryStatus = null,
+            )
+        }
+    }
+
+    /**
+     * Writes a change to the open memory.
+     *
+     * The change is sent against the version it was written from. If the
+     * partner changed the memory meanwhile the server refuses, and the refusal
+     * is reported **without** touching what was typed — the newly written text
+     * is the thing worth protecting here, not the request. The memory is then
+     * reloaded so a second attempt carries the current version.
+     */
+    fun saveMemory(title: String, body: String, happenedOn: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val memory = _uiState.value.openMemory ?: return
+        val operationEpoch = sessionEpoch
+
+        val happenedOnDate = parseHappenedOn(happenedOn)
+        if (happenedOn.isNotBlank() && happenedOnDate == null) {
+            mutate { it.copy(error = message(R.string.ref_error_date_format)) }
+            return
+        }
+
+        mutate { it.copy(memoryBusy = true, memoryProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateMemory(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    memory.id,
+                    memory.version,
+                    MemoryUpdate(
+                        body = body,
+                        happenedOn = happenedOnDate,
+                        title = title,
+                    ),
+                )
+            }
+                .onSuccess { updated ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            openMemory = updated,
+                            memoryBusy = false,
+                            memoryProblem = null,
+                            // The change is written, so the form has done its
+                            // job; leaving it open would look as if nothing had
+                            // happened.
+                            editingMemory = false,
+                            memoryStatus = message(R.string.memory_saved),
+                        )
+                    }
+                    refreshStory()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(memoryBusy = false, memoryProblem = problemFor(throwable))
+                    }
+                    // Reload so a retry carries the version the partner left
+                    // behind. The typed text lives in the form and is untouched,
+                    // and the refusal stays on screen.
+                    reloadMemory(memory.id)
+                }
+        }
+    }
+
+    /** Removes the open memory, and the Story entry that showed it. */
+    fun deleteMemory() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val memory = _uiState.value.openMemory ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(memoryBusy = true, memoryProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteMemory(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    memory.id,
+                    memory.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            openMemory = null,
+                            memoryBusy = false,
+                            openMemoryGone = true,
+                            status = message(R.string.memory_deleted),
+                        )
+                    }
+                    refreshStory()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(memoryBusy = false, memoryProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
     fun refreshStory() {
         val api = contract ?: return
         val currentSession = session ?: return
@@ -444,6 +652,208 @@ class ReferenceViewModel(
                         failure(R.string.ref_error_story_load_failed, clearBusy = false)
                     }
                 }
+        }
+    }
+
+    /** Profile data is lazy: older test fakes and normal Story startup need no profile calls. */
+    fun refreshProfile() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    loading = true,
+                    busy = false,
+                    status = null,
+                    error = null,
+                ),
+            )
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { loadProfileIdentity(api, spaceId, currentSession) }
+                .onSuccess { profile ->
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate { it.copy(profile = profile) }
+                    }
+                }
+                .onFailure {
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate {
+                            it.copy(
+                                profile = it.profile.copy(
+                                    loading = false,
+                                    busy = false,
+                                    status = null,
+                                    error = message(R.string.profile_loading_failed),
+                                ),
+                            )
+                        }
+                    }
+                }
+        }
+    }
+
+    fun saveProfileDisplayName(displayName: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val currentProfile = _uiState.value.profile.self ?: return refreshProfile()
+        if (displayName.isBlank()) {
+            mutate {
+                it.copy(
+                    profile = it.profile.copy(
+                        error = message(R.string.profile_display_name_required),
+                        status = null,
+                    ),
+                )
+            }
+            return
+        }
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    busy = true,
+                    status = null,
+                    error = null,
+                ),
+            )
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                updateProfileDisplayName(
+                    api = api,
+                    spaceId = spaceId,
+                    session = currentSession,
+                    current = currentProfile,
+                    displayName = displayName,
+                )
+            }.onSuccess { updated ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                session = currentSession.copy(
+                    account = currentSession.account.copy(displayName = updated.displayName),
+                )
+                mutate {
+                    it.copy(
+                        profile = it.profile.copy(
+                            self = updated,
+                            busy = false,
+                            status = message(R.string.profile_saved),
+                            error = null,
+                        ),
+                    )
+                }
+                refreshStory()
+            }.onFailure {
+                if (sessionEpoch == operationEpoch) profileFailure(R.string.profile_save_failed)
+            }
+        }
+    }
+
+    fun beginProfileAvatarSelection(): Long? = session?.let { sessionEpoch }
+
+    fun setProfileAvatar(image: SelectedImage, selectionEpoch: Long) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val currentProfile = _uiState.value.profile.self ?: return refreshProfile()
+        if (selectionEpoch != sessionEpoch) return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    busy = true,
+                    status = message(R.string.profile_avatar_uploading),
+                    error = null,
+                ),
+            )
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                val updated = updateProfileAvatar(
+                    api = api,
+                    spaceId = spaceId,
+                    session = currentSession,
+                    current = currentProfile,
+                    image = image,
+                )
+                val bytes = runCatching {
+                    api.readProfileAvatar(spaceId, currentSession.tokens.accessToken, currentSession.account.id)
+                }.getOrNull()
+                updated to bytes
+            }.onSuccess { (updated, bytes) ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        profile = it.profile.copy(
+                            self = updated,
+                            selfAvatarBytes = bytes,
+                            busy = false,
+                            status = message(R.string.profile_saved),
+                            error = null,
+                        ),
+                    )
+                }
+            }.onFailure {
+                if (isCurrentSession(operationEpoch, currentSession)) {
+                    profileFailure(R.string.profile_avatar_failed)
+                }
+            }
+        }
+    }
+
+    fun setProfileAvatarSelectionError(throwable: Throwable, selectionEpoch: Long) {
+        if (session == null || selectionEpoch != sessionEpoch) return
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    busy = false,
+                    status = null,
+                    error = message(
+                        R.string.profile_avatar_failed,
+                        throwable.message.orEmpty(),
+                    ),
+                ),
+            )
+        }
+    }
+
+    fun removeProfileAvatar() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val currentProfile = _uiState.value.profile.self ?: return refreshProfile()
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(profile = it.profile.copy(busy = true, status = null, error = null))
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                removeProfileAvatar(api, spaceId, currentSession, currentProfile)
+            }.onSuccess { updated ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        profile = it.profile.copy(
+                            self = updated,
+                            selfAvatarBytes = null,
+                            busy = false,
+                            status = message(R.string.profile_saved),
+                            error = null,
+                        ),
+                    )
+                }
+            }.onFailure {
+                if (isCurrentSession(operationEpoch, currentSession)) {
+                    profileFailure(R.string.profile_avatar_failed)
+                }
+            }
         }
     }
 
@@ -587,9 +997,26 @@ class ReferenceViewModel(
         }
     }
 
+    private fun profileFailure(resourceId: Int) {
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    loading = false,
+                    busy = false,
+                    error = message(resourceId),
+                    status = null,
+                ),
+            )
+        }
+    }
+
     private inline fun mutate(update: (ReferenceUiState) -> ReferenceUiState) {
         _uiState.value = update(_uiState.value)
     }
+
+    /** Null for a blank date, which is allowed, and for an unparseable one. */
+    private fun parseHappenedOn(text: String): LocalDate? =
+        if (text.isBlank()) null else runCatching { LocalDate.parse(text.trim()) }.getOrNull()
 
     private fun message(resourceId: Int, vararg args: Any): UiMessage =
         UiMessage(resourceId = resourceId, args = args.toList())

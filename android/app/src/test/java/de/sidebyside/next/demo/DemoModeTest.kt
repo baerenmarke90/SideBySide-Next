@@ -1,5 +1,6 @@
 package de.sidebyside.next.demo
 
+import de.sidebyside.next.reference.FakeReferenceContract
 import de.sidebyside.next.reference.ReferenceApiException
 import de.sidebyside.next.reference.ReferenceConfig
 import de.sidebyside.next.reference.ReferenceContract
@@ -199,7 +200,7 @@ private class RecordingDemoApi(
     private val memberships: List<AccountMembershipView> =
         listOf(membership("ACTIVE", DEMO_SPACE)),
     private val demoEntryFailure: Throwable? = null,
-) : ReferenceContract {
+) : FakeReferenceContract() {
     val demoEntries = mutableListOf<DemoPersona>()
     val demoBaseUrls = mutableListOf<String>()
     val consumedTokens = mutableListOf<String>()
@@ -231,53 +232,11 @@ private class RecordingDemoApi(
         return StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
     }
 
-    override suspend fun createMemory(
-        spaceId: UUID,
-        accessToken: String,
-        memory: MemoryCreate,
-    ): MemoryDetail = error("not used")
 
-    override suspend fun createAttachmentUpload(
-        spaceId: UUID,
-        accessToken: String,
-        request: AttachmentUploadCreate,
-    ): UploadDescriptor = error("not used")
 
-    override suspend fun uploadAttachmentBytes(
-        accessToken: String,
-        descriptor: UploadDescriptor,
-        image: SelectedImage,
-    ) = error("not used")
 
-    override suspend fun finalizeAttachment(
-        spaceId: UUID,
-        accessToken: String,
-        attachmentId: UUID,
-    ): AttachmentDetail = error("not used")
 
-    override suspend fun getAttachment(
-        spaceId: UUID,
-        accessToken: String,
-        attachmentId: UUID,
-    ): AttachmentDetail = error("not used")
 
-    override suspend fun replaceMemoryAttachments(
-        spaceId: UUID,
-        accessToken: String,
-        memoryId: UUID,
-        ifMatch: Int,
-        attachments: MemoryAttachmentSet,
-    ): MemoryDetail = error("not used")
 
-    override suspend fun createReadAccess(
-        spaceId: UUID,
-        accessToken: String,
-        attachmentId: UUID,
-        request: AttachmentReadRequest,
-    ): ReadDescriptor = error("not used")
 
-    override suspend fun readImageBytes(
-        accessToken: String,
-        descriptor: ReadDescriptor,
-    ): ByteArray = error("not used")
 }

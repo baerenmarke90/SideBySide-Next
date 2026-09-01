@@ -35,66 +35,24 @@ class ReferenceFlowTest {
         val createdMemory = memory(version = 1, body = "")
         val story = StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
 
-        val api = object : ReferenceContract {
-            override suspend fun consumeMagicLink(token: String): SessionView =
-                error("Magic-link entry is not exercised by this test.")
+        val api = object : FakeReferenceContract() {
 
-            override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
-                error("Memberships are not exercised by this test.")
 
-            override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
-                error("Demo entry is not exercised by this test.")
 
-            override suspend fun signIn(email: String, password: String): SessionView = error("not used")
 
             override suspend fun createMemory(spaceId: UUID, accessToken: String, memory: MemoryCreate): MemoryDetail {
                 createdRequest = memory
                 return createdMemory
             }
 
-            override suspend fun createAttachmentUpload(
-                spaceId: UUID,
-                accessToken: String,
-                request: AttachmentUploadCreate,
-            ): UploadDescriptor = error("attachment upload must not start")
 
-            override suspend fun uploadAttachmentBytes(
-                accessToken: String,
-                descriptor: UploadDescriptor,
-                image: SelectedImage,
-            ): Unit = error("attachment bytes must not upload")
 
-            override suspend fun finalizeAttachment(
-                spaceId: UUID,
-                accessToken: String,
-                attachmentId: UUID,
-            ): AttachmentDetail = error("attachment must not finalize")
 
-            override suspend fun getAttachment(
-                spaceId: UUID,
-                accessToken: String,
-                attachmentId: UUID,
-            ): AttachmentDetail = error("attachment must not be polled")
 
-            override suspend fun replaceMemoryAttachments(
-                spaceId: UUID,
-                accessToken: String,
-                memoryId: UUID,
-                ifMatch: Int,
-                attachments: MemoryAttachmentSet,
-            ): MemoryDetail = error("attachment must not be bound")
 
             override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage = story
 
-            override suspend fun createReadAccess(
-                spaceId: UUID,
-                accessToken: String,
-                attachmentId: UUID,
-                request: AttachmentReadRequest,
-            ): ReadDescriptor = error("attachment read access must not be created")
 
-            override suspend fun readImageBytes(accessToken: String, descriptor: ReadDescriptor): ByteArray =
-                error("image bytes must not be read")
         }
 
         val result = runMemoryMediaStoryFlow(
@@ -122,21 +80,14 @@ class ReferenceFlowTest {
         val boundMemory = memory(version = 2)
         val story = StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
 
-        val api = object : ReferenceContract {
-            override suspend fun consumeMagicLink(token: String): SessionView =
-                error("Magic-link entry is not exercised by this test.")
+        val api = object : FakeReferenceContract() {
 
-            override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
-                error("Memberships are not exercised by this test.")
 
-            override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
-                error("Demo entry is not exercised by this test.")
 
             var boundSet: MemoryAttachmentSet? = null
             var boundIfMatch: Int? = null
             var readRequest: AttachmentReadRequest? = null
 
-            override suspend fun signIn(email: String, password: String): SessionView = error("not used")
 
             override suspend fun createMemory(spaceId: UUID, accessToken: String, memory: MemoryCreate): MemoryDetail {
                 calls += "create-memory"

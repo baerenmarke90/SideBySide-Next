@@ -105,14 +105,22 @@ ordinary sign-in path as well.
 `tools/openapi/generate.sh`; CI verifies the committed output against the
 contract.
 
-For the S8 build, an unchanged temporary compile source root is prepared under
-`app/build/generated/`. This unrelated slice omits the two generator-owned
-Passkey request models that use `Map<String, Any>` from the compile copy because
-kotlinx.serialization cannot produce a concrete `Any` serializer for them.
-Issue #138 tracks this generator finding separately; the source files remain
-unchanged. Every DTO required for S8, especially the `StoryItem` union fixed by
-#119, still comes directly from the generated contract. There is no second,
-handwritten DTO layer.
+An unchanged temporary compile source root is prepared under
+`app/build/generated/`. The **whole** generated model tree is compiled; no file
+is excluded.
+
+That was not always so. A free-form object in the contract (`type: object` with
+`additionalProperties`) mapped to `Map<String, Any>`, and kotlinx.serialization
+has no serializer for `Any`, so the two Passkey request models did not compile
+and had to be left out — which blocked any Passkey work. `typeMappings` in
+`tools/openapi/kotlin-models.yaml` now maps that free-form type to
+`JsonElement`, which is the concrete type for "whatever JSON the contract allows
+here". Only those two models change; the `kotlin.Any` in generated enum helpers
+comes from a template literal and is untouched, and the TypeScript client is
+unaffected.
+
+Every DTO comes directly from the generated contract, including the `StoryItem`
+union fixed by #119. There is no second, handwritten DTO layer.
 
 ## M2-S8 reference flow
 
@@ -177,6 +185,66 @@ fails if the declaration and the packaged set drift apart.
 
 Platform strings — the ones the operating system owns rather than this app —
 follow the device language regardless, and are outside what this can control.
+
+## Release identity
+
+Decided by #194, before any distribution build, because Google Play binds an
+application ID to its listing permanently and the M2 name would then have been
+frozen as the product's.
+
+| | |
+| --- | --- |
+| Application ID | `de.sidebyside.app` |
+| Debug application ID | `de.sidebyside.app.debug` |
+| `versionName` | the product's version, edited by hand when the product moves |
+| `versionCode` | supplied by the publisher as `-PsbsVersionCode=<n>` |
+
+`reference` named a technical flow and `next` is this repository's codename;
+neither is the product, so neither is in the released identity. The Kotlin
+package root is still `de.sidebyside.next.*`. That is internal — it decides
+where the `R` and `BuildConfig` classes live and nothing a store or a device
+sees — and renaming it is a separate mechanical change.
+
+A debug build carries its own suffix so it is a different application to
+Android. Without that, a build from this checkout would replace an installed
+release, or refuse to install beside it.
+
+`versionCode` is only an ordering: Android needs each update to carry a higher
+integer than the one before, and it means nothing else. Keeping it out of the
+build file lets the same source be republished without inventing a new product
+version.
+
+### Release signing
+
+Signing material never lives in this repository. It is supplied by whatever
+publishes the build, as Gradle properties or environment variables:
+
+| Property | Environment variable |
+| --- | --- |
+| `sbsReleaseKeystore` | `SBS_RELEASE_KEYSTORE` |
+| `sbsReleaseKeystorePassword` | `SBS_RELEASE_KEYSTORE_PASSWORD` |
+| `sbsReleaseKeyAlias` | `SBS_RELEASE_KEY_ALIAS` |
+| `sbsReleaseKeyPassword` | `SBS_RELEASE_KEY_PASSWORD` |
+
+```bash
+./gradlew -PsbsApiBaseUrl=https://sidebyside.example \
+  -PsbsVersionCode=42 \
+  -PsbsReleaseKeystore=/secure/path/release.jks \
+  :app:assembleRelease
+```
+
+Two failure modes are deliberate. With no keystore at all, the release build
+produces `app-release-unsigned.apk` rather than falling back to the debug key —
+an artifact signed with the debug key looks releasable and can never be
+replaced by a properly signed update. With a keystore but incomplete
+credentials, configuration fails immediately and names the missing value,
+instead of building something that fails at install time.
+
+`*.jks`, `*.keystore` and `keystore.properties` are ignored by git.
+
+**Still open, and needed before a first store release:** who holds the upload
+key, whether Play App Signing is used, and where the key is escrowed. That is
+an operational decision with no code in it, and it is not made here.
 
 ## Reproducible Gradle build
 

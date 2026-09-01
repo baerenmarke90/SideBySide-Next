@@ -1,7 +1,7 @@
 package de.sidebyside.next.reference
 
-import java.util.UUID
 import de.sidebyside.next.demo.DemoPersona
+import java.util.UUID
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
@@ -9,8 +9,12 @@ import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
+import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
 
@@ -58,6 +62,26 @@ interface ReferenceContract {
 
     suspend fun createMemory(spaceId: UUID, accessToken: String, memory: MemoryCreate): MemoryDetail
 
+    suspend fun getMemory(spaceId: UUID, accessToken: String, memoryId: UUID): MemoryDetail
+
+    /**
+     * Changes a memory.
+     *
+     * [ifMatch] is the version the change was written against. The server
+     * answers 409 when the partner changed the memory in the meantime, which is
+     * the point: without it the later write would silently overwrite the
+     * earlier one.
+     */
+    suspend fun updateMemory(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+        ifMatch: Int,
+        update: MemoryUpdate,
+    ): MemoryDetail
+
+    suspend fun deleteMemory(spaceId: UUID, accessToken: String, memoryId: UUID, ifMatch: Int)
+
     suspend fun createAttachmentUpload(
         spaceId: UUID,
         accessToken: String,
@@ -69,6 +93,15 @@ interface ReferenceContract {
     suspend fun finalizeAttachment(spaceId: UUID, accessToken: String, attachmentId: UUID): AttachmentDetail
 
     suspend fun getAttachment(spaceId: UUID, accessToken: String, attachmentId: UUID): AttachmentDetail
+
+    suspend fun deleteAttachment(
+        spaceId: UUID,
+        accessToken: String,
+        attachmentId: UUID,
+        ifMatch: Int,
+    ) {
+        unsupportedProfileOperation()
+    }
 
     suspend fun replaceMemoryAttachments(
         spaceId: UUID,
@@ -88,4 +121,42 @@ interface ReferenceContract {
     ): ReadDescriptor
 
     suspend fun readImageBytes(accessToken: String, descriptor: ReadDescriptor): ByteArray
+
+    /** Profile APIs are optional for older test fakes and loaded lazily by the UI. */
+    suspend fun getSpace(spaceId: UUID, accessToken: String): SpaceView = unsupportedProfileOperation()
+
+    suspend fun getProfile(
+        spaceId: UUID,
+        accessToken: String,
+        accountId: UUID,
+    ): PartnerProfileView = unsupportedProfileOperation()
+
+    suspend fun updateProfileIdentity(
+        spaceId: UUID,
+        accessToken: String,
+        accountId: UUID,
+        ifMatch: Int,
+        update: ProfileIdentityUpdate,
+    ): PartnerProfileView = unsupportedProfileOperation()
+
+    /**
+     * Explicit avatar removal is separate because the generated nullable DTO is
+     * encoded with `explicitNulls = false`; the wire contract still requires a
+     * literal JSON null to distinguish removal from omission.
+     */
+    suspend fun removeProfileAvatar(
+        spaceId: UUID,
+        accessToken: String,
+        accountId: UUID,
+        ifMatch: Int,
+    ): PartnerProfileView = unsupportedProfileOperation()
+
+    suspend fun readProfileAvatar(
+        spaceId: UUID,
+        accessToken: String,
+        accountId: UUID,
+    ): ByteArray = unsupportedProfileOperation()
 }
+
+private fun unsupportedProfileOperation(): Nothing =
+    throw UnsupportedOperationException("This ReferenceContract fake does not implement profile identity.")
