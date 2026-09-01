@@ -20,7 +20,7 @@ function navigationLinkFor(html: string, href: string): string {
   return tag;
 }
 
-function renderShell(route: string): string {
+function renderShell(route: string, serverAdmin = false): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -39,6 +39,7 @@ function renderShell(route: string): string {
           accessToken="test-token"
           account={{ id: 'account-1', displayName: 'Alex Example' }}
           spaceId="space-1"
+          serverAdmin={serverAdmin}
         >
           <h1>Content fixture</h1>
         </AppShell>
@@ -123,6 +124,17 @@ describe('AppShell', () => {
     expect(header).toContain('header-profile-menu-logout');
     expect(sidebar).not.toContain('href="/more/profile"');
     expect(sidebar).not.toContain('href="/today/activity"');
+  });
+
+  it('shows ServerAdmin only for an authorized account capability', () => {
+    expect(renderShell('/story')).not.toContain('href="/server-admin"');
+
+    const authorized = renderShell('/story', true);
+    const header = authorized.slice(
+      authorized.indexOf('<header'),
+      authorized.indexOf('</header>') + '</header>'.length,
+    );
+    expect(header).toContain('href="/server-admin"');
   });
 
   it('offers creation as a shell action and keeps every destination compact', () => {
