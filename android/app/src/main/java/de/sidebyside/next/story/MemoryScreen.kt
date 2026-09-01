@@ -66,6 +66,8 @@ fun MemoryScreen(
     onSave: (title: String, body: String, happenedOn: String) -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Rendered below the memory; absent while it is being edited. */
+    comments: (@Composable () -> Unit)? = null,
 ) {
     if (gone) {
         UiStatePanel(
@@ -222,6 +224,10 @@ fun MemoryScreen(
                     }
                 }
             }
+        }
+
+        if (!editing) {
+            comments?.let { thread -> item { thread() } }
         }
 
         items(
