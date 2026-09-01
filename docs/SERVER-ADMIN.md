@@ -72,10 +72,16 @@ projection including available signals for:
 - deployment and environment;
 - build revision and API process start time;
 - safe public/runtime configuration state;
-- aggregate Account and active-Space counts;
-- coarse recent Account-registration counts;
+- total, active, and suspended Account counts;
+- verified and unverified primary-email counts;
+- 24-hour, 7-day, and 30-day Account-registration counts;
+- aggregate active-session and authentication-method counts;
+- configured vs. currently resolved ServerAdmin allowlist entries;
+- aggregate active-Space counts;
 - READY media object count and aggregate stored bytes;
-- background-job state and recent failed-job technical metadata.
+- background-job state, oldest pending job, and recent failed-job technical
+  metadata;
+- privacy-safe warning codes for actionable configuration/runtime conditions.
 
 Where no authoritative runtime primitive exists yet, the API reports that the
 signal is not available instead of fabricating health. In particular, the
@@ -88,7 +94,140 @@ The overview does not expose:
 - private Memories, Notes, messages, media content, or other product payloads;
 - background-job payloads;
 - raw background-job exception text;
+- relationship-quality, engagement, Vibe/Energy, intimacy, or OWNER_ONLY
+  analytics;
 - shell, SQL, filesystem, or container execution capabilities.
+
+## Account administration
+
+The ServerAdmin Web console includes a paginated Account directory and focused
+Account detail view. These surfaces expose only identity, authentication, and
+coarse lifecycle metadata required for instance operation, for example:
+
+- Account ID, display name, creation and disabled timestamps;
+- primary email and verification state;
+- configured authentication methods and passkey count;
+- active session count and last available session activity;
+- active/historical Membership counts without Space content.
+
+Private relationship content is deliberately not queried by these read models.
+
+The corresponding ServerAdmin API supports:
+
+- `GET /api/v1/server-admin/accounts`;
+- `GET /api/v1/server-admin/accounts/{accountId}`;
+- `PUT /api/v1/server-admin/accounts/{accountId}/suspension`;
+- `POST /api/v1/server-admin/accounts/{accountId}/sessions/revoke`;
+- `POST /api/v1/server-admin/accounts/{accountId}/emails/{accountEmailId}/verify`;
+- `POST /api/v1/server-admin/accounts/{accountId}/recovery/email`;
+- `POST /api/v1/server-admin/accounts/{accountId}/recovery/operator`;
+- `GET /api/v1/server-admin/activity/actions`.
+
+### Suspension and session revocation
+
+Account suspension reuses the authoritative `Account.disabled_at` state. It is
+not a parallel ban flag. Suspending an Account:
+
+- disables future authentication;
+- revokes all active `DeviceSession` families;
+- leaves Account and relationship data intact;
+- records a content-free privileged audit event.
+
+The currently authenticated ServerAdmin cannot suspend their own Account.
+ServerAdmin rows involved in lockout protection are locked transactionally so
+concurrent administrative changes cannot intentionally bypass the safeguard.
+
+Unsuspending an Account restores authentication eligibility only. It does not
+recreate deleted credentials or sessions.
+
+The explicit revoke-sessions action invalidates all current session families
+without suspending the Account.
+
+### Operator-assisted email verification
+
+When an operator has verified an Account email through an appropriate
+out-of-band process, ServerAdmin may mark that existing `AccountEmail` as
+verified. The operation requires typing the exact target email address and is
+audited. It does not create an email address, create an Account, or grant
+ServerAdmin by itself.
+
+This path exists primarily for Self-Hosted installations that intentionally run
+with `SBS_MAIL_TRANSPORT=none`. It must not be exposed to ordinary clients as a
+way to bypass normal verification.
+
+### Password recovery
+
+A ServerAdmin never reads or sets a user's plaintext password.
+
+If mail delivery is configured, the Account detail surface can request the
+normal password-recovery email. This reuses the same Account recovery service as
+the public recovery flow.
+
+For a Self-Hosted installation without mail delivery, ServerAdmin may issue an
+operator-assisted recovery proof for an active local-password Account. This
+also reuses the normal `AccountRecoveryToken` lifecycle:
+
+- any previous open recovery proof for the target Account is revoked;
+- only a token hash is persisted;
+- the returned recovery URL is sent with `Cache-Control: no-store`;
+- the plaintext proof is not written to audit history or logs;
+- the Account owner chooses their own replacement password through the normal
+  recovery-consume endpoint;
+- the proof remains single-use and expires according to the normal recovery
+  token policy.
+
+The operator is responsible for handing the one-time URL to the Account owner
+through an appropriate out-of-band channel.
+
+## Self-Hosted break-glass email verification
+
+A dashboard cannot repair the initial state where no verified allowlisted
+ServerAdmin can enter it. For that narrow bootstrap/recovery case, a local
+operator may run inside the backend environment:
+
+```bash
+python -m scripts.server_admin verify-email operator@example.com
+```
+
+The command:
+
+- only matches an already existing `AccountEmail`;
+- only sets its `verified_at` assertion;
+- never creates an Account;
+- never changes `SBS_SERVER_ADMIN_EMAILS`;
+- never grants ServerAdmin independently of the normal allowlist check;
+- does not print authentication secrets;
+- records a system-attributed privileged audit event when it changes state.
+
+After verification, the deployment still needs the exact address in
+`SBS_SERVER_ADMIN_EMAILS` and the normal API restart/recreate semantics apply to
+allowlist changes.
+
+## Account deletion boundary
+
+ServerAdmin account deletion is intentionally **not** implemented as a direct
+row/table deletion. Issue #520 owns the authoritative Account deletion and
+retention lifecycle, including credentials, sessions, OWNER_ONLY data, shared
+history, media references, jobs, backups, and restore reconciliation.
+
+Until that lifecycle exists, the Web ServerAdmin danger zone exposes deletion
+as unavailable rather than providing a hidden SQL/delete shortcut. When the
+operation is implemented later, it must invoke the #520 workflow and add the
+specified double-confirmation/re-authentication protections.
+
+## Privileged action audit
+
+Account administration actions use a separate narrow audit projection from the
+boolean settings history. `InstanceAdministrationActionEvent` records only:
+
+- actor Account ID, or system attribution for local break-glass work;
+- target Account ID where applicable;
+- typed action identifier;
+- optional technical effect count such as revoked sessions;
+- timestamp.
+
+It never stores passwords, recovery proofs, free-form reasons, request bodies,
+private relationship payloads, IP-history profiling, or provider secrets.
 
 ## Registration and maintenance controls
 
