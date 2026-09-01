@@ -38,6 +38,8 @@ x-runtime-environment: &runtime-environment
 x-backend-build: &backend-build
   build:
     context: "${SBS_SOURCE_REPOSITORY:-https://github.com/baerenmarke90/SideBySide-Next.git}#${SBS_SOURCE_REF:-main}:backend"
+    args:
+      SBS_BUILD_REVISION: "${SBS_SOURCE_REF:-main}"
   pull_policy: build
 
 x-web-build: &web-build
