@@ -11,6 +11,7 @@ All URIs are relative to *http://localhost*
 | [**consumeRecoveryApiV1AuthRecoveryConsumePost**](AuthApi.md#consumerecoveryapiv1authrecoveryconsumepost) | **POST** /api/v1/auth/recovery/consume | Consume Recovery |
 | [**finishPasskeyAuthenticationApiV1AuthPasskeysAuthenticationFinishPost**](AuthApi.md#finishpasskeyauthenticationapiv1authpasskeysauthenticationfinishpost) | **POST** /api/v1/auth/passkeys/authentication/finish | Finish Passkey Authentication |
 | [**finishPasskeyRegistrationApiV1AuthPasskeysRegistrationFinishPost**](AuthApi.md#finishpasskeyregistrationapiv1authpasskeysregistrationfinishpost) | **POST** /api/v1/auth/passkeys/registration/finish | Finish Passkey Registration |
+| [**getAccountCapabilitiesApiV1AuthCapabilitiesGet**](AuthApi.md#getaccountcapabilitiesapiv1authcapabilitiesget) | **GET** /api/v1/auth/capabilities | Get Account Capabilities |
 | [**linkOidcApiV1AuthOidcConnectionIdLinkPost**](AuthApi.md#linkoidcapiv1authoidcconnectionidlinkpost) | **POST** /api/v1/auth/oidc/{connectionId}/link | Link Oidc |
 | [**listAccountMembershipsApiV1AuthMembershipsGet**](AuthApi.md#listaccountmembershipsapiv1authmembershipsget) | **GET** /api/v1/auth/memberships | List Account Memberships |
 | [**meApiV1AuthMeGet**](AuthApi.md#meapiv1authmeget) | **GET** /api/v1/auth/me | Me |
@@ -501,6 +502,66 @@ No authorization required
 | **201** | Successful Response |  -  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getAccountCapabilitiesApiV1AuthCapabilitiesGet
+
+> AccountCapabilitiesView getAccountCapabilitiesApiV1AuthCapabilitiesGet()
+
+Get Account Capabilities
+
+Return presentation capabilities without replacing endpoint authorization.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthApi,
+} from '';
+import type { GetAccountCapabilitiesApiV1AuthCapabilitiesGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new AuthApi();
+
+  try {
+    const data = await api.getAccountCapabilitiesApiV1AuthCapabilitiesGet();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AccountCapabilitiesView**](AccountCapabilitiesView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
