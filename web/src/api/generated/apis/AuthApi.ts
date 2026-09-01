@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type AccountCapabilitiesView,
+    AccountCapabilitiesViewFromJSON,
+    AccountCapabilitiesViewToJSON,
+} from '../models/AccountCapabilitiesView';
+import {
     type AccountMembershipView,
     AccountMembershipViewFromJSON,
     AccountMembershipViewToJSON,
@@ -512,6 +517,45 @@ export class AuthApi extends runtime.BaseAPI {
      */
     async finishPasskeyRegistrationApiV1AuthPasskeysRegistrationFinishPost(requestParameters: FinishPasskeyRegistrationApiV1AuthPasskeysRegistrationFinishPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PasskeyView> {
         const response = await this.finishPasskeyRegistrationApiV1AuthPasskeysRegistrationFinishPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getAccountCapabilitiesApiV1AuthCapabilitiesGet without sending the request
+     */
+    async getAccountCapabilitiesApiV1AuthCapabilitiesGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/auth/capabilities`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return presentation capabilities without replacing endpoint authorization.
+     * Get Account Capabilities
+     */
+    async getAccountCapabilitiesApiV1AuthCapabilitiesGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AccountCapabilitiesView>> {
+        const requestOptions = await this.getAccountCapabilitiesApiV1AuthCapabilitiesGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AccountCapabilitiesViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Return presentation capabilities without replacing endpoint authorization.
+     * Get Account Capabilities
+     */
+    async getAccountCapabilitiesApiV1AuthCapabilitiesGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AccountCapabilitiesView> {
+        const response = await this.getAccountCapabilitiesApiV1AuthCapabilitiesGetRaw(initOverrides);
         return await response.value();
     }
 
