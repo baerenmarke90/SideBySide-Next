@@ -32,7 +32,15 @@ import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.DashboardView
+import sidebyside.api.models.DateRepeat
+import sidebyside.api.models.ImportantDateFields
+import sidebyside.api.models.ImportantDateType
+import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.PersonRelationship
+import sidebyside.api.models.RelatedPersonDeletePolicy
+import sidebyside.api.models.RelatedPersonFields
+import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
@@ -186,6 +194,11 @@ data class ReferenceUiState(
     val plans: List<PlanDetail> = emptyList(),
     val planningBusy: Boolean = false,
     val planningProblem: UiProblem? = null,
+    val relatedPersons: List<RelatedPersonView> = emptyList(),
+    val relatedPersonsBusy: Boolean = false,
+    val relatedPersonsProblem: UiProblem? = null,
+    /** Dates for whichever person's screen is currently open. */
+    val personImportantDates: List<ImportantDateView> = emptyList(),
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -313,6 +326,7 @@ class ReferenceViewModel(
         clearPlanning()
         clearToday()
         clearInvitations()
+        clearRelatedPersons()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -396,6 +410,7 @@ class ReferenceViewModel(
         clearPlanning()
         clearToday()
         clearInvitations()
+        clearRelatedPersons()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -447,6 +462,7 @@ class ReferenceViewModel(
         clearPlanning()
         clearToday()
         clearInvitations()
+        clearRelatedPersons()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -486,6 +502,7 @@ class ReferenceViewModel(
         clearPlanning()
         clearToday()
         clearInvitations()
+        clearRelatedPersons()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -1669,6 +1686,119 @@ class ReferenceViewModel(
         }
     }
 
+    fun loadRelatedPersons() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listRelatedPersons(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { people ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersons = people, relatedPersonsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun addRelatedPerson(
+        displayName: String,
+        relationship: PersonRelationship,
+        birthday: LocalDate?,
+        birthdayYearKnown: Boolean,
+        visibility: ContentVisibility,
+    ) {
+        if (displayName.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createRelatedPerson(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    RelatedPersonFields(
+                        birthday = birthday,
+                        birthdayYearKnown = birthdayYearKnown,
+                        displayName = displayName,
+                        relationship = relationship,
+                        visibility = visibility,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersonsBusy = false) }
+                    loadRelatedPersons()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun updateRelatedPerson(
+        personId: java.util.UUID,
+        displayName: String,
+        relationship: PersonRelationship,
+        birthday: LocalDate?,
+        birthdayYearKnown: Boolean,
+        visibility: ContentVisibility,
+    ) {
+        if (displayName.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val person = _uiState.value.relatedPersons.firstOrNull { it.id == personId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateRelatedPerson(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    personId,
+                    person.version,
+                    RelatedPersonFields(
+                        birthday = birthday,
+                        birthdayYearKnown = birthdayYearKnown,
+                        displayName = displayName,
+                        relationship = relationship,
+                        visibility = visibility,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersonsBusy = false) }
+                    loadRelatedPersons()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
     /**
      * Resolves the other partner's name for every Space this account may
      * open, so the picker can show who a Space is with instead of its
@@ -1716,6 +1846,167 @@ class ReferenceViewModel(
                 issuedInvitations = emptyList(),
                 issuedInvitationToken = null,
             )
+        }
+    }
+
+    /**
+     * Deletes a person under an explicit, already-decided policy.
+     *
+     * Deliberately does not read [personImportantDates] or call
+     * [loadImportantDates] first: per #65, the confirmation that led here must
+     * never be built from a query of what is affected, because even a correct,
+     * already-filtered count would disclose the gap between what this account
+     * can see and what `cascade` actually removes.
+     */
+    fun deleteRelatedPerson(personId: java.util.UUID, deletePolicy: RelatedPersonDeletePolicy) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val person = _uiState.value.relatedPersons.firstOrNull { it.id == personId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteRelatedPerson(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    personId,
+                    deletePolicy,
+                    person.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            relatedPersonsBusy = false,
+                            personImportantDates = emptyList(),
+                        )
+                    }
+                    loadRelatedPersons()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun clearRelatedPersons() {
+        mutate {
+            it.copy(
+                relatedPersons = emptyList(),
+                relatedPersonsBusy = false,
+                relatedPersonsProblem = null,
+                personImportantDates = emptyList(),
+            )
+        }
+    }
+
+    /**
+     * Reads a person's ImportantDates for their own screen.
+     *
+     * Only called from that screen, never from the delete confirmation — see
+     * [deleteRelatedPerson].
+     */
+    fun loadImportantDates(relatedPersonId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.listImportantDates(spaceId, currentSession.tokens.accessToken, relatedPersonId)
+            }
+                .onSuccess { dates ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(personImportantDates = dates, relatedPersonsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun addImportantDate(
+        relatedPersonId: java.util.UUID,
+        label: String,
+        type: ImportantDateType,
+        date: LocalDate,
+        repeats: DateRepeat,
+        visibility: ContentVisibility,
+    ) {
+        if (label.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createImportantDate(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    ImportantDateFields(
+                        date = date,
+                        label = label,
+                        relatedPersonId = relatedPersonId,
+                        repeats = repeats,
+                        type = type,
+                        visibility = visibility,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersonsBusy = false) }
+                    loadImportantDates(relatedPersonId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun deleteImportantDate(relatedPersonId: java.util.UUID, dateId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val date = _uiState.value.personImportantDates.firstOrNull { it.id == dateId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(relatedPersonsBusy = true, relatedPersonsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteImportantDate(spaceId, currentSession.tokens.accessToken, dateId, date.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(relatedPersonsBusy = false) }
+                    loadImportantDates(relatedPersonId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(relatedPersonsBusy = false, relatedPersonsProblem = problemFor(throwable))
+                    }
+                }
         }
     }
 

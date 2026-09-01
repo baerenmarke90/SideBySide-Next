@@ -47,6 +47,8 @@ import de.sidebyside.next.invitation.InvitationsScreen
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.people.ImportantDatesScreen
+import de.sidebyside.next.people.RelatedPersonsScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
@@ -497,6 +499,58 @@ private fun DemoShell(
                     onDelete = viewModel::deleteHeartMoment,
                 )
             }
+
+            composable(RELATED_PERSONS_ROUTE) {
+                // Deliberately no dispose-time clear here, unlike HeartMoments:
+                // opening a person's ImportantDates navigates forward to a
+                // child route that reads this same list for the person's
+                // name, and clearing on leave wiped it before that screen
+                // could render. Every session-changing event already calls
+                // clearRelatedPersons() directly, so nothing leaks across
+                // sign-in/demo/Space boundaries without this.
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadRelatedPersons() }
+
+                RelatedPersonsScreen(
+                    people = state.relatedPersons,
+                    busy = state.relatedPersonsBusy,
+                    problem = state.relatedPersonsProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = viewModel::addRelatedPerson,
+                    onOpenDates = { personId ->
+                        controller.navigate("people/related-persons/$personId/important-dates")
+                    },
+                    onDelete = viewModel::deleteRelatedPerson,
+                )
+            }
+
+            composable(
+                route = IMPORTANT_DATES_ROUTE,
+                arguments = listOf(navArgument(PERSON_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val personId = entry.arguments?.getString(PERSON_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val person = state.relatedPersons.firstOrNull { it.id == personId }
+
+                LaunchedEffect(personId, state.activeSpaceId) {
+                    personId?.let(viewModel::loadImportantDates)
+                }
+
+                ImportantDatesScreen(
+                    personName = person?.displayName.orEmpty(),
+                    dates = state.personImportantDates,
+                    busy = state.relatedPersonsBusy,
+                    problem = state.relatedPersonsProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = { label, type, date, repeats, visibility ->
+                        personId?.let {
+                            viewModel.addImportantDate(it, label, type, date, repeats, visibility)
+                        }
+                    },
+                    onDelete = { dateId ->
+                        personId?.let { viewModel.deleteImportantDate(it, dateId) }
+                    },
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -542,6 +596,7 @@ private fun DemoShell(
                     onSignOut = onSignOut,
                     onOpenHeartMoments = { navController.navigate(HEART_MOMENTS_ROUTE) },
                     onOpenInvitations = { navController.navigate(INVITATIONS_ROUTE) },
+                    onOpenRelatedPersons = { navController.navigate(RELATED_PERSONS_ROUTE) },
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
                     spacePartnerNames = state.spacePartnerNames,
@@ -583,6 +638,11 @@ private const val INVITATIONS_ROUTE = "more/invitations"
 private const val ITEM_ID_ARGUMENT = "itemId"
 private const val MILESTONE_ROUTE = "story/milestones/{$ITEM_ID_ARGUMENT}"
 private const val HEART_MOMENT_ROUTE = "story/heart-moments/{$ITEM_ID_ARGUMENT}"
+
+private const val RELATED_PERSONS_ROUTE = "people/related-persons"
+private const val PERSON_ID_ARGUMENT = "personId"
+private const val IMPORTANT_DATES_ROUTE =
+    "people/related-persons/{$PERSON_ID_ARGUMENT}/important-dates"
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE

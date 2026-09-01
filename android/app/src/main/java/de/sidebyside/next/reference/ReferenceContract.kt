@@ -24,6 +24,11 @@ import sidebyside.api.models.InvitationView
 import sidebyside.api.models.MembershipView
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.PartnerView
+import sidebyside.api.models.ImportantDateFields
+import sidebyside.api.models.ImportantDateView
+import sidebyside.api.models.RelatedPersonDeletePolicy
+import sidebyside.api.models.RelatedPersonFields
+import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -395,6 +400,65 @@ interface ReferenceContract {
     suspend fun createInvitation(spaceId: UUID, accessToken: String): IssuedInvitationView
 
     suspend fun revokeInvitation(spaceId: UUID, accessToken: String, invitationId: UUID)
+
+    suspend fun listRelatedPersons(spaceId: UUID, accessToken: String): List<RelatedPersonView>
+
+    suspend fun createRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        fields: RelatedPersonFields,
+    ): RelatedPersonView
+
+    /** The contract replaces every field, so callers send the whole record. */
+    suspend fun updateRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        personId: UUID,
+        ifMatch: Int,
+        fields: RelatedPersonFields,
+    ): RelatedPersonView
+
+    /**
+     * Deletes a person, per an explicit, named policy — never a default.
+     *
+     * `preserve` keeps their linked ImportantDates and detaches them; `cascade`
+     * removes both. The choice must reach here already made; nothing about
+     * what the deletion affects is queried beforehand, per #65.
+     */
+    suspend fun deleteRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        personId: UUID,
+        deletePolicy: RelatedPersonDeletePolicy,
+        ifMatch: Int,
+    )
+
+    suspend fun listImportantDates(
+        spaceId: UUID,
+        accessToken: String,
+        relatedPersonId: UUID?,
+    ): List<ImportantDateView>
+
+    suspend fun createImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ImportantDateFields,
+    ): ImportantDateView
+
+    suspend fun updateImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        dateId: UUID,
+        ifMatch: Int,
+        fields: ImportantDateFields,
+    ): ImportantDateView
+
+    suspend fun deleteImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        dateId: UUID,
+        ifMatch: Int,
+    )
 
     suspend fun getTimeline(
         spaceId: UUID,

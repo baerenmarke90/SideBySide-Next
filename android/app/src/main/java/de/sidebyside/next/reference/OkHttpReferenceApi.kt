@@ -37,7 +37,12 @@ import sidebyside.api.models.AcceptRequest
 import sidebyside.api.models.IssuedInvitationView
 import sidebyside.api.models.InvitationView
 import sidebyside.api.models.MembershipView
+import sidebyside.api.models.ImportantDateFields
+import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.RelatedPersonDeletePolicy
+import sidebyside.api.models.RelatedPersonFields
+import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -740,6 +745,124 @@ class OkHttpReferenceApi(
             "$baseUrl/api/v1/spaces/$spaceId/invitations/$invitationId",
             accessToken,
         ).delete().build(),
+    )
+
+    override suspend fun listRelatedPersons(
+        spaceId: UUID,
+        accessToken: String,
+    ): List<RelatedPersonView> = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/related-persons", accessToken)
+            .get().build(),
+        ListSerializer(RelatedPersonView.serializer()),
+    )
+
+    override suspend fun createRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        fields: RelatedPersonFields,
+    ): RelatedPersonView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/related-persons", accessToken)
+            .post(
+                SideBySideJson.encodeToString(RelatedPersonFields.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        RelatedPersonView.serializer(),
+    )
+
+    override suspend fun updateRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        personId: UUID,
+        ifMatch: Int,
+        fields: RelatedPersonFields,
+    ): RelatedPersonView = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/related-persons/$personId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .put(
+                SideBySideJson.encodeToString(RelatedPersonFields.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        RelatedPersonView.serializer(),
+    )
+
+    override suspend fun deleteRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        personId: UUID,
+        deletePolicy: RelatedPersonDeletePolicy,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/related-persons/$personId" +
+                "?deletePolicy=${deletePolicy.value}",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
+
+    override suspend fun listImportantDates(
+        spaceId: UUID,
+        accessToken: String,
+        relatedPersonId: UUID?,
+    ): List<ImportantDateView> {
+        val filter = relatedPersonId?.let { "?relatedPersonId=$it" }.orEmpty()
+        return executeJson(
+            authenticatedRequest(
+                "$baseUrl/api/v1/spaces/$spaceId/important-dates$filter",
+                accessToken,
+            ).get().build(),
+            ListSerializer(ImportantDateView.serializer()),
+        )
+    }
+
+    override suspend fun createImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ImportantDateFields,
+    ): ImportantDateView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/important-dates", accessToken)
+            .post(
+                SideBySideJson.encodeToString(ImportantDateFields.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ImportantDateView.serializer(),
+    )
+
+    override suspend fun updateImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        dateId: UUID,
+        ifMatch: Int,
+        fields: ImportantDateFields,
+    ): ImportantDateView = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/important-dates/$dateId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .put(
+                SideBySideJson.encodeToString(ImportantDateFields.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ImportantDateView.serializer(),
+    )
+
+    override suspend fun deleteImportantDate(
+        spaceId: UUID,
+        accessToken: String,
+        dateId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/important-dates/$dateId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
     )
 
     override suspend fun getTimeline(

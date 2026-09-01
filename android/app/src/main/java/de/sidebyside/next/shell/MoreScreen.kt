@@ -50,6 +50,14 @@ fun MoreScreen(
      */
     onOpenHeartMoments: () -> Unit,
     onOpenInvitations: () -> Unit,
+    /**
+     * Opens the people the couple wants to remember dates for.
+     *
+     * Deliberately without a default, for the same reason as
+     * [onOpenHeartMoments]: an optional navigation entry a caller forgets to
+     * pass disappears from the product without breaking the build.
+     */
+    onOpenRelatedPersons: () -> Unit,
     modifier: Modifier = Modifier,
     signOutEnabled: Boolean = true,
     spaces: List<AccountMembershipView> = emptyList(),
@@ -146,6 +154,38 @@ fun MoreScreen(
                         modifier = Modifier.heightIn(min = MinimumTouchTarget),
                     ) {
                         Text(stringResource(R.string.invitation_create))
+                    }
+                }
+            }
+        }
+
+        run {
+            val open = onOpenRelatedPersons
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.related_persons_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.related_persons_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.related_persons_open))
                     }
                 }
             }
