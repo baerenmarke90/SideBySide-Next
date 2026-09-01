@@ -70,7 +70,10 @@ def _active_verified_server_admins_for_update(session: Session) -> list[Account]
     allowed = get_settings().server_admin_emails
     if not allowed:
         return []
-    return list(
+    # Avoid SELECT DISTINCT ... FOR UPDATE: PostgreSQL does not permit that
+    # combination. Lock the matching account rows and deduplicate in Python;
+    # one Account may legitimately own more than one allowlisted address.
+    rows = list(
         session.execute(
             select(Account)
             .join(AccountEmail, AccountEmail.account_id == Account.id)
@@ -79,12 +82,12 @@ def _active_verified_server_admins_for_update(session: Session) -> list[Account]
                 AccountEmail.verified_at.is_not(None),
                 AccountEmail.email.in_(allowed),
             )
-            .distinct()
             .with_for_update()
         )
         .scalars()
         .all()
     )
+    return list({account.id: account for account in rows}.values())
 
 
 def set_suspended(
