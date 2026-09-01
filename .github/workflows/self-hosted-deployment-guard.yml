@@ -60,14 +60,42 @@ jobs:
           docker compose config --quiet
           docker compose -f compose.arcane.yaml --env-file .env config --quiet
 
+      - name: Deployment helper syntax and isolation contract
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/deployment_smoke.py scripts/check_environment_isolation.py
+
+          cat >/tmp/production.env <<'EOF'
+          COMPOSE_PROJECT_NAME=sidebyside-production-ci
+          SBS_ENVIRONMENT=production
+          SBS_PUBLIC_BASE_URL=https://production.example.invalid
+          POSTGRES_PASSWORD=production-only-ci-secret
+          SBS_CURSOR_SIGNING_KEY=production-only-ci-cursor-signing-key-1234567890
+          SBS_MEDIA_STORE=local
+          EOF
+
+          python3 scripts/check_environment_isolation.py \
+            deploy/persistent-development.env.example /tmp/production.env
+
+          cp /tmp/production.env /tmp/unsafe-production.env
+          printf '%s\n' 'SBS_CURSOR_SIGNING_KEY=replace-with-development-only-signing-key-at-least-32-chars' \
+            >> /tmp/unsafe-production.env
+          if python3 scripts/check_environment_isolation.py \
+            deploy/persistent-development.env.example /tmp/unsafe-production.env; then
+            echo "Environment isolation accepted a reused signing key."
+            exit 1
+          fi
+
       - name: Arcane variant remains semantically equivalent
         run: |
           set -euo pipefail
+          NORMALIZE='del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" | if ((.build.args? | type) == "object" and (.build.args.SBS_BUILD_REVISION? != null)) then .build.args.SBS_BUILD_REVISION = "__BUILD_REVISION__" else . end else . end)'
+
           docker compose --env-file .env config --format json \
-            | jq -S 'del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" else . end)' \
+            | jq -S "$NORMALIZE" \
             > /tmp/compose-standard.json
           docker compose -f compose.arcane.yaml --env-file .env config --format json \
-            | jq -S 'del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" else . end)' \
+            | jq -S "$NORMALIZE" \
             > /tmp/compose-arcane.json
           diff -u /tmp/compose-standard.json /tmp/compose-arcane.json
 
@@ -76,6 +104,9 @@ jobs:
             (.services.migrate.build.context | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#")) and
             (.services.api.build.context == .services.migrate.build.context) and
             (.services.worker.build.context == .services.migrate.build.context) and
+            (.services.api.build.args.SBS_BUILD_REVISION == "main") and
+            (.services.worker.build.args.SBS_BUILD_REVISION == "main") and
+            (.services.migrate.build.args.SBS_BUILD_REVISION == "main") and
             (.services.web.build.context | endswith(":web")) and
             (.services.migrate.build.context | endswith(":backend"))
           ' /tmp/compose-arcane-raw.json
@@ -178,14 +209,22 @@ jobs:
 
       - name: Readiness through published port
         run: |
-          response=$(curl --fail --silent --show-error http://127.0.0.1:18081/api/v1/health/ready)
+          headers=$(mktemp)
+          response=$(curl --fail --silent --show-error -D "$headers" http://127.0.0.1:18081/api/v1/health/ready)
           printf '%s\n' "$response"
           printf '%s\n' "$response" | jq -e '.status == "ok" and .database == "ok"'
+          grep -Eiq '^X-SideBySide-Revision: local-checkout\r?$' "$headers"
 
       - name: Web proof of concept through published port
         run: |
           curl --fail --silent --show-error http://127.0.0.1:18082/healthz
           curl --fail --silent --show-error http://127.0.0.1:18082/ | grep -Fq "<title>SidebySide</title>"
+
+      - name: Deployment smoke helper against running stack
+        run: |
+          python3 scripts/deployment_smoke.py \
+            --base-url http://127.0.0.1:18082 \
+            --expected-revision local-checkout
 
       - name: Runtime containers are healthy
         run: |
