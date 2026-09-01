@@ -17,25 +17,27 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.MemoryCreate
+import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
 import sidebyside.api.models.PlanReturnToWishResponse
 import sidebyside.api.models.PlanSchedule
 import sidebyside.api.models.PlanUpdate
+import sidebyside.api.models.ReadDescriptor
+import sidebyside.api.models.SessionView
+import sidebyside.api.models.StoryPage
+import sidebyside.api.models.UploadDescriptor
 import sidebyside.api.models.WishCreate
 import sidebyside.api.models.WishDetail
 import sidebyside.api.models.WishPage
 import sidebyside.api.models.WishToPlan
 import sidebyside.api.models.WishToPlanResponse
 import sidebyside.api.models.WishUpdate
-import sidebyside.api.models.MemoryCreate
-import sidebyside.api.models.MemoryDetail
-import sidebyside.api.models.MemoryUpdate
-import sidebyside.api.models.ReadDescriptor
-import sidebyside.api.models.SessionView
-import sidebyside.api.models.StoryPage
-import sidebyside.api.models.UploadDescriptor
 
 /**
  * A [ReferenceContract] whose every call fails until a test says otherwise.
@@ -88,18 +90,47 @@ abstract class FakeReferenceContract : ReferenceContract {
         ifMatch: Int,
     ): Unit = notExercised("deleteMemory")
 
-    override suspend fun listMemoryComments(
+    override suspend fun listComments(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
-    ): CommentPage = notExercised("listMemoryComments")
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
+    ): CommentPage = notExercised("listComments")
 
-    override suspend fun createMemoryComment(
+    override suspend fun createComment(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
         comment: CommentCreate,
-    ): CommentDetail = notExercised("createMemoryComment")
+    ): CommentDetail = notExercised("createComment")
+
+    override suspend fun getMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+    ): MilestoneDetail = notExercised("getMilestone")
+
+    override suspend fun updateMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+        update: MilestoneUpdate,
+    ): MilestoneDetail = notExercised("updateMilestone")
+
+    override suspend fun deleteMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteMilestone")
+
+    override suspend fun getHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+    ): HeartMomentDetail = notExercised("getHeartMoment")
 
     override suspend fun updateComment(
         spaceId: UUID,

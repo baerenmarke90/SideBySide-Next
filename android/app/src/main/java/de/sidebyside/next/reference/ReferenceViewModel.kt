@@ -9,6 +9,8 @@ import de.sidebyside.next.profile.loadProfileIdentity
 import de.sidebyside.next.profile.removeProfileAvatar
 import de.sidebyside.next.profile.updateProfileAvatar
 import de.sidebyside.next.profile.updateProfileDisplayName
+import de.sidebyside.next.shell.UiProblem
+import de.sidebyside.next.shell.problemFor
 import de.sidebyside.next.story.StoryImageRef
 import de.sidebyside.next.story.StoryImageStore
 import java.time.LocalDate
@@ -18,7 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentReadRequest
-import sidebyside.api.models.SessionView
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentUpdate
@@ -29,17 +30,18 @@ import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanSchedule
+import sidebyside.api.models.SessionView
+import sidebyside.api.models.StoryItem
 import sidebyside.api.models.WishCreate
 import sidebyside.api.models.WishDetail
 import sidebyside.api.models.WishStatus
 import sidebyside.api.models.WishToPlan
-import sidebyside.api.models.MemoryUpdate
-import sidebyside.api.models.StoryItem
-import de.sidebyside.next.shell.UiProblem
-import de.sidebyside.next.shell.problemFor
 
 data class UiMessage(
     val resourceId: Int,
@@ -127,6 +129,9 @@ data class ReferenceUiState(
     val plans: List<PlanDetail> = emptyList(),
     val planningBusy: Boolean = false,
     val planningProblem: UiProblem? = null,
+    /** The Story item currently open that is not a memory. */
+    val openMilestone: MilestoneDetail? = null,
+    val openSharedHeartMoment: HeartMomentDetail? = null,
     val commentsBusy: Boolean = false,
     val commentsProblem: UiProblem? = null,
     /** A problem belonging to the open memory rather than to the whole screen. */
@@ -224,6 +229,7 @@ class ReferenceViewModel(
         clearHeartMoments()
         clearComments()
         clearPlanning()
+        closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -287,6 +293,7 @@ class ReferenceViewModel(
         storyImages.reset()
         clearHeartMoments()
         clearComments()
+        closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -334,6 +341,7 @@ class ReferenceViewModel(
         storyImages.reset()
         clearHeartMoments()
         clearComments()
+        closeStoryItem()
         session = null
         imageDrafts = emptyList()
         _uiState.value = ReferenceUiState(
@@ -368,6 +376,7 @@ class ReferenceViewModel(
         storyImages.reset()
         clearHeartMoments()
         clearComments()
+        closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
         mutate {
@@ -693,7 +702,167 @@ class ReferenceViewModel(
         }
     }
 
-    fun loadComments(memoryId: java.util.UUID) {
+    fun openMilestone(milestoneId: java.util.UUID) {
+        mutate { it.copy(memoryProblem = null, memoryStatus = null, openMemoryGone = false) }
+        reloadMilestone(milestoneId)
+    }
+
+    /**
+     * Reads the milestone again without clearing what is already being
+     * reported, for the same reason [reloadMemory] does: a conflict reloads to
+     * pick up the partner's version, and clearing the problem on the way would
+     * make the refusal look like nothing having happened.
+     */
+    private fun reloadMilestone(milestoneId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(memoryBusy = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.getMilestone(spaceId, currentSession.tokens.accessToken, milestoneId)
+            }
+                .onSuccess { milestone ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(openMilestone = milestone, memoryBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(memoryBusy = false, memoryProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /**
+     * Reads one HeartMoment for its own screen.
+     *
+     * Only a shared one is reachable this way, because only a shared one is in
+     * the Story. A private moment is not filtered out here — the server never
+     * puts it in the timeline the id came from.
+     */
+    fun openSharedHeartMoment(heartMomentId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(memoryBusy = true, memoryProblem = null, openMemoryGone = false) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.getHeartMoment(spaceId, currentSession.tokens.accessToken, heartMomentId)
+            }
+                .onSuccess { moment ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(openSharedHeartMoment = moment, memoryBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(memoryBusy = false, memoryProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun closeStoryItem() {
+        mutate {
+            it.copy(
+                openMilestone = null,
+                openSharedHeartMoment = null,
+                memoryBusy = false,
+                memoryProblem = null,
+                memoryStatus = null,
+                editingMemory = false,
+            )
+        }
+    }
+
+    fun saveMilestone(title: String, body: String, happenedOn: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val milestone = _uiState.value.openMilestone ?: return
+        val operationEpoch = sessionEpoch
+
+        val day = parseHappenedOn(happenedOn)
+        if (happenedOn.isNotBlank() && day == null) {
+            mutate { it.copy(error = message(R.string.ref_error_date_format)) }
+            return
+        }
+
+        mutate { it.copy(memoryBusy = true, memoryProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateMilestone(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    milestone.id,
+                    milestone.version,
+                    MilestoneUpdate(body = body, happenedOn = day, title = title),
+                )
+            }
+                .onSuccess { updated ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            openMilestone = updated,
+                            memoryBusy = false,
+                            memoryProblem = null,
+                            editingMemory = false,
+                            memoryStatus = message(R.string.memory_saved),
+                        )
+                    }
+                    refreshStory()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(memoryBusy = false, memoryProblem = problemFor(throwable)) }
+                    reloadMilestone(milestone.id)
+                }
+        }
+    }
+
+    fun deleteMilestone() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val milestone = _uiState.value.openMilestone ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(memoryBusy = true, memoryProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteMilestone(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    milestone.id,
+                    milestone.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            openMilestone = null,
+                            memoryBusy = false,
+                            openMemoryGone = true,
+                            memoryStatus = message(R.string.memory_deleted),
+                        )
+                    }
+                    refreshStory()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(memoryBusy = false, memoryProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun loadComments(parent: ReferenceContract.CommentParent, parentId: java.util.UUID) {
         val api = contract ?: return
         val currentSession = session ?: return
         val spaceId = activeSpaceId ?: return
@@ -703,7 +872,7 @@ class ReferenceViewModel(
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
             runCatching {
-                api.listMemoryComments(spaceId, currentSession.tokens.accessToken, memoryId)
+                api.listComments(spaceId, currentSession.tokens.accessToken, parent, parentId)
             }
                 .onSuccess { page ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
@@ -713,7 +882,11 @@ class ReferenceViewModel(
         }
     }
 
-    fun addComment(memoryId: java.util.UUID, body: String) {
+    fun addComment(
+        parent: ReferenceContract.CommentParent,
+        parentId: java.util.UUID,
+        body: String,
+    ) {
         val api = contract ?: return
         val currentSession = session ?: return
         val spaceId = activeSpaceId ?: return
@@ -724,22 +897,28 @@ class ReferenceViewModel(
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
             runCatching {
-                api.createMemoryComment(
+                api.createComment(
                     spaceId,
                     currentSession.tokens.accessToken,
-                    memoryId,
+                    parent,
+                    parentId,
                     CommentCreate(body = body),
                 )
             }
                 .onSuccess {
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    loadComments(memoryId)
+                    loadComments(parent, parentId)
                 }
                 .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
         }
     }
 
-    fun editComment(memoryId: java.util.UUID, commentId: java.util.UUID, body: String) {
+    fun editComment(
+        parent: ReferenceContract.CommentParent,
+        parentId: java.util.UUID,
+        commentId: java.util.UUID,
+        body: String,
+    ) {
         val api = contract ?: return
         val currentSession = session ?: return
         val spaceId = activeSpaceId ?: return
@@ -761,13 +940,17 @@ class ReferenceViewModel(
             }
                 .onSuccess {
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    loadComments(memoryId)
+                    loadComments(parent, parentId)
                 }
                 .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
         }
     }
 
-    fun removeComment(memoryId: java.util.UUID, commentId: java.util.UUID) {
+    fun removeComment(
+        parent: ReferenceContract.CommentParent,
+        parentId: java.util.UUID,
+        commentId: java.util.UUID,
+    ) {
         val api = contract ?: return
         val currentSession = session ?: return
         val spaceId = activeSpaceId ?: return
@@ -787,7 +970,7 @@ class ReferenceViewModel(
             }
                 .onSuccess {
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    loadComments(memoryId)
+                    loadComments(parent, parentId)
                 }
                 .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
         }
@@ -1404,6 +1587,7 @@ class ReferenceViewModel(
         storyImages.reset()
         clearHeartMoments()
         clearComments()
+        closeStoryItem()
         session = null
         activeSpaceId = null
         imageDrafts = emptyList()

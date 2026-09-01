@@ -17,28 +17,30 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.MemoryCreate
+import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
 import sidebyside.api.models.PlanReturnToWishResponse
 import sidebyside.api.models.PlanSchedule
 import sidebyside.api.models.PlanUpdate
-import sidebyside.api.models.WishCreate
-import sidebyside.api.models.WishDetail
-import sidebyside.api.models.WishPage
-import sidebyside.api.models.WishToPlan
-import sidebyside.api.models.WishToPlanResponse
-import sidebyside.api.models.WishUpdate
-import sidebyside.api.models.MemoryCreate
-import sidebyside.api.models.MemoryDetail
-import sidebyside.api.models.MemoryUpdate
-import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
+import sidebyside.api.models.WishCreate
+import sidebyside.api.models.WishDetail
+import sidebyside.api.models.WishPage
+import sidebyside.api.models.WishToPlan
+import sidebyside.api.models.WishToPlanResponse
+import sidebyside.api.models.WishUpdate
 
 data class SelectedImage(
     val bytes: ByteArray,
@@ -104,16 +106,58 @@ interface ReferenceContract {
 
     suspend fun deleteMemory(spaceId: UUID, accessToken: String, memoryId: UUID, ifMatch: Int)
 
-    suspend fun listMemoryComments(
+    suspend fun getMilestone(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        milestoneId: UUID,
+    ): MilestoneDetail
+
+    suspend fun updateMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+        update: MilestoneUpdate,
+    ): MilestoneDetail
+
+    suspend fun deleteMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+    )
+
+    suspend fun getHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+    ): HeartMomentDetail
+
+    /**
+     * What a comment hangs on.
+     *
+     * The contract has a separate list and create path per kind, but one update
+     * and one delete for all of them, so only reading and writing need to know
+     * the parent.
+     */
+    enum class CommentParent(val segment: String) {
+        MEMORY("memories"),
+        MILESTONE("milestones"),
+        HEART_MOMENT("heart-moments"),
+    }
+
+    suspend fun listComments(
+        spaceId: UUID,
+        accessToken: String,
+        parent: CommentParent,
+        parentId: UUID,
     ): CommentPage
 
-    suspend fun createMemoryComment(
+    suspend fun createComment(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: CommentParent,
+        parentId: UUID,
         comment: CommentCreate,
     ): CommentDetail
 

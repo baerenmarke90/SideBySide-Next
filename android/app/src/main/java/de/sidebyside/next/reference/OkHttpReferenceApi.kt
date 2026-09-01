@@ -20,7 +20,6 @@ import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
-import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentPage
@@ -31,23 +30,20 @@ import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
+import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.MemoryCreate
+import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
 import sidebyside.api.models.PlanReturnToWishResponse
 import sidebyside.api.models.PlanSchedule
 import sidebyside.api.models.PlanUpdate
-import sidebyside.api.models.WishCreate
-import sidebyside.api.models.WishDetail
-import sidebyside.api.models.WishPage
-import sidebyside.api.models.WishToPlan
-import sidebyside.api.models.WishToPlanResponse
-import sidebyside.api.models.WishUpdate
-import sidebyside.api.models.MemoryCreate
-import sidebyside.api.models.MemoryDetail
-import sidebyside.api.models.MemoryUpdate
-import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.ProblemDetails
 import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
@@ -56,6 +52,12 @@ import sidebyside.api.models.SignInRequest
 import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
+import sidebyside.api.models.WishCreate
+import sidebyside.api.models.WishDetail
+import sidebyside.api.models.WishPage
+import sidebyside.api.models.WishToPlan
+import sidebyside.api.models.WishToPlanResponse
+import sidebyside.api.models.WishUpdate
 
 /** The demo entry response. It is not part of the generated contract. */
 @Serializable
@@ -203,26 +205,28 @@ class OkHttpReferenceApi(
             .build(),
     )
 
-    override suspend fun listMemoryComments(
+    override suspend fun listComments(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
     ): CommentPage = executeJson(
         authenticatedRequest(
-            "$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId/comments?limit=50",
+            "$baseUrl/api/v1/spaces/$spaceId/${parent.segment}/$parentId/comments?limit=50",
             accessToken,
         ).get().build(),
         CommentPage.serializer(),
     )
 
-    override suspend fun createMemoryComment(
+    override suspend fun createComment(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
         comment: CommentCreate,
     ): CommentDetail = executeJson(
         authenticatedRequest(
-            "$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId/comments",
+            "$baseUrl/api/v1/spaces/$spaceId/${parent.segment}/$parentId/comments",
             accessToken,
         )
             .post(
@@ -260,6 +264,65 @@ class OkHttpReferenceApi(
             .header("If-Match", ifMatch.toString())
             .delete()
             .build(),
+    )
+
+    override suspend fun getMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+    ): MilestoneDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/milestones/$milestoneId",
+            accessToken,
+        ).get().build(),
+        MilestoneDetail.serializer(),
+    )
+
+    override suspend fun updateMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+        update: MilestoneUpdate,
+    ): MilestoneDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/milestones/$milestoneId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(MilestoneUpdate.serializer(), update)
+                    .toRequestBody(jsonMediaType),
+            )
+            .build(),
+        MilestoneDetail.serializer(),
+    )
+
+    override suspend fun deleteMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/milestones/$milestoneId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .delete()
+            .build(),
+    )
+
+    override suspend fun getHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+    ): HeartMomentDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/heart-moments/$heartMomentId",
+            accessToken,
+        ).get().build(),
+        HeartMomentDetail.serializer(),
     )
 
     override suspend fun listHeartMoments(

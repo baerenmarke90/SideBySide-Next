@@ -48,11 +48,10 @@ fun StoryScreen(
     imageStore: StoryImageStore,
     generation: Long,
     modifier: Modifier = Modifier,
-    /**
-     * Opens one memory. Only memories have a screen of their own so far, so
-     * only their entries are made to look and behave as if they open.
-     */
+    /** Opens one entry. Every kind now has a screen of its own. */
     onOpenMemory: ((UUID) -> Unit)? = null,
+    onOpenMilestone: ((UUID) -> Unit)? = null,
+    onOpenHeartMoment: ((UUID) -> Unit)? = null,
     header: (@Composable () -> Unit)? = null,
 ) {
     val days = items.toStoryDays()
@@ -81,9 +80,11 @@ fun StoryScreen(
                     entry = entry,
                     imageStore = imageStore,
                     generation = generation,
-                    onOpen = onOpenMemory
-                        ?.takeIf { entry.kind == StoryEntryKind.MEMORY }
-                        ?.let { open -> { open(entry.id) } },
+                    onOpen = when (entry.kind) {
+                        StoryEntryKind.MEMORY -> onOpenMemory
+                        StoryEntryKind.MILESTONE -> onOpenMilestone
+                        StoryEntryKind.HEART_MOMENT -> onOpenHeartMoment
+                    }?.let { open -> { open(entry.id) } },
                 )
             }
         }

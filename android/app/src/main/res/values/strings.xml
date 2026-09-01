@@ -250,4 +250,10 @@
     <string name="plan_scheduled_for">Geplant für %1$s</string>
     <string name="plan_experienced_on">Erlebt am %1$s</string>
     <string name="plan_cancel">Abbrechen</string>
+    <string name="milestone_written_by">Festgehalten von %1$s</string>
+    <string name="milestone_gone_title">Diesen Meilenstein gibt es nicht mehr</string>
+    <string name="milestone_gone_body">Er wurde gelöscht. Eure übrige Geschichte ist unverändert.</string>
+    <string name="milestone_delete_confirm_title">Diesen Meilenstein löschen?</string>
+    <string name="milestone_delete_confirm_body">Er verschwindet aus eurer gemeinsamen Geschichte. Das lässt sich nicht rückgängig machen.</string>
+    <string name="heart_moment_shared_by">Von %1$s</string>
 </resources>
