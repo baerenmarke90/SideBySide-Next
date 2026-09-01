@@ -840,6 +840,7 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
 
 AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/auth/me"),
+    ("GET", "/api/v1/auth/capabilities"),
     ("GET", "/api/v1/auth/memberships"),
     ("POST", "/api/v1/auth/sign-out"),
     ("POST", "/api/v1/auth/password"),
@@ -853,6 +854,11 @@ AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
     ("POST", "/api/v1/auth/passkeys/registration/finish"),
 )
 """Account-scoped but not space-scoped. Anonymous requests receive 401."""
+
+SERVER_ADMIN_ONLY: tuple[tuple[str, str], ...] = (
+    ("GET", "/api/v1/server-admin/overview"),
+)
+"""Instance-scoped operations that require authenticated ServerAdmin authority."""
 
 PUBLIC_ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/health"),
@@ -1185,6 +1191,7 @@ def test_contract_is_completely_covered() -> None:
     covered = (
         {(endpoint.method, endpoint.template) for endpoint in SPACE_ENDPOINTS}
         | set(AUTHENTICATED_ONLY)
+        | set(SERVER_ADMIN_ONLY)
         | set(PUBLIC_ENDPOINTS)
     )
     assert contract == covered
@@ -1192,6 +1199,15 @@ def test_contract_is_completely_covered() -> None:
 
 @pytest.mark.parametrize(("method", "path"), AUTHENTICATED_ONLY, ids=str)
 def test_account_scoped_endpoints_remain_closed_to_anonymous(
+    scenario, method: str, path: str
+) -> None:  # type: ignore[no-untyped-def]
+    response = scenario["client"].request(method, path, json={})
+    assert response.status_code == 401
+    assert response.json()["code"] == "AUTHENTICATION_REQUIRED"
+
+
+@pytest.mark.parametrize(("method", "path"), SERVER_ADMIN_ONLY, ids=str)
+def test_server_admin_endpoints_remain_closed_to_anonymous(
     scenario, method: str, path: str
 ) -> None:  # type: ignore[no-untyped-def]
     response = scenario["client"].request(method, path, json={})
