@@ -6,7 +6,16 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, SmallInteger, String, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    func,
+)
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -37,7 +46,7 @@ class InstanceAdministrationSettings(TimestampMixin, VersionMixin, Base):
     __table_args__ = (
         CheckConstraint(
             "singleton_key = 1",
-            name="instance_administration_singleton_key_is_one",
+            name="singleton_key_is_one",
         ),
     )
 
@@ -61,7 +70,7 @@ class InstanceAdministrationEvent(IdMixin, Base):
     __table_args__ = (
         CheckConstraint(
             "setting IN ('registration_enabled', 'maintenance_mode')",
-            name="instance_administration_event_setting_valid",
+            name="setting_valid",
         ),
         Index("ix_instance_administration_events_created_at", "created_at"),
     )
