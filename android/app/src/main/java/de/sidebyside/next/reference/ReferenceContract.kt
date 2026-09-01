@@ -41,6 +41,10 @@ import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlacePage
 import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.GiftIdeaCreate
+import sidebyside.api.models.GiftIdeaDetail
+import sidebyside.api.models.GiftIdeaPage
+import sidebyside.api.models.GiftIdeaUpdate
 import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNotePage
@@ -627,6 +631,27 @@ interface ReferenceContract {
     ): PrivateNoteDetail
 
     suspend fun deletePrivateNote(spaceId: UUID, accessToken: String, noteId: UUID, ifMatch: Int)
+
+    /** Owner-only, same server-side filtering as [listPrivateNotes]. */
+    suspend fun listGiftIdeas(spaceId: UUID, accessToken: String, cursor: String? = null): GiftIdeaPage
+
+    suspend fun createGiftIdea(spaceId: UUID, accessToken: String, fields: GiftIdeaCreate): GiftIdeaDetail
+
+    /**
+     * The contract accepts a partial correction; unset fields are left
+     * unchanged. A status change is the same operation with only [fields]'s
+     * `status` set — the server validates the transition (M3-D17's
+     * transition graph), so this client never encodes that graph itself.
+     */
+    suspend fun updateGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        giftIdeaId: UUID,
+        ifMatch: Int,
+        fields: GiftIdeaUpdate,
+    ): GiftIdeaDetail
+
+    suspend fun deleteGiftIdea(spaceId: UUID, accessToken: String, giftIdeaId: UUID, ifMatch: Int)
 }
 
 private fun unsupportedProfileOperation(): Nothing =

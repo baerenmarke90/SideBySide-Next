@@ -461,4 +461,32 @@
     <string name="private_note_delete_confirm">Endgültig löschen</string>
     <string name="private_note_cancel">Abbrechen</string>
     <string name="private_note_save_changes">Änderungen speichern</string>
+
+    <string name="gift_ideas_open">Geschenkideen</string>
+    <string name="gift_ideas_title">Geschenkideen</string>
+    <string name="gift_ideas_intro">Nur du siehst diese Liste – ideal, um Ideen zu sammeln, ohne die Überraschung zu verraten.</string>
+    <string name="gift_ideas_empty">Noch keine Geschenkideen.</string>
+
+    <string name="gift_idea_add">Idee hinzufügen</string>
+    <string name="gift_idea_title_hint">Titel</string>
+    <string name="gift_idea_description_hint">Beschreibung</string>
+    <string name="gift_idea_occasion_hint">Anlass</string>
+    <string name="gift_idea_recipient_hint">Für wen</string>
+    <string name="gift_idea_price_hint">Preis (frei formuliert)</string>
+    <string name="gift_idea_url_hint">Link</string>
+    <string name="gift_idea_target_on_hint">Zieldatum (JJJJ-MM-TT, optional)</string>
+    <string name="gift_idea_pinned">Angeheftet</string>
+    <string name="gift_idea_edit">Bearbeiten</string>
+    <string name="gift_idea_edit_title">Geschenkidee bearbeiten</string>
+    <string name="gift_idea_delete">Löschen</string>
+    <string name="gift_idea_delete_title">%1$s löschen?</string>
+    <string name="gift_idea_delete_warning">Diese Geschenkidee wird endgültig gelöscht.</string>
+    <string name="gift_idea_delete_confirm">Endgültig löschen</string>
+    <string name="gift_idea_cancel">Abbrechen</string>
+    <string name="gift_idea_save_changes">Änderungen speichern</string>
+
+    <string name="gift_idea_status_idea">Idee</string>
+    <string name="gift_idea_status_bought">Gekauft</string>
+    <string name="gift_idea_status_given">Übergeben</string>
+    <string name="gift_idea_mark_as">Als „%1$s“ markieren</string>
 </resources>

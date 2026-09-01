@@ -55,6 +55,10 @@ import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlacePage
 import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.GiftIdeaCreate
+import sidebyside.api.models.GiftIdeaDetail
+import sidebyside.api.models.GiftIdeaPage
+import sidebyside.api.models.GiftIdeaUpdate
 import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNotePage
@@ -1193,6 +1197,58 @@ class OkHttpReferenceApi(
         ifMatch: Int,
     ) = executeEmpty(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/notes/$noteId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
+
+    override suspend fun listGiftIdeas(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): GiftIdeaPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/private/gift-ideas?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        GiftIdeaPage.serializer(),
+    )
+
+    override suspend fun createGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        fields: GiftIdeaCreate,
+    ): GiftIdeaDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/gift-ideas", accessToken)
+            .post(
+                SideBySideJson.encodeToString(GiftIdeaCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        GiftIdeaDetail.serializer(),
+    )
+
+    override suspend fun updateGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        giftIdeaId: UUID,
+        ifMatch: Int,
+        fields: GiftIdeaUpdate,
+    ): GiftIdeaDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/gift-ideas/$giftIdeaId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(GiftIdeaUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        GiftIdeaDetail.serializer(),
+    )
+
+    override suspend fun deleteGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        giftIdeaId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/gift-ideas/$giftIdeaId", accessToken)
             .header("If-Match", ifMatch.toString())
             .delete().build(),
     )
