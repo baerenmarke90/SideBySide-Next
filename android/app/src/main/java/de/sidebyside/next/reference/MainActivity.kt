@@ -1,5 +1,6 @@
 package de.sidebyside.next.reference
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -36,7 +37,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -81,8 +85,23 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Wires a real, Context-backed [SharedPreferencesSpaceStore] into the
+ * ViewModel default construction path used by `viewModel()`, which — unlike
+ * every other constructor default here — cannot be a plain default parameter
+ * because it needs a [Context] the ViewModel class itself never holds.
+ */
+private fun referenceViewModelFactory(context: Context): ViewModelProvider.Factory =
+    viewModelFactory {
+        initializer {
+            ReferenceViewModel(spaceStore = SharedPreferencesSpaceStore(context))
+        }
+    }
+
 @Composable
-private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewModel()) {
+private fun ReferenceFlowRoute(
+    referenceViewModel: ReferenceViewModel = viewModel(factory = referenceViewModelFactory(LocalContext.current)),
+) {
     val state by referenceViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
