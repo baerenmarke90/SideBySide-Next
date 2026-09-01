@@ -58,6 +58,13 @@ fun MoreScreen(
      * pass disappears from the product without breaking the build.
      */
     onOpenRelatedPersons: () -> Unit,
+    /**
+     * Opens the couple's shared and private preferences.
+     *
+     * Deliberately without a default, for the same reason as
+     * [onOpenHeartMoments].
+     */
+    onOpenPreferences: () -> Unit,
     modifier: Modifier = Modifier,
     signOutEnabled: Boolean = true,
     spaces: List<AccountMembershipView> = emptyList(),
@@ -186,6 +193,38 @@ fun MoreScreen(
                         modifier = Modifier.heightIn(min = MinimumTouchTarget),
                     ) {
                         Text(stringResource(R.string.related_persons_open))
+                    }
+                }
+            }
+        }
+
+        run {
+            val open = onOpenPreferences
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.preferences_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.preferences_self_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.preferences_open))
                     }
                 }
             }
