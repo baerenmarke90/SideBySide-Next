@@ -37,12 +37,18 @@ x-runtime-environment: &runtime-environment
 x-backend-build: &backend-build
   build:
     context: ./backend
+    args:
+      # Raw complete-checkout Compose is a local/test path. A verified candidate
+      # or Production build must use scripts/compose_checked.py, which overrides
+      # this marker with the exact clean Git HEAD.
+      SBS_BUILD_REVISION: "unverified-local-checkout"
   pull_policy: build
 
 x-web-build: &web-build
   build:
     context: ./web
     args:
+      SBS_BUILD_REVISION: "unverified-local-checkout"
       VITE_SBS_API_BASE_URL: ""
       VITE_SBS_DEMO_MODE: "${SBS_DEMO_MODE:-false}"
       VITE_SBS_DEMO_URL: "${SBS_DEMO_PUBLIC_URL:-}"

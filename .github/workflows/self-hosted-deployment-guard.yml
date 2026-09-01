@@ -49,6 +49,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Prepare test configuration
         run: |
@@ -57,25 +59,129 @@ jobs:
           sed -i 's/^API_PORT=.*/API_PORT=18081/' .env
           sed -i 's/^WEB_PORT=.*/WEB_PORT=18082/' .env
           sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=http://localhost:18082|' .env
+          printf '%s\n' 'COMPOSE_PROJECT_NAME=sidebyside-verified-ci' >> .env
           docker compose config --quiet
           docker compose -f compose.arcane.yaml --env-file .env config --quiet
+
+      - name: Deployment helper syntax and isolation contract
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/deployment_smoke.py \
+            scripts/check_environment_isolation.py \
+            scripts/compose_checked.py \
+            scripts/test_deployment_smoke.py
+          python3 -m unittest scripts.test_deployment_smoke
+
+          if python3 scripts/deployment_smoke.py \
+            --base-url http://127.0.0.1:9 \
+            --expected-revision main; then
+            echo "Release smoke accepted a mutable ref as revision evidence."
+            exit 1
+          fi
+
+          cat >/tmp/production.env <<'EOF'
+          COMPOSE_PROJECT_NAME=sidebyside-production-ci
+          SBS_ENVIRONMENT=production
+          SBS_PUBLIC_BASE_URL=https://production.example.invalid
+          POSTGRES_PASSWORD=production-only-ci-secret
+          SBS_CURSOR_SIGNING_KEY=production-only-ci-cursor-signing-key-1234567890
+          SBS_MEDIA_STORE=local
+          EOF
+
+          python3 scripts/check_environment_isolation.py \
+            deploy/persistent-development.env.example /tmp/production.env
+
+          cp /tmp/production.env /tmp/unsafe-production.env
+          printf '%s\n' 'SBS_CURSOR_SIGNING_KEY=replace-with-development-only-signing-key-at-least-32-chars' \
+            >> /tmp/unsafe-production.env
+          if python3 scripts/check_environment_isolation.py \
+            deploy/persistent-development.env.example /tmp/unsafe-production.env; then
+            echo "Environment isolation accepted a reused signing key."
+            exit 1
+          fi
+
+      - name: Verified checkout revision contract
+        run: |
+          set -euo pipefail
+          revision=$(python3 scripts/compose_checked.py --print-revision)
+          test "$revision" = "$(git rev-parse HEAD)"
+
+          python3 scripts/compose_checked.py \
+            --expected-revision "$revision" \
+            config --format json > /tmp/compose-verified.json
+
+          jq -e --arg revision "$revision" '
+            (.services.api.build.args.SBS_BUILD_REVISION == $revision) and
+            (.services.worker.build.args.SBS_BUILD_REVISION == $revision) and
+            (.services.migrate.build.args.SBS_BUILD_REVISION == $revision) and
+            (.services["demo-init"].build.args.SBS_BUILD_REVISION == $revision) and
+            (.services.web.build.args.SBS_BUILD_REVISION == $revision)
+          ' /tmp/compose-verified.json
+
+          cp compose.yaml /tmp/compose-verified-source.yaml
+          cleanup_hidden_compose_change() {
+            cp /tmp/compose-verified-source.yaml compose.yaml
+            git update-index --no-assume-unchanged compose.yaml
+          }
+          trap cleanup_hidden_compose_change EXIT
+          git update-index --assume-unchanged compose.yaml
+          sed -i 's/driver: bridge/driver: overlay/' compose.yaml
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
+          python3 scripts/compose_checked.py \
+            --expected-revision "$revision" \
+            config --format json > /tmp/compose-index-hidden.json
+          jq -e '.networks.app.driver == "bridge"' /tmp/compose-index-hidden.json
+
+          cleanup_hidden_compose_change
+          trap - EXIT
+
+          trap 'rm -f .sidebyside-dirty-check' EXIT
+          touch .sidebyside-dirty-check
+          if python3 scripts/compose_checked.py --print-revision; then
+            echo "Verified Compose accepted a dirty checkout."
+            exit 1
+          fi
+          rm -f .sidebyside-dirty-check
+          trap - EXIT
+
+          wrong_revision=0000000000000000000000000000000000000000
+          if python3 scripts/compose_checked.py \
+            --expected-revision "$wrong_revision" --print-revision; then
+            echo "Verified Compose accepted the wrong expected revision."
+            exit 1
+          fi
 
       - name: Arcane variant remains semantically equivalent
         run: |
           set -euo pipefail
-          docker compose --env-file .env config --format json \
-            | jq -S 'del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" else . end)' \
-            > /tmp/compose-standard.json
-          docker compose -f compose.arcane.yaml --env-file .env config --format json \
-            | jq -S 'del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" else . end)' \
-            > /tmp/compose-arcane.json
+          NORMALIZE='del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" | if ((.build.args? | type) == "object" and (.build.args.SBS_BUILD_REVISION? != null)) then .build.args.SBS_BUILD_REVISION = "__BUILD_REVISION__" else . end else . end)'
+
+          docker compose --env-file .env config --format json > /tmp/compose-standard-raw.json
+          docker compose -f compose.arcane.yaml --env-file .env config --format json > /tmp/compose-arcane-raw.json
+
+          jq -S "$NORMALIZE" /tmp/compose-standard-raw.json > /tmp/compose-standard.json
+          jq -S "$NORMALIZE" /tmp/compose-arcane-raw.json > /tmp/compose-arcane.json
           diff -u /tmp/compose-standard.json /tmp/compose-arcane.json
 
-          docker compose -f compose.arcane.yaml --env-file .env config --format json > /tmp/compose-arcane-raw.json
+          jq -e '
+            (.services.api.build.args.SBS_BUILD_REVISION == "unverified-local-checkout") and
+            (.services.worker.build.args.SBS_BUILD_REVISION == "unverified-local-checkout") and
+            (.services.migrate.build.args.SBS_BUILD_REVISION == "unverified-local-checkout") and
+            (.services["demo-init"].build.args.SBS_BUILD_REVISION == "unverified-local-checkout") and
+            (.services.web.build.args.SBS_BUILD_REVISION == "unverified-local-checkout")
+          ' /tmp/compose-standard-raw.json
+
           jq -e '
             (.services.migrate.build.context | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#")) and
             (.services.api.build.context == .services.migrate.build.context) and
             (.services.worker.build.context == .services.migrate.build.context) and
+            (.services.api.build.args.SBS_BUILD_REVISION == "main") and
+            (.services.worker.build.args.SBS_BUILD_REVISION == "main") and
+            (.services.migrate.build.args.SBS_BUILD_REVISION == "main") and
+            (.services["demo-init"].build.args.SBS_BUILD_REVISION == "main") and
+            (.services.web.build.args.SBS_BUILD_REVISION == "main") and
             (.services.web.build.context | endswith(":web")) and
             (.services.migrate.build.context | endswith(":backend"))
           ' /tmp/compose-arcane-raw.json
@@ -172,20 +278,29 @@ jobs:
 
           address = socket.gethostbyname("postgres")
           if not address:
-              raise SystemExit("postgres was not resolved through Docker DNS")
+            raise SystemExit("postgres was not resolved through Docker DNS")
           print(f"postgres -> {address}")
           PY
 
       - name: Readiness through published port
         run: |
-          response=$(curl --fail --silent --show-error http://127.0.0.1:18081/api/v1/health/ready)
+          headers=$(mktemp)
+          response=$(curl --fail --silent --show-error -D "$headers" http://127.0.0.1:18081/api/v1/health/ready)
           printf '%s\n' "$response"
           printf '%s\n' "$response" | jq -e '.status == "ok" and .database == "ok"'
+          tr -d '\r' < "$headers" | grep -Fqi 'X-SideBySide-Revision: unverified-local-checkout'
 
       - name: Web proof of concept through published port
         run: |
           curl --fail --silent --show-error http://127.0.0.1:18082/healthz
+          test "$(curl --fail --silent --show-error http://127.0.0.1:18082/.well-known/sidebyside-revision)" = "unverified-local-checkout"
           curl --fail --silent --show-error http://127.0.0.1:18082/ | grep -Fq "<title>SidebySide</title>"
+
+      - name: Deployment smoke helper against running stack
+        run: |
+          python3 scripts/deployment_smoke.py \
+            --base-url http://127.0.0.1:18082 \
+            --allow-unverified-local
 
       - name: Runtime containers are healthy
         run: |

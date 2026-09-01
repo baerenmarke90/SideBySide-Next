@@ -7,6 +7,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY . .
+ARG SBS_BUILD_REVISION="unverified-local-checkout"
 ARG VITE_SBS_API_BASE_URL=""
 ARG VITE_SBS_DEMO_MODE="false"
 ARG VITE_SBS_DEMO_URL=""
@@ -19,6 +20,8 @@ ENV VITE_SBS_DEMO_RESET_TIMER=${VITE_SBS_DEMO_RESET_TIMER}
 ENV VITE_SBS_DEMO_RESET_INTERVAL=${VITE_SBS_DEMO_RESET_INTERVAL}
 RUN sh scripts/test_csp_config.sh
 RUN npm run build
+RUN mkdir -p dist/.well-known \
+    && printf '%s\n' "$SBS_BUILD_REVISION" > dist/.well-known/sidebyside-revision
 
 FROM ghcr.io/nginx/nginx-unprivileged:1.31.4@sha256:197f252f060ed357f2ab98d4256762d7d107c76f18ad8f0b9d5178854611566d
 
