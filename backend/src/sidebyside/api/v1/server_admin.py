@@ -150,7 +150,7 @@ def get_server_admin_overview(
         accounts_last_24h=accounts_last_24h,
         accounts_last_7d=accounts_last_7d,
         media_object_count=media_object_count,
-        media_stored_bytes=int(media_stored_bytes),
+        media_stored_bytes=int(media_stored_bytes or 0),
         jobs_pending=_job_count(session, JobStatus.PENDING),
         jobs_running=_job_count(session, JobStatus.RUNNING),
         jobs_failed=_job_count(session, JobStatus.FAILED),
