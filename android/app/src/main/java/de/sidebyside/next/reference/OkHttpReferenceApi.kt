@@ -32,6 +32,8 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
@@ -188,26 +190,28 @@ class OkHttpReferenceApi(
             .build(),
     )
 
-    override suspend fun listMemoryComments(
+    override suspend fun listComments(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
     ): CommentPage = executeJson(
         authenticatedRequest(
-            "$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId/comments?limit=50",
+            "$baseUrl/api/v1/spaces/$spaceId/${parent.segment}/$parentId/comments?limit=50",
             accessToken,
         ).get().build(),
         CommentPage.serializer(),
     )
 
-    override suspend fun createMemoryComment(
+    override suspend fun createComment(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
         comment: CommentCreate,
     ): CommentDetail = executeJson(
         authenticatedRequest(
-            "$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId/comments",
+            "$baseUrl/api/v1/spaces/$spaceId/${parent.segment}/$parentId/comments",
             accessToken,
         )
             .post(
@@ -245,6 +249,65 @@ class OkHttpReferenceApi(
             .header("If-Match", ifMatch.toString())
             .delete()
             .build(),
+    )
+
+    override suspend fun getMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+    ): MilestoneDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/milestones/$milestoneId",
+            accessToken,
+        ).get().build(),
+        MilestoneDetail.serializer(),
+    )
+
+    override suspend fun updateMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+        update: MilestoneUpdate,
+    ): MilestoneDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/milestones/$milestoneId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(MilestoneUpdate.serializer(), update)
+                    .toRequestBody(jsonMediaType),
+            )
+            .build(),
+        MilestoneDetail.serializer(),
+    )
+
+    override suspend fun deleteMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/milestones/$milestoneId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .delete()
+            .build(),
+    )
+
+    override suspend fun getHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+    ): HeartMomentDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/heart-moments/$heartMomentId",
+            accessToken,
+        ).get().build(),
+        HeartMomentDetail.serializer(),
     )
 
     override suspend fun listHeartMoments(
