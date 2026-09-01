@@ -10,6 +10,12 @@
   `docs/ACCESSIBILITY-QA-MATRIX.md`, `docs/CROSS-CUTTING-QUALITY.md`,
   `docs/m5/S6-CACHE-PORTABILITY-DECISIONS.md`
 
+M5 productizes the already delivered M0-M4 Core. Per ADR 0006/#433, new
+Relationship Depth domains (#429-#432 and later M7 work) are not added to M5
+merely because Android client completion is active. Reusable navigation,
+settings and client infrastructure may be prepared here, but new M7 Domain
+contracts remain outside the M5/G4 boundary.
+
 ## Starting position
 
 Android is still the M2-S8 thin vertical reference flow. The whole client is one
@@ -55,7 +61,7 @@ S1 Identity + relationship context (#353)
 S6 Android runtime: Deep Links + encrypted Read Cache + portability UI (#328)
   |
   v
-M5 Android evidence -> combined M5/G4 parity and release evidence
+M5 Android evidence -> combined M5/G4 parity and Core Release Candidate evidence
 ```
 
 S2-S5 may use controlled parallelism only after S0B and the required S1 Space
@@ -99,17 +105,19 @@ transport contract while #345 is unmerged.
 **Route model:** decided in
 `docs/decisions/0003-primary-navigation-and-route-model.md` (#360). Android
 builds its destination registry directly against that model, so no Android
-route is ever migrated:
+route is ever migrated. ADR 0006 changes the forward milestone number for the
+reserved Discover area from old M7 Integrations to new M8 Discover & Integrations;
+the route identity itself does not change:
 
 | Route ID | de-DE | Path | Availability |
 |---|---|---|---|
 | `today` | Heute | `/today` | now |
 | `story` | Story | `/story` | now |
 | `plan` | Planen | `/plan` | now |
-| `discover` | Entdecken | `/discover` | M7, reserved and not rendered |
+| `discover` | Entdecken | `/discover` | **M8**, reserved and not rendered |
 | `more` | Mehr | `/more` | now |
 
-Four destinations until M7. Search is a global utility rather than a
+Four destinations until M8. Search is a global utility rather than a
 destination, Activity lives at `/today/activity`, and people, the owner-only
 area, notifications and profile live under `/more`. Web migrates onto the same
 model in #364; Android does not wait for it.
@@ -230,7 +238,8 @@ needs them, when the requirements are concrete rather than assumed.
   documented Mixed baseline;
 - no Android slice may add ad-hoc Premium flags or infer entitlement in the
   client;
-- M9/#262 remains the entitlement runtime boundary.
+- **M6/#262 is the entitlement runtime boundary** under ADR 0006; M5 consumes no
+  speculative Entitlement contract.
 
 ## Cross-cutting acceptance for every production screen
 
