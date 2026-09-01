@@ -46,6 +46,7 @@ x-web-build: &web-build
   build:
     context: "${SBS_SOURCE_REPOSITORY:-https://github.com/baerenmarke90/SideBySide-Next.git}#${SBS_SOURCE_REF:-main}:web"
     args:
+      SBS_BUILD_REVISION: "${SBS_SOURCE_REF:-main}"
       VITE_SBS_API_BASE_URL: ""
       VITE_SBS_DEMO_MODE: "${SBS_DEMO_MODE:-false}"
       VITE_SBS_DEMO_URL: "${SBS_DEMO_PUBLIC_URL:-}"
