@@ -6,6 +6,12 @@ import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
+import sidebyside.api.models.ContentVisibility
+import sidebyside.api.models.HeartMomentCreate
+import sidebyside.api.models.HeartMomentDetail
+import sidebyside.api.models.HeartMomentPage
+import sidebyside.api.models.HeartMomentUpdate
+import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
@@ -81,6 +87,58 @@ interface ReferenceContract {
     ): MemoryDetail
 
     suspend fun deleteMemory(spaceId: UUID, accessToken: String, memoryId: UUID, ifMatch: Int)
+
+    /**
+     * The HeartMoments this account may read.
+     *
+     * The server narrows this to what the caller is authorised for, and the
+     * [visibility] filter narrows it further — it never widens it. Asking for
+     * `PRIVATE` therefore returns the caller's own private moments, and an
+     * empty page for anyone else's, rather than a refusal that would confirm
+     * that someone else's exist.
+     */
+    suspend fun listHeartMoments(
+        spaceId: UUID,
+        accessToken: String,
+        visibility: ContentVisibility? = null,
+    ): HeartMomentPage
+
+    suspend fun createHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMoment: HeartMomentCreate,
+    ): HeartMomentDetail
+
+    suspend fun updateHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+        update: HeartMomentUpdate,
+    ): HeartMomentDetail
+
+    /**
+     * Changes who may see a HeartMoment.
+     *
+     * Its own call, not a field on [updateHeartMoment], because the server
+     * makes it one: `SHARED -> PRIVATE` deletes the moment's comments in the
+     * same transaction, and going back does not restore them. That must never
+     * happen as a side effect of editing text.
+     */
+    suspend fun changeHeartMomentVisibility(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+        change: HeartMomentVisibilityChange,
+    ): HeartMomentDetail
+
+    suspend fun deleteHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+    )
 
     suspend fun createAttachmentUpload(
         spaceId: UUID,
