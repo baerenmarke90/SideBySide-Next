@@ -6,6 +6,12 @@ import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
+import sidebyside.api.models.ContentVisibility
+import sidebyside.api.models.HeartMomentCreate
+import sidebyside.api.models.HeartMomentDetail
+import sidebyside.api.models.HeartMomentPage
+import sidebyside.api.models.HeartMomentUpdate
+import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
@@ -65,6 +71,41 @@ abstract class FakeReferenceContract : ReferenceContract {
         memoryId: UUID,
         ifMatch: Int,
     ): Unit = notExercised("deleteMemory")
+
+    override suspend fun listHeartMoments(
+        spaceId: UUID,
+        accessToken: String,
+        visibility: ContentVisibility?,
+    ): HeartMomentPage = notExercised("listHeartMoments")
+
+    override suspend fun createHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMoment: HeartMomentCreate,
+    ): HeartMomentDetail = notExercised("createHeartMoment")
+
+    override suspend fun updateHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+        update: HeartMomentUpdate,
+    ): HeartMomentDetail = notExercised("updateHeartMoment")
+
+    override suspend fun changeHeartMomentVisibility(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+        change: HeartMomentVisibilityChange,
+    ): HeartMomentDetail = notExercised("changeHeartMomentVisibility")
+
+    override suspend fun deleteHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteHeartMoment")
 
     override suspend fun createAttachmentUpload(
         spaceId: UUID,

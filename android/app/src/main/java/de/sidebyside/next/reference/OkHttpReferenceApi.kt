@@ -21,6 +21,12 @@ import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.MagicLinkConsumeRequest
+import sidebyside.api.models.ContentVisibility
+import sidebyside.api.models.HeartMomentCreate
+import sidebyside.api.models.HeartMomentDetail
+import sidebyside.api.models.HeartMomentPage
+import sidebyside.api.models.HeartMomentUpdate
+import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
@@ -173,6 +179,91 @@ class OkHttpReferenceApi(
         ifMatch: Int,
     ) = executeEmpty(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete()
+            .build(),
+    )
+
+    override suspend fun listHeartMoments(
+        spaceId: UUID,
+        accessToken: String,
+        visibility: ContentVisibility?,
+    ): HeartMomentPage {
+        val filter = visibility?.let { "&visibility=${it.value}" }.orEmpty()
+        return executeJson(
+            authenticatedRequest(
+                "$baseUrl/api/v1/spaces/$spaceId/heart-moments?limit=50$filter",
+                accessToken,
+            ).get().build(),
+            HeartMomentPage.serializer(),
+        )
+    }
+
+    override suspend fun createHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMoment: HeartMomentCreate,
+    ): HeartMomentDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/heart-moments", accessToken)
+            .post(
+                SideBySideJson.encodeToString(HeartMomentCreate.serializer(), heartMoment)
+                    .toRequestBody(jsonMediaType),
+            )
+            .build(),
+        HeartMomentDetail.serializer(),
+    )
+
+    override suspend fun updateHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+        update: HeartMomentUpdate,
+    ): HeartMomentDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/heart-moments/$heartMomentId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(HeartMomentUpdate.serializer(), update)
+                    .toRequestBody(jsonMediaType),
+            )
+            .build(),
+        HeartMomentDetail.serializer(),
+    )
+
+    override suspend fun changeHeartMomentVisibility(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+        change: HeartMomentVisibilityChange,
+    ): HeartMomentDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/heart-moments/$heartMomentId/visibility",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson
+                    .encodeToString(HeartMomentVisibilityChange.serializer(), change)
+                    .toRequestBody(jsonMediaType),
+            )
+            .build(),
+        HeartMomentDetail.serializer(),
+    )
+
+    override suspend fun deleteHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/heart-moments/$heartMomentId",
+            accessToken,
+        )
             .header("If-Match", ifMatch.toString())
             .delete()
             .build(),
