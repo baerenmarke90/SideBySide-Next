@@ -70,16 +70,6 @@
   color: var(--color-brand-text);
 }
 
-.shell-utility-link .shell-nav-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.shell-utility-link .shell-nav-icon svg {
-  width: 1.2rem;
-  height: 1.2rem;
-}
-
 .header-profile-menu {
   position: relative;
   flex: 0 0 auto;
@@ -307,6 +297,16 @@
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.shell-utility-link .shell-nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.shell-utility-link .shell-nav-icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .mobile-bottom-nav {

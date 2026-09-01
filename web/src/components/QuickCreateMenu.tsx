@@ -58,9 +58,7 @@ export function QuickCreateMenu() {
     );
     if (!items.length) return;
 
-    const currentIndex = items.findIndex(
-      (item) => item === document.activeElement,
-    );
+    const currentIndex = items.indexOf(document.activeElement as HTMLElement);
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       focusMenuItem(currentIndex + 1);

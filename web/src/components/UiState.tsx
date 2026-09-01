@@ -44,6 +44,8 @@ export function UiState({
       <span className="ui-state-mark" aria-hidden="true">
         {kind === 'empty' ? (
           <svg
+            aria-hidden="true"
+            focusable="false"
             viewBox="0 0 24 24"
             width="100%"
             height="100%"

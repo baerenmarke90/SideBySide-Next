@@ -130,10 +130,10 @@
 .memory-delete-confirmation {
   display: grid;
   gap: var(--space-4);
-  border: 2px dashed var(--color-error);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-large);
   padding: var(--space-4);
-  background: var(--color-surface-overlay);
+  background: var(--color-surface-subtle);
 }
 
 .memory-delete-confirmation h2 {
