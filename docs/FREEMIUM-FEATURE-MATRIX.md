@@ -44,7 +44,7 @@ Consequences:
 - no M0-M3 user data needs to become inaccessible when Premium launches;
 - no blanket grandfathering is required for the audited M0-M3 capability set;
 - no M0-M3 entitlement gate needs to be added merely to complete #270;
-- future Premium extensions must use the centralized entitlement architecture defined through #262/M9 instead of ad-hoc feature checks;
+- future Premium extensions must use the centralized entitlement architecture defined through M6/#262 under ADR 0006 instead of ad-hoc feature checks;
 - if a future product decision changes an existing capability from this baseline to whole-feature Premium, that change requires an explicit matrix revision and migration decision before runtime gating.
 
 ## Classification vocabulary
@@ -75,7 +75,7 @@ The audit checked the current implementation rather than relying only on issue t
 
 The production API router on the audited baseline includes the implemented M1-M3 surfaces for authentication, invitations, attachments, Story, Memories, Milestones, HeartMoments, Comments, people, profiles, Spaces, Wishes, Places and typed Place relations, Plans, Chapters and typed Chapter relations, shared Collections, PrivateNote/GiftIdea, and PrivateCollections.
 
-The current API does **not** register M4 Search/Dashboard/Activity/Notification/Reminder/Rule routes, M6 Question/Recap routes, M7 external product integrations, or M9 billing/entitlement routes. Those remain later-milestone work.
+The current API does **not** register M4 Search/Dashboard/Activity/Notification/Reminder/Rule routes, M7 Question/Recap routes, M8 external product integrations, or M6 billing/entitlement routes. Those remain later-milestone work.
 
 The current Web and Android clients provide the thin M2 reference/product evidence flow rather than complete M1-M3 client parity. Full Web/Android productization remains M5.
 
@@ -175,7 +175,7 @@ Current missing launch/productization capabilities include:
 - backup/restore productization;
 - managed render/AI fair-use accounting where expensive Premium processing is later introduced.
 
-These belong to #262/M9 and are not defects in the M0-M3 implementation.
+These belong to M6/#262 under ADR 0006 and are not defects in the M0-M3 implementation.
 
 ### Hosted storage working values
 
@@ -238,7 +238,7 @@ Resource cost may justify a transparent quota or fair-use policy. It does not ju
 
 The product specification deliberately separates `FeatureConfiguration` (technical activation) from `Entitlement` (commercial eligibility), but no runtime entitlement/billing implementation exists on the audited baseline.
 
-That is consistent with the roadmap: Entitlements/Billing belong to M9, and broad Premium gating must not be pulled forward before #262 resolves the provider-neutral capability model, relationship ownership, lifecycle, restore, downgrade, offline/Self-Hosted, and failure semantics.
+That is consistent with the roadmap: Entitlements/Billing belong to M6 under ADR 0006, and broad Premium gating must not be pulled into M5 before #262 resolves the provider-neutral capability model, relationship ownership, lifecycle, restore, downgrade, offline/Self-Hosted, and failure semantics.
 
 Therefore:
 
@@ -263,7 +263,7 @@ This is a positive result, not an absence of future work.
 - **#262** remains the owning product/architecture decision for future Premium capability boundaries, relationship-scoped entitlements, hosted storage hypotheses, lifecycle, downgrade, restore, licensing, billing-provider boundaries and Premium UX.
 - **#88** remains the existing future work item for video upload/poster support; its eventual commercial/resource treatment must be checked against this matrix and #262 before implementation.
 - **M4+ issues** must apply the mandatory business/freemium consistency check at issue/PR time. In particular, basic Search and normal access to user-created content must not accidentally become Premium merely because M4 is implemented after this baseline.
-- **M9** remains the roadmap milestone for runtime Entitlements/Billing/Cloud productization. Specific implementation issues should be created when the #262 decisions are sufficiently concrete and the milestone work is ready to start.
+- **M6** is the roadmap milestone for runtime Entitlements/Billing/Cloud productization under ADR 0006. Specific implementation issues should be created when the #262 decisions are sufficiently concrete and the milestone work is ready to start.
 
 No duplicate follow-up issue is created merely to restate work already owned by #262, #88, or the roadmap.
 
