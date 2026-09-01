@@ -159,7 +159,8 @@ const serverAdmin = {
       revokeSessions: 'Alle Sitzungen abmelden',
       sendRecovery: 'Passwort-Zurücksetzung senden',
       operatorRecovery: 'Betreiber-Recovery erzeugen',
-      recoverySent: 'Die Passwort-Zurücksetzung wurde über den normalen E-Mail-Weg angefordert.',
+      recoverySent:
+        'Die Passwort-Zurücksetzung wurde über den normalen E-Mail-Weg angefordert.',
       recoveryProofTitle: 'Einmaliger Betreiber-Recovery-Link',
       recoveryProofBody:
         'Dieser Link wird nur in dieser Antwort angezeigt. Übergib ihn sicher an den Account-Inhaber. Er ist kurzlebig und nur einmal nutzbar.',
@@ -184,7 +185,8 @@ const serverAdmin = {
       title: 'Privilegierte Account-Aktionen',
       body: 'Technischer Audit-Verlauf der ServerAdmin-Aktionen. Passwörter, Recovery-Tokens und private Inhalte werden nicht protokolliert.',
       loading: 'Privilegierte Aktionen werden geladen …',
-      error: 'Der Audit-Verlauf der Account-Aktionen konnte nicht geladen werden.',
+      error:
+        'Der Audit-Verlauf der Account-Aktionen konnte nicht geladen werden.',
       empty: 'Noch keine privilegierten Account-Aktionen vorhanden.',
       action: 'Aktion',
       target: 'Ziel-Account',

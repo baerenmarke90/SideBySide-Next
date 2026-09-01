@@ -55,7 +55,10 @@ export function ServerAdminAccessGate({
                   {t('serverAdmin.access.retry')}
                 </button>
               ) : null}
-              <Link className="button-link secondary-link" to={DEFAULT_APP_ROUTE}>
+              <Link
+                className="button-link secondary-link"
+                to={DEFAULT_APP_ROUTE}
+              >
                 {t('serverAdmin.backToApp')}
               </Link>
             </div>
@@ -256,7 +259,9 @@ function activitySettingLabel(
 }
 
 function booleanStateLabel(value: boolean, t: (key: string) => string): string {
-  return t(value ? 'serverAdmin.activity.enabled' : 'serverAdmin.activity.disabled');
+  return t(
+    value ? 'serverAdmin.activity.enabled' : 'serverAdmin.activity.disabled',
+  );
 }
 
 export function ServerAdminActivityPanel({
@@ -328,7 +333,10 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
         </section>
       ) : null}
 
-      <section className="server-admin-panel" aria-labelledby="server-health-title">
+      <section
+        className="server-admin-panel"
+        aria-labelledby="server-health-title"
+      >
         <h2 id="server-health-title">{t('serverAdmin.health.title')}</h2>
         <div className="server-admin-status-list">
           <StatusRow
@@ -350,7 +358,10 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
         </div>
       </section>
 
-      <section className="server-admin-panel" aria-labelledby="server-usage-title">
+      <section
+        className="server-admin-panel"
+        aria-labelledby="server-usage-title"
+      >
         <h2 id="server-usage-title">{t('serverAdmin.usage.title')}</h2>
         <dl className="server-admin-metrics">
           <Metric
@@ -429,7 +440,10 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
         </dl>
       </section>
 
-      <section className="server-admin-panel" aria-labelledby="server-jobs-title">
+      <section
+        className="server-admin-panel"
+        aria-labelledby="server-jobs-title"
+      >
         <h2 id="server-jobs-title">{t('serverAdmin.jobs.title')}</h2>
         <dl className="server-admin-metrics server-admin-job-metrics">
           <Metric
@@ -455,7 +469,9 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
         </dl>
         <h3>{t('serverAdmin.jobs.failuresTitle')}</h3>
         {overview.recentFailedJobs.length === 0 ? (
-          <p className="server-admin-muted">{t('serverAdmin.jobs.noFailures')}</p>
+          <p className="server-admin-muted">
+            {t('serverAdmin.jobs.noFailures')}
+          </p>
         ) : (
           <div className="server-admin-table-scroll">
             <table className="server-admin-table">
@@ -471,7 +487,8 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
                   <tr key={job.id}>
                     <td>{job.kind}</td>
                     <td>
-                      {formatNumber(job.attempts)} / {formatNumber(job.maxAttempts)}
+                      {formatNumber(job.attempts)} /{' '}
+                      {formatNumber(job.maxAttempts)}
                     </td>
                     <td>{formatDate(job.finishedAt) ?? '–'}</td>
                   </tr>
@@ -580,8 +597,12 @@ export function ServerAdminPage({
       ),
     onSuccess: (settings) => {
       queryClient.setQueryData(['server-admin', 'settings'], settings);
-      void queryClient.invalidateQueries({ queryKey: ['server-admin', 'activity'] });
-      void queryClient.invalidateQueries({ queryKey: ['server-admin', 'overview'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'activity'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'overview'],
+      });
     },
   });
   const maintenanceMutation = useMutation({
@@ -591,20 +612,30 @@ export function ServerAdminPage({
       ),
     onSuccess: (settings) => {
       queryClient.setQueryData(['server-admin', 'settings'], settings);
-      void queryClient.invalidateQueries({ queryKey: ['server-admin', 'activity'] });
-      void queryClient.invalidateQueries({ queryKey: ['server-admin', 'overview'] });
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'activity'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'overview'],
+      });
     },
   });
   const refreshing =
-    overviewQuery.isFetching || settingsQuery.isFetching || activityQuery.isFetching;
+    overviewQuery.isFetching ||
+    settingsQuery.isFetching ||
+    activityQuery.isFetching;
   const mutationError = registrationMutation.error ?? maintenanceMutation.error;
 
   function refreshAll() {
     void overviewQuery.refetch();
     void settingsQuery.refetch();
     void activityQuery.refetch();
-    void queryClient.invalidateQueries({ queryKey: ['server-admin', 'accounts'] });
-    void queryClient.invalidateQueries({ queryKey: ['server-admin', 'action-activity'] });
+    void queryClient.invalidateQueries({
+      queryKey: ['server-admin', 'accounts'],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ['server-admin', 'action-activity'],
+    });
   }
 
   function updateMaintenance(enabled: boolean) {
@@ -671,7 +702,10 @@ export function ServerAdminPage({
                 title={t('serverAdmin.settings.errorTitle')}
                 body={t('serverAdmin.settings.errorBody')}
                 action={
-                  <button type="button" onClick={() => void settingsQuery.refetch()}>
+                  <button
+                    type="button"
+                    onClick={() => void settingsQuery.refetch()}
+                  >
                     {t('serverAdmin.refresh')}
                   </button>
                 }
@@ -683,7 +717,9 @@ export function ServerAdminPage({
               registrationPending={registrationMutation.isPending}
               maintenancePending={maintenanceMutation.isPending}
               mutationError={mutationError}
-              onRegistrationChange={(enabled) => registrationMutation.mutate(enabled)}
+              onRegistrationChange={(enabled) =>
+                registrationMutation.mutate(enabled)
+              }
               onMaintenanceChange={updateMaintenance}
             />
           ) : null}
@@ -703,7 +739,10 @@ export function ServerAdminPage({
                 title={t('serverAdmin.states.errorTitle')}
                 body={t('serverAdmin.states.errorBody')}
                 action={
-                  <button type="button" onClick={() => void overviewQuery.refetch()}>
+                  <button
+                    type="button"
+                    onClick={() => void overviewQuery.refetch()}
+                  >
                     {t('serverAdmin.refresh')}
                   </button>
                 }
@@ -733,7 +772,10 @@ export function ServerAdminPage({
                 title={t('serverAdmin.activity.errorTitle')}
                 body={t('serverAdmin.activity.errorBody')}
                 action={
-                  <button type="button" onClick={() => void activityQuery.refetch()}>
+                  <button
+                    type="button"
+                    onClick={() => void activityQuery.refetch()}
+                  >
                     {t('serverAdmin.refresh')}
                   </button>
                 }
@@ -744,7 +786,9 @@ export function ServerAdminPage({
           ) : null}
         </div>
 
-        <p className="server-admin-privacy-note">{t('serverAdmin.privacyNote')}</p>
+        <p className="server-admin-privacy-note">
+          {t('serverAdmin.privacyNote')}
+        </p>
       </main>
     </div>
   );

@@ -133,7 +133,7 @@
   min-width: 7rem;
 }
 
-.server-admin-toggle[aria-pressed='true'] {
+.server-admin-toggle[aria-pressed="true"] {
   border-color: var(--color-shared);
 }
 

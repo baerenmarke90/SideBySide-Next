@@ -59,9 +59,13 @@ function ActionAudit({ items }: { items: ServerAdminActionActivityItem[] }) {
       <h2 id="server-account-audit-title">
         {t('serverAdmin.accounts.audit.title')}
       </h2>
-      <p className="server-admin-muted">{t('serverAdmin.accounts.audit.body')}</p>
+      <p className="server-admin-muted">
+        {t('serverAdmin.accounts.audit.body')}
+      </p>
       {items.length === 0 ? (
-        <p className="server-admin-muted">{t('serverAdmin.accounts.audit.empty')}</p>
+        <p className="server-admin-muted">
+          {t('serverAdmin.accounts.audit.empty')}
+        </p>
       ) : (
         <div className="server-admin-table-scroll">
           <table className="server-admin-table">
@@ -112,10 +116,18 @@ function AccountDetail({
   const [recoveryExpiry, setRecoveryExpiry] = useState<Date | null>(null);
 
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ['server-admin', 'accounts'] });
-    void queryClient.invalidateQueries({ queryKey: ['server-admin', 'account', account.id] });
-    void queryClient.invalidateQueries({ queryKey: ['server-admin', 'overview'] });
-    void queryClient.invalidateQueries({ queryKey: ['server-admin', 'action-activity'] });
+    void queryClient.invalidateQueries({
+      queryKey: ['server-admin', 'accounts'],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ['server-admin', 'account', account.id],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ['server-admin', 'overview'],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ['server-admin', 'action-activity'],
+    });
     onChanged();
   };
 
@@ -191,20 +203,26 @@ function AccountDetail({
   }
 
   function revokeSessions() {
-    if (window.confirm(t('serverAdmin.accounts.detail.confirmRevokeSessions'))) {
+    if (
+      window.confirm(t('serverAdmin.accounts.detail.confirmRevokeSessions'))
+    ) {
       revokeSessionsMutation.mutate();
     }
   }
 
   function issueOperatorRecovery() {
-    if (window.confirm(t('serverAdmin.accounts.detail.confirmOperatorRecovery'))) {
+    if (
+      window.confirm(t('serverAdmin.accounts.detail.confirmOperatorRecovery'))
+    ) {
       setRecoveryUrl(null);
       setRecoveryExpiry(null);
       operatorRecoveryMutation.mutate();
     }
   }
 
-  const unverifiedEmails = account.emails.filter((email) => email.verifiedAt === null);
+  const unverifiedEmails = account.emails.filter(
+    (email) => email.verifiedAt === null,
+  );
 
   return (
     <div className="server-admin-account-detail">
@@ -212,7 +230,9 @@ function AccountDetail({
         <div>
           <p className="eyebrow">{t('serverAdmin.accounts.detail.eyebrow')}</p>
           <h3>{account.displayName}</h3>
-          <p className="server-admin-muted server-admin-actor-id">{account.id}</p>
+          <p className="server-admin-muted server-admin-actor-id">
+            {account.id}
+          </p>
         </div>
         <span
           className={`server-admin-badge ${account.disabledAt ? 'is-warning' : 'is-ok'}`}
@@ -241,7 +261,8 @@ function AccountDetail({
         <div className="server-admin-metric">
           <dt>{t('serverAdmin.accounts.detail.memberships')}</dt>
           <dd>
-            {account.activeMembershipCount} / {account.historicalMembershipCount}
+            {account.activeMembershipCount} /{' '}
+            {account.historicalMembershipCount}
           </dd>
         </div>
         <div className="server-admin-metric">
@@ -289,7 +310,8 @@ function AccountDetail({
                   type="button"
                   disabled={
                     pending ||
-                    verificationText.trim().toLowerCase() !== email.email.toLowerCase()
+                    verificationText.trim().toLowerCase() !==
+                      email.email.toLowerCase()
                   }
                   onClick={() =>
                     verificationMutation.mutate({
@@ -410,7 +432,9 @@ export function ServerAdminAccountsPanel({
     'all' | 'verified' | 'unverified'
   >('all');
   const [offset, setOffset] = useState(0);
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
+    null,
+  );
 
   const accountRequest = useMemo(
     () => ({
@@ -444,10 +468,7 @@ export function ServerAdminAccountsPanel({
     retry: false,
   });
 
-  function changeFilter(
-    setter: (value: never) => void,
-    value: string,
-  ): void {
+  function changeFilter(setter: (value: never) => void, value: string): void {
     setOffset(0);
     setter(value as never);
   }
@@ -464,8 +485,12 @@ export function ServerAdminAccountsPanel({
       >
         <div className="server-admin-section-heading">
           <div>
-            <h2 id="server-accounts-title">{t('serverAdmin.accounts.title')}</h2>
-            <p className="server-admin-muted">{t('serverAdmin.accounts.body')}</p>
+            <h2 id="server-accounts-title">
+              {t('serverAdmin.accounts.title')}
+            </h2>
+            <p className="server-admin-muted">
+              {t('serverAdmin.accounts.body')}
+            </p>
           </div>
           {data ? (
             <span className="server-admin-count">
@@ -492,11 +517,18 @@ export function ServerAdminAccountsPanel({
             <select
               value={status}
               onChange={(event) =>
-                changeFilter(setStatus as (value: never) => void, event.target.value)
+                changeFilter(
+                  setStatus as (value: never) => void,
+                  event.target.value,
+                )
               }
             >
-              <option value="all">{t('serverAdmin.accounts.status.all')}</option>
-              <option value="active">{t('serverAdmin.accounts.status.active')}</option>
+              <option value="all">
+                {t('serverAdmin.accounts.status.all')}
+              </option>
+              <option value="active">
+                {t('serverAdmin.accounts.status.active')}
+              </option>
               <option value="suspended">
                 {t('serverAdmin.accounts.status.suspended')}
               </option>
@@ -527,13 +559,17 @@ export function ServerAdminAccountsPanel({
         </div>
 
         {accountsQuery.isPending ? (
-          <p className="server-admin-muted">{t('serverAdmin.accounts.loading')}</p>
+          <p className="server-admin-muted">
+            {t('serverAdmin.accounts.loading')}
+          </p>
         ) : accountsQuery.error ? (
           <p className="status status-error" role="alert">
             {t('serverAdmin.accounts.error')}
           </p>
         ) : data && data.items.length === 0 ? (
-          <p className="server-admin-muted">{t('serverAdmin.accounts.empty')}</p>
+          <p className="server-admin-muted">
+            {t('serverAdmin.accounts.empty')}
+          </p>
         ) : data ? (
           <>
             <div className="server-admin-table-scroll">
@@ -542,8 +578,12 @@ export function ServerAdminAccountsPanel({
                   <tr>
                     <th scope="col">{t('serverAdmin.accounts.name')}</th>
                     <th scope="col">{t('serverAdmin.accounts.email')}</th>
-                    <th scope="col">{t('serverAdmin.accounts.status.label')}</th>
-                    <th scope="col">{t('serverAdmin.accounts.verification.label')}</th>
+                    <th scope="col">
+                      {t('serverAdmin.accounts.status.label')}
+                    </th>
+                    <th scope="col">
+                      {t('serverAdmin.accounts.verification.label')}
+                    </th>
                     <th scope="col">{t('serverAdmin.accounts.sessions')}</th>
                     <th scope="col">{t('serverAdmin.accounts.auth')}</th>
                     <th scope="col">{t('serverAdmin.accounts.open')}</th>
@@ -554,7 +594,9 @@ export function ServerAdminAccountsPanel({
                     <tr key={account.id}>
                       <td>
                         <strong>{account.displayName}</strong>
-                        <span className="server-admin-row-meta">{account.id}</span>
+                        <span className="server-admin-row-meta">
+                          {account.id}
+                        </span>
                       </td>
                       <td>{account.primaryEmail ?? '–'}</td>
                       <td>
@@ -572,7 +614,10 @@ export function ServerAdminAccountsPanel({
                         )}
                       </td>
                       <td>{account.activeSessionCount}</td>
-                      <td>{account.authMethods.map(authMethodLabel).join(', ') || '–'}</td>
+                      <td>
+                        {account.authMethods.map(authMethodLabel).join(', ') ||
+                          '–'}
+                      </td>
                       <td>
                         <button
                           type="button"
