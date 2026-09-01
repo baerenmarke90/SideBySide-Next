@@ -137,11 +137,14 @@ describe('AppShell', () => {
     expect(header).toContain('href="/server-admin"');
   });
 
-  it('offers creation as a shell action and keeps every destination compact', () => {
+  it('offers the global quick-create trigger and keeps every destination compact', () => {
     const html = renderShell('/story');
 
     expect(html).toContain('shell-primary-action');
-    expect(html).toContain('href="/story/memories/new"');
+    expect(html).toContain('quick-create-trigger');
+    expect(html).toContain(`>${navigation.newContent}<`);
+    expect(html).toContain('aria-haspopup="menu"');
+    expect(html).toContain('aria-expanded="false"');
 
     const compact = html.slice(html.indexOf('mobile-bottom-nav'));
     for (const path of ['/today', '/story', '/plan', '/more']) {

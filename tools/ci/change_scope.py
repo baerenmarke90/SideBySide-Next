@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Conservatively classify paths for expensive pull-request gates.
+"""Classify changed paths for expensive pull-request gates.
 
-Ordinary documentation must not start runtime, PostgreSQL, or container gates.
-As soon as a relevant or unknown file is affected, enable the corresponding
-gates, or all expensive gates fail-closed when the effect is unknown. Workflow
-pushes to main always run every expensive gate separately.
+Pull requests should only pay for checks that can be affected by their diff.
+The classifier stays fail-closed for unknown paths and CI infrastructure so a
+new repository surface cannot silently bypass an expensive safety gate.
+Pushes to ``main`` are handled separately by the workflows and still run the
+full integration suite.
 """
 
 from __future__ import annotations
@@ -15,7 +16,9 @@ from pathlib import Path
 
 SCOPES = (
     "backend",
+    "backend_integration",
     "self_hosted",
+    "api_clients",
     "supply_chain",
     "deployment_guard",
     "recovery",
@@ -32,6 +35,7 @@ SAFE_DOC_EXACT = (
     "PROVENANCE.md",
     "TRADEMARKS.md",
     ".gitleaksignore",
+    ".gitignore",
 )
 SELF_HOSTED_COMPOSE_FILES = ("compose.yaml", "compose.arcane.yaml")
 
@@ -56,31 +60,51 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
         if not path:
             continue
 
-        if path.startswith("tools/ci/"):
+        # The classifier and its owning workflow define the safety boundary.
+        # Changes to either must exercise every gate.
+        if path.startswith("tools/ci/") or path == ".github/workflows/ci.yml":
             return _all_enabled()
 
         known = False
 
-        if _matches(
-            path,
-            prefixes=("backend/", "web/", "android/"),
-            exact=(
-                ".github/workflows/ci.yml",
-                ".env.example",
-                *SELF_HOSTED_COMPOSE_FILES,
-                ".gitignore",
-            ),
-        ):
+        # Backend lint, typing, unit tests and the OpenAPI contract only depend
+        # on backend files. Web/Android changes no longer wake this job up.
+        if path.startswith("backend/"):
             result["backend"] = True
             known = True
 
+        # PostgreSQL/Alembic integration is relevant for runtime backend code,
+        # migrations, integration fixtures/tests and Python dependency changes.
         if _matches(
             path,
-            prefixes=("backend/", "web/"),
+            prefixes=(
+                "backend/src/",
+                "backend/alembic/",
+                "backend/tests/integration/",
+            ),
             exact=(
-                ".github/workflows/ci.yml",
+                "backend/alembic.ini",
+                "backend/tests/conftest.py",
+                "backend/pyproject.toml",
+                "backend/uv.lock",
+            ),
+        ):
+            result["backend_integration"] = True
+            known = True
+
+        # The documented self-hosted stack is sensitive to container/runtime
+        # wiring, not ordinary application UI source.
+        if _matches(
+            path,
+            prefixes=("web/docker-entrypoint.d/",),
+            exact=(
                 ".env.example",
                 *SELF_HOSTED_COMPOSE_FILES,
+                "backend/Dockerfile",
+                "web/Dockerfile",
+                "web/nginx.conf",
+                "backend/src/sidebyside/config.py",
+                "backend/src/sidebyside/main.py",
                 "docs/SELF-HOSTING.md",
                 "docs/ARCANE.md",
             ),
@@ -88,25 +112,53 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             result["self_hosted"] = True
             known = True
 
+        # Generated Web/Android clients only need regeneration when their
+        # OpenAPI input or generator surfaces change.
         if _matches(
             path,
-            prefixes=("backend/",),
+            prefixes=(
+                "tools/openapi/",
+                "web/src/api/generated/",
+                "android/api/generated/",
+            ),
             exact=(
-                ".github/workflows/ci.yml",
-                "docs/DEPENDENCIES.md",
+                "backend/openapi.json",
+                "backend/scripts/openapi_contract.py",
+            ),
+        ):
+            result["api_clients"] = True
+            known = True
+
+        # Supply-chain work is dependency/build related; normal backend source
+        # changes do not need a fresh audit and two no-cache container builds.
+        if _matches(
+            path,
+            exact=(
+                "backend/pyproject.toml",
+                "backend/uv.lock",
+                "backend/Dockerfile",
                 "web/Dockerfile",
+                "docs/DEPENDENCIES.md",
+                ".github/dependabot.yml",
             ),
         ):
             result["supply_chain"] = True
             known = True
 
+        # Network/port/CSP checks are tied to deployment and proxy surfaces.
         if _matches(
             path,
-            prefixes=("backend/", "web/"),
+            prefixes=("web/docker-entrypoint.d/",),
             exact=(
                 ".github/workflows/self-hosted-deployment-guard.yml",
                 ".env.example",
                 *SELF_HOSTED_COMPOSE_FILES,
+                "backend/Dockerfile",
+                "web/Dockerfile",
+                "web/nginx.conf",
+                "web/scripts/check_csp_header.sh",
+                "backend/src/sidebyside/config.py",
+                "backend/src/sidebyside/main.py",
                 "docs/SELF-HOSTING.md",
                 "docs/ARCANE.md",
             ),
@@ -114,9 +166,12 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             result["deployment_guard"] = True
             known = True
 
+        # Recovery acceptance is expensive and is needed for actual recovery
+        # tooling/contracts plus schema migrations that an old snapshot must
+        # survive. Ordinary backend or Web feature work does not affect it.
         if _matches(
             path,
-            prefixes=("backend/",),
+            prefixes=("backend/alembic/",),
             exact=(
                 ".github/workflows/self-hosted-recovery.yml",
                 ".env.example",
@@ -131,6 +186,11 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             ),
         ):
             result["recovery"] = True
+            known = True
+
+        # Ordinary client source is intentionally known but does not activate
+        # backend/container gates. Client-specific workflows cover these trees.
+        if path.startswith(("web/", "android/")):
             known = True
 
         if _is_explicitly_safe_documentation(path):

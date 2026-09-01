@@ -560,7 +560,7 @@ export function HeartMomentProductPage({
         </aside>
 
         <div className="layout-main">
-          <article className="story-surface product-detail-card">
+          <article className="story-surface product-detail-card coffee-table-layout">
             {heartMoment.attachment ? (
               <section aria-label={t('heartMomentProduct.photoLabel')}>
                 <MediaGallery
