@@ -30,6 +30,7 @@ import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchPage
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -738,6 +739,9 @@ interface ReferenceContract {
     suspend fun markAllNotificationsRead(spaceId: UUID, accessToken: String): NotificationsReadAllResult
 
     suspend fun getActivity(spaceId: UUID, accessToken: String, cursor: String? = null): ActivityPage
+
+    /** Searches shared Space content plus the caller's own private content. */
+    suspend fun search(spaceId: UUID, accessToken: String, query: String, cursor: String? = null): SearchPage
 }
 
 private fun unsupportedProfileOperation(): Nothing =

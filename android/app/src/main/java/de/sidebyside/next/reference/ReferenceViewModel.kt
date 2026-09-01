@@ -65,6 +65,7 @@ import sidebyside.api.models.ProfileVisibility
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchResult
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
@@ -252,6 +253,9 @@ data class ReferenceUiState(
     val activity: List<ActivityItem> = emptyList(),
     val activityBusy: Boolean = false,
     val activityProblem: UiProblem? = null,
+    val searchResults: List<SearchResult> = emptyList(),
+    val searchBusy: Boolean = false,
+    val searchProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -389,6 +393,7 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearSearch()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -481,6 +486,7 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearSearch()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -541,6 +547,7 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearSearch()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -607,6 +614,7 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearSearch()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -3649,6 +3657,35 @@ class ReferenceViewModel(
 
     fun clearActivity() {
         mutate { it.copy(activity = emptyList(), activityBusy = false, activityProblem = null) }
+    }
+
+    fun search(query: String) {
+        if (query.isBlank()) {
+            clearSearch()
+            return
+        }
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(searchBusy = true, searchProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.search(spaceId, currentSession.tokens.accessToken, query.trim()) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(searchResults = page.items, searchBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(searchBusy = false, searchProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearSearch() {
+        mutate { it.copy(searchResults = emptyList(), searchBusy = false, searchProblem = null) }
     }
 
     fun logout() {

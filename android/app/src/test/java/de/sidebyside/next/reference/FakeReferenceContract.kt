@@ -51,6 +51,7 @@ import sidebyside.api.models.ProfilePreferenceView
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchPage
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -654,6 +655,13 @@ abstract class FakeReferenceContract : ReferenceContract {
         accessToken: String,
         cursor: String?,
     ): ActivityPage = notExercised("getActivity")
+
+    override suspend fun search(
+        spaceId: UUID,
+        accessToken: String,
+        query: String,
+        cursor: String?,
+    ): SearchPage = notExercised("search")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")
