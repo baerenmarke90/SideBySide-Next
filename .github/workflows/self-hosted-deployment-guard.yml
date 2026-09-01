@@ -68,7 +68,9 @@ jobs:
           python3 -m py_compile \
             scripts/deployment_smoke.py \
             scripts/check_environment_isolation.py \
-            scripts/compose_checked.py
+            scripts/compose_checked.py \
+            scripts/test_deployment_smoke.py
+          python3 -m unittest scripts.test_deployment_smoke
 
           if python3 scripts/deployment_smoke.py \
             --base-url http://127.0.0.1:9 \
