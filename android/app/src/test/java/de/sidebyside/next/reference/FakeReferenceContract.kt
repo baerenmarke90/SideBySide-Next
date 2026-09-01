@@ -17,6 +17,10 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.DashboardView
+import sidebyside.api.models.AcceptRequest
+import sidebyside.api.models.IssuedInvitationView
+import sidebyside.api.models.InvitationView
+import sidebyside.api.models.MembershipView
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
@@ -306,6 +310,21 @@ abstract class FakeReferenceContract : ReferenceContract {
         accessToken: String,
         gesture: ThinkingOfYouCreate,
     ): ThinkingOfYouAccepted = notExercised("sendThinkingOfYou")
+
+    override suspend fun acceptInvitation(accessToken: String, token: String): MembershipView =
+        notExercised("acceptInvitation")
+
+    override suspend fun listInvitations(spaceId: UUID, accessToken: String): List<InvitationView> =
+        notExercised("listInvitations")
+
+    override suspend fun createInvitation(spaceId: UUID, accessToken: String): IssuedInvitationView =
+        notExercised("createInvitation")
+
+    override suspend fun revokeInvitation(
+        spaceId: UUID,
+        accessToken: String,
+        invitationId: UUID,
+    ): Unit = notExercised("revokeInvitation")
 
     override suspend fun getTimeline(
         spaceId: UUID,
