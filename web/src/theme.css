@@ -2,6 +2,28 @@
   color-scheme: light;
   color: var(--color-text);
   background: var(--color-background);
+  /* Base Emotional Theme Overrides */
+  --color-background: #fdf3f4;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #fcf0f2;
+  --color-text: #3d2328;
+  --color-text-secondary: #6e4e55;
+  --color-text-muted: #845e65;
+  --color-border: #f0dbdf;
+  --color-border-subtle: #fae8eb;
+  --color-brand: #d65c7a;
+  --color-brand-strong: #c24462;
+  --color-brand-surface: #ffe8f0;
+  --color-surface-panel: #ffffff;
+  --color-surface-panel-tint: #fffcfd;
+  --color-page-tint-brand: #ffe8f066;
+  --color-page-tint-shared: #ffede866;
+  --color-shared: #b34b29;
+  --color-shared-accent: #f59171;
+  --color-shared-surface: #ffede8;
+  --color-private: #b3395c;
+  --color-focus: #ffa6c9;
+
   --color-surface-raised: #ffffff;
   --color-surface-overlay: #ffffffea;
   --color-header-surface: #fffafce8;
