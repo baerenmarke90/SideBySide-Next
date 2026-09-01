@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import select
 
 from sidebyside.administration import service as administration
 from sidebyside.config import get_settings
