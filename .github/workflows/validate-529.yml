@@ -47,7 +47,7 @@ jobs:
           python -m pip install 'uv==0.12.5'
           uv sync --frozen
 
-      - name: Apply known type search and lint fixes
+      - name: Apply known type, search, and lint fixes
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -62,54 +62,66 @@ jobs:
               "def _active_session_filters(current_time: datetime) -> tuple[object, ...]:",
               "def _active_session_filters(current_time: datetime) -> tuple[Any, ...]:",
           )
+
           function_start = text.index("def list_server_admin_accounts(")
           query_start = text.index("    if normalized_query:\n", function_start)
           query_end = text.index('    if account_status == "active":', query_start)
-          new_query = '''    if normalized_query:
-              like = f"%{normalized_query}%"
-              display_name_match = func.lower(Account.display_name).like(like)
-              email_match = exists().where(
-                  AccountEmail.account_id == Account.id,
-                  AccountEmail.email.like(like),
-              )
-              account_id_match = parse_id(normalized_query)
-              if account_id_match is None:
-                  statement = statement.where(or_(display_name_match, email_match))
-              else:
-                  statement = statement.where(
-                      or_(display_name_match, email_match, Account.id == account_id_match)
-                  )
-          '''
+          query_lines = [
+              "    if normalized_query:",
+              '        like = f"%{normalized_query}%"',
+              "        display_name_match = func.lower(Account.display_name).like(like)",
+              "        email_match = exists().where(",
+              "            AccountEmail.account_id == Account.id,",
+              "            AccountEmail.email.like(like),",
+              "        )",
+              "        account_id_match = parse_id(normalized_query)",
+              "        if account_id_match is None:",
+              "            statement = statement.where(or_(display_name_match, email_match))",
+              "        else:",
+              "            statement = statement.where(",
+              "                or_(",
+              "                    display_name_match,",
+              "                    email_match,",
+              "                    Account.id == account_id_match,",
+              "                )",
+              "            )",
+              "",
+          ]
+          new_query = "\n".join(query_lines)
           text = text[:query_start] + new_query + text[query_end:]
           api_path.write_text(text)
 
           test_path = Path("backend/tests/integration/test_server_admin.py")
           test_text = test_path.read_text()
           test_marker = "\n\ndef test_server_admin_can_suspend_account_and_sessions_are_revoked("
-          by_id_assertion = '''
-
-              by_id = client.get(
-                  f"/api/v1/server-admin/accounts?query={target.id}",
-                  headers=auth(token),
-              )
-              assert by_id.status_code == 200
-              assert by_id.json()["total"] == 1
-              assert by_id.json()["items"][0]["id"] == str(target.id)
-          '''
           marker_at = test_text.index(test_marker)
           preceding = test_text[:marker_at]
           if "accounts?query={target.id}" not in preceding:
-              test_text = test_text[:marker_at] + by_id_assertion + test_text[marker_at:]
+              by_id_lines = [
+                  "",
+                  "    by_id = client.get(",
+                  '        f"/api/v1/server-admin/accounts?query={target.id}",',
+                  "        headers=auth(token),",
+                  "    )",
+                  "    assert by_id.status_code == 200",
+                  '    assert by_id.json()["total"] == 1',
+                  '    assert by_id.json()["items"][0]["id"] == str(target.id)',
+                  "",
+              ]
+              test_text = (
+                  test_text[:marker_at]
+                  + "\n".join(by_id_lines)
+                  + test_text[marker_at:]
+              )
           test_path.write_text(test_text)
 
           web_path = Path("web/src/components/ServerAdminAccountsPanel.tsx")
           web_text = web_path.read_text()
-          unused_block = '''  const unverifiedEmails = account.emails.filter(
-              (email) => email.verifiedAt === null,
-            );
-          '''
-          if unused_block in web_text:
-              web_path.write_text(web_text.replace(unused_block, ""))
+          unused_start = web_text.find("  const unverifiedEmails = account.emails.filter(")
+          if unused_start != -1:
+              unused_end = web_text.index("\n\n", unused_start) + 2
+              web_text = web_text[:unused_start] + web_text[unused_end:]
+              web_path.write_text(web_text)
           PY
 
       - name: Fix safe Ruff issues and format changed backend files
