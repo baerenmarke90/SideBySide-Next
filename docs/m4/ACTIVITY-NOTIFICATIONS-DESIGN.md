@@ -517,7 +517,7 @@ M4-B promotes these v1 classifications:
 | Basic in-app Notifications/read state | **Free/Core** | Normal engagement state must not require Premium. |
 | `Ich denke an dich` basic content-free nudge | **Free/Core** | Lightweight partner interaction is an everyday Core behavior, not advanced automation. |
 | Basic push delivery when infrastructure is configured | **Free/Core capability** | Transport availability may differ by operating model/configuration, but there is no Premium entitlement gate in M4-B. |
-| Advanced digests, routing, rich preview customization, complex notification automation | **Future Mixed/Premium candidate** | Additional automation/presentation may be classified later through #262/M9. |
+| Advanced digests, routing, rich preview customization, complex notification automation | **Future Mixed/Premium candidate** | Additional automation/presentation may be classified later through #262; runtime entitlement enforcement belongs to M6 under ADR 0006. |
 
 Cloud-managed push has operating cost, but M4-B does not convert that fact into an ad-hoc feature gate. Self-Hosted operators remain responsible for their configured delivery infrastructure.
 
