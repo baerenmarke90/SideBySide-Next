@@ -35,13 +35,20 @@ fun AppNavigation(
      * rather than losing its selection on the way into a detail.
      */
     detailRoutes: NavGraphBuilder.(NavHostController) -> Unit = {},
+    /**
+     * Which routes are owner-only and need [SecureWindowEffect]. Left to the
+     * caller because the shell itself does not know the app's domain routes;
+     * defaults to never-secure so existing callers are unaffected.
+     */
+    secureWhen: (route: String?) -> Boolean = { false },
     destinationContent: @Composable (AppDestination) -> Unit,
 ) {
     require(destinations.isNotEmpty()) { "The shell needs at least one destination." }
     val start = destinations.first()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination =
-        destinationForRoute(backStackEntry?.destination?.route, destinations)
+    val currentRoute = backStackEntry?.destination?.route
+    val currentDestination = destinationForRoute(currentRoute, destinations)
+    SecureWindowEffect(secure = secureWhen(currentRoute))
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         AppShell(
