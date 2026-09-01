@@ -1,7 +1,7 @@
 const m5s5 = {
   dashboard: {
-    // The area is named Heute per docs/INFORMATION-ARCHITECTURE.md section 2.
-    eyebrow: 'Heute',
+    // The visible landing area is Übersicht; the stable route ID remains `today`.
+    eyebrow: 'Übersicht',
     title: 'Euer gemeinsamer Ort',
     intro: 'Das Wichtigste aus eurem gemeinsamen Raum auf einen Blick.',
     partner: 'Gemeinsam mit {{name}}',
