@@ -197,9 +197,7 @@ class ReferenceViewModelAttachmentTest {
 
     private inner class AttachmentContract(
         private val upload: suspend (SelectedImage) -> Unit,
-    ) : ReferenceContract {
-        override suspend fun consumeMagicLink(token: String): SessionView =
-            error("Magic-link entry is not exercised by this test.")
+    ) : FakeReferenceContract() {
 
         override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
             listOf(
@@ -210,8 +208,6 @@ class ReferenceViewModelAttachmentTest {
                 ),
             )
 
-        override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
-            error("Demo entry is not exercised by this test.")
 
         private var nextAttachmentValue = 30L
         val createdAttachmentIds = mutableListOf<UUID>()
