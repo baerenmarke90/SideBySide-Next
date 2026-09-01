@@ -132,9 +132,7 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
 
 async function signIn(page: Page): Promise<void> {
   await page.getByLabel(de.login.email).fill('anna@example.org');
-  await page
-    .getByLabel(de.login.password)
-    .fill('a-long-enough-test-password');
+  await page.getByLabel(de.login.password).fill('a-long-enough-test-password');
   await page.getByRole('button', { name: de.login.submit }).click();
 }
 
