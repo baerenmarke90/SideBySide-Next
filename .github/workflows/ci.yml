@@ -19,7 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.scope.outputs.backend }}
+      backend_integration: ${{ steps.scope.outputs.backend_integration }}
       self_hosted: ${{ steps.scope.outputs.self_hosted }}
+      api_clients: ${{ steps.scope.outputs.api_clients }}
       supply_chain: ${{ steps.scope.outputs.supply_chain }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,7 +45,9 @@ jobs:
           set -euo pipefail
           if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
             echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "backend_integration=true" >> "$GITHUB_OUTPUT"
             echo "self_hosted=true" >> "$GITHUB_OUTPUT"
+            echo "api_clients=true" >> "$GITHUB_OUTPUT"
             echo "supply_chain=true" >> "$GITHUB_OUTPUT"
             echo "Push to main: all expensive CI gates remain active."
             exit 0
@@ -128,7 +132,7 @@ jobs:
   backend-integration:
     name: Backend Integration
     needs: changes
-    if: needs.changes.outputs.backend == 'true'
+    if: needs.changes.outputs.backend_integration == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -338,6 +342,8 @@ jobs:
 
   api-clients:
     name: API Clients
+    needs: changes
+    if: needs.changes.outputs.api_clients == 'true'
     runs-on: ubuntu-latest
     # The contract is the single source of truth for Web and Android DTOs. If
     # committed client code differs, a contract change was merged without the
