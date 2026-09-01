@@ -69,11 +69,14 @@ class MemoryCommentTest {
         val api = CommentApi(thread = listOf(commentBy(ME, "It was lovely")))
         val model = signedIn(api)
 
-        model.loadComments(MEMORY)
+        model.loadComments(PARENT, MEMORY)
         advanceUntilIdle()
 
         assertEquals(1, model.uiState.value.comments.size)
         assertEquals(listOf(MEMORY), api.listedFor)
+        // The contract has one path per kind; asking under the wrong one would
+        // read a different resource's thread.
+        assertEquals(listOf(ReferenceContract.CommentParent.MEMORY), api.listedParents)
     }
 
     @Test
@@ -81,7 +84,7 @@ class MemoryCommentTest {
         val api = CommentApi()
         val model = signedIn(api)
 
-        model.addComment(MEMORY, "A thought about this")
+        model.addComment(PARENT, MEMORY, "A thought about this")
         advanceUntilIdle()
 
         assertEquals("A thought about this", api.created.single().body)
@@ -94,7 +97,7 @@ class MemoryCommentTest {
         val api = CommentApi()
         val model = signedIn(api)
 
-        model.addComment(MEMORY, "   ")
+        model.addComment(PARENT, MEMORY, "   ")
         advanceUntilIdle()
 
         assertTrue(api.created.isEmpty())
@@ -105,9 +108,9 @@ class MemoryCommentTest {
         val api = CommentApi(thread = listOf(commentBy(ME, "First like this", version = 4)))
         val model = signedIn(api)
 
-        model.loadComments(MEMORY)
+        model.loadComments(PARENT, MEMORY)
         advanceUntilIdle()
-        model.editComment(MEMORY, COMMENT, "Then like that")
+        model.editComment(PARENT, MEMORY, COMMENT, "Then like that")
         advanceUntilIdle()
 
         assertEquals(listOf(4), api.updateVersions)
@@ -124,9 +127,9 @@ class MemoryCommentTest {
         )
         val model = signedIn(api)
 
-        model.loadComments(MEMORY)
+        model.loadComments(PARENT, MEMORY)
         advanceUntilIdle()
-        model.editComment(MEMORY, COMMENT, "Mine now")
+        model.editComment(PARENT, MEMORY, COMMENT, "Mine now")
         advanceUntilIdle()
 
         assertEquals(UiStateKind.Permission, model.uiState.value.commentsProblem?.kind)
@@ -140,9 +143,9 @@ class MemoryCommentTest {
         )
         val model = signedIn(api)
 
-        model.loadComments(MEMORY)
+        model.loadComments(PARENT, MEMORY)
         advanceUntilIdle()
-        model.editComment(MEMORY, COMMENT, "Then like that")
+        model.editComment(PARENT, MEMORY, COMMENT, "Then like that")
         advanceUntilIdle()
 
         assertEquals(UiStateKind.Conflict, model.uiState.value.commentsProblem?.kind)
@@ -153,10 +156,10 @@ class MemoryCommentTest {
         val api = CommentApi(thread = listOf(commentBy(ME, "Away with it", version = 2)))
         val model = signedIn(api)
 
-        model.loadComments(MEMORY)
+        model.loadComments(PARENT, MEMORY)
         advanceUntilIdle()
         val readsBefore = api.listedFor.size
-        model.removeComment(MEMORY, COMMENT)
+        model.removeComment(PARENT, MEMORY, COMMENT)
         advanceUntilIdle()
 
         assertEquals(listOf(2), api.deleteVersions)
@@ -168,7 +171,7 @@ class MemoryCommentTest {
         val api = CommentApi(thread = listOf(commentBy(ME, "Does not stay")))
         val model = signedIn(api)
 
-        model.loadComments(MEMORY)
+        model.loadComments(PARENT, MEMORY)
         advanceUntilIdle()
         assertNotNull(model.uiState.value.comments.firstOrNull())
 
@@ -186,6 +189,7 @@ class MemoryCommentTest {
 }
 
 private const val BASE_URL = "https://sidebyside.example"
+private val PARENT = ReferenceContract.CommentParent.MEMORY
 
 private fun commentBy(authorId: UUID, body: String, version: Int = 1) = CommentDetail(
     author = AuthorSummary(displayName = "Lea", id = authorId),
@@ -203,6 +207,7 @@ private class CommentApi(
     private val updateFailure: Throwable? = null,
 ) : FakeReferenceContract() {
     val listedFor = mutableListOf<UUID>()
+    val listedParents = mutableListOf<ReferenceContract.CommentParent>()
     val created = mutableListOf<CommentCreate>()
     val updates = mutableListOf<CommentUpdate>()
     val updateVersions = mutableListOf<Int>()
@@ -224,19 +229,22 @@ private class CommentApi(
     override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage =
         StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
 
-    override suspend fun listMemoryComments(
+    override suspend fun listComments(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
     ): CommentPage {
-        listedFor += memoryId
+        listedParents += parent
+        listedFor += parentId
         return CommentPage(hasMore = false, items = thread, nextCursor = null)
     }
 
-    override suspend fun createMemoryComment(
+    override suspend fun createComment(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
         comment: CommentCreate,
     ): CommentDetail {
         created += comment

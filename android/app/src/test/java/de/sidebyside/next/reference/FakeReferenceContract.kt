@@ -17,6 +17,8 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
@@ -76,18 +78,47 @@ abstract class FakeReferenceContract : ReferenceContract {
         ifMatch: Int,
     ): Unit = notExercised("deleteMemory")
 
-    override suspend fun listMemoryComments(
+    override suspend fun listComments(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
-    ): CommentPage = notExercised("listMemoryComments")
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
+    ): CommentPage = notExercised("listComments")
 
-    override suspend fun createMemoryComment(
+    override suspend fun createComment(
         spaceId: UUID,
         accessToken: String,
-        memoryId: UUID,
+        parent: ReferenceContract.CommentParent,
+        parentId: UUID,
         comment: CommentCreate,
-    ): CommentDetail = notExercised("createMemoryComment")
+    ): CommentDetail = notExercised("createComment")
+
+    override suspend fun getMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+    ): MilestoneDetail = notExercised("getMilestone")
+
+    override suspend fun updateMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+        update: MilestoneUpdate,
+    ): MilestoneDetail = notExercised("updateMilestone")
+
+    override suspend fun deleteMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        milestoneId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteMilestone")
+
+    override suspend fun getHeartMoment(
+        spaceId: UUID,
+        accessToken: String,
+        heartMomentId: UUID,
+    ): HeartMomentDetail = notExercised("getHeartMoment")
 
     override suspend fun updateComment(
         spaceId: UUID,

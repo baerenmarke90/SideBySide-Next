@@ -53,6 +53,8 @@ import de.sidebyside.next.shell.ShellSurface
 import de.sidebyside.next.story.HeartMomentsScreen
 import de.sidebyside.next.story.MemoryComments
 import de.sidebyside.next.story.MemoryScreen
+import de.sidebyside.next.story.MilestoneScreen
+import de.sidebyside.next.story.SharedHeartMomentScreen
 import de.sidebyside.next.story.StoryScreen
 import kotlinx.coroutines.launch
 
@@ -190,13 +192,15 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
                 onSignOut = signOut,
                 onSelectSpace = referenceViewModel::selectSpace,
                 onPickProfileAvatar = pickProfileAvatar,
-            ) { open ->
+            ) { openMemory, openMilestone, openHeartMoment ->
                 StoryDestination(
                     state = state,
                     viewModel = referenceViewModel,
                     onPickImage = pickImage,
                     onSignOut = signOut,
-                    onOpenMemory = open,
+                    onOpenMemory = openMemory,
+                    onOpenMilestone = openMilestone,
+                    onOpenHeartMoment = openHeartMoment,
                 )
             }
         }
@@ -209,13 +213,15 @@ private fun ReferenceFlowRoute(referenceViewModel: ReferenceViewModel = viewMode
         onSignOut = signOut,
         onSelectSpace = referenceViewModel::selectSpace,
         onPickProfileAvatar = pickProfileAvatar,
-    ) { open ->
+    ) { openMemory, openMilestone, openHeartMoment ->
         StoryDestination(
             state = state,
             viewModel = referenceViewModel,
             onPickImage = pickImage,
             onSignOut = signOut,
-            onOpenMemory = open,
+            onOpenMemory = openMemory,
+            onOpenMilestone = openMilestone,
+            onOpenHeartMoment = openHeartMoment,
         )
     }
 }
@@ -233,7 +239,11 @@ private fun DemoShell(
     onSignOut: () -> Unit,
     onSelectSpace: (java.util.UUID) -> Unit,
     onPickProfileAvatar: () -> Unit,
-    story: @Composable (onOpenMemory: (java.util.UUID) -> Unit) -> Unit,
+    story: @Composable (
+        onOpenMemory: (java.util.UUID) -> Unit,
+        onOpenMilestone: (java.util.UUID) -> Unit,
+        onOpenHeartMoment: (java.util.UUID) -> Unit,
+    ) -> Unit,
 ) {
     val navController = rememberNavController()
     AppNavigation(
@@ -252,7 +262,7 @@ private fun DemoShell(
                 // memory instead of an empty one.
                 LaunchedEffect(memoryId, state.activeSpaceId) {
                     memoryId?.let(viewModel::openMemory)
-                    memoryId?.let(viewModel::loadComments)
+                    memoryId?.let { viewModel.loadComments(MEMORY_COMMENTS, it) }
                 }
                 DisposableEffect(memoryId) {
                     onDispose {
@@ -283,12 +293,131 @@ private fun DemoShell(
                                 accountId = state.accountId,
                                 busy = state.commentsBusy,
                                 problem = state.commentsProblem,
-                                onAdd = { body -> viewModel.addComment(id, body) },
+                                onAdd = { body ->
+                                    viewModel.addComment(MEMORY_COMMENTS, id, body)
+                                },
                                 onEdit = { commentId, body ->
-                                    viewModel.editComment(id, commentId, body)
+                                    viewModel.editComment(MEMORY_COMMENTS, id, commentId, body)
                                 },
                                 onDelete = { commentId ->
-                                    viewModel.removeComment(id, commentId)
+                                    viewModel.removeComment(MEMORY_COMMENTS, id, commentId)
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+
+            composable(
+                route = MILESTONE_ROUTE,
+                arguments = listOf(navArgument(ITEM_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val id = entry.arguments?.getString(ITEM_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+
+                LaunchedEffect(id, state.activeSpaceId) {
+                    id?.let(viewModel::openMilestone)
+                    id?.let { viewModel.loadComments(MILESTONE_COMMENTS, it) }
+                }
+                DisposableEffect(id) {
+                    onDispose {
+                        viewModel.closeStoryItem()
+                        viewModel.clearComments()
+                    }
+                }
+
+                MilestoneScreen(
+                    milestone = state.openMilestone,
+                    busy = state.memoryBusy,
+                    problem = state.memoryProblem,
+                    gone = state.openMemoryGone,
+                    editing = state.editingMemory,
+                    savedMessage = state.memoryStatus
+                        ?.let { stringResource(it.resourceId, *it.args.toTypedArray()) },
+                    onBack = { controller.popBackStack() },
+                    onBeginEditing = viewModel::beginEditingMemory,
+                    onCancelEditing = viewModel::cancelEditingMemory,
+                    onSave = viewModel::saveMilestone,
+                    onDelete = viewModel::deleteMilestone,
+                    comments = id?.let { parentId ->
+                        {
+                            MemoryComments(
+                                comments = state.comments,
+                                accountId = state.accountId,
+                                busy = state.commentsBusy,
+                                problem = state.commentsProblem,
+                                onAdd = { body ->
+                                    viewModel.addComment(MILESTONE_COMMENTS, parentId, body)
+                                },
+                                onEdit = { commentId, body ->
+                                    viewModel.editComment(
+                                        MILESTONE_COMMENTS,
+                                        parentId,
+                                        commentId,
+                                        body,
+                                    )
+                                },
+                                onDelete = { commentId ->
+                                    viewModel.removeComment(
+                                        MILESTONE_COMMENTS,
+                                        parentId,
+                                        commentId,
+                                    )
+                                },
+                            )
+                        }
+                    },
+                )
+            }
+
+            composable(
+                route = HEART_MOMENT_ROUTE,
+                arguments = listOf(navArgument(ITEM_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val id = entry.arguments?.getString(ITEM_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+
+                LaunchedEffect(id, state.activeSpaceId) {
+                    id?.let(viewModel::openSharedHeartMoment)
+                    id?.let { viewModel.loadComments(HEART_MOMENT_COMMENTS, it) }
+                }
+                DisposableEffect(id) {
+                    onDispose {
+                        viewModel.closeStoryItem()
+                        viewModel.clearComments()
+                    }
+                }
+
+                SharedHeartMomentScreen(
+                    moment = state.openSharedHeartMoment,
+                    imageStore = viewModel.storyImages,
+                    generation = viewModel.storyGeneration,
+                    problem = state.memoryProblem,
+                    onBack = { controller.popBackStack() },
+                    comments = id?.let { parentId ->
+                        {
+                            MemoryComments(
+                                comments = state.comments,
+                                accountId = state.accountId,
+                                busy = state.commentsBusy,
+                                problem = state.commentsProblem,
+                                onAdd = { body ->
+                                    viewModel.addComment(HEART_MOMENT_COMMENTS, parentId, body)
+                                },
+                                onEdit = { commentId, body ->
+                                    viewModel.editComment(
+                                        HEART_MOMENT_COMMENTS,
+                                        parentId,
+                                        commentId,
+                                        body,
+                                    )
+                                },
+                                onDelete = { commentId ->
+                                    viewModel.removeComment(
+                                        HEART_MOMENT_COMMENTS,
+                                        parentId,
+                                        commentId,
+                                    )
                                 },
                             )
                         }
@@ -342,7 +471,11 @@ private fun DemoShell(
                 )
             }
 
-            else -> story { memoryId -> navController.navigate("story/memories/$memoryId") }
+            else -> story(
+                { memoryId -> navController.navigate("story/memories/$memoryId") },
+                { id -> navController.navigate("story/milestones/$id") },
+                { id -> navController.navigate("story/heart-moments/$id") },
+            )
         }
     }
 }
@@ -357,6 +490,14 @@ private const val MEMORY_ROUTE = "story/memories/{$MEMORY_ID_ARGUMENT}"
 
 /** The account's own HeartMoments, private ones included. */
 private const val HEART_MOMENTS_ROUTE = "story/heart-moments"
+
+private const val ITEM_ID_ARGUMENT = "itemId"
+private const val MILESTONE_ROUTE = "story/milestones/{$ITEM_ID_ARGUMENT}"
+private const val HEART_MOMENT_ROUTE = "story/heart-moments/{$ITEM_ID_ARGUMENT}"
+
+private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
+private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE
+private val HEART_MOMENT_COMMENTS = ReferenceContract.CommentParent.HEART_MOMENT
 
 /**
  * The Story destination.
@@ -373,6 +514,8 @@ private fun StoryDestination(
     onPickImage: () -> Unit,
     onSignOut: () -> Unit,
     onOpenMemory: (java.util.UUID) -> Unit,
+    onOpenMilestone: (java.util.UUID) -> Unit,
+    onOpenHeartMoment: (java.util.UUID) -> Unit,
 ) {
     var capturing by rememberSaveable { mutableStateOf(false) }
 
@@ -402,6 +545,8 @@ private fun StoryDestination(
         imageStore = viewModel.storyImages,
         generation = viewModel.storyGeneration,
         onOpenMemory = onOpenMemory,
+        onOpenMilestone = onOpenMilestone,
+        onOpenHeartMoment = onOpenHeartMoment,
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
