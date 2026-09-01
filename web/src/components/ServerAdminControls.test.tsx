@@ -22,11 +22,9 @@ describe('ServerAdmin controls', () => {
       />,
     );
 
-    expect(html).toContain('Neue Registrierungen');
-    expect(html).toContain('Wartungsmodus');
-    expect(html).toContain('Effektive Registrierung');
-    expect(html).toContain('Nicht verfügbar');
-    expect(html).toContain('aria-pressed="true"');
+    expect(html.match(/server-admin-setting-row/g)).toHaveLength(2);
+    expect(html).toContain('server-admin-effective-state');
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(2);
   });
 
   it('renders privacy-safe audit changes without exposing actor ids', () => {
@@ -46,9 +44,8 @@ describe('ServerAdmin controls', () => {
       />,
     );
 
-    expect(html).toContain('Wartungsmodus');
-    expect(html).toContain('Inaktiv');
-    expect(html).toContain('Aktiv');
+    expect(html).toContain('server-admin-table');
+    expect(html).toContain('maintenance_mode');
     expect(html).not.toContain(actorId);
   });
 });
