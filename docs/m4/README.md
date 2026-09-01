@@ -49,7 +49,7 @@ The initial searchable surface is:
 - the caller's GiftIdea;
 - the caller's PrivateCollection and PrivateCollectionItem.
 
-Questions remain M6. Comments, Profiles, RelatedPersons and ImportantDates are deliberately not part of the first global Search contract.
+Questions remain M7 Relationship Depth. Comments, Profiles, RelatedPersons and ImportantDates are deliberately not part of the first global Search contract.
 
 Detailed contract: [Search Design](./SEARCH-DESIGN.md).
 
@@ -65,7 +65,7 @@ The first M4-A Dashboard derives only data whose owning Domain already exists:
 - upcoming scheduled Plans and date-based relationship items;
 - recent shared root content.
 
-`Ich denke an dich` is not faked by M4-A. M4-B owns its runtime contract. Activity/Notification/Reminder/Rule data remains absent until its owning M4 slice delivers it. Questions/Year Summary remain M6.
+`Ich denke an dich` is not faked by M4-A. M4-B owns its runtime contract. Activity/Notification/Reminder/Rule data remains absent until its owning M4 slice delivers it. Questions/Year Summary remain M7 Relationship Depth.
 
 Detailed contract: [Dashboard Design](./DASHBOARD-DESIGN.md).
 
@@ -319,7 +319,7 @@ M4 currently promotes these v1 classifications:
 
 Potential future Mixed/Premium extensions remain separate decisions, including semantic/AI Search, advanced analytical views, notification digests/routing, richer preview customization and advanced multi-condition/multi-step/external-trigger automation.
 
-M4 introduces no Premium entitlement runtime. M9/#262 remains the entitlement/billing implementation boundary.
+M4 introduces no Premium entitlement runtime. M6/#262 remains the entitlement/billing implementation boundary under ADR 0006.
 
 # Definitions of Ready
 
@@ -385,9 +385,9 @@ Runtime order may use safe parallelism only when migration/router/OpenAPI/genera
 # Deliberately not pulled forward
 
 - full Web/Android productization, Offline Read Cache and systematic parity — M5;
-- Questions and Recaps — M6;
+- Questions and Recaps — M7 Relationship Depth;
 - semantic/AI Search — later explicit scope;
 - private/owner-only Reminder semantics — later explicit model/privacy decision;
 - external-trigger/general-purpose automation — later explicit scope;
 - real E2EE — MX;
-- Premium entitlement runtime — M9/#262.
+- Premium entitlement runtime — M6/#262.
