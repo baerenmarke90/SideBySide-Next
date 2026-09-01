@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from sqlalchemy import CheckConstraint, engine_from_config, pool
 from sqlalchemy.schema import SchemaItem
 
+from sidebyside.administration import models as _administration  # noqa: F401
 from sidebyside.attachments import binding as _binding  # noqa: F401
 
 # Register models. These imports look unused, but they are not.
@@ -52,12 +53,7 @@ from sidebyside.wishes import models as _wishes  # noqa: F401
 
 
 def _migration_connection() -> str:
-    """Return the database URL for this run or fail with a clear diagnostic.
-
-    Validation is caught and reformulated here because a raw
-    `ValidationError` looks like an application error. A migration operator
-    should instead see which environment variable is missing.
-    """
+    """Return the database URL for this run or fail with a clear diagnostic."""
     try:
         return DatabaseSettings().database_url
     except ValidationError as error:
@@ -79,12 +75,7 @@ target_metadata = Base.metadata
 
 
 def _type_bound_checks(table_name: str) -> set[str]:
-    """Return CHECK names owned by a column type rather than the table.
-
-    `SqlEnum(native_enum=False, create_constraint=True)` creates its allowed
-    value check from the type. The constraint lives on the table but belongs
-    to the type; Alembic calls this type-bound.
-    """
+    """Return CHECK names owned by a column type rather than the table."""
     table = Base.metadata.tables.get(table_name)
     if table is None:
         return set()
@@ -92,8 +83,6 @@ def _type_bound_checks(table_name: str) -> set[str]:
         constraint.name
         for constraint in table.constraints
         if isinstance(constraint, CheckConstraint)
-        # No public attribute exists, but this is the same marker Alembic uses
-        # internally to identify type-bound constraints.
         and getattr(constraint, "_type_bound", False)
         and constraint.name is not None
     }
@@ -106,16 +95,7 @@ def include_object(
     reflected: bool,
     compare_to: SchemaItem | None,
 ) -> bool:
-    """Exclude type-bound CHECK constraints from autogenerate comparison.
-
-    Autogenerate deliberately omits them on the model side but reads them
-    from the database, otherwise proposing their removal on every run and
-    keeping the drift check permanently red.
-
-    Manually adding the same rule to the table is the obvious but wrong
-    workaround: it would receive the same name as the type-owned constraint
-    and `create_all` would fail on the duplicate.
-    """
+    """Exclude type-bound CHECK constraints from autogenerate comparison."""
     del compare_to
     if type_ != "check_constraint" or not reflected or name is None:
         return True
