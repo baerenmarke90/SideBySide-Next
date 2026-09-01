@@ -78,22 +78,20 @@ def revision_override(revision: str) -> dict[str, object]:
     }
 
 
-def reject_compose_file_overrides(arguments: list[str]) -> None:
-    for index, argument in enumerate(arguments):
+def reject_compose_source_overrides(arguments: list[str]) -> None:
+    for argument in arguments:
         if argument in {"-f", "--file"} or argument.startswith("--file="):
             raise CheckoutError("alternate Compose files are not allowed by the verified wrapper")
         if argument.startswith("-f") and argument != "-f":
             raise CheckoutError("alternate Compose files are not allowed by the verified wrapper")
         if argument == "--project-directory" or argument.startswith("--project-directory="):
             raise CheckoutError("--project-directory is not allowed by the verified wrapper")
-        if argument == "--project-directory" and index + 1 < len(arguments):
-            raise CheckoutError("--project-directory is not allowed by the verified wrapper")
 
 
 def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
     if not compose_args:
         raise CheckoutError("a Docker Compose command is required")
-    reject_compose_file_overrides(compose_args)
+    reject_compose_source_overrides(compose_args)
 
     with tempfile.NamedTemporaryFile(
         mode="w",
