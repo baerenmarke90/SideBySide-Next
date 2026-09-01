@@ -28,9 +28,7 @@ class InstanceAccessState:
         return self.registration_enabled and not self.maintenance_mode
 
 
-def get_settings(
-    session: Session, *, for_update: bool = False
-) -> InstanceAdministrationSettings:
+def get_settings(session: Session, *, for_update: bool = False) -> InstanceAdministrationSettings:
     """Return the singleton settings row, creating safe defaults if necessary."""
     statement = select(InstanceAdministrationSettings).where(
         InstanceAdministrationSettings.singleton_key == 1
@@ -108,9 +106,7 @@ def update_setting(
     return settings
 
 
-def recent_events(
-    session: Session, *, limit: int = 20
-) -> list[InstanceAdministrationEvent]:
+def recent_events(session: Session, *, limit: int = 20) -> list[InstanceAdministrationEvent]:
     return list(
         session.execute(
             select(InstanceAdministrationEvent)
