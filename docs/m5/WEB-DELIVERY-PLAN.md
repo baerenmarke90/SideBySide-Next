@@ -5,6 +5,12 @@
 - **Gate:** M5/G4 remains dependent on completed M4 and the full cross-platform
   evidence set
 
+M5 productizes the already delivered M0-M4 Core. Per ADR 0006/#433, new
+Relationship Depth domains (#429-#432 and later M7 work) are not added to M5
+merely because client completion is active. Reusable navigation/settings/client
+primitives may be prepared here, but new M7 Domain contracts remain outside the
+M5/G4 boundary.
+
 ## Delivery sequence
 
 ```text
@@ -30,7 +36,7 @@ S6 prerequisite decisions: cache + portability contract (#303)
 S6 Web runtime: Deep Links + hardened Read Cache + portability UI (#346)
   |
   v
-M5 Web evidence -> combined M5/G4 parity and release evidence
+M5 Web evidence -> combined M5/G4 parity and Core Release Candidate evidence
 ```
 
 S2-S5 may use controlled parallelism only after S0B and the required S1 Space
@@ -186,7 +192,8 @@ current Reuse/License/Privacy/Cloud/Self-Hosted/Cost/Fallback review.
 - implemented M1-M3 capabilities: retain their authoritative Free/Core or
   documented Mixed baseline;
 - no M5 slice may add ad-hoc Premium flags or infer entitlement in the client;
-- M9/#262 remains the entitlement runtime boundary.
+- **M6/#262 is the entitlement runtime boundary** under ADR 0006; M5 consumes no
+  speculative Entitlement contract.
 
 ## Cross-cutting acceptance for every production screen
 
