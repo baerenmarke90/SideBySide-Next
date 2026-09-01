@@ -471,6 +471,29 @@ abstract class FakeReferenceContract : ReferenceContract {
         ifMatch: Int,
     ): Unit = notExercised("deletePlace")
 
+    override suspend fun listPlaceRelationTargets(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+    ): List<UUID> = notExercised("listPlaceRelationTargets")
+
+    override suspend fun linkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ): Unit = notExercised("linkPlaceTarget")
+
+    override suspend fun unlinkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ): Unit = notExercised("unlinkPlaceTarget")
+
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")
 }

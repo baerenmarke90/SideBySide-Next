@@ -50,6 +50,7 @@ class PlacesScreenAddTest {
                     },
                     onEdit = { _, _, _, _, _, _ -> },
                     onDelete = {},
+                    onOpenRelations = {},
                 )
             }
         }
@@ -77,6 +78,7 @@ class PlacesScreenAddTest {
                     onAdd = { _, _, _, _, _ -> },
                     onEdit = { _, _, _, _, _, _ -> },
                     onDelete = {},
+                    onOpenRelations = {},
                 )
             }
         }
@@ -108,6 +110,7 @@ class PlacesScreenAddTest {
                     },
                     onEdit = { _, _, _, _, _, _ -> },
                     onDelete = {},
+                    onOpenRelations = {},
                 )
             }
         }
