@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from sidebyside.core.clock import now
 from sidebyside.core.ids import new_id
 from sidebyside.jobs.models import Job, JobStatus
+from sidebyside.observability import get_correlation_id
 
 DEFAULT_LEASE = timedelta(minutes=5)
 
@@ -32,10 +33,19 @@ def enqueue(
     Materialize the UUID before the first flush so callers can safely persist
     references to the job in the same unit of work.
     """
+    job_payload = dict(payload or {})
+    active_corr_id = get_correlation_id()
+    if (
+        active_corr_id
+        and "_correlation_id" not in job_payload
+        and "correlation_id" not in job_payload
+    ):
+        job_payload["_correlation_id"] = active_corr_id
+
     job = Job(
         id=new_id(),
         kind=kind,
-        payload=payload or {},
+        payload=job_payload,
         max_attempts=max_attempts,
         run_after=now() + delay if delay else now(),
     )

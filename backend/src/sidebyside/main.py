@@ -12,11 +12,13 @@ from sidebyside.api.openapi import SideBySideFastAPI
 from sidebyside.api.transport import RequireHttpsForExternalHostsMiddleware
 from sidebyside.api.v1 import router as v1_router
 from sidebyside.config import Environment, Settings, get_settings
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+from sidebyside.observability import (
+    RequestIdMiddleware,
+    RequestLoggingMiddleware,
+    configure_logging,
 )
+
+configure_logging(get_settings())
 
 
 _log = logging.getLogger(__name__)
@@ -70,6 +72,9 @@ def create_app() -> FastAPI:
         # proxy addresses explicitly configured by the deployment.
         app.add_middleware(RequireHttpsForExternalHostsMiddleware)
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
+    app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(RequestIdMiddleware)
 
     register_error_handlers(app)
     app.include_router(v1_router, prefix="/api/v1")
