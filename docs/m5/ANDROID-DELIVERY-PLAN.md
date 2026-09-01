@@ -181,10 +181,10 @@ discovered late:
   records the rules. What remains is operational and has no code in it: who
   holds the upload key, whether Play App Signing is used, and where the key is
   escrowed.
-- **Generated client gap.** The build excludes two generator-owned Passkey
-  request models from the compile copy because `Map<String, Any>` has no
-  concrete kotlinx.serialization serializer. #138 owns the generator fix; any
-  slice that needs Passkey registration or authentication is blocked on it.
+- **Generated client gap.** Closed by #138. The generator now maps the
+  contract's free-form object type to `JsonElement`, so the whole generated
+  model tree compiles and no file is excluded. Passkey registration and
+  authentication are no longer blocked at the client layer.
 - **Locale resolution.** The supported locale set is implied by the default
   resource folder rather than declared, so library-provided strings can mix
   languages on a non-German device. Owned by #362.
