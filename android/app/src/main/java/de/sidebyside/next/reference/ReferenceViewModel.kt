@@ -19,6 +19,9 @@ import kotlinx.coroutines.launch
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.SessionView
+import sidebyside.api.models.CommentCreate
+import sidebyside.api.models.CommentDetail
+import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartEmotion
 import sidebyside.api.models.HeartMomentCreate
@@ -98,6 +101,17 @@ data class ReferenceUiState(
     val heartMomentsBusy: Boolean = false,
     val heartMomentsProblem: UiProblem? = null,
     val heartMomentStatus: UiMessage? = null,
+    /**
+     * The signed-in account.
+     *
+     * A comment carries no `capabilities`, unlike a Memory or a HeartMoment, so
+     * this is the only signal for whose comment it is. It decides what is
+     * offered, never what is allowed — the server still refuses what it should.
+     */
+    val accountId: java.util.UUID? = null,
+    val comments: List<CommentDetail> = emptyList(),
+    val commentsBusy: Boolean = false,
+    val commentsProblem: UiProblem? = null,
     /** A problem belonging to the open memory rather than to the whole screen. */
     val memoryProblem: UiProblem? = null,
     /**
@@ -191,6 +205,7 @@ class ReferenceViewModel(
         sessionEpoch += 1
         storyImages.reset()
         clearHeartMoments()
+        clearComments()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -215,6 +230,7 @@ class ReferenceViewModel(
                     mutate {
                         it.copy(
                             loggedIn = true,
+                            accountId = signedIn.account.id,
                             busy = false,
                             status = message(R.string.ref_status_logged_in),
                             error = null,
@@ -252,6 +268,7 @@ class ReferenceViewModel(
         sessionEpoch += 1
         storyImages.reset()
         clearHeartMoments()
+        clearComments()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -273,6 +290,7 @@ class ReferenceViewModel(
                     _uiState.value = ReferenceUiState(
                         configured = true,
                         loggedIn = true,
+                        accountId = signedIn.account.id,
                         demoMode = true,
                         demoPersona = persona,
                         activeSpaceId = space,
@@ -297,6 +315,7 @@ class ReferenceViewModel(
         sessionEpoch += 1
         storyImages.reset()
         clearHeartMoments()
+        clearComments()
         session = null
         imageDrafts = emptyList()
         _uiState.value = ReferenceUiState(
@@ -330,6 +349,7 @@ class ReferenceViewModel(
         sessionEpoch += 1
         storyImages.reset()
         clearHeartMoments()
+        clearComments()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
         mutate {
@@ -653,6 +673,119 @@ class ReferenceViewModel(
                     }
                 }
         }
+    }
+
+    fun loadComments(memoryId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(commentsBusy = true, commentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.listMemoryComments(spaceId, currentSession.tokens.accessToken, memoryId)
+            }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(comments = page.items, commentsBusy = false) }
+                }
+                .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun addComment(memoryId: java.util.UUID, body: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        if (body.isBlank()) return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(commentsBusy = true, commentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createMemoryComment(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    memoryId,
+                    CommentCreate(body = body),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    loadComments(memoryId)
+                }
+                .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun editComment(memoryId: java.util.UUID, commentId: java.util.UUID, body: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val current = _uiState.value.comments.firstOrNull { it.id == commentId } ?: return
+        if (body.isBlank()) return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(commentsBusy = true, commentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateComment(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    commentId,
+                    current.version,
+                    CommentUpdate(body = body),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    loadComments(memoryId)
+                }
+                .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun removeComment(memoryId: java.util.UUID, commentId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val current = _uiState.value.comments.firstOrNull { it.id == commentId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(commentsBusy = true, commentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteComment(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    commentId,
+                    current.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    loadComments(memoryId)
+                }
+                .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun clearComments() {
+        mutate { it.copy(comments = emptyList(), commentsBusy = false, commentsProblem = null) }
+    }
+
+    private fun reportCommentFailure(
+        operationEpoch: Long,
+        currentSession: SessionView,
+        throwable: Throwable,
+    ) {
+        if (!isCurrentSession(operationEpoch, currentSession)) return
+        mutate { it.copy(commentsBusy = false, commentsProblem = problemFor(throwable)) }
     }
 
     fun loadHeartMoments() {
@@ -1104,6 +1237,7 @@ class ReferenceViewModel(
         sessionEpoch += 1
         storyImages.reset()
         clearHeartMoments()
+        clearComments()
         session = null
         activeSpaceId = null
         imageDrafts = emptyList()
