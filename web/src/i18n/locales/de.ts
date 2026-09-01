@@ -14,11 +14,11 @@ const de = {
   },
   more: {
     eyebrow: 'Mehr',
-    title: 'Alles Weitere',
+    title: 'Weitere Bereiche',
     intro:
-      'Menschen, euer privater Bereich, Benachrichtigungen und euer Profil.',
+      'Die Menschen in eurem Leben, dein ganz privater Raum und eure Einstellungen.',
     people: {
-      title: 'Menschen',
+      title: 'Wichtige Menschen',
       description:
         'Personen, die euch wichtig sind, mit Geburtstagen und Jahrestagen.',
     },
@@ -32,8 +32,9 @@ const de = {
       description: 'Was es seit deinem letzten Besuch Neues für dich gibt.',
     },
     profile: {
-      title: 'Profil',
-      description: 'Eure Beziehungsanzeige, Vorlieben und Darstellung.',
+      title: 'Unser Profil',
+      description:
+        'Wer ihr seid, was ihr liebt und wie ihr euren Raum gestaltet.',
     },
   },
   states: {
