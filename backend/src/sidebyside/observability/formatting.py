@@ -135,6 +135,10 @@ def configure_logging(settings: Settings) -> None:
 
     root_logger.setLevel(level)
 
+    # Silence noisy HTTP client and connection pool loggers
+    for noisy in ("httpx", "httpx2", "httpcore", "urllib3"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
     # Remove existing handlers to prevent duplicate output
     for handler in list(root_logger.handlers):
         root_logger.removeHandler(handler)

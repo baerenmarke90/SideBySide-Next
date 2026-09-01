@@ -122,6 +122,9 @@ def scrub_data(data: Any, depth: int = 0) -> Any:
             return scrub_url(scrub_message(data))
         return scrub_message(data)
 
+    if hasattr(data, "query") and hasattr(data, "scheme"):
+        return scrub_url(str(data))
+
     if isinstance(data, Mapping):
         scrubbed: dict[str, Any] = {}
         for key, value in data.items():
