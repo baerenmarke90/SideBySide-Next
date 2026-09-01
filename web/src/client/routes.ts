@@ -106,6 +106,8 @@ export const MORE_NOTIFICATIONS_ROUTE = '/more/notifications';
 /** Existing surface; the Web shell exposes it through the avatar/account tree. */
 export const MORE_PROFILE_ROUTE = '/more/profile';
 export const MORE_PRIVATE_ROUTE = '/more/private';
+/** Compatibility alias for the emotional-redesign dashboard. */
+export const PRIVATE_AREA_PATH = MORE_PRIVATE_ROUTE;
 
 /* Story content ---------------------------------------------------------- */
 
