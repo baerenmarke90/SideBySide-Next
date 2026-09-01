@@ -59,6 +59,13 @@ def expect_json(result: HttpResult, *, url: str) -> object:
         raise RuntimeError(f"{url} did not return valid JSON") from exc
 
 
+def expect_text(result: HttpResult, *, url: str) -> str:
+    try:
+        return result.body.decode("utf-8").strip()
+    except UnicodeDecodeError as exc:
+        raise RuntimeError(f"{url} did not return UTF-8 text") from exc
+
+
 def check(base_url: str, expected_revision: str) -> None:
     origin = base_url.rstrip("/")
 
@@ -68,6 +75,14 @@ def check(base_url: str, expected_revision: str) -> None:
         raise RuntimeError(f"Web health returned HTTP {web.status}")
     print("ok: Web /healthz")
 
+    web_revision_url = f"{origin}/.well-known/sidebyside-revision"
+    web_revision = expect_text(request(web_revision_url), url=web_revision_url)
+    if web_revision != expected_revision:
+        raise RuntimeError(
+            f"Web revision mismatch: expected {expected_revision!r}, got {web_revision!r}"
+        )
+    print(f"ok: Web revision {expected_revision}")
+
     ready_url = f"{origin}/api/v1/health/ready"
     ready = request(ready_url)
     ready_body = expect_json(ready, url=ready_url)
@@ -75,7 +90,7 @@ def check(base_url: str, expected_revision: str) -> None:
         raise RuntimeError(f"API readiness is not healthy: {ready_body!r}")
     if ready.revision != expected_revision:
         raise RuntimeError(
-            f"Revision mismatch: expected {expected_revision!r}, got {ready.revision!r}"
+            f"API revision mismatch: expected {expected_revision!r}, got {ready.revision!r}"
         )
     print(f"ok: API ready, revision {expected_revision}")
 
@@ -125,7 +140,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--expected-revision",
         required=True,
-        help="Exact revision expected in X-SideBySide-Revision",
+        help="Exact revision expected from both Web and API deployment identities",
     )
     return parser.parse_args(argv)
 
