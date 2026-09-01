@@ -38,9 +38,9 @@ def get_settings(session: Session, *, for_update: bool = False) -> InstanceAdmin
         statement = statement.with_for_update()
     settings = session.execute(statement).scalar_one_or_none()
     if settings is None:
-        # SELECT ... FOR UPDATE cannot lock a row that does not exist. Use an
-        # atomic PostgreSQL upsert so concurrent first requests cannot both try
-        # to create the singleton and turn a normal race into a 500 response.
+        # SELECT ... FOR UPDATE cannot lock a row that does not exist. Use the
+        # migration-compatible PostgreSQL upsert so concurrent first requests
+        # cannot both create the singleton and turn a normal race into a 500.
         session.execute(
             insert(InstanceAdministrationSettings)
             .values(
