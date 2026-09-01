@@ -4,8 +4,8 @@
  * The model is decided in
  * `docs/decisions/0003-primary-navigation-and-route-model.md` and mirrored by
  * `docs/INFORMATION-ARCHITECTURE.md` section 5. Web and Android use the same
- * route IDs, so this file is the Web half of a cross-client contract rather
- * than a client-local convention.
+ * stable route IDs, so this file is the Web half of a cross-client contract
+ * rather than a client-local convention.
  */
 
 export type AppRouteId = 'today' | 'story' | 'plan' | 'more';
@@ -90,14 +90,20 @@ export function appRoutePath(id: AppRouteId): string {
 
 /* Secondary destinations ------------------------------------------------- */
 
-/** A global utility rather than an area; reachable from the app bar. */
+/** A global utility rather than an area; reachable from the Web app bar. */
 export const SEARCH_ROUTE = '/search';
 
-/** What happened between the partners, which is what Heute is for. */
+/**
+ * Stable Activity route. The Web shell exposes it from the personal account
+ * tree; route placement remains under `today` for Deep-Link compatibility and
+ * domain ownership.
+ */
 export const ACTIVITY_ROUTE = '/today/activity';
 
 export const MORE_PEOPLE_ROUTE = '/more/people';
+/** Existing surface; the Web shell exposes it as the header bell utility. */
 export const MORE_NOTIFICATIONS_ROUTE = '/more/notifications';
+/** Existing surface; the Web shell exposes it through the avatar/account tree. */
 export const MORE_PROFILE_ROUTE = '/more/profile';
 export const MORE_PRIVATE_ROUTE = '/more/private';
 

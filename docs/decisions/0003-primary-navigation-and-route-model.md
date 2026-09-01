@@ -1,82 +1,78 @@
 # ADR 0003 – Primary Navigation and Route Model
 
-**Status:** Accepted
-**Date:** August 31, 2026
-**Owning issue:** #360
-**Affects:** #295 (Web), #350 (Android), #328 and #346 (Deep Links), #344, #352
+**Status:** Accepted, amended by #374  
+**Date:** August 31, 2026  
+**Amended:** September 1, 2026  
+**Owning issue:** #360  
+**Navigation amendment:** #374  
+**Affects:** #295 (Web), #350 (Android), #328 and #346 (Deep Links), #344, #352, #368, #374
 
 ## Context
 
 `docs/INFORMATION-ARCHITECTURE.md` section 2 declared five mandatory primary
 destinations and section 5 a canonical route model. `docs/UX-PATTERNS.md`
-repeated the same five product labels, and `docs/SCREEN-TEMPLATES.md` carries a
-template for one of them.
+repeated the same product model. The original ADR normalized the shipped Web
+routes to stable cross-client route IDs and restored the five-destination
+boundary.
 
-The delivered Web client ships a different set. Only `story` matches:
+The original Web client had flattened Search, Activity, Notifications, People
+and Profile into destination-like entries. That broke the core rule that
+primary navigation contains no more than five destinations. It also reused the
+reserved label *Entdecken* for a sidebar group even though the actual Discover
+domain belongs to M7.
 
-| IA route | Purpose | Backend | Web client |
-|---|---|---|---|
-| `today` — Heute | shared overview and next actions | `/spaces/{id}/dashboard` | `dashboard`, labelled *Übersicht* |
-| `story` — Story | shared timeline | present | `story` |
-| `plan` — Planen | wishes and plans | present | `planning`, labelled *Planen* |
-| `discover` — Entdecken | curated inspiration | **none** | not shipped |
-| `more` — Mehr | Space, privacy, profile, settings | present | dissolved into five flat destinations |
+Two constraints remain binding:
 
-Three findings shaped this decision.
+- **Discover has no Core yet.** Its route identity stays reserved and it is not
+  rendered before M7 provides the domain.
+- **Deep Links are durable.** Existing canonical and compatibility paths remain
+  valid even when the visible shell placement or product copy changes.
 
-**Discover has no Core.** `docs/ROADMAP.md` places Discover in **M7**, together
-with Shopping, Recipes, Events and Provider adapters. The backend exposes no
-endpoint for it. The Web client was therefore right not to build it: the M5 Web
-slice contract forbids dead or future-contract navigation. The contradiction
-here is in the Information Architecture, which listed an M7 area as mandatory
-primary navigation from the start.
-
-**Two divergences are naming only.** `today` versus `dashboard` describes the
-same purpose against the same endpoint, and `plan` versus `planning` differs
-only in the path — the Web label is already *Planen*.
-
-**The substantive divergence is `more`.** The Web client dissolved that area
-into `search`, `activity`, `notifications`, `people` and `profile`, reaching
-eight primary destinations. That breaks a core rule of the Information
-Architecture — "primary navigation contains no more than five destinations" —
-rather than only its route table.
-
-Related: the desktop navigation grouping introduced by #340 labels a Web sidebar
-group *Entdecken* while holding Search, Activity and Notifications. That name is
-reserved for the M7 area and must not be used for anything else.
+Issue #374 subsequently refined the Web shell. It makes the main signed-in area
+visibly **Übersicht**, moves Search and Notifications to icon utilities in the
+header, and places Profile and Activity in the personal account tree. This
+amendment records that refinement without renaming the stable `today` route ID
+or `/today` path.
 
 ## Decision
 
-Keep the five-area product intent of the Information Architecture. Correct the
-document where the clients are right, and correct the clients where the document
-is right.
+Keep the five-area product intent of the Information Architecture. Primary
+product areas remain separate from global utilities and personal/account
+navigation.
 
 ### 1. Primary navigation
 
 Four destinations until M7, five from M7:
 
-| Route ID | de-DE | Path | Availability |
+| Route ID | de-DE visible product name | Path | Availability |
 |---|---|---|---|
-| `today` | Heute | `/today` | now |
+| `today` | Übersicht | `/today` | now |
 | `story` | Story | `/story` | now |
 | `plan` | Planen | `/plan` | now |
 | `discover` | Entdecken | `/discover` | **M7**, feature-gated |
 | `more` | Mehr | `/more` | now |
 
-`discover` keeps its reserved identity and its position in the order, and is not
+`discover` keeps its reserved identity and position in the order and is not
 rendered before its domain exists. A reserved route is not dead navigation; a
 visible empty area would be.
 
-### 2. Naming is unified on the document
+For Web, **Übersicht is the first/top primary destination and the ordinary
+signed-in landing page**. A valid protected Deep Link return target still takes
+precedence after authentication.
 
-`dashboard` becomes `today`, `planning` becomes `plan`. The user-facing label
-for `today` is **Heute**, not *Übersicht*: the area answers what is relevant
-now, and the Information Architecture, UX Patterns and the App all use that
-term.
+### 2. Stable route identity, updated visible label
 
-### 3. `more` is restored as an area
+The canonical identifier remains `today` and the canonical path remains
+`/today`. Issue #374 intentionally changes only the user-facing product label
+from **Heute** to **Übersicht**. This avoids unnecessary Deep Link churn while
+making the dashboard/landing semantics explicit.
 
-Everything that is not a primary task moves underneath it:
+`dashboard` remains a legacy route name and redirects to `/today`; `planning`
+remains a legacy route name and redirects to `/plan`.
+
+### 3. `more` remains a primary product area
+
+Secondary product/settings surfaces keep their canonical routes under `Mehr`:
 
 | Path | Content |
 |---|---|
@@ -84,51 +80,70 @@ Everything that is not a primary task moves underneath it:
 | `/more/space` | Space and partner, invitations |
 | `/more/people` | related people and important dates |
 | `/more/private` | the owner-only area |
-| `/more/notifications` | in-app notifications |
+| `/more/notifications` | in-app notifications surface |
 | `/more/profile` | profile, preferences, appearance |
 
-This closes #344: the owner-only area becomes a named destination under `Mehr`
-instead of being reachable only from within Profile.
+A route living under `/more` does not require its entry point to be a left-nav
+item. #374 moves the Web entry points for Notifications and Profile into the
+header/account hierarchy while preserving these canonical paths.
 
-### 4. Search and Activity are not primary destinations
+### 4. Global utilities and personal/account navigation are not primary destinations
 
-Neither appears in the Information Architecture structure tree, and adding them
-would break the five-destination rule again.
+Promoting utility or account targets to the left primary navigation would break
+the five-destination rule.
 
-- **Search** is a global utility, not an area. It belongs in the app bar on Web
-  and behind the search affordance on Android, at `/search`.
-- **Activity** answers "what happened between us", which is what `Heute` is
-  for. It becomes `/today/activity` rather than a peer of Story and Planen.
+For the Web shell:
+
+- **Search** is a global utility at `/search`; it is represented by an icon-only
+  search affordance in the persistent top-right header.
+- **Notifications** is a global utility whose existing surface remains
+  `/more/notifications`; its persistent entry point is an icon-only bell in the
+  top-right header. No client-only unread count is invented.
+- **Profile** remains `/more/profile`, but its persistent entry point is the
+  current-user avatar/profile control in the top-right header.
+- **Activity** retains `/today/activity` for compatibility and domain semantics,
+  but its Web entry point is inside the avatar/profile account tree rather than
+  the left primary navigation.
+
+The avatar/profile control reuses the centralized identity/avatar primitive and
+settings hierarchy defined by #368. Search, Notifications, Profile and Activity
+must not also be duplicated as left-primary destinations.
 
 ### 5. Old paths redirect
 
 `/dashboard`, `/planning`, `/people`, `/profile`, `/activity`,
-`/notifications` and the current private-area paths keep working as permanent
-redirects to their new locations. Deep Links that have already been shared must
-not break, and #328 and #346 build their Deep Link registry on the new model.
+`/notifications` and the previous private-area paths keep working as permanent
+redirects to their canonical locations. Deep Links that have already been
+shared must not break. #328 and #346 use the stable canonical route model rather
+than visible shell placement.
 
 ## Consequences
 
-- `docs/INFORMATION-ARCHITECTURE.md`, `docs/UX-PATTERNS.md` and
-  `docs/SCREEN-TEMPLATES.md` are updated with this ADR to mark Discover as an
-  M7 area and to record the sub-routes of `Mehr`.
-- The Web client needs a routing change with redirects and a navigation
-  regrouping. That is implementation and is owned by its own issue, not by
-  #360.
-- The Web sidebar group currently labelled *Entdecken* is renamed; the label
-  stays reserved for the M7 area.
-- Android S0B (#352) is unblocked and builds its destination registry against
-  this model directly, so no Android route is ever migrated.
-- The M5 parity gate can compare both clients against one model.
+- `docs/INFORMATION-ARCHITECTURE.md` records **Übersicht** as the visible
+  `today` label and documents the Web utility/account hierarchy.
+- Web authentication resolves the ordinary authenticated root to `/today`, while
+  the #346 protected Deep Link return target still has precedence.
+- Web Search, Notifications and the avatar/profile control share the persistent
+  top-right header. Activity and Profile are reachable from the account tree.
+- Existing route IDs and compatibility redirects stay unchanged.
+- Discover stays reserved until M7.
+- No second navigation framework, icon system, account model or avatar
+  representation is introduced.
 
 ## Alternatives considered
 
-**Rewrite the route table to match the shipped Web client.** Cheapest, and
-rejected: it would delete *Heute* and *Entdecken* as product concepts, abandon
-the five-destination rule, and let three binding documents follow the
-implementation rather than guide it.
+**Rename the route ID and path to `overview`/`/overview`.** Rejected: the visible
+copy does not justify breaking or migrating an already-established Deep Link
+contract.
 
-**Rebuild the Web client exactly as documented.** Rejected: it would require a
-visible *Entdecken* area with no Core behind it until M7, which the Web slice
-contract forbids, and it treats the document as correct on a point where the
-client's judgement was better.
+**Keep the visible label `Heute`.** Superseded by #374: the product direction
+explicitly establishes **Übersicht** as the main signed-in landing/dashboard
+label.
+
+**Keep Search, Notifications, Activity and Profile in the left navigation.**
+Rejected: they are global/personal utilities and would compete with actual
+product areas while violating the primary-navigation boundary.
+
+**Create a second account-menu or avatar implementation for the header.**
+Rejected: #368 already owns identity/avatar and centralized settings, and #374
+must reuse those primitives.

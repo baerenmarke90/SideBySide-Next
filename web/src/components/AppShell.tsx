@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import type { AccountView } from '../api/generated/models/AccountView';
 import {
   PRODUCT_CACHE_FALLBACK_EVENT,
   PRODUCT_CACHE_NETWORK_EVENT,
@@ -9,12 +10,14 @@ import {
   APP_ROUTES,
   DEFAULT_APP_ROUTE,
   MEMORY_CREATE_ROUTE,
+  MORE_NOTIFICATIONS_ROUTE,
   SEARCH_ROUTE,
   type AppRouteDefinition,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
+import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { ThemeControl } from './ThemeControl';
 
 function NavigationLink({ route }: { route: AppRouteDefinition }) {
@@ -87,9 +90,17 @@ function useCachedReadTimestamp(): string | null {
 export function AppShell({
   children,
   onLogout,
+  apiBaseUrl,
+  accessToken,
+  account,
+  spaceId,
 }: {
   children: ReactNode;
   onLogout: () => void;
+  apiBaseUrl: string;
+  accessToken: string;
+  account: AccountView;
+  spaceId: string;
 }) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
@@ -117,24 +128,41 @@ export function AppShell({
       <header className="app-header product-topbar">
         <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
         <div className="header-actions">
-          <NavLink
-            to={SEARCH_ROUTE}
-            className={({ isActive }) =>
-              `shell-search-link${isActive ? ' shell-search-link-active' : ''}`
-            }
-          >
-            <span className="shell-nav-icon" aria-hidden="true">
-              <DestinationIcon icon="search" />
-            </span>
-            <span>{t('navigation.search')}</span>
-          </NavLink>
           <span className="shared-context">
             <span aria-hidden="true">♥</span> {t('header.sharedArea')}
           </span>
           <ThemeControl variant="inline" />
-          <button type="button" className="tertiary" onClick={logout}>
-            {t('header.logout')}
-          </button>
+          <NavLink
+            to={SEARCH_ROUTE}
+            className={({ isActive }) =>
+              `shell-utility-link${isActive ? ' shell-utility-link-active' : ''}`
+            }
+            aria-label={t('navigation.search')}
+            title={t('navigation.search')}
+          >
+            <span className="shell-nav-icon" aria-hidden="true">
+              <DestinationIcon icon="search" />
+            </span>
+          </NavLink>
+          <NavLink
+            to={MORE_NOTIFICATIONS_ROUTE}
+            className={({ isActive }) =>
+              `shell-utility-link${isActive ? ' shell-utility-link-active' : ''}`
+            }
+            aria-label={t('navigation.notifications')}
+            title={t('navigation.notifications')}
+          >
+            <span className="shell-nav-icon" aria-hidden="true">
+              <DestinationIcon icon="notifications" />
+            </span>
+          </NavLink>
+          <HeaderProfileMenu
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            account={account}
+            spaceId={spaceId}
+            onLogout={logout}
+          />
         </div>
       </header>
 
