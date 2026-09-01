@@ -1,4 +1,4 @@
-"""ServerAdmin-only operational read models.
+"""ServerAdmin-only operational and application-administration read models.
 
 The dashboard reports SideBySide application state only. It deliberately has
 no shell, filesystem, container, SQL-console, or private-content inspection
@@ -14,12 +14,17 @@ from fastapi import APIRouter
 from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
+from sidebyside.administration import service as administration
+from sidebyside.administration.models import (
+    AdministrationSetting,
+    InstanceAdministrationSettings,
+)
 from sidebyside.api.deps import CurrentServerAdmin, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
 from sidebyside.api.v1.health import build_revision
 from sidebyside.attachments.models import Attachment, AttachmentStatus
-from sidebyside.config import get_settings
+from sidebyside.config import get_settings as get_runtime_settings
 from sidebyside.core.clock import now
 from sidebyside.identity.models import Account
 from sidebyside.jobs.models import Job, JobStatus
@@ -69,6 +74,37 @@ class ServerAdminOverview(ApiModel):
     recent_failed_jobs: list[ServerAdminFailedJob]
 
 
+class ServerAdminSettings(ApiModel):
+    registration_enabled: bool
+    maintenance_mode: bool
+    effective_registration_enabled: bool
+    version: int
+
+
+class ServerAdminSettingUpdate(ApiModel):
+    enabled: bool
+
+
+class ServerAdminActivityItem(ApiModel):
+    id: UUID
+    actor_id: UUID | None
+    setting: str
+    previous_value: bool
+    new_value: bool
+    created_at: datetime
+
+
+def _settings_view(settings: InstanceAdministrationSettings) -> ServerAdminSettings:
+    registration_enabled = bool(settings.registration_enabled)
+    maintenance_mode = bool(settings.maintenance_mode)
+    return ServerAdminSettings(
+        registration_enabled=registration_enabled,
+        maintenance_mode=maintenance_mode,
+        effective_registration_enabled=(registration_enabled and not maintenance_mode),
+        version=int(settings.version),
+    )
+
+
 def _job_count(session: Session, status: JobStatus) -> int:
     return session.execute(
         select(func.count()).select_from(Job).where(Job.status == status.value)
@@ -85,7 +121,7 @@ def get_server_admin_overview(
     session: DbSession,
 ) -> ServerAdminOverview:
     """Return safe operational state for an authorized ServerAdmin."""
-    settings = get_settings()
+    settings = get_runtime_settings()
     current_time = now()
 
     account_count = session.execute(select(func.count()).select_from(Account)).scalar_one()
@@ -166,3 +202,75 @@ def get_server_admin_overview(
             for job in failed_jobs
         ],
     )
+
+
+@router.get(
+    "/settings",
+    response_model=ServerAdminSettings,
+    responses=problem_responses(401, 403),
+)
+def get_server_admin_settings(
+    _: CurrentServerAdmin,
+    session: DbSession,
+) -> ServerAdminSettings:
+    return _settings_view(administration.get_settings(session))
+
+
+@router.put(
+    "/settings/registration",
+    response_model=ServerAdminSettings,
+    responses=problem_responses(401, 403, 422),
+)
+def update_registration_setting(
+    body: ServerAdminSettingUpdate,
+    admin: CurrentServerAdmin,
+    session: DbSession,
+) -> ServerAdminSettings:
+    settings = administration.update_setting(
+        session,
+        actor_id=admin.id,
+        setting=AdministrationSetting.REGISTRATION_ENABLED,
+        enabled=body.enabled,
+    )
+    return _settings_view(settings)
+
+
+@router.put(
+    "/settings/maintenance",
+    response_model=ServerAdminSettings,
+    responses=problem_responses(401, 403, 422),
+)
+def update_maintenance_setting(
+    body: ServerAdminSettingUpdate,
+    admin: CurrentServerAdmin,
+    session: DbSession,
+) -> ServerAdminSettings:
+    settings = administration.update_setting(
+        session,
+        actor_id=admin.id,
+        setting=AdministrationSetting.MAINTENANCE_MODE,
+        enabled=body.enabled,
+    )
+    return _settings_view(settings)
+
+
+@router.get(
+    "/activity",
+    response_model=list[ServerAdminActivityItem],
+    responses=problem_responses(401, 403),
+)
+def get_server_admin_activity(
+    _: CurrentServerAdmin,
+    session: DbSession,
+) -> list[ServerAdminActivityItem]:
+    return [
+        ServerAdminActivityItem(
+            id=event.id,
+            actor_id=event.actor_id,
+            setting=event.setting,
+            previous_value=event.previous_value,
+            new_value=event.new_value,
+            created_at=event.created_at,
+        )
+        for event in administration.recent_events(session)
+    ]

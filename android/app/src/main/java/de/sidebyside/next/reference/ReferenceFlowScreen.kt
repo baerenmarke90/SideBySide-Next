@@ -67,11 +67,21 @@ fun ReferenceFlowScreen(
     // Signed out, the product entry surface is the whole screen. It scrolls
     // itself, so it must not be nested inside the lazy list below.
     if (!state.loggedIn) {
+        val entryNotice = when {
+            !state.configured -> stringResource(R.string.ref_not_configured)
+            state.instanceAvailability == InstanceAvailability.MAINTENANCE ->
+                stringResource(R.string.ref_maintenance_mode)
+            state.instanceAvailability == InstanceAvailability.REGISTRATION_DISABLED ->
+                stringResource(R.string.ref_registration_disabled)
+            state.instanceAvailability == InstanceAvailability.UNREACHABLE ->
+                stringResource(R.string.ref_instance_status_unreachable)
+            else -> null
+        }
         EntryScreen(
             onSignIn = onLogin,
             busy = state.busy,
             signInEnabled = state.configured,
-            notice = if (state.configured) null else stringResource(R.string.ref_not_configured),
+            notice = entryNotice,
             onEnterDemo = onEnterDemo,
             modifier = modifier.fillMaxSize(),
         )
