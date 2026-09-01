@@ -4,8 +4,9 @@
 Direct ``docker compose`` remains the convenient local/test path and deliberately
 reports ``unverified-local-checkout``. Release-candidate and Production
 complete-checkout deployments use this wrapper. It derives the revision from Git
-and exports the backend/Web build contexts from that committed tree, so ignored or
-untracked local files cannot enter a verified image.
+and exports Compose plus the backend/Web build contexts from that committed tree,
+so ignored, untracked, or index-hidden working-tree changes cannot become verified
+orchestration/source.
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ import tempfile
 from pathlib import Path
 
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+PROJECT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 BACKEND_SERVICES = ("migrate", "demo-init", "api", "worker")
 
 
@@ -71,20 +73,28 @@ def verified_revision(root: Path, expected: str | None) -> str:
     return revision
 
 
-def export_build_snapshot(root: Path, revision: str, target: Path) -> None:
-    """Export only committed backend/Web files without trusting the worktree."""
+def export_verified_snapshot(root: Path, revision: str, target: Path) -> None:
+    """Export committed Compose/backend/Web files without trusting the worktree."""
     archive_path = target / "source.tar"
     try:
         with archive_path.open("wb") as archive_file:
             subprocess.run(
-                ["git", "archive", "--format=tar", revision, "backend", "web"],
+                [
+                    "git",
+                    "archive",
+                    "--format=tar",
+                    revision,
+                    "compose.yaml",
+                    "backend",
+                    "web",
+                ],
                 cwd=root,
                 check=True,
                 stdout=archive_file,
                 stderr=subprocess.PIPE,
             )
     except (OSError, subprocess.CalledProcessError) as exc:
-        raise CheckoutError("Git could not export the verified source tree") from exc
+        raise CheckoutError("Git could not export the verified deployment tree") from exc
 
     target_root = target.resolve()
     try:
@@ -97,7 +107,9 @@ def export_build_snapshot(root: Path, revision: str, target: Path) -> None:
                     destination.mkdir(parents=True, exist_ok=True)
                     continue
                 if not member.isfile():
-                    raise CheckoutError("verified build source contains an unsupported link/device")
+                    raise CheckoutError(
+                        "verified deployment source contains an unsupported link/device"
+                    )
                 source = archive.extractfile(member)
                 if source is None:
                     raise CheckoutError("Git archive member could not be read")
@@ -106,7 +118,7 @@ def export_build_snapshot(root: Path, revision: str, target: Path) -> None:
                     output.write(source.read())
                 os.chmod(destination, member.mode & 0o777)
     except (OSError, tarfile.TarError) as exc:
-        raise CheckoutError("verified Git source snapshot could not be extracted") from exc
+        raise CheckoutError("verified Git deployment snapshot could not be extracted") from exc
     finally:
         archive_path.unlink(missing_ok=True)
 
@@ -128,14 +140,60 @@ def compose_override(revision: str, snapshot_root: Path) -> dict[str, object]:
     return {"services": services}
 
 
+def dotenv_value(path: Path, key: str) -> str | None:
+    if not path.is_file():
+        return None
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise CheckoutError("the deployment .env file could not be read") from exc
+    for raw_line in lines:
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        candidate, value = line.split("=", 1)
+        if candidate.strip() != key:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        return value
+    return None
+
+
+def default_project_name(root: Path) -> str:
+    value = root.name.lower()
+    value = re.sub(r"[^a-z0-9_-]+", "", value)
+    value = re.sub(r"^[^a-z0-9]+", "", value)
+    if not value:
+        raise CheckoutError("the checkout directory cannot produce a Compose project name")
+    return value
+
+
+def compose_project_name(root: Path, env_file: Path) -> str:
+    value = os.environ.get("COMPOSE_PROJECT_NAME") or dotenv_value(
+        env_file, "COMPOSE_PROJECT_NAME"
+    )
+    value = value or default_project_name(root)
+    if not PROJECT_NAME_RE.fullmatch(value):
+        raise CheckoutError("COMPOSE_PROJECT_NAME is not a valid Docker Compose project name")
+    return value
+
+
 def reject_compose_source_overrides(arguments: list[str]) -> None:
     for argument in arguments:
         if argument in {"-f", "--file"} or argument.startswith("--file="):
             raise CheckoutError("alternate Compose files are not allowed by the verified wrapper")
         if argument.startswith("-f") and argument != "-f":
             raise CheckoutError("alternate Compose files are not allowed by the verified wrapper")
-        if argument == "--project-directory" or argument.startswith("--project-directory="):
-            raise CheckoutError("--project-directory is not allowed by the verified wrapper")
+        if argument in {"-p", "--project-name"} or argument.startswith("--project-name="):
+            raise CheckoutError("project-name overrides are not allowed by the verified wrapper")
+        if argument.startswith("-p") and argument != "-p":
+            raise CheckoutError("project-name overrides are not allowed by the verified wrapper")
+        if argument in {"--env-file", "--project-directory"}:
+            raise CheckoutError("deployment source/config overrides are not allowed by the verified wrapper")
+        if argument.startswith("--env-file=") or argument.startswith("--project-directory="):
+            raise CheckoutError("deployment source/config overrides are not allowed by the verified wrapper")
 
 
 def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
@@ -143,28 +201,36 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
         raise CheckoutError("a Docker Compose command is required")
     reject_compose_source_overrides(compose_args)
 
+    env_file = root / ".env"
+    project_name = compose_project_name(root, env_file)
+
     try:
         with tempfile.TemporaryDirectory(prefix="sidebyside-source-") as temp_dir:
             snapshot_root = Path(temp_dir)
-            export_build_snapshot(root, revision, snapshot_root)
+            export_verified_snapshot(root, revision, snapshot_root)
             override_path = snapshot_root / "compose.revision.json"
             override_path.write_text(
                 json.dumps(compose_override(revision, snapshot_root)),
                 encoding="utf-8",
             )
-            completed = subprocess.run(
+            command = [
+                "docker",
+                "compose",
+                "--project-name",
+                project_name,
+            ]
+            if env_file.is_file():
+                command.extend(["--env-file", str(env_file)])
+            command.extend(
                 [
-                    "docker",
-                    "compose",
                     "-f",
-                    str(root / "compose.yaml"),
+                    str(snapshot_root / "compose.yaml"),
                     "-f",
                     str(override_path),
                     *compose_args,
-                ],
-                cwd=root,
-                check=False,
+                ]
             )
+            completed = subprocess.run(command, cwd=root, check=False)
             return completed.returncode
     except OSError as exc:
         raise CheckoutError("docker compose could not be executed") from exc
