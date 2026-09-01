@@ -13,6 +13,7 @@ from sidebyside.administration.models import (
     InstanceAdministrationEvent,
     InstanceAdministrationSettings,
 )
+from sidebyside.core.errors import ErrorCode, ForbiddenError, ServiceUnavailableError
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,8 +28,10 @@ class InstanceAccessState:
         return self.registration_enabled and not self.maintenance_mode
 
 
-def get_settings(session: Session, *, for_update: bool = False) -> InstanceAdministrationSettings:
-    """Return the singleton settings row, creating the safe default for fresh test DBs."""
+def get_settings(
+    session: Session, *, for_update: bool = False
+) -> InstanceAdministrationSettings:
+    """Return the singleton settings row, creating safe defaults if necessary."""
     statement = select(InstanceAdministrationSettings).where(
         InstanceAdministrationSettings.singleton_key == 1
     )
@@ -54,6 +57,30 @@ def get_access_state(session: Session) -> InstanceAccessState:
     )
 
 
+def ensure_normal_operation(session: Session) -> None:
+    """Reject ordinary product traffic while instance maintenance is active."""
+    if get_access_state(session).maintenance_mode:
+        raise ServiceUnavailableError(
+            "SideBySide is temporarily unavailable for maintenance.",
+            ErrorCode.MAINTENANCE_MODE,
+        )
+
+
+def ensure_new_account_registration_allowed(session: Session) -> None:
+    """Reject creation of a new non-bootstrap account when policy disallows it."""
+    state = get_access_state(session)
+    if state.maintenance_mode:
+        raise ServiceUnavailableError(
+            "SideBySide is temporarily unavailable for maintenance.",
+            ErrorCode.MAINTENANCE_MODE,
+        )
+    if not state.registration_enabled:
+        raise ForbiddenError(
+            "New account registration is disabled by the administrator.",
+            ErrorCode.REGISTRATION_DISABLED,
+        )
+
+
 def update_setting(
     session: Session,
     *,
@@ -61,7 +88,7 @@ def update_setting(
     setting: AdministrationSetting,
     enabled: bool,
 ) -> InstanceAdministrationSettings:
-    """Change one privileged setting and append audit history on an actual mutation."""
+    """Change one privileged setting and audit actual state transitions."""
     settings = get_settings(session, for_update=True)
     attribute = setting.value
     previous = bool(getattr(settings, attribute))
@@ -81,7 +108,9 @@ def update_setting(
     return settings
 
 
-def recent_events(session: Session, *, limit: int = 20) -> list[InstanceAdministrationEvent]:
+def recent_events(
+    session: Session, *, limit: int = 20
+) -> list[InstanceAdministrationEvent]:
     return list(
         session.execute(
             select(InstanceAdministrationEvent)
