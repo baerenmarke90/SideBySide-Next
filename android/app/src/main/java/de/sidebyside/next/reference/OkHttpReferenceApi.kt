@@ -1,33 +1,37 @@
 package de.sidebyside.next.reference
 
+import de.sidebyside.next.demo.DemoPersona
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
-import de.sidebyside.next.demo.DemoPersona
+import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
+import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import sidebyside.api.models.AccountMembershipView
-import sidebyside.api.models.MagicLinkConsumeRequest
+import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.ProblemDetails
+import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.SignInRequest
+import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
 
@@ -227,6 +231,20 @@ class OkHttpReferenceApi(
         AttachmentDetail.serializer(),
     )
 
+    override suspend fun deleteAttachment(
+        spaceId: UUID,
+        accessToken: String,
+        attachmentId: UUID,
+        ifMatch: Int,
+    ) {
+        executeEmpty(
+            authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/attachments/$attachmentId", accessToken)
+                .header("If-Match", ifMatch.toString())
+                .delete()
+                .build(),
+        )
+    }
+
     override suspend fun replaceMemoryAttachments(
         spaceId: UUID,
         accessToken: String,
@@ -272,6 +290,71 @@ class OkHttpReferenceApi(
             builder.header("Authorization", "Bearer $accessToken")
         }
         client.newCall(builder.build()).execute().use { response ->
+            assertSuccessful(response)
+            response.body.bytes()
+        }
+    }
+
+    override suspend fun getSpace(spaceId: UUID, accessToken: String): SpaceView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId", accessToken)
+            .get()
+            .build(),
+        SpaceView.serializer(),
+    )
+
+    override suspend fun getProfile(
+        spaceId: UUID,
+        accessToken: String,
+        accountId: UUID,
+    ): PartnerProfileView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/profiles/$accountId", accessToken)
+            .get()
+            .build(),
+        PartnerProfileView.serializer(),
+    )
+
+    override suspend fun updateProfileIdentity(
+        spaceId: UUID,
+        accessToken: String,
+        accountId: UUID,
+        ifMatch: Int,
+        update: ProfileIdentityUpdate,
+    ): PartnerProfileView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/profiles/$accountId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(SideBySideJson.encodeToString(ProfileIdentityUpdate.serializer(), update).toRequestBody(jsonMediaType))
+            .build(),
+        PartnerProfileView.serializer(),
+    )
+
+    override suspend fun removeProfileAvatar(
+        spaceId: UUID,
+        accessToken: String,
+        accountId: UUID,
+        ifMatch: Int,
+    ): PartnerProfileView {
+        val payload = buildJsonObject { put("profileAttachmentId", JsonNull) }
+        return executeJson(
+            authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/profiles/$accountId", accessToken)
+                .header("If-Match", ifMatch.toString())
+                .patch(payload.toString().toRequestBody(jsonMediaType))
+                .build(),
+            PartnerProfileView.serializer(),
+        )
+    }
+
+    override suspend fun readProfileAvatar(
+        spaceId: UUID,
+        accessToken: String,
+        accountId: UUID,
+    ): ByteArray = withContext(Dispatchers.IO) {
+        val request = authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/profiles/$accountId/avatar/content",
+            accessToken,
+        )
+            .get()
+            .build()
+        client.newCall(request).execute().use { response ->
             assertSuccessful(response)
             response.body.bytes()
         }

@@ -2,17 +2,22 @@ package de.sidebyside.next.reference
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.sidebyside.next.demo.DemoEndpoint
+import de.sidebyside.next.demo.DemoPersona
+import de.sidebyside.next.profile.ProfileUiState
+import de.sidebyside.next.profile.loadProfileIdentity
+import de.sidebyside.next.profile.removeProfileAvatar
+import de.sidebyside.next.profile.updateProfileAvatar
+import de.sidebyside.next.profile.updateProfileDisplayName
+import de.sidebyside.next.story.StoryImageRef
+import de.sidebyside.next.story.StoryImageStore
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import de.sidebyside.next.demo.DemoEndpoint
-import de.sidebyside.next.demo.DemoPersona
-import de.sidebyside.next.story.StoryImageRef
-import de.sidebyside.next.story.StoryImageStore
-import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AccountMembershipView
+import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
@@ -48,6 +53,7 @@ data class ReferenceUiState(
     /** Every Space the account may open; a choice only exists above one. */
     val availableSpaces: List<AccountMembershipView> = emptyList(),
     val activeSpaceId: java.util.UUID? = null,
+    val profile: ProfileUiState = ProfileUiState(),
     val busy: Boolean = false,
     val status: UiMessage? = null,
     val error: UiMessage? = null,
@@ -194,6 +200,7 @@ class ReferenceViewModel(
                             busy = false,
                             status = message(R.string.ref_status_logged_in),
                             error = null,
+                            profile = ProfileUiState(),
                             draftImages = emptyList(),
                             lastMemoryTitle = null,
                             lastMemoryBody = null,
@@ -307,6 +314,7 @@ class ReferenceViewModel(
         mutate {
             it.copy(
                 activeSpaceId = spaceId,
+                profile = ProfileUiState(),
                 busy = false,
                 error = null,
                 status = message(R.string.space_switched),
@@ -647,6 +655,208 @@ class ReferenceViewModel(
         }
     }
 
+    /** Profile data is lazy: older test fakes and normal Story startup need no profile calls. */
+    fun refreshProfile() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    loading = true,
+                    busy = false,
+                    status = null,
+                    error = null,
+                ),
+            )
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { loadProfileIdentity(api, spaceId, currentSession) }
+                .onSuccess { profile ->
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate { it.copy(profile = profile) }
+                    }
+                }
+                .onFailure {
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate {
+                            it.copy(
+                                profile = it.profile.copy(
+                                    loading = false,
+                                    busy = false,
+                                    status = null,
+                                    error = message(R.string.profile_loading_failed),
+                                ),
+                            )
+                        }
+                    }
+                }
+        }
+    }
+
+    fun saveProfileDisplayName(displayName: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val currentProfile = _uiState.value.profile.self ?: return refreshProfile()
+        if (displayName.isBlank()) {
+            mutate {
+                it.copy(
+                    profile = it.profile.copy(
+                        error = message(R.string.profile_display_name_required),
+                        status = null,
+                    ),
+                )
+            }
+            return
+        }
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    busy = true,
+                    status = null,
+                    error = null,
+                ),
+            )
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                updateProfileDisplayName(
+                    api = api,
+                    spaceId = spaceId,
+                    session = currentSession,
+                    current = currentProfile,
+                    displayName = displayName,
+                )
+            }.onSuccess { updated ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                session = currentSession.copy(
+                    account = currentSession.account.copy(displayName = updated.displayName),
+                )
+                mutate {
+                    it.copy(
+                        profile = it.profile.copy(
+                            self = updated,
+                            busy = false,
+                            status = message(R.string.profile_saved),
+                            error = null,
+                        ),
+                    )
+                }
+                refreshStory()
+            }.onFailure {
+                if (sessionEpoch == operationEpoch) profileFailure(R.string.profile_save_failed)
+            }
+        }
+    }
+
+    fun beginProfileAvatarSelection(): Long? = session?.let { sessionEpoch }
+
+    fun setProfileAvatar(image: SelectedImage, selectionEpoch: Long) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val currentProfile = _uiState.value.profile.self ?: return refreshProfile()
+        if (selectionEpoch != sessionEpoch) return
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    busy = true,
+                    status = message(R.string.profile_avatar_uploading),
+                    error = null,
+                ),
+            )
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                val updated = updateProfileAvatar(
+                    api = api,
+                    spaceId = spaceId,
+                    session = currentSession,
+                    current = currentProfile,
+                    image = image,
+                )
+                val bytes = runCatching {
+                    api.readProfileAvatar(spaceId, currentSession.tokens.accessToken, currentSession.account.id)
+                }.getOrNull()
+                updated to bytes
+            }.onSuccess { (updated, bytes) ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        profile = it.profile.copy(
+                            self = updated,
+                            selfAvatarBytes = bytes,
+                            busy = false,
+                            status = message(R.string.profile_saved),
+                            error = null,
+                        ),
+                    )
+                }
+            }.onFailure {
+                if (isCurrentSession(operationEpoch, currentSession)) {
+                    profileFailure(R.string.profile_avatar_failed)
+                }
+            }
+        }
+    }
+
+    fun setProfileAvatarSelectionError(throwable: Throwable, selectionEpoch: Long) {
+        if (session == null || selectionEpoch != sessionEpoch) return
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    busy = false,
+                    status = null,
+                    error = message(
+                        R.string.profile_avatar_failed,
+                        throwable.message.orEmpty(),
+                    ),
+                ),
+            )
+        }
+    }
+
+    fun removeProfileAvatar() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val currentProfile = _uiState.value.profile.self ?: return refreshProfile()
+        val operationEpoch = sessionEpoch
+        mutate {
+            it.copy(profile = it.profile.copy(busy = true, status = null, error = null))
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                removeProfileAvatar(api, spaceId, currentSession, currentProfile)
+            }.onSuccess { updated ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate {
+                    it.copy(
+                        profile = it.profile.copy(
+                            self = updated,
+                            selfAvatarBytes = null,
+                            busy = false,
+                            status = message(R.string.profile_saved),
+                            error = null,
+                        ),
+                    )
+                }
+            }.onFailure {
+                if (isCurrentSession(operationEpoch, currentSession)) {
+                    profileFailure(R.string.profile_avatar_failed)
+                }
+            }
+        }
+    }
+
     fun logout() {
         // Leaving the demo is a different exit: it also has to put the endpoint
         // back, so a later normal sign-in does not silently reach the demo.
@@ -783,6 +993,19 @@ class ReferenceViewModel(
                 busy = if (clearBusy) false else it.busy,
                 error = message(resourceId),
                 status = null,
+            )
+        }
+    }
+
+    private fun profileFailure(resourceId: Int) {
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    loading = false,
+                    busy = false,
+                    error = message(resourceId),
+                    status = null,
+                ),
             )
         }
     }

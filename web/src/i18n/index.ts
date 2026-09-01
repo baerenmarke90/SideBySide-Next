@@ -11,6 +11,7 @@ import navigation from './locales/navigation';
 import partnerConnection from './locales/partnerConnection';
 import people from './locales/people';
 import privateArea from './locales/privateArea';
+import profileIdentity from './locales/profileIdentity';
 import profiles from './locales/profiles';
 import storyProducts from './locales/storyProducts';
 
@@ -41,6 +42,7 @@ if (!i18n.isInitialized) {
           partnerConnection,
           people,
           privateArea,
+          profileIdentity,
           profiles,
           ...storyProducts,
         },

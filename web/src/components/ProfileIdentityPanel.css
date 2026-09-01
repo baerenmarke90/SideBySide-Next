@@ -1,0 +1,32 @@
+.profile-identity-panel {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.profile-identity-preview {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-subtle);
+}
+
+.profile-identity-preview > small {
+  color: var(--color-text-secondary);
+}
+
+.profile-identity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.profile-identity-file-input {
+  max-width: 100%;
+}
+
+.profile-identity-status {
+  margin: 0;
+}

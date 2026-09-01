@@ -144,6 +144,18 @@ SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
         "/api/v1/spaces/{spaceId}/profiles/{accountId}",
         resource_absence="PARTNER_PROFILE_NOT_FOUND",
     ),
+    Endpoint(
+        "PATCH",
+        "/api/v1/spaces/{spaceId}/profiles/{accountId}",
+        body={"displayName": "Matrix Name"},
+        if_match=True,
+        resource_absence="PARTNER_PROFILE_NOT_FOUND",
+    ),
+    Endpoint(
+        "GET",
+        "/api/v1/spaces/{spaceId}/profiles/{accountId}/avatar/content",
+        resource_absence="PARTNER_PROFILE_NOT_FOUND",
+    ),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/profile-preferences"),
     Endpoint(
         "POST",
