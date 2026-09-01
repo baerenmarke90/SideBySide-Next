@@ -1,12 +1,12 @@
 """Invitations.
 
     Account A creates a Space
-    → issue invitation
-    → one-time token
-    → partner opens the link
-    → sign in or register
-    → accept
-    → membership
+    -> issue invitation
+    -> one-time token
+    -> partner opens the link
+    -> sign in or register
+    -> accept
+    -> membership
 
 The token is returned only once and only its hash is persisted.
 """
@@ -21,6 +21,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from sidebyside.administration import service as administration
 from sidebyside.auth.tokens import generate_token, hash_token
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, NotFoundError, ValidationError
@@ -135,15 +136,11 @@ def _accept_open(session: Session, invitation: Invitation, account: Account) -> 
     if not invitation.is_open(now()):
         raise _invalid()
 
-    # The creator cannot accept their own invitation. Otherwise a mistaken
-    # click consumes the invitation and leaves the partner with a dead link.
     if invitation.created_by == account.id:
         raise ValidationError(
             "You cannot accept your own invitation.", InvitationErrorCode.SELF_INVITE
         )
 
-    # add_member checks the upper bound and existing membership. If it fails,
-    # the invitation remains open because the failure is not caused by it.
     membership = service.add_member(session, invitation.space_id, account)
 
     invitation.accepted_at = now()
@@ -153,14 +150,10 @@ def _accept_open(session: Session, invitation: Invitation, account: Account) -> 
 
 
 def accept(session: Session, token: str, account: Account) -> Membership:
-    """Accept an invitation.
+    """Accept an invitation with an already existing account.
 
-    Every failure - unknown, expired, revoked, already used - yields the same
-    message. Distinguishing them would disclose which tokens exist.
-
-    The row is loaded under lock. If two attempts accept the same invitation
-    concurrently, the second waits for the first and then observes
-    `accepted_at` instead of both succeeding.
+    Existing accounts may keep linking to an invitation while self-registration
+    is disabled; the registration policy governs new Accounts, not membership.
     """
     if not token:
         raise _invalid()
@@ -173,13 +166,8 @@ def accept_with_new_account(
     token_hash: str,
     account_factory: Callable[[], Account],
 ) -> tuple[Account, Membership]:
-    """Accept an invitation and create the account only while holding the lock.
-
-    This path is intended for onboarding flows where the account does not yet
-    exist. The order matters: first lock and revalidate the invitation, only
-    then may the caller create the account. Two concurrent callbacks for the
-    same invitation therefore cannot create two accounts.
-    """
+    """Accept an invitation and create the account only while holding the lock."""
+    administration.ensure_new_account_registration_allowed(session)
     invitation = _open_for_update(session, token_hash)
     account = account_factory()
     return account, _accept_open(session, invitation, account)
