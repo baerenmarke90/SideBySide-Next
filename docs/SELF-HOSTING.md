@@ -1,43 +1,42 @@
 # Secure Self-Hosted Operation
 
-## Two operating modes
+Persistent Development, release-candidate verification, Production promotion, and
+rollback are governed by
+[`DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`](DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md).
+This document covers secure instance operation; it must not be used to bypass the
+Development-before-Production promotion gates defined there.
 
-The bundled Compose stack supports two operating modes, and the distinction is
-not incidental:
+## Operating modes
 
-| | local test mode | production mode |
+The bundled stack supports a convenient local test mode and a hardened Production
+mode:
+
+| | local test mode | Production mode |
 |---|---|---|
 | `SBS_ENVIRONMENT` | `development` (default) | `production` |
-| cursor signing key | local fallback value | required, at least 32 characters |
-| outgoing mail | written to the log | `smtp` or `none`, never `log` |
-| `SBS_PUBLIC_BASE_URL` | `http://localhost:8080` | must use `https://` |
-| HTTPS enforcement, host validation | off | on |
-| schema documentation `/docs` | open | closed |
+| cursor signing key | local fallback | required, at least 32 characters |
+| outgoing mail | `log` allowed | `smtp` or `none`, never `log` |
+| `SBS_PUBLIC_BASE_URL` | HTTP localhost allowed | HTTPS required |
+| HTTPS/host enforcement | off | on |
+| `/docs` | available | disabled |
+| deployment revision | explicitly unverified with raw Compose | exact verified commit required |
 
-The default is test mode. This is a deliberate decision
-([ADR 0002](decisions/0002-self-hosted-first-start-mode.md)): initial startup
-must be possible without SMTP access and without an HTTPS domain. The Web PoC
-and API are bound exclusively to `127.0.0.1` in this mode and therefore remain
-unreachable from the LAN or Internet even if the host firewall is configured
-too permissively.
-
-On every startup, the application reports which operating mode it is using. In
-test mode this appears as a warning in `docker compose logs api`.
+The default is test mode by design ([ADR 0002](decisions/0002-self-hosted-first-start-mode.md)).
+Initial evaluation must work without an SMTP account or public HTTPS domain. Web
+and API bind to loopback by default.
 
 ## Local test
 
 ```bash
 cp .env.example .env
-# Replace at least POSTGRES_PASSWORD with a long, random secret.
-# Set SBS_BOOTSTRAP_TOKEN in .env to a separately generated secret with
-# at least 32 characters.
+# Replace at least POSTGRES_PASSWORD with a strong random value.
+# Set SBS_BOOTSTRAP_TOKEN to a separate random value with at least 32 characters.
 docker compose config --quiet
 docker compose up -d --wait --wait-timeout 300
 ```
 
-`API_PORT=8000` and `WEB_PORT=8080` are only default values. Both ports must be
-free on the Docker host. If either port is already in use, choose a free port in
-`.env` before startup, for example:
+`API_PORT=8000` and `WEB_PORT=8080` are defaults only. If either host port is
+already occupied, select a free port in `.env` before startup, for example:
 
 ```dotenv
 API_PORT=8010
@@ -45,143 +44,146 @@ WEB_PORT=8081
 SBS_PUBLIC_BASE_URL=http://localhost:8081
 ```
 
-This changes only the host ports. The API and Web service continue to listen on
-8000 and 8080 respectively inside their containers. A host port that is already
-in use must not be shared by a second service; `docker compose up` must fail
-clearly in that case.
-
-Compose shows the port that is actually published:
+The published ports must remain bound to the intended interface. For the default
+local setup:
 
 ```bash
 docker compose port api 8000
 docker compose port web 8080
 ```
 
-Both outputs must be bound to `127.0.0.1`. An output containing `0.0.0.0`, `::`,
-or an unexpected external address is not allowed for the default setup.
+Both should report `127.0.0.1`. An unexpected `0.0.0.0`, `::`, or external
+address is not an acceptable default.
 
-After startup, verify operational readiness rather than only whether the HTTP
-process is running:
+Raw `docker compose` intentionally builds both application images with the
+identity:
+
+```text
+unverified-local-checkout
+```
+
+That identity is useful for local diagnosis but is **not** a release proof. It
+cannot be changed from `.env` to impersonate an approved commit.
+
+## Verified complete-checkout deployment
+
+A release candidate or Production deployment from a complete repository checkout
+must use `scripts/compose_checked.py`, not raw `docker compose`.
+
+The wrapper derives the revision from Git, rejects a dirty checkout, and can
+require the checkout to match an expected immutable commit before Compose runs.
+It injects that exact revision into both backend and Web builds.
+
+Example:
 
 ```bash
-api_port=$(docker compose port api 8000 | awk -F: '{print $NF}')
-web_port=$(docker compose port web 8080 | awk -F: '{print $NF}')
-curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
-curl --fail "http://127.0.0.1:${web_port}/healthz"
-curl --fail "http://127.0.0.1:${web_port}/"
+CANDIDATE=<40-character-approved-commit-sha>
+git checkout "$CANDIDATE"
+python3 scripts/compose_checked.py \
+  --expected-revision "$CANDIDATE" \
+  up -d --build --force-recreate --wait --wait-timeout 300
 ```
 
-Expected response:
+Do not substitute a manually supplied revision environment variable. The release
+identity must come from the source that is actually being built.
 
-```json
-{"status":"ok","database":"ok"}
-```
-
-The Web start page requires no Space configuration. After authentication, the
-client discovers the account's active Memberships through the API and uses only
-a server-authorized Space. No Space UUID is embedded in the Web image.
-
-This state is intended for evaluation, not publication. Before making the
-instance reachable, complete the production checklist below.
-
-The source-code development workflow is separate again:
-`deploy/docker-compose.dev.yml` starts PostgreSQL only. A locally started
-Uvicorn process is a development server and is not a template for an
-externally reachable production service.
+Arcane uses the equivalent remote-source invariant instead: see `ARCANE.md`.
 
 ## Compose network and readiness
 
-`postgres`, `migrate`, `api`, `worker`, and `web` are explicitly attached to the
-same project-specific bridge network `app` in `compose.yaml`. The concrete
-Docker network name also contains the Compose project name so multiple
-SideBySide stacks on the same host do not collide.
+`postgres`, `migrate`, `demo-init`, `api`, `worker`, and `web` use the same
+project-specific bridge network. The database URL deliberately resolves
+`postgres:5432` through Docker DNS rather than using container IDs, fixed Docker
+addresses, or published host ports.
 
-The database URL deliberately uses the Compose service name `postgres:5432`.
-Container IDs, fixed Docker IP addresses, and host ports do not belong in
-`SBS_DATABASE_URL`.
+Startup ordering is:
 
-After a deployment, the Docker DNS path can be checked directly from the API:
+```text
+postgres -> migrate -> demo-init(no-op outside Demo) -> api/worker -> web
+```
+
+`migrate` must complete successfully before API and worker start. Web waits for
+API readiness.
+
+Useful network checks:
 
 ```bash
 docker compose exec -T api python -c \
   'import socket; print(socket.gethostbyname("postgres"))'
-```
 
-Additional check of the actual network state:
-
-```bash
 api_id=$(docker compose ps -q api)
 docker inspect "$api_id" --format '{{json .NetworkSettings.Networks}}'
 ```
 
-A running API container with an empty `{}` result is **not** ready. In that
-state, Docker DNS cannot resolve `postgres`.
+A running API container with no attached Docker network is not ready.
 
-SideBySide separates two health questions:
+SideBySide exposes separate health signals:
 
-- `/api/v1/health` is pure **liveness**: the API process responds.
-- `/api/v1/health/ready` is **readiness**: the API can also reach PostgreSQL and
-  execute a real `SELECT 1`.
-- `/healthz` on the Web service confirms only that the static server responds.
-  API dependency is represented separately through Compose and API readiness.
+- `/api/v1/health`: API process liveness;
+- `/api/v1/health/ready`: API plus database readiness;
+- `/healthz`: Web server liveness;
+- `/.well-known/sidebyside-revision`: immutable Web build identity.
 
-The API Docker health check deliberately uses the readiness route. This makes
-`docker compose up -d --wait` report a missing database/network path as a
-deployment failure even if Uvicorn itself is still running. Docker Compose does
-not restart a process merely because its status is `unhealthy`, so a temporary
-database outage remains distinct from a process crash.
+The API health responses include:
 
-## Production operation checklist
+```text
+X-SideBySide-Revision: <backend-build-revision>
+```
 
-Before the first public startup, set the following in `.env`:
+A release is valid only when the Web revision endpoint and the API header both
+match the expected commit. This prevents a partially recreated stack from
+silently pairing a stale Web image with a newer backend.
+
+## Production configuration
+
+Before the first Production startup, configure at least:
 
 ```dotenv
 SBS_ENVIRONMENT=production
 SBS_CURSOR_SIGNING_KEY=...        # openssl rand -base64 48
 SBS_PUBLIC_BASE_URL=https://your-domain.example
 SBS_ALLOWED_HOSTS=["your-domain.example"]
-TRUSTED_PROXY_IPS=...             # smallest IP range used by the reverse proxy
-# With a mail server:
+TRUSTED_PROXY_IPS=...             # smallest real reverse-proxy IP/CIDR
+
+# With mail delivery:
 SBS_MAIL_TRANSPORT=smtp
 SBS_MAIL_FROM=no-reply@your-domain.example
 SBS_SMTP_HOST=smtp.your-domain.example
 
-# Or without a mail server - see below:
+# Or without mail delivery:
 # SBS_MAIL_TRANSPORT=none
 ```
 
-If the cursor signing key is missing or the base URL does not use `https://`,
-the application refuses to start. This is intentional and must not be bypassed:
-the cursor signing key protects the integrity of opaque pagination cursors, and
-a sign-in link delivered over plaintext HTTP is a transferable credential.
+Production refuses unsafe configuration such as a missing cursor signing key, a
+plaintext public base URL, or `SBS_MAIL_TRANSPORT=log`. These are secure-default
+startup failures and must not be bypassed.
 
-### Operation without a mail server
+The exact source revision must first pass the persistent Development gates in
+`DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`. For complete-checkout Production,
+perform the actual deploy with `scripts/compose_checked.py`; for Arcane, pin
+`SBS_SOURCE_REF` to the exact approved commit SHA.
 
-SMTP access is **not** a startup requirement. With `SBS_MAIL_TRANSPORT=none`,
-the instance runs without a mail path:
+## Operation without a mail server
 
-- Magic Link, password Recovery, and email verification return
-  `503 MAIL_TRANSPORT_UNAVAILABLE` instead of promising a message that will
-  never arrive.
-- Sign-in through password, Passkey/WebAuthn, and OIDC continues to work.
-- A user who forgets their password and has no Passkey cannot recover access
-  without mail delivery. That is the trade-off of this operating mode.
+SMTP is not a startup requirement. With:
 
-Production explicitly **does not** accept `SBS_MAIL_TRANSPORT=log`. That mode
-would place valid single-use tokens in API logs and therefore in any log
-aggregation or backup containing them. The distinction from `none` is
-substantive: with `none`, no token leaves the system.
+```dotenv
+SBS_MAIL_TRANSPORT=none
+```
 
-Then run `docker compose up -d --build --force-recreate --wait --wait-timeout
-300` and verify that `docker compose logs api` reports production mode.
-`--build` ensures the deployed Web and backend images match the selected source revision.
+the instance remains usable through password, Passkey/WebAuthn, and OIDC, but
+mail-dependent Magic Link, password recovery, and address verification return a
+clear unavailable response instead of pretending to send a message.
+
+`log` transport is for local testing only. It would put valid one-time
+credentials in logs and is therefore rejected in Production.
 
 ## Media storage
 
-`SBS_MEDIA_STORE=local` is the default. The API and worker use the private
-Compose volume `media_data`; filesystem paths are not exposed to clients.
+`SBS_MEDIA_STORE=local` is the default. API and worker share the private Compose
+`media_data` volume; filesystem paths are not exposed to clients.
 
-For an S3-compatible object store, configure `.env` instead as follows:
+For S3-compatible private object storage:
 
 ```dotenv
 SBS_MEDIA_STORE=s3
@@ -190,138 +192,104 @@ SBS_S3_REGION=eu-central-1
 SBS_S3_BUCKET=sidebyside-private
 SBS_S3_ACCESS_KEY_ID=...
 SBS_S3_SECRET_ACCESS_KEY=...
-# Only for temporary provider credentials:
+# Optional temporary credentials only:
 # SBS_S3_SESSION_TOKEN=...
 ```
 
-The endpoint is an S3 API origin without embedded credentials or a subpath.
-HTTPS must be used for production traffic over networks that are not fully
-trusted. The bucket itself remains private: no public ACLs, no anonymous read
-policy, and no static website exposure. Server credentials need only the
-GET/PUT/HEAD/DELETE object operations for the bucket/key prefix in use; making
-the bucket public is not required.
+The bucket must remain private. Production traffic over untrusted networks uses
+HTTPS. Provider credentials need only the object operations required by the
+SideBySide media lifecycle; no public bucket policy or static website exposure is
+required.
 
-With S3, the client uploads directly to the exact generated storage key using a
-server-signed PUT capability. The upload URL is valid for exactly 10 minutes and
-is bound with `If-None-Match: *` to prevent later overwriting of the same object.
-A provider upload does not set the Attachment to `READY`: `finalizeUpload`
-verifies the object server-side and the existing validation remains the sole
-authority for transitioning to `READY`.
+Uploads use short-lived server-signed PUT capabilities for the exact generated
+object key. A provider upload does not make an Attachment `READY`; server-side
+finalization and validation remain authoritative. Reads receive short-lived
+server-authorized GET capabilities only after normal membership/parent checks.
 
-Reads are released only after the normal Membership/parent authorization. The
-signed GET URL is valid for exactly 5 minutes and only for that object. An
-already-issued URL can technically continue to work after Membership or privacy
-revocation until those 5 minutes have elapsed. This is the documented privacy
-trade-off of the S3 adapter; no new URLs are issued after revocation.
+Presigned URLs, signatures, storage keys, and credentials must not enter logs,
+analytics, support bundles, or persistent client caches.
 
-Descriptor responses and stored objects use `Cache-Control: private, no-store`;
-the API additionally sets `Referrer-Policy: no-referrer` for descriptors.
-Presigned URLs, signatures, and storage credentials must not be copied into
-access logs, analytics, support data, or persistent client caches.
+For browser direct upload/read, configure a narrow CORS rule for the concrete
+SideBySide origin. Compose derives the Web CSP `connect-src` allowance from the
+exact `SBS_S3_ENDPOINT`; wildcard origins, scheme-wide allowances, paths, and
+credentials are rejected.
 
-For a browser client, the bucket requires a narrow CORS rule for the concrete
-SideBySide origin. Uploads require `PUT` and the `Content-Type`, `Cache-Control`,
-and `If-None-Match` headers; direct reads require `GET`/`HEAD`. No CORS rule
-replaces the private bucket policy or server-side authorization.
-
-The Web container also permits this direct connection in its Content Security
-Policy. Compose forwards only the exact `SBS_S3_ENDPOINT` origin into
-`connect-src`. Wildcards, scheme-wide allowances such as `https:`, paths,
-credentials, and free-form CSP fragments are rejected before Nginx starts.
-Normal users do not configure this. An alternative Cloud/hosting topology may
-set multiple exact origins on the Web container as a whitespace-separated
-`SBS_WEB_CSP_CONNECT_ORIGINS` value; in the canonical Compose path this
-technical value is derived automatically.
+Development and Production must never share an S3 bucket/credential set. Use
+`scripts/check_environment_isolation.py` before promotion when environment files
+are available to the operator.
 
 ## One-time initial registration
 
-An empty instance accepts the first account only with the `SBS_BOOTSTRAP_TOKEN`
-configured in the local `.env`. The value is passed as `bootstrapToken` to
-`POST /api/v1/auth/register`. It is neither stored in the database nor logged by
-the application.
+An empty instance accepts its first account only with `SBS_BOOTSTRAP_TOKEN` from
+the untracked environment. The value is neither persisted as product data nor
+logged by SideBySide.
 
-For an instance without existing users:
+1. Generate a random secret with at least 32 characters.
+2. Put it only in the target environment as `SBS_BOOTSTRAP_TOKEN`.
+3. Start the stack and perform the first registration.
+4. Remove the bootstrap token and recreate the API container.
+5. Create additional accounts through the normal invitation flow.
 
-1. Generate a random secret with at least 32 characters and store it only as
-   `SBS_BOOTSTRAP_TOKEN` in the untracked `.env`.
-2. Start the stack and perform the first registration locally through
-   `127.0.0.1`.
-3. After successful registration, remove `SBS_BOOTSTRAP_TOKEN` from `.env` and
-   recreate the API container with `docker compose up -d --force-recreate api`.
-4. Register all additional accounts exclusively through invitations.
+The bootstrap token must not enter repository files, shell history, screenshots,
+or support requests. Development and Production use different bootstrap secrets.
 
-The database records successful bootstrap completion permanently. Neither the
-same value nor a later replacement bootstrap value can create a second initial
-owner. Two concurrent initial registrations are serialized by PostgreSQL;
-exactly one can succeed.
+## Reverse proxy and public exposure
 
-The secret must not enter shell history, screenshots, support requests, or
-repository files. `.env` is therefore excluded by `.gitignore`.
-
-## Access from the LAN or Internet
-
-External access is provided exclusively through a TLS reverse proxy on the
-same host or in a controlled private network. The secure default in
-`compose.yaml` binds Web and API to loopback only.
-
-On the same host, the proxy requires two targets on the same public HTTPS
-origin:
+The TLS reverse proxy is the only public endpoint. On the same public origin it
+routes:
 
 | Path | Internal target |
 |---|---|
-| `/api/` | `http://127.0.0.1:<API_PORT>` |
-| all other paths | `http://127.0.0.1:<WEB_PORT>` |
+| `/api/` | SideBySide API on `API_PORT` |
+| all other paths | SideBySide Web on `WEB_PORT` |
 
-The more specific `/api/` route must take precedence over the general Web
-route. In production it goes **directly** to the API, not through the Web
-container. Only the local loopback test uses the Web container's internal
-`/api/` proxy. This preserves the TLS reverse proxy as the single trusted hop
-for `X-Forwarded-*`, so `TRUSTED_PROXY_IPS` does not need to include the Compose
-network or `*`.
+The `/api/` route goes directly to the API in Production. It must not first pass
+through the Web Nginx container, because the configured trusted TLS proxy is the
+authority for `X-Forwarded-*` handling.
 
-If the reverse proxy runs on a **different** host, neither loopback target is
-reachable from it. The deployment then needs a deliberately configured,
-private-network-limited exposure for Web and API instead of a blanket bind to
-`0.0.0.0`. That exposure belongs to hosting configuration and must not arise
-accidentally from the standard Compose stack.
+### Reverse proxy on the same host
 
-Set the following additionally in `.env`:
+The secure default is sufficient:
 
 ```dotenv
-SBS_ALLOWED_HOSTS=["sidebyside.example.com","localhost","127.0.0.1"]
-TRUSTED_PROXY_IPS=192.0.2.10
+SBS_BIND_IP=127.0.0.1
+API_PORT=8000
+WEB_PORT=8080
 ```
 
-- `SBS_ALLOWED_HOSTS` is a JSON list of public API hostnames. A global `"*"` is
-  rejected in production.
-- `TRUSTED_PROXY_IPS` is the exact address or smallest CIDR range from which the
-  proxy reaches the API container. Never use `*`.
-- The proxy sets `Host`, `X-Forwarded-For`, and `X-Forwarded-Proto: https`
-  itself; Forwarded headers supplied by the client are not trusted blindly.
-- TLS certificates must be valid and renewed automatically.
+### Reverse proxy on another private host
 
-The application still rejects an allowed external host unless the request
-scheme sanitized by Uvicorn is `https`. A normal client cannot bypass this
-check merely by forging a Forwarded header.
+Bind only to the intended private address, not unnecessarily to all interfaces:
 
-After proxy configuration, both paths must work:
+```dotenv
+SBS_BIND_IP=192.168.10.20
+API_PORT=8000
+WEB_PORT=8099
+```
+
+Then configure the public origin and exact proxy source:
+
+```dotenv
+SBS_PUBLIC_BASE_URL=https://sidebyside.example
+SBS_ALLOWED_HOSTS=["sidebyside.example","localhost","127.0.0.1"]
+TRUSTED_PROXY_IPS=192.168.10.30
+```
+
+Never use `*` for trusted proxies or Production allowed hosts. Client-supplied
+Forwarded headers are not independently trusted.
+
+After proxy configuration:
 
 ```bash
-curl --fail https://sidebyside.example.com/
-curl --fail https://sidebyside.example.com/api/v1/health/ready
-web/scripts/check_csp_header.sh https://sidebyside.example.com/
+curl --fail https://sidebyside.example/
+curl --fail https://sidebyside.example/.well-known/sidebyside-revision
+curl --fail https://sidebyside.example/api/v1/health/ready
+web/scripts/check_csp_header.sh https://sidebyside.example/
 ```
-
-If API readiness responds but the start page does not, the general route still
-points to the API port instead of the Web port.
 
 ## Outgoing email
 
-Magic Link and password Recovery require a mail path. The default is
-`SBS_MAIL_TRANSPORT=log`: the message is written to the API log so both flows
-can be tested without a mail server.
-
-For real operation, configure an SMTP server:
+For actual delivery configure a Production-specific SMTP account:
 
 ```dotenv
 SBS_MAIL_TRANSPORT=smtp
@@ -330,46 +298,41 @@ SBS_SMTP_HOST=smtp.your-domain.example
 SBS_SMTP_PORT=587
 SBS_SMTP_USERNAME=...
 SBS_SMTP_PASSWORD=...
-SBS_PUBLIC_BASE_URL=https://your-domain.example
 ```
 
-`SBS_PUBLIC_BASE_URL` appears in every link. It deliberately comes from
-configuration rather than from the request Host header.
+`SBS_PUBLIC_BASE_URL` is used to construct application links. It comes from
+configuration rather than from an untrusted request host.
 
-With `SBS_ENVIRONMENT=production`, the API refuses to start if log transport is
-still enabled or the base URL does not use `https://`. Otherwise valid sign-in
-links would appear in logs.
+## Smoke verification
 
-If no mail server is available, use `SBS_MAIL_TRANSPORT=none` instead of `log`;
-see [Operation without a mail server](#operation-without-a-mail-server).
-
-## Smoke test after changes
+The release smoke helper is the preferred post-deploy check:
 
 ```bash
-# Determine the actual host port.
-api_port=$(docker compose port api 8000 | awk -F: '{print $NF}')
-
-# Liveness: the API process responds.
-curl --fail "http://127.0.0.1:${api_port}/api/v1/health"
-
-# Readiness: Docker DNS and PostgreSQL work as well.
-curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
-
-# The API container can resolve the Compose service postgres.
-docker compose exec -T api python -c \
-  'import socket; print(socket.gethostbyname("postgres"))'
-
-# The Web server serves exactly the documented restrictive CSP.
-web_port=$(docker compose port web 8080 | awk -F: '{print $NF}')
-web/scripts/check_csp_header.sh "http://127.0.0.1:${web_port}/"
-
-# The public address must use HTTPS.
-curl --fail https://sidebyside.example.com/api/v1/health
-
-# Plaintext HTTP must not return a successful external API response.
-curl --fail http://sidebyside.example.com/api/v1/health && exit 1 || true
+python3 scripts/deployment_smoke.py \
+  --base-url https://sidebyside.example \
+  --expected-revision <exact-commit-sha>
 ```
 
-The container health check accesses `127.0.0.1` internally and evaluates
-`/health/ready`. This makes an API process without a functioning database path
-visible as `unhealthy` without changing the separate liveness route.
+It verifies Web health, Web build identity, API/database readiness, and the API
+build identity. With `SBS_SMOKE_EMAIL` and `SBS_SMOKE_PASSWORD`, it also performs
+a password sign-in and authenticated membership read without creating product
+content.
+
+For host-level diagnosis, these checks remain useful:
+
+```bash
+api_port=$(docker compose port api 8000 | awk -F: '{print $NF}')
+web_port=$(docker compose port web 8080 | awk -F: '{print $NF}')
+
+curl --fail "http://127.0.0.1:${api_port}/api/v1/health"
+curl --fail "http://127.0.0.1:${api_port}/api/v1/health/ready"
+curl --fail "http://127.0.0.1:${web_port}/healthz"
+curl --fail "http://127.0.0.1:${web_port}/.well-known/sidebyside-revision"
+
+docker compose exec -T api python -c \
+  'import socket; print(socket.gethostbyname("postgres"))'
+```
+
+A health check proves availability; the revision checks prove that the intended
+application components are actually the ones serving traffic. Production is not
+accepted until both are true.
