@@ -1,0 +1,66 @@
+name: Self-Hosted Recovery
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Change Detection
+    runs-on: ubuntu-latest
+    outputs:
+      recovery: ${{ steps.scope.outputs.recovery }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Test change-scope filter logic
+        run: python3 tools/ci/test_change_scope.py
+
+      - name: Determine relevant change scopes
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+            echo "recovery=true" >> "$GITHUB_OUTPUT"
+            echo "Push/manual run: Self-Hosted Recovery remains active."
+            exit 0
+          fi
+
+          git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-files.txt
+          echo "Changed files:"
+          cat /tmp/changed-files.txt
+          python3 tools/ci/change_scope.py /tmp/changed-files.txt >> "$GITHUB_OUTPUT"
+
+  recovery:
+    name: Backup, Restore, and Upgrade
+    needs: changes
+    if: needs.changes.outputs.recovery == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Recovery helper syntax and archive contract
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            scripts/self_hosted_recovery.py \
+            scripts/self_hosted_recovery_acceptance.py \
+            scripts/test_self_hosted_recovery.py \
+            backend/scripts/recovery_fixture.py
+          python3 -m unittest scripts.test_self_hosted_recovery
+
+      - name: Fresh restore and prior-schema upgrade acceptance
+        run: python3 scripts/self_hosted_recovery_acceptance.py

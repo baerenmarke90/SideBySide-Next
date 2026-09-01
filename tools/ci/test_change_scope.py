@@ -22,6 +22,7 @@ class ChangeScopeTest(unittest.TestCase):
                 "self_hosted": False,
                 "supply_chain": False,
                 "deployment_guard": False,
+                "recovery": False,
             },
         )
 
@@ -33,6 +34,7 @@ class ChangeScopeTest(unittest.TestCase):
                 "self_hosted": True,
                 "supply_chain": True,
                 "deployment_guard": True,
+                "recovery": True,
             },
         )
 
@@ -44,6 +46,7 @@ class ChangeScopeTest(unittest.TestCase):
                 self.assertTrue(result["self_hosted"])
                 self.assertTrue(result["deployment_guard"])
                 self.assertFalse(result["supply_chain"])
+                self.assertTrue(result["recovery"])
 
     def test_web_source_change_enables_runtime_gates(self) -> None:
         self.assertEqual(
@@ -53,11 +56,17 @@ class ChangeScopeTest(unittest.TestCase):
                 "self_hosted": True,
                 "supply_chain": False,
                 "deployment_guard": True,
+                "recovery": False,
             },
         )
 
     def test_web_dockerfile_also_enables_supply_chain(self) -> None:
-        self.assertTrue(all(classify_paths(["web/Dockerfile"]).values()))
+        result = classify_paths(["web/Dockerfile"])
+        self.assertTrue(result["backend"])
+        self.assertTrue(result["self_hosted"])
+        self.assertTrue(result["supply_chain"])
+        self.assertTrue(result["deployment_guard"])
+        self.assertFalse(result["recovery"])
 
     def test_dependency_inventory_only_enables_supply_chain(self) -> None:
         result = classify_paths(["docs/DEPENDENCIES.md"])
@@ -65,6 +74,7 @@ class ChangeScopeTest(unittest.TestCase):
         self.assertFalse(result["self_hosted"])
         self.assertTrue(result["supply_chain"])
         self.assertFalse(result["deployment_guard"])
+        self.assertFalse(result["recovery"])
 
     def test_self_hosting_contract_enables_both_self_hosted_gates(self) -> None:
         for path in ("docs/SELF-HOSTING.md", "docs/ARCANE.md"):
@@ -74,6 +84,17 @@ class ChangeScopeTest(unittest.TestCase):
                 self.assertTrue(result["self_hosted"])
                 self.assertFalse(result["supply_chain"])
                 self.assertTrue(result["deployment_guard"])
+                self.assertTrue(result["recovery"])
+
+    def test_recovery_tooling_enables_recovery_gate(self) -> None:
+        for path in (
+            "scripts/self_hosted_recovery.py",
+            "scripts/self_hosted_recovery_acceptance.py",
+            "scripts/test_self_hosted_recovery.py",
+            "docs/SELF-HOSTED-RECOVERY.md",
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(classify_paths([path])["recovery"])
 
     def test_filter_changes_fail_closed(self) -> None:
         self.assertTrue(all(classify_paths(["tools/ci/change_scope.py"]).values()))

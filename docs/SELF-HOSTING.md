@@ -218,6 +218,21 @@ Development and Production must never share an S3 bucket/credential set. Use
 `scripts/check_environment_isolation.py` before promotion when environment files
 are available to the operator.
 
+## Backup, restore, and upgrade
+
+The binding recovery contract and copy-paste operator procedure are in
+[`SELF-HOSTED-RECOVERY.md`](SELF-HOSTED-RECOVERY.md). For the default
+`LocalMediaStore`, `scripts/self_hosted_recovery.py` creates and restores one
+coordinated PostgreSQL/durable-media archive while configuration and secrets stay
+in the operator's separate protected backup. The command intentionally refuses S3
+storage; S3 requires the provider-specific consistency procedure documented in
+that runbook.
+
+Production upgrades require a fresh coordinated recovery point, migration-first
+startup, and post-start readiness/revision checks. A database dump without the
+matching media and configuration/secret recovery material is not a complete
+SideBySide recovery point.
+
 ## One-time initial registration
 
 An empty instance accepts its first account only with `SBS_BOOTSTRAP_TOKEN` from
