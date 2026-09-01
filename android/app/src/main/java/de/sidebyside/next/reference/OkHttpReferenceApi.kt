@@ -50,6 +50,10 @@ import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.NotificationItem
+import sidebyside.api.models.NotificationPage
+import sidebyside.api.models.NotificationUnreadCount
+import sidebyside.api.models.NotificationsReadAllResult
 import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
@@ -1377,6 +1381,48 @@ class OkHttpReferenceApi(
                     .toRequestBody(jsonMediaType),
             ).build(),
         PrivateCollectionDetail.serializer(),
+    )
+
+    override suspend fun listNotifications(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): NotificationPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/notifications?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        NotificationPage.serializer(),
+    )
+
+    override suspend fun getNotificationUnreadCount(
+        spaceId: UUID,
+        accessToken: String,
+    ): NotificationUnreadCount = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/notifications/unread-count", accessToken)
+            .get().build(),
+        NotificationUnreadCount.serializer(),
+    )
+
+    override suspend fun markNotificationRead(
+        spaceId: UUID,
+        accessToken: String,
+        notificationId: UUID,
+    ): NotificationItem = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/notifications/$notificationId/read",
+            accessToken,
+        ).post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+        NotificationItem.serializer(),
+    )
+
+    override suspend fun markAllNotificationsRead(
+        spaceId: UUID,
+        accessToken: String,
+    ): NotificationsReadAllResult = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/notifications/read-all", accessToken)
+            .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+        NotificationsReadAllResult.serializer(),
     )
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {

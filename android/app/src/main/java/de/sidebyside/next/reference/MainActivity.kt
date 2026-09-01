@@ -59,6 +59,7 @@ import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
 import de.sidebyside.next.place.PlaceRelationsScreen
 import de.sidebyside.next.place.PlacesScreen
+import de.sidebyside.next.notifications.NotificationsScreen
 import de.sidebyside.next.privatearea.GiftIdeasScreen
 import de.sidebyside.next.privatearea.PrivateAreaScreen
 import de.sidebyside.next.privatearea.PrivateCollectionDetailScreen
@@ -758,6 +759,23 @@ private fun DemoShell(
                     onMoveDown = { item -> collection?.let { viewModel.moveCollectionItemDown(it, item) } },
                 )
             }
+
+            composable(NOTIFICATIONS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) {
+                    viewModel.loadNotifications()
+                    viewModel.loadUnreadNotificationCount()
+                }
+
+                NotificationsScreen(
+                    notifications = state.notifications,
+                    unreadCount = state.unreadNotificationCount,
+                    busy = state.notificationsBusy,
+                    problem = state.notificationsProblem,
+                    onBack = { controller.popBackStack() },
+                    onMarkRead = viewModel::markNotificationRead,
+                    onMarkAllRead = viewModel::markAllNotificationsRead,
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -800,6 +818,7 @@ private fun DemoShell(
                     if (state.activeSpaceId != null) viewModel.refreshProfile()
                 }
                 LaunchedEffect(state.availableSpaces) { viewModel.loadSpaceNames() }
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadUnreadNotificationCount() }
                 MoreScreen(
                     onSignOut = onSignOut,
                     onOpenHeartMoments = { navController.navigate(HEART_MOMENTS_ROUTE) },
@@ -807,6 +826,8 @@ private fun DemoShell(
                     onOpenRelatedPersons = { navController.navigate(RELATED_PERSONS_ROUTE) },
                     onOpenPreferences = { navController.navigate(PREFERENCES_ROUTE) },
                     onOpenPrivateArea = { navController.navigate(PRIVATE_AREA_ROUTE) },
+                    onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
+                    unreadNotificationCount = state.unreadNotificationCount,
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
                     spacePartnerNames = state.spacePartnerNames,
@@ -866,6 +887,9 @@ private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
 private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"
 private const val COLLECTION_ID_ARGUMENT = "collectionId"
 private const val PRIVATE_COLLECTION_DETAIL_ROUTE = "more/private/collections/{$COLLECTION_ID_ARGUMENT}"
+
+/** Matches the Web path from `web/src/client/routes.ts` (`MORE_NOTIFICATIONS_ROUTE`). */
+private const val NOTIFICATIONS_ROUTE = "more/notifications"
 
 /**
  * Whether [route] is inside the owner-only Private Area subtree — the hub

@@ -68,6 +68,7 @@ import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.NotificationItem
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.InvitationView
@@ -243,6 +244,10 @@ data class ReferenceUiState(
     val privateCollections: List<PrivateCollectionDetail> = emptyList(),
     val privateCollectionsBusy: Boolean = false,
     val privateCollectionsProblem: UiProblem? = null,
+    val notifications: List<NotificationItem> = emptyList(),
+    val unreadNotificationCount: Int = 0,
+    val notificationsBusy: Boolean = false,
+    val notificationsProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -378,6 +383,7 @@ class ReferenceViewModel(
         clearPrivateNotes()
         clearGiftIdeas()
         clearPrivateCollections()
+        clearNotifications()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -468,6 +474,7 @@ class ReferenceViewModel(
         clearPrivateNotes()
         clearGiftIdeas()
         clearPrivateCollections()
+        clearNotifications()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -526,6 +533,7 @@ class ReferenceViewModel(
         clearPrivateNotes()
         clearGiftIdeas()
         clearPrivateCollections()
+        clearNotifications()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -590,6 +598,7 @@ class ReferenceViewModel(
         clearPrivateNotes()
         clearGiftIdeas()
         clearPrivateCollections()
+        clearNotifications()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -3510,6 +3519,102 @@ class ReferenceViewModel(
     fun clearPrivateCollections() {
         mutate {
             it.copy(privateCollections = emptyList(), privateCollectionsBusy = false, privateCollectionsProblem = null)
+        }
+    }
+
+    fun loadNotifications() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(notificationsBusy = true, notificationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listNotifications(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(notifications = page.items, notificationsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(notificationsBusy = false, notificationsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun loadUnreadNotificationCount() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getNotificationUnreadCount(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { count ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(unreadNotificationCount = count.unreadCount) }
+                }
+        }
+    }
+
+    fun markNotificationRead(notification: NotificationItem) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(notificationsBusy = true, notificationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.markNotificationRead(spaceId, currentSession.tokens.accessToken, notification.id)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(notificationsBusy = false) }
+                    loadNotifications()
+                    loadUnreadNotificationCount()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(notificationsBusy = false, notificationsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun markAllNotificationsRead() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(notificationsBusy = true, notificationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.markAllNotificationsRead(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(notificationsBusy = false) }
+                    loadNotifications()
+                    loadUnreadNotificationCount()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(notificationsBusy = false, notificationsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearNotifications() {
+        mutate {
+            it.copy(
+                notifications = emptyList(),
+                unreadNotificationCount = 0,
+                notificationsBusy = false,
+                notificationsProblem = null,
+            )
         }
     }
 

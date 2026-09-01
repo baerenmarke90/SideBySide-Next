@@ -72,8 +72,16 @@ fun MoreScreen(
      * [onOpenHeartMoments].
      */
     onOpenPrivateArea: () -> Unit,
+    /**
+     * Opens the account's notifications.
+     *
+     * Deliberately without a default, for the same reason as
+     * [onOpenHeartMoments].
+     */
+    onOpenNotifications: () -> Unit,
     modifier: Modifier = Modifier,
     signOutEnabled: Boolean = true,
+    unreadNotificationCount: Int = 0,
     spaces: List<AccountMembershipView> = emptyList(),
     spacePartnerNames: Map<UUID, String> = emptyMap(),
     activeSpaceId: UUID? = null,
@@ -107,6 +115,43 @@ fun MoreScreen(
                 color = SideBySideTheme.colors.textSecondary,
                 modifier = Modifier.widthIn(max = ReadingMeasure),
             )
+        }
+
+        run {
+            val open = onOpenNotifications
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = if (unreadNotificationCount > 0) {
+                            "${stringResource(R.string.notifications_title)} · " +
+                                stringResource(R.string.notifications_unread_count, unreadNotificationCount)
+                        } else {
+                            stringResource(R.string.notifications_title)
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.notifications_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.notifications_open))
+                    }
+                }
+            }
         }
 
         run {
