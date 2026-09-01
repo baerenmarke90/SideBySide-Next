@@ -92,12 +92,41 @@ The overview does not expose:
 
 ## Registration and maintenance controls
 
-Runtime registration policy and maintenance mode are owned by Issue #334. Their
-persistent state, public status semantics, privileged mutations, audit events,
-and recovery/lockout behavior must be implemented there and then surfaced by
-the ServerAdmin dashboard. The dashboard must not introduce temporary
-client-only switches or environment-only substitutes for those runtime
-settings.
+Registration policy and maintenance mode are persisted as application state,
+not deployment-environment feature flags. `registration_enabled` records the
+operator's registration policy; the effective registration state additionally
+requires maintenance mode to be off. This keeps the stored operator choice
+intact when maintenance is entered and left.
+
+Clients can read the minimal unauthenticated `GET /api/v1/instance/status`
+projection. It exposes only maintenance state, effective registration
+availability, and the non-sensitive reason `administrator` or `maintenance`
+when registration is unavailable. Web and Android treat connectivity failure
+as a separate state and fail closed for advertising new-account creation.
+
+An authenticated ServerAdmin can use:
+
+- `GET /api/v1/server-admin/settings`;
+- `PUT /api/v1/server-admin/settings/registration`;
+- `PUT /api/v1/server-admin/settings/maintenance`;
+- `GET /api/v1/server-admin/activity`.
+
+Each mutation is authorized server-side and records a narrow audit event with
+the actor, setting name, previous/new boolean value, and timestamp. The audit
+record contains no product content, credentials, job payloads, or other private
+data.
+
+Maintenance mode rejects ordinary product API traffic, while health,
+authentication/recovery, public instance status, and ServerAdmin endpoints stay
+reachable. Background workers continue to run. This boundary deliberately
+lets an operator sign in and leave maintenance mode without requiring shell or
+database access.
+
+Disabling registration blocks all supported new invited-account onboarding
+paths, including local-password and OIDC onboarding. Existing accounts can
+still authenticate and accept invitations. Initial bootstrap remains an
+explicit lockout-recovery exception so a fresh Self-Hosted instance cannot be
+made permanently inaccessible before its first operator account exists.
 
 ## Business model
 

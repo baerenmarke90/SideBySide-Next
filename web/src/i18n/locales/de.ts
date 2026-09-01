@@ -107,7 +107,23 @@ const de = {
     invitationTitle: 'Ihr möchtet SidebySide gemeinsam nutzen',
     invitationBody:
       'Melde dich mit deinem bestehenden Konto an oder erstelle über diese Einladung ein neues Konto.',
+    invitationExistingAccountBody:
+      'Melde dich mit deinem bestehenden Konto an, um diese Einladung anzunehmen.',
     createAccount: 'Neues Konto erstellen',
+    registrationCheckingTitle: 'Registrierung wird geprüft',
+    registrationCheckingBody:
+      'Die Anmeldung mit einem bestehenden Konto bleibt verfügbar. Ob ein neues Konto erstellt werden kann, wird gerade geprüft.',
+    registrationDisabledTitle: 'Neue Konten sind deaktiviert',
+    registrationDisabledBody:
+      'Der ServerAdmin hat neue Registrierungen deaktiviert. Bestehende Konten können sich weiterhin anmelden.',
+    maintenanceTitle: 'Wartungsmodus ist aktiv',
+    maintenanceBody:
+      'Während der Wartung werden keine neuen Konten erstellt. Bestehende Konten und der ServerAdmin-Zugang bleiben erreichbar.',
+    registrationStatusUnavailableTitle: 'Registrierungsstatus nicht erreichbar',
+    registrationStatusUnavailableBody:
+      'Der Serverstatus konnte nicht geprüft werden. Deshalb wird keine neue Registrierung angeboten; die Anmeldung mit einem bestehenden Konto kann weiterhin versucht werden.',
+    registrationUnavailable:
+      'Ein neues Konto kann derzeit nicht erstellt werden. Bitte nutze ein bestehendes Konto oder versuche es später erneut.',
     registerTitle: 'Dein Konto erstellen',
     registerBody:
       'Dein neues Konto wird direkt mit dem eingeladenen gemeinsamen Bereich verbunden.',

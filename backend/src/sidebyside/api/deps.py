@@ -15,6 +15,7 @@ from uuid import UUID
 from fastapi import Depends, Path, Request
 from sqlalchemy.orm import Session
 
+from sidebyside.administration import service as administration
 from sidebyside.auth.sessions import resolve
 from sidebyside.authorization import AuthorizationContext
 from sidebyside.authorization.server_admin import require_server_admin
@@ -70,6 +71,11 @@ def current_server_admin(session: DbSession, account: CurrentAccount) -> Account
 
 
 CurrentServerAdmin = Annotated[Account, Depends(current_server_admin)]
+
+
+def require_normal_operation(session: DbSession) -> None:
+    """Block ordinary product routes while maintenance mode is active."""
+    administration.ensure_normal_operation(session)
 
 
 @dataclass(frozen=True)

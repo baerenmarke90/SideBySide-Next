@@ -10,6 +10,7 @@ export * from './CommentsApi';
 export * from './DashboardApi';
 export * from './HealthApi';
 export * from './HeartMomentsApi';
+export * from './InstanceApi';
 export * from './InvitationsApi';
 export * from './MemoriesApi';
 export * from './MilestonesApi';
