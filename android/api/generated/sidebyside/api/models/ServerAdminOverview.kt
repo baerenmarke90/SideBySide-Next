@@ -34,7 +34,9 @@ import kotlinx.serialization.Contextual
  *
  * @param accountCount 
  * @param accountsLast24h 
+ * @param accountsLast30d 
  * @param accountsLast7d 
+ * @param activeSessionCount 
  * @param activeSpaceCount 
  * @param applicationStatus 
  * @param buildRevision 
@@ -42,20 +44,31 @@ import kotlinx.serialization.Contextual
  * @param databaseStatus 
  * @param demoMode 
  * @param deployment 
+ * @param enabledAccountCount 
  * @param environment 
  * @param jobsFailed 
  * @param jobsPending 
  * @param jobsRunning 
  * @param lastSuccessfulJobAt 
+ * @param localPasswordAccountCount 
  * @param mailTransport 
  * @param mediaObjectCount 
  * @param mediaStatus 
  * @param mediaStore 
  * @param mediaStoredBytes 
+ * @param oidcAccountCount 
  * @param oidcConnectionCount 
+ * @param oldestPendingJobAt 
+ * @param passkeyAccountCount 
  * @param processStartedAt 
  * @param publicBaseUrl 
  * @param recentFailedJobs 
+ * @param serverAdminAllowlistCount 
+ * @param serverAdminVerifiedMatchCount 
+ * @param suspendedAccountCount 
+ * @param unverifiedPrimaryEmailCount 
+ * @param verifiedPrimaryEmailCount 
+ * @param warningCodes 
  * @param workerStatus 
  */
 @Serializable
@@ -68,8 +81,14 @@ data class ServerAdminOverview (
     @SerialName(value = "accountsLast24h")
     val accountsLast24h: kotlin.Int,
 
+    @SerialName(value = "accountsLast30d")
+    val accountsLast30d: kotlin.Int,
+
     @SerialName(value = "accountsLast7d")
     val accountsLast7d: kotlin.Int,
+
+    @SerialName(value = "activeSessionCount")
+    val activeSessionCount: kotlin.Int,
 
     @SerialName(value = "activeSpaceCount")
     val activeSpaceCount: kotlin.Int,
@@ -92,6 +111,9 @@ data class ServerAdminOverview (
     @SerialName(value = "deployment")
     val deployment: kotlin.String,
 
+    @SerialName(value = "enabledAccountCount")
+    val enabledAccountCount: kotlin.Int,
+
     @SerialName(value = "environment")
     val environment: kotlin.String,
 
@@ -106,6 +128,9 @@ data class ServerAdminOverview (
 
     @Contextual @SerialName(value = "lastSuccessfulJobAt")
     val lastSuccessfulJobAt: java.time.OffsetDateTime?,
+
+    @SerialName(value = "localPasswordAccountCount")
+    val localPasswordAccountCount: kotlin.Int,
 
     @SerialName(value = "mailTransport")
     val mailTransport: kotlin.String,
@@ -122,8 +147,17 @@ data class ServerAdminOverview (
     @SerialName(value = "mediaStoredBytes")
     val mediaStoredBytes: kotlin.Int,
 
+    @SerialName(value = "oidcAccountCount")
+    val oidcAccountCount: kotlin.Int,
+
     @SerialName(value = "oidcConnectionCount")
     val oidcConnectionCount: kotlin.Int,
+
+    @Contextual @SerialName(value = "oldestPendingJobAt")
+    val oldestPendingJobAt: java.time.OffsetDateTime?,
+
+    @SerialName(value = "passkeyAccountCount")
+    val passkeyAccountCount: kotlin.Int,
 
     @Contextual @SerialName(value = "processStartedAt")
     val processStartedAt: java.time.OffsetDateTime,
@@ -133,6 +167,24 @@ data class ServerAdminOverview (
 
     @SerialName(value = "recentFailedJobs")
     val recentFailedJobs: kotlin.collections.List<ServerAdminFailedJob>,
+
+    @SerialName(value = "serverAdminAllowlistCount")
+    val serverAdminAllowlistCount: kotlin.Int,
+
+    @SerialName(value = "serverAdminVerifiedMatchCount")
+    val serverAdminVerifiedMatchCount: kotlin.Int,
+
+    @SerialName(value = "suspendedAccountCount")
+    val suspendedAccountCount: kotlin.Int,
+
+    @SerialName(value = "unverifiedPrimaryEmailCount")
+    val unverifiedPrimaryEmailCount: kotlin.Int,
+
+    @SerialName(value = "verifiedPrimaryEmailCount")
+    val verifiedPrimaryEmailCount: kotlin.Int,
+
+    @SerialName(value = "warningCodes")
+    val warningCodes: kotlin.collections.List<kotlin.String>,
 
     @SerialName(value = "workerStatus")
     val workerStatus: kotlin.String
