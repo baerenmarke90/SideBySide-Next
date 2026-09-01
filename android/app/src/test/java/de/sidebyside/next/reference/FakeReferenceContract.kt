@@ -5,6 +5,7 @@ import java.util.UUID
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
+import sidebyside.api.models.ActivityPage
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
@@ -647,6 +648,12 @@ abstract class FakeReferenceContract : ReferenceContract {
         spaceId: UUID,
         accessToken: String,
     ): NotificationsReadAllResult = notExercised("markAllNotificationsRead")
+
+    override suspend fun getActivity(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): ActivityPage = notExercised("getActivity")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

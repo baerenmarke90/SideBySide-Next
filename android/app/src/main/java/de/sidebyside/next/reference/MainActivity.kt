@@ -66,6 +66,7 @@ import de.sidebyside.next.privatearea.PrivateCollectionDetailScreen
 import de.sidebyside.next.privatearea.PrivateCollectionsScreen
 import de.sidebyside.next.privatearea.PrivateNotesScreen
 import de.sidebyside.next.plan.PlanScreen
+import de.sidebyside.next.activity.ActivityScreen
 import de.sidebyside.next.today.TodayScreen
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
@@ -776,6 +777,17 @@ private fun DemoShell(
                     onMarkAllRead = viewModel::markAllNotificationsRead,
                 )
             }
+
+            composable(ACTIVITY_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadActivity() }
+
+                ActivityScreen(
+                    entries = state.activity,
+                    busy = state.activityBusy,
+                    problem = state.activityProblem,
+                    onBack = { controller.popBackStack() },
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -787,6 +799,7 @@ private fun DemoShell(
                     problem = state.todayProblem,
                     gestureSent = state.thinkingOfYouSent,
                     onSendThinkingOfYou = viewModel::sendThinkingOfYou,
+                    onOpenActivity = { navController.navigate(ACTIVITY_ROUTE) },
                 )
             }
 
@@ -890,6 +903,9 @@ private const val PRIVATE_COLLECTION_DETAIL_ROUTE = "more/private/collections/{$
 
 /** Matches the Web path from `web/src/client/routes.ts` (`MORE_NOTIFICATIONS_ROUTE`). */
 private const val NOTIFICATIONS_ROUTE = "more/notifications"
+
+/** Matches the Web path from `web/src/client/routes.ts` (`ACTIVITY_ROUTE`). */
+private const val ACTIVITY_ROUTE = "today/activity"
 
 /**
  * Whether [route] is inside the owner-only Private Area subtree — the hub

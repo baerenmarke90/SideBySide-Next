@@ -56,6 +56,14 @@ fun TodayScreen(
     problem: UiProblem?,
     gestureSent: Boolean,
     onSendThinkingOfYou: () -> Unit,
+    /**
+     * Opens the couple's full Activity feed.
+     *
+     * Deliberately without a default: an optional navigation entry a caller
+     * forgets to pass disappears from the product without breaking the
+     * build, which is how one was lost once already in this codebase.
+     */
+    onOpenActivity: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (dashboard == null) {
@@ -79,6 +87,15 @@ fun TodayScreen(
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.semantics { heading() },
             )
+        }
+
+        item {
+            Button(
+                onClick = onOpenActivity,
+                modifier = Modifier.heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.today_open_activity))
+            }
         }
 
         // Absent when the couple has not set a start date or has turned the

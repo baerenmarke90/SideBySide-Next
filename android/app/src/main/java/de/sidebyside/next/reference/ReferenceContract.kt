@@ -5,6 +5,7 @@ import java.util.UUID
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
+import sidebyside.api.models.ActivityPage
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
@@ -735,6 +736,8 @@ interface ReferenceContract {
     ): NotificationItem
 
     suspend fun markAllNotificationsRead(spaceId: UUID, accessToken: String): NotificationsReadAllResult
+
+    suspend fun getActivity(spaceId: UUID, accessToken: String, cursor: String? = null): ActivityPage
 }
 
 private fun unsupportedProfileOperation(): Nothing =

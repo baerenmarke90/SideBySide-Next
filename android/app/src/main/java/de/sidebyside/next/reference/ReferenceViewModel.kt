@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import sidebyside.api.models.AccountMembershipView
+import sidebyside.api.models.ActivityItem
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
@@ -248,6 +249,9 @@ data class ReferenceUiState(
     val unreadNotificationCount: Int = 0,
     val notificationsBusy: Boolean = false,
     val notificationsProblem: UiProblem? = null,
+    val activity: List<ActivityItem> = emptyList(),
+    val activityBusy: Boolean = false,
+    val activityProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -384,6 +388,7 @@ class ReferenceViewModel(
         clearGiftIdeas()
         clearPrivateCollections()
         clearNotifications()
+        clearActivity()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -475,6 +480,7 @@ class ReferenceViewModel(
         clearGiftIdeas()
         clearPrivateCollections()
         clearNotifications()
+        clearActivity()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -534,6 +540,7 @@ class ReferenceViewModel(
         clearGiftIdeas()
         clearPrivateCollections()
         clearNotifications()
+        clearActivity()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -599,6 +606,7 @@ class ReferenceViewModel(
         clearGiftIdeas()
         clearPrivateCollections()
         clearNotifications()
+        clearActivity()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -3616,6 +3624,31 @@ class ReferenceViewModel(
                 notificationsProblem = null,
             )
         }
+    }
+
+    fun loadActivity() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(activityBusy = true, activityProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getActivity(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(activity = page.items, activityBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(activityBusy = false, activityProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearActivity() {
+        mutate { it.copy(activity = emptyList(), activityBusy = false, activityProblem = null) }
     }
 
     fun logout() {
