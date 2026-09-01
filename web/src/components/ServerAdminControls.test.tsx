@@ -45,7 +45,7 @@ describe('ServerAdmin controls', () => {
     );
 
     expect(html).toContain('server-admin-table');
-    expect(html).toContain('maintenance_mode');
+    expect(html.match(/<td>/g)).toHaveLength(3);
     expect(html).not.toContain(actorId);
   });
 });
