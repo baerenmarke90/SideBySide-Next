@@ -216,6 +216,10 @@ The final M4 migration order is `0028 -> 0029 -> 0030 -> 0031 -> 0032`. M4 remai
 - [ ] M7 — Integrations/Providers
 - [ ] M8 — Location/Context with explicit opt-in
 - [ ] M9 — Productization, Managed/Self-Hosted policy, Backup, Entitlements, Launch Hardening
+  - [x] **#190 — Self-Hosted recovery evidence:** coordinated PostgreSQL and durable
+    LocalMediaStore backup/restore, fresh-target integrity/privacy acceptance,
+    reproducible `0032`-to-head upgrade validation, S3 responsibility boundary,
+    operator runbook, and required CI gate delivered.
 - [ ] MX — real E2EE as a separate later Security milestone
 
 ## Active milestone

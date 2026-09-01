@@ -13,7 +13,13 @@ import argparse
 from collections.abc import Iterable
 from pathlib import Path
 
-SCOPES = ("backend", "self_hosted", "supply_chain", "deployment_guard")
+SCOPES = (
+    "backend",
+    "self_hosted",
+    "supply_chain",
+    "deployment_guard",
+    "recovery",
+)
 
 SAFE_DOC_PREFIXES = ("docs/", "specification/")
 SAFE_DOC_EXACT = (
@@ -106,6 +112,25 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             ),
         ):
             result["deployment_guard"] = True
+            known = True
+
+        if _matches(
+            path,
+            prefixes=("backend/",),
+            exact=(
+                ".github/workflows/self-hosted-recovery.yml",
+                ".env.example",
+                *SELF_HOSTED_COMPOSE_FILES,
+                "scripts/self_hosted_recovery.py",
+                "scripts/self_hosted_recovery_acceptance.py",
+                "scripts/test_self_hosted_recovery.py",
+                "docs/SELF-HOSTED-RECOVERY.md",
+                "docs/SELF-HOSTING.md",
+                "docs/DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md",
+                "docs/ARCANE.md",
+            ),
+        ):
+            result["recovery"] = True
             known = True
 
         if _is_explicitly_safe_documentation(path):
