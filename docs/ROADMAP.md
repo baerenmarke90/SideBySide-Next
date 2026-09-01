@@ -1,19 +1,41 @@
 # SideBySide Next Roadmap
 
 **Status:** Human-readable orientation and prioritization view  
-**Version:** 2.2
-**As of:** August 30, 2026  
+**Version:** 2.3  
+**As of:** September 1, 2026  
 **Time model:** phases and Release Gates, no committed calendar dates
 
-This roadmap translates the binding product specification into an understandable sequence. It shows goals, dependencies, and release points. The actual implementation state is tracked in [Implementation Status](./IMPLEMENTATION-STATUS.md); rules for living status sources are defined in [Status Sources and Drift Rules](./STATUS-SOURCES.md); the refined M2 boundaries are documented in [M2 Project Control](./m2/PROJECT-CONTROL.md), M3 readiness/delivery in the [M3 Technical Readiness Package](./m3/README.md), and completed M4 runtime evidence in the [M4 Evidence Map](./m4/M4-EVIDENCE.md).
+This roadmap translates the binding product requirements into an understandable sequence. It shows goals, dependencies, and release points. Actual implementation state is tracked in [Implementation Status](./IMPLEMENTATION-STATUS.md); rules for living status sources are defined in [Status Sources and Drift Rules](./STATUS-SOURCES.md).
+
+The accepted sequencing decision is [ADR 0006 — Release the Core before optional product expansion](./decisions/0006-release-before-optional-expansion.md). It changes only the **forward M6-M9 ordering**. M0-M4 remain historical milestones and M5 remains Client Completion & Parity.
 
 ## Roadmap at a glance
 
-![Roadmap from M0 Foundation through M9 Release and the strategic E2EE track](./assets/roadmap/roadmap-overview.svg)
+![Roadmap from M0 Foundation through M6 launch readiness and post-launch M7-M9 expansion](./assets/roadmap/roadmap-overview.svg)
 
-**Current:** M0 through M4 are complete for their intended scope. **G1, G2, and G3 have passed.** **M5 — Client Completion & Parity** is the active roadmap milestone; G4 has not yet been evaluated or passed. Completed M4 runtime and integrated evidence are indexed in the [M4 Evidence Map](./m4/M4-EVIDENCE.md). The binding current gate decision remains the [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md).
+**Current:** M0 through M4 are complete for their intended scope. **G1, G2, and G3 have passed.** **M5 — Client Completion & Parity** is active; G4 has not yet been evaluated or passed.
 
-The earlier Pre-Exposure hardening items #59 and #60 and Repository Hardening #25 are complete. The active `main` ruleset enforces Pull Requests, Merge Commits, and the defined required checks.
+The intended forward path is now deliberately:
+
+```text
+Core Domain complete
+        ↓
+M5 Client Completion & Parity
+        ↓
+G4 Core Release Candidate
+        ↓
+M6 Operate & Launch
+        ↓
+G5 Launch-ready
+        ↓
+M7 Relationship Depth
+        ↓
+M8 Discover & Integrations
+        ↓
+M9 Context & Presence
+```
+
+Optional relationship, integration, and location features are therefore **not prerequisites for the first safe release**.
 
 ## Document roles
 
@@ -22,17 +44,23 @@ The earlier Pre-Exposure hardening items #59 and #60 and Repository Hardening #2
 | this Roadmap | Where are we going, in which order, and why? |
 | [Implementation Status](./IMPLEMENTATION-STATUS.md) | What is actually implemented on `main`, and what remains open? |
 | [Status Sources and Drift Rules](./STATUS-SOURCES.md) | Which status files are living documents and which are historical snapshots? |
+| [ADR 0006](./decisions/0006-release-before-optional-expansion.md) | Why did M6-M9 change order and what exactly was superseded? |
 | [M2 Project Control](./m2/PROJECT-CONTROL.md) | Which M2/M5 boundaries and G2 criteria applied? |
 | [M3 Technical Readiness Package](./m3/README.md) | Which M3 decisions, delivery rules, and runtime results apply? |
 | [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md) | Which executable HTTP/PostgreSQL/race tests constitute the G3 evidence set? |
-| [M4 Evidence Map](./m4/M4-EVIDENCE.md) | Which M4-A/B/C runtime slices, migrations, privacy/time/idempotency tests, and generated contracts complete M4? |
-| [Final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) | current gate decision |
-| [Final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) | historical G2 gate decision |
-| older dated reviews | historical review snapshots that are never rewritten |
+| [M4 Evidence Map](./m4/M4-EVIDENCE.md) | Which M4 runtime slices and evidence complete M4? |
+| dated reviews under `docs/reviews/` | Historical gate/review snapshots; never rewritten retroactively |
 | GitHub Issues/PRs | Which concrete work packages are being handled? |
-| [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | What is binding from a product and technical perspective? |
+| [Product Specification](../specification/PRODUCT-SPEC.md) | Current compact binding product requirements and milestone mapping |
+| [Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md) | Binding Clean-Room, security, Privacy, Domain, architecture and technical requirements |
 
-## Current snapshot
+### Specification precedence after ADR 0006
+
+The Master Specification remains authoritative for Clean-Room, Security, Privacy, Domain modeling, architecture, tests, operations principles and technical requirements.
+
+For **milestone numbering/order only**, Product Spec 1.1 and ADR 0006 supersede the old M6-M9 sequence in section 68 of the current Master Specification until that document is next consolidated. No other Master Specification rule is weakened.
+
+## Current milestone snapshot
 
 ### M0 — Foundation: complete
 
@@ -40,106 +68,140 @@ API/DB conventions, migrations, Outbox, jobs, MediaStore foundation, ProtectedPa
 
 ### M1 — Identity & Relationship: complete, G1 passed
 
-Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, email verification, and Recovery are implemented. PR #64 closed #61 with explicit `preserve`/`cascade` semantics and no destructive default; the following Gate Review explicitly declared G1 passed. The later hardening items #59 and #60 and Repository Hardening #25 are also complete.
+Account/AuthIdentity, Sessions, Space/Membership/Tenant Guard, Invitations, Profile, RelatedPerson/ImportantDate, OIDC, Passkeys, Magic Link, email verification, and Recovery are delivered. Repository and Pre-Exposure hardening already completed in this historical scope remain valid.
 
 ### M2 — Memories / Story Alpha: complete, G2 passed
 
-The blocking Domain, Privacy, Media, and API decisions are closed. Delivered:
+Memory, image Attachments, HeartMoment Privacy, Milestones, Comments, Story, MediaStore integration and thin real Web/Android reference flows are delivered. The [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) remains the immutable G2 decision.
 
-1. #71 — Memory CRUD without media: **delivered**.
-2. #80 — HeartMoment with owner-only Privacy: **delivered**.
-3. #79 — Attachment lifecycle for images: **delivered**. Video is not part of M2/G2 and is tracked for future development in #88.
-4. #90 — Bind Attachments to Memory and HeartMoment: **delivered**.
-5. #94 — Milestone Domain and API: **delivered**.
-6. #97 — Comments, Outbox, and Notification Hook: **delivered**.
-7. #87 — S3-compatible MediaStore adapter: **delivered**.
-8. #113 — Story Read Model and `/timeline`: **delivered**.
-9. S8 — thin Web/Android reference flows: **delivered**.
-10. Real Web/Android Memory/Media/Story E2E against API, Worker, PostgreSQL, and LocalMediaStore: **demonstrated**.
-
-The [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) explicitly evaluates the state as **G2: PASSED**. Manual Accessibility acceptance was not counted as passed; it remains part of final client/release QA in M5/G4.
-
-Future backlog: #88 retains video uploads and poster frames for later reevaluation. Prototype #109 was deliberately closed without merge because of a production image of roughly 755 MiB and the additional ffmpeg operational, Supply Chain, and Security burden; `main` remains fail-closed for video.
+Video remains separate future work and is not implied by M2 completion.
 
 ### M3 — Planning & Private Area: complete, G3 passed
 
-The [M3 Technical Readiness Package](./m3/README.md) records the completed M3 decisions and delivery. M3-D01 through M3-D32 are `DECIDED`, runtime slices S1 through S9 are delivered, and M3-S10 completed the formal gate review.
-
-Delivered are **M3-S1 Wish Foundation**, **M3-S2 Plan + Wish->Plan**, **M3-S3 Place Foundation**, **M3-S4 typed Content Relations**, **M3-S5 Chapter**, **M3-S6 Shared Collections**, **M3-S7 PrivateNote + GiftIdea**, **M3-S8 PrivateCollection**, **M3-S9 Integrated M3 backend/API evidence**, and **M3-S10 G3 Review**. The executable S9 evidence set is indexed in [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md); the immutable [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) concludes **G3: PASSED**.
+Wishes, Plans, Places, typed relations, Chapters, shared Collections and the owner-only Private Area are delivered with their Privacy/concurrency/evidence package. The [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) remains the immutable G3 decision.
 
 ### M4 — Engage: complete
 
-M4-A Search/Dashboard, M4-B Activity/Notifications/Thinking-of-you/PushDelivery, and M4-C Reminders/Rules/occurrence planning are delivered. The final migration chain is `0028 -> 0029 -> 0030 -> 0031 -> 0032` with one Alembic head. The integrated Privacy, Tenant, time/DST, retry/idempotency, OpenAPI and generated-client evidence is indexed in the [M4 Evidence Map](./m4/M4-EVIDENCE.md). M4 completion does not imply G4: full Web/Android productization and parity remain M5.
+Search/Dashboard, Activity/Notifications, Thinking-of-you/PushDelivery, Reminders, Rules and occurrence planning are delivered. Full Web/Android productization remains M5.
 
-## Milestones
+### M5 — Client Completion & Parity: active
 
-| Phase | Human goal | Domain scope | Outcome |
+M5 turns the already delivered M0-M4 Core into a complete product on both clients. It owns:
+
+- complete Web productization;
+- complete Android productization;
+- stable route/Deep Link behavior;
+- versioned Export/Import;
+- bounded Read Cache/offline-read behavior;
+- systematic domain parity;
+- Accessibility;
+- Performance;
+- final Core client Privacy/Security evidence.
+
+**Scope protection:** M5 does not absorb new Relationship Depth domains merely because it is active. New Vibe/Energy, Love Note, achievement, Question or Recap runtime belongs to M7 after G5. M5 may provide reusable navigation/settings/client primitives but does not invent those new Domain contracts.
+
+## Forward milestones
+
+| Phase | Human goal | Scope | Outcome |
 |---|---|---|---|
-| **M0 · Foundation** | reliable technical foundation | API, DB, Outbox, Jobs, MediaStore, CI, Provenance | safely extensible Core |
-| **M1 · Connect** | two people form a private Space | Identity, Auth, Membership, Invitation, Profile | secure Account and relationship foundation |
-| **M2 · Memories / Story Alpha** | shared history works as the first vertical Core | Attachments, Memories, HeartMoments, Milestones, Comments, Story plus minimal Web/Android reference flows | Domain/API complete and critical E2E flow technically demonstrated |
-| **M3 · Planning & Private Area** | ideas become shared plans | Wishes, Plans, Places, Chapters, Collections, Private Area | planning and private storage with its own Privacy boundary |
-| **M4 · Engage** | helpful, controlled activation | Search/Dashboard, Activity/Notifications, Reminders/Rules | Read Models and activation without unnecessary tracking |
-| **M5 · Client Completion & Parity** | Web and Android are fully usable | complete client integration, Export/Import, Read Cache, Deep Links, Accessibility, Performance, parity | production-ready Core on both clients |
-| **M6 · Deepen** | optional shared reflection | Questions, Check-in, monthly/yearly recaps | Rich Features after a stable Core |
-| **M7 · Discover** | external inspiration remains optional | Shopping, Recipes, Events, Entertainment, Provider adapters | integrations without Core dependency |
-| **M8 · Context** | optional location context | Location, Maps, Geofencing, Presence | explicitly enabled context features |
-| **M9 · Release** | safely operable product | Self-Hosted, Cloud, Backup, Entitlements, Hardening, Release | launch-ready operation |
+| **M5 · Client Completion & Parity** | Web and Android are fully usable | complete client integration, Export/Import, Read Cache, Deep Links, Accessibility, Performance, parity | **G4 Core Release Candidate** |
+| **M6 · Operate & Launch** | the Core can be safely operated and released | Self-Hosted, Cloud/Managed, Backup/Restore/Upgrade, administration, observability, Entitlements/Billing adapters, hardening, release engineering and final launch QA | **G5 Launch-ready** |
+| **M7 · Relationship Depth** | deepen everyday connection without making it mandatory | module configuration, Daily Check-in/Vibe/Energy, partner notes/support gestures, Questions, shared achievements, monthly/yearly recaps | optional post-launch relationship depth |
+| **M8 · Discover & Integrations** | bring optional external inspiration into the product | Shopping, Recipes, Events/Entertainment, external media and provider adapters | integrations without Core dependency |
+| **M9 · Context & Presence** | add explicit, privacy-sensitive context only when enabled | Maps/location history, opt-in location context, Geofencing, Presence, contextual suggestions | separately consented context features |
 | **MX · E2EE** | real cryptographic protection | key model, migration, client crypto, Recovery | separately evaluated E2EE version |
 
-## Refined milestone boundaries
+## M6 — Operate & Launch
 
-### M2 vs. M5
+M6 is now the launch-readiness milestone and follows G4 directly.
 
-M2 is **not backend-only**. M2 contains thin Web/Android reference flows to demonstrate the critical Memory/Media/Story flow end to end. M2 does not promise full client parity.
+Its readiness/delivery plan should separate at least these risk classes rather than building one monolithic release PR:
 
-M5 is complete client productization: complete screens and navigation, Deep Links, Read Cache, Export/Import, systematic Web/Android parity, Accessibility, Performance, and Release Hardening.
+1. **Release engineering** — final application identity/versioning/signing, reproducible release artifacts, release provenance/SBOM where applicable.
+2. **Operations** — Backup/Restore/Upgrade, retention/cleanup, recovery evidence, failure handling.
+3. **Deployment** — Self-Hosted, persistent development/staging, promotion/rollback, Cloud/Managed deployment.
+4. **Administration** — runtime registration/maintenance controls and ServerAdmin surfaces.
+5. **Commercial capability runtime** — centralized Entitlement/capability model plus provider-neutral billing/licensing adapters consistent with #262.
+6. **Release QA** — Security, Privacy, Accessibility, performance, incident and recovery evidence.
 
-### Internal M4 slices
+Existing issues such as #190, #192, #193, #194, #304, #334 and #335 should be classified against these M6 concerns when the detailed M6 package is assembled. Reclassification does not silently expand their issue scope.
 
-M4 is internally split into three separate risk classes:
+## M7 — Relationship Depth
 
-- **M4-A:** Search + Dashboard Read Models,
-- **M4-B:** Activity + Notifications,
-- **M4-C:** Reminders + Rules.
+M7 owns optional everyday relationship features. It starts with readiness rather than immediately adding independent domains.
 
-This split is a delivery boundary, not a domain scope expansion.
+### M7-S0 — Module and Daily Check-in foundation
 
-### Privacy terminology
+#432 is the conceptual owner for the Space-level optional-module boundary.
 
-- `SHARED` / `PRIVATE` are public domain values.
-- `SPACE_SHARED` / `OWNER_ONLY` are internal Authorization/Privacy classes.
-- Clients do not redundantly write `privacyClass` as a second source of truth.
-
-## M2 delivery sequence
+Effective availability must preserve separate concerns:
 
 ```text
-S0 Readiness
-   │
-   ├── Memory CRUD without media
-   │        │
-   │        ├──────────────┐
-   │        │              │
-   │   Attachment      HeartMoment
-   │        │              │
-   │        └── Memory+Media
-   │
-   ├── Milestone
-   ├── Comments + Outbox
-   └── Story Read Model
-              │
-              ▼
-      Thin Web/Android E2E
-              │
-              ▼
-             G2 ✓
+server/deployment capability
+        ∩
+commercial entitlement capability
+        ∩
+Space module configuration
+        ∩
+personal preference/consent where required
+        =
+effective product capability
 ```
 
-This delivery sequence is complete. It first validated the M2 migration style, ProtectedPayload, Tenant Guard, author rule, and Concurrency on a smaller security surface, then continued through the real client E2E evidence.
+Consequences:
 
-## Search boundary
+- a Space setting cannot unlock a Premium capability without Entitlement;
+- an Entitlement cannot force a deliberately disabled optional module to appear;
+- Security, Privacy, Accessibility and essential data rights are never optional Space modules;
+- disabling a module does not delete its data;
+- personal/emotional sharing remains voluntary even when the module is available.
 
-Global full-text Search was not part of G2 or G3. The minimum Story contract includes `type`, `year`, `order`, `cursor`, and `limit`; global full-text Search belongs to M4-A.
+V1 may give the Space creator module-management authority. Runtime callers should consume an authoritative capability such as `canManageSpaceConfiguration`, not permanently spread direct `accountId == space.createdBy` checks across the codebase.
+
+### One Daily Check-in foundation
+
+#429 and #431 remain distinct product experiences but must share a coherent Daily Check-in/Privacy foundation. M7-S0 evaluates one small `DailyCheckIn` boundary with separately optional dimensions such as `vibe` and `energyLevel`; exact persistence, local-day/timezone, retention and historical-use semantics are decided before runtime.
+
+### M7 feature families
+
+After S0, M7 may deliver in contract-safe slices:
+
+- Daily Vibe Check;
+- Daily Energy/Capacity Check-in;
+- Love Notes / partner-directed small notes;
+- lightweight Support Gestures reusing Thinking-of-you where applicable;
+- `Unsere Fragen` and editorial question pool;
+- shared-achievement/Celebration behavior built on authoritative existing completion events where possible;
+- monthly and yearly recaps.
+
+M7 must not become a gamification, chat, health-scoring or behavioral-profiling platform.
+
+## M8 — Discover & Integrations
+
+M8 contains optional provider-backed product expansion that does not require continuous location context, including:
+
+- Shopping Domain;
+- Recipes;
+- Events/Discovery;
+- Entertainment;
+- external media such as Immich-style integration;
+- provider adapters needed for these capabilities.
+
+Integrations remain replaceable behind provider boundaries and must not become Core availability dependencies.
+
+## M9 — Context & Presence
+
+M9 groups the privacy-sensitive location/context family so it receives one coherent opt-in, retention and disclosure model:
+
+- Maps and map presentation;
+- location history semantics, including Dawarich-style adapters where chosen;
+- active location context;
+- Geofencing;
+- optional partner distance;
+- Ephemeral Presence;
+- contextual suggestions driven by explicitly enabled context.
+
+Normal M8 provider integration must not silently activate M9-style location tracking.
 
 ## Dependencies
 
@@ -151,14 +213,18 @@ flowchart LR
   M2 --> M4[M4 Engagement]
   M3 --> M5[M5 Client Completion & Parity]
   M4 --> M5
-  M5 --> M6[M6 Rich Features]
-  M5 --> M7[M7 Integrations]
-  M7 --> M8[M8 Context]
-  M6 --> M9[M9 Productization]
-  M8 --> M9
+  M5 --> G4[G4 Core Release Candidate]
+  G4 --> M6[M6 Operate & Launch]
+  M6 --> G5[G5 Launch-ready]
+  G5 --> M7[M7 Relationship Depth]
+  G5 --> M8[M8 Discover & Integrations]
+  M8 --> M9[M9 Context & Presence]
+  M7 --> M9
   M0 -. ProtectedPayload boundary .-> MX[MX E2EE]
   M5 -. mature clients .-> MX
 ```
+
+M7 and M8 may evolve independently after G5 where their shared foundations permit it; M9 consumes the relevant integration/provider capabilities only after its own Privacy/readiness decisions.
 
 ## Release Gates
 
@@ -168,94 +234,87 @@ flowchart LR
 
 ### G1 — Secure couple Space
 
-- Auth and Recovery paths,
-- race-safe Invitations,
-- Tenant Guard and owner-only Authorization,
-- Profile/SpaceProfile with version conflicts,
-- cross-tenant, session, and Privacy tests.
-
-**Current state: PASSED.** The dated [G1 Gate Review after completion of #61](./reviews/2026-08-25-g1-gate-review-after-61.md) remains the historical G1 evidence.
+**Passed.** Historical evidence remains in the dated G1 review.
 
 ### G2 — Story Alpha
 
-**Current state: PASSED.** The [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) remains the immutable G2 decision.
-
-Demonstrated in particular:
-
-- complete M2 Domain/API for Memory, image Attachments, HeartMoment, Milestone, Comments, and Story,
-- server-side exclusion of `OWNER_ONLY` before Story projection/pagination,
-- Media/upload abuse, parent Authorization, tenant, race, and data-integrity paths,
-- OpenAPI, migrations, and PostgreSQL integration,
-- real critical Memory/Media/Story flow in Web and Android against the same SideBySide stack,
-- current CI, Secret Scan, Supply Chain, and Deployment gates at the G2 checkpoint.
-
-Manual Accessibility acceptance is deliberately **no longer a G2 blocker** and is performed in M5/G4 as final client/release QA. Full client parity likewise remains M5/G4.
+**Passed.** The [final G2 Gate Review](./reviews/2026-08-26-g2-final-gate-review.md) remains the immutable decision.
 
 ### G3 — Shared everyday use
 
-- Wishes/Plans/Places/Chapters/Collections consistent,
-- Private Area fully isolated,
-- Delete/409 effects understandable,
-- M4 Read Model boundaries prepared.
-
-**Current state: PASSED.** M3-S9 assembled the executable real HTTP/PostgreSQL evidence, and the [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) evaluated the merged S9 tree, exact successful workflow runs, all five mandatory M3-D24 flows, negative/race/redaction/contract evidence, and current open findings.
-
-Complete Web/Android productization, systematic parity, Accessibility, Read Cache, Export/Import, Deep Links, and client performance remain M5/G4 and were not treated as G3 requirements.
+**Passed.** The [final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md) remains the immutable decision.
 
 ### G4 — Core Release Candidate
 
-- Web and Android domain-equivalent,
-- Offline Read Cache without pretending Write Sync exists,
-- Export/Import versioned and tested,
-- Design System and Accessibility verified,
-- Performance, Privacy, and Security gates passed.
+G4 is evaluated after M5. At minimum:
+
+- Web and Android are domain-equivalent for the Core;
+- Read Cache/offline-read works without pretending Offline Write exists;
+- Export/Import is versioned and tested;
+- Deep Links and route identity are stable;
+- Design System and Accessibility are verified;
+- client performance is acceptable;
+- Privacy and Security gates pass;
+- no M7 domain is required merely to declare the Core client-complete.
 
 ### G5 — Launch-ready
 
-- Cloud and Self-Hosted documented, updatable, and backup-capable,
-- server-side Auth/Provider policy enforced per operating model,
-- Pre-Exposure hardening #59 and #60 complete,
-- Retention, complete deletion, and support processes resolved,
-- Entitlements/Billing without Domain coupling,
-- Monitoring without sensitive content,
-- Release, Incident, and Recovery process tested.
+G5 is evaluated after **M6**, before M7-M9 expansion is required. At minimum:
+
+- Cloud/Managed and Self-Hosted operation are documented and supported for the launch target;
+- Backup/Restore/Upgrade and rollback/recovery paths are demonstrated;
+- release application identity, signing/versioning and artifact pipeline are controlled;
+- administration/maintenance/recovery access is safe;
+- Retention and complete deletion responsibilities are resolved;
+- Entitlements/Billing are centralized and do not couple payment-provider concepts into Domain code;
+- monitoring/observability contains no sensitive content;
+- Security/Privacy hardening and final Accessibility/performance release QA pass;
+- Incident and Recovery processes are tested;
+- the public/demo exposure boundary is safe.
+
+**M7, M8 and M9 features are not G5 prerequisites.**
 
 ## Deliberately not pulled forward
 
-- semantic/vector/AI Search before a separately approved later capability and Privacy model,
-- Shopping, Event Discovery, and Provider integrations before a stable Core,
-- Offline Write Sync in the MVP,
-- public Share Links,
-- AI features,
-- Location/Geofencing without a separate opt-in and Privacy flow,
+- #429-#432 Relationship Depth runtime into M5;
+- semantic/vector/AI Search without a separately approved later capability and Privacy model;
+- Shopping, Event Discovery and external provider features before the Core is launch-ready;
+- Location/Geofencing/Presence before the M9 opt-in/Privacy boundary;
+- Offline Write Sync in the MVP;
+- public Share Links;
+- AI features;
 - E2EE marketing before real implementation and review.
 
 ## Roadmap risks
 
 | Risk | Safeguard |
 |---|---|
-| Runtime starts before the contract is resolved | relevant milestone decisions + contract-testable OpenAPI contract before runtime slices |
+| M5 never finishes because new product ideas keep entering it | explicit M5 Core scope protection; new Relationship Depth work starts in M7 |
+| Optional expansion delays a safe first release | M6/G5 now precedes M7-M9 |
+| Runtime starts before contracts are resolved | readiness/decision slices and contract-testable OpenAPI before runtime |
 | Web and Android drift apart | shared OpenAPI contract and M5 parity gate |
+| Feature flags, Entitlements and user choices become one ambiguous switch | separate deployment capability, Entitlement, Space module config and personal preference |
 | Privacy classes become Client Domain | clear separation of `SHARED/PRIVATE` vs. `SPACE_SHARED/OWNER_ONLY` |
-| Media creates indirect leaks | parent Authorization, adapter contract, and abuse/race tests |
-| Repository gates are bypassed | active `main` ruleset enforces Pull Request, Merge Commit, and required checks |
-| public operation starts too early | G5 remains a mandatory Pre-Exposure/launch gate |
+| Location integrations leak into ordinary provider work | M9 owns user-visible active location/context semantics |
+| Repository gates are bypassed | Pull Request, Merge Commit and required checks remain mandatory |
+| public operation starts too early | G5 remains the mandatory launch gate after M6 |
 
 ## Maintenance
 
 - Dated reviews are never rewritten retroactively.
-- Domain current markers are updated after completed gate/milestone/slice changes; static supposedly current `main` SHAs are not kept in living status files.
-- Open tasks live in Implementation Status and GitHub Issues; explicitly open Issue tasks are checked automatically against GitHub.
+- Completed milestone documents may retain historical milestone references when they clearly describe the state/decision at that time.
+- Forward-looking living documents use the ADR 0006 sequence.
+- Static supposedly current `main` SHAs are not stored as living status markers.
+- Open tasks live in Implementation Status and GitHub Issues.
 - Roadmap updates state the reason and impact, not merely a new sequence.
 
 ## Related documents
 
 - [Implementation Status](./IMPLEMENTATION-STATUS.md)
 - [Status Sources and Drift Rules](./STATUS-SOURCES.md)
+- [ADR 0006 — Release before optional expansion](./decisions/0006-release-before-optional-expansion.md)
 - [M2 Project Control](./m2/PROJECT-CONTROL.md)
 - [M3 Technical Readiness Package](./m3/README.md)
-- [M3 Decision Log](./m3/DECISION-LOG.md)
-- [M3 Delivery Plan](./m3/DELIVERY-PLAN.md)
 - [M3 G3 Evidence Map](./m3/G3-EVIDENCE.md)
 - [M4 Evidence Map](./m4/M4-EVIDENCE.md)
 - [Final G3 Gate Review](./reviews/2026-08-30-g3-gate-review.md)
