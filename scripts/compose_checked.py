@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""Run the canonical Compose stack with a revision derived from a clean checkout.
+"""Run canonical Compose from an immutable snapshot of a clean Git checkout.
 
 Direct ``docker compose`` remains the convenient local/test path and deliberately
 reports ``unverified-local-checkout``. Release-candidate and Production
-complete-checkout deployments use this wrapper so the revision embedded in the
-backend and Web images is derived from the checked-out source rather than from an
-operator-supplied environment value.
+complete-checkout deployments use this wrapper. It derives the revision from Git
+and exports the backend/Web build contexts from that committed tree, so ignored or
+untracked local files cannot enter a verified image.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
+import tarfile
 import tempfile
 from pathlib import Path
 
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
-REVISION_SERVICES = ("migrate", "demo-init", "api", "worker", "web")
+BACKEND_SERVICES = ("migrate", "demo-init", "api", "worker")
 
 
 class CheckoutError(RuntimeError):
@@ -69,13 +71,61 @@ def verified_revision(root: Path, expected: str | None) -> str:
     return revision
 
 
-def revision_override(revision: str) -> dict[str, object]:
-    return {
-        "services": {
-            service: {"build": {"args": {"SBS_BUILD_REVISION": revision}}}
-            for service in REVISION_SERVICES
+def export_build_snapshot(root: Path, revision: str, target: Path) -> None:
+    """Export only committed backend/Web files without trusting the worktree."""
+    archive_path = target / "source.tar"
+    try:
+        with archive_path.open("wb") as archive_file:
+            subprocess.run(
+                ["git", "archive", "--format=tar", revision, "backend", "web"],
+                cwd=root,
+                check=True,
+                stdout=archive_file,
+                stderr=subprocess.PIPE,
+            )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise CheckoutError("Git could not export the verified source tree") from exc
+
+    target_root = target.resolve()
+    try:
+        with tarfile.open(archive_path, mode="r:") as archive:
+            for member in archive.getmembers():
+                destination = (target / member.name).resolve()
+                if destination != target_root and target_root not in destination.parents:
+                    raise CheckoutError("Git archive contained an invalid path")
+                if member.isdir():
+                    destination.mkdir(parents=True, exist_ok=True)
+                    continue
+                if not member.isfile():
+                    raise CheckoutError("verified build source contains an unsupported link/device")
+                source = archive.extractfile(member)
+                if source is None:
+                    raise CheckoutError("Git archive member could not be read")
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                with source, destination.open("wb") as output:
+                    output.write(source.read())
+                os.chmod(destination, member.mode & 0o777)
+    except (OSError, tarfile.TarError) as exc:
+        raise CheckoutError("verified Git source snapshot could not be extracted") from exc
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+
+def compose_override(revision: str, snapshot_root: Path) -> dict[str, object]:
+    backend_build = {
+        "context": str(snapshot_root / "backend"),
+        "args": {"SBS_BUILD_REVISION": revision},
+    }
+    services: dict[str, object] = {
+        service: {"build": backend_build} for service in BACKEND_SERVICES
+    }
+    services["web"] = {
+        "build": {
+            "context": str(snapshot_root / "web"),
+            "args": {"SBS_BUILD_REVISION": revision},
         }
     }
+    return {"services": services}
 
 
 def reject_compose_source_overrides(arguments: list[str]) -> None:
@@ -93,35 +143,31 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
         raise CheckoutError("a Docker Compose command is required")
     reject_compose_source_overrides(compose_args)
 
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        suffix=".json",
-        prefix="sidebyside-revision-",
-        delete=False,
-    ) as handle:
-        json.dump(revision_override(revision), handle)
-        override_path = Path(handle.name)
-
     try:
-        completed = subprocess.run(
-            [
-                "docker",
-                "compose",
-                "-f",
-                str(root / "compose.yaml"),
-                "-f",
-                str(override_path),
-                *compose_args,
-            ],
-            cwd=root,
-            check=False,
-        )
-        return completed.returncode
+        with tempfile.TemporaryDirectory(prefix="sidebyside-source-") as temp_dir:
+            snapshot_root = Path(temp_dir)
+            export_build_snapshot(root, revision, snapshot_root)
+            override_path = snapshot_root / "compose.revision.json"
+            override_path.write_text(
+                json.dumps(compose_override(revision, snapshot_root)),
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [
+                    "docker",
+                    "compose",
+                    "-f",
+                    str(root / "compose.yaml"),
+                    "-f",
+                    str(override_path),
+                    *compose_args,
+                ],
+                cwd=root,
+                check=False,
+            )
+            return completed.returncode
     except OSError as exc:
         raise CheckoutError("docker compose could not be executed") from exc
-    finally:
-        override_path.unlink(missing_ok=True)
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
