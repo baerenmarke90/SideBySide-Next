@@ -41,6 +41,14 @@ import sidebyside.api.models.AccountMembershipView
 @Composable
 fun MoreScreen(
     onSignOut: () -> Unit,
+    /**
+     * Opens the account's own HeartMoments.
+     *
+     * Deliberately without a default. An optional navigation entry that a
+     * caller forgets to pass disappears from the product without breaking the
+     * build, which is how this one was lost once already.
+     */
+    onOpenHeartMoments: () -> Unit,
     modifier: Modifier = Modifier,
     signOutEnabled: Boolean = true,
     spaces: List<AccountMembershipView> = emptyList(),
@@ -75,6 +83,38 @@ fun MoreScreen(
                 color = SideBySideTheme.colors.textSecondary,
                 modifier = Modifier.widthIn(max = ReadingMeasure),
             )
+        }
+
+        run {
+            val open = onOpenHeartMoments
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.heart_moments_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.heart_moments_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.heart_moments_open))
+                    }
+                }
+            }
         }
 
         if (spaces.size > 1) {

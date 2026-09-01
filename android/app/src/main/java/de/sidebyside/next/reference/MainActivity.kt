@@ -49,6 +49,7 @@ import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
+import de.sidebyside.next.story.HeartMomentsScreen
 import de.sidebyside.next.story.MemoryScreen
 import de.sidebyside.next.story.StoryScreen
 import kotlinx.coroutines.launch
@@ -269,6 +270,27 @@ private fun DemoShell(
                     onDelete = viewModel::deleteMemory,
                 )
             }
+
+            composable(HEART_MOMENTS_ROUTE) {
+                // Tied to the route, so returning here after process death
+                // loads again instead of showing an empty list.
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadHeartMoments() }
+                DisposableEffect(Unit) { onDispose(viewModel::clearHeartMoments) }
+
+                HeartMomentsScreen(
+                    moments = state.heartMoments,
+                    busy = state.heartMomentsBusy,
+                    problem = state.heartMomentsProblem,
+                    statusMessage = state.heartMomentStatus
+                        ?.let { stringResource(it.resourceId, *it.args.toTypedArray()) },
+                    onBack = { controller.popBackStack() },
+                    onCreate = { text, emotion, visibility ->
+                        viewModel.createHeartMoment(text, emotion, "", visibility)
+                    },
+                    onChangeVisibility = viewModel::changeHeartMomentVisibility,
+                    onDelete = viewModel::deleteHeartMoment,
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -278,6 +300,7 @@ private fun DemoShell(
                 }
                 MoreScreen(
                     onSignOut = onSignOut,
+                    onOpenHeartMoments = { navController.navigate(HEART_MOMENTS_ROUTE) },
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
                     activeSpaceId = state.activeSpaceId,
@@ -306,6 +329,9 @@ private fun DemoShell(
  */
 private const val MEMORY_ID_ARGUMENT = "memoryId"
 private const val MEMORY_ROUTE = "story/memories/{$MEMORY_ID_ARGUMENT}"
+
+/** The account's own HeartMoments, private ones included. */
+private const val HEART_MOMENTS_ROUTE = "story/heart-moments"
 
 /**
  * The Story destination.

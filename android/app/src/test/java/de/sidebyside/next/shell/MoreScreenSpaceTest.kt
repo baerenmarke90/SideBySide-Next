@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
@@ -53,7 +54,9 @@ class MoreScreenSpaceTest {
         )
 
         composeRule.onNodeWithText(option(1)).assertIsSelected()
-        composeRule.onNodeWithText(option(2)).performClick()
+        // Mehr scrolls, and the screen has grown since this was written: the
+        // click has to reach the row rather than the window it sits below.
+        composeRule.onNodeWithText(option(2)).performScrollTo().performClick()
 
         assertEquals(listOf(SECOND), chosen)
     }
@@ -83,6 +86,7 @@ class MoreScreenSpaceTest {
             SideBySideTheme {
                 MoreScreen(
                     onSignOut = {},
+                    onOpenHeartMoments = {},
                     spaces = spaces,
                     activeSpaceId = active,
                     onSelectSpace = onSelectSpace,

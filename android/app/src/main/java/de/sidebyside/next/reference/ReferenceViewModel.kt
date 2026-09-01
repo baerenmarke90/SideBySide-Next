@@ -19,6 +19,12 @@ import kotlinx.coroutines.launch
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.SessionView
+import sidebyside.api.models.ContentVisibility
+import sidebyside.api.models.HeartEmotion
+import sidebyside.api.models.HeartMomentCreate
+import sidebyside.api.models.HeartMomentDetail
+import sidebyside.api.models.HeartMomentUpdate
+import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.StoryItem
@@ -81,6 +87,17 @@ data class ReferenceUiState(
      * memory screen dressed as a save confirmation.
      */
     val memoryStatus: UiMessage? = null,
+    /**
+     * The account's own HeartMoments, private ones included.
+     *
+     * The server decides what is in here; asking for someone else's private
+     * moments returns an empty page rather than a refusal, so nothing this
+     * screen can render discloses that they exist.
+     */
+    val heartMoments: List<HeartMomentDetail> = emptyList(),
+    val heartMomentsBusy: Boolean = false,
+    val heartMomentsProblem: UiProblem? = null,
+    val heartMomentStatus: UiMessage? = null,
     /** A problem belonging to the open memory rather than to the whole screen. */
     val memoryProblem: UiProblem? = null,
     /**
@@ -173,6 +190,7 @@ class ReferenceViewModel(
 
         sessionEpoch += 1
         storyImages.reset()
+        clearHeartMoments()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -233,6 +251,7 @@ class ReferenceViewModel(
 
         sessionEpoch += 1
         storyImages.reset()
+        clearHeartMoments()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
             if (attemptEpoch != sessionEpoch) return@launch
@@ -277,6 +296,7 @@ class ReferenceViewModel(
         activeSpaceId = null
         sessionEpoch += 1
         storyImages.reset()
+        clearHeartMoments()
         session = null
         imageDrafts = emptyList()
         _uiState.value = ReferenceUiState(
@@ -309,6 +329,7 @@ class ReferenceViewModel(
 
         sessionEpoch += 1
         storyImages.reset()
+        clearHeartMoments()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
         mutate {
@@ -634,6 +655,224 @@ class ReferenceViewModel(
         }
     }
 
+    fun loadHeartMoments() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(heartMomentsBusy = true, heartMomentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listHeartMoments(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(heartMoments = page.items, heartMomentsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(
+                            heartMomentsBusy = false,
+                            heartMomentsProblem = problemFor(throwable),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun createHeartMoment(
+        text: String,
+        emotion: HeartEmotion,
+        happenedOn: String,
+        visibility: ContentVisibility,
+    ) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+
+        if (text.isBlank()) {
+            mutate { it.copy(heartMomentStatus = null, heartMomentsProblem = null) }
+            setError(message(R.string.heart_moment_error_text_required))
+            return
+        }
+        val day = parseHappenedOn(happenedOn) ?: LocalDate.now()
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(heartMomentsBusy = true, heartMomentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createHeartMoment(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    HeartMomentCreate(
+                        emotion = emotion,
+                        happenedOn = day,
+                        text = text,
+                        visibility = visibility,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            heartMomentsBusy = false,
+                            heartMomentStatus = message(R.string.heart_moment_created),
+                        )
+                    }
+                    loadHeartMoments()
+                    // A shared moment belongs in the Story straight away; a
+                    // private one will simply not be in what comes back.
+                    refreshStory()
+                }
+                .onFailure { throwable -> reportHeartMomentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun updateHeartMoment(heartMomentId: java.util.UUID, text: String, emotion: HeartEmotion) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val current = _uiState.value.heartMoments.firstOrNull { it.id == heartMomentId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(heartMomentsBusy = true, heartMomentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateHeartMoment(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    heartMomentId,
+                    current.version,
+                    // Deliberately without visibility: the contract keeps that
+                    // a separate operation because it destroys comments.
+                    HeartMomentUpdate(emotion = emotion, text = text),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            heartMomentsBusy = false,
+                            heartMomentStatus = message(R.string.heart_moment_saved),
+                        )
+                    }
+                    loadHeartMoments()
+                    refreshStory()
+                }
+                .onFailure { throwable -> reportHeartMomentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    /**
+     * Changes who may see a HeartMoment.
+     *
+     * Separate from [updateHeartMoment] because the server makes it separate:
+     * `SHARED -> PRIVATE` deletes the moment's comments and going back does not
+     * bring them back. The screen names that before calling this.
+     */
+    fun changeHeartMomentVisibility(
+        heartMomentId: java.util.UUID,
+        visibility: ContentVisibility,
+    ) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val current = _uiState.value.heartMoments.firstOrNull { it.id == heartMomentId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(heartMomentsBusy = true, heartMomentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.changeHeartMomentVisibility(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    heartMomentId,
+                    current.version,
+                    HeartMomentVisibilityChange(visibility = visibility),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            heartMomentsBusy = false,
+                            heartMomentStatus = message(
+                                if (visibility == ContentVisibility.PRIVATE) {
+                                    R.string.heart_moment_now_private
+                                } else {
+                                    R.string.heart_moment_now_shared
+                                },
+                            ),
+                        )
+                    }
+                    loadHeartMoments()
+                    // The Story gains or loses the moment with this change.
+                    refreshStory()
+                }
+                .onFailure { throwable -> reportHeartMomentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun deleteHeartMoment(heartMomentId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val current = _uiState.value.heartMoments.firstOrNull { it.id == heartMomentId } ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(heartMomentsBusy = true, heartMomentsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteHeartMoment(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    heartMomentId,
+                    current.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            heartMomentsBusy = false,
+                            heartMomentStatus = message(R.string.heart_moment_deleted),
+                        )
+                    }
+                    loadHeartMoments()
+                    refreshStory()
+                }
+                .onFailure { throwable -> reportHeartMomentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun clearHeartMoments() {
+        mutate {
+            it.copy(
+                heartMoments = emptyList(),
+                heartMomentsBusy = false,
+                heartMomentsProblem = null,
+                heartMomentStatus = null,
+            )
+        }
+    }
+
+    private fun reportHeartMomentFailure(
+        operationEpoch: Long,
+        currentSession: SessionView,
+        throwable: Throwable,
+    ) {
+        if (!isCurrentSession(operationEpoch, currentSession)) return
+        mutate {
+            it.copy(heartMomentsBusy = false, heartMomentsProblem = problemFor(throwable))
+        }
+    }
+
     fun refreshStory() {
         val api = contract ?: return
         val currentSession = session ?: return
@@ -864,6 +1103,7 @@ class ReferenceViewModel(
 
         sessionEpoch += 1
         storyImages.reset()
+        clearHeartMoments()
         session = null
         activeSpaceId = null
         imageDrafts = emptyList()
