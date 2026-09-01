@@ -38,6 +38,9 @@ import sidebyside.api.models.ImportantDateType
 import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.PersonRelationship
+import sidebyside.api.models.PlaceCreate
+import sidebyside.api.models.PlaceDetail
+import sidebyside.api.models.PlaceUpdate
 import sidebyside.api.models.PreferenceCategory
 import sidebyside.api.models.PreferenceSentiment
 import sidebyside.api.models.ProfilePreferenceCreate
@@ -205,6 +208,9 @@ data class ReferenceUiState(
     val relatedPersonsProblem: UiProblem? = null,
     /** Dates for whichever person's screen is currently open. */
     val personImportantDates: List<ImportantDateView> = emptyList(),
+    val places: List<PlaceDetail> = emptyList(),
+    val placesBusy: Boolean = false,
+    val placesProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -334,6 +340,7 @@ class ReferenceViewModel(
         clearInvitations()
         clearRelatedPersons()
         clearProfilePreferences()
+        clearPlaces()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -419,6 +426,7 @@ class ReferenceViewModel(
         clearInvitations()
         clearRelatedPersons()
         clearProfilePreferences()
+        clearPlaces()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -472,6 +480,7 @@ class ReferenceViewModel(
         clearInvitations()
         clearRelatedPersons()
         clearProfilePreferences()
+        clearPlaces()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -513,6 +522,7 @@ class ReferenceViewModel(
         clearInvitations()
         clearRelatedPersons()
         clearProfilePreferences()
+        clearPlaces()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -2598,6 +2608,163 @@ class ReferenceViewModel(
                 ),
             )
         }
+    }
+
+    /**
+     * Enforces the same latitude/longitude pairing the server enforces as
+     * `PLACE_COORDINATE_PAIR_REQUIRED`, so a client mistake is refused before
+     * the request rather than surfacing only as a 400.
+     *
+     * Returns `null` when the pairing is invalid (exactly one of the two set,
+     * or either unparsable); both blank is valid and yields `null to null`.
+     */
+    private fun pairedCoordinates(
+        latitude: String,
+        longitude: String,
+    ): Pair<java.math.BigDecimal?, java.math.BigDecimal?>? {
+        val lat = latitude.trim()
+        val lng = longitude.trim()
+        if (lat.isBlank() && lng.isBlank()) return null to null
+        if (lat.isBlank() || lng.isBlank()) return null
+        val parsedLat = runCatching { java.math.BigDecimal(lat) }.getOrNull() ?: return null
+        val parsedLng = runCatching { java.math.BigDecimal(lng) }.getOrNull() ?: return null
+        return parsedLat to parsedLng
+    }
+
+    fun loadPlaces() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placesBusy = true, placesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listPlaces(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(places = page.items, placesBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(placesBusy = false, placesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addPlace(
+        name: String,
+        description: String,
+        address: String,
+        latitude: String,
+        longitude: String,
+    ) {
+        if (name.isBlank()) return
+        val coordinates = pairedCoordinates(latitude, longitude) ?: return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placesBusy = true, placesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createPlace(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    PlaceCreate(
+                        name = name,
+                        address = address.trim().takeIf { it.isNotBlank() },
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        latitude = coordinates.first,
+                        longitude = coordinates.second,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placesBusy = false) }
+                    loadPlaces()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(placesBusy = false, placesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updatePlace(
+        place: PlaceDetail,
+        name: String,
+        description: String,
+        address: String,
+        latitude: String,
+        longitude: String,
+    ) {
+        if (name.isBlank()) return
+        val coordinates = pairedCoordinates(latitude, longitude) ?: return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placesBusy = true, placesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePlace(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    place.id,
+                    place.version,
+                    PlaceUpdate(
+                        name = name,
+                        address = address.trim().takeIf { it.isNotBlank() },
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        latitude = coordinates.first,
+                        longitude = coordinates.second,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placesBusy = false) }
+                    loadPlaces()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(placesBusy = false, placesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deletePlace(place: PlaceDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placesBusy = true, placesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deletePlace(spaceId, currentSession.tokens.accessToken, place.id, place.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placesBusy = false) }
+                    loadPlaces()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(placesBusy = false, placesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearPlaces() {
+        mutate { it.copy(places = emptyList(), placesBusy = false, placesProblem = null) }
     }
 
     fun logout() {

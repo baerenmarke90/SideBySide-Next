@@ -51,6 +51,10 @@ import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.PlaceCreate
+import sidebyside.api.models.PlaceDetail
+import sidebyside.api.models.PlacePage
+import sidebyside.api.models.PlaceUpdate
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
@@ -1044,6 +1048,58 @@ class OkHttpReferenceApi(
             SideBySideJson.decodeFromString(serializer, body)
         }
     }
+
+    override suspend fun listPlaces(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PlacePage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/places?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        PlacePage.serializer(),
+    )
+
+    override suspend fun createPlace(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PlaceCreate,
+    ): PlaceDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/places", accessToken)
+            .post(
+                SideBySideJson.encodeToString(PlaceCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PlaceDetail.serializer(),
+    )
+
+    override suspend fun updatePlace(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        ifMatch: Int,
+        fields: PlaceUpdate,
+    ): PlaceDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/places/$placeId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(PlaceUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PlaceDetail.serializer(),
+    )
+
+    override suspend fun deletePlace(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/places/$placeId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {
         client.newCall(request).execute().use(::assertSuccessful)

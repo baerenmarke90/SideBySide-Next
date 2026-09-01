@@ -25,6 +25,10 @@ import sidebyside.api.models.MembershipView
 import sidebyside.api.models.ImportantDateFields
 import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.PlaceCreate
+import sidebyside.api.models.PlaceDetail
+import sidebyside.api.models.PlacePage
+import sidebyside.api.models.PlaceUpdate
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
@@ -439,6 +443,33 @@ abstract class FakeReferenceContract : ReferenceContract {
         preferenceId: UUID,
         ifMatch: Int,
     ): Unit = notExercised("deleteProfilePreference")
+
+    override suspend fun listPlaces(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PlacePage = notExercised("listPlaces")
+
+    override suspend fun createPlace(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PlaceCreate,
+    ): PlaceDetail = notExercised("createPlace")
+
+    override suspend fun updatePlace(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        ifMatch: Int,
+        fields: PlaceUpdate,
+    ): PlaceDetail = notExercised("updatePlace")
+
+    override suspend fun deletePlace(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePlace")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

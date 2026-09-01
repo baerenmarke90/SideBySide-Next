@@ -397,4 +397,30 @@
     <string name="preference_cancel">Abbrechen</string>
     <string name="preference_save_changes">Änderungen speichern</string>
     <string name="preference_edit_title">Eintrag bearbeiten</string>
+
+    <string name="places_open">Orte verwalten</string>
+    <string name="places_title">Orte</string>
+    <string name="places_intro">Gemeinsame Orte funktionieren auch nur mit einem Namen – Koordinaten sind optional.</string>
+    <string name="places_empty">Noch keine Orte.</string>
+
+    <string name="place_add">Ort hinzufügen</string>
+    <string name="place_name_hint">Name</string>
+    <string name="place_description_hint">Beschreibung</string>
+    <string name="place_address_hint">Adresse</string>
+    <string name="place_latitude_hint">Breitengrad</string>
+    <string name="place_longitude_hint">Längengrad</string>
+    <string name="place_coordinate_help">Koordinaten sind optional. Wenn du sie angibst, müssen Breitengrad und Längengrad gemeinsam gesetzt sein.</string>
+    <string name="place_coordinate_error">Bitte gib Breitengrad und Längengrad gemeinsam an oder lasse beide Felder leer.</string>
+    <string name="place_no_address">Keine Adresse hinterlegt</string>
+    <string name="place_no_coordinates">Dieser Ort ist bewusst ohne Koordinaten gespeichert.</string>
+    <string name="place_coordinates">%1$s, %2$s</string>
+
+    <string name="place_edit">Bearbeiten</string>
+    <string name="place_edit_title">Ort bearbeiten</string>
+    <string name="place_delete">Löschen</string>
+    <string name="place_delete_title">%1$s löschen?</string>
+    <string name="place_delete_warning">Der Ort und seine Verknüpfungen werden gelöscht. Erinnerungen, Herzmomente und Meilensteine selbst bleiben erhalten.</string>
+    <string name="place_delete_confirm">Endgültig löschen</string>
+    <string name="place_cancel">Abbrechen</string>
+    <string name="place_save_changes">Änderungen speichern</string>
 </resources>

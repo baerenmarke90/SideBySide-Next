@@ -73,6 +73,15 @@ fun PlanScreen(
     onComplete: (UUID, LocalDate) -> Unit,
     onReturnToWish: (UUID) -> Unit,
     onDeletePlan: (UUID) -> Unit,
+    /**
+     * Opens the couple's shared places.
+     *
+     * Deliberately without a default, for the same reason every other
+     * navigation entry point in this client is: an optional one that a
+     * caller forgets to pass disappears from the product without breaking
+     * the build.
+     */
+    onOpenPlaces: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var draft by rememberSaveable { mutableStateOf("") }
@@ -105,6 +114,37 @@ fun PlanScreen(
         }
 
         problem?.let { item { UiStatePanel(problem = it) } }
+
+        item {
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.places_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.places_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    FilledTonalButton(
+                        onClick = onOpenPlaces,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.places_open))
+                    }
+                }
+            }
+        }
 
         item {
             Text(
