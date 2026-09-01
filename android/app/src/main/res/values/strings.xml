@@ -514,4 +514,15 @@
     <string name="private_collection_item_move_up">Nach oben</string>
     <string name="private_collection_item_move_down">Nach unten</string>
     <string name="private_collection_items_empty">Noch keine Einträge in dieser Liste.</string>
+
+    <string name="notifications_open">Benachrichtigungen</string>
+    <string name="notifications_title">Benachrichtigungen</string>
+    <string name="notifications_intro">Was seit deinem letzten Besuch passiert ist.</string>
+    <string name="notifications_empty">Keine Benachrichtigungen.</string>
+    <string name="notifications_unread_count">%1$d ungelesen</string>
+    <string name="notification_mark_all_read">Alle als gelesen markieren</string>
+    <string name="notification_mark_read">Als gelesen markieren</string>
+    <string name="notification_kind_comment_created">Neuer Kommentar</string>
+    <string name="notification_kind_thinking_of_you">„Ich denke an dich“</string>
+    <string name="notification_kind_reminder_due">Erinnerung fällig</string>
 </resources>

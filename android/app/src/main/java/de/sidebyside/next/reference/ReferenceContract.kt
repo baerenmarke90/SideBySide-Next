@@ -36,6 +36,10 @@ import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.NotificationItem
+import sidebyside.api.models.NotificationPage
+import sidebyside.api.models.NotificationUnreadCount
+import sidebyside.api.models.NotificationsReadAllResult
 import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
@@ -719,6 +723,18 @@ interface ReferenceContract {
         ifMatch: Int,
         itemIds: List<UUID>,
     ): PrivateCollectionDetail
+
+    suspend fun listNotifications(spaceId: UUID, accessToken: String, cursor: String? = null): NotificationPage
+
+    suspend fun getNotificationUnreadCount(spaceId: UUID, accessToken: String): NotificationUnreadCount
+
+    suspend fun markNotificationRead(
+        spaceId: UUID,
+        accessToken: String,
+        notificationId: UUID,
+    ): NotificationItem
+
+    suspend fun markAllNotificationsRead(spaceId: UUID, accessToken: String): NotificationsReadAllResult
 }
 
 private fun unsupportedProfileOperation(): Nothing =

@@ -57,6 +57,10 @@ import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.NotificationItem
+import sidebyside.api.models.NotificationPage
+import sidebyside.api.models.NotificationUnreadCount
+import sidebyside.api.models.NotificationsReadAllResult
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
@@ -621,6 +625,28 @@ abstract class FakeReferenceContract : ReferenceContract {
         ifMatch: Int,
         itemIds: List<UUID>,
     ): PrivateCollectionDetail = notExercised("reorderPrivateCollectionItems")
+
+    override suspend fun listNotifications(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): NotificationPage = notExercised("listNotifications")
+
+    override suspend fun getNotificationUnreadCount(
+        spaceId: UUID,
+        accessToken: String,
+    ): NotificationUnreadCount = notExercised("getNotificationUnreadCount")
+
+    override suspend fun markNotificationRead(
+        spaceId: UUID,
+        accessToken: String,
+        notificationId: UUID,
+    ): NotificationItem = notExercised("markNotificationRead")
+
+    override suspend fun markAllNotificationsRead(
+        spaceId: UUID,
+        accessToken: String,
+    ): NotificationsReadAllResult = notExercised("markAllNotificationsRead")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")
