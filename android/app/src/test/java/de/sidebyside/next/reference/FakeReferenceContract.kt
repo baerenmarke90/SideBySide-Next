@@ -16,6 +16,7 @@ import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
+import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.DashboardView
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.ThinkingOfYouAccepted
@@ -54,6 +55,13 @@ import sidebyside.api.models.WishUpdate
  * itself rather than as a null or a silent default.
  */
 abstract class FakeReferenceContract : ReferenceContract {
+    override suspend fun getInstanceStatus(): InstanceAccessStatus =
+        InstanceAccessStatus(
+            maintenanceMode = false,
+            registrationAvailable = true,
+            registrationUnavailableReason = null,
+        )
+
     override suspend fun signIn(email: String, password: String): SessionView =
         notExercised("signIn")
 

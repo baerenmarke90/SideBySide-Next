@@ -29,6 +29,7 @@ import sidebyside.api.models.HeartMomentCreate
 import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
+import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.DashboardView
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.ThinkingOfYouCreate
@@ -57,6 +58,24 @@ enum class DraftUploadState {
     FAILED,
 }
 
+enum class InstanceAvailability {
+    CHECKING,
+    AVAILABLE,
+    REGISTRATION_DISABLED,
+    MAINTENANCE,
+    UNREACHABLE,
+}
+
+internal fun instanceAvailabilityOf(status: InstanceAccessStatus): InstanceAvailability = when {
+    status.maintenanceMode ||
+        status.registrationUnavailableReason == InstanceAccessStatus.RegistrationUnavailableReason.maintenance ->
+        InstanceAvailability.MAINTENANCE
+    status.registrationAvailable -> InstanceAvailability.AVAILABLE
+    status.registrationUnavailableReason == InstanceAccessStatus.RegistrationUnavailableReason.administrator ->
+        InstanceAvailability.REGISTRATION_DISABLED
+    else -> InstanceAvailability.UNREACHABLE
+}
+
 data class DraftImageUiItem(
     val id: Long,
     val displayName: String,
@@ -66,6 +85,7 @@ data class DraftImageUiItem(
 
 data class ReferenceUiState(
     val configured: Boolean = false,
+    val instanceAvailability: InstanceAvailability = InstanceAvailability.CHECKING,
     val loggedIn: Boolean = false,
     /** True while the session belongs to the public demo rather than the configured server. */
     val demoMode: Boolean = false,
@@ -201,6 +221,24 @@ class ReferenceViewModel(
 
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
     val uiState: StateFlow<ReferenceUiState> = _uiState.asStateFlow()
+
+    init {
+        if (config.isConfigured) refreshInstanceAvailability()
+    }
+
+    fun refreshInstanceAvailability() {
+        val api = contract ?: return
+        if (!config.isConfigured) return
+        mutate { it.copy(instanceAvailability = InstanceAvailability.CHECKING) }
+        viewModelScope.launch {
+            val availability = runCatching { api.getInstanceStatus() }
+                .fold(
+                    onSuccess = ::instanceAvailabilityOf,
+                    onFailure = { InstanceAvailability.UNREACHABLE },
+                )
+            mutate { it.copy(instanceAvailability = availability) }
+        }
+    }
 
     /**
      * Story photographs, held in memory for the current Space only.
@@ -371,6 +409,7 @@ class ReferenceViewModel(
             configured = config.isConfigured,
             status = message(R.string.demo_left),
         )
+        refreshInstanceAvailability()
     }
 
     /**
@@ -1798,6 +1837,7 @@ class ReferenceViewModel(
             configured = config.isConfigured,
             status = message(R.string.ref_status_logged_out),
         )
+        refreshInstanceAvailability()
     }
 
     private fun startAttachmentPreparation(

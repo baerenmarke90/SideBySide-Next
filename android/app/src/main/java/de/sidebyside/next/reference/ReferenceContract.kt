@@ -16,6 +16,7 @@ import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
+import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.DashboardView
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.ThinkingOfYouAccepted
@@ -58,6 +59,8 @@ data class ReferenceFlowResult(
 )
 
 interface ReferenceContract {
+    suspend fun getInstanceStatus(): InstanceAccessStatus
+
     suspend fun signIn(email: String, password: String): SessionView
 
     /**
