@@ -9,6 +9,8 @@ import de.sidebyside.next.profile.loadProfileIdentity
 import de.sidebyside.next.profile.removeProfileAvatar
 import de.sidebyside.next.profile.updateProfileAvatar
 import de.sidebyside.next.profile.updateProfileDisplayName
+import de.sidebyside.next.shell.UiProblem
+import de.sidebyside.next.shell.problemFor
 import de.sidebyside.next.story.StoryImageRef
 import de.sidebyside.next.story.StoryImageStore
 import java.time.LocalDate
@@ -18,7 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentReadRequest
-import sidebyside.api.models.SessionView
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentUpdate
@@ -29,12 +30,18 @@ import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
-import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.PlanComplete
+import sidebyside.api.models.PlanDetail
+import sidebyside.api.models.PlanSchedule
+import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
-import de.sidebyside.next.shell.UiProblem
-import de.sidebyside.next.shell.problemFor
+import sidebyside.api.models.WishCreate
+import sidebyside.api.models.WishDetail
+import sidebyside.api.models.WishStatus
+import sidebyside.api.models.WishToPlan
 
 data class UiMessage(
     val resourceId: Int,
@@ -112,6 +119,16 @@ data class ReferenceUiState(
      */
     val accountId: java.util.UUID? = null,
     val comments: List<CommentDetail> = emptyList(),
+    /**
+     * Only the wishes nobody has acted on yet.
+     *
+     * A wish that became a plan is still there and still `PLANNED`, but showing
+     * it beside its plan would list one intention twice.
+     */
+    val openWishes: List<WishDetail> = emptyList(),
+    val plans: List<PlanDetail> = emptyList(),
+    val planningBusy: Boolean = false,
+    val planningProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -211,6 +228,7 @@ class ReferenceViewModel(
         storyImages.reset()
         clearHeartMoments()
         clearComments()
+        clearPlanning()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -1187,6 +1205,154 @@ class ReferenceViewModel(
         mutate {
             it.copy(heartMomentsBusy = false, heartMomentsProblem = problemFor(throwable))
         }
+    }
+
+    fun loadPlanning() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(planningBusy = true, planningProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                val token = currentSession.tokens.accessToken
+                api.listWishes(spaceId, token).items to api.listPlans(spaceId, token).items
+            }
+                .onSuccess { (wishes, plans) ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            openWishes = wishes.filter { wish ->
+                                wish.status == WishStatus.OPEN
+                            },
+                            plans = plans,
+                            planningBusy = false,
+                        )
+                    }
+                }
+                .onFailure { throwable -> reportPlanningFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun addWish(title: String) {
+        if (title.isBlank()) return
+        planningCall { api, spaceId, token -> api.createWish(spaceId, token, WishCreate(title = title)) }
+    }
+
+    fun removeWish(wishId: java.util.UUID) {
+        val wish = _uiState.value.openWishes.firstOrNull { it.id == wishId } ?: return
+        planningCall { api, spaceId, token -> api.deleteWish(spaceId, token, wishId, wish.version) }
+    }
+
+    /** Turns a wish into a plan; both survive, the wish as `PLANNED`. */
+    fun planWish(wishId: java.util.UUID, title: String, description: String) {
+        val wish = _uiState.value.openWishes.firstOrNull { it.id == wishId } ?: return
+        planningCall { api, spaceId, token ->
+            api.planWish(
+                spaceId,
+                token,
+                wishId,
+                wish.version,
+                WishToPlan(
+                    description = description.takeIf { it.isNotBlank() },
+                    title = title.ifBlank { wish.title },
+                ),
+            )
+        }
+    }
+
+    fun schedulePlan(planId: java.util.UUID, start: java.time.OffsetDateTime) {
+        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+        planningCall { api, spaceId, token ->
+            api.schedulePlan(spaceId, token, planId, plan.version, PlanSchedule(plannedStart = start))
+        }
+    }
+
+    fun unschedulePlan(planId: java.util.UUID) {
+        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+        planningCall { api, spaceId, token ->
+            api.unschedulePlan(spaceId, token, planId, plan.version)
+        }
+    }
+
+    fun completePlan(planId: java.util.UUID, experiencedOn: LocalDate) {
+        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+        planningCall { api, spaceId, token ->
+            api.completePlan(
+                spaceId,
+                token,
+                planId,
+                plan.version,
+                PlanComplete(experiencedOn = experiencedOn),
+            )
+        }
+    }
+
+    /**
+     * Sends a plan back to being a wish.
+     *
+     * Destructive: the wish receives nothing back from the plan, so its
+     * description is gone. The screen says so before calling this.
+     */
+    fun returnPlanToWish(planId: java.util.UUID) {
+        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+        planningCall { api, spaceId, token ->
+            api.returnPlanToWish(spaceId, token, planId, plan.version)
+        }
+    }
+
+    fun deletePlan(planId: java.util.UUID) {
+        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+        planningCall { api, spaceId, token -> api.deletePlan(spaceId, token, planId, plan.version) }
+    }
+
+    fun clearPlanning() {
+        mutate {
+            it.copy(
+                openWishes = emptyList(),
+                plans = emptyList(),
+                planningBusy = false,
+                planningProblem = null,
+            )
+        }
+    }
+
+    /**
+     * Every planning write has the same shape: do it, then re-read both lists.
+     *
+     * Re-reading rather than patching locally, because one transition moves two
+     * resources — planning a wish changes the wish as well as creating the plan
+     * — and a client that guessed at that would drift from the server.
+     */
+    private fun planningCall(
+        block: suspend (ReferenceContract, java.util.UUID, String) -> Unit,
+    ) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(planningBusy = true, planningProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { block(api, spaceId, currentSession.tokens.accessToken) }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    loadPlanning()
+                }
+                .onFailure { throwable -> reportPlanningFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    private fun reportPlanningFailure(
+        operationEpoch: Long,
+        currentSession: SessionView,
+        throwable: Throwable,
+    ) {
+        if (!isCurrentSession(operationEpoch, currentSession)) return
+        mutate { it.copy(planningBusy = false, planningProblem = problemFor(throwable)) }
     }
 
     fun refreshStory() {

@@ -17,15 +17,27 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
-import sidebyside.api.models.MilestoneDetail
-import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.PlanComplete
+import sidebyside.api.models.PlanDetail
+import sidebyside.api.models.PlanPage
+import sidebyside.api.models.PlanReturnToWishResponse
+import sidebyside.api.models.PlanSchedule
+import sidebyside.api.models.PlanUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
+import sidebyside.api.models.WishCreate
+import sidebyside.api.models.WishDetail
+import sidebyside.api.models.WishPage
+import sidebyside.api.models.WishToPlan
+import sidebyside.api.models.WishToPlanResponse
+import sidebyside.api.models.WishUpdate
 
 /**
  * A [ReferenceContract] whose every call fails until a test says otherwise.
@@ -201,6 +213,86 @@ abstract class FakeReferenceContract : ReferenceContract {
         ifMatch: Int,
         attachments: MemoryAttachmentSet,
     ): MemoryDetail = notExercised("replaceMemoryAttachments")
+
+    override suspend fun listWishes(spaceId: UUID, accessToken: String): WishPage =
+        notExercised("listWishes")
+
+    override suspend fun createWish(
+        spaceId: UUID,
+        accessToken: String,
+        wish: WishCreate,
+    ): WishDetail = notExercised("createWish")
+
+    override suspend fun updateWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+        update: WishUpdate,
+    ): WishDetail = notExercised("updateWish")
+
+    override suspend fun deleteWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteWish")
+
+    override suspend fun planWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+        conversion: WishToPlan,
+    ): WishToPlanResponse = notExercised("planWish")
+
+    override suspend fun listPlans(spaceId: UUID, accessToken: String): PlanPage =
+        notExercised("listPlans")
+
+    override suspend fun updatePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        update: PlanUpdate,
+    ): PlanDetail = notExercised("updatePlan")
+
+    override suspend fun deletePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePlan")
+
+    override suspend fun schedulePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        schedule: PlanSchedule,
+    ): PlanDetail = notExercised("schedulePlan")
+
+    override suspend fun unschedulePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+    ): PlanDetail = notExercised("unschedulePlan")
+
+    override suspend fun completePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        completion: PlanComplete,
+    ): PlanDetail = notExercised("completePlan")
+
+    override suspend fun returnPlanToWish(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+    ): PlanReturnToWishResponse = notExercised("returnPlanToWish")
 
     override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage =
         notExercised("getTimeline")

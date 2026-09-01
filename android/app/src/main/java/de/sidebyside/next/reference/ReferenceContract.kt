@@ -17,18 +17,30 @@ import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MemoryAttachmentSet
-import sidebyside.api.models.MilestoneDetail
-import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.PlanComplete
+import sidebyside.api.models.PlanDetail
+import sidebyside.api.models.PlanPage
+import sidebyside.api.models.PlanReturnToWishResponse
+import sidebyside.api.models.PlanSchedule
+import sidebyside.api.models.PlanUpdate
 import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
+import sidebyside.api.models.WishCreate
+import sidebyside.api.models.WishDetail
+import sidebyside.api.models.WishPage
+import sidebyside.api.models.WishToPlan
+import sidebyside.api.models.WishToPlanResponse
+import sidebyside.api.models.WishUpdate
 
 data class SelectedImage(
     val bytes: ByteArray,
@@ -248,6 +260,86 @@ interface ReferenceContract {
         ifMatch: Int,
         attachments: MemoryAttachmentSet,
     ): MemoryDetail
+
+    suspend fun listWishes(spaceId: UUID, accessToken: String): WishPage
+
+    suspend fun createWish(spaceId: UUID, accessToken: String, wish: WishCreate): WishDetail
+
+    suspend fun updateWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+        update: WishUpdate,
+    ): WishDetail
+
+    suspend fun deleteWish(spaceId: UUID, accessToken: String, wishId: UUID, ifMatch: Int)
+
+    /**
+     * Turns a wish into a plan.
+     *
+     * Both survive: the wish moves `OPEN -> PLANNED` and goes on recording that
+     * someone wanted this, while the plan records the doing. The answer carries
+     * both, which is why it is not simply a plan.
+     */
+    suspend fun planWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+        conversion: WishToPlan,
+    ): WishToPlanResponse
+
+    suspend fun listPlans(spaceId: UUID, accessToken: String): PlanPage
+
+    suspend fun updatePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        update: PlanUpdate,
+    ): PlanDetail
+
+    suspend fun deletePlan(spaceId: UUID, accessToken: String, planId: UUID, ifMatch: Int)
+
+    /** `IDEA -> PLANNED`. */
+    suspend fun schedulePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        schedule: PlanSchedule,
+    ): PlanDetail
+
+    /** `PLANNED -> IDEA`, keeping the plan. */
+    suspend fun unschedulePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+    ): PlanDetail
+
+    /** `-> COMPLETED`, with the day it actually happened. */
+    suspend fun completePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        completion: PlanComplete,
+    ): PlanDetail
+
+    /**
+     * All the way back: the plan is removed and its wish reopens.
+     *
+     * The wish deliberately receives nothing back from the plan (M3-D03), so
+     * whatever was written into the plan is lost. The screen says so first.
+     */
+    suspend fun returnPlanToWish(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+    ): PlanReturnToWishResponse
 
     suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage
 

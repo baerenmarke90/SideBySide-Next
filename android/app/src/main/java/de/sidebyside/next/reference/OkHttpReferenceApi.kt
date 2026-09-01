@@ -20,7 +20,6 @@ import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
-import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentPage
@@ -31,13 +30,20 @@ import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
+import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.MemoryAttachmentSet
-import sidebyside.api.models.MilestoneDetail
-import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneDetail
+import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.PlanComplete
+import sidebyside.api.models.PlanDetail
+import sidebyside.api.models.PlanPage
+import sidebyside.api.models.PlanReturnToWishResponse
+import sidebyside.api.models.PlanSchedule
+import sidebyside.api.models.PlanUpdate
 import sidebyside.api.models.ProblemDetails
 import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
@@ -46,6 +52,12 @@ import sidebyside.api.models.SignInRequest
 import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
+import sidebyside.api.models.WishCreate
+import sidebyside.api.models.WishDetail
+import sidebyside.api.models.WishPage
+import sidebyside.api.models.WishToPlan
+import sidebyside.api.models.WishToPlanResponse
+import sidebyside.api.models.WishUpdate
 
 /** The demo entry response. It is not part of the generated contract. */
 @Serializable
@@ -64,6 +76,9 @@ class ReferenceApiException(
     override val message: String,
     val status: Int? = null,
 ) : RuntimeException(message)
+
+/** A transition that carries no body still has to send valid JSON. */
+private const val EMPTY_JSON_BODY = "{}"
 
 class OkHttpReferenceApi(
     apiBaseUrl: String,
@@ -477,6 +492,163 @@ class OkHttpReferenceApi(
             .put(SideBySideJson.encodeToString(MemoryAttachmentSet.serializer(), attachments).toRequestBody(jsonMediaType))
             .build(),
         MemoryDetail.serializer(),
+    )
+
+    override suspend fun listWishes(spaceId: UUID, accessToken: String): WishPage = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/wishes?limit=50", accessToken)
+            .get().build(),
+        WishPage.serializer(),
+    )
+
+    override suspend fun createWish(
+        spaceId: UUID,
+        accessToken: String,
+        wish: WishCreate,
+    ): WishDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/wishes", accessToken)
+            .post(
+                SideBySideJson.encodeToString(WishCreate.serializer(), wish)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        WishDetail.serializer(),
+    )
+
+    override suspend fun updateWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+        update: WishUpdate,
+    ): WishDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/wishes/$wishId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(WishUpdate.serializer(), update)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        WishDetail.serializer(),
+    )
+
+    override suspend fun deleteWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/wishes/$wishId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
+
+    override suspend fun planWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+        conversion: WishToPlan,
+    ): WishToPlanResponse = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/wishes/$wishId/plan", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .post(
+                SideBySideJson.encodeToString(WishToPlan.serializer(), conversion)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        WishToPlanResponse.serializer(),
+    )
+
+    override suspend fun listPlans(spaceId: UUID, accessToken: String): PlanPage = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/plans?limit=50", accessToken)
+            .get().build(),
+        PlanPage.serializer(),
+    )
+
+    override suspend fun updatePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        update: PlanUpdate,
+    ): PlanDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/plans/$planId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(PlanUpdate.serializer(), update)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PlanDetail.serializer(),
+    )
+
+    override suspend fun deletePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/plans/$planId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
+
+    override suspend fun schedulePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        schedule: PlanSchedule,
+    ): PlanDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/plans/$planId/schedule", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .post(
+                SideBySideJson.encodeToString(PlanSchedule.serializer(), schedule)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PlanDetail.serializer(),
+    )
+
+    override suspend fun unschedulePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+    ): PlanDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/plans/$planId/unschedule",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+        PlanDetail.serializer(),
+    )
+
+    override suspend fun completePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        completion: PlanComplete,
+    ): PlanDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/plans/$planId/complete", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .post(
+                SideBySideJson.encodeToString(PlanComplete.serializer(), completion)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PlanDetail.serializer(),
+    )
+
+    override suspend fun returnPlanToWish(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+    ): PlanReturnToWishResponse = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/plans/$planId/return-to-wish",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+        PlanReturnToWishResponse.serializer(),
     )
 
     override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage = executeJson(
