@@ -48,6 +48,7 @@ import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.plan.PlanScreen
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
 import de.sidebyside.next.story.HeartMomentsScreen
@@ -237,7 +238,13 @@ private fun DemoShell(
 ) {
     val navController = rememberNavController()
     AppNavigation(
-        destinations = listOf(AppDestination.Story, AppDestination.More),
+        // Planen joins now that #419 put something behind it; a destination
+        // with nothing behind it would be dead navigation.
+        destinations = listOf(
+            AppDestination.Story,
+            AppDestination.Plan,
+            AppDestination.More,
+        ),
         navController = navController,
         detailRoutes = { controller ->
             composable(
@@ -319,6 +326,28 @@ private fun DemoShell(
         },
     ) { destination ->
         when (destination) {
+            AppDestination.Plan -> {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPlanning() }
+                PlanScreen(
+                    wishes = state.openWishes,
+                    plans = state.plans,
+                    busy = state.planningBusy,
+                    problem = state.planningProblem,
+                    onAddWish = viewModel::addWish,
+                    onPlanWish = { wishId ->
+                        // The plan starts from the wish's own words; giving it
+                        // more belongs to the plan, not to this tap.
+                        viewModel.planWish(wishId, "", "")
+                    },
+                    onRemoveWish = viewModel::removeWish,
+                    onSchedule = viewModel::schedulePlan,
+                    onUnschedule = viewModel::unschedulePlan,
+                    onComplete = viewModel::completePlan,
+                    onReturnToWish = viewModel::returnPlanToWish,
+                    onDeletePlan = viewModel::deletePlan,
+                )
+            }
+
             AppDestination.More -> {
                 LaunchedEffect(state.activeSpaceId) {
                     if (state.activeSpaceId != null) viewModel.refreshProfile()
