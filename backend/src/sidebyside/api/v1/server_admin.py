@@ -88,9 +88,7 @@ def get_server_admin_overview(
     settings = get_settings()
     current_time = now()
 
-    account_count = session.execute(
-        select(func.count()).select_from(Account)
-    ).scalar_one()
+    account_count = session.execute(select(func.count()).select_from(Account)).scalar_one()
     active_space_count = session.execute(
         select(func.count(distinct(Membership.space_id))).where(
             Membership.status == MembershipStatus.ACTIVE.value
@@ -108,9 +106,9 @@ def get_server_admin_overview(
     ).scalar_one()
 
     media_object_count = session.execute(
-        select(func.count()).select_from(Attachment).where(
-            Attachment.status == AttachmentStatus.READY.value
-        )
+        select(func.count())
+        .select_from(Attachment)
+        .where(Attachment.status == AttachmentStatus.READY.value)
     ).scalar_one()
     media_stored_bytes = session.execute(
         select(func.coalesce(func.sum(Attachment.size), 0)).where(
