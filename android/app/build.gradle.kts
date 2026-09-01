@@ -162,14 +162,6 @@ val preparedGeneratedModels = layout.buildDirectory.dir("generated/s8ApiModels")
 val prepareS8GeneratedModels by tasks.registering(org.gradle.api.tasks.Sync::class) {
     from(layout.projectDirectory.dir("../api/generated"))
     into(preparedGeneratedModels)
-    // The generator-owned passkey request models use Map<String, Any>. They
-    // are outside this M2-S8 slice and kotlinx.serialization cannot generate
-    // a concrete Any serializer. Keep the source files untouched and compile
-    // the generated contract surface S8 actually consumes.
-    exclude(
-        "sidebyside/api/models/PasskeyAuthenticationRequest.kt",
-        "sidebyside/api/models/PasskeyRegistrationRequest.kt",
-    )
 }
 
 fun quotedBuildConfig(value: String): String = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""

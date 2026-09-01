@@ -22,3 +22,18 @@ modelPackage: sidebyside.api.models
 # Kotlin supports this generator option with jvm-retrofit2 and
 # kotlinx_serialization.
 generateOneOfAnyOfWrappers: true
+
+# A free-form object in the contract (`type: object` with `additionalProperties`)
+# maps to `Map<String, Any>` by default, and kotlinx.serialization has no
+# serializer for `Any` — the Passkey request models therefore did not compile at
+# all and had to be excluded from the Android build.
+#
+# `JsonElement` is the concrete type for "whatever JSON the contract allows
+# here", so the models compile and round-trip without a hand-written DTO
+# standing in for a generated one. This affects only the two Passkey request
+# models; the `kotlin.Any` in the generated enum helpers comes from a template
+# literal and is untouched.
+typeMappings:
+  AnyType: kotlinx.serialization.json.JsonElement
+importMappings:
+  kotlinx.serialization.json.JsonElement: kotlinx.serialization.json.JsonElement

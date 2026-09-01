@@ -40,7 +40,7 @@ import kotlinx.serialization.Contextual
 data class PasskeyAuthenticationRequest (
 
     @Contextual @SerialName(value = "credential")
-    val credential: kotlin.collections.Map<kotlin.String, kotlin.Any>,
+    val credential: kotlin.collections.Map<kotlin.String, kotlinx.serialization.json.JsonElement>,
 
     @SerialName(value = "deviceName")
     val deviceName: kotlin.String? = "",

@@ -105,14 +105,22 @@ ordinary sign-in path as well.
 `tools/openapi/generate.sh`; CI verifies the committed output against the
 contract.
 
-For the S8 build, an unchanged temporary compile source root is prepared under
-`app/build/generated/`. This unrelated slice omits the two generator-owned
-Passkey request models that use `Map<String, Any>` from the compile copy because
-kotlinx.serialization cannot produce a concrete `Any` serializer for them.
-Issue #138 tracks this generator finding separately; the source files remain
-unchanged. Every DTO required for S8, especially the `StoryItem` union fixed by
-#119, still comes directly from the generated contract. There is no second,
-handwritten DTO layer.
+An unchanged temporary compile source root is prepared under
+`app/build/generated/`. The **whole** generated model tree is compiled; no file
+is excluded.
+
+That was not always so. A free-form object in the contract (`type: object` with
+`additionalProperties`) mapped to `Map<String, Any>`, and kotlinx.serialization
+has no serializer for `Any`, so the two Passkey request models did not compile
+and had to be left out — which blocked any Passkey work. `typeMappings` in
+`tools/openapi/kotlin-models.yaml` now maps that free-form type to
+`JsonElement`, which is the concrete type for "whatever JSON the contract allows
+here". Only those two models change; the `kotlin.Any` in generated enum helpers
+comes from a template literal and is untouched, and the TypeScript client is
+unaffected.
+
+Every DTO comes directly from the generated contract, including the `StoryItem`
+union fixed by #119. There is no second, handwritten DTO layer.
 
 ## M2-S8 reference flow
 
