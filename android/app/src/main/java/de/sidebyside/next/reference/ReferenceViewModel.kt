@@ -41,6 +41,9 @@ import sidebyside.api.models.PersonRelationship
 import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.PrivateNoteCreate
+import sidebyside.api.models.PrivateNoteDetail
+import sidebyside.api.models.PrivateNoteUpdate
 import sidebyside.api.models.PreferenceCategory
 import sidebyside.api.models.PreferenceSentiment
 import sidebyside.api.models.ProfilePreferenceCreate
@@ -211,6 +214,10 @@ data class ReferenceUiState(
     val places: List<PlaceDetail> = emptyList(),
     val placesBusy: Boolean = false,
     val placesProblem: UiProblem? = null,
+    /** Owner-only: the server already filters this to the caller's own notes. */
+    val privateNotes: List<PrivateNoteDetail> = emptyList(),
+    val privateNotesBusy: Boolean = false,
+    val privateNotesProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -342,6 +349,7 @@ class ReferenceViewModel(
         clearRelatedPersons()
         clearProfilePreferences()
         clearPlaces()
+        clearPrivateNotes()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -428,6 +436,7 @@ class ReferenceViewModel(
         clearRelatedPersons()
         clearProfilePreferences()
         clearPlaces()
+        clearPrivateNotes()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -482,6 +491,7 @@ class ReferenceViewModel(
         clearRelatedPersons()
         clearProfilePreferences()
         clearPlaces()
+        clearPrivateNotes()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -542,6 +552,7 @@ class ReferenceViewModel(
         clearRelatedPersons()
         clearProfilePreferences()
         clearPlaces()
+        clearPrivateNotes()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -2784,6 +2795,115 @@ class ReferenceViewModel(
 
     fun clearPlaces() {
         mutate { it.copy(places = emptyList(), placesBusy = false, placesProblem = null) }
+    }
+
+    fun loadPrivateNotes() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listPrivateNotes(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateNotes = page.items, privateNotesBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(privateNotesBusy = false, privateNotesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addPrivateNote(title: String, body: String, pinned: Boolean) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createPrivateNote(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    PrivateNoteCreate(title = title, body = body, pinned = pinned),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateNotesBusy = false) }
+                    loadPrivateNotes()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(privateNotesBusy = false, privateNotesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updatePrivateNote(note: PrivateNoteDetail, title: String, body: String, pinned: Boolean) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePrivateNote(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    note.id,
+                    note.version,
+                    PrivateNoteUpdate(title = title, body = body, pinned = pinned),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateNotesBusy = false) }
+                    loadPrivateNotes()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(privateNotesBusy = false, privateNotesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deletePrivateNote(note: PrivateNoteDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deletePrivateNote(spaceId, currentSession.tokens.accessToken, note.id, note.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateNotesBusy = false) }
+                    loadPrivateNotes()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(privateNotesBusy = false, privateNotesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearPrivateNotes() {
+        mutate { it.copy(privateNotes = emptyList(), privateNotesBusy = false, privateNotesProblem = null) }
     }
 
     fun logout() {

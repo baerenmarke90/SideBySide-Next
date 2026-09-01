@@ -55,6 +55,10 @@ import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlacePage
 import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.PrivateNoteCreate
+import sidebyside.api.models.PrivateNoteDetail
+import sidebyside.api.models.PrivateNotePage
+import sidebyside.api.models.PrivateNoteUpdate
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
@@ -1097,6 +1101,58 @@ class OkHttpReferenceApi(
         ifMatch: Int,
     ) = executeEmpty(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/places/$placeId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
+
+    override suspend fun listPrivateNotes(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PrivateNotePage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/private/notes?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        PrivateNotePage.serializer(),
+    )
+
+    override suspend fun createPrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PrivateNoteCreate,
+    ): PrivateNoteDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/notes", accessToken)
+            .post(
+                SideBySideJson.encodeToString(PrivateNoteCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PrivateNoteDetail.serializer(),
+    )
+
+    override suspend fun updatePrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        noteId: UUID,
+        ifMatch: Int,
+        fields: PrivateNoteUpdate,
+    ): PrivateNoteDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/notes/$noteId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(PrivateNoteUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PrivateNoteDetail.serializer(),
+    )
+
+    override suspend fun deletePrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        noteId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/notes/$noteId", accessToken)
             .header("If-Match", ifMatch.toString())
             .delete().build(),
     )

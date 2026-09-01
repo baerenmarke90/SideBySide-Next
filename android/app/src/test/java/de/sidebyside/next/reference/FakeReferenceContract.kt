@@ -29,6 +29,10 @@ import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlacePage
 import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.PrivateNoteCreate
+import sidebyside.api.models.PrivateNoteDetail
+import sidebyside.api.models.PrivateNotePage
+import sidebyside.api.models.PrivateNoteUpdate
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
@@ -470,6 +474,33 @@ abstract class FakeReferenceContract : ReferenceContract {
         placeId: UUID,
         ifMatch: Int,
     ): Unit = notExercised("deletePlace")
+
+    override suspend fun listPrivateNotes(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PrivateNotePage = notExercised("listPrivateNotes")
+
+    override suspend fun createPrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PrivateNoteCreate,
+    ): PrivateNoteDetail = notExercised("createPrivateNote")
+
+    override suspend fun updatePrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        noteId: UUID,
+        ifMatch: Int,
+        fields: PrivateNoteUpdate,
+    ): PrivateNoteDetail = notExercised("updatePrivateNote")
+
+    override suspend fun deletePrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        noteId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePrivateNote")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

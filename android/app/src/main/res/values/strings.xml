@@ -423,4 +423,28 @@
     <string name="place_delete_confirm">Endgültig löschen</string>
     <string name="place_cancel">Abbrechen</string>
     <string name="place_save_changes">Änderungen speichern</string>
+
+    <string name="private_area_card_title">Privater Bereich</string>
+    <string name="private_area_card_intro">Notizen und Ideen, die nur dir gehören – dein Partner oder deine Partnerin sieht sie nie.</string>
+    <string name="private_area_open">Privaten Bereich öffnen</string>
+    <string name="private_area_title">Privater Bereich</string>
+    <string name="private_area_intro">Alles hier ist ausschließlich für dich sichtbar, auch in einer geteilten Beziehung.</string>
+
+    <string name="private_notes_open">Notizen</string>
+    <string name="private_notes_title">Private Notizen</string>
+    <string name="private_notes_intro">Nur du siehst diese Notizen.</string>
+    <string name="private_notes_empty">Noch keine privaten Notizen.</string>
+
+    <string name="private_note_add">Notiz hinzufügen</string>
+    <string name="private_note_title_hint">Titel</string>
+    <string name="private_note_body_hint">Text</string>
+    <string name="private_note_pinned">Angeheftet</string>
+    <string name="private_note_edit">Bearbeiten</string>
+    <string name="private_note_edit_title">Notiz bearbeiten</string>
+    <string name="private_note_delete">Löschen</string>
+    <string name="private_note_delete_title">%1$s löschen?</string>
+    <string name="private_note_delete_warning">Diese Notiz wird endgültig gelöscht.</string>
+    <string name="private_note_delete_confirm">Endgültig löschen</string>
+    <string name="private_note_cancel">Abbrechen</string>
+    <string name="private_note_save_changes">Änderungen speichern</string>
 </resources>

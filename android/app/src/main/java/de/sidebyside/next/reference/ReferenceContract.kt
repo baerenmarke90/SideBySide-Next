@@ -41,6 +41,10 @@ import sidebyside.api.models.PlaceCreate
 import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlacePage
 import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.PrivateNoteCreate
+import sidebyside.api.models.PrivateNoteDetail
+import sidebyside.api.models.PrivateNotePage
+import sidebyside.api.models.PrivateNoteUpdate
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
@@ -561,6 +565,26 @@ interface ReferenceContract {
     ): PlaceDetail
 
     suspend fun deletePlace(spaceId: UUID, accessToken: String, placeId: UUID, ifMatch: Int)
+
+    /**
+     * Owner-only: the server filters to what the caller owns, so the path
+     * carries no accountId and the response never contains another
+     * account's PrivateNote.
+     */
+    suspend fun listPrivateNotes(spaceId: UUID, accessToken: String, cursor: String? = null): PrivateNotePage
+
+    suspend fun createPrivateNote(spaceId: UUID, accessToken: String, fields: PrivateNoteCreate): PrivateNoteDetail
+
+    /** The contract accepts a partial correction; unset fields are left unchanged. */
+    suspend fun updatePrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        noteId: UUID,
+        ifMatch: Int,
+        fields: PrivateNoteUpdate,
+    ): PrivateNoteDetail
+
+    suspend fun deletePrivateNote(spaceId: UUID, accessToken: String, noteId: UUID, ifMatch: Int)
 }
 
 private fun unsupportedProfileOperation(): Nothing =

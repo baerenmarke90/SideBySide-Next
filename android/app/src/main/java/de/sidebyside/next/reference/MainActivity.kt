@@ -58,6 +58,8 @@ import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
 import de.sidebyside.next.place.PlacesScreen
+import de.sidebyside.next.privatearea.PrivateAreaScreen
+import de.sidebyside.next.privatearea.PrivateNotesScreen
 import de.sidebyside.next.plan.PlanScreen
 import de.sidebyside.next.today.TodayScreen
 import de.sidebyside.next.shell.MoreScreen
@@ -301,6 +303,7 @@ private fun DemoShell(
             AppDestination.More,
         ),
         navController = navController,
+        secureWhen = ::isPrivateAreaRoute,
         detailRoutes = { controller ->
             composable(
                 route = MEMORY_ROUTE,
@@ -638,6 +641,27 @@ private fun DemoShell(
                     onDelete = viewModel::deletePlace,
                 )
             }
+
+            composable(PRIVATE_AREA_ROUTE) {
+                PrivateAreaScreen(
+                    onBack = { controller.popBackStack() },
+                    onOpenNotes = { controller.navigate(PRIVATE_NOTES_ROUTE) },
+                )
+            }
+
+            composable(PRIVATE_NOTES_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateNotes() }
+
+                PrivateNotesScreen(
+                    notes = state.privateNotes,
+                    busy = state.privateNotesBusy,
+                    problem = state.privateNotesProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = viewModel::addPrivateNote,
+                    onEdit = viewModel::updatePrivateNote,
+                    onDelete = viewModel::deletePrivateNote,
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -686,6 +710,7 @@ private fun DemoShell(
                     onOpenInvitations = { navController.navigate(INVITATIONS_ROUTE) },
                     onOpenRelatedPersons = { navController.navigate(RELATED_PERSONS_ROUTE) },
                     onOpenPreferences = { navController.navigate(PREFERENCES_ROUTE) },
+                    onOpenPrivateArea = { navController.navigate(PRIVATE_AREA_ROUTE) },
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
                     spacePartnerNames = state.spacePartnerNames,
@@ -736,6 +761,17 @@ private const val IMPORTANT_DATES_ROUTE =
 private const val PREFERENCES_ROUTE = "profile/preferences"
 
 private const val PLACES_ROUTE = "planning/places"
+
+private const val PRIVATE_AREA_ROUTE = "more/private"
+private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
+
+/**
+ * Whether [route] is inside the owner-only Private Area subtree — the hub
+ * and every screen under it, matched by prefix so a new private-area screen
+ * is secure by default rather than needing to opt in.
+ */
+internal fun isPrivateAreaRoute(route: String?): Boolean =
+    route != null && (route == PRIVATE_AREA_ROUTE || route.startsWith("$PRIVATE_AREA_ROUTE/"))
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE
