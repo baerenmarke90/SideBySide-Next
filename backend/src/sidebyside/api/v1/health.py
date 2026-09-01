@@ -24,6 +24,7 @@ from sidebyside.db.session import get_engine
 router = APIRouter(tags=["health"])
 
 REVISION_HEADER = "X-SideBySide-Revision"
+UNVERIFIED_REVISION = "unverified-local-checkout"
 
 
 class Health(ApiModel):
@@ -37,7 +38,7 @@ class Readiness(ApiModel):
 
 def _build_revision() -> str:
     """Return a response-header-safe build identity without exposing other config."""
-    value = os.environ.get("SBS_BUILD_REVISION", "local-checkout").strip()
+    value = os.environ.get("SBS_BUILD_REVISION", UNVERIFIED_REVISION).strip()
     if not value or "\r" in value or "\n" in value:
         return "unknown"
     return value[:128]
