@@ -1,0 +1,90 @@
+name: Temporary ServerAdmin Web Patch
+
+on:
+  push:
+    branches:
+      - feat/335-server-admin-foundation
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Patch authenticated routing
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('web/src/App.tsx')
+          text = path.read_text()
+
+          def replace_once(old: str, new: str) -> None:
+              global text
+              if old not in text:
+                  raise SystemExit(f'Expected App.tsx fragment missing:\n{old}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              "} from './client/referenceFlow';\n",
+              "} from './client/referenceFlow';\nimport { createServerAdminApis } from './client/serverAdmin';\n",
+          )
+          replace_once(
+              "  SEARCH_ROUTE,\n  WISH_DETAIL_ROUTE_PATTERN,\n",
+              "  SEARCH_ROUTE,\n  SERVER_ADMIN_ROUTE,\n  WISH_DETAIL_ROUTE_PATTERN,\n",
+          )
+          replace_once(
+              "import { RelatedPeoplePage } from './components/RelatedPeoplePage';\n",
+              "import { RelatedPeoplePage } from './components/RelatedPeoplePage';\nimport {\n  ServerAdminAccessGate,\n  ServerAdminPage,\n} from './components/ServerAdminPage';\n",
+          )
+          replace_once(
+              "  apiBaseUrl,\n  spaceId,\n}: {\n  tokens: TokenView;\n  account: AccountView;\n  logout: () => void;\n  apiBaseUrl: string;\n  spaceId: string;\n}) {",
+              "  apiBaseUrl,\n  spaceId,\n  serverAdmin,\n}: {\n  tokens: TokenView;\n  account: AccountView;\n  logout: () => void;\n  apiBaseUrl: string;\n  spaceId: string;\n  serverAdmin: boolean;\n}) {",
+          )
+          replace_once(
+              "      account={account}\n      spaceId={spaceId}\n    >",
+              "      account={account}\n      spaceId={spaceId}\n      serverAdmin={serverAdmin}\n    >",
+          )
+          replace_once(
+              "export function App() {\n  const config = useMemo(loadReferenceClientConfig, []);\n  const queryClient = useQueryClient();\n",
+              "export function App() {\n  const config = useMemo(loadReferenceClientConfig, []);\n  const location = useLocation();\n  const queryClient = useQueryClient();\n",
+          )
+          replace_once(
+              "  const [entryToken, setEntryToken] = useState(() =>\n    readSensitiveEntryToken(window.location.pathname, window.location.search),\n  );\n\n  useEffect(() => {",
+              "  const [entryToken, setEntryToken] = useState(() =>\n    readSensitiveEntryToken(window.location.pathname, window.location.search),\n  );\n  const serverAdminApis = useMemo(\n    () => createServerAdminApis(config.apiBaseUrl, tokens?.accessToken),\n    [config.apiBaseUrl, tokens?.accessToken],\n  );\n  const capabilitiesQuery = useQuery({\n    queryKey: ['account-capabilities', account?.id],\n    queryFn: async () => {\n      try {\n        return await serverAdminApis.auth.getAccountCapabilitiesApiV1AuthCapabilitiesGet();\n      } catch (error) {\n        throw await normalizeClientError(error);\n      }\n    },\n    enabled: tokens !== null && account !== null,\n    retry: false,\n  });\n\n  useEffect(() => {",
+          )
+          replace_once(
+              "  const memberships = membershipsQuery.data ?? [];\n",
+              "  const serverAdminPath =\n    location.pathname === SERVER_ADMIN_ROUTE ||\n    location.pathname.startsWith(`${SERVER_ADMIN_ROUTE}/`);\n\n  if (serverAdminPath) {\n    if (capabilitiesQuery.isPending || capabilitiesQuery.error) {\n      return (\n        <ServerAdminAccessGate\n          loading={capabilitiesQuery.isPending}\n          error={capabilitiesQuery.error}\n          onRetry={() => void capabilitiesQuery.refetch()}\n        />\n      );\n    }\n\n    if (!capabilitiesQuery.data?.serverAdmin) {\n      return (\n        <ServerAdminAccessGate\n          loading={false}\n          error={null}\n          onRetry={() => void capabilitiesQuery.refetch()}\n        />\n      );\n    }\n\n    return (\n      <ServerAdminPage\n        apiBaseUrl={config.apiBaseUrl}\n        accessToken={tokens.accessToken}\n        onLogout={logout}\n      />\n    );\n  }\n\n  const memberships = membershipsQuery.data ?? [];\n",
+          )
+          replace_once(
+              "      apiBaseUrl={config.apiBaseUrl}\n      spaceId={activeSpaceId}\n    />",
+              "      apiBaseUrl={config.apiBaseUrl}\n      spaceId={activeSpaceId}\n      serverAdmin={capabilitiesQuery.data?.serverAdmin ?? false}\n    />",
+          )
+
+          path.write_text(text)
+          PY
+
+      - name: Format Web sources
+        working-directory: web
+        run: |
+          npm ci
+          npm run format
+
+      - name: Commit Web routing changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src/App.tsx web/src/components web/src/client web/src/i18n
+          if git diff --cached --quiet; then
+            echo "No Web patch changes."
+            exit 0
+          fi
+          git commit -m "feat(web): route dedicated ServerAdmin dashboard"
+          git push origin HEAD:feat/335-server-admin-foundation
