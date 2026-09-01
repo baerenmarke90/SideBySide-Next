@@ -125,9 +125,9 @@ Defined, among other things:
 - global full-text Search / general Search Read Model – M4-A;
 - Dashboard, Activity, Notifications, Reminders, and Rules – M4;
 - complete Web/Android productization, parity, Read Cache, Export/Import, Deep Links, comprehensive Accessibility/Performance – M5/G4;
-- Questions, Check-in, and Recaps – M6;
-- Discovery, Shopping, Recipe, Event, and other Providers – M7;
-- Maps/Geocoding Providers, Geofencing, Presence, and active location context – M7/M8;
+- Questions, Check-in, and Recaps – M7 Relationship Depth;
+- Discovery, Shopping, Recipe, Event, and other Providers – M8 Discover & Integrations;
+- Maps/Geocoding Providers, Geofencing, Presence, and active location context – M9 Context & Presence;
 - ShoppingList/ShoppingItem – separate later Domain;
 - real E2EE – MX;
 - video – Future Backlog #88;
