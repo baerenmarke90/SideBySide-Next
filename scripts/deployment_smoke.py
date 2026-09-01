@@ -6,12 +6,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 
 REVISION_HEADER = "X-SideBySide-Revision"
+REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+UNVERIFIED_REVISION = "unverified-local-checkout"
 TIMEOUT_SECONDS = 20
 
 
@@ -86,7 +89,11 @@ def check(base_url: str, expected_revision: str) -> None:
     ready_url = f"{origin}/api/v1/health/ready"
     ready = request(ready_url)
     ready_body = expect_json(ready, url=ready_url)
-    if not isinstance(ready_body, dict) or ready_body.get("status") != "ok" or ready_body.get("database") != "ok":
+    if (
+        not isinstance(ready_body, dict)
+        or ready_body.get("status") != "ok"
+        or ready_body.get("database") != "ok"
+    ):
         raise RuntimeError(f"API readiness is not healthy: {ready_body!r}")
     if ready.revision != expected_revision:
         raise RuntimeError(
@@ -122,33 +129,63 @@ def check(base_url: str, expected_revision: str) -> None:
     access_token = tokens["accessToken"]
     print("ok: password sign-in")
 
-    memberships_url = f"{origin}/api/v1/auth/memberships"
-    memberships = request(memberships_url, bearer=access_token)
-    expect_json(memberships, url=memberships_url)
-    print("ok: authenticated memberships read")
-
-    sign_out_url = f"{origin}/api/v1/auth/sign-out"
-    sign_out = request(sign_out_url, method="POST", bearer=access_token)
-    if sign_out.status < 200 or sign_out.status >= 300:
-        raise RuntimeError(f"Sign-out returned HTTP {sign_out.status}")
-    print("ok: smoke session signed out")
+    primary_error: RuntimeError | None = None
+    try:
+        memberships_url = f"{origin}/api/v1/auth/memberships"
+        memberships = request(memberships_url, bearer=access_token)
+        expect_json(memberships, url=memberships_url)
+        print("ok: authenticated memberships read")
+    except RuntimeError as exc:
+        primary_error = exc
+        raise
+    finally:
+        try:
+            sign_out_url = f"{origin}/api/v1/auth/sign-out"
+            sign_out = request(sign_out_url, method="POST", bearer=access_token)
+            if sign_out.status < 200 or sign_out.status >= 300:
+                raise RuntimeError(f"Sign-out returned HTTP {sign_out.status}")
+            print("ok: smoke session signed out")
+        except RuntimeError as cleanup_error:
+            if primary_error is not None:
+                raise RuntimeError(
+                    f"{primary_error}; smoke-session cleanup also failed: {cleanup_error}"
+                ) from primary_error
+            raise
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", required=True, help="Public SideBySide origin")
-    parser.add_argument(
+    revision = parser.add_mutually_exclusive_group(required=True)
+    revision.add_argument(
         "--expected-revision",
-        required=True,
-        help="Exact revision expected from both Web and API deployment identities",
+        help="Exact 40-character Git commit SHA expected from Web and API",
+    )
+    revision.add_argument(
+        "--allow-unverified-local",
+        action="store_true",
+        help="Explicit non-release mode for the unverified-local-checkout sentinel",
     )
     return parser.parse_args(argv)
+
+
+def expected_revision(args: argparse.Namespace) -> str:
+    if args.allow_unverified_local:
+        return UNVERIFIED_REVISION
+
+    value = args.expected_revision.strip().lower()
+    if not REVISION_RE.fullmatch(value):
+        raise RuntimeError(
+            "--expected-revision must be an exact 40-character Git commit SHA; "
+            "mutable refs such as main are not valid release evidence"
+        )
+    return value
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     try:
-        check(args.base_url, args.expected_revision)
+        check(args.base_url, expected_revision(args))
     except RuntimeError as exc:
         print(f"deployment smoke failed: {exc}", file=sys.stderr)
         return 1
