@@ -32,6 +32,10 @@ import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
 import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.DashboardView
+import sidebyside.api.models.AcceptRequest
+import sidebyside.api.models.IssuedInvitationView
+import sidebyside.api.models.InvitationView
+import sidebyside.api.models.MembershipView
 import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
@@ -685,6 +689,47 @@ class OkHttpReferenceApi(
                     .toRequestBody(jsonMediaType),
             ).build(),
         ThinkingOfYouAccepted.serializer(),
+    )
+
+    override suspend fun acceptInvitation(
+        accessToken: String,
+        token: String,
+    ): MembershipView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/invitations/accept", accessToken)
+            .post(
+                SideBySideJson.encodeToString(AcceptRequest.serializer(), AcceptRequest(token = token))
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        MembershipView.serializer(),
+    )
+
+    override suspend fun listInvitations(
+        spaceId: UUID,
+        accessToken: String,
+    ): List<InvitationView> = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/invitations", accessToken)
+            .get().build(),
+        ListSerializer(InvitationView.serializer()),
+    )
+
+    override suspend fun createInvitation(
+        spaceId: UUID,
+        accessToken: String,
+    ): IssuedInvitationView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/invitations", accessToken)
+            .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+        IssuedInvitationView.serializer(),
+    )
+
+    override suspend fun revokeInvitation(
+        spaceId: UUID,
+        accessToken: String,
+        invitationId: UUID,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/invitations/$invitationId",
+            accessToken,
+        ).delete().build(),
     )
 
     override suspend fun getTimeline(
