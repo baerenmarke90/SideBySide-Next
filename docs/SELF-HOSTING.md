@@ -1,5 +1,11 @@
 # Secure Self-Hosted Operation
 
+Persistent Development, release-candidate verification, Production promotion, and
+rollback are governed by
+[`DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`](DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md).
+This document covers secure instance operation; it must not be used to bypass the
+Development-before-Production promotion gates defined there.
+
 ## Two operating modes
 
 The bundled Compose stack supports two operating modes, and the distinction is
@@ -125,6 +131,10 @@ SideBySide separates two health questions:
 - `/healthz` on the Web service confirms only that the static server responds.
   API dependency is represented separately through Compose and API readiness.
 
+Both API health responses also include `X-SideBySide-Revision`. Release
+verification must compare that header with the expected candidate/Production
+revision as described in the authoritative environment/promotion runbook.
+
 The API Docker health check deliberately uses the readiness route. This makes
 `docker compose up -d --wait` report a missing database/network path as a
 deployment failure even if Uvicorn itself is still running. Docker Compose does
@@ -175,6 +185,8 @@ substantive: with `none`, no token leaves the system.
 Then run `docker compose up -d --build --force-recreate --wait --wait-timeout
 300` and verify that `docker compose logs api` reports production mode.
 `--build` ensures the deployed Web and backend images match the selected source revision.
+Production promotion itself must still follow the immutable-revision and
+Development-first gates in `DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`.
 
 ## Media storage
 
@@ -344,6 +356,10 @@ If no mail server is available, use `SBS_MAIL_TRANSPORT=none` instead of `log`;
 see [Operation without a mail server](#operation-without-a-mail-server).
 
 ## Smoke test after changes
+
+The shared non-destructive release smoke helper is documented in
+`DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`. For local host-level diagnosis, the
+following checks remain useful:
 
 ```bash
 # Determine the actual host port.
