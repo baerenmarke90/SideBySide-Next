@@ -2,8 +2,10 @@ package de.sidebyside.next.design
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import de.sidebyside.next.reference.R
 import androidx.compose.ui.unit.sp
 
 /**
@@ -13,11 +15,28 @@ import androidx.compose.ui.unit.sp
  * resolved against the token font size so a scale change in
  * `design/tokens.json` propagates without a second edit here.
  *
- * The token file names `Inter` and `Fraunces`. Neither face is delivered with
- * the app, so both resolve to their documented fallbacks. Delivering them is a
- * provider decision with licensing and size consequences and is deliberately
- * not made in this slice.
+ * The token file names `Inter` and `Fraunces`. Only Fraunces is delivered, as
+ * one variable file bundled with the app. The UI face stays the platform's own:
+ * every platform already ships a neutral grotesque, so Inter would have cost
+ * bytes for a difference nobody would name. See
+ * `docs/decisions/0005-typography-delivery.md`.
  */
+
+/**
+ * The display face, from the app's own resources.
+ *
+ * One variable file rather than static cuts, so the token scale's weights are
+ * all covered by a single 360 kB resource. Nothing is fetched at runtime: a
+ * font host would put a third party in the path of a product whose premise is
+ * that only two people are in it, and Self-Hosted installations have no
+ * external access to rely on.
+ */
+val FrauncesFamily: FontFamily = FontFamily(
+    Font(R.font.fraunces, FontWeight.Normal),
+    Font(R.font.fraunces, FontWeight.Medium),
+    Font(R.font.fraunces, FontWeight.SemiBold),
+    Font(R.font.fraunces, FontWeight.Bold),
+)
 private fun tokenTextStyle(
     fontSizeSp: Float,
     lineHeightRatio: Float,
@@ -38,8 +57,9 @@ internal val displayStyle = with(GeneratedTypographyTokens.Display) {
         LINE_HEIGHT_RATIO,
         FONT_WEIGHT,
         LETTER_SPACING_EM,
-        // The display face is reserved for editorial and Story moments.
-        fontFamily = FontFamily.Serif,
+        // Reserved for editorial and Story moments, and the only place the
+        // delivered face is used.
+        fontFamily = FrauncesFamily,
     )
 }
 

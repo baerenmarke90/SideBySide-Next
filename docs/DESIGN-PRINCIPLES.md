@@ -166,14 +166,17 @@ Mandatory rules:
 
 ### 3.2 Typography
 
-At most two font families are used:
+At most two font families are used, and only one of them is delivered by the
+product. See `docs/decisions/0005-typography-delivery.md`.
 
 - **Display:** Fraunces 600 for selected editorial and Story moments where it
-  supports the content without reducing readability.
-- **UI:** Inter 400/500/600 for navigation, content, forms, controls, and product
-  entry or authentication headings.
-- Fallbacks: `Georgia, serif` and
-  `system-ui, -apple-system, Segoe UI, sans-serif`, respectively.
+  supports the content without reducing readability. **Delivered** by both
+  clients as a self-hosted variable file; nothing is fetched at runtime.
+  Fallback: `Georgia, serif`.
+- **UI:** the platform's own face at 400/500/600 for navigation, content, forms,
+  controls, and product entry or authentication headings. Every platform ships a
+  neutral grotesque already, so none is bundled. The stack names `Inter` first,
+  which applies only where the reader happens to have it installed.
 
 | Level | Mobile | Web | Use |
 |---|---:|---:|---|

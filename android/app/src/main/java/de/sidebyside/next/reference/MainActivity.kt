@@ -43,6 +43,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import de.sidebyside.next.demo.DemoBanner
 import de.sidebyside.next.design.MinimumTouchTarget
+import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
@@ -407,7 +408,11 @@ private fun StoryDestination(
         ) {
             Text(
                 text = stringResource(R.string.story_title),
-                style = MaterialTheme.typography.headlineMedium,
+                // An editorial moment, which is what the delivered display face
+                // is for. The size stays the token scale's; only the family
+                // changes.
+                style = MaterialTheme.typography.headlineMedium
+                    .copy(fontFamily = FrauncesFamily),
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.semantics { heading() },
             )
