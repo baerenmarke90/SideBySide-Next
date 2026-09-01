@@ -6,6 +6,9 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import type { ReferenceApis } from '../client/referenceFlow';
+import { StoryList } from './StoryList';
+import { PRIVATE_AREA_PATH } from '../client/routes';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
@@ -196,10 +199,14 @@ function MoodCheckIn({ partnerName }: { partnerName?: string }) {
 
 export function DashboardProductPage({
   apis,
+  storyApis,
   spaceId,
+  loadMemoryImage,
 }: {
   apis: M4ProductApis;
+  storyApis?: ReferenceApis;
   spaceId: string;
+  loadMemoryImage?: (m: string, a: string) => Promise<string>;
 }) {
   const { t } = useTranslation();
   const dashboardQuery = useQuery({
@@ -209,6 +216,15 @@ export function DashboardProductPage({
   });
 
   const partnerName = dashboardQuery.data?.space.partner?.displayName;
+
+  const storyQuery = useQuery({
+    queryKey: ['dashboard', 'storyPreview', spaceId],
+    queryFn: () =>
+      storyApis
+        ? apiCall(() => storyApis.story.getStoryTimeline({ spaceId, limit: 3 }))
+        : Promise.resolve({ items: [], hasMore: false, nextCursor: null }),
+    enabled: !!storyApis,
+  });
 
   return (
     <div className="page m4-product-page">
@@ -245,6 +261,27 @@ export function DashboardProductPage({
           <MoodCheckIn partnerName={partnerName} />
 
           <div className="dashboard-grid">
+            <div className="relationship-duration-card">
+              <p className="eyebrow">{t('m5s5.dashboard.durationTitle')}</p>
+              <h3>
+                {dashboardQuery.data.relationshipDuration
+                  ? t('m5s5.dashboard.durationSince', {
+                      date: formatDate(
+                        dashboardQuery.data.relationshipDuration.startedOn,
+                      ),
+                    })
+                  : t('m5s5.dashboard.durationEmpty')}
+              </h3>
+            </div>
+
+            <Link to={PRIVATE_AREA_PATH} className="private-area-card">
+              <p className="eyebrow" style={{ color: 'var(--color-private)' }}>
+                {t('more.private.title')}
+              </p>
+              <h3>Gedanken & Geheimnisse</h3>
+              <p>{t('more.private.description')}</p>
+            </Link>
+
             <div className="date-night-card">
               <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 {t('m5s5.dashboard.upcomingTitle')}
@@ -276,11 +313,21 @@ export function DashboardProductPage({
 
           <div className="layout-split" style={{ marginTop: '2rem' }}>
             <div className="layout-main">
-              <DashboardSection
-                title={t('m5s5.dashboard.recentTitle')}
-                items={dashboardQuery.data.recentShared}
-                empty={t('m5s5.dashboard.recentEmpty')}
-              />
+              <div className="layout-section-head">
+                <h2>{t('m5s5.dashboard.recentTitle')}</h2>
+              </div>
+              {storyQuery.data && storyQuery.data.items.length > 0 ? (
+                <StoryList
+                  items={storyQuery.data.items}
+                  loadMemoryImage={loadMemoryImage ?? (() => Promise.reject())}
+                />
+              ) : (
+                <DashboardSection
+                  title=""
+                  items={dashboardQuery.data.recentShared}
+                  empty={t('m5s5.dashboard.recentEmpty')}
+                />
+              )}
             </div>
             <aside
               className="layout-rail"
@@ -291,27 +338,6 @@ export function DashboardProductPage({
                 items={dashboardQuery.data.upcoming}
                 empty={t('m5s5.dashboard.upcomingEmpty')}
               />
-              <section
-                className="m4-summary-card"
-                aria-labelledby="m4-summary-heading"
-              >
-                <div className="m4-summary-copy">
-                  <h2 id="m4-summary-heading">
-                    {partnerName
-                      ? t('m5s5.dashboard.partner', { name: partnerName })
-                      : t('m5s5.dashboard.durationTitle')}
-                  </h2>
-                  <p className="m4-muted">
-                    {dashboardQuery.data.relationshipDuration
-                      ? t('m5s5.dashboard.durationSince', {
-                          date: formatDate(
-                            dashboardQuery.data.relationshipDuration.startedOn,
-                          ),
-                        })
-                      : t('m5s5.dashboard.durationEmpty')}
-                  </p>
-                </div>
-              </section>
             </aside>
           </div>
         </>

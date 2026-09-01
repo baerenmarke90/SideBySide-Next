@@ -8,7 +8,7 @@
  * The destination names follow `docs/INFORMATION-ARCHITECTURE.md` section 2.
  */
 const navigation = {
-  today: 'Unser Heute',
+  today: 'Unser Tag',
   plan: 'Unsere Pläne',
   more: 'Mehr',
   search: 'Suchen',

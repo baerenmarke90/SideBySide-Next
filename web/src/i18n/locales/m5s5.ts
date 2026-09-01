@@ -1,7 +1,7 @@
 const m5s5 = {
   dashboard: {
     // The visible landing area is Übersicht; the stable route ID remains `today`.
-    eyebrow: 'Unser Heute',
+    eyebrow: 'Unser Tag',
     title: 'Schön, dass du da bist',
     intro: 'Ein kleiner Blick auf das, was euch heute verbindet.',
     partner: 'Zusammen mit {{name}}',
@@ -21,7 +21,7 @@ const m5s5 = {
     moodStressed: 'Gestresst',
     moodLoving: 'Liebevoll',
     moodTired: 'Müde',
-    plansRail: 'Eure gemeinsamen Pläne',
+    plansRail: 'Unsere gemeinsamen Pläne',
     durationTitle: 'Unsere Reise',
     durationDays: '{{count}} Tage voller Momente',
     durationSince: 'Gemeinsam seit {{date}}',

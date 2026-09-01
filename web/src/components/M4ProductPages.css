@@ -378,3 +378,58 @@
   margin: 0;
   font-size: 0.9rem;
 }
+
+.relationship-duration-card {
+  background: var(--color-surface-panel);
+  border-radius: var(--radius-large);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.relationship-duration-card h3 {
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  color: var(--color-brand-strong);
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.private-area-card {
+  background: linear-gradient(
+    135deg,
+    var(--color-private-surface-soft) 0%,
+    var(--color-surface) 100%
+  );
+  border-radius: var(--radius-large);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-decoration: none;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  border: 1px solid transparent;
+}
+
+.private-area-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px var(--color-shadow-card);
+}
+
+.private-area-card h3 {
+  color: var(--color-private);
+  margin: var(--space-1) 0;
+  font-size: 1.4rem;
+}
+
+.private-area-card p {
+  color: var(--color-text-secondary);
+  margin: 0;
+}
