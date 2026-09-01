@@ -494,8 +494,8 @@ export function MemoryProductPage({
         </aside>
 
         <div className="layout-main">
-          <article className="story-surface memory-detail-card">
-            <p className="memory-detail-body">
+          <article className="story-surface memory-detail-card coffee-table-layout">
+            <p className="memory-detail-body drop-cap">
               {memory.body || t('memoryProduct.noBody')}
             </p>
 

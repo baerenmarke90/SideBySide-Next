@@ -138,7 +138,25 @@ function MoodCheckIn({ partnerName }: { partnerName?: string }) {
   ];
   const [myMood, setMyMood] = useState('happy');
   // For demonstration, partner's mood is static.
+
   const partnerMood = 'calm';
+
+  useEffect(() => {
+    const MOOD_COLORS: Record<string, string> = {
+      happy: 'rgba(255, 193, 107, 0.35)',
+      calm: 'rgba(138, 203, 216, 0.35)',
+      stressed: 'rgba(182, 147, 201, 0.35)',
+      loving: 'rgba(255, 138, 171, 0.35)',
+      tired: 'rgba(164, 169, 184, 0.35)',
+    };
+    const c1 = MOOD_COLORS[myMood] || 'transparent';
+    const c2 = MOOD_COLORS[partnerMood] || 'transparent';
+
+    document.documentElement.style.setProperty(
+      '--mood-aura',
+      `radial-gradient(circle at 20% 0%, ${c1}, transparent 60%), radial-gradient(circle at 80% 100%, ${c2}, transparent 60%)`,
+    );
+  }, [myMood, partnerMood]);
 
   return (
     <section className="layout-panel" aria-labelledby="mood-heading">

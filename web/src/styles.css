@@ -94,7 +94,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--color-background);
+  background: var(--mood-aura, none), var(--color-background);
+  background-attachment: fixed;
+  transition: background 1s ease-in-out;
 }
 
 button,
