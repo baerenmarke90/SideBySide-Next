@@ -16,9 +16,9 @@ SideBySide has four distinct operational purposes:
 | Environment | Purpose | Data | Source revision |
 |---|---|---|---|
 | Local / PR | developer feedback and automated validation | disposable/generated | feature branch or PR commit |
-| Development | persistent integration, migration and release-candidate verification | fictional/test only | `main` or an explicit candidate commit |
+| Development | persistent integration, migration and release-candidate verification | fictional/test only | `main` or an exact candidate commit |
 | Demo | public product demonstration and manual QA | canonical fictional demo data | independently deployed |
-| Production | supported service with real user data | real | immutable commit SHA |
+| Production | supported service with real user data | real | exact immutable commit SHA |
 
 The public Demo from #304 is **not** a staging environment and is not a production
 release gate. Development may use the canonical fictional scenario as test data,
@@ -54,6 +54,8 @@ storage credentials/buckets.
 No new orchestrator is introduced for v1.
 
 - Complete repository checkout: `compose.yaml`.
+- Verified release-candidate/Production deployment from a complete checkout:
+  `scripts/compose_checked.py` wrapping `compose.yaml`.
 - Arcane / remote Git workspace: `compose.arcane.yaml`.
 - Development database only for source-code work: `deploy/docker-compose.dev.yml`.
 - Persistent Development: the complete SideBySide stack, normally through
@@ -69,6 +71,31 @@ postgres -> migrate -> demo-init(no-op outside Demo) -> api/worker -> web
 The `migrate` service must succeed before API/worker start, and Web waits for API
 readiness. Production is never the first persistent environment to execute a new
 migration.
+
+### 3.1 Raw Compose is not a release identity
+
+Direct `docker compose` from a complete checkout remains the convenient local/test
+path. Its backend and Web images deliberately report:
+
+```text
+unverified-local-checkout
+```
+
+That marker cannot be replaced through `.env`. Therefore a dirty checkout or an
+operator-selected value cannot impersonate an approved commit.
+
+A complete-checkout release candidate or Production deployment must use
+`scripts/compose_checked.py`. The wrapper:
+
+- derives the exact 40-character revision from Git `HEAD`;
+- refuses a checkout with tracked or untracked changes;
+- optionally requires `--expected-revision` to match `HEAD` exactly;
+- injects that derived revision into backend **and** Web build arguments;
+- refuses alternate Compose files/project directories that could detach the proof
+  from the canonical checkout.
+
+Arcane does not use this wrapper because its remote Git build context and build
+identity are both derived from the same `SBS_SOURCE_REF`.
 
 ## 4. Persistent Development
 
@@ -119,39 +146,47 @@ network/VPN path or a protected TLS origin.
 
 The revision policy is intentionally different by environment:
 
-- PR/local: branch or PR commit;
+- PR/local: branch or PR commit; raw Compose remains explicitly unverified;
 - normal Development: `main` may float;
 - release-candidate Development: exact commit SHA;
 - Production: exact immutable commit SHA only.
 
-A human-readable release tag may point to the production commit, but the production
-Arcane `SBS_SOURCE_REF` should be the resolved 40-character commit SHA. This avoids
-relying on a movable tag during deployment.
+A human-readable release tag may point to the production commit, but an Arcane
+Production `SBS_SOURCE_REF` must be the resolved 40-character commit SHA. This
+avoids relying on a movable tag during deployment.
 
 For v1, SideBySide continues to build from Git/BuildKit rather than introducing a
-container registry solely for promotion. This means Development and Production may
-rebuild the same immutable source; the invariant is **same known source revision**,
-not byte-identical image layers. Versioned registry images remain a valid later
-improvement if build-once/promote-the-identical-artifact becomes operationally
-important.
+container registry solely for promotion. Development and Production may rebuild
+the same immutable source; the invariant is **same verified source revision for
+all application components**, not byte-identical image layers. Versioned registry
+images remain a valid later improvement if build-once/promote-the-identical-artifact
+becomes operationally important.
 
 ## 6. Deployed revision observability
 
-The backend image receives its source revision at build time. The API returns it on
-both health endpoints as:
+Backend and Web carry independent build identities so a mixed-version deployment
+cannot pass release smoke.
+
+The API returns the backend identity on both health endpoints as:
 
 ```text
 X-SideBySide-Revision: <revision>
 ```
 
-For Arcane builds this value is derived from `SBS_SOURCE_REF`; API, worker, and
-migrate use the same backend build context. The Web build uses the same Git ref.
-For a normal local checkout the fallback is `local-checkout` unless
-`SBS_BUILD_REVISION` is explicitly supplied.
+The Web image exposes its build identity at:
 
-A release smoke check must compare the header with the expected candidate or
-production commit. A healthy service serving the wrong revision is a failed
-promotion.
+```text
+/.well-known/sidebyside-revision
+```
+
+For Arcane, both identities are derived from `SBS_SOURCE_REF`; API, worker, and
+migrate use one backend build context while Web uses the same source ref for its
+own build context. For a verified complete checkout, `scripts/compose_checked.py`
+injects the exact clean Git `HEAD` into both builds.
+
+A release smoke check must require **both** Web and API identities to equal the
+expected candidate/Production commit. A healthy component serving the wrong
+revision, or a stale Web image paired with a new backend, is a failed promotion.
 
 ## 7. Promotion gates
 
@@ -165,7 +200,7 @@ candidate commit:
 5. candidate commit is deployed to persistent Development;
 6. Development migration succeeds;
 7. API readiness and Web health succeed;
-8. `X-SideBySide-Revision` equals the candidate commit;
+8. Web and API deployment identities both equal the candidate commit;
 9. authenticated sign-in and one authenticated core read succeed;
 10. affected manual acceptance paths are exercised where automated coverage is
     insufficient;
@@ -189,12 +224,14 @@ python3 scripts/deployment_smoke.py \
 It verifies:
 
 - Web `/healthz`;
+- Web `/.well-known/sidebyside-revision`;
 - API `/api/v1/health/ready` and database readiness;
-- the deployed revision header;
+- API `X-SideBySide-Revision`;
+- exact equality of both component identities with the requested revision;
 - optionally, password sign-in plus `GET /api/v1/auth/memberships` when
   `SBS_SMOKE_EMAIL` and `SBS_SMOKE_PASSWORD` are provided.
 
-Smoke credentials must belong to a fictional Development/Production smoke account
+Smoke credentials must belong to a fictional Development/operator smoke account
 appropriate for the target environment and must not be committed. Do not use a
 real user's credentials as an automated test secret.
 
@@ -232,28 +269,49 @@ a verified pre-change backup plus a compatible application revision.
 High-risk schema changes require a confirmed Production backup/restore point before
 promotion.
 
-## 10. Release and production promotion
+## 10. Release and Production promotion
 
-Recommended operator sequence:
+After CI and Development acceptance, resolve and record the immutable candidate:
 
 ```bash
-# In a trusted checkout after CI and Development acceptance:
 CANDIDATE=$(git rev-parse <candidate-ref>^{commit})
 git tag -a vX.Y.Z "$CANDIDATE" -m "SidebySide vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-Record both the tag and `$CANDIDATE`. Configure Production with:
+A tag is the human release name; `$CANDIDATE` is the deployment identity.
+
+### 10.1 Arcane Production
+
+Configure Production with:
 
 ```dotenv
 SBS_ENVIRONMENT=production
 SBS_SOURCE_REF=<CANDIDATE>
 ```
 
-Then rebuild/recreate the complete Production stack. Confirm migrations, readiness,
-Web health, and the revision header before declaring the release complete.
+Rebuild/recreate the complete Arcane stack and run the smoke helper with exactly
+that candidate SHA.
 
-A tag is the human release name; the resolved commit SHA is the deployment identity.
+### 10.2 Complete-checkout Production
+
+Use a trusted checkout at the candidate, verify it is clean, and deploy only
+through the checked wrapper:
+
+```bash
+git checkout "$CANDIDATE"
+git status --short
+python3 scripts/compose_checked.py \
+  --expected-revision "$CANDIDATE" \
+  up -d --build --force-recreate --wait --wait-timeout 300
+```
+
+The wrapper refuses dirty or mismatched source before Docker Compose runs. Do not
+replace this release command with raw `docker compose`; raw Compose intentionally
+reports `unverified-local-checkout` and cannot satisfy a commit-specific smoke.
+
+After either deployment path, confirm migrations, readiness, Web health, and both
+revision identities before declaring the release complete.
 
 ## 11. Rollback and recovery
 
@@ -266,7 +324,9 @@ Before every Production promotion record:
 - whether application rollback is schema-compatible.
 
 If the candidate fails before an incompatible migration is committed, redeploy the
-previous known-good commit SHA and repeat smoke verification.
+previous known-good commit SHA and repeat smoke verification. Arcane pins the old
+SHA as `SBS_SOURCE_REF`; a complete checkout uses the same verified wrapper against
+a clean checkout at the old SHA.
 
 If the candidate has already applied a schema change that is not backward
 compatible, do **not** blindly redeploy old code. Choose one of:
@@ -297,7 +357,8 @@ promoted into Production.
 
 CI owns deterministic repository checks: tests, migrations from clean schemas,
 OpenAPI/client drift, security/privacy/reuse/supply-chain rules, Compose rendering,
-and the deployment guard.
+verified-checkout refusal behavior, Web/API revision parity, and the deployment
+guard.
 
 Operators own environment facts CI cannot prove from the repository: actual secret
 separation, persistent Development health, external reverse proxy/TLS behavior,
