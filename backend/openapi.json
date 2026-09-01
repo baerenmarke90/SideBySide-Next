@@ -14,6 +14,20 @@
         "title": "AcceptRequest",
         "type": "object"
       },
+      "AccountCapabilitiesView": {
+        "description": "Current account capabilities used only for client presentation.",
+        "properties": {
+          "serverAdmin": {
+            "title": "Serveradmin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "serverAdmin"
+        ],
+        "title": "AccountCapabilitiesView",
+        "type": "object"
+      },
       "AccountMembershipView": {
         "description": "Active Space membership belonging to the authenticated account.",
         "properties": {
@@ -5250,6 +5264,195 @@
         "title": "SearchScope",
         "type": "string"
       },
+      "ServerAdminFailedJob": {
+        "description": "Safe queue metadata without payload or raw exception text.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "maxAttempts": {
+            "title": "Maxattempts",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "attempts",
+          "maxAttempts",
+          "finishedAt"
+        ],
+        "title": "ServerAdminFailedJob",
+        "type": "object"
+      },
+      "ServerAdminOverview": {
+        "description": "Privacy-safe operational projection for one SideBySide installation.",
+        "properties": {
+          "accountCount": {
+            "title": "Accountcount",
+            "type": "integer"
+          },
+          "accountsLast24h": {
+            "title": "Accountslast24H",
+            "type": "integer"
+          },
+          "accountsLast7d": {
+            "title": "Accountslast7D",
+            "type": "integer"
+          },
+          "activeSpaceCount": {
+            "title": "Activespacecount",
+            "type": "integer"
+          },
+          "applicationStatus": {
+            "title": "Applicationstatus",
+            "type": "string"
+          },
+          "buildRevision": {
+            "title": "Buildrevision",
+            "type": "string"
+          },
+          "databaseProvider": {
+            "title": "Databaseprovider",
+            "type": "string"
+          },
+          "databaseStatus": {
+            "title": "Databasestatus",
+            "type": "string"
+          },
+          "demoMode": {
+            "title": "Demomode",
+            "type": "boolean"
+          },
+          "deployment": {
+            "title": "Deployment",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "jobsFailed": {
+            "title": "Jobsfailed",
+            "type": "integer"
+          },
+          "jobsPending": {
+            "title": "Jobspending",
+            "type": "integer"
+          },
+          "jobsRunning": {
+            "title": "Jobsrunning",
+            "type": "integer"
+          },
+          "lastSuccessfulJobAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastsuccessfuljobat"
+          },
+          "mailTransport": {
+            "title": "Mailtransport",
+            "type": "string"
+          },
+          "mediaObjectCount": {
+            "title": "Mediaobjectcount",
+            "type": "integer"
+          },
+          "mediaStatus": {
+            "title": "Mediastatus",
+            "type": "string"
+          },
+          "mediaStore": {
+            "title": "Mediastore",
+            "type": "string"
+          },
+          "mediaStoredBytes": {
+            "title": "Mediastoredbytes",
+            "type": "integer"
+          },
+          "oidcConnectionCount": {
+            "title": "Oidcconnectioncount",
+            "type": "integer"
+          },
+          "processStartedAt": {
+            "format": "date-time",
+            "title": "Processstartedat",
+            "type": "string"
+          },
+          "publicBaseUrl": {
+            "title": "Publicbaseurl",
+            "type": "string"
+          },
+          "recentFailedJobs": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminFailedJob"
+            },
+            "title": "Recentfailedjobs",
+            "type": "array"
+          },
+          "workerStatus": {
+            "title": "Workerstatus",
+            "type": "string"
+          }
+        },
+        "required": [
+          "applicationStatus",
+          "databaseStatus",
+          "workerStatus",
+          "mediaStatus",
+          "deployment",
+          "environment",
+          "buildRevision",
+          "processStartedAt",
+          "publicBaseUrl",
+          "mediaStore",
+          "mailTransport",
+          "oidcConnectionCount",
+          "demoMode",
+          "databaseProvider",
+          "accountCount",
+          "activeSpaceCount",
+          "accountsLast24h",
+          "accountsLast7d",
+          "mediaObjectCount",
+          "mediaStoredBytes",
+          "jobsPending",
+          "jobsRunning",
+          "jobsFailed",
+          "lastSuccessfulJobAt",
+          "recentFailedJobs"
+        ],
+        "title": "ServerAdminOverview",
+        "type": "object"
+      },
       "SessionView": {
         "properties": {
           "account": {
@@ -6205,6 +6408,38 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/auth/capabilities": {
+      "get": {
+        "description": "Return presentation capabilities without replacing endpoint authorization.",
+        "operationId": "get_account_capabilities_api_v1_auth_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountCapabilitiesView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          }
+        },
+        "summary": "Get Account Capabilities",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/email/verification/confirm": {
       "post": {
         "description": "Confirm the email address without requiring authentication.\n\nVerification links are frequently opened in a different application from\nthe one that holds the current session.",
@@ -7306,6 +7541,48 @@
         "summary": "Accept Invitation",
         "tags": [
           "invitations"
+        ]
+      }
+    },
+    "/api/v1/server-admin/overview": {
+      "get": {
+        "description": "Return safe operational state for an authorized ServerAdmin.",
+        "operationId": "get_server_admin_overview_api_v1_server_admin_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          }
+        },
+        "summary": "Get Server Admin Overview",
+        "tags": [
+          "server-admin"
         ]
       }
     },

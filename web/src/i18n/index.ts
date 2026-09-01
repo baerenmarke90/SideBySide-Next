@@ -13,6 +13,7 @@ import people from './locales/people';
 import privateArea from './locales/privateArea';
 import profileIdentity from './locales/profileIdentity';
 import profiles from './locales/profiles';
+import serverAdmin from './locales/serverAdmin';
 import storyProducts from './locales/storyProducts';
 
 export const DEFAULT_LOCALE = 'de';
@@ -44,6 +45,7 @@ if (!i18n.isInitialized) {
           privateArea,
           profileIdentity,
           profiles,
+          serverAdmin,
           ...storyProducts,
         },
       },

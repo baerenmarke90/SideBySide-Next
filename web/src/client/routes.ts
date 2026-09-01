@@ -107,6 +107,12 @@ export const MORE_NOTIFICATIONS_ROUTE = '/more/notifications';
 export const MORE_PROFILE_ROUTE = '/more/profile';
 export const MORE_PRIVATE_ROUTE = '/more/private';
 
+/**
+ * Instance-wide operational administration. It is deliberately outside the
+ * partner/product navigation tree and never derives authorization from a Space.
+ */
+export const SERVER_ADMIN_ROUTE = '/server-admin';
+
 /* Story content ---------------------------------------------------------- */
 
 export const MEMORY_CREATE_ROUTE = '/story/memories/new';

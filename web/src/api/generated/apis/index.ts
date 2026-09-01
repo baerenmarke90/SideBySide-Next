@@ -23,6 +23,7 @@ export * from './ProfilesApi';
 export * from './RemindersApi';
 export * from './RulesApi';
 export * from './SearchApi';
+export * from './ServerAdminApi';
 export * from './SpacesApi';
 export * from './StoryApi';
 export * from './TransferApi';

@@ -36,7 +36,7 @@ class Readiness(ApiModel):
     database: str
 
 
-def _build_revision() -> str:
+def build_revision() -> str:
     """Return a response-header-safe build identity without exposing other config."""
     value = os.environ.get("SBS_BUILD_REVISION", UNVERIFIED_REVISION).strip()
     if not value or "\r" in value or "\n" in value:
@@ -45,7 +45,7 @@ def _build_revision() -> str:
 
 
 def _set_revision_header(response: Response) -> None:
-    response.headers[REVISION_HEADER] = _build_revision()
+    response.headers[REVISION_HEADER] = build_revision()
 
 
 @router.get("/health", response_model=Health)

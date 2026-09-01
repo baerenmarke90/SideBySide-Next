@@ -4,7 +4,11 @@ import { Link } from 'react-router-dom';
 import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { Configuration } from '../api/generated/runtime';
-import { ACTIVITY_ROUTE, MORE_PROFILE_ROUTE } from '../client/routes';
+import {
+  ACTIVITY_ROUTE,
+  MORE_PROFILE_ROUTE,
+  SERVER_ADMIN_ROUTE,
+} from '../client/routes';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import { useTranslation } from '../i18n';
 import { DestinationIcon } from './DestinationIcon';
@@ -22,12 +26,14 @@ export function HeaderProfileMenu({
   accessToken,
   account,
   spaceId,
+  serverAdmin,
   onLogout,
 }: {
   apiBaseUrl: string;
   accessToken: string;
   account: AccountView;
   spaceId: string;
+  serverAdmin: boolean;
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
@@ -115,6 +121,18 @@ export function HeaderProfileMenu({
           </span>
           <span>{t('navigation.activity')}</span>
         </Link>
+        {serverAdmin ? (
+          <Link
+            className="header-profile-menu-item"
+            to={SERVER_ADMIN_ROUTE}
+            onClick={closeMenu}
+          >
+            <span className="shell-nav-icon" aria-hidden="true">
+              <DestinationIcon icon="more" />
+            </span>
+            <span>{t('serverAdmin.title')}</span>
+          </Link>
+        ) : null}
         <button
           type="button"
           className="header-profile-menu-item header-profile-menu-logout"
