@@ -5,6 +5,7 @@ import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
 import { useTranslation } from '../i18n';
 import { PartnerConnectionPanel } from './PartnerConnectionPanel';
 import { PartnerIdentityPanel } from './PartnerIdentityPanel';
+import { ProfileAppearancePanel } from './ProfileAppearancePanel';
 import { ProfileIdentityPanel } from './ProfileIdentityPanel';
 import { ProfilePage as ProfilePageBase } from './ProfilePageBase';
 import { ProfileSettingsIndex } from './ProfileSettingsIndex';
@@ -27,6 +28,7 @@ export function ProfilePage(props: ProfilePageProps) {
     <>
       <ProfilePageBase {...currentProps} />
       <ProfileSettingsIndex />
+      <ProfileAppearancePanel />
       <div id="profile-identity-settings">
         <ProfileIdentityPanel
           {...currentProps}

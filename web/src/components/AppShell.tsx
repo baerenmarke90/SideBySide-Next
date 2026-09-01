@@ -6,6 +6,7 @@ import {
   PRODUCT_CACHE_NETWORK_EVENT,
   type ProductCacheEventDetail,
 } from '../client/productReadCache';
+import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import {
   APP_ROUTES,
   DEFAULT_APP_ROUTE,
@@ -114,13 +115,12 @@ export function AppShell({
 
   function logout(): void {
     onLogout();
-    if (import.meta.env.VITE_SBS_DEMO_MODE === 'true') {
-      window.location.assign('/');
-    }
+    window.location.assign(PUBLIC_START_ROUTE);
   }
 
   return (
     <div className="product-shell">
+      <ThemeControl />
       <a className="skip-link" href="#main-content">
         {t('navigation.skipToContent')}
       </a>
@@ -131,7 +131,6 @@ export function AppShell({
           <span className="shared-context">
             <span aria-hidden="true">♥</span> {t('header.sharedArea')}
           </span>
-          <ThemeControl variant="inline" />
           <NavLink
             to={SEARCH_ROUTE}
             className={({ isActive }) =>
