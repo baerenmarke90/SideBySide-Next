@@ -266,6 +266,7 @@ export function ServerAdminActivityPanel({
               <tr>
                 <th scope="col">{t('serverAdmin.activity.setting')}</th>
                 <th scope="col">{t('serverAdmin.activity.change')}</th>
+                <th scope="col">{t('serverAdmin.activity.actor')}</th>
                 <th scope="col">{t('serverAdmin.activity.changedAt')}</th>
               </tr>
             </thead>
@@ -276,6 +277,9 @@ export function ServerAdminActivityPanel({
                   <td>
                     {booleanStateLabel(item.previousValue, t)} →{' '}
                     {booleanStateLabel(item.newValue, t)}
+                  </td>
+                  <td className="server-admin-actor-id">
+                    {item.actorId ?? t('serverAdmin.activity.systemActor')}
                   </td>
                   <td>{formatDate(item.createdAt) ?? '–'}</td>
                 </tr>

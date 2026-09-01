@@ -92,6 +92,8 @@ const serverAdmin = {
     empty: 'Noch keine administrativen Einstellungsänderungen vorhanden.',
     setting: 'Einstellung',
     change: 'Änderung',
+    actor: 'Akteur',
+    systemActor: 'System / nicht mehr zugeordnet',
     changedAt: 'Geändert',
     registration: 'Neue Registrierungen',
     maintenance: 'Wartungsmodus',

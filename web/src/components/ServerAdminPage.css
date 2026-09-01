@@ -192,6 +192,13 @@
   vertical-align: top;
 }
 
+.server-admin-actor-id {
+  max-width: 16rem;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+}
+
 .server-admin-table th {
   color: var(--color-text-secondary);
   font-size: 0.875rem;

@@ -27,7 +27,7 @@ describe('ServerAdmin controls', () => {
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(2);
   });
 
-  it('renders privacy-safe audit changes without exposing actor ids', () => {
+  it('identifies the audit actor without exposing unrelated account data', () => {
     const actorId = '00000000-0000-0000-0000-000000000099';
     const html = renderToStaticMarkup(
       <ServerAdminActivityPanel
@@ -45,7 +45,7 @@ describe('ServerAdmin controls', () => {
     );
 
     expect(html).toContain('server-admin-table');
-    expect(html.match(/<td>/g)).toHaveLength(3);
-    expect(html).not.toContain(actorId);
+    expect(html.match(/<td/g)).toHaveLength(4);
+    expect(html).toContain(actorId);
   });
 });
