@@ -174,10 +174,13 @@ discovered late:
   Account or Space after a switch.
 - **Configuration change and window size classes.** Compact, medium, and
   expanded behaviour per `docs/SCREEN-TEMPLATES.md`, including foldables.
-- **Release identity.** The application ID is still
-  `de.sidebyside.next.reference`, versioned `0.0.1-m2-s8`. The final identity,
-  versioning, and signing strategy are owned by #194 and must land before any
-  distribution build.
+- **Release identity.** Settled by #194. The application ID is
+  `de.sidebyside.app`, a debug build carries a `.debug` suffix, `versionCode`
+  comes from the publisher, and release signing material is supplied by the
+  publishing environment or the build stays unsigned. `android/README.md`
+  records the rules. What remains is operational and has no code in it: who
+  holds the upload key, whether Play App Signing is used, and where the key is
+  escrowed.
 - **Generated client gap.** The build excludes two generator-owned Passkey
   request models from the compile copy because `Map<String, Any>` has no
   concrete kotlinx.serialization serializer. #138 owns the generator fix; any
