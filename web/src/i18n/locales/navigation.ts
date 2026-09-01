@@ -16,6 +16,10 @@ const navigation = {
   profileMenu: 'Profil und Konto',
   profile: 'Profil',
   activity: 'Aktivität',
+  newContent: 'Neu festhalten',
+  quickCreateShared: 'Gemeinsam',
+  quickCreatePrivate: 'Privat',
+  quickCreatePrivateNote: 'Private Notiz',
   // Reserved for the M7 Discover area; declared so the label is not reused.
   discover: 'Entdecken',
 };
