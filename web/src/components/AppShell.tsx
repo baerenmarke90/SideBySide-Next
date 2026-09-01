@@ -95,7 +95,7 @@ export function AppShell({
   accessToken,
   account,
   spaceId,
-  serverAdmin,
+  serverAdmin = false,
 }: {
   children: ReactNode;
   onLogout: () => void;
@@ -103,7 +103,7 @@ export function AppShell({
   accessToken: string;
   account: AccountView;
   spaceId: string;
-  serverAdmin: boolean;
+  serverAdmin?: boolean;
 }) {
   const { t } = useTranslation();
   const online = useOnlineStatus();
