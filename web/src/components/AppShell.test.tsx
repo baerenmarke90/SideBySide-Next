@@ -93,6 +93,7 @@ describe('AppShell', () => {
     expect(header).toContain(`aria-label="${navigation.search}"`);
     expect(header).toContain('href="/more/notifications"');
     expect(header).toContain(`aria-label="${navigation.notifications}"`);
+    expect(header).not.toContain('theme-preference');
 
     const compact = html.slice(html.indexOf('mobile-bottom-nav'));
     expect(compact).not.toContain('href="/search"');

@@ -2,6 +2,7 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'sidebyside.theme';
+export const THEME_PREFERENCE_EVENT = 'sidebyside:theme-preference';
 export const DARK_MODE_QUERY = '(prefers-color-scheme: dark)';
 
 const THEME_COLOR: Record<ResolvedTheme, string> = {
@@ -46,6 +47,16 @@ export function storeThemePreference(preference: ThemePreference): void {
   } catch {
     // Storage can be unavailable in hardened/private browser contexts. The
     // active document still changes theme; only persistence is skipped.
+  }
+  if (
+    typeof window.dispatchEvent === 'function' &&
+    typeof CustomEvent === 'function'
+  ) {
+    window.dispatchEvent(
+      new CustomEvent<ThemePreference>(THEME_PREFERENCE_EVENT, {
+        detail: preference,
+      }),
+    );
   }
 }
 

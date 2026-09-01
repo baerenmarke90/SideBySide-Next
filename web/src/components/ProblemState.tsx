@@ -1,4 +1,6 @@
+import { Link } from 'react-router-dom';
 import { clientProblemKind } from '../client/problemDetails';
+import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import { useTranslation } from '../i18n';
 import { UiState, type UiStateKind } from './UiState';
 
@@ -40,18 +42,27 @@ export function ProblemState({
   const kind = clientProblemKind(error);
   const [titleKey, bodyKey] = COPY_KEYS[kind];
 
+  const action =
+    kind === 'unauthorized' ? (
+      <Link
+        className="button-link secondary-link"
+        to={PUBLIC_START_ROUTE}
+        reloadDocument
+      >
+        {t('common.backToStart')}
+      </Link>
+    ) : onRetry && kind !== 'permission' ? (
+      <button type="button" className="secondary" onClick={onRetry}>
+        {t('common.retry')}
+      </button>
+    ) : undefined;
+
   return (
     <UiState
       kind={KIND_TO_STATE[kind]}
       title={t(titleKey)}
       body={t(bodyKey)}
-      action={
-        onRetry && kind !== 'permission' && kind !== 'unauthorized' ? (
-          <button type="button" className="secondary" onClick={onRetry}>
-            {t('common.retry')}
-          </button>
-        ) : undefined
-      }
+      action={action}
     />
   );
 }

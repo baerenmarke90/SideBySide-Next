@@ -1,0 +1,19 @@
+import { useTranslation } from '../i18n';
+import { ThemeControl } from './ThemeControl';
+
+/** Appearance belongs to the centralized personal settings hierarchy. */
+export function ProfileAppearancePanel() {
+  const { t } = useTranslation();
+
+  return (
+    <section
+      id="profile-appearance-settings"
+      className="form-card"
+      aria-labelledby="profile-appearance-title"
+    >
+      <h2 id="profile-appearance-title">{t('theme.label')}</h2>
+      <p>{t('profileIdentity.appearanceIntro')}</p>
+      <ThemeControl variant="inline" />
+    </section>
+  );
+}

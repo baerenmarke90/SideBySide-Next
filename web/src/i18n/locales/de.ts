@@ -4,6 +4,7 @@ const de = {
     retry: 'Erneut versuchen',
     refresh: 'Aktualisieren',
     refreshing: 'Aktualisiert …',
+    backToStart: 'Zur Startseite',
   },
   navigation: {
     skipToContent: 'Zum Inhalt springen',
