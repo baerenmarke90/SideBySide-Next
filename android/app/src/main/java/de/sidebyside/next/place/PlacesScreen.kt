@@ -58,6 +58,7 @@ fun PlacesScreen(
         longitude: String,
     ) -> Unit,
     onDelete: (PlaceDetail) -> Unit,
+    onOpenRelations: (PlaceDetail) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
@@ -157,25 +158,30 @@ fun PlacesScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color = SideBySideTheme.colors.textSecondary,
                     )
-                    if (place.capabilities.canEdit || place.capabilities.canDelete) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
-                            if (place.capabilities.canEdit) {
-                                TextButton(
-                                    onClick = { editing = place.id.toString() },
-                                    enabled = !busy,
-                                    modifier = Modifier.heightIn(min = MinimumTouchTarget),
-                                ) {
-                                    Text(stringResource(R.string.place_edit))
-                                }
+                    Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+                        TextButton(
+                            onClick = { onOpenRelations(place) },
+                            enabled = !busy,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.place_relations))
+                        }
+                        if (place.capabilities.canEdit) {
+                            TextButton(
+                                onClick = { editing = place.id.toString() },
+                                enabled = !busy,
+                                modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                            ) {
+                                Text(stringResource(R.string.place_edit))
                             }
-                            if (place.capabilities.canDelete) {
-                                TextButton(
-                                    onClick = { deleting = place.id.toString() },
-                                    enabled = !busy,
-                                    modifier = Modifier.heightIn(min = MinimumTouchTarget),
-                                ) {
-                                    Text(stringResource(R.string.place_delete))
-                                }
+                        }
+                        if (place.capabilities.canDelete) {
+                            TextButton(
+                                onClick = { deleting = place.id.toString() },
+                                enabled = !busy,
+                                modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                            ) {
+                                Text(stringResource(R.string.place_delete))
                             }
                         }
                     }

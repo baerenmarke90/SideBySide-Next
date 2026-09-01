@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.sidebyside.next.demo.DemoEndpoint
 import de.sidebyside.next.demo.DemoPersona
+import de.sidebyside.next.place.toRelationTargetItem
 import de.sidebyside.next.profile.ProfileUiState
 import de.sidebyside.next.profile.loadProfileIdentity
 import de.sidebyside.next.profile.removeProfileAvatar
@@ -211,6 +212,12 @@ data class ReferenceUiState(
     val places: List<PlaceDetail> = emptyList(),
     val placesBusy: Boolean = false,
     val placesProblem: UiProblem? = null,
+    /** Every shared Story item, as a possible link target for whichever place's relations are open. */
+    val placeRelationTargets: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
+    /** Ids already linked to that place, across all three kinds. */
+    val placeLinkedTargetIds: Set<java.util.UUID> = emptySet(),
+    val placeRelationsBusy: Boolean = false,
+    val placeRelationsProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -342,6 +349,7 @@ class ReferenceViewModel(
         clearRelatedPersons()
         clearProfilePreferences()
         clearPlaces()
+        clearPlaceRelations()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -428,6 +436,7 @@ class ReferenceViewModel(
         clearRelatedPersons()
         clearProfilePreferences()
         clearPlaces()
+        clearPlaceRelations()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -482,6 +491,7 @@ class ReferenceViewModel(
         clearRelatedPersons()
         clearProfilePreferences()
         clearPlaces()
+        clearPlaceRelations()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -542,6 +552,7 @@ class ReferenceViewModel(
         clearRelatedPersons()
         clearProfilePreferences()
         clearPlaces()
+        clearPlaceRelations()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -2784,6 +2795,124 @@ class ReferenceViewModel(
 
     fun clearPlaces() {
         mutate { it.copy(places = emptyList(), placesBusy = false, placesProblem = null) }
+    }
+
+    /**
+     * Loads what a place's relations screen needs: the shared Story as
+     * possible targets, and which of them are already linked to [placeId].
+     *
+     * Reads the Story timeline rather than any place-specific endpoint for
+     * the target list, because the typed-relation endpoints return only
+     * linked ids, never content — a second, separately authorized read path
+     * for content was deliberately not built. This is also why a private
+     * HeartMoment can never appear here: the timeline itself never carries
+     * one that is not the caller's own or shared.
+     */
+    fun loadPlaceRelations(placeId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placeRelationsBusy = true, placeRelationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                val accessToken = currentSession.tokens.accessToken
+                val timeline = api.getTimeline(spaceId, accessToken)
+                val linkedIds = ReferenceContract.RelationTargetKind.entries
+                    .flatMap { kind -> api.listPlaceRelationTargets(spaceId, accessToken, placeId, kind) }
+                    .toSet()
+                timeline.items.map { it.toRelationTargetItem() } to linkedIds
+            }
+                .onSuccess { (targets, linkedIds) ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            placeRelationTargets = targets,
+                            placeLinkedTargetIds = linkedIds,
+                            placeRelationsBusy = false,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(placeRelationsBusy = false, placeRelationsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun linkPlaceRelation(
+        placeId: java.util.UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: java.util.UUID,
+    ) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placeRelationsBusy = true, placeRelationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.linkPlaceTarget(spaceId, currentSession.tokens.accessToken, placeId, kind, targetId)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placeRelationsBusy = false) }
+                    loadPlaceRelations(placeId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(placeRelationsBusy = false, placeRelationsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun unlinkPlaceRelation(
+        placeId: java.util.UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: java.util.UUID,
+    ) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placeRelationsBusy = true, placeRelationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.unlinkPlaceTarget(spaceId, currentSession.tokens.accessToken, placeId, kind, targetId)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placeRelationsBusy = false) }
+                    loadPlaceRelations(placeId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(placeRelationsBusy = false, placeRelationsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun clearPlaceRelations() {
+        mutate {
+            it.copy(
+                placeRelationTargets = emptyList(),
+                placeLinkedTargetIds = emptySet(),
+                placeRelationsBusy = false,
+                placeRelationsProblem = null,
+            )
+        }
     }
 
     fun logout() {

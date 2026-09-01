@@ -57,6 +57,7 @@ import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.place.PlaceRelationsScreen
 import de.sidebyside.next.place.PlacesScreen
 import de.sidebyside.next.plan.PlanScreen
 import de.sidebyside.next.today.TodayScreen
@@ -636,6 +637,37 @@ private fun DemoShell(
                         viewModel.updatePlace(place, name, description, address, latitude, longitude)
                     },
                     onDelete = viewModel::deletePlace,
+                    onOpenRelations = { place ->
+                        controller.navigate("planning/places/${place.id}/relations")
+                    },
+                )
+            }
+
+            composable(
+                route = PLACE_RELATIONS_ROUTE,
+                arguments = listOf(navArgument(PLACE_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val placeId = entry.arguments?.getString(PLACE_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val place = state.places.firstOrNull { it.id == placeId }
+
+                LaunchedEffect(placeId, state.activeSpaceId) {
+                    placeId?.let(viewModel::loadPlaceRelations)
+                }
+
+                PlaceRelationsScreen(
+                    placeName = place?.name.orEmpty(),
+                    targets = state.placeRelationTargets,
+                    linkedIds = state.placeLinkedTargetIds,
+                    busy = state.placeRelationsBusy,
+                    problem = state.placeRelationsProblem,
+                    onBack = { controller.popBackStack() },
+                    onLink = { target ->
+                        placeId?.let { viewModel.linkPlaceRelation(it, target.kind, target.id) }
+                    },
+                    onUnlink = { target ->
+                        placeId?.let { viewModel.unlinkPlaceRelation(it, target.kind, target.id) }
+                    },
                 )
             }
         },
@@ -736,6 +768,8 @@ private const val IMPORTANT_DATES_ROUTE =
 private const val PREFERENCES_ROUTE = "profile/preferences"
 
 private const val PLACES_ROUTE = "planning/places"
+private const val PLACE_ID_ARGUMENT = "placeId"
+private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/relations"
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE
