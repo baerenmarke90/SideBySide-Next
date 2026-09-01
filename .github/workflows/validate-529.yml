@@ -62,18 +62,9 @@ jobs:
               "def _active_session_filters(current_time: datetime) -> tuple[object, ...]:",
               "def _active_session_filters(current_time: datetime) -> tuple[Any, ...]:",
           )
-          old_query = '''    if normalized_query:
-              like = f"%{normalized_query}%"
-              statement = statement.where(
-                  or_(
-                      func.lower(Account.display_name).like(like),
-                      exists().where(
-                          AccountEmail.account_id == Account.id,
-                          AccountEmail.email.like(like),
-                      ),
-                  )
-              )
-          '''
+          function_start = text.index("def list_server_admin_accounts(")
+          query_start = text.index("    if normalized_query:\n", function_start)
+          query_end = text.index('    if account_status == "active":', query_start)
           new_query = '''    if normalized_query:
               like = f"%{normalized_query}%"
               display_name_match = func.lower(Account.display_name).like(like)
@@ -89,25 +80,14 @@ jobs:
                       or_(display_name_match, email_match, Account.id == account_id_match)
                   )
           '''
-          if old_query not in text:
-              raise SystemExit("Account query block changed unexpectedly.")
-          api_path.write_text(text.replace(old_query, new_query))
+          text = text[:query_start] + new_query + text[query_end:]
+          api_path.write_text(text)
 
           test_path = Path("backend/tests/integration/test_server_admin.py")
           test_text = test_path.read_text()
-          test_anchor = '''    assert set(payload["items"][0]) == {
-              "id",
-              "displayName",
-              "primaryEmail",
-              "emailVerified",
-              "createdAt",
-              "disabledAt",
-              "authMethods",
-              "activeSessionCount",
-              "activeMembershipCount",
-          }
-          '''
-          test_replacement = test_anchor + '''
+          test_marker = "\n\ndef test_server_admin_can_suspend_account_and_sessions_are_revoked("
+          by_id_assertion = '''
+
               by_id = client.get(
                   f"/api/v1/server-admin/accounts?query={target.id}",
                   headers=auth(token),
@@ -116,9 +96,11 @@ jobs:
               assert by_id.json()["total"] == 1
               assert by_id.json()["items"][0]["id"] == str(target.id)
           '''
-          if test_anchor not in test_text:
-              raise SystemExit("Account directory test block changed unexpectedly.")
-          test_path.write_text(test_text.replace(test_anchor, test_replacement))
+          marker_at = test_text.index(test_marker)
+          preceding = test_text[:marker_at]
+          if "accounts?query={target.id}" not in preceding:
+              test_text = test_text[:marker_at] + by_id_assertion + test_text[marker_at:]
+          test_path.write_text(test_text)
 
           web_path = Path("web/src/components/ServerAdminAccountsPanel.tsx")
           web_text = web_path.read_text()
