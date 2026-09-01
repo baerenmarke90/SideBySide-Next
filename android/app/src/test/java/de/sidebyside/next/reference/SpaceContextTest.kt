@@ -211,6 +211,91 @@ class SpaceContextTest {
         assertNull(model.uiState.value.activeSpaceId)
         assertTrue(model.uiState.value.availableSpaces.isEmpty())
     }
+
+    @Test
+    fun rememberedSpaceIsPreferredOverTheFirstActiveMembershipOnSignIn() = runTest(dispatcher) {
+        // #391's own deferred piece: relaunching returns to the Space the
+        // account was last in, not always whichever membership sorts first.
+        val accountId = UUID.randomUUID()
+        val store = InMemorySpacePreferenceStore().apply { rememberSpace(accountId, SECOND_SPACE) }
+        val api = SpaceApi(
+            memberships = listOf(active(FIRST_SPACE), active(SECOND_SPACE)),
+            accountId = accountId,
+        )
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, spaceStore = store)
+
+        model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+
+        assertEquals(SECOND_SPACE, model.uiState.value.activeSpaceId)
+    }
+
+    @Test
+    fun withNoRememberedSpaceTheFirstActiveMembershipStillWins() = runTest(dispatcher) {
+        val api = SpaceApi(memberships = listOf(active(FIRST_SPACE), active(SECOND_SPACE)))
+        val model = ReferenceViewModel(
+            config = ReferenceConfig(BASE_URL),
+            api = api,
+            spaceStore = InMemorySpacePreferenceStore(),
+        )
+
+        model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+
+        assertEquals(FIRST_SPACE, model.uiState.value.activeSpaceId)
+    }
+
+    @Test
+    fun aRememberedSpaceNoLongerActiveFallsBackToTheFirstOne() = runTest(dispatcher) {
+        val accountId = UUID.randomUUID()
+        val goneSpace = UUID.fromString("99999999-9999-4999-8999-999999999999")
+        val store = InMemorySpacePreferenceStore().apply { rememberSpace(accountId, goneSpace) }
+        val api = SpaceApi(
+            memberships = listOf(active(FIRST_SPACE), active(SECOND_SPACE)),
+            accountId = accountId,
+        )
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, spaceStore = store)
+
+        model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+
+        assertEquals(FIRST_SPACE, model.uiState.value.activeSpaceId)
+    }
+
+    @Test
+    fun selectingASpaceRemembersItForNextSignIn() = runTest(dispatcher) {
+        val accountId = UUID.randomUUID()
+        val store = InMemorySpacePreferenceStore()
+        val api = SpaceApi(
+            memberships = listOf(active(FIRST_SPACE), active(SECOND_SPACE)),
+            accountId = accountId,
+        )
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, spaceStore = store)
+
+        model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+        model.selectSpace(SECOND_SPACE)
+
+        assertEquals(SECOND_SPACE, store.rememberedSpace(accountId))
+    }
+
+    @Test
+    fun theAutomaticFirstPickIsNeverRememberedByItself() = runTest(dispatcher) {
+        // Signing in without ever explicitly switching must not make the
+        // arbitrary first-active pick sticky.
+        val accountId = UUID.randomUUID()
+        val store = InMemorySpacePreferenceStore()
+        val api = SpaceApi(
+            memberships = listOf(active(FIRST_SPACE), active(SECOND_SPACE)),
+            accountId = accountId,
+        )
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, spaceStore = store)
+
+        model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+
+        assertNull(store.rememberedSpace(accountId))
+    }
 }
 
 private const val BASE_URL = "https://sidebyside.example"
@@ -230,12 +315,13 @@ private class SpaceApi(
     private val memberships: List<AccountMembershipView>,
     private val holdTimelineAfter: Int = Int.MAX_VALUE,
     private val releaseHeldTimeline: CompletableDeferred<Unit>? = null,
+    private val accountId: UUID = UUID.randomUUID(),
 ) : FakeReferenceContract() {
     val timelineSpaces = mutableListOf<UUID>()
     private var timelineCalls = 0
 
     override suspend fun signIn(email: String, password: String): SessionView = SessionView(
-        account = AccountView(displayName = "Someone", id = UUID.randomUUID()),
+        account = AccountView(displayName = "Someone", id = accountId),
         tokens = TokenView(
             accessExpiresAt = java.time.OffsetDateTime.now(),
             accessToken = "access",
