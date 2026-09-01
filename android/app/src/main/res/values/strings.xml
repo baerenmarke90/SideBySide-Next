@@ -349,4 +349,52 @@
     <string name="important_date_delete">Löschen</string>
     <string name="important_date_visibility_private">Nur für dich</string>
     <string name="important_date_visibility_shared">Mit deinem Partner geteilt</string>
+
+    <string name="preferences_open">Vorlieben verwalten</string>
+    <string name="preferences_title">Vorlieben &amp; Notizen</string>
+
+    <string name="preferences_self_title">Meine Vorlieben</string>
+    <string name="preferences_self_intro">Diese Angaben gehören zu deinem Profil und können deinem Partner angezeigt werden.</string>
+    <string name="preferences_self_empty">Noch keine eigenen Vorlieben.</string>
+    <string name="preferences_self_topic_hint">Zum Beispiel Lieblingsküche</string>
+    <string name="preferences_self_value_hint">Details</string>
+
+    <string name="preferences_partner_title">Profil von %1$s</string>
+    <string name="preferences_partner_intro">Hier siehst du ausschließlich die Vorlieben, die dein Partner für sein Profil freigegeben hat.</string>
+    <string name="preferences_partner_empty">Noch keine Vorlieben von deinem Partner geteilt.</string>
+
+    <string name="preferences_private_title">Private Notizen über %1$s</string>
+    <string name="preferences_private_intro">Diese Notizen sind nur für dich sichtbar. Sie erscheinen niemals im Profil deines Partners.</string>
+    <string name="preferences_private_empty">Noch keine privaten Notizen.</string>
+    <string name="preferences_private_topic_hint">Zum Beispiel Geschenkidee</string>
+    <string name="preferences_private_value_hint">Nur für dich sichtbare Details</string>
+
+    <string name="preference_category">Kategorie</string>
+    <string name="preference_category_food">Essen</string>
+    <string name="preference_category_drink">Getränke</string>
+    <string name="preference_category_flowers">Blumen</string>
+    <string name="preference_category_movies">Filme</string>
+    <string name="preference_category_series">Serien</string>
+    <string name="preference_category_music">Musik</string>
+    <string name="preference_category_hobbies">Hobbys</string>
+    <string name="preference_category_activities">Aktivitäten</string>
+    <string name="preference_category_travel">Reisen</string>
+    <string name="preference_category_restaurants">Restaurants</string>
+    <string name="preference_category_colors">Farben</string>
+    <string name="preference_category_other">Sonstiges</string>
+
+    <string name="preference_sentiment">Einordnung</string>
+    <string name="preference_sentiment_love">Liebe ich</string>
+    <string name="preference_sentiment_like">Mag ich</string>
+    <string name="preference_sentiment_neutral">Neutral</string>
+    <string name="preference_sentiment_dislike">Mag ich eher nicht</string>
+    <string name="preference_sentiment_avoid">Bitte vermeiden</string>
+
+    <string name="preference_topic_label">Thema</string>
+    <string name="preference_add">Hinzufügen</string>
+    <string name="preference_edit">Bearbeiten</string>
+    <string name="preference_delete">Löschen</string>
+    <string name="preference_cancel">Abbrechen</string>
+    <string name="preference_save_changes">Änderungen speichern</string>
+    <string name="preference_edit_title">Eintrag bearbeiten</string>
 </resources>

@@ -38,6 +38,12 @@ import sidebyside.api.models.ImportantDateType
 import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.PersonRelationship
+import sidebyside.api.models.PreferenceCategory
+import sidebyside.api.models.PreferenceSentiment
+import sidebyside.api.models.ProfilePreferenceCreate
+import sidebyside.api.models.ProfilePreferenceUpdate
+import sidebyside.api.models.ProfilePreferenceView
+import sidebyside.api.models.ProfileVisibility
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
@@ -327,6 +333,7 @@ class ReferenceViewModel(
         clearToday()
         clearInvitations()
         clearRelatedPersons()
+        clearProfilePreferences()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -411,6 +418,7 @@ class ReferenceViewModel(
         clearToday()
         clearInvitations()
         clearRelatedPersons()
+        clearProfilePreferences()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -463,6 +471,7 @@ class ReferenceViewModel(
         clearToday()
         clearInvitations()
         clearRelatedPersons()
+        clearProfilePreferences()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -503,6 +512,7 @@ class ReferenceViewModel(
         clearToday()
         clearInvitations()
         clearRelatedPersons()
+        clearProfilePreferences()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -2207,7 +2217,19 @@ class ReferenceViewModel(
             runCatching { loadProfileIdentity(api, spaceId, currentSession) }
                 .onSuccess { profile ->
                     if (isCurrentSession(operationEpoch, currentSession)) {
-                        mutate { it.copy(profile = profile) }
+                        // loadProfileIdentity builds a fresh ProfileUiState
+                        // that knows nothing about ProfilePreference; carry
+                        // that part of the state forward rather than
+                        // clobbering it back to defaults.
+                        mutate {
+                            it.copy(
+                                profile = profile.copy(
+                                    preferences = it.profile.preferences,
+                                    preferencesBusy = it.profile.preferencesBusy,
+                                    preferencesProblem = it.profile.preferencesProblem,
+                                ),
+                            )
+                        }
                     }
                 }
                 .onFailure {
@@ -2385,6 +2407,196 @@ class ReferenceViewModel(
                     profileFailure(R.string.profile_avatar_failed)
                 }
             }
+        }
+    }
+
+    /**
+     * Every ProfilePreference visible to this account.
+     *
+     * SELF_PROFILE rows already arrive embedded on [ProfileUiState.self] and
+     * [ProfileUiState.partner] via [refreshProfile]; this call exists for the
+     * PRIVATE_PARTNER_NOTE rows, which the server never attaches to either
+     * profile. The server applies no accountId filter, so this list also
+     * contains SELF_PROFILE rows again — callers read [ProfileUiState.self]
+     * and [ProfileUiState.partner] for those instead of this list.
+     */
+    fun loadProfilePreferences() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(profile = it.profile.copy(preferencesBusy = true, preferencesProblem = null)) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listProfilePreferences(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { preferences ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(profile = it.profile.copy(preferences = preferences, preferencesBusy = false))
+                    }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(
+                            profile = it.profile.copy(
+                                preferencesBusy = false,
+                                preferencesProblem = problemFor(throwable),
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun addProfilePreference(
+        accountId: java.util.UUID,
+        visibility: ProfileVisibility,
+        category: PreferenceCategory,
+        topic: String,
+        sentiment: PreferenceSentiment,
+        value: String,
+    ) {
+        if (topic.isBlank() || value.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(profile = it.profile.copy(preferencesBusy = true, preferencesProblem = null)) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createProfilePreference(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    ProfilePreferenceCreate(
+                        accountId = accountId,
+                        category = category,
+                        sentiment = sentiment,
+                        topic = topic,
+                        value = value,
+                        visibility = visibility,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(profile = it.profile.copy(preferencesBusy = false)) }
+                    refreshProfile()
+                    loadProfilePreferences()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(
+                            profile = it.profile.copy(
+                                preferencesBusy = false,
+                                preferencesProblem = problemFor(throwable),
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun updateProfilePreference(
+        preference: ProfilePreferenceView,
+        category: PreferenceCategory,
+        topic: String,
+        sentiment: PreferenceSentiment,
+        value: String,
+    ) {
+        if (topic.isBlank() || value.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(profile = it.profile.copy(preferencesBusy = true, preferencesProblem = null)) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateProfilePreference(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    preference.id,
+                    preference.version,
+                    ProfilePreferenceUpdate(
+                        category = category,
+                        sentiment = sentiment,
+                        topic = topic,
+                        value = value,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(profile = it.profile.copy(preferencesBusy = false)) }
+                    refreshProfile()
+                    loadProfilePreferences()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(
+                            profile = it.profile.copy(
+                                preferencesBusy = false,
+                                preferencesProblem = problemFor(throwable),
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun deleteProfilePreference(preference: ProfilePreferenceView) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(profile = it.profile.copy(preferencesBusy = true, preferencesProblem = null)) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteProfilePreference(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    preference.id,
+                    preference.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(profile = it.profile.copy(preferencesBusy = false)) }
+                    refreshProfile()
+                    loadProfilePreferences()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(
+                            profile = it.profile.copy(
+                                preferencesBusy = false,
+                                preferencesProblem = problemFor(throwable),
+                            ),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun clearProfilePreferences() {
+        mutate {
+            it.copy(
+                profile = it.profile.copy(
+                    preferences = emptyList(),
+                    preferencesBusy = false,
+                    preferencesProblem = null,
+                ),
+            )
         }
     }
 

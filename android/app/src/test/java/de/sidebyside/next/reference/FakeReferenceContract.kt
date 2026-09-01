@@ -25,6 +25,9 @@ import sidebyside.api.models.MembershipView
 import sidebyside.api.models.ImportantDateFields
 import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.ProfilePreferenceCreate
+import sidebyside.api.models.ProfilePreferenceUpdate
+import sidebyside.api.models.ProfilePreferenceView
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
@@ -410,6 +413,32 @@ abstract class FakeReferenceContract : ReferenceContract {
         accessToken: String,
         descriptor: ReadDescriptor,
     ): ByteArray = notExercised("readImageBytes")
+
+    override suspend fun listProfilePreferences(
+        spaceId: UUID,
+        accessToken: String,
+    ): List<ProfilePreferenceView> = notExercised("listProfilePreferences")
+
+    override suspend fun createProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ProfilePreferenceCreate,
+    ): ProfilePreferenceView = notExercised("createProfilePreference")
+
+    override suspend fun updateProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        preferenceId: UUID,
+        ifMatch: Int,
+        fields: ProfilePreferenceUpdate,
+    ): ProfilePreferenceView = notExercised("updateProfilePreference")
+
+    override suspend fun deleteProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        preferenceId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteProfilePreference")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

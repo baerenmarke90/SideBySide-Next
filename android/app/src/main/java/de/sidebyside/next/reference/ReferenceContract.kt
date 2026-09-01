@@ -37,6 +37,9 @@ import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.ProfilePreferenceCreate
+import sidebyside.api.models.ProfilePreferenceUpdate
+import sidebyside.api.models.ProfilePreferenceView
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
@@ -509,6 +512,36 @@ interface ReferenceContract {
         accessToken: String,
         accountId: UUID,
     ): ByteArray = unsupportedProfileOperation()
+
+    /**
+     * Every ProfilePreference visible to the caller: the space's SELF_PROFILE
+     * rows and the caller's own PRIVATE_PARTNER_NOTE rows about the partner.
+     * The server applies no accountId filter; distinguishing "mine",
+     * "partner's", and "my private note" is the caller's job.
+     */
+    suspend fun listProfilePreferences(spaceId: UUID, accessToken: String): List<ProfilePreferenceView>
+
+    suspend fun createProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ProfilePreferenceCreate,
+    ): ProfilePreferenceView
+
+    /** The contract replaces every field, so callers send the whole record. */
+    suspend fun updateProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        preferenceId: UUID,
+        ifMatch: Int,
+        fields: ProfilePreferenceUpdate,
+    ): ProfilePreferenceView
+
+    suspend fun deleteProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        preferenceId: UUID,
+        ifMatch: Int,
+    )
 }
 
 private fun unsupportedProfileOperation(): Nothing =

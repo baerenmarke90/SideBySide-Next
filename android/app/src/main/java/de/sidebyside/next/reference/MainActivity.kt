@@ -49,6 +49,7 @@ import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.people.ImportantDatesScreen
 import de.sidebyside.next.people.RelatedPersonsScreen
+import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
@@ -63,6 +64,7 @@ import de.sidebyside.next.story.MilestoneScreen
 import de.sidebyside.next.story.SharedHeartMomentScreen
 import de.sidebyside.next.story.StoryScreen
 import kotlinx.coroutines.launch
+import sidebyside.api.models.ProfileVisibility
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -551,6 +553,53 @@ private fun DemoShell(
                     },
                 )
             }
+
+            composable(PREFERENCES_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadProfilePreferences() }
+
+                val selfId = state.accountId
+                val partnerAccountId = state.profile.partner?.accountId
+
+                ProfilePreferencesScreen(
+                    selfPreferences = state.profile.self?.preferences.orEmpty(),
+                    partnerPreferences = state.profile.partner?.preferences.orEmpty(),
+                    privateNotes = state.profile.preferences.filter {
+                        it.visibility == ProfileVisibility.PRIVATE_PARTNER_NOTE
+                    },
+                    partnerName = state.profile.partner?.displayName,
+                    busy = state.profile.preferencesBusy,
+                    problem = state.profile.preferencesProblem,
+                    onBack = { controller.popBackStack() },
+                    onAddSelf = { category, topic, sentiment, value ->
+                        selfId?.let {
+                            viewModel.addProfilePreference(
+                                it,
+                                ProfileVisibility.SELF_PROFILE,
+                                category,
+                                topic,
+                                sentiment,
+                                value,
+                            )
+                        }
+                    },
+                    onAddPrivateNote = { category, topic, sentiment, value ->
+                        partnerAccountId?.let {
+                            viewModel.addProfilePreference(
+                                it,
+                                ProfileVisibility.PRIVATE_PARTNER_NOTE,
+                                category,
+                                topic,
+                                sentiment,
+                                value,
+                            )
+                        }
+                    },
+                    onEdit = { preference, category, topic, sentiment, value ->
+                        viewModel.updateProfilePreference(preference, category, topic, sentiment, value)
+                    },
+                    onDelete = viewModel::deleteProfilePreference,
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -597,6 +646,7 @@ private fun DemoShell(
                     onOpenHeartMoments = { navController.navigate(HEART_MOMENTS_ROUTE) },
                     onOpenInvitations = { navController.navigate(INVITATIONS_ROUTE) },
                     onOpenRelatedPersons = { navController.navigate(RELATED_PERSONS_ROUTE) },
+                    onOpenPreferences = { navController.navigate(PREFERENCES_ROUTE) },
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
                     spacePartnerNames = state.spacePartnerNames,
@@ -643,6 +693,8 @@ private const val RELATED_PERSONS_ROUTE = "people/related-persons"
 private const val PERSON_ID_ARGUMENT = "personId"
 private const val IMPORTANT_DATES_ROUTE =
     "people/related-persons/{$PERSON_ID_ARGUMENT}/important-dates"
+
+private const val PREFERENCES_ROUTE = "profile/preferences"
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE

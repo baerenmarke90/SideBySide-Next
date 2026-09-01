@@ -51,6 +51,9 @@ import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.ProfilePreferenceCreate
+import sidebyside.api.models.ProfilePreferenceUpdate
+import sidebyside.api.models.ProfilePreferenceView
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
@@ -967,6 +970,61 @@ class OkHttpReferenceApi(
             response.body.bytes()
         }
     }
+
+    override suspend fun listProfilePreferences(
+        spaceId: UUID,
+        accessToken: String,
+    ): List<ProfilePreferenceView> = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/profile-preferences", accessToken)
+            .get().build(),
+        ListSerializer(ProfilePreferenceView.serializer()),
+    )
+
+    override suspend fun createProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ProfilePreferenceCreate,
+    ): ProfilePreferenceView = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/profile-preferences", accessToken)
+            .post(
+                SideBySideJson.encodeToString(ProfilePreferenceCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ProfilePreferenceView.serializer(),
+    )
+
+    override suspend fun updateProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        preferenceId: UUID,
+        ifMatch: Int,
+        fields: ProfilePreferenceUpdate,
+    ): ProfilePreferenceView = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/profile-preferences/$preferenceId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .put(
+                SideBySideJson.encodeToString(ProfilePreferenceUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ProfilePreferenceView.serializer(),
+    )
+
+    override suspend fun deleteProfilePreference(
+        spaceId: UUID,
+        accessToken: String,
+        preferenceId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/profile-preferences/$preferenceId",
+            accessToken,
+        )
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
 
     private fun authenticatedRequest(url: String, accessToken: String): Request.Builder =
         Request.Builder()
