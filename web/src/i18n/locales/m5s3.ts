@@ -22,15 +22,14 @@ const m5s3 = {
     confirmDelete: 'Endgültig löschen',
   },
   overview: {
-    eyebrow: 'Gemeinsam planen',
-    title: 'Eure Wünsche und Pläne',
-    intro:
-      'Wünsche, konkrete Pläne, gemeinsame Orte, Kapitel und Listen – ohne versteckte Automatik und immer auf dem aktuellen Serverstand.',
+    eyebrow: 'Unsere Abenteuer & Pläne',
+    title: 'Erlebnisse, Träume & Geheimnisse',
+    intro: 'Alles, was wir noch gemeinsam erleben wollen, unsere größten Abenteuer, Orte, die wir entdecken möchten, und kleine Geheimnisse.',
   },
   wish: {
-    heading: 'Wünsche',
-    intro: 'Ideen, die ihr später bewusst in einen Plan überführen könnt.',
-    create: 'Wunsch hinzufügen',
+    heading: 'Träume & Wünsche',
+    intro: 'Die kleinen und großen Träume, die wir eines Tages wahr machen wollen.',
+    create: 'Neuen Traum festhalten',
     loading: 'Wunsch wird geladen …',
     detailEyebrow: 'Gemeinsamer Wunsch',
     planTitle: 'Titel des Plans (optional)',
@@ -48,9 +47,9 @@ const m5s3 = {
     },
   },
   plan: {
-    heading: 'Pläne',
-    intro: 'Vom ersten Gedanken über einen Termin bis zum gemeinsam Erlebten.',
-    create: 'Plan hinzufügen',
+    heading: 'Unsere Abenteuer',
+    intro: 'Aus Träumen werden Erlebnisse. Unsere konkreten Vorhaben und gemeinsamen Abenteuer.',
+    create: 'Neues Abenteuer planen',
     loading: 'Plan wird geladen …',
     detailEyebrow: 'Gemeinsamer Plan',
     lifecycleHeading: 'Planstatus ändern',
@@ -71,9 +70,8 @@ const m5s3 = {
     },
   },
   place: {
-    heading: 'Orte',
-    intro:
-      'Gemeinsame Orte funktionieren auch nur mit einem Namen – Koordinaten sind optional.',
+    heading: 'Entdeckungen & Orte',
+    intro: 'Besondere Orte, Lieblingscafés, Traumziele oder unser kleines Geheimversteck.',
     create: 'Ort hinzufügen',
     loading: 'Ort wird geladen …',
     detailEyebrow: 'Gemeinsamer Ort',
@@ -95,8 +93,8 @@ const m5s3 = {
       'Der Ort und seine Verknüpfungen werden gelöscht. Erinnerungen, Herzmomente und Meilensteine selbst bleiben erhalten.',
   },
   chapter: {
-    heading: 'Kapitel',
-    intro: 'Bündelt bestehende gemeinsame Inhalte, ohne sie zu duplizieren.',
+    heading: 'Lebenskapitel',
+    intro: 'Fasst zusammen, was in bestimmten Lebensabschnitten passiert ist.',
     create: 'Kapitel hinzufügen',
     loading: 'Kapitel wird geladen …',
     detailEyebrow: 'Gemeinsames Kapitel',
@@ -126,8 +124,8 @@ const m5s3 = {
     },
   },
   collection: {
-    heading: 'Gemeinsame Listen',
-    intro: 'Gemeinsam abhaken und die Reihenfolge bewusst festlegen.',
+    heading: 'Bucket Lists & Listen',
+    intro: 'Unsere Bucket Lists, kleine Geheimnisse oder Dinge, die wir nicht vergessen wollen.',
     create: 'Liste hinzufügen',
     loading: 'Liste wird geladen …',
     detailEyebrow: 'Gemeinsame Liste',

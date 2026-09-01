@@ -8,11 +8,11 @@
  * The destination names follow `docs/INFORMATION-ARCHITECTURE.md` section 2.
  */
 const navigation = {
-  today: 'Übersicht',
-  plan: 'Planen',
+  today: 'Unser Heute',
+  plan: 'Unsere Pläne',
   more: 'Mehr',
-  search: 'Suche',
-  notifications: 'Benachrichtigungen',
+  search: 'Suchen',
+  notifications: 'Neuigkeiten',
   profileMenu: 'Profil und Konto',
   profile: 'Profil',
   activity: 'Aktivität',

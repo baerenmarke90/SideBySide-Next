@@ -175,9 +175,8 @@ const de = {
     savedTitle: 'Erinnerung gespeichert.',
     savedBody: 'Sie ist jetzt Teil eurer gemeinsamen Story.',
     eyebrow: 'Gemeinsam erinnern',
-    title: 'Eure Story',
-    intro:
-      'Erinnerungen, Herzmomente und Meilensteine – chronologisch an einem Ort.',
+    title: 'Unsere Story',
+    intro: "Eine Reise unserer gemeinsamen Momente.",
     addMemory: 'Erinnerung',
     timelineKicker: 'Zeitleiste',
     timelineHeading: 'Gemeinsame Geschichte',

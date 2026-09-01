@@ -768,32 +768,47 @@ code {
 }
 
 .month-dot {
-  width: 0.65rem;
-  height: 0.65rem;
+  width: 0.85rem;
+  height: 0.85rem;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--color-brand);
-  box-shadow: 0 0 0 5px var(--color-brand-surface);
+  background: var(--color-brand-text);
+  box-shadow: 0 0 0 4px var(--color-brand-glow);
 }
 
 .story-list {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 1.85rem;
+  padding: 0 0 0 2rem;
   display: grid;
-  gap: 0.8rem;
-  border-left: 1px solid var(--color-border-subtle);
+  gap: 1.5rem;
+  border-left: 2px solid var(--color-brand-glow);
+  margin-left: 0.35rem;
 }
 
 .story-card {
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-large);
   padding: 1rem 1.1rem;
-  background: var(--color-surface);
+  background: var(--color-surface-overlay);
+  box-shadow: 0 8px 24px var(--color-shadow-card);
+  position: relative;
   transition:
     transform 120ms ease,
     border-color 120ms ease,
     box-shadow 120ms ease;
+}
+
+.story-card::before {
+  content: "";
+  position: absolute;
+  left: -2.35rem;
+  top: 1.5rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  background: var(--color-surface);
+  border: 2px solid var(--color-brand-text);
+  border-radius: 50%;
 }
 
 .story-card:hover {

@@ -122,6 +122,68 @@ function DashboardSection({
   );
 }
 
+function MoodCheckIn({ partnerName }: { partnerName?: string }) {
+  const { t } = useTranslation();
+  const MOODS = [
+    { id: 'happy', emoji: '😄', label: t('m5s5.dashboard.moodHappy') },
+    { id: 'calm', emoji: '😌', label: t('m5s5.dashboard.moodCalm') },
+    { id: 'stressed', emoji: '😫', label: t('m5s5.dashboard.moodStressed') },
+    { id: 'loving', emoji: '🥰', label: t('m5s5.dashboard.moodLoving') },
+    { id: 'tired', emoji: '😴', label: t('m5s5.dashboard.moodTired') },
+  ];
+  const [myMood, setMyMood] = useState('happy');
+  // For demonstration, partner's mood is static.
+  const partnerMood = 'calm';
+
+  return (
+    <section className="layout-panel" aria-labelledby="mood-heading">
+      <div className="layout-section-head">
+        <div>
+          <h2 id="mood-heading">Täglicher Mood Check-In</h2>
+        </div>
+      </div>
+      <div className="mood-checkin-container">
+        <div className="mood-card">
+          <div className="mood-card-header">
+            <h3>{t('m5s5.dashboard.moodYour')}</h3>
+            <span className="mood-percentage">{t('m5s5.dashboard.moodToday')}</span>
+          </div>
+          <div className="mood-emoji-row">
+            {MOODS.map(m => (
+              <button type="button"
+                key={m.id} 
+                className={`mood-emoji-btn ${myMood === m.id ? 'active' : ''}`}
+                onClick={() => setMyMood(m.id)}
+              >
+                {m.emoji}
+                <span className="mood-emoji-label">{m.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mood-card">
+          <div className="mood-card-header">
+            <h3>{partnerName ? t('m5s5.dashboard.moodPartner', { name: partnerName }) : t('m5s5.dashboard.moodPartnerFallback')}</h3>
+            <span className="mood-percentage">{t('m5s5.dashboard.moodToday')}</span>
+          </div>
+          <div className="mood-emoji-row">
+            {MOODS.map(m => (
+              <button type="button"
+                key={m.id} 
+                className={`mood-emoji-btn ${partnerMood === m.id ? 'active' : ''}`}
+                disabled
+              >
+                {m.emoji}
+                <span className="mood-emoji-label">{m.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function DashboardProductPage({
   apis,
   spaceId,
@@ -135,6 +197,8 @@ export function DashboardProductPage({
     queryFn: () => apiCall(() => apis.dashboard.getDashboard({ spaceId })),
     retry: false,
   });
+
+  const partnerName = dashboardQuery.data?.space.partner?.displayName;
 
   return (
     <div className="page m4-product-page">
@@ -168,38 +232,32 @@ export function DashboardProductPage({
 
       {dashboardQuery.data ? (
         <>
-          <section
-            className="m4-summary-card"
-            aria-labelledby="m4-summary-heading"
-          >
-            <div className="m4-summary-copy">
-              <h2 id="m4-summary-heading">
-                {dashboardQuery.data.space.partner
-                  ? t('m5s5.dashboard.partner', {
-                      name: dashboardQuery.data.space.partner.displayName,
-                    })
-                  : t('m5s5.dashboard.durationTitle')}
-              </h2>
-              <p className="m4-muted">
-                {dashboardQuery.data.relationshipDuration
-                  ? t('m5s5.dashboard.durationSince', {
-                      date: formatDate(
-                        dashboardQuery.data.relationshipDuration.startedOn,
-                      ),
-                    })
-                  : t('m5s5.dashboard.durationEmpty')}
-              </p>
-            </div>
-            {dashboardQuery.data.relationshipDuration ? (
-              <p className="m4-summary-value">
-                {t('m5s5.dashboard.durationDays', {
-                  count: dashboardQuery.data.relationshipDuration.daysTogether,
-                })}
-              </p>
-            ) : null}
-          </section>
+          <MoodCheckIn partnerName={partnerName} />
 
-          <div className="layout-split">
+          <div className="dashboard-grid">
+            <div className="date-night-card">
+              <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                {t('m5s5.dashboard.upcomingTitle')}
+              </p>
+              <h3>{t('m5s5.dashboard.dateNightTitle')}</h3>
+              <p className="date-night-date">{t('m5s5.dashboard.dateNightDate')}</p>
+              <p>{t('m5s5.dashboard.dateNightDesc')}</p>
+              <span className="badge">{t('m5s5.dashboard.dateNightBadge')}</span>
+            </div>
+
+            <div className="photo-memory-card">
+              <div className="photo-memory-placeholder" />
+              <div className="photo-memory-content">
+                <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                  {t('m5s5.dashboard.retrospectiveTitle')}
+                </p>
+                <h3>{t('m5s5.dashboard.memoryTitle')}</h3>
+                <p>{t('m5s5.dashboard.memoryDate')}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="layout-split" style={{ marginTop: '2rem' }}>
             <div className="layout-main">
               <DashboardSection
                 title={t('m5s5.dashboard.recentTitle')}
@@ -212,19 +270,26 @@ export function DashboardProductPage({
               aria-label={t('m5s5.dashboard.railAria')}
             >
               <DashboardSection
-                title={t('m5s5.dashboard.upcomingTitle')}
+                title={t('m5s5.dashboard.plansRail')}
                 items={dashboardQuery.data.upcoming}
                 empty={t('m5s5.dashboard.upcomingEmpty')}
               />
-              <DashboardSection
-                title={t('m5s5.dashboard.retrospectiveTitle')}
-                items={
-                  dashboardQuery.data.retrospective
-                    ? [dashboardQuery.data.retrospective]
-                    : []
-                }
-                empty={t('m5s5.dashboard.retrospectiveEmpty')}
-              />
+              <section className="m4-summary-card" aria-labelledby="m4-summary-heading">
+                <div className="m4-summary-copy">
+                  <h2 id="m4-summary-heading">
+                    {partnerName
+                      ? t('m5s5.dashboard.partner', { name: partnerName })
+                      : t('m5s5.dashboard.durationTitle')}
+                  </h2>
+                  <p className="m4-muted">
+                    {dashboardQuery.data.relationshipDuration
+                      ? t('m5s5.dashboard.durationSince', {
+                          date: formatDate(dashboardQuery.data.relationshipDuration.startedOn),
+                        })
+                      : t('m5s5.dashboard.durationEmpty')}
+                  </p>
+                </div>
+              </section>
             </aside>
           </div>
         </>
