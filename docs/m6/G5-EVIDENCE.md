@@ -1,0 +1,228 @@
+# G5 Launch-Readiness Evidence Matrix
+
+**Readiness owner:** #437  
+**Integrated evidence owner:** #524  
+**Final gate decision:** #525  
+**S0 baseline:** `main` at `7564800df85f53f9f0c9a99a7414de22906ade73`
+
+This matrix is the authoritative M6 index for **G5 — Launch-ready** evidence. It
+separates reusable repository baselines from final release-candidate proof.
+
+A closed issue or merged PR is not, by itself, evidence that the launch topology
+passed the integrated gate.
+
+## 1. Status vocabulary
+
+Every final G5 criterion uses exactly one status:
+
+- `PASS` — traceable evidence for the reviewed release candidate exists;
+- `FAIL` — the requirement was exercised and is not met;
+- `BLOCKED` — required work/evidence is incomplete;
+- `NOT_APPLICABLE` — excluded only with an explicit rationale consistent with the
+  declared launch target.
+
+At S0, criteria that depend on future G4/M6 runtime/rehearsal work are intentionally
+`BLOCKED`. Delivered baselines are marked as available inputs, not pre-emptive
+`PASS` results.
+
+## 2. Evidence record identity
+
+Before #524 starts the integrated rehearsal, record:
+
+- exact release candidate commit SHA;
+- product release version/tag;
+- backend/Web/Android artifact identities/digests as applicable;
+- Android application ID/version/signing channel;
+- database/Alembic revision;
+- persistent Development revision;
+- launch Production/staging-equivalent revision;
+- declared launch operating modes: Self-Hosted and/or Cloud/Managed;
+- selected commercial/Entitlement source adapters required for those launch
+  channels;
+- Demo revision when it is included in release regression evidence;
+- test date/time and environment;
+- evidence/report revision.
+
+Do not record secrets, receipts, license keys, tokens, private content or production
+user fixtures in the evidence report.
+
+## 3. Reusable baseline inputs
+
+| Baseline | Available evidence | Final-G5 limitation |
+|---|---|---|
+| #190 | repository Self-Hosted PostgreSQL + LocalMediaStore backup/restore/upgrade contract and tests | #524 must exercise target-relevant restore/upgrade/recovery |
+| #194 | Android identity/version/signing code boundary | #519/#524 must prove actual release publication/signing operations |
+| #304 | isolated canonical public Demo foundation | #524 must regression-test Demo isolation/hardening on the reviewed release |
+| #375 | persistent Development, immutable revision, promotion/smoke and rollback/forward-fix contract | #524 must exercise the real candidate through the launch path |
+| #192 / G4 | browser/a11y automation and client gate evidence when complete | M6 reuses it; #524 adds only final release-state/manual gaps |
+
+These inputs reduce duplicated work but do not waive the integrated G5 checks.
+
+## 4. G5 criteria
+
+| ID | Criterion | Required evidence / owner | S0 status |
+|---|---|---|---|
+| G5-01 | G4 Core Release Candidate baseline | final M5/G4 review, including #192 where applicable; exact candidate reused by M6 | `BLOCKED` — G4 must pass |
+| G5-02 | Coherent immutable release identity and controlled Android signing/versioning | #194 baseline, #519 release manifest/artifacts, #524 release verification | `BLOCKED` |
+| G5-03 | SBOM, attestations and provenance | #193 bound to exact #519 artifact/release identity; #524 verification | `BLOCKED` |
+| G5-04 | Self-Hosted backup/restore/upgrade/recovery | #190 baseline plus #524 real restore/upgrade/recovery evidence | `BLOCKED` — repository baseline available |
+| G5-05 | Development-to-Production promotion, migration and rollback/forward-fix | #375 baseline, #519 release identity, #524 candidate rehearsal | `BLOCKED` — repository baseline available |
+| G5-06 | Supported Cloud/Managed production topology | #521 deployment contract, recovery/capacity evidence and #524 rehearsal if managed launch is in scope | `BLOCKED` |
+| G5-07 | Registration, maintenance and ServerAdmin lockout safety | #334, #335, #524 privileged-flow and negative-access evidence | `BLOCKED` |
+| G5-08 | Structured observability and redaction | #189 logs/correlation/metrics plus #524 redaction/diagnostic evidence | `BLOCKED` |
+| G5-09 | Incident detection, response and recovery drill | #522 runbooks + controlled drill, integrated/recorded by #524 | `BLOCKED` |
+| G5-10 | Relationship/Space offboarding and retention | #518 lifecycle contract and #524 old-Membership/cache/job/privacy evidence | `BLOCKED` |
+| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and #524 deletion/restore evidence | `BLOCKED` |
+| G5-12 | Accepted versioned commercial/Entitlement product model | #262 final capability matrix, ownership, lifecycle, downgrade and launch-channel decisions | `BLOCKED` |
+| G5-13 | Central Entitlement enforcement and launch source adapters | #523 plus one focused adapter per source selected by #262; #524 lifecycle/outage/restore evidence | `BLOCKED` |
+| G5-14 | Final Security/Privacy/Tenant Isolation | G4 baseline plus #524 synthetic cross-Space, `OWNER_ONLY`, admin/ops and data-lifecycle negative tests | `BLOCKED` |
+| G5-15 | Final release-state Accessibility acceptance | G4/#192 automation reused; #524 manual keyboard/focus/TalkBack/large-text launch-state gaps only | `BLOCKED` |
+| G5-16 | Launch-topology performance/capacity | #521 assumptions and #524 bounded synthetic API/worker/database/media evidence | `BLOCKED` |
+| G5-17 | Public Demo exposure/isolation boundary | #304 baseline plus #524 release regression for DB/media/secrets/reset/auth/Entitlement isolation | `BLOCKED` — repository baseline available |
+| G5-18 | Integrated launch rehearsal evidence complete | #524 dated report with every criterion linked to an artifact/test/drill/decision or blocker | `BLOCKED` |
+| G5-19 | Final explicit G5 decision | #525 review of this matrix and #524 report against exact release candidate | `BLOCKED` |
+
+## 5. Evidence expectations by criterion class
+
+### Automated repository evidence
+
+Appropriate evidence includes successful, revision-addressable results for:
+
+- normal repository CI;
+- security/privacy/Tenant negative tests;
+- migration/schema drift;
+- OpenAPI/generated-client consistency;
+- release artifact identity checks;
+- SBOM/attestation verification;
+- backup/restore helpers where automated;
+- structured-log/redaction tests;
+- Entitlement lifecycle/provider-sandbox tests;
+- Demo isolation guards.
+
+A green CI run must correspond to the reviewed candidate or an explicitly identical
+artifact/source identity.
+
+### Operator / environment evidence
+
+Required where the repository cannot prove real environment facts:
+
+- actual Development/Production secret and datastore separation;
+- protected TLS/ingress behavior;
+- managed database/media restore;
+- signing/publishing key custody and successful release publication;
+- maintenance/Admin recovery access;
+- incident response drill;
+- measured restore and capacity observations;
+- external provider outage/restore behavior for selected launch sources.
+
+Record the result and revision, not sensitive credentials or private data.
+
+### Manual client evidence
+
+M6 does not rerun the complete G4 client program. Manual G5 evidence is limited to
+release/launch states automation cannot fully prove, for example:
+
+- Web critical release flow keyboard/focus spot-check;
+- Android TalkBack/large-text/back-navigation on the actual release artifact where
+  required by G4;
+- accessibility of maintenance, locked/Premium and recovery states introduced in
+  M6;
+- final store/install/update smoke where applicable.
+
+## 6. Security / Privacy evidence invariants
+
+The final report must explicitly show that launch operations do **not** weaken:
+
+- Tenant Guard / privacy-safe cross-Space behavior;
+- partner `OWNER_ONLY` isolation;
+- Account/Space-bound client cache clearing/reconciliation;
+- non-paywallable Account deletion and essential portability;
+- separation of ServerAdmin/host operations from private-content browsing;
+- redaction of ProtectedPayload, `OWNER_ONLY`, tokens, cookies, signed URLs,
+  receipts/license secrets and raw provider payloads;
+- Demo/Development/Production data and secret isolation.
+
+No G5 criterion can be waived by classifying a trust/data-rights gap as Premium or
+post-launch polish.
+
+## 7. Entitlement evidence rule
+
+G5 only requires provider adapters for the commercial sources #262 explicitly
+selects for the declared first launch channels.
+
+For every selected source, #524 must exercise as applicable:
+
+- activation;
+- restore/reconciliation;
+- expiry/grace;
+- downgrade without data loss;
+- refund/revocation;
+- outage/stale evidence;
+- relationship/account ownership transitions;
+- Self-Hosted offline behavior;
+- deterministic Development/Demo behavior;
+- server-authoritative enforcement;
+- absence of provider secrets/private content in logs and clients.
+
+An unselected provider is not silently a blocker. It may be `NOT_APPLICABLE` only
+when #262/#525 explicitly define the launch channel scope.
+
+## 8. Recovery evidence rule
+
+A backup configuration or provider claim is not sufficient. #524 must demonstrate a
+usable restore for the supported launch topology and show:
+
+- database/media consistency expectations;
+- application/schema compatibility;
+- previous-known-good release selection;
+- rollback vs. forward-fix vs. restore decision;
+- post-recovery health/revision smoke;
+- deletion reconciliation when the restored snapshot predates an Account deletion
+  required by #520.
+
+Record measured recovery timing honestly; do not infer an untested SLA/RPO/RTO.
+
+## 9. Performance/capacity evidence rule
+
+G5 requires bounded evidence appropriate to the initial launch target, not a
+hyperscale architecture.
+
+Record:
+
+- tested topology/resources;
+- synthetic workload shape;
+- representative API latency/error behavior;
+- worker queue/backlog/recovery behavior;
+- database/media bottleneck observations;
+- any known safe launch limits/assumptions.
+
+Do not use real relationship content as load-test data and do not make performance
+claims beyond the measured environment.
+
+## 10. Final #524 report
+
+#524 produces one dated launch-rehearsal report linked from this matrix. For every
+G5 ID it must provide:
+
+- status;
+- release/environment identity;
+- evidence link/reference;
+- concise result;
+- blocker/follow-up owner if not `PASS`;
+- `NOT_APPLICABLE` rationale when used.
+
+Failures create or reopen focused owning issues. Do not implement unrelated fixes in
+the evidence report itself.
+
+## 11. Final #525 gate
+
+#525 reviews the exact #524 report and release candidate. G5 passes only when:
+
+- every required criterion is `PASS`;
+- every `NOT_APPLICABLE` entry has an honest launch-scope rationale;
+- there is no unresolved launch-critical Security/Privacy/Tenant/Data-Rights,
+  recovery, release, admin, observability or required Entitlement gap;
+- M7-M9 scope has not been pulled into the gate merely as optional product polish.
+
+Only after #525 records `PASS` may authoritative roadmap/status documentation mark
+**G5 — Launch-ready** as passed.
