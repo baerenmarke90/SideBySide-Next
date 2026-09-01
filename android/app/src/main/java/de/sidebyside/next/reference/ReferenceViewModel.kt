@@ -29,7 +29,9 @@ import sidebyside.api.models.HeartMomentCreate
 import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
+import sidebyside.api.models.DashboardView
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
@@ -129,6 +131,11 @@ data class ReferenceUiState(
      * A wish that became a plan is still there and still `PLANNED`, but showing
      * it beside its plan would list one intention twice.
      */
+    val dashboard: DashboardView? = null,
+    val todayBusy: Boolean = false,
+    val todayProblem: UiProblem? = null,
+    /** Set once the gesture has been accepted, so the screen can say so. */
+    val thinkingOfYouSent: Boolean = false,
     val openWishes: List<WishDetail> = emptyList(),
     val plans: List<PlanDetail> = emptyList(),
     val planningBusy: Boolean = false,
@@ -187,6 +194,9 @@ class ReferenceViewModel(
     /** Where the next page continues from; opaque and server-issued. */
     private var storyCursor: String? = null
     private var commentsCursor: String? = null
+
+    /** Kept across a failed attempt so a retry is the same gesture, not a second one. */
+    private var pendingGestureId: java.util.UUID? = null
     private var nextAttemptId: Long = 1
 
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
@@ -237,6 +247,7 @@ class ReferenceViewModel(
         clearHeartMoments()
         clearComments()
         clearPlanning()
+        clearToday()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -1302,6 +1313,87 @@ class ReferenceViewModel(
                     }
                 }
                 .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
+    fun loadToday() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(todayBusy = true, todayProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getDashboard(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { view ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(dashboard = view, todayBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(todayBusy = false, todayProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /**
+     * Sends the partner a sign, once.
+     *
+     * The request id is kept until the server accepts it, so a second tap after
+     * a failure repeats the *same* gesture rather than sending a new one. That
+     * is the whole point of an idempotency key: the tap a person repeats is the
+     * tap that looked like it failed.
+     */
+    fun sendThinkingOfYou() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        if (_uiState.value.todayBusy) return
+        val operationEpoch = sessionEpoch
+
+        val requestId = pendingGestureId ?: java.util.UUID.randomUUID().also {
+            pendingGestureId = it
+        }
+
+        mutate { it.copy(todayBusy = true, todayProblem = null, thinkingOfYouSent = false) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.sendThinkingOfYou(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    ThinkingOfYouCreate(clientRequestId = requestId),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    pendingGestureId = null
+                    mutate { it.copy(todayBusy = false, thinkingOfYouSent = true) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    // A 429 means it was already sent recently, which the
+                    // problem mapping renders as its own state rather than as
+                    // a failure. The id is kept either way.
+                    mutate { it.copy(todayBusy = false, todayProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun acknowledgeThinkingOfYou() {
+        mutate { it.copy(thinkingOfYouSent = false) }
+    }
+
+    fun clearToday() {
+        pendingGestureId = null
+        mutate {
+            it.copy(
+                dashboard = null,
+                todayBusy = false,
+                todayProblem = null,
+                thinkingOfYouSent = false,
+            )
         }
     }
 

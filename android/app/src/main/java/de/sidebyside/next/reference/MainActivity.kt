@@ -49,6 +49,7 @@ import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
 import de.sidebyside.next.plan.PlanScreen
+import de.sidebyside.next.today.TodayScreen
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
 import de.sidebyside.next.story.HeartMomentsScreen
@@ -250,7 +251,10 @@ private fun DemoShell(
     AppNavigation(
         // Planen joins now that #419 put something behind it; a destination
         // with nothing behind it would be dead navigation.
+        // Heute leads, as the Information Architecture has it; #421 put
+        // something behind it.
         destinations = listOf(
+            AppDestination.Today,
             AppDestination.Story,
             AppDestination.Plan,
             AppDestination.More,
@@ -463,6 +467,17 @@ private fun DemoShell(
         },
     ) { destination ->
         when (destination) {
+            AppDestination.Today -> {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadToday() }
+                TodayScreen(
+                    dashboard = state.dashboard,
+                    busy = state.todayBusy,
+                    problem = state.todayProblem,
+                    gestureSent = state.thinkingOfYouSent,
+                    onSendThinkingOfYou = viewModel::sendThinkingOfYou,
+                )
+            }
+
             AppDestination.Plan -> {
                 LaunchedEffect(state.activeSpaceId) { viewModel.loadPlanning() }
                 PlanScreen(
