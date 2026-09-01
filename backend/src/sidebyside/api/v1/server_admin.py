@@ -15,7 +15,10 @@ from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session
 
 from sidebyside.administration import service as administration
-from sidebyside.administration.models import AdministrationSetting
+from sidebyside.administration.models import (
+    AdministrationSetting,
+    InstanceAdministrationSettings,
+)
 from sidebyside.api.deps import CurrentServerAdmin, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
@@ -91,14 +94,14 @@ class ServerAdminActivityItem(ApiModel):
     created_at: datetime
 
 
-def _settings_view(settings: object) -> ServerAdminSettings:
-    registration_enabled = bool(getattr(settings, "registration_enabled"))
-    maintenance_mode = bool(getattr(settings, "maintenance_mode"))
+def _settings_view(settings: InstanceAdministrationSettings) -> ServerAdminSettings:
+    registration_enabled = bool(settings.registration_enabled)
+    maintenance_mode = bool(settings.maintenance_mode)
     return ServerAdminSettings(
         registration_enabled=registration_enabled,
         maintenance_mode=maintenance_mode,
         effective_registration_enabled=(registration_enabled and not maintenance_mode),
-        version=int(getattr(settings, "version")),
+        version=int(settings.version),
     )
 
 
