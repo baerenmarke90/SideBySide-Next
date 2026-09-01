@@ -16,7 +16,10 @@ import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
+import sidebyside.api.models.DashboardView
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.ThinkingOfYouAccepted
+import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
@@ -340,6 +343,22 @@ interface ReferenceContract {
         planId: UUID,
         ifMatch: Int,
     ): PlanReturnToWishResponse
+
+    suspend fun getDashboard(spaceId: UUID, accessToken: String): DashboardView
+
+    /**
+     * Sends the partner a sign that you are thinking of them.
+     *
+     * [gesture] carries a client request id, so the same tap sent twice is one
+     * gesture rather than two — which matters, because a tap that looks like it
+     * failed is exactly the tap someone repeats. The server answers 429 when it
+     * has been sent too often; that is a product state, not a failure.
+     */
+    suspend fun sendThinkingOfYou(
+        spaceId: UUID,
+        accessToken: String,
+        gesture: ThinkingOfYouCreate,
+    ): ThinkingOfYouAccepted
 
     suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage
 
