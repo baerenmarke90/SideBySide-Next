@@ -1,0 +1,42 @@
+name: Temporary Web formatting for 529
+
+on:
+  push:
+    branches: [feat/529-server-admin-operations]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/529-server-admin-operations
+          fetch-depth: 0
+
+      - name: Install tooling and locked dependencies
+        run: |
+          apt-get update >/dev/null
+          apt-get install -y --no-install-recommends git >/dev/null
+          cd web
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Format Web sources
+        working-directory: web
+        run: npm run format
+
+      - name: Commit formatting
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add web/src/components/ServerAdminPage.tsx web/src/components/ServerAdminAccountsPanel.tsx web/src/components/ServerAdminPage.css web/src/i18n/locales/serverAdmin.ts
+          if git diff --cached --quiet; then
+            echo 'Web sources already formatted.'
+            exit 0
+          fi
+          git commit -m 'style(web): format ServerAdmin expansion'
+          git push origin HEAD:feat/529-server-admin-operations
