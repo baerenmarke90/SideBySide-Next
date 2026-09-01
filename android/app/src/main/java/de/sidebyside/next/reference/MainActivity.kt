@@ -51,6 +51,7 @@ import de.sidebyside.next.shell.AppNavigation
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
 import de.sidebyside.next.story.HeartMomentsScreen
+import de.sidebyside.next.story.MemoryComments
 import de.sidebyside.next.story.MemoryScreen
 import de.sidebyside.next.story.StoryScreen
 import kotlinx.coroutines.launch
@@ -251,8 +252,14 @@ private fun DemoShell(
                 // memory instead of an empty one.
                 LaunchedEffect(memoryId, state.activeSpaceId) {
                     memoryId?.let(viewModel::openMemory)
+                    memoryId?.let(viewModel::loadComments)
                 }
-                DisposableEffect(memoryId) { onDispose(viewModel::closeMemory) }
+                DisposableEffect(memoryId) {
+                    onDispose {
+                        viewModel.closeMemory()
+                        viewModel.clearComments()
+                    }
+                }
 
                 MemoryScreen(
                     memory = state.openMemory,
@@ -269,6 +276,23 @@ private fun DemoShell(
                     onCancelEditing = viewModel::cancelEditingMemory,
                     onSave = viewModel::saveMemory,
                     onDelete = viewModel::deleteMemory,
+                    comments = memoryId?.let { id ->
+                        {
+                            MemoryComments(
+                                comments = state.comments,
+                                accountId = state.accountId,
+                                busy = state.commentsBusy,
+                                problem = state.commentsProblem,
+                                onAdd = { body -> viewModel.addComment(id, body) },
+                                onEdit = { commentId, body ->
+                                    viewModel.editComment(id, commentId, body)
+                                },
+                                onDelete = { commentId ->
+                                    viewModel.removeComment(id, commentId)
+                                },
+                            )
+                        }
+                    },
                 )
             }
 
