@@ -44,9 +44,7 @@ def _bearer_token(request: Request) -> str:
     header = request.headers.get("Authorization", "")
     scheme, _, value = header.partition(" ")
     if scheme.lower() != "bearer" or not value.strip():
-        raise UnauthenticatedError(
-            "Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED
-        )
+        raise UnauthenticatedError("Authentication required.", ErrorCode.AUTHENTICATION_REQUIRED)
     return value.strip()
 
 
