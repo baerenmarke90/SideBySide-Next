@@ -540,4 +540,25 @@
     <string name="activity_kind_chapter_created">Kapitel erstellt</string>
     <string name="activity_kind_collection_created">Liste erstellt</string>
     <string name="activity_kind_comment_created">Kommentar geschrieben</string>
+
+    <string name="search_open">Suche</string>
+    <string name="search_title">Suche</string>
+    <string name="search_intro">Durchsucht eure gemeinsame Story und deine privaten Inhalte.</string>
+    <string name="search_query_hint">Suchbegriff</string>
+    <string name="search_submit">Suchen</string>
+    <string name="search_empty">Keine Treffer.</string>
+    <string name="search_result_kind_memory">Erinnerung</string>
+    <string name="search_result_kind_heart_moment">Herzmoment</string>
+    <string name="search_result_kind_milestone">Meilenstein</string>
+    <string name="search_result_kind_wish">Wunsch</string>
+    <string name="search_result_kind_plan">Plan</string>
+    <string name="search_result_kind_place">Ort</string>
+    <string name="search_result_kind_chapter">Kapitel</string>
+    <string name="search_result_kind_collection">Liste</string>
+    <string name="search_result_kind_collection_item">Listeneintrag</string>
+    <string name="search_result_kind_private_note">Private Notiz</string>
+    <string name="search_result_kind_gift_idea">Geschenkidee</string>
+    <string name="search_result_kind_private_collection">Private Liste</string>
+    <string name="search_result_kind_private_collection_item">Eintrag in privater Liste</string>
+    <string name="search_result_untitled">Ohne Titel</string>
 </resources>

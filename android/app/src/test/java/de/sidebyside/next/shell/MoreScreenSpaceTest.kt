@@ -92,6 +92,7 @@ class MoreScreenSpaceTest {
                     onOpenPreferences = {},
                     onOpenPrivateArea = {},
                     onOpenNotifications = {},
+                    onOpenSearch = {},
                     spaces = spaces,
                     activeSpaceId = active,
                     onSelectSpace = onSelectSpace,

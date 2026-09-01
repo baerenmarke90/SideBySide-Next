@@ -65,6 +65,7 @@ import de.sidebyside.next.privatearea.PrivateAreaScreen
 import de.sidebyside.next.privatearea.PrivateCollectionDetailScreen
 import de.sidebyside.next.privatearea.PrivateCollectionsScreen
 import de.sidebyside.next.privatearea.PrivateNotesScreen
+import de.sidebyside.next.search.SearchScreen
 import de.sidebyside.next.plan.PlanScreen
 import de.sidebyside.next.activity.ActivityScreen
 import de.sidebyside.next.today.TodayScreen
@@ -309,7 +310,7 @@ private fun DemoShell(
             AppDestination.More,
         ),
         navController = navController,
-        secureWhen = ::isPrivateAreaRoute,
+        secureWhen = ::isSecureRoute,
         detailRoutes = { controller ->
             composable(
                 route = MEMORY_ROUTE,
@@ -788,6 +789,18 @@ private fun DemoShell(
                     onBack = { controller.popBackStack() },
                 )
             }
+
+            composable(SEARCH_ROUTE) {
+                DisposableEffect(Unit) { onDispose(viewModel::clearSearch) }
+
+                SearchScreen(
+                    results = state.searchResults,
+                    busy = state.searchBusy,
+                    problem = state.searchProblem,
+                    onBack = { controller.popBackStack() },
+                    onSearch = viewModel::search,
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -840,6 +853,7 @@ private fun DemoShell(
                     onOpenPreferences = { navController.navigate(PREFERENCES_ROUTE) },
                     onOpenPrivateArea = { navController.navigate(PRIVATE_AREA_ROUTE) },
                     onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
+                    onOpenSearch = { navController.navigate(SEARCH_ROUTE) },
                     unreadNotificationCount = state.unreadNotificationCount,
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
@@ -908,12 +922,29 @@ private const val NOTIFICATIONS_ROUTE = "more/notifications"
 private const val ACTIVITY_ROUTE = "today/activity"
 
 /**
+ * Matches the Web path from `web/src/client/routes.ts` (`SEARCH_ROUTE`).
+ * Secured the same way as the Private Area subtree (see `secureWhen`
+ * above): a result's `SearchKind` can be `PRIVATE_NOTE`, `GIFT_IDEA`, or a
+ * PrivateCollection kind just as easily as a shared one, so the screen as a
+ * whole gets the same screenshot/Recents protection rather than only the
+ * routes with "private" in their path.
+ */
+private const val SEARCH_ROUTE = "search"
+
+/**
  * Whether [route] is inside the owner-only Private Area subtree — the hub
  * and every screen under it, matched by prefix so a new private-area screen
  * is secure by default rather than needing to opt in.
  */
 internal fun isPrivateAreaRoute(route: String?): Boolean =
     route != null && (route == PRIVATE_AREA_ROUTE || route.startsWith("$PRIVATE_AREA_ROUTE/"))
+
+/**
+ * Every route that gets [de.sidebyside.next.shell.SecureWindowEffect]: the
+ * Private Area subtree, and Search — a result's `SearchKind` can be a
+ * private one just as easily as a shared one.
+ */
+internal fun isSecureRoute(route: String?): Boolean = isPrivateAreaRoute(route) || route == SEARCH_ROUTE
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE

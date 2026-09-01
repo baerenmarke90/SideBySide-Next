@@ -35,3 +35,33 @@ class PrivateAreaRouteTest {
         assertFalse(isPrivateAreaRoute(null))
     }
 }
+
+/**
+ * The full `secureWhen` decision, including #357's Search addition: a
+ * `SearchResult` can carry a private `SearchKind`, so the whole screen
+ * needs the same `FLAG_SECURE` protection as the Private Area subtree.
+ */
+class SecureRouteTest {
+    @Test
+    fun matchesTheSearchRoute() {
+        assertTrue(isSecureRoute("search"))
+    }
+
+    @Test
+    fun stillMatchesThePrivateAreaSubtree() {
+        assertTrue(isSecureRoute("more/private"))
+        assertTrue(isSecureRoute("more/private/notes"))
+    }
+
+    @Test
+    fun doesNotMatchOrdinarySharedRoutes() {
+        assertFalse(isSecureRoute("today/activity"))
+        assertFalse(isSecureRoute("more/notifications"))
+        assertFalse(isSecureRoute("planning/places"))
+    }
+
+    @Test
+    fun doesNotMatchANullRoute() {
+        assertFalse(isSecureRoute(null))
+    }
+}

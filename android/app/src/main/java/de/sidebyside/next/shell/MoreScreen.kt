@@ -79,6 +79,13 @@ fun MoreScreen(
      * [onOpenHeartMoments].
      */
     onOpenNotifications: () -> Unit,
+    /**
+     * Opens global Search.
+     *
+     * Deliberately without a default, for the same reason as
+     * [onOpenHeartMoments].
+     */
+    onOpenSearch: () -> Unit,
     modifier: Modifier = Modifier,
     signOutEnabled: Boolean = true,
     unreadNotificationCount: Int = 0,
@@ -115,6 +122,38 @@ fun MoreScreen(
                 color = SideBySideTheme.colors.textSecondary,
                 modifier = Modifier.widthIn(max = ReadingMeasure),
             )
+        }
+
+        run {
+            val open = onOpenSearch
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.search_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.search_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.search_open))
+                    }
+                }
+            }
         }
 
         run {
