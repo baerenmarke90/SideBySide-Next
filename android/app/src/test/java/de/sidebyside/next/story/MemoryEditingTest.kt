@@ -322,7 +322,11 @@ private class MemoryApi(
         deleteVersions += ifMatch
     }
 
-    override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
+    override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage {
         timelineCalls += 1
         return StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
     }

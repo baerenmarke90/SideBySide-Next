@@ -151,6 +151,7 @@ interface ReferenceContract {
         accessToken: String,
         parent: CommentParent,
         parentId: UUID,
+        cursor: String? = null,
     ): CommentPage
 
     suspend fun createComment(
@@ -341,7 +342,18 @@ interface ReferenceContract {
         ifMatch: Int,
     ): PlanReturnToWishResponse
 
-    suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage
+    /**
+     * One page of the Story.
+     *
+     * [cursor] continues from a previous page's `nextCursor`. Without paging a
+     * couple simply stops seeing their own history past the first page, which
+     * is the kind of loss nothing on screen would announce.
+     */
+    suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String? = null,
+    ): StoryPage
 
     suspend fun createReadAccess(
         spaceId: UUID,

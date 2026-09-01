@@ -80,6 +80,10 @@ data class ReferenceUiState(
     val lastMemoryBody: String? = null,
     val lastImageBytes: ByteArray? = null,
     val storyItems: List<StoryItem> = emptyList(),
+    /** Whether the server says there is more Story past what is loaded. */
+    val storyHasMore: Boolean = false,
+    val storyLoadingMore: Boolean = false,
+    val commentsHaveMore: Boolean = false,
     /** The memory currently open, if any. */
     val openMemory: MemoryDetail? = null,
     val memoryBusy: Boolean = false,
@@ -179,6 +183,10 @@ class ReferenceViewModel(
     private var imageDrafts: List<ImageDraft> = emptyList()
     private var sessionEpoch: Long = 0
     private var nextDraftId: Long = 1
+
+    /** Where the next page continues from; opaque and server-issued. */
+    private var storyCursor: String? = null
+    private var commentsCursor: String? = null
     private var nextAttemptId: Long = 1
 
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
@@ -876,7 +884,14 @@ class ReferenceViewModel(
             }
                 .onSuccess { page ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(comments = page.items, commentsBusy = false) }
+                    commentsCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            comments = page.items,
+                            commentsHaveMore = page.hasMore,
+                            commentsBusy = false,
+                        )
+                    }
                 }
                 .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
         }
@@ -977,7 +992,15 @@ class ReferenceViewModel(
     }
 
     fun clearComments() {
-        mutate { it.copy(comments = emptyList(), commentsBusy = false, commentsProblem = null) }
+        commentsCursor = null
+        mutate {
+            it.copy(
+                comments = emptyList(),
+                commentsBusy = false,
+                commentsProblem = null,
+                commentsHaveMore = false,
+            )
+        }
     }
 
     private fun reportCommentFailure(
@@ -1207,6 +1230,81 @@ class ReferenceViewModel(
         }
     }
 
+    /**
+     * Appends the next Story page.
+     *
+     * Appends rather than replaces: a couple reading their history back must
+     * not lose what they already scrolled past.
+     */
+    fun loadMoreStory() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val cursor = storyCursor ?: return
+        if (_uiState.value.storyLoadingMore) return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(storyLoadingMore = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.getTimeline(spaceId, currentSession.tokens.accessToken, cursor)
+            }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    storyCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            storyItems = it.storyItems + page.items,
+                            storyHasMore = page.hasMore,
+                            storyLoadingMore = false,
+                        )
+                    }
+                }
+                .onFailure {
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate { it.copy(storyLoadingMore = false) }
+                        failure(R.string.ref_error_story_load_failed, clearBusy = false)
+                    }
+                }
+        }
+    }
+
+    fun loadMoreComments(parent: ReferenceContract.CommentParent, parentId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val cursor = commentsCursor ?: return
+        if (_uiState.value.commentsBusy) return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(commentsBusy = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.listComments(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    parent,
+                    parentId,
+                    cursor,
+                )
+            }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    commentsCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            comments = it.comments + page.items,
+                            commentsHaveMore = page.hasMore,
+                            commentsBusy = false,
+                        )
+                    }
+                }
+                .onFailure { throwable -> reportCommentFailure(operationEpoch, currentSession, throwable) }
+        }
+    }
+
     fun loadPlanning() {
         val api = contract ?: return
         val currentSession = session ?: return
@@ -1365,7 +1463,14 @@ class ReferenceViewModel(
             runCatching { api.getTimeline(spaceId, currentSession.tokens.accessToken) }
                 .onSuccess { story ->
                     if (isCurrentSession(operationEpoch, currentSession)) {
-                        mutate { it.copy(storyItems = story.items, error = null) }
+                        storyCursor = story.nextCursor
+                        mutate {
+                            it.copy(
+                                storyItems = story.items,
+                                storyHasMore = story.hasMore,
+                                error = null,
+                            )
+                        }
                     }
                 }
                 .onFailure {

@@ -50,7 +50,11 @@ class ReferenceFlowTest {
 
 
 
-            override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage = story
+            override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage = story
 
 
         }
@@ -148,7 +152,11 @@ class ReferenceFlowTest {
                 return boundMemory
             }
 
-            override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
+            override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage {
                 calls += "timeline"
                 return story
             }

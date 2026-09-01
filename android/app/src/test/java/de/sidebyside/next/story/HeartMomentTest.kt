@@ -223,7 +223,11 @@ private class HeartMomentApi(
     override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
         listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
 
-    override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
+    override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage {
         timelineCalls += 1
         return StoryPage(hasMore = false, items = emptyList(), nextCursor = null)
     }

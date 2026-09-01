@@ -64,7 +64,11 @@ class ReferenceViewModelTest {
                 )
 
 
-            override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage {
+            override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage {
                 timelineCalls += 1
                 if (timelineCalls == 1) {
                     return StoryPage(hasMore = false, items = emptyList(), nextCursor = null)

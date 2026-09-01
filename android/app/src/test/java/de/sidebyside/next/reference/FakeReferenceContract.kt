@@ -95,6 +95,7 @@ abstract class FakeReferenceContract : ReferenceContract {
         accessToken: String,
         parent: ReferenceContract.CommentParent,
         parentId: UUID,
+        cursor: String?,
     ): CommentPage = notExercised("listComments")
 
     override suspend fun createComment(
@@ -294,8 +295,11 @@ abstract class FakeReferenceContract : ReferenceContract {
         ifMatch: Int,
     ): PlanReturnToWishResponse = notExercised("returnPlanToWish")
 
-    override suspend fun getTimeline(spaceId: UUID, accessToken: String): StoryPage =
-        notExercised("getTimeline")
+    override suspend fun getTimeline(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): StoryPage = notExercised("getTimeline")
 
     override suspend fun createReadAccess(
         spaceId: UUID,
