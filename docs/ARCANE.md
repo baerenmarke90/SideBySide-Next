@@ -3,6 +3,12 @@
 These notes supplement `SELF-HOSTING.md` for installations where Arcane manages
 the SideBySide stack and a separate TLS reverse proxy sits in front of it.
 
+For persistent Development, release-candidate verification, Production promotion,
+and rollback, the authoritative workflow is
+[`DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`](DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md).
+This document defines Arcane mechanics; it does not create a competing release
+policy.
+
 ## Which Compose file?
 
 SideBySide has two deliberately separate Self-Hosting entry points:
@@ -18,8 +24,9 @@ Arcane should instead use **`compose.arcane.yaml`**. This file requires neither
 `build context not found` error for `/app/data/projects/<project>/backend`.
 
 Both variants contain the same services, volumes, networks, runtime settings,
-and startup dependencies. CI compares their rendered configuration and permits
-only the build contexts as an intentional difference.
+and startup dependencies. CI compares their rendered configuration. The remote
+Git build context and the backend build-revision argument derived from that ref
+are the intentional source-specific differences.
 
 ## Configure Arcane
 
@@ -29,8 +36,9 @@ only the build contexts as an intentional difference.
 3. Import the values from `.env.example` as the project environment and set at
    least `POSTGRES_PASSWORD` and, for initial registration,
    `SBS_BOOTSTRAP_TOKEN` securely.
-4. `SBS_SOURCE_REF=main` may be used for tests. Use an immutable release tag for
-   production.
+4. `SBS_SOURCE_REF=main` may be used for ordinary Development integration. Pin
+   persistent Development to an exact candidate commit before release acceptance.
+   Production uses only the exact approved commit SHA.
 5. Start the deployment. `migrate` must complete successfully before API and
    worker start; Web additionally waits for API readiness.
 
@@ -49,7 +57,33 @@ https://github.com/baerenmarke90/SideBySide-Next.git#main:web
 ```
 
 `api`, `worker`, and `migrate` always use the same backend context and are
-therefore built from the same source revision.
+therefore built from the same source revision. The backend image also receives
+`SBS_BUILD_REVISION` directly from `SBS_SOURCE_REF`; both API health endpoints
+return that identity as `X-SideBySide-Revision`.
+
+## Persistent Development in Arcane
+
+A long-lived Development instance is a separate Arcane project, not a mode of the
+Production project. Start from `deploy/persistent-development.env.example` and use
+a unique `COMPOSE_PROJECT_NAME`, database password, cursor signing key, bootstrap
+state, and media storage.
+
+The safe default binds Development to loopback. Device/Android access should be
+provided through a controlled private network/VPN or protected reverse proxy, not
+by publishing unrestricted development settings to the Internet.
+
+Before a production promotion:
+
+1. resolve the candidate commit SHA;
+2. set Development `SBS_SOURCE_REF` to that exact SHA;
+3. rebuild/recreate the complete Development stack;
+4. verify migrations, API/Web health, the revision header, authenticated smoke,
+   and the affected product path;
+5. only then configure Production to the same exact commit SHA.
+
+Use `scripts/check_environment_isolation.py` before promotion when Development and
+Production dotenv files are available to the operator. Use
+`scripts/deployment_smoke.py` for the non-destructive network smoke.
 
 ## Public and private repositories
 
@@ -77,6 +111,11 @@ The previous approach of setting `SBS_BACKEND_BUILD_CONTEXT` and
 `SBS_WEB_BUILD_CONTEXT` manually in the standard Compose file was deliberately
 removed. The normal Compose file remains focused on complete repository
 checkouts, while Arcane has one explicit dedicated entry point.
+
+For v1, Production still rebuilds from an immutable source revision rather than
+promoting versioned registry images. The exact commit SHA is the deployment
+identity. A registry-based build-once/promote-identical-artifact model may be
+introduced later if it materially improves release reproducibility.
 
 ## Target architecture with a reverse proxy
 
@@ -156,10 +195,17 @@ service:
 curl --fail http://<docker-host>:<WEB_PORT>/healthz
 ```
 
-Verify the production API over the real TLS path:
+Verify the production API over the real TLS path and inspect the deployed
+revision:
 
 ```bash
-curl --fail https://sidebyside.example/api/v1/health/ready
+curl --fail --include https://sidebyside.example/api/v1/health/ready
+```
+
+The response must include:
+
+```text
+X-SideBySide-Revision: <expected-commit-sha>
 ```
 
 Both targets should work through the public origin:
@@ -173,6 +219,15 @@ The normal API readiness response is:
 
 ```json
 {"status":"ok","database":"ok"}
+```
+
+For release acceptance prefer the shared helper, which verifies health and the
+revision together:
+
+```bash
+python3 scripts/deployment_smoke.py \
+  --base-url https://sidebyside.example \
+  --expected-revision <expected-commit-sha>
 ```
 
 ## Reuse review
