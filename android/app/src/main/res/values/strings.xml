@@ -285,4 +285,24 @@
     <string name="today_type_important_date">Wichtiges Datum</string>
     <string name="today_type_birthday">Geburtstag</string>
     <string name="today_type_anniversary">Jahrestag</string>
+    <string name="awaiting_space_title">Noch kein gemeinsamer Bereich</string>
+    <string name="awaiting_space_body">Für dieses Konto ist noch kein gemeinsamer Bereich aktiv. Hat euch jemand einen Einladungscode geschickt?</string>
+    <string name="invitation_code_hint">Einladungscode</string>
+    <string name="invitation_accept">Beitreten</string>
+    <string name="invitation_accepted">Willkommen im gemeinsamen Bereich.</string>
+    <string name="invitation_expired_title">Dieser Code funktioniert nicht</string>
+    <string name="invitation_expired">Er ist ungültig, abgelaufen oder wurde schon benutzt.</string>
+    <string name="invitation_already_member_title">Schon dabei</string>
+    <string name="invitation_already_member">Ihr teilt diesen Bereich bereits.</string>
+    <string name="invitation_space_full_title">Bereich schon voll</string>
+    <string name="invitation_space_full">Dieser Bereich hat schon zwei Partner:innen. Eine Einladung ist erst wieder möglich, wenn Platz ist.</string>
+    <string name="invitations_title">Einladungen</string>
+    <string name="invitations_intro">Lade deinen Partner ein, damit ihr denselben Bereich teilt.</string>
+    <string name="invitation_create">Einladung erstellen</string>
+    <string name="invitation_share">Weitergeben</string>
+    <string name="invitation_token_notice">Dieser Code wird nur jetzt angezeigt. Gib ihn direkt weiter.</string>
+    <string name="invitation_revoke">Zurückziehen</string>
+    <string name="invitation_expires">Läuft ab am %1$s</string>
+    <string name="invitations_empty">Noch keine offene Einladung.</string>
+    <string name="invitation_share_text">Mit diesem Code kannst du unserem gemeinsamen Bereich in SidebySide beitreten: %1$s</string>
 </resources>

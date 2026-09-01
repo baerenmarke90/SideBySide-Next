@@ -115,6 +115,12 @@ export const PRIVATE_AREA_PATH = MORE_PRIVATE_ROUTE;
  */
 export const SERVER_ADMIN_ROUTE = '/server-admin';
 
+/**
+ * Instance-wide operational administration. It is deliberately outside the
+ * partner/product navigation tree and never derives authorization from a Space.
+ */
+export const SERVER_ADMIN_ROUTE = '/server-admin';
+
 /* Story content ---------------------------------------------------------- */
 
 export const MEMORY_CREATE_ROUTE = '/story/memories/new';
