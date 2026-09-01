@@ -39,7 +39,8 @@ export function QuickCreateMenu() {
   }, [open]);
 
   function focusMenuItem(index: number): void {
-    const items = rootRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
+    const items =
+      rootRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
     if (!items?.length) return;
     items[(index + items.length) % items.length]?.focus();
   }
@@ -57,7 +58,9 @@ export function QuickCreateMenu() {
     );
     if (!items.length) return;
 
-    const currentIndex = items.findIndex((item) => item === document.activeElement);
+    const currentIndex = items.findIndex(
+      (item) => item === document.activeElement,
+    );
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       focusMenuItem(currentIndex + 1);
