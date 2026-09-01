@@ -46,6 +46,12 @@ import sidebyside.api.models.GiftIdeaCreate
 import sidebyside.api.models.GiftIdeaDetail
 import sidebyside.api.models.GiftIdeaStatus
 import sidebyside.api.models.GiftIdeaUpdate
+import sidebyside.api.models.PrivateCollectionCreate
+import sidebyside.api.models.PrivateCollectionDetail
+import sidebyside.api.models.PrivateCollectionItemCreate
+import sidebyside.api.models.PrivateCollectionItemDetail
+import sidebyside.api.models.PrivateCollectionItemUpdate
+import sidebyside.api.models.PrivateCollectionUpdate
 import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNoteUpdate
@@ -233,6 +239,10 @@ data class ReferenceUiState(
     val giftIdeas: List<GiftIdeaDetail> = emptyList(),
     val giftIdeasBusy: Boolean = false,
     val giftIdeasProblem: UiProblem? = null,
+    /** Owner-only: items ride along inside each [PrivateCollectionDetail]. */
+    val privateCollections: List<PrivateCollectionDetail> = emptyList(),
+    val privateCollectionsBusy: Boolean = false,
+    val privateCollectionsProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -367,6 +377,7 @@ class ReferenceViewModel(
         clearPlaceRelations()
         clearPrivateNotes()
         clearGiftIdeas()
+        clearPrivateCollections()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -456,6 +467,7 @@ class ReferenceViewModel(
         clearPlaceRelations()
         clearPrivateNotes()
         clearGiftIdeas()
+        clearPrivateCollections()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -513,6 +525,7 @@ class ReferenceViewModel(
         clearPlaceRelations()
         clearPrivateNotes()
         clearGiftIdeas()
+        clearPrivateCollections()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -576,6 +589,7 @@ class ReferenceViewModel(
         clearPlaceRelations()
         clearPrivateNotes()
         clearGiftIdeas()
+        clearPrivateCollections()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -3227,6 +3241,276 @@ class ReferenceViewModel(
 
     fun clearGiftIdeas() {
         mutate { it.copy(giftIdeas = emptyList(), giftIdeasBusy = false, giftIdeasProblem = null) }
+    }
+
+    fun loadPrivateCollections() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listPrivateCollections(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollections = page.items, privateCollectionsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun addPrivateCollection(title: String, icon: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createPrivateCollection(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    PrivateCollectionCreate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun updatePrivateCollection(collection: PrivateCollectionDetail, title: String, icon: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePrivateCollection(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    collection.version,
+                    PrivateCollectionUpdate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun deletePrivateCollection(collection: PrivateCollectionDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deletePrivateCollection(spaceId, currentSession.tokens.accessToken, collection.id, collection.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun addPrivateCollectionItem(collection: PrivateCollectionDetail, title: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createPrivateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    PrivateCollectionItemCreate(title = title),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun toggleCollectionItemCompleted(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePrivateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                    PrivateCollectionItemUpdate(completed = !item.completed),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun deletePrivateCollectionItem(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deletePrivateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun moveCollectionItemUp(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
+        reorderCollectionItem(collection, item, offset = -1)
+    }
+
+    fun moveCollectionItemDown(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
+        reorderCollectionItem(collection, item, offset = 1)
+    }
+
+    /**
+     * Swaps [item] with its neighbour [offset] positions away and sends the
+     * whole resulting order. A swap always keeps the same set of ids the
+     * collection already has, so it satisfies the server's exact-set order
+     * contract by construction rather than by re-checking it here.
+     */
+    private fun reorderCollectionItem(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail, offset: Int) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        val currentOrder = collection.items.sortedBy { it.position }.map { it.id }
+        val index = currentOrder.indexOf(item.id)
+        val targetIndex = index + offset
+        if (index < 0 || targetIndex < 0 || targetIndex >= currentOrder.size) return
+        val newOrder = currentOrder.toMutableList()
+        val moved = newOrder.removeAt(index)
+        newOrder.add(targetIndex, moved)
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.reorderPrivateCollectionItems(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    collection.version,
+                    newOrder,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun clearPrivateCollections() {
+        mutate {
+            it.copy(privateCollections = emptyList(), privateCollectionsBusy = false, privateCollectionsProblem = null)
+        }
     }
 
     fun logout() {

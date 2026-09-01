@@ -36,14 +36,13 @@ private val ReadingMeasure: Dp = 560.dp
  * one shared "you are in the private area now" moment says that once rather
  * than on every card.
  *
- * Collections join once their own slice lands: a card with nothing behind
- * it is dead navigation.
  */
 @Composable
 fun PrivateAreaScreen(
     onBack: () -> Unit,
     onOpenNotes: () -> Unit,
     onOpenGiftIdeas: () -> Unit,
+    onOpenCollections: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -124,6 +123,35 @@ fun PrivateAreaScreen(
                     modifier = Modifier.heightIn(min = MinimumTouchTarget),
                 ) {
                     Text(stringResource(R.string.gift_ideas_open))
+                }
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(SideBySideTheme.radii.card),
+            color = SideBySideTheme.colors.surface,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+            ) {
+                Text(
+                    text = stringResource(R.string.private_collections_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SideBySideTheme.colors.textPrimary,
+                    modifier = Modifier.semantics { heading() },
+                )
+                Text(
+                    text = stringResource(R.string.private_collections_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SideBySideTheme.colors.textSecondary,
+                )
+                OutlinedButton(
+                    onClick = onOpenCollections,
+                    modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                ) {
+                    Text(stringResource(R.string.private_collections_open))
                 }
             }
         }

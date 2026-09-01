@@ -33,6 +33,13 @@ import sidebyside.api.models.GiftIdeaCreate
 import sidebyside.api.models.GiftIdeaDetail
 import sidebyside.api.models.GiftIdeaPage
 import sidebyside.api.models.GiftIdeaUpdate
+import sidebyside.api.models.PrivateCollectionCreate
+import sidebyside.api.models.PrivateCollectionDetail
+import sidebyside.api.models.PrivateCollectionItemCreate
+import sidebyside.api.models.PrivateCollectionItemDetail
+import sidebyside.api.models.PrivateCollectionItemUpdate
+import sidebyside.api.models.PrivateCollectionPage
+import sidebyside.api.models.PrivateCollectionUpdate
 import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNotePage
@@ -555,6 +562,65 @@ abstract class FakeReferenceContract : ReferenceContract {
         giftIdeaId: UUID,
         ifMatch: Int,
     ): Unit = notExercised("deleteGiftIdea")
+
+    override suspend fun listPrivateCollections(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PrivateCollectionPage = notExercised("listPrivateCollections")
+
+    override suspend fun createPrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PrivateCollectionCreate,
+    ): PrivateCollectionDetail = notExercised("createPrivateCollection")
+
+    override suspend fun updatePrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionUpdate,
+    ): PrivateCollectionDetail = notExercised("updatePrivateCollection")
+
+    override suspend fun deletePrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePrivateCollection")
+
+    override suspend fun createPrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: PrivateCollectionItemCreate,
+    ): PrivateCollectionItemDetail = notExercised("createPrivateCollectionItem")
+
+    override suspend fun updatePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionItemUpdate,
+    ): PrivateCollectionItemDetail = notExercised("updatePrivateCollectionItem")
+
+    override suspend fun deletePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePrivateCollectionItem")
+
+    override suspend fun reorderPrivateCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): PrivateCollectionDetail = notExercised("reorderPrivateCollectionItems")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

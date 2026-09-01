@@ -45,6 +45,13 @@ import sidebyside.api.models.GiftIdeaCreate
 import sidebyside.api.models.GiftIdeaDetail
 import sidebyside.api.models.GiftIdeaPage
 import sidebyside.api.models.GiftIdeaUpdate
+import sidebyside.api.models.PrivateCollectionCreate
+import sidebyside.api.models.PrivateCollectionDetail
+import sidebyside.api.models.PrivateCollectionItemCreate
+import sidebyside.api.models.PrivateCollectionItemDetail
+import sidebyside.api.models.PrivateCollectionItemUpdate
+import sidebyside.api.models.PrivateCollectionPage
+import sidebyside.api.models.PrivateCollectionUpdate
 import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNotePage
@@ -652,6 +659,66 @@ interface ReferenceContract {
     ): GiftIdeaDetail
 
     suspend fun deleteGiftIdea(spaceId: UUID, accessToken: String, giftIdeaId: UUID, ifMatch: Int)
+
+    /**
+     * Owner-only, same server-side filtering as [listPrivateNotes]. Items
+     * are not listed separately: [PrivateCollectionDetail.items] already
+     * carries them, in server order.
+     */
+    suspend fun listPrivateCollections(spaceId: UUID, accessToken: String, cursor: String? = null): PrivateCollectionPage
+
+    suspend fun createPrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PrivateCollectionCreate,
+    ): PrivateCollectionDetail
+
+    suspend fun updatePrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionUpdate,
+    ): PrivateCollectionDetail
+
+    suspend fun deletePrivateCollection(spaceId: UUID, accessToken: String, collectionId: UUID, ifMatch: Int)
+
+    suspend fun createPrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: PrivateCollectionItemCreate,
+    ): PrivateCollectionItemDetail
+
+    suspend fun updatePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionItemUpdate,
+    ): PrivateCollectionItemDetail
+
+    suspend fun deletePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    )
+
+    /**
+     * The server accepts only an exact permutation of the collection's
+     * current item ids — not a subset, not an addition. [itemIds] must be
+     * built from the collection's own current items, never invented.
+     */
+    suspend fun reorderPrivateCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): PrivateCollectionDetail
 }
 
 private fun unsupportedProfileOperation(): Nothing =
