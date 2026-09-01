@@ -198,6 +198,11 @@ class Settings(BaseSettings):
     # SecretStr prevents a Settings repr from exposing the value.
     bootstrap_token: SecretStr | None = None
 
+    # Instance-wide ServerAdmin authorization is configured by the operator,
+    # never inferred from Space membership. Only verified AccountEmail rows can
+    # satisfy this allowlist at request time.
+    server_admin_emails: list[str] = Field(default_factory=list)
+
     # Public address of this instance. It appears in every magic link and must
     # not come from a request header; otherwise a forged Host header could make
     # the link point to an attacker-controlled server.
@@ -233,6 +238,28 @@ class Settings(BaseSettings):
     @classmethod
     def empty_secret_is_unset(cls, value: object) -> object | None:
         return None if value == "" else value
+
+    @field_validator("server_admin_emails")
+    @classmethod
+    def server_admin_email_allowlist_is_valid(cls, value: list[str]) -> list[str]:
+        """Normalize the operator-managed ServerAdmin identity allowlist."""
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for raw_address in value:
+            address = raw_address.strip().lower()
+            local_part, separator, domain = address.partition("@")
+            if (
+                not separator
+                or not local_part
+                or "." not in domain
+                or domain.startswith(".")
+                or len(address) > 320
+            ):
+                raise ValueError("SBS_SERVER_ADMIN_EMAILS contains an invalid email address.")
+            if address not in seen:
+                normalized.append(address)
+                seen.add(address)
+        return normalized
 
     @property
     def is_production(self) -> bool:
