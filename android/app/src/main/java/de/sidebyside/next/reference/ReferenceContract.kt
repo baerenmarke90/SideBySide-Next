@@ -37,6 +37,10 @@ import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.PlaceCreate
+import sidebyside.api.models.PlaceDetail
+import sidebyside.api.models.PlacePage
+import sidebyside.api.models.PlaceUpdate
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
@@ -542,6 +546,21 @@ interface ReferenceContract {
         preferenceId: UUID,
         ifMatch: Int,
     )
+
+    suspend fun listPlaces(spaceId: UUID, accessToken: String, cursor: String? = null): PlacePage
+
+    suspend fun createPlace(spaceId: UUID, accessToken: String, fields: PlaceCreate): PlaceDetail
+
+    /** The contract accepts a partial correction; unset fields are left unchanged. */
+    suspend fun updatePlace(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        ifMatch: Int,
+        fields: PlaceUpdate,
+    ): PlaceDetail
+
+    suspend fun deletePlace(spaceId: UUID, accessToken: String, placeId: UUID, ifMatch: Int)
 }
 
 private fun unsupportedProfileOperation(): Nothing =

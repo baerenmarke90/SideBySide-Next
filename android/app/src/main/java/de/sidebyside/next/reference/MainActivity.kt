@@ -57,6 +57,7 @@ import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.place.PlacesScreen
 import de.sidebyside.next.plan.PlanScreen
 import de.sidebyside.next.today.TodayScreen
 import de.sidebyside.next.shell.MoreScreen
@@ -619,6 +620,24 @@ private fun DemoShell(
                     onDelete = viewModel::deleteProfilePreference,
                 )
             }
+
+            composable(PLACES_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPlaces() }
+
+                PlacesScreen(
+                    places = state.places,
+                    busy = state.placesBusy,
+                    problem = state.placesProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = { name, description, address, latitude, longitude ->
+                        viewModel.addPlace(name, description, address, latitude, longitude)
+                    },
+                    onEdit = { place, name, description, address, latitude, longitude ->
+                        viewModel.updatePlace(place, name, description, address, latitude, longitude)
+                    },
+                    onDelete = viewModel::deletePlace,
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -652,6 +671,7 @@ private fun DemoShell(
                     onComplete = viewModel::completePlan,
                     onReturnToWish = viewModel::returnPlanToWish,
                     onDeletePlan = viewModel::deletePlan,
+                    onOpenPlaces = { navController.navigate(PLACES_ROUTE) },
                 )
             }
 
@@ -714,6 +734,8 @@ private const val IMPORTANT_DATES_ROUTE =
     "people/related-persons/{$PERSON_ID_ARGUMENT}/important-dates"
 
 private const val PREFERENCES_ROUTE = "profile/preferences"
+
+private const val PLACES_ROUTE = "planning/places"
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE
