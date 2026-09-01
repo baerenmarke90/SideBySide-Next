@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from sidebyside.administration.models import (
@@ -37,13 +38,20 @@ def get_settings(session: Session, *, for_update: bool = False) -> InstanceAdmin
         statement = statement.with_for_update()
     settings = session.execute(statement).scalar_one_or_none()
     if settings is None:
-        settings = InstanceAdministrationSettings(
-            singleton_key=1,
-            registration_enabled=True,
-            maintenance_mode=False,
+        # SELECT ... FOR UPDATE cannot lock a row that does not exist. Use an
+        # atomic PostgreSQL upsert so concurrent first requests cannot both try
+        # to create the singleton and turn a normal race into a 500 response.
+        session.execute(
+            insert(InstanceAdministrationSettings)
+            .values(
+                singleton_key=1,
+                registration_enabled=True,
+                maintenance_mode=False,
+                version=1,
+            )
+            .on_conflict_do_nothing(index_elements=[InstanceAdministrationSettings.singleton_key])
         )
-        session.add(settings)
-        session.flush()
+        settings = session.execute(statement).scalar_one()
     return settings
 
 

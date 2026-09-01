@@ -855,12 +855,19 @@ AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
 )
 """Account-scoped but not space-scoped. Anonymous requests receive 401."""
 
-SERVER_ADMIN_ONLY: tuple[tuple[str, str], ...] = (("GET", "/api/v1/server-admin/overview"),)
+SERVER_ADMIN_ONLY: tuple[tuple[str, str], ...] = (
+    ("GET", "/api/v1/server-admin/overview"),
+    ("GET", "/api/v1/server-admin/settings"),
+    ("PUT", "/api/v1/server-admin/settings/registration"),
+    ("PUT", "/api/v1/server-admin/settings/maintenance"),
+    ("GET", "/api/v1/server-admin/activity"),
+)
 """Instance-scoped operations that require authenticated ServerAdmin authority."""
 
 PUBLIC_ENDPOINTS: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/health"),
     ("GET", "/api/v1/health/ready"),
+    ("GET", "/api/v1/instance/status"),
     ("POST", "/api/v1/auth/register"),
     ("POST", "/api/v1/auth/sign-in"),
     ("POST", "/api/v1/auth/refresh"),
@@ -1215,5 +1222,9 @@ def test_server_admin_endpoints_remain_closed_to_anonymous(
 
 def test_public_endpoints_require_no_token(scenario) -> None:  # type: ignore[no-untyped-def]
     "The countercheck: these endpoints lead to a token and remain public."
-    for path in ("/api/v1/health", "/api/v1/health/ready"):
+    for path in (
+        "/api/v1/health",
+        "/api/v1/health/ready",
+        "/api/v1/instance/status",
+    ):
         assert scenario["client"].get(path).status_code == 200
