@@ -78,9 +78,9 @@ class ProfilePreferenceTest {
             SELF,
             ProfileVisibility.SELF_PROFILE,
             PreferenceCategory.MUSIC,
-            "Lieblingsband",
+            "Favorite band",
             PreferenceSentiment.LOVE,
-            "Alles von ihnen",
+            "Everything they release",
         )
         advanceUntilIdle()
 
@@ -99,9 +99,9 @@ class ProfilePreferenceTest {
             PARTNER,
             ProfileVisibility.PRIVATE_PARTNER_NOTE,
             PreferenceCategory.FLOWERS,
-            "Geschenkidee",
+            "Gift idea",
             PreferenceSentiment.LIKE,
-            "Sonnenblumen",
+            "Sunflowers",
         )
         advanceUntilIdle()
 
@@ -139,9 +139,9 @@ class ProfilePreferenceTest {
         model.updateProfilePreference(
             note,
             PreferenceCategory.HOBBIES,
-            "Neues Thema",
+            "New topic",
             PreferenceSentiment.LIKE,
-            "Neuer Wert",
+            "New value",
         )
         advanceUntilIdle()
 
@@ -212,9 +212,9 @@ private fun privateNote(version: Int = 1) = ProfilePreferenceView(
     createdAt = OffsetDateTime.now(),
     id = UUID.randomUUID(),
     sentiment = PreferenceSentiment.LIKE,
-    topic = "Geschenkidee",
+    topic = "Gift idea",
     updatedAt = OffsetDateTime.now(),
-    value = "Sonnenblumen",
+    value = "Sunflowers",
     version = version,
     visibility = ProfileVisibility.PRIVATE_PARTNER_NOTE,
 )
