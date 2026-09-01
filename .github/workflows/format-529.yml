@@ -13,17 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     container: node:22.19.0-bookworm-slim@sha256:4a4884e8a44826194dff92ba316264f392056cbe243dcc9fd3551e71cea02b90
     steps:
+      - name: Install git
+        run: |
+          apt-get update >/dev/null
+          apt-get install -y --no-install-recommends git >/dev/null
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: feat/529-server-admin-operations
           fetch-depth: 0
 
-      - name: Install tooling and locked dependencies
-        run: |
-          apt-get update >/dev/null
-          apt-get install -y --no-install-recommends git >/dev/null
-          cd web
-          npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install locked dependencies
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Format Web sources
         working-directory: web
