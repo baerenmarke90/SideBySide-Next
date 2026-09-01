@@ -20,7 +20,7 @@ class TestHealth:
         response = client.get("/api/v1/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
-        assert response.headers["X-SideBySide-Revision"] == "local-checkout"
+        assert response.headers["X-SideBySide-Revision"] == "unverified-local-checkout"
 
     def test_revision_header_uses_build_identity(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
@@ -40,7 +40,7 @@ class TestHealth:
     def test_readiness_reports_503_without_database(self, client: TestClient) -> None:
         response = client.get("/api/v1/health/ready")
         assert response.status_code in (200, 503)
-        assert response.headers["X-SideBySide-Revision"] == "local-checkout"
+        assert response.headers["X-SideBySide-Revision"] == "unverified-local-checkout"
         if response.status_code == 503:
             assert response.json()["database"] == "unavailable"
 
