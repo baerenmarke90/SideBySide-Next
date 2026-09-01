@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
@@ -287,7 +288,9 @@ private fun MemoryHeader(memory: MemoryDetail) {
         }
         Text(
             text = memory.title,
-            style = MaterialTheme.typography.headlineMedium,
+            // A memory's own title is the other editorial moment.
+            style = MaterialTheme.typography.headlineMedium
+                .copy(fontFamily = FrauncesFamily),
             color = SideBySideTheme.colors.textPrimary,
             modifier = Modifier
                 .widthIn(max = ReadingMeasure)

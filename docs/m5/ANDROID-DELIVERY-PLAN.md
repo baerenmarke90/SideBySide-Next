@@ -188,8 +188,10 @@ discovered late:
 - **Locale resolution.** The supported locale set is implied by the default
   resource folder rather than declared, so library-provided strings can mix
   languages on a non-German device. Owned by #362.
-- **Typography delivery.** The specified Inter and Fraunces faces are declared
-  by both clients and delivered by neither. Owned by #361.
+- **Typography delivery.** Settled by #361 and
+  `docs/decisions/0005-typography-delivery.md`: Fraunces is delivered by both
+  clients as a self-hosted variable file, and the UI face is the platform's own.
+  Nothing is fetched at runtime.
 - **Dependency verification.** `android/gradle/verification-metadata.xml` is
   enforced in strict mode. Every added dependency requires verified checksums in
   the same change, which is a further reason to prefer platform capabilities.
