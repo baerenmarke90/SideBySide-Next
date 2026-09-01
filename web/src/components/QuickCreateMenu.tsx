@@ -127,7 +127,7 @@ export function QuickCreateMenu() {
             {t('storyActions.addMilestone')}
           </Link>
 
-          <div className="quick-create-separator" role="separator" />
+          <hr className="quick-create-separator" />
           <div className="quick-create-group-label">
             {t('navigation.quickCreatePrivate')}
           </div>
