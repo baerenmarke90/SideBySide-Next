@@ -4,7 +4,7 @@ Every dependency is recorded with its name, version, source, and license. Every
 asset is recorded with its origin, license, and creator. Anything not listed
 here does not belong in the project.
 
-As of: 2026-08-26
+As of: 2026-09-01
 
 ## Reproducibility and verification
 
@@ -21,6 +21,12 @@ known vulnerabilities at high severity and above. The Node CI and Web build
 image is additionally pinned by digest. The static production build runs in
 an unprivileged Nginx image that is also pinned by digest.
 
+`web/e2e/package-lock.json` is the separate binding npm resolution for the
+#192 Web browser/accessibility QA harness. Its direct versions are pinned
+exactly in `web/e2e/package.json`; CI also installs this package exclusively
+with `npm ci` and runs the same high-severity npm audit gate. These dependencies
+are development-only and are never shipped with the production Web bundle.
+
 The thin M2-S8 Android reference flow uses only exactly versioned Gradle/Maven
 coordinates and the fixed Compose BOM `2026.08.00`. Its own CI evidence pins
 JDK 17, Gradle 9.5.0, Android Gradle Plugin 9.3.0, compileSdk 37, and Build
@@ -35,10 +41,10 @@ date, and linked Issue; there are currently none.
 After the locked installation, the documented Backend state is automatically
 compared with the actually installed versions and the packages'
 `License-Expression` or `License` metadata. Direct Web dependencies are listed
-below; the complete transitive npm graph including integrity hashes is in
-`web/package-lock.json`. Direct Android runtime, test, and build dependencies
-are listed below; CI resolves them exclusively from Google Maven and Maven
-Central at the versions specified there.
+below; the complete transitive npm graphs including integrity hashes are in
+`web/package-lock.json` and `web/e2e/package-lock.json`. Direct Android runtime,
+test, and build dependencies are listed below; CI resolves them exclusively
+from Google Maven and Maven Central at the versions specified there.
 
 `.github/dependabot.yml` schedules weekly updates for uv, npm, Gradle, Docker,
 and GitHub Actions dependencies. On a new fork or repository, **Dependabot
@@ -152,6 +158,21 @@ These Web dependencies serve only the thin S8 reference flow. They do not
 pull M5 functionality such as persistent Offline Caches, complete navigation,
 or Client Parity forward. The generated `typescript-fetch` code remains free
 of additional runtime dependencies and uses the browser Fetch API.
+
+## Web — Browser QA Development
+
+| Package | Version | Source | License |
+|---|---|---|---|
+| @playwright/test | 1.62.1 | npm | Apache-2.0 |
+| @axe-core/playwright | 4.13.0 | npm | MPL-2.0 |
+
+Playwright is selected instead of a custom browser harness because it provides
+established Chromium automation, browser-isolated tests, keyboard/focus and
+history assertions, and deterministic browser-revision management. The axe
+integration provides an established WCAG rule engine instead of project-owned
+accessibility heuristics. Both are test-only; no SideBySide user data is sent
+to either project or to a testing SaaS. Details and manual-gate boundaries are
+in `docs/m5/WEB-BROWSER-QA.md`.
 
 ## Web — Container toolchain
 
@@ -287,9 +308,10 @@ No font or audio assets are currently documented in the repository.
 A new direct dependency is added here together with its entry. CI checks the
 Backend documentation against the locked, installed environment. Transitive
 Python versions are fully recorded in `backend/uv.lock`; transitive Web
-versions and integrity hashes are fully recorded in `web/package-lock.json`.
-Android keeps all direct coordinates and the Compose BOM pinned exactly in the
-Gradle build; Dependabot monitors the `/android` build separately.
+versions and integrity hashes are fully recorded in `web/package-lock.json`
+and `web/e2e/package-lock.json`. Android keeps all direct coordinates and the
+Compose BOM pinned exactly in the Gradle build; Dependabot monitors the
+`/android` build separately.
 
 New assets are documented here in the same change. If origin, license, or
 creator is unclear, the asset is not admitted until Provenance is resolved.
