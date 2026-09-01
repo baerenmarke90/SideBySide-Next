@@ -1,6 +1,6 @@
 # Implementation Status
 
-As of: August 30, 2026
+As of: September 1, 2026
 Current repository state: GitHub `main` is the canonical SHA source; this living status document deliberately stores no static current SHA.  
 Current gate status: **G3 passed; M4 complete; M5 is active; G4 not yet evaluated**
 
@@ -8,6 +8,7 @@ Current gate status: **G3 passed; M4 complete; M5 is active; G4 not yet evaluate
 
 - **Binding source:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Compact product overview:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
+- **Current forward roadmap decision:** [ADR 0006](decisions/0006-release-before-optional-expansion.md)
 - **Current gate decision:** [2026-08-30-g3-gate-review.md](reviews/2026-08-30-g3-gate-review.md)
 - **Status sources and drift rules:** [STATUS-SOURCES.md](STATUS-SOURCES.md)
 - **Binding development rule:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) and [AGENTS.md](../AGENTS.md)
@@ -18,7 +19,7 @@ Current gate status: **G3 passed; M4 complete; M5 is active; G4 not yet evaluate
 - **Historical reviews:** dated files under `docs/reviews/`; they are never modified retroactively.
 - **This document:** living work and progress list.
 
-If sources conflict, the Master Specification takes precedence. A new gate decision always receives a new dated review.
+If sources conflict, the Master Specification takes precedence for Clean-Room, Security, Privacy, Domain, architecture and technical requirements. For the **forward M6-M9 milestone numbering/order only**, Product Spec 1.1 and ADR 0006 supersede section 68 of the current Master Specification until that section is consolidated. A new gate decision always receives a new dated review.
 
 ## Working rules
 
@@ -127,7 +128,7 @@ Historical M2 project control and binding milestone boundaries are documented in
 
 M2 is **Domain + API + minimal vertical Web/Android reference flows**. These reference flows provide technical E2E evidence for the critical Memory/Media/Story Core and do not imply full client parity.
 
-M5 is **Client Completion & Parity**: complete client integration, Deep Links, Read Cache, Export/Import, systematic Web/Android parity, Accessibility, and Performance.
+M5 is **Client Completion & Parity**: complete client integration, Deep Links, Read Cache, Export/Import, systematic Web/Android parity, Accessibility, and Performance. Per ADR 0006/#433, new M7 Relationship Depth domains are not pulled into M5; M5 completes the M0-M4 Core first.
 
 ### Privacy terminology
 
@@ -211,19 +212,21 @@ The final M4 migration order is `0028 -> 0029 -> 0030 -> 0031 -> 0032`. M4 remai
 ## Later milestones
 
 - [x] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules
-- [ ] M5 — Client Completion & Parity, Export/Import, Read Cache, final Accessibility QA
-- [ ] M6 — Questions, Check-in, monthly/yearly recaps
-- [ ] M7 — Integrations/Providers
-- [ ] M8 — Location/Context with explicit opt-in
-- [ ] M9 — Productization, Managed/Self-Hosted policy, Backup, Entitlements, Launch Hardening
-  - [x] **#190 — Self-Hosted recovery evidence:** coordinated PostgreSQL and durable
-    LocalMediaStore backup/restore, fresh-target integrity/privacy acceptance,
-    reproducible `0032`-to-head upgrade validation, S3 responsibility boundary,
-    operator runbook, and required CI gate delivered.
+- [ ] **M5 — Client Completion & Parity:** complete Web/Android Core productization, Export/Import, Read Cache, Deep Links, final Accessibility/Performance/parity evidence -> G4
+- [ ] **M6 — Operate & Launch:** Managed/Self-Hosted operation, Backup/Restore/Upgrade, administration, observability, Entitlements/Billing adapters, hardening, release engineering and launch QA -> G5
+  - [x] **#190 — Self-Hosted recovery evidence:** coordinated PostgreSQL and durable LocalMediaStore backup/restore, fresh-target integrity/privacy acceptance, reproducible `0032`-to-head upgrade validation, S3 responsibility boundary, operator runbook, and required CI gate delivered.
+- [ ] **M7 — Relationship Depth:** module readiness, Daily Check-in/Vibe/Energy, partner notes/support gestures, Questions, shared achievements, monthly/yearly recaps
+  - [ ] **#432 — M7-S0:** Space module/capability configuration and disable/re-enable semantics
+  - [ ] **#429/#431:** one coherent Daily Check-in/Privacy foundation for Vibe and Energy before their separate product surfaces
+  - [ ] **#430:** shared achievements/Celebration based on authoritative completion events where possible
+- [ ] **M8 — Discover & Integrations:** Shopping, Recipes, Events/Entertainment, external media and provider adapters
+- [ ] **M9 — Context & Presence:** Maps/location history, explicit opt-in context, Geofencing, Presence and contextual suggestions
 - [ ] MX — real E2EE as a separate later Security milestone
 
 ## Active milestone
 
-**M5 — Client Completion & Parity** is active. M4's backend/API contracts are now stable on `main`; M5 productizes them across Web and Android together with Export/Import, Read Cache, Deep Links, Accessibility, Performance, and systematic parity.
+**M5 — Client Completion & Parity** is active. M4's backend/API contracts are stable on `main`; M5 productizes them across Web and Android together with Export/Import, Read Cache, Deep Links, Accessibility, Performance, and systematic parity.
 
-M4 completion does **not** declare G4 passed. G4 requires the complete M5 client/parity/release evidence defined by the Roadmap and binding specifications.
+M4 completion does **not** declare G4 passed. G4 requires the complete M5 client/parity/Core Release Candidate evidence defined by the Roadmap and binding specifications. New M7 Relationship Depth runtime is not part of that gate.
+
+After a passed G4, **M6 — Operate & Launch** is the next launch-critical milestone. G5 is evaluated after M6; M7-M9 are post-launch expansion and are not G5 prerequisites.

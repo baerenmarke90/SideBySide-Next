@@ -4,8 +4,8 @@ Binding product requirement. This file is the implementation source; a predecess
 
 | | |
 |---|---|
-| Version | 1.0 |
-| As of | 2026-08-23 |
+| Version | 1.1 |
+| As of | 2026-09-01 |
 
 ## 1. Product
 
@@ -38,6 +38,8 @@ Account stores profile identity, not mixed Auth secrets. Auth identities are kep
 `Space`, `Membership`, `Invitation`, `SpaceProfile`
 
 `SpaceProfile` stores `relationship_started_on`, `show_relationship_duration`, and `duration_display_mode`. Relationship-duration display is part of the MVP and can be disabled.
+
+Optional future product modules are configured through an authoritative Space-scoped capability/configuration boundary rather than scattered client-only feature flags. A Space-level module being enabled never forces an individual partner to contribute personal or emotional status data. V1 may grant module-management authority to the Space creator, but clients and Domain code consume an authoritative management capability instead of hard-coding creator-ID comparisons as the permanent authorization model.
 
 ### Profiles
 `PartnerProfile`, `ProfilePreference`, `RelatedPerson`, `ImportantDate`
@@ -82,10 +84,16 @@ Flow: Wish → Plan → experienced → optional Chapter. A non-completed Plan c
 Automatically generated Reminders know their source and are not freely editable like manual ones.
 
 ### Platform
-`FeatureConfiguration` (technical activation) and `Entitlement` (commercial eligibility) are strictly separate. `Job`, `OutboxEvent`, `AuditEvent`, `IntegrationConnection`.
+`FeatureConfiguration` (technical/deployment activation) and `Entitlement` (commercial eligibility) are strictly separate. `Job`, `OutboxEvent`, `AuditEvent`, `IntegrationConnection`.
+
+For optional relationship modules, effective availability is conceptually the intersection of deployment capability, commercial entitlement, Space module configuration, and — where the data is personally sensitive — the individual partner's own preference/consent. These concerns must not be collapsed into one generic flag.
 
 ### Later
 `Question`, `QuestionAssignment`, `QuestionAnswer`, `QuestionFavorite`, `DailyCheckIn`, `ShoppingList`, `ShoppingItem`
+
+`DailyCheckIn` is the shared technical foundation to evaluate for voluntary daily relationship-status dimensions such as Vibe and subjective Energy/Capacity. Separate product surfaces may use separate optional dimensions, but they must not create competing daily-status/privacy backends without an explicit decision.
+
+Future Relationship Depth also includes deliberately small partner-directed notes/support gestures and shared-achievement/celebration experiences. Their exact Domain representation is decided during the owning milestone readiness work rather than inferred from UI wording.
 
 Question reveal rule: both people answer independently; before reveal, neither sees the other's answer and, where possible, not even whether the other has already answered. The question catalog is created editorially from scratch.
 
@@ -124,7 +132,11 @@ Web (React/TypeScript) and Android (Kotlin/Compose). A Core function is producti
 
 Android: Offline Read Cache yes, offline writes no. Without connectivity, the client clearly states that nothing was saved.
 
+M5 is intentionally a **Core completion milestone**. New Relationship Depth domains must not be pulled into M5 merely because M5 is active; M5 may provide reusable navigation/settings/client primitives, but it productizes the M0-M4 Core and portability contract first.
+
 ## 9. Milestones
+
+The forward roadmap is deliberately release-first after client completion: optional product expansion must not block the first safe release of the stable Core.
 
 | | Scope |
 |---|---|
@@ -133,16 +145,22 @@ Android: Offline Read Cache yes, offline writes no. Without connectivity, the cl
 | M2 | MediaStore, Attachments, Memories, HeartMoments, Milestones, Comments, Story |
 | M3 | Wishes, Plans, Places, Relations, Chapters, Collections, Private Area |
 | M4 | Reminders, Activity, Notifications, "Ich denke an dich", Dashboard, Search, Rules |
-| M5 | Export, Import, Web client, Android client, Read Cache, parity |
-| M6 | "Unsere Fragen", new question pool, yearly and monthly recaps, Check-in |
-| M7 | Integrations: Discovery, Shopping, Recipes, Entertainment, external media, location history, Maps |
-| M8 | opt-in location context, Geofencing, contextual suggestions, Presence |
-| M9 | Self-Hosted Compose, Backup, Cloud deployment, Entitlements, Billing adapter, hardening, Release |
+| M5 | Export, Import, complete Web client, complete Android client, Read Cache, Deep Links, Accessibility, Performance, parity |
+| M6 | **Operate & Launch:** Self-Hosted/Cloud deployment, Backup/Restore/Upgrade, administration, observability, Entitlements/Billing adapter boundary, hardening, release engineering and final launch QA |
+| M7 | **Relationship Depth:** Space module readiness, Daily Check-in/Vibe/Energy, partner notes/support gestures, "Unsere Fragen", shared achievements, yearly/monthly recaps |
+| M8 | **Discover & Integrations:** Discovery, Shopping, Recipes, Events/Entertainment, external media and provider adapters |
+| M9 | **Context & Presence:** Maps/location history, opt-in location context, Geofencing, contextual suggestions, Presence |
 | MX | real end-to-end encryption |
+
+M0-M4 are historical milestone boundaries and are not renumbered. M5 remains Client Completion & Parity. G4 follows M5 as the Core Release Candidate gate; G5 follows M6 as the Launch-ready gate. M7-M9 are post-launch expansion milestones and are not prerequisites for the first release.
+
+This sequence supersedes only the old M6-M9 milestone numbering/order described in section 68 of `CLEAN-ROOM-MASTER-SPEC.md`; all security, privacy, Domain, architecture and implementation requirements from that specification remain binding. The dated roadmap decision under `docs/decisions/` records this narrow supersession.
 
 ## 10. Not in the first MVP
 
-Real E2EE, offline write sync, AI, public share links, movie recommendations, Event Discovery, recipe integration, Shopping automation, external media and location integrations, Maps integration, Geofencing, partner removal, Daily Check-in, "Unsere Fragen", Year in Review.
+Real E2EE, offline write sync, AI, public share links, movie recommendations, Event Discovery, recipe integration, Shopping automation, external media and location integrations, Maps integration, Geofencing, partner removal, Daily Check-in, "Unsere Fragen", Relationship Depth modules, Year in Review.
+
+These M7-M9 capabilities are post-launch expansion. The first MVP/release is the M0-M5 Core made safely operable through M6/G5.
 
 The architecture must support these extensions; the Core is built cleanly and securely first.
 
