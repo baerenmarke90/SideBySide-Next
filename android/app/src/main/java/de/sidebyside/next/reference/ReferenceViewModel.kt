@@ -312,6 +312,8 @@ class ReferenceViewModel(
         storyImages.reset()
         clearHeartMoments()
         clearComments()
+        clearPlanning()
+        clearToday()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -360,6 +362,8 @@ class ReferenceViewModel(
         storyImages.reset()
         clearHeartMoments()
         clearComments()
+        clearPlanning()
+        clearToday()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -395,6 +399,8 @@ class ReferenceViewModel(
         storyImages.reset()
         clearHeartMoments()
         clearComments()
+        clearPlanning()
+        clearToday()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
