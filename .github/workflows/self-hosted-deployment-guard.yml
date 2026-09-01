@@ -70,6 +70,13 @@ jobs:
             scripts/check_environment_isolation.py \
             scripts/compose_checked.py
 
+          if python3 scripts/deployment_smoke.py \
+            --base-url http://127.0.0.1:9 \
+            --expected-revision main; then
+            echo "Release smoke accepted a mutable ref as revision evidence."
+            exit 1
+          fi
+
           cat >/tmp/production.env <<'EOF'
           COMPOSE_PROJECT_NAME=sidebyside-production-ci
           SBS_ENVIRONMENT=production
@@ -250,7 +257,7 @@ jobs:
 
           address = socket.gethostbyname("postgres")
           if not address:
-              raise SystemExit("postgres was not resolved through Docker DNS")
+            raise SystemExit("postgres was not resolved through Docker DNS")
           print(f"postgres -> {address}")
           PY
 
@@ -272,7 +279,7 @@ jobs:
         run: |
           python3 scripts/deployment_smoke.py \
             --base-url http://127.0.0.1:18082 \
-            --expected-revision unverified-local-checkout
+            --allow-unverified-local
 
       - name: Runtime containers are healthy
         run: |
