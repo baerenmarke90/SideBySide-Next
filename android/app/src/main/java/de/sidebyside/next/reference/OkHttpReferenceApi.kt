@@ -59,6 +59,14 @@ import sidebyside.api.models.GiftIdeaCreate
 import sidebyside.api.models.GiftIdeaDetail
 import sidebyside.api.models.GiftIdeaPage
 import sidebyside.api.models.GiftIdeaUpdate
+import sidebyside.api.models.PrivateCollectionCreate
+import sidebyside.api.models.PrivateCollectionDetail
+import sidebyside.api.models.PrivateCollectionItemCreate
+import sidebyside.api.models.PrivateCollectionItemDetail
+import sidebyside.api.models.PrivateCollectionItemUpdate
+import sidebyside.api.models.PrivateCollectionOrder
+import sidebyside.api.models.PrivateCollectionPage
+import sidebyside.api.models.PrivateCollectionUpdate
 import sidebyside.api.models.PrivateNoteCreate
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNotePage
@@ -1251,6 +1259,124 @@ class OkHttpReferenceApi(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/gift-ideas/$giftIdeaId", accessToken)
             .header("If-Match", ifMatch.toString())
             .delete().build(),
+    )
+
+    override suspend fun listPrivateCollections(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PrivateCollectionPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/private/collections?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        PrivateCollectionPage.serializer(),
+    )
+
+    override suspend fun createPrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PrivateCollectionCreate,
+    ): PrivateCollectionDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/collections", accessToken)
+            .post(
+                SideBySideJson.encodeToString(PrivateCollectionCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PrivateCollectionDetail.serializer(),
+    )
+
+    override suspend fun updatePrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionUpdate,
+    ): PrivateCollectionDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/collections/$collectionId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(PrivateCollectionUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PrivateCollectionDetail.serializer(),
+    )
+
+    override suspend fun deletePrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/private/collections/$collectionId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
+
+    override suspend fun createPrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: PrivateCollectionItemCreate,
+    ): PrivateCollectionItemDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/private/collections/$collectionId/items",
+            accessToken,
+        ).post(
+            SideBySideJson.encodeToString(PrivateCollectionItemCreate.serializer(), fields)
+                .toRequestBody(jsonMediaType),
+        ).build(),
+        PrivateCollectionItemDetail.serializer(),
+    )
+
+    override suspend fun updatePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionItemUpdate,
+    ): PrivateCollectionItemDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/private/collections/$collectionId/items/$itemId",
+            accessToken,
+        ).header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(PrivateCollectionItemUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PrivateCollectionItemDetail.serializer(),
+    )
+
+    override suspend fun deletePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/private/collections/$collectionId/items/$itemId",
+            accessToken,
+        ).header("If-Match", ifMatch.toString()).delete().build(),
+    )
+
+    override suspend fun reorderPrivateCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): PrivateCollectionDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/private/collections/$collectionId/order",
+            accessToken,
+        ).header("If-Match", ifMatch.toString())
+            .put(
+                SideBySideJson.encodeToString(PrivateCollectionOrder.serializer(), PrivateCollectionOrder(itemIds))
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PrivateCollectionDetail.serializer(),
     )
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {

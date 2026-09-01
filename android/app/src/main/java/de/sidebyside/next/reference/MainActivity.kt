@@ -61,6 +61,8 @@ import de.sidebyside.next.place.PlaceRelationsScreen
 import de.sidebyside.next.place.PlacesScreen
 import de.sidebyside.next.privatearea.GiftIdeasScreen
 import de.sidebyside.next.privatearea.PrivateAreaScreen
+import de.sidebyside.next.privatearea.PrivateCollectionDetailScreen
+import de.sidebyside.next.privatearea.PrivateCollectionsScreen
 import de.sidebyside.next.privatearea.PrivateNotesScreen
 import de.sidebyside.next.plan.PlanScreen
 import de.sidebyside.next.today.TodayScreen
@@ -680,6 +682,7 @@ private fun DemoShell(
                     onBack = { controller.popBackStack() },
                     onOpenNotes = { controller.navigate(PRIVATE_NOTES_ROUTE) },
                     onOpenGiftIdeas = { controller.navigate(GIFT_IDEAS_ROUTE) },
+                    onOpenCollections = { controller.navigate(PRIVATE_COLLECTIONS_ROUTE) },
                 )
             }
 
@@ -709,6 +712,50 @@ private fun DemoShell(
                     onEdit = viewModel::updateGiftIdea,
                     onChangeStatus = viewModel::changeGiftIdeaStatus,
                     onDelete = viewModel::deleteGiftIdea,
+                )
+            }
+
+            composable(PRIVATE_COLLECTIONS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateCollections() }
+
+                PrivateCollectionsScreen(
+                    collections = state.privateCollections,
+                    busy = state.privateCollectionsBusy,
+                    problem = state.privateCollectionsProblem,
+                    onBack = { controller.popBackStack() },
+                    onOpen = { collection ->
+                        controller.navigate("more/private/collections/${collection.id}")
+                    },
+                    onAdd = viewModel::addPrivateCollection,
+                    onEdit = viewModel::updatePrivateCollection,
+                    onDelete = viewModel::deletePrivateCollection,
+                )
+            }
+
+            composable(
+                route = PRIVATE_COLLECTION_DETAIL_ROUTE,
+                arguments = listOf(navArgument(COLLECTION_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val collectionId = entry.arguments?.getString(COLLECTION_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val collection = state.privateCollections.firstOrNull { it.id == collectionId }
+
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateCollections() }
+
+                PrivateCollectionDetailScreen(
+                    collection = collection,
+                    busy = state.privateCollectionsBusy,
+                    problem = state.privateCollectionsProblem,
+                    onBack = { controller.popBackStack() },
+                    onAddItem = { title -> collection?.let { viewModel.addPrivateCollectionItem(it, title) } },
+                    onToggleCompleted = { item ->
+                        collection?.let { viewModel.toggleCollectionItemCompleted(it, item) }
+                    },
+                    onDeleteItem = { item ->
+                        collection?.let { viewModel.deletePrivateCollectionItem(it, item) }
+                    },
+                    onMoveUp = { item -> collection?.let { viewModel.moveCollectionItemUp(it, item) } },
+                    onMoveDown = { item -> collection?.let { viewModel.moveCollectionItemDown(it, item) } },
                 )
             }
         },
@@ -816,6 +863,9 @@ private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/
 private const val PRIVATE_AREA_ROUTE = "more/private"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
 private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
+private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"
+private const val COLLECTION_ID_ARGUMENT = "collectionId"
+private const val PRIVATE_COLLECTION_DETAIL_ROUTE = "more/private/collections/{$COLLECTION_ID_ARGUMENT}"
 
 /**
  * Whether [route] is inside the owner-only Private Area subtree — the hub

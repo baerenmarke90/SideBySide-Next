@@ -489,4 +489,29 @@
     <string name="gift_idea_status_bought">Gekauft</string>
     <string name="gift_idea_status_given">Übergeben</string>
     <string name="gift_idea_mark_as">Als „%1$s“ markieren</string>
+
+    <string name="private_collections_open">Listen</string>
+    <string name="private_collections_title">Private Listen</string>
+    <string name="private_collections_intro">Nur du siehst diese Listen und ihre Einträge.</string>
+    <string name="private_collections_empty">Noch keine privaten Listen.</string>
+    <string name="private_collection_add">Liste hinzufügen</string>
+    <string name="private_collection_title_hint">Titel</string>
+    <string name="private_collection_icon_hint">Symbol (optional)</string>
+    <string name="private_collection_open">Öffnen</string>
+    <string name="private_collection_edit">Bearbeiten</string>
+    <string name="private_collection_edit_title">Liste bearbeiten</string>
+    <string name="private_collection_delete">Löschen</string>
+    <string name="private_collection_delete_title">%1$s löschen?</string>
+    <string name="private_collection_delete_warning">Diese Liste und alle ihre Einträge werden endgültig gelöscht.</string>
+    <string name="private_collection_delete_confirm">Endgültig löschen</string>
+    <string name="private_collection_cancel">Abbrechen</string>
+    <string name="private_collection_save_changes">Änderungen speichern</string>
+    <string name="private_collection_item_count">%1$d Einträge</string>
+
+    <string name="private_collection_item_add">Eintrag hinzufügen</string>
+    <string name="private_collection_item_title_hint">Titel</string>
+    <string name="private_collection_item_delete">Löschen</string>
+    <string name="private_collection_item_move_up">Nach oben</string>
+    <string name="private_collection_item_move_down">Nach unten</string>
+    <string name="private_collection_items_empty">Noch keine Einträge in dieser Liste.</string>
 </resources>
