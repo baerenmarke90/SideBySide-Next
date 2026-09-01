@@ -25,26 +25,20 @@ that classification.
 | M6-D10 | ServerAdmin is an application-operations surface, not a host/container shell and not a private-content browser. | FROZEN | #335, #437 |
 | M6-D11 | Account deletion is distinct from Space/relationship offboarding and both are launch data-lifecycle concerns. | FROZEN BOUNDARY | #518, #520 |
 | M6-D12 | No new orchestration/queue/backup/export platform is introduced without Reuse-before-build evidence and demonstrated need. | FROZEN | repository governance |
+| M6-D13 | Commercial entitlements are Space/couple-scoped, downgrade is strictly non-destructive, Self-Hosted is offline-resilient, and domain gating uses normalized capabilities. | FROZEN | #262, `FREEMIUM-FEATURE-MATRIX.md` v1.1, ADR 0006 |
 
 ## Blocking decisions
 
 ### M6-B01 — Final #262 product/entitlement semantics
 
-**Status:** `BLOCKING` for #523 and every launch provider adapter.
+**Status:** `FROZEN / RESOLVED` via #262, `FREEMIUM-FEATURE-MATRIX.md` (v1.1) and ADR 0006. Unblocks #523.
 
-#262 must explicitly freeze before runtime:
-
-- capability classification and versioned Free/Premium matrix;
-- relationship/couple vs. purchaser/account entitlement ownership;
-- lifecycle states actually supported (trial/grace/grandfathering/refund/revocation,
-  only where accepted);
-- downgrade read/create/edit/export behavior;
-- migration policy for previously available features/data;
-- Self-Hosted commercial licensing/offline behavior;
-- restore/reconciliation rules;
-- commercial channels required for the first launch.
-
-M6-S0 deliberately does not choose these product semantics on behalf of #262.
+- Capability matrix across M0–M8 finalized.
+- Space/couple-scoped entitlement ownership with purchaser sponsorship.
+- Lifecycle states: `ACTIVE`, `TRIAL`, `GRACE_PERIOD` (14 days), `EXPIRED`, `REVOKED`, `GRANDFATHERED`.
+- Guaranteed zero data loss on downgrade; existing history remains 100% readable and exportable.
+- Self-Hosted is 100% offline-resilient; optional commercial license uses Ed25519 offline tokens.
+- Restores are idempotent and normalized across all channels.
 
 ### M6-B02 — Complete Account deletion/retention matrix
 
