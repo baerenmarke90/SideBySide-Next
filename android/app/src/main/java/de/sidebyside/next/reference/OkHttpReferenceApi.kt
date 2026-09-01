@@ -21,6 +21,10 @@ import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.MagicLinkConsumeRequest
+import sidebyside.api.models.CommentCreate
+import sidebyside.api.models.CommentDetail
+import sidebyside.api.models.CommentPage
+import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartMomentCreate
 import sidebyside.api.models.HeartMomentDetail
@@ -179,6 +183,65 @@ class OkHttpReferenceApi(
         ifMatch: Int,
     ) = executeEmpty(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete()
+            .build(),
+    )
+
+    override suspend fun listMemoryComments(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+    ): CommentPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId/comments?limit=50",
+            accessToken,
+        ).get().build(),
+        CommentPage.serializer(),
+    )
+
+    override suspend fun createMemoryComment(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+        comment: CommentCreate,
+    ): CommentDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/memories/$memoryId/comments",
+            accessToken,
+        )
+            .post(
+                SideBySideJson.encodeToString(CommentCreate.serializer(), comment)
+                    .toRequestBody(jsonMediaType),
+            )
+            .build(),
+        CommentDetail.serializer(),
+    )
+
+    override suspend fun updateComment(
+        spaceId: UUID,
+        accessToken: String,
+        commentId: UUID,
+        ifMatch: Int,
+        update: CommentUpdate,
+    ): CommentDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/comments/$commentId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(CommentUpdate.serializer(), update)
+                    .toRequestBody(jsonMediaType),
+            )
+            .build(),
+        CommentDetail.serializer(),
+    )
+
+    override suspend fun deleteComment(
+        spaceId: UUID,
+        accessToken: String,
+        commentId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/comments/$commentId", accessToken)
             .header("If-Match", ifMatch.toString())
             .delete()
             .build(),

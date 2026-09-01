@@ -6,6 +6,10 @@ import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.AttachmentUploadCreate
+import sidebyside.api.models.CommentCreate
+import sidebyside.api.models.CommentDetail
+import sidebyside.api.models.CommentPage
+import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartMomentCreate
 import sidebyside.api.models.HeartMomentDetail
@@ -71,6 +75,34 @@ abstract class FakeReferenceContract : ReferenceContract {
         memoryId: UUID,
         ifMatch: Int,
     ): Unit = notExercised("deleteMemory")
+
+    override suspend fun listMemoryComments(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+    ): CommentPage = notExercised("listMemoryComments")
+
+    override suspend fun createMemoryComment(
+        spaceId: UUID,
+        accessToken: String,
+        memoryId: UUID,
+        comment: CommentCreate,
+    ): CommentDetail = notExercised("createMemoryComment")
+
+    override suspend fun updateComment(
+        spaceId: UUID,
+        accessToken: String,
+        commentId: UUID,
+        ifMatch: Int,
+        update: CommentUpdate,
+    ): CommentDetail = notExercised("updateComment")
+
+    override suspend fun deleteComment(
+        spaceId: UUID,
+        accessToken: String,
+        commentId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteComment")
 
     override suspend fun listHeartMoments(
         spaceId: UUID,

@@ -215,4 +215,14 @@
     <string name="heart_emotion_supported">Unterstützt</string>
     <string name="heart_emotion_grateful">Dankbar</string>
     <string name="heart_emotion_happy">Glücklich</string>
+    <string name="comments_title">Kommentare</string>
+    <string name="comments_empty">Noch nichts gesagt. Schreib den ersten Gedanken dazu.</string>
+    <string name="comments_write">Etwas dazu sagen</string>
+    <string name="comments_send">Abschicken</string>
+    <string name="comments_edit">Bearbeiten</string>
+    <string name="comments_delete">Löschen</string>
+    <string name="comments_save">Speichern</string>
+    <string name="comments_cancel">Abbrechen</string>
+    <string name="comments_delete_title">Diesen Kommentar löschen?</string>
+    <string name="comments_delete_body">Er verschwindet endgültig.</string>
 </resources>
