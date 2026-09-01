@@ -25,8 +25,8 @@ Arcane should instead use **`compose.arcane.yaml`**. This file requires neither
 
 Both variants contain the same services, volumes, networks, runtime settings,
 and startup dependencies. CI compares their rendered configuration. The remote
-Git build context and the backend build-revision argument derived from that ref
-are the intentional source-specific differences.
+Git build contexts and the backend/Web build-revision arguments derived from the
+same ref are the intentional source-specific differences.
 
 ## Configure Arcane
 
@@ -56,10 +56,12 @@ https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
 https://github.com/baerenmarke90/SideBySide-Next.git#main:web
 ```
 
-`api`, `worker`, and `migrate` always use the same backend context and are
-therefore built from the same source revision. The backend image also receives
-`SBS_BUILD_REVISION` directly from `SBS_SOURCE_REF`; both API health endpoints
-return that identity as `X-SideBySide-Revision`.
+`api`, `worker`, and `migrate` always use the same backend context. Backend and
+Web both receive `SBS_BUILD_REVISION` directly from the same `SBS_SOURCE_REF`.
+The API exposes that identity through `X-SideBySide-Revision`; the Web image
+exposes it through `/.well-known/sidebyside-revision`. Release smoke requires
+both values to equal the expected commit, so a stale Web image cannot be accepted
+alongside a newer backend.
 
 ## Persistent Development in Arcane
 
@@ -77,8 +79,8 @@ Before a production promotion:
 1. resolve the candidate commit SHA;
 2. set Development `SBS_SOURCE_REF` to that exact SHA;
 3. rebuild/recreate the complete Development stack;
-4. verify migrations, API/Web health, the revision header, authenticated smoke,
-   and the affected product path;
+4. verify migrations, API/Web health, both revision identities, authenticated
+   smoke, and the affected product path;
 5. only then configure Production to the same exact commit SHA.
 
 Use `scripts/check_environment_isolation.py` before promotion when Development and
@@ -189,20 +191,21 @@ Web build argument or environment value.
 ## Post-deployment verification
 
 From the reverse-proxy host or the same private network, first verify the Web
-service:
+service and its exact build identity:
 
 ```bash
 curl --fail http://<docker-host>:<WEB_PORT>/healthz
+curl --fail http://<docker-host>:<WEB_PORT>/.well-known/sidebyside-revision
 ```
 
-Verify the production API over the real TLS path and inspect the deployed
+Verify the production API over the real TLS path and inspect the backend
 revision:
 
 ```bash
 curl --fail --include https://sidebyside.example/api/v1/health/ready
 ```
 
-The response must include:
+The API response must include:
 
 ```text
 X-SideBySide-Revision: <expected-commit-sha>
@@ -212,6 +215,7 @@ Both targets should work through the public origin:
 
 ```bash
 curl --fail https://sidebyside.example/
+curl --fail https://sidebyside.example/.well-known/sidebyside-revision
 curl --fail https://sidebyside.example/api/v1/health/ready
 ```
 
@@ -221,8 +225,8 @@ The normal API readiness response is:
 {"status":"ok","database":"ok"}
 ```
 
-For release acceptance prefer the shared helper, which verifies health and the
-revision together:
+For release acceptance prefer the shared helper. It fails unless **both** Web
+and API report the expected commit:
 
 ```bash
 python3 scripts/deployment_smoke.py \
@@ -242,5 +246,5 @@ without introducing a new runtime component or provider abstraction.
 - external provider: none; Git hosting is only source transport during build
 - privacy/user data: this step does not send SideBySide user data off-host
 - cost: no additional SideBySide runtime cost
-- fallback: complete checkout with `compose.yaml`; optionally versioned registry
-  images later if remote Git builds become operationally unsuitable
+- fallback: verified complete checkout with `compose.yaml`; optionally versioned
+  registry images later if remote Git builds become operationally unsuitable
