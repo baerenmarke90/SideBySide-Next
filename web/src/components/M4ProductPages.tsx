@@ -146,12 +146,15 @@ function MoodCheckIn({ partnerName }: { partnerName?: string }) {
         <div className="mood-card">
           <div className="mood-card-header">
             <h3>{t('m5s5.dashboard.moodYour')}</h3>
-            <span className="mood-percentage">{t('m5s5.dashboard.moodToday')}</span>
+            <span className="mood-percentage">
+              {t('m5s5.dashboard.moodToday')}
+            </span>
           </div>
           <div className="mood-emoji-row">
-            {MOODS.map(m => (
-              <button type="button"
-                key={m.id} 
+            {MOODS.map((m) => (
+              <button
+                type="button"
+                key={m.id}
                 className={`mood-emoji-btn ${myMood === m.id ? 'active' : ''}`}
                 onClick={() => setMyMood(m.id)}
               >
@@ -163,13 +166,20 @@ function MoodCheckIn({ partnerName }: { partnerName?: string }) {
         </div>
         <div className="mood-card">
           <div className="mood-card-header">
-            <h3>{partnerName ? t('m5s5.dashboard.moodPartner', { name: partnerName }) : t('m5s5.dashboard.moodPartnerFallback')}</h3>
-            <span className="mood-percentage">{t('m5s5.dashboard.moodToday')}</span>
+            <h3>
+              {partnerName
+                ? t('m5s5.dashboard.moodPartner', { name: partnerName })
+                : t('m5s5.dashboard.moodPartnerFallback')}
+            </h3>
+            <span className="mood-percentage">
+              {t('m5s5.dashboard.moodToday')}
+            </span>
           </div>
           <div className="mood-emoji-row">
-            {MOODS.map(m => (
-              <button type="button"
-                key={m.id} 
+            {MOODS.map((m) => (
+              <button
+                type="button"
+                key={m.id}
                 className={`mood-emoji-btn ${partnerMood === m.id ? 'active' : ''}`}
                 disabled
               >
@@ -240,15 +250,22 @@ export function DashboardProductPage({
                 {t('m5s5.dashboard.upcomingTitle')}
               </p>
               <h3>{t('m5s5.dashboard.dateNightTitle')}</h3>
-              <p className="date-night-date">{t('m5s5.dashboard.dateNightDate')}</p>
+              <p className="date-night-date">
+                {t('m5s5.dashboard.dateNightDate')}
+              </p>
               <p>{t('m5s5.dashboard.dateNightDesc')}</p>
-              <span className="badge">{t('m5s5.dashboard.dateNightBadge')}</span>
+              <span className="badge">
+                {t('m5s5.dashboard.dateNightBadge')}
+              </span>
             </div>
 
             <div className="photo-memory-card">
               <div className="photo-memory-placeholder" />
               <div className="photo-memory-content">
-                <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                <p
+                  className="eyebrow"
+                  style={{ color: 'rgba(255,255,255,0.8)' }}
+                >
                   {t('m5s5.dashboard.retrospectiveTitle')}
                 </p>
                 <h3>{t('m5s5.dashboard.memoryTitle')}</h3>
@@ -274,7 +291,10 @@ export function DashboardProductPage({
                 items={dashboardQuery.data.upcoming}
                 empty={t('m5s5.dashboard.upcomingEmpty')}
               />
-              <section className="m4-summary-card" aria-labelledby="m4-summary-heading">
+              <section
+                className="m4-summary-card"
+                aria-labelledby="m4-summary-heading"
+              >
                 <div className="m4-summary-copy">
                   <h2 id="m4-summary-heading">
                     {partnerName
@@ -284,7 +304,9 @@ export function DashboardProductPage({
                   <p className="m4-muted">
                     {dashboardQuery.data.relationshipDuration
                       ? t('m5s5.dashboard.durationSince', {
-                          date: formatDate(dashboardQuery.data.relationshipDuration.startedOn),
+                          date: formatDate(
+                            dashboardQuery.data.relationshipDuration.startedOn,
+                          ),
                         })
                       : t('m5s5.dashboard.durationEmpty')}
                   </p>

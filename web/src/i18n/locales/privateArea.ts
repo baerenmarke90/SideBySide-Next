@@ -33,7 +33,8 @@ const privateArea = {
   },
   notes: {
     title: 'Private Gedanken & Geheimnisse',
-    intro: 'Gedanken, Tagebucheinträge und kleine Geheimnisse, die ausschließlich für dich bestimmt sind.',
+    intro:
+      'Gedanken, Tagebucheinträge und kleine Geheimnisse, die ausschließlich für dich bestimmt sind.',
     add: 'Gedanken festhalten',
     createTitle: 'Neues Geheimnis / Neuer Gedanke',
     editTitle: 'Private Notiz bearbeiten',

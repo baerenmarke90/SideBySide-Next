@@ -24,11 +24,13 @@ const m5s3 = {
   overview: {
     eyebrow: 'Unsere Abenteuer & Pläne',
     title: 'Erlebnisse, Träume & Geheimnisse',
-    intro: 'Alles, was wir noch gemeinsam erleben wollen, unsere größten Abenteuer, Orte, die wir entdecken möchten, und kleine Geheimnisse.',
+    intro:
+      'Alles, was wir noch gemeinsam erleben wollen, unsere größten Abenteuer, Orte, die wir entdecken möchten, und kleine Geheimnisse.',
   },
   wish: {
     heading: 'Träume & Wünsche',
-    intro: 'Die kleinen und großen Träume, die wir eines Tages wahr machen wollen.',
+    intro:
+      'Die kleinen und großen Träume, die wir eines Tages wahr machen wollen.',
     create: 'Neuen Traum festhalten',
     loading: 'Wunsch wird geladen …',
     detailEyebrow: 'Gemeinsamer Wunsch',
@@ -48,7 +50,8 @@ const m5s3 = {
   },
   plan: {
     heading: 'Unsere Abenteuer',
-    intro: 'Aus Träumen werden Erlebnisse. Unsere konkreten Vorhaben und gemeinsamen Abenteuer.',
+    intro:
+      'Aus Träumen werden Erlebnisse. Unsere konkreten Vorhaben und gemeinsamen Abenteuer.',
     create: 'Neues Abenteuer planen',
     loading: 'Plan wird geladen …',
     detailEyebrow: 'Gemeinsamer Plan',
@@ -71,7 +74,8 @@ const m5s3 = {
   },
   place: {
     heading: 'Entdeckungen & Orte',
-    intro: 'Besondere Orte, Lieblingscafés, Traumziele oder unser kleines Geheimversteck.',
+    intro:
+      'Besondere Orte, Lieblingscafés, Traumziele oder unser kleines Geheimversteck.',
     create: 'Ort hinzufügen',
     loading: 'Ort wird geladen …',
     detailEyebrow: 'Gemeinsamer Ort',
@@ -125,7 +129,8 @@ const m5s3 = {
   },
   collection: {
     heading: 'Bucket Lists & Listen',
-    intro: 'Unsere Bucket Lists, kleine Geheimnisse oder Dinge, die wir nicht vergessen wollen.',
+    intro:
+      'Unsere Bucket Lists, kleine Geheimnisse oder Dinge, die wir nicht vergessen wollen.',
     create: 'Liste hinzufügen',
     loading: 'Liste wird geladen …',
     detailEyebrow: 'Gemeinsame Liste',

@@ -176,7 +176,7 @@ const de = {
     savedBody: 'Sie ist jetzt Teil eurer gemeinsamen Story.',
     eyebrow: 'Gemeinsam erinnern',
     title: 'Unsere Story',
-    intro: "Eine Reise unserer gemeinsamen Momente.",
+    intro: 'Eine Reise unserer gemeinsamen Momente.',
     addMemory: 'Erinnerung',
     timelineKicker: 'Zeitleiste',
     timelineHeading: 'Gemeinsame Geschichte',
