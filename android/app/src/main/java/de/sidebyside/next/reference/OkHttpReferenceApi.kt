@@ -30,6 +30,7 @@ import sidebyside.api.models.HeartMomentDetail
 import sidebyside.api.models.HeartMomentPage
 import sidebyside.api.models.HeartMomentUpdate
 import sidebyside.api.models.HeartMomentVisibilityChange
+import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.MagicLinkConsumeRequest
 import sidebyside.api.models.DashboardView
 import sidebyside.api.models.AcceptRequest
@@ -108,6 +109,15 @@ class OkHttpReferenceApi(
             "SBS_API_BASE_URL must be a complete HTTP(S) URL."
         }
     }
+
+    override suspend fun getInstanceStatus(): InstanceAccessStatus =
+        executeJson(
+            Request.Builder()
+                .url("$baseUrl/api/v1/instance/status")
+                .get()
+                .build(),
+            InstanceAccessStatus.serializer(),
+        )
 
     override suspend fun signIn(email: String, password: String): SessionView {
         val payload = SignInRequest(

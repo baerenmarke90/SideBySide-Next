@@ -2,6 +2,10 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import type { SessionView } from '../api/generated/models/SessionView';
 import type { SensitiveEntryToken } from '../client/entryToken';
 import {
+  loadRegistrationAvailability,
+  type RegistrationAvailability,
+} from '../client/instanceStatus';
+import {
   completePasswordRecovery,
   confirmEmailAddress,
   consumeMagicLink,
@@ -16,6 +20,8 @@ import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 
 type EntryMode = 'signIn' | 'register' | 'recoveryRequest' | 'magicLinkRequest';
+type RegistrationUiState = 'checking' | RegistrationAvailability;
+type RegistrationNoticeState = Exclude<RegistrationUiState, 'available'>;
 type PendingAction =
   | 'signIn'
   | 'register'
@@ -41,6 +47,8 @@ export function IdentityEntry({
     entryToken?.kind === 'invitation' ? entryToken.token : null;
   const recoveryToken =
     entryToken?.kind === 'recovery' ? entryToken.token : null;
+  const [registrationAvailability, setRegistrationAvailability] =
+    useState<RegistrationUiState>('checking');
   const [mode, setMode] = useState<EntryMode>('signIn');
   const [recoveryRequested, setRecoveryRequested] = useState(false);
   const [magicLinkRequested, setMagicLinkRequested] = useState(false);
@@ -69,6 +77,28 @@ export function IdentityEntry({
       setPendingAction(null);
     }
   }
+
+  useEffect(() => {
+    if (!invitationToken) {
+      setRegistrationAvailability('available');
+      return;
+    }
+
+    let cancelled = false;
+    setRegistrationAvailability('checking');
+    void loadRegistrationAvailability(apiBaseUrl).then((availability) => {
+      if (!cancelled) setRegistrationAvailability(availability);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBaseUrl, invitationToken]);
+
+  useEffect(() => {
+    if (mode === 'register' && registrationAvailability !== 'available') {
+      setMode('signIn');
+    }
+  }, [mode, registrationAvailability]);
 
   useEffect(() => {
     if (!entryToken || processedEntryToken.current === entryToken.token) return;
@@ -143,6 +173,10 @@ export function IdentityEntry({
 
   function submitRegistration(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (registrationAvailability !== 'available') {
+      setValidationError(t('identity.registrationUnavailable'));
+      return;
+    }
     const data = new FormData(event.currentTarget);
     const password = requireMatchingPasswords(data);
     if (!password) return;
@@ -291,7 +325,9 @@ export function IdentityEntry({
                 </button>
               </form>
             </>
-          ) : mode === 'register' && invitationToken ? (
+          ) : mode === 'register' &&
+            invitationToken &&
+            registrationAvailability === 'available' ? (
             <>
               <div>
                 <p className="eyebrow">{t('identity.invitationEyebrow')}</p>
@@ -422,10 +458,28 @@ export function IdentityEntry({
                 </h2>
                 <p className="muted">
                   {invitationToken
-                    ? t('identity.invitationBody')
+                    ? registrationAvailability === 'available'
+                      ? t('identity.invitationBody')
+                      : t('identity.invitationExistingAccountBody')
                     : t('login.body')}
                 </p>
               </div>
+              {invitationToken && registrationAvailability !== 'available' ? (
+                <div className="inline-message" role="status">
+                  <strong>
+                    {t(
+                      registrationAvailabilityTitleKey(
+                        registrationAvailability,
+                      ),
+                    )}
+                  </strong>
+                  <span>
+                    {t(
+                      registrationAvailabilityBodyKey(registrationAvailability),
+                    )}
+                  </span>
+                </div>
+              ) : null}
               <form onSubmit={submitSignIn} className="form-grid login-form">
                 <EmailField />
                 <div className="field-group">
@@ -448,13 +502,15 @@ export function IdentityEntry({
                     : t('login.submit')}
                 </button>
                 {invitationToken ? (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => switchMode('register')}
-                  >
-                    {t('identity.createAccount')}
-                  </button>
+                  registrationAvailability === 'available' ? (
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => switchMode('register')}
+                    >
+                      {t('identity.createAccount')}
+                    </button>
+                  ) : null
                 ) : (
                   <button
                     type="button"
@@ -490,6 +546,44 @@ export function IdentityEntry({
       </div>
     </main>
   );
+}
+
+function registrationAvailabilityTitleKey(
+  state: RegistrationNoticeState,
+):
+  | 'identity.registrationCheckingTitle'
+  | 'identity.registrationDisabledTitle'
+  | 'identity.maintenanceTitle'
+  | 'identity.registrationStatusUnavailableTitle' {
+  switch (state) {
+    case 'checking':
+      return 'identity.registrationCheckingTitle';
+    case 'administrator':
+      return 'identity.registrationDisabledTitle';
+    case 'maintenance':
+      return 'identity.maintenanceTitle';
+    case 'unreachable':
+      return 'identity.registrationStatusUnavailableTitle';
+  }
+}
+
+function registrationAvailabilityBodyKey(
+  state: RegistrationNoticeState,
+):
+  | 'identity.registrationCheckingBody'
+  | 'identity.registrationDisabledBody'
+  | 'identity.maintenanceBody'
+  | 'identity.registrationStatusUnavailableBody' {
+  switch (state) {
+    case 'checking':
+      return 'identity.registrationCheckingBody';
+    case 'administrator':
+      return 'identity.registrationDisabledBody';
+    case 'maintenance':
+      return 'identity.maintenanceBody';
+    case 'unreachable':
+      return 'identity.registrationStatusUnavailableBody';
+  }
 }
 
 function EmailField() {
