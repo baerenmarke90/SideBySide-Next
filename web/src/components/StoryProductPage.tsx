@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react';
 import { useEffect, useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import {
   StoryKind,
   type StoryKind as StoryKindValue,
@@ -21,11 +21,6 @@ import {
 } from '../client/productReadCache';
 import { normalizeClientError } from '../client/problemDetails';
 import type { ReferenceApis } from '../client/referenceFlow';
-import {
-  MEMORY_CREATE_ROUTE,
-  HEART_MOMENT_CREATE_ROUTE,
-  MILESTONE_CREATE_ROUTE,
-} from '../client/routes';
 import {
   aggregateStoryPages,
   parseStoryFilters,
@@ -175,32 +170,8 @@ export function StoryProductPage({
       <div className="layout-split layout-split-lead-rail">
         <aside
           className="layout-rail layout-rail-sticky"
-          aria-label={t('storyActions.addAria')}
+          aria-label={t('storyFilters.aria')}
         >
-          <section className="layout-panel">
-            <h2 className="rail-heading">{t('storyActions.railHeading')}</h2>
-            <div className="layout-action-list">
-              <Link
-                className="button-link primary-action"
-                to={MEMORY_CREATE_ROUTE}
-              >
-                {t('story.addMemory')}
-              </Link>
-              <Link
-                className="button-link secondary-link"
-                to={HEART_MOMENT_CREATE_ROUTE}
-              >
-                {t('storyActions.addHeartMoment')}
-              </Link>
-              <Link
-                className="button-link secondary-link"
-                to={MILESTONE_CREATE_ROUTE}
-              >
-                {t('storyActions.addMilestone')}
-              </Link>
-            </div>
-          </section>
-
           <form
             className="layout-panel story-filter-panel"
             onSubmit={applyFilters}
