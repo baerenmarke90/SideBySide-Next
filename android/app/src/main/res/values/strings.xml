@@ -606,4 +606,14 @@
     <string name="chapter_delete_confirm">Endgültig löschen</string>
     <string name="chapter_cancel">Abbrechen</string>
     <string name="chapter_save_changes">Änderungen speichern</string>
+    <string name="chapter_open">Öffnen</string>
+
+    <string name="chapter_content_title">Inhalt des Kapitels</string>
+    <string name="chapter_content_intro">Auswählbar sind ausschließlich Inhalte aus eurer gemeinsamen Story. Private Herzmomente erscheinen hier nicht.</string>
+    <string name="chapter_content_empty">Noch keine Inhalte in diesem Kapitel.</string>
+    <string name="chapter_content_unlink">Aus Kapitel entfernen</string>
+    <string name="chapter_content_add_heading">Zum Kapitel hinzufügen</string>
+    <string name="chapter_content_choose">Inhalt auswählen</string>
+    <string name="chapter_content_link">Hinzufügen</string>
+    <string name="chapter_content_none_available">Alle aktuell verfügbaren gemeinsamen Story-Inhalte sind bereits im Kapitel.</string>
 </resources>

@@ -1,5 +1,6 @@
 package de.sidebyside.next.place
 
+import de.sidebyside.next.reference.R
 import de.sidebyside.next.reference.ReferenceContract
 import java.time.LocalDate
 import java.util.UUID
@@ -39,4 +40,11 @@ fun StoryItem.toRelationTargetItem(): RelationTargetItem = when (this) {
         label = value.heartMoment.text,
         date = value.effectiveDate,
     )
+}
+
+/** Shared between Place relations and Chapter content — same three kinds, same wording. */
+internal fun ReferenceContract.RelationTargetKind.labelRes(): Int = when (this) {
+    ReferenceContract.RelationTargetKind.MEMORY -> R.string.place_relation_kind_memory
+    ReferenceContract.RelationTargetKind.MILESTONE -> R.string.place_relation_kind_milestone
+    ReferenceContract.RelationTargetKind.HEART_MOMENT -> R.string.place_relation_kind_heart_moment
 }

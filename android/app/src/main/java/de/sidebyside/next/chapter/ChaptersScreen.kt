@@ -39,10 +39,8 @@ import sidebyside.api.models.ChapterDetail
 private val ReadingMeasure: Dp = 560.dp
 
 /**
- * The couple's shared Chapters — a curated span of their Story. Just CRUD
- * for the chapter itself; assigning which Memories, HeartMoments and
- * Milestones belong to one is its own slice, the same order #531/#532
- * built Place CRUD before Place relations.
+ * The couple's shared Chapters — a curated span of their Story. Each card
+ * opens onto [ChapterContentScreen] for its content.
  */
 @Composable
 fun ChaptersScreen(
@@ -50,6 +48,7 @@ fun ChaptersScreen(
     busy: Boolean,
     problem: UiProblem?,
     onBack: () -> Unit,
+    onOpen: (ChapterDetail) -> Unit,
     onAdd: (title: String, description: String, startOn: String, endOn: String) -> Unit,
     onEdit: (chapter: ChapterDetail, title: String, description: String, startOn: String, endOn: String) -> Unit,
     onDelete: (ChapterDetail) -> Unit,
@@ -147,6 +146,13 @@ fun ChaptersScreen(
                         color = SideBySideTheme.colors.textSecondary,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+                        TextButton(
+                            onClick = { onOpen(chapter) },
+                            enabled = !busy,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.chapter_open))
+                        }
                         TextButton(
                             onClick = { editing = chapter.id.toString() },
                             enabled = !busy,

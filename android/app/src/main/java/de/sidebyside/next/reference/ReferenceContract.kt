@@ -19,6 +19,7 @@ import sidebyside.api.models.CollectionPage
 import sidebyside.api.models.ChapterCreate
 import sidebyside.api.models.ChapterDetail
 import sidebyside.api.models.ChapterPage
+import sidebyside.api.models.ChapterContent
 import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
@@ -815,6 +816,30 @@ interface ReferenceContract {
     ): ChapterDetail
 
     suspend fun deleteChapter(spaceId: UUID, accessToken: String, chapterId: UUID, ifMatch: Int)
+
+    /**
+     * The chapter's own curated content, in the server's display order.
+     * A read-only derived view of the typed relations below — there is no
+     * manual relation position, so this client never reorders it.
+     */
+    suspend fun getChapterContent(spaceId: UUID, accessToken: String, chapterId: UUID): ChapterContent
+
+    /** Same [RelationTargetKind] and privacy shape as the Place relation endpoints. */
+    suspend fun linkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: RelationTargetKind,
+        targetId: UUID,
+    )
+
+    suspend fun unlinkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: RelationTargetKind,
+        targetId: UUID,
+    )
 }
 
 private fun unsupportedProfileOperation(): Nothing =
