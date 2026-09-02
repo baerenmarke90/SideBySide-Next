@@ -20,6 +20,7 @@ import {
 } from '../client/m4Product';
 import { normalizeClientError } from '../client/problemDetails';
 import { resolvedLocale, useTranslation } from '../i18n';
+import { postSnackbar } from '../client/snackbar';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -122,6 +123,67 @@ function DashboardSection({
   );
 }
 
+function ThinkingOfYouWidget() {
+  const { t } = useTranslation();
+  const [active, setActive] = useState(false);
+  const [particles, setParticles] = useState<number[]>([]);
+
+  function handleClick() {
+    const newParticles = [1, 2, 3, 4, 5].map((i) => Date.now() + i);
+    setParticles(newParticles);
+    setActive(true);
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([40, 60, 40]);
+    }
+
+    postSnackbar('m5s5.dashboard.thinkingOfYouSent');
+
+    setTimeout(() => {
+      setActive(false);
+    }, 2500);
+
+    setTimeout(() => {
+      setParticles([]);
+    }, 1500);
+  }
+
+  return (
+    <div className="thinking-of-you-container">
+      <button
+        type="button"
+        className={`thinking-of-you-btn ${active ? 'sent' : ''}`}
+        onClick={handleClick}
+        aria-label={t('m5s5.dashboard.thinkingOfYouButton')}
+      >
+        <span className="thinking-icon" aria-hidden="true">
+          {active ? '✨' : '❤️'}
+        </span>
+        <span>
+          {active
+            ? t('m5s5.dashboard.thinkingOfYouSent')
+            : t('m5s5.dashboard.thinkingOfYouButton')}
+        </span>
+      </button>
+      {particles.map((p, idx) => (
+        <span
+          key={p}
+          className="floating-heart"
+          style={
+            {
+              '--drift': `${(idx - 2) * 24}px`,
+              '--delay': `${idx * 0.1}s`,
+            } as Record<string, string>
+          }
+          aria-hidden="true"
+        >
+          ❤️
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function DashboardProductPage({
   apis,
   spaceId,
@@ -191,30 +253,8 @@ export function DashboardProductPage({
               </p>
             </div>
 
-            <div
-              className="m4-summary-action"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
-            >
-              <button
-                type="button"
-                className="thinking-of-you-btn"
-                onClick={(e) => {
-                  const btn = e.currentTarget;
-                  btn.classList.remove('animating');
-                  void btn.offsetWidth; // trigger reflow
-                  btn.classList.add('animating');
-                  // Trigger haptic feedback on supported devices
-                  if (navigator.vibrate) navigator.vibrate(50);
-                  // TODO: trigger API call (e.g. apis.activity.postActivity({ type: 'THINKING_OF_YOU' }))
-                }}
-              >
-                ❤️ Ich denke an dich
-              </button>
+            <div className="m4-summary-action">
+              <ThinkingOfYouWidget />
             </div>
 
             {dashboardQuery.data.relationshipDuration ? (

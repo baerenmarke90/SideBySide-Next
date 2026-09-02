@@ -19,6 +19,8 @@ const m5s5 = {
     recentTitle: 'Zuletzt bei euch',
     recentEmpty: 'Noch keine gemeinsamen Einträge vorhanden.',
     itemFallback: 'Gemeinsamer Eintrag',
+    thinkingOfYouButton: '❤️ Ich denke an dich',
+    thinkingOfYouSent: 'Liebesgruß gesendet! ❤️',
   },
   search: {
     eyebrow: 'Suche',

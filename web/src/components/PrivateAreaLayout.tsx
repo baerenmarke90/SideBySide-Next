@@ -13,15 +13,26 @@ export function PrivateAreaFrame({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   return (
     <div className="page private-area-page">
-      <div className="private-area-context">
-        <div>
-          <p className="eyebrow">{t('privateArea.eyebrow')}</p>
-          <p>{t('privateArea.intro')}</p>
+      <section
+        className="private-area-context"
+        aria-label={t('privateArea.privacyLabel')}
+      >
+        <div className="private-area-header-info">
+          <div className="private-area-title-row">
+            <span className="private-area-lock-icon" aria-hidden="true">
+              🔒
+            </span>
+            <p className="eyebrow">{t('privateArea.eyebrow')}</p>
+          </div>
+          <p className="private-area-intro-text">{t('privateArea.intro')}</p>
         </div>
-        <span className="private-area-badge">
-          {t('privateArea.privacyLabel')}
-        </span>
-      </div>
+        <div className="private-area-badge-container">
+          <span className="private-area-badge">
+            <span className="private-badge-dot" aria-hidden="true" />
+            {t('privateArea.privacyLabel')}
+          </span>
+        </div>
+      </section>
       <nav
         className="private-area-nav"
         aria-label={t('privateArea.navigation.aria')}
