@@ -281,6 +281,9 @@ function MemoryCreatePage({
         </h2>
         <form onSubmit={submit} className="immersive-create-form">
           <div className="immersive-create-hero">
+            <label htmlFor="title" className="sr-only">
+              {t('memory.titleLabel')}
+            </label>
             <input
               id="title"
               name="title"
@@ -409,11 +412,10 @@ function AuthenticatedApp({
   // M5 Vault Theme Context Switch
   useEffect(() => {
     const isVault = location.pathname.startsWith('/more/private');
-    if (isVault) {
-      document.body.classList.add('theme-vault');
-    } else {
+    document.body.classList.toggle('theme-vault', isVault);
+    return () => {
       document.body.classList.remove('theme-vault');
-    }
+    };
   }, [location.pathname]);
 
   const loadMemoryImage = useCallback(
