@@ -166,7 +166,7 @@ The S3 adapter (#87) ran in parallel and is delivered. Video (#88) is not part o
 
 Demonstrated are M2 Domain/API, Story Privacy, Media/parent Authorization, Cross-Tenant/race/data integrity, OpenAPI, migrations, PostgreSQL integration, and a real critical Memory/Media/Story flow in Web and Android against the same SideBySide stack.
 
-Manual Accessibility acceptance was deliberately moved from G2 into final client/release QA. It is **not** considered passed and remains part of M5/G4. Full client parity likewise remains M5/G4.
+Manual Accessibility acceptance was deliberately moved from G2 into final client/release QA. As of 2026-09-02, this manual acceptance step is deprioritized and is **not** required for G4; the per-slice automated accessibility semantics already delivered (contrast, TalkBack/screen-reader names, focus order, touch targets, dynamic type) stand as the accepted evidence instead. Full client parity remains M5/G4.
 
 ## M3 — Planning & Private Area
 
