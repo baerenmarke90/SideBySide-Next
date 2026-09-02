@@ -20,7 +20,7 @@ import org.robolectric.annotation.Config
  * The shell-wide quick-create trigger (#577).
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], qualifiers = "w320dp-h800dp")
+@Config(sdk = [35], qualifiers = "w320dp-h1200dp")
 class QuickCreateFabTest {
     @get:Rule
     val composeRule = createComposeRule()
@@ -28,7 +28,7 @@ class QuickCreateFabTest {
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun theTriggerOffersAllThreeCreatableKindsOnceOpened() {
+    fun theTriggerOffersAllFourCreatableKindsOnceOpened() {
         render()
 
         composeRule
@@ -38,6 +38,7 @@ class QuickCreateFabTest {
 
         composeRule.onNodeWithText(context.getString(R.string.quick_create_memory)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.quick_create_heart_moment)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.quick_create_milestone)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.quick_create_private_note)).assertIsDisplayed()
     }
 
@@ -45,10 +46,12 @@ class QuickCreateFabTest {
     fun choosingMemoryInvokesOnlyTheMemoryCallback() {
         var memoryCalls = 0
         var heartMomentCalls = 0
+        var milestoneCalls = 0
         var privateNoteCalls = 0
         render(
             onCreateMemory = { memoryCalls++ },
             onCreateHeartMoment = { heartMomentCalls++ },
+            onCreateMilestone = { milestoneCalls++ },
             onCreatePrivateNote = { privateNoteCalls++ },
         )
 
@@ -61,7 +64,28 @@ class QuickCreateFabTest {
 
         assertEquals(1, memoryCalls)
         assertEquals(0, heartMomentCalls)
+        assertEquals(0, milestoneCalls)
         assertEquals(0, privateNoteCalls)
+    }
+
+    @Test
+    fun choosingMilestoneInvokesOnlyTheMilestoneCallback() {
+        var milestoneCalls = 0
+        var memoryCalls = 0
+        render(
+            onCreateMemory = { memoryCalls++ },
+            onCreateMilestone = { milestoneCalls++ },
+        )
+
+        composeRule
+            .onNodeWithContentDescription(context.getString(R.string.quick_create_trigger))
+            .performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(context.getString(R.string.quick_create_milestone)).performClick()
+        composeRule.waitForIdle()
+
+        assertEquals(1, milestoneCalls)
+        assertEquals(0, memoryCalls)
     }
 
     @Test
@@ -83,6 +107,7 @@ class QuickCreateFabTest {
     private fun render(
         onCreateMemory: () -> Unit = {},
         onCreateHeartMoment: () -> Unit = {},
+        onCreateMilestone: () -> Unit = {},
         onCreatePrivateNote: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -90,6 +115,7 @@ class QuickCreateFabTest {
                 QuickCreateFab(
                     onCreateMemory = onCreateMemory,
                     onCreateHeartMoment = onCreateHeartMoment,
+                    onCreateMilestone = onCreateMilestone,
                     onCreatePrivateNote = onCreatePrivateNote,
                 )
             }

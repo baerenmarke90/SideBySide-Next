@@ -79,6 +79,7 @@ import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.SearchResult
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneCreate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.NotificationItem
@@ -357,6 +358,13 @@ data class ReferenceUiState(
     val openMilestone: MilestoneDetail? = null,
     /** Non-null only while [openMilestone] is a stale M2-D18 cache fallback, not a fresh read. */
     val openMilestoneCachedAt: java.time.Instant? = null,
+    /**
+     * Set once [ReferenceViewModel.createMilestone] actually succeeds; the
+     * create screen watches this to return to the Story feed itself,
+     * mirroring [exportDownloaded]'s one-shot "the action completed" shape.
+     * Reset by [ReferenceViewModel.clearMilestoneCreated].
+     */
+    val milestoneCreated: Boolean = false,
     val openSharedHeartMoment: HeartMomentDetail? = null,
     /** Non-null only while [openSharedHeartMoment] is a stale M2-D18 cache fallback, not a fresh read. */
     val openSharedHeartMomentCachedAt: java.time.Instant? = null,
@@ -1297,6 +1305,54 @@ class ReferenceViewModel(
                 editingMemory = false,
             )
         }
+    }
+
+    /**
+     * Creates a Milestone. Unlike [saveMilestone], there is nothing to
+     * version against yet — the M2-D18 `If-Match` concurrency contract only
+     * applies once a resource exists.
+     */
+    fun createMilestone(title: String, body: String, happenedOn: String) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        if (title.isBlank()) {
+            mutate { it.copy(memoryProblem = validationProblem()) }
+            return
+        }
+        val day = parseHappenedOn(happenedOn)
+        if (day == null) {
+            mutate { it.copy(memoryProblem = validationProblem()) }
+            return
+        }
+
+        mutate { it.copy(memoryBusy = true, memoryProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createMilestone(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    MilestoneCreate(happenedOn = day, title = title.trim(), body = body.trim().ifBlank { null }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(memoryBusy = false, memoryProblem = null, milestoneCreated = true) }
+                    postSnackbar(R.string.milestone_created)
+                    refreshStory()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(memoryBusy = false, memoryProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearMilestoneCreated() {
+        mutate { it.copy(milestoneCreated = false) }
     }
 
     fun saveMilestone(title: String, body: String, happenedOn: String) {
@@ -4984,6 +5040,20 @@ class ReferenceViewModel(
     /** Null for a blank date, which is allowed, and for an unparseable one. */
     private fun parseHappenedOn(text: String): LocalDate? =
         if (text.isBlank()) null else runCatching { LocalDate.parse(text.trim()) }.getOrNull()
+
+    /**
+     * The same shape [problemForStatus] gives a server 422 — a client-side
+     * check failing (a blank required field, an unparseable date) is not
+     * meaningfully different from the server rejecting it, and reusing the
+     * existing validation copy means one message rather than a second,
+     * competing one.
+     */
+    private fun validationProblem(): UiProblem = UiProblem(
+        kind = UiStateKind.Error,
+        titleRes = R.string.state_validation_title,
+        bodyRes = R.string.state_validation_body,
+        retryable = false,
+    )
 
     private fun message(resourceId: Int, vararg args: Any): UiMessage =
         UiMessage(resourceId = resourceId, args = args.toList())

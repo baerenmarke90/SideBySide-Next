@@ -263,6 +263,14 @@
     <string name="milestone_written_by">Festgehalten von %1$s</string>
     <string name="milestone_gone_title">Diesen Meilenstein gibt es nicht mehr</string>
     <string name="milestone_gone_body">Er wurde gelöscht. Eure übrige Geschichte ist unverändert.</string>
+    <string name="milestone_create_heading">Neuer Meilenstein</string>
+    <string name="milestone_create_intro">Haltet einen wichtigen gemeinsamen Schritt in eurer Story fest.</string>
+    <string name="milestone_title_label">Titel</string>
+    <string name="milestone_body_label">Beschreibung</string>
+    <string name="milestone_happened_on_label">Datum (JJJJ-MM-TT)</string>
+    <string name="milestone_create_submit">Meilenstein speichern</string>
+    <string name="milestone_created">Meilenstein festgehalten.</string>
+    <string name="quick_create_milestone">Meilenstein</string>
     <string name="milestone_delete_confirm_title">Diesen Meilenstein löschen?</string>
     <string name="milestone_delete_confirm_body">Er verschwindet aus eurer gemeinsamen Geschichte. Das lässt sich nicht rückgängig machen.</string>
     <string name="heart_moment_shared_by">Von %1$s</string>

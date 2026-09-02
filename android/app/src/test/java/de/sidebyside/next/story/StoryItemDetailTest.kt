@@ -19,7 +19,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import sidebyside.api.models.AccountMembershipView
@@ -31,6 +33,7 @@ import sidebyside.api.models.CommentPage
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartEmotion
 import sidebyside.api.models.HeartMomentDetail
+import sidebyside.api.models.MilestoneCreate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.ResourceCapabilities
@@ -124,6 +127,86 @@ class StoryItemDetailTest {
     }
 
     @Test
+    fun createsAMilestoneWithTheGivenFields() = runTest(dispatcher) {
+        val api = DetailApi()
+        val model = signedIn(api)
+
+        model.createMilestone("Moved in together", "The day the boxes arrived", "2026-08-20")
+        advanceUntilIdle()
+
+        assertEquals(LocalDate.of(2026, 8, 20), api.createdMilestones.single().happenedOn)
+        assertEquals("Moved in together", api.createdMilestones.single().title)
+        assertEquals("The day the boxes arrived", api.createdMilestones.single().body)
+        assertTrue(model.uiState.value.milestoneCreated)
+        assertNull(model.uiState.value.memoryProblem)
+    }
+
+    @Test
+    fun aBlankTitleIsRefusedWithoutReachingTheServer() = runTest(dispatcher) {
+        val api = DetailApi()
+        val model = signedIn(api)
+
+        model.createMilestone("   ", "Text", "2026-08-20")
+        advanceUntilIdle()
+
+        assertTrue(api.createdMilestones.isEmpty())
+        assertFalse(model.uiState.value.milestoneCreated)
+        assertEquals(UiStateKind.Error, model.uiState.value.memoryProblem?.kind)
+    }
+
+    @Test
+    fun anUnparseableDateIsRefusedWithoutReachingTheServer() = runTest(dispatcher) {
+        val api = DetailApi()
+        val model = signedIn(api)
+
+        model.createMilestone("Moved in together", "Text", "not a date")
+        advanceUntilIdle()
+
+        assertTrue(api.createdMilestones.isEmpty())
+        assertEquals(UiStateKind.Error, model.uiState.value.memoryProblem?.kind)
+    }
+
+    @Test
+    fun aBlankDateIsRefusedSinceHappenedOnIsRequiredOnCreate() = runTest(dispatcher) {
+        // Unlike an update, where a blank date means "leave unchanged", create
+        // has no prior value to fall back on — MilestoneCreate.happenedOn is required.
+        val api = DetailApi()
+        val model = signedIn(api)
+
+        model.createMilestone("Moved in together", "Text", "")
+        advanceUntilIdle()
+
+        assertTrue(api.createdMilestones.isEmpty())
+        assertEquals(UiStateKind.Error, model.uiState.value.memoryProblem?.kind)
+    }
+
+    @Test
+    fun aServerFailureIsReportedAndTheCreatedFlagStaysFalse() = runTest(dispatcher) {
+        val api = DetailApi(createMilestoneFailure = ReferenceApiException(null, "bad", 422))
+        val model = signedIn(api)
+
+        model.createMilestone("Moved in together", "Text", "2026-08-20")
+        advanceUntilIdle()
+
+        assertFalse(model.uiState.value.milestoneCreated)
+        assertEquals(UiStateKind.Error, model.uiState.value.memoryProblem?.kind)
+    }
+
+    @Test
+    fun clearMilestoneCreatedResetsTheFlag() = runTest(dispatcher) {
+        val api = DetailApi()
+        val model = signedIn(api)
+
+        model.createMilestone("Moved in together", "Text", "2026-08-20")
+        advanceUntilIdle()
+        assertTrue(model.uiState.value.milestoneCreated)
+
+        model.clearMilestoneCreated()
+
+        assertFalse(model.uiState.value.milestoneCreated)
+    }
+
+    @Test
     fun opensASharedHeartMomentFromTheStory() = runTest(dispatcher) {
         val model = signedIn(DetailApi())
 
@@ -208,11 +291,13 @@ private fun sharedMoment() = HeartMomentDetail(
 private class DetailApi(
     private val milestoneUpdateFailure: Throwable? = null,
     private val heartMomentFailure: Throwable? = null,
+    private val createMilestoneFailure: Throwable? = null,
 ) : FakeReferenceContract() {
     val commentParents = mutableListOf<ReferenceContract.CommentParent>()
     val commentParentIds = mutableListOf<UUID>()
     val milestoneUpdates = mutableListOf<MilestoneUpdate>()
     val milestoneVersions = mutableListOf<Int>()
+    val createdMilestones = mutableListOf<MilestoneCreate>()
 
     override suspend fun signIn(email: String, password: String): SessionView = SessionView(
         account = AccountView(displayName = "Lea", id = UUID.randomUUID()),
@@ -251,6 +336,16 @@ private class DetailApi(
         milestoneUpdates += update
         milestoneUpdateFailure?.let { throw it }
         return milestone(version = ifMatch + 1)
+    }
+
+    override suspend fun createMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        fields: MilestoneCreate,
+    ): MilestoneDetail {
+        createdMilestones += fields
+        createMilestoneFailure?.let { throw it }
+        return milestone(version = 1)
     }
 
     override suspend fun getHeartMoment(

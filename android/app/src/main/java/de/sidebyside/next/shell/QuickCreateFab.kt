@@ -43,17 +43,13 @@ import de.sidebyside.next.reference.R
  * closes that gap by navigating to the right destination, the same as the
  * Web menu's own items do.
  *
- * Milestone is deliberately absent, unlike Web's menu: `ReferenceContract`
- * has `getMilestone`/`updateMilestone`/`deleteMilestone` but no
- * `createMilestone`, even though the generated client's `MilestoneCreate`
- * model exists — the API layer was never wired up. Offering a Milestone
- * option here would be dead navigation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickCreateFab(
     onCreateMemory: () -> Unit,
     onCreateHeartMoment: () -> Unit,
+    onCreateMilestone: () -> Unit,
     onCreatePrivateNote: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -83,6 +79,10 @@ fun QuickCreateFab(
                 QuickCreateItem(R.string.quick_create_heart_moment) {
                     open = false
                     onCreateHeartMoment()
+                }
+                QuickCreateItem(R.string.quick_create_milestone) {
+                    open = false
+                    onCreateMilestone()
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = SideBySideTheme.spacing.step3))

@@ -72,6 +72,7 @@ import sidebyside.api.models.TransferScope
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneCreate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.NotificationItem
@@ -357,6 +358,19 @@ class OkHttpReferenceApi(
             .header("If-Match", ifMatch.toString())
             .delete()
             .build(),
+    )
+
+    override suspend fun createMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        fields: MilestoneCreate,
+    ): MilestoneDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/milestones", accessToken)
+            .post(
+                SideBySideJson.encodeToString(MilestoneCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        MilestoneDetail.serializer(),
     )
 
     override suspend fun getMilestone(

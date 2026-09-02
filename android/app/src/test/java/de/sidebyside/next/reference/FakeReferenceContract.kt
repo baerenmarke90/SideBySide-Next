@@ -166,6 +166,12 @@ abstract class FakeReferenceContract : ReferenceContract {
         comment: CommentCreate,
     ): CommentDetail = notExercised("createComment")
 
+    override suspend fun createMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        fields: sidebyside.api.models.MilestoneCreate,
+    ): MilestoneDetail = notExercised("createMilestone")
+
     override suspend fun getMilestone(
         spaceId: UUID,
         accessToken: String,

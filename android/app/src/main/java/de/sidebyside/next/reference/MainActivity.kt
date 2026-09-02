@@ -81,6 +81,7 @@ import de.sidebyside.next.shell.ShellSurface
 import de.sidebyside.next.story.HeartMomentsScreen
 import de.sidebyside.next.story.MemoryComments
 import de.sidebyside.next.story.MemoryScreen
+import de.sidebyside.next.story.MilestoneCreateScreen
 import de.sidebyside.next.story.MilestoneScreen
 import de.sidebyside.next.story.SharedHeartMomentScreen
 import de.sidebyside.next.story.StoryScreen
@@ -359,6 +360,7 @@ private fun DemoShell(
                 // also reach into StoryDestination's local capture state.
                 onCreateMemory = { navController.navigateToPrimary(AppDestination.Story) },
                 onCreateHeartMoment = { navController.navigate(HEART_MOMENTS_ROUTE) },
+                onCreateMilestone = { navController.navigate(MILESTONE_CREATE_ROUTE) },
                 onCreatePrivateNote = { navController.navigate(PRIVATE_NOTES_ROUTE) },
             )
         },
@@ -421,6 +423,22 @@ private fun DemoShell(
                             )
                         }
                     },
+                )
+            }
+
+            composable(MILESTONE_CREATE_ROUTE) {
+                LaunchedEffect(state.milestoneCreated) {
+                    if (state.milestoneCreated) {
+                        controller.popBackStack()
+                        viewModel.clearMilestoneCreated()
+                    }
+                }
+
+                MilestoneCreateScreen(
+                    busy = state.memoryBusy,
+                    problem = state.memoryProblem,
+                    onBack = { controller.popBackStack() },
+                    onCreate = viewModel::createMilestone,
                 )
             }
 
@@ -1124,6 +1142,14 @@ private const val INVITATIONS_ROUTE = "more/invitations"
 
 private const val ITEM_ID_ARGUMENT = "itemId"
 private const val MILESTONE_ROUTE = "story/milestones/{$ITEM_ID_ARGUMENT}"
+
+/**
+ * Matches the Web path from `web/src/client/routes.ts`
+ * (`MILESTONE_CREATE_ROUTE`). Registered ahead of [MILESTONE_ROUTE] in the
+ * Nav graph, since Navigation Compose scores a literal path segment above a
+ * `{itemId}` wildcard when both could otherwise match "new".
+ */
+private const val MILESTONE_CREATE_ROUTE = "story/milestones/new"
 private const val HEART_MOMENT_ROUTE = "story/heart-moments/{$ITEM_ID_ARGUMENT}"
 
 private const val RELATED_PERSONS_ROUTE = "people/related-persons"

@@ -51,6 +51,7 @@ import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
+import sidebyside.api.models.MilestoneCreate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.NotificationItem
@@ -164,6 +165,12 @@ interface ReferenceContract {
     ): MemoryDetail
 
     suspend fun deleteMemory(spaceId: UUID, accessToken: String, memoryId: UUID, ifMatch: Int)
+
+    suspend fun createMilestone(
+        spaceId: UUID,
+        accessToken: String,
+        fields: MilestoneCreate,
+    ): MilestoneDetail
 
     suspend fun getMilestone(
         spaceId: UUID,
