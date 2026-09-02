@@ -489,3 +489,65 @@
   line-height: 1.4;
   margin: auto 0;
 }
+
+/* Future Map / Zukunftslandkarte Redesign */
+.future-map {
+  position: relative;
+  max-width: 800px;
+  margin: var(--space-8) auto;
+  padding-left: var(--space-8);
+}
+
+.future-map-path {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 23px;
+  width: 4px;
+  background: linear-gradient(to bottom, var(--color-brand-koralle), var(--color-discovery-surface-soft), var(--color-surface-raised));
+  border-radius: var(--radius-pill);
+}
+
+.future-map-stop {
+  position: relative;
+  margin-bottom: var(--space-8);
+}
+
+.future-map-marker {
+  position: absolute;
+  left: -23px;
+  top: var(--space-2);
+  width: 14px;
+  height: 14px;
+  background: var(--color-brand-koralle);
+  border-radius: 50%;
+  box-shadow: 0 0 0 6px var(--color-background);
+  z-index: 2;
+}
+
+.future-map-stop-someday .future-map-marker {
+  background: var(--color-private-surface-soft);
+  border: 3px solid var(--color-brand-koralle);
+}
+
+.future-map-stop-others .future-map-marker {
+  background: var(--color-surface-raised);
+  border: 3px solid var(--color-border-subtle);
+}
+
+.future-map-content {
+  padding-left: var(--space-4);
+}
+
+.future-map-heading {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+}
+
+.future-map-intro {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+}

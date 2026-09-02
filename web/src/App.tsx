@@ -80,10 +80,11 @@ import { IdentityEntry } from './components/IdentityEntry';
 import { LegacyPathRedirect } from './components/LegacyPathRedirect';
 import {
   ActivityProductPage,
-  DashboardProductPage,
+   
   NotificationsProductPage,
   SearchProductPage,
 } from './components/M4ProductPages';
+import { TodayPage } from './components/TodayPage';
 import { MemoryProductPage } from './components/MemoryProductPage';
 import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { MoreOverviewPage } from './components/MoreOverviewPage';
@@ -269,42 +270,53 @@ function MemoryCreatePage({
         className="create-heading"
       />
 
-      <section className="form-card" aria-labelledby="memory-form-heading">
+      <section className="immersive-create-card sbs-motion-reveal" aria-labelledby="memory-form-heading">
         <h2 id="memory-form-heading" className="sr-only">
           {t('memory.formAria')}
         </h2>
-        <form onSubmit={submit} className="form-grid memory-form">
-          <div className="field-group">
-            <label htmlFor="title">{t('memory.titleLabel')}</label>
+        <form onSubmit={submit} className="immersive-create-form">
+          <div className="immersive-create-hero">
             <input
               id="title"
               name="title"
               required
               maxLength={200}
-              placeholder={t('memory.titlePlaceholder')}
+              placeholder={t('memory.titlePlaceholder', 'Was möchtest du festhalten?')}
+              className="immersive-create-title"
+              autoFocus
             />
           </div>
-          <div className="field-group">
-            <label htmlFor="body">{t('memory.bodyLabel')}</label>
-            <textarea
-              id="body"
-              name="body"
-              rows={5}
-              placeholder={t('memory.bodyPlaceholder')}
+          
+          <div className="immersive-create-media">
+            <AttachmentDraftPicker
+              id="memory-create-images"
+              attachments={attachments}
+              multiple
             />
           </div>
-          <div className="field-group">
-            <label htmlFor="happenedOn">{t('memory.dateLabel')}</label>
-            <input id="happenedOn" name="happenedOn" type="date" />
-            <p className="field-help">{t('memory.dateHelp')}</p>
-          </div>
-          <AttachmentDraftPicker
-            id="memory-create-images"
-            attachments={attachments}
-            multiple
-          />
+
+          <details className="immersive-create-details">
+            <summary>{t('memory.addMoreDetails', 'Mehr Details hinzufügen (optional)')}</summary>
+            <div className="immersive-create-details-content">
+              <div className="field-group">
+                <label htmlFor="body">{t('memory.bodyLabel')}</label>
+                <textarea
+                  id="body"
+                  name="body"
+                  rows={4}
+                  placeholder={t('memory.bodyPlaceholder', 'Gibt es eine Geschichte dazu?')}
+                />
+              </div>
+              <div className="field-group">
+                <label htmlFor="happenedOn">{t('memory.dateLabel')}</label>
+                <input id="happenedOn" name="happenedOn" type="date" />
+                <p className="field-help">{t('memory.dateHelp')}</p>
+              </div>
+            </div>
+          </details>
+
           <div
-            className="sharing-note"
+            className="sharing-note immersive-sharing-note"
             role="note"
             aria-label={t('memory.visibilityAria')}
           >
@@ -525,7 +537,7 @@ function AuthenticatedApp({
           />
           <Route
             path={appRoutePath('today')}
-            element={<DashboardProductPage apis={m4Apis} spaceId={spaceId} />}
+            element={<TodayPage apis={m4Apis} spaceId={spaceId} />}
           />
           <Route
             path={ACTIVITY_ROUTE}

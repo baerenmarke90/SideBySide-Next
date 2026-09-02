@@ -1227,3 +1227,129 @@ code {
     animation: none;
   }
 }
+
+/* Reusable Motion Semantics */
+@keyframes sbs-reveal {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sbs-motion-reveal {
+  animation: sbs-reveal var(--motion-duration-medium) var(--motion-easing-reveal) forwards;
+}
+
+@keyframes sbs-lift {
+  from { transform: translateY(0); box-shadow: 0 2px 4px var(--color-shadow-card); }
+  to { transform: translateY(-4px); box-shadow: 0 12px 24px var(--color-shadow-card); }
+}
+.sbs-motion-lift:hover {
+  animation: sbs-lift var(--motion-duration-short) var(--motion-easing-lift) forwards;
+}
+
+@keyframes sbs-success {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.sbs-motion-success {
+  animation: sbs-success var(--motion-duration-medium) var(--motion-easing-reveal) forwards;
+}
+
+@keyframes sbs-affectionate-pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.sbs-motion-pulse {
+  animation: sbs-affectionate-pulse var(--motion-duration-long) var(--motion-easing-pulse);
+}
+
+@keyframes sbs-context-change {
+  from { opacity: 0; filter: blur(4px); }
+  to { opacity: 1; filter: blur(0); }
+}
+.sbs-motion-context-change {
+  animation: sbs-context-change var(--motion-duration-medium) var(--motion-easing-settle) forwards;
+}
+
+/* Immersive Creation */
+.immersive-create-card {
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-large);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.immersive-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.immersive-create-hero {
+  position: relative;
+}
+
+.immersive-create-title {
+  width: 100%;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 800;
+  color: var(--color-text);
+  padding: var(--space-2) 0;
+  transition: border-color var(--motion-duration-short);
+}
+
+.immersive-create-title::placeholder {
+  color: var(--color-text-inverse-muted); /* or something subtle */
+  opacity: 0.5;
+}
+
+.immersive-create-title:focus {
+  outline: none;
+  border-bottom-color: var(--color-brand-koralle);
+}
+
+.immersive-create-media {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-subtle);
+}
+
+.immersive-create-details {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+}
+
+.immersive-create-details summary {
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  list-style: none;
+}
+
+.immersive-create-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.immersive-create-details-content {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.immersive-sharing-note {
+  margin-top: var(--space-2);
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--color-text-secondary);
+}

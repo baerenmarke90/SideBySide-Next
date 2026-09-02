@@ -1,0 +1,74 @@
+--- web/src/components/SharedPlanningOverviewPage.tsx
++++ web/src/components/SharedPlanningOverviewPage.tsx
+@@ -21,7 +21,6 @@
+ import { PageHeader } from './PageHeader';
+ import { ProblemState } from './ProblemState';
+ import { UiState } from './UiState';
+-import { KanbanBoard } from './KanbanBoard';
+ import './SharedPlanningPages.css';
+ 
+ const PAGE_SIZE = 20;
+@@ -341,20 +340,39 @@
+         description={t('m5s3.overview.intro')}
+       />
+ 
+-      <KanbanBoard
+-        apis={apis}
+-        spaceId={spaceId}
+-        wishes={wishItems}
+-        plans={planItems}
+-        placeChoices={placeChoices}
+-        onCreateWish={(title, onSuccess) => {
+-          createWish.mutate(title, { onSuccess });
+-        }}
+-        onCreatePlan={(values, onSuccess) => {
+-          createPlan.mutate(values, { onSuccess });
+-        }}
+-        createWishPending={createWish.isPending}
+-        createPlanPending={createPlan.isPending}
+-        createWishError={createWish.error}
+-        createPlanError={createPlan.error}
+-      />
+-
+-      <div className="layout-columns planning-grid">
++      <div className="future-map">
++        <div className="future-map-path" aria-hidden="true"></div>
++        
++        <section className="future-map-stop future-map-stop-soon sbs-motion-reveal">
++          <div className="future-map-marker">
++             <span className="marker-dot"></span>
++          </div>
++          <div className="future-map-content">
++            <h2 className="future-map-heading">{t('m5s3.overview.soon', 'Bald & Geplant')}</h2>
++            <p className="future-map-intro">Eure nächsten konkreten Schritte.</p>
++            <ul className="planning-list">
++              {planItems.map(plan => (
++                 <PlanningCard key={plan.id} title={plan.title} to={`/plan/${plan.id}`} />
++              ))}
++            </ul>
++            {planItems.length === 0 && <p className="planning-empty">Noch keine konkreten Pläne.</p>}
++          </div>
++        </section>
++
++        <section className="future-map-stop future-map-stop-someday sbs-motion-reveal" style={{animationDelay: '100ms'}}>
++          <div className="future-map-marker">
++             <span className="marker-dot"></span>
++          </div>
++          <div className="future-map-content">
++            <h2 className="future-map-heading">{t('m5s3.overview.someday', 'Irgendwann')}</h2>
++            <p className="future-map-intro">Wünsche und Träume für die Zukunft.</p>
++            <ul className="planning-list">
++              {wishItems.map(wish => (
++                 <PlanningCard key={wish.id} title={wish.title} to={`/wish/${wish.id}`} />
++              ))}
++            </ul>
++            {wishItems.length === 0 && <p className="planning-empty">Noch keine Wünsche.</p>}
++          </div>
++        </section>
++
++        <section className="future-map-stop future-map-stop-places sbs-motion-reveal" style={{animationDelay: '200ms'}}>
++          <div className="future-map-marker">
++             <span className="marker-dot"></span>
++          </div>
++          <div className="future-map-content">
++             <PlanningSection

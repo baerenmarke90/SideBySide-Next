@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import type { AccountView } from '../api/generated/models/AccountView';
 import {
   PRODUCT_CACHE_FALLBACK_EVENT,
@@ -121,6 +121,8 @@ export function AppShell({
     window.location.assign(PUBLIC_START_ROUTE);
   }
 
+  const location = useLocation();
+
   return (
     <div className="product-shell">
       <ThemeControl />
@@ -131,8 +133,12 @@ export function AppShell({
       <header className="app-header product-topbar">
         <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
         <div className="header-actions">
-          <span className="shared-context">
-            <span aria-hidden="true">♥</span> {t('header.sharedArea')}
+          <span className={`shared-context ${location.pathname.startsWith('/private') ? 'private-context' : ''}`}>
+            {location.pathname.startsWith('/private') ? (
+              <><span aria-hidden="true">🔒</span> {t('privateArea.privacyLabel', 'Nur für mich')}</>
+            ) : (
+              <><span aria-hidden="true">♥</span> {t('header.sharedArea')}</>
+            )}
           </span>
           <NavLink
             to={SEARCH_ROUTE}
@@ -195,7 +201,12 @@ export function AppShell({
           </div>
         </aside>
 
-        <main id="main-content" className="product-main" tabIndex={-1}>
+        <main
+          key={location.pathname}
+          id="main-content"
+          className="product-main sbs-motion-reveal"
+          tabIndex={-1}
+        >
           {children}
         </main>
       </div>

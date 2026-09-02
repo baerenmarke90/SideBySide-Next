@@ -371,3 +371,22 @@ button.secondary,
     max-width: 5.5rem;
   }
 }
+
+/* Semantic Motion Foundation */
+:root {
+  --motion-duration-short: 150ms;
+  --motion-duration-medium: 300ms;
+  --motion-duration-long: 500ms;
+  --motion-easing-reveal: cubic-bezier(0.2, 0, 0, 1);
+  --motion-easing-lift: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-easing-settle: cubic-bezier(0.3, 0.8, 0.1, 1);
+  --motion-easing-pulse: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-short: 0ms;
+    --motion-duration-medium: 0ms;
+    --motion-duration-long: 0ms;
+  }
+}

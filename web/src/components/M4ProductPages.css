@@ -324,3 +324,110 @@
   flex-direction: column;
   gap: var(--space-6);
 }
+
+/* Search Results Redesign */
+.search-result-wrapper {
+  list-style: none;
+}
+
+.search-result-link {
+  text-decoration: none;
+  display: block;
+  height: 100%;
+}
+
+.search-result-card {
+  height: 100%;
+  border-radius: var(--radius-large);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+}
+
+.search-result-memory {
+  background: linear-gradient(135deg, var(--color-surface-raised) 0%, var(--color-private-surface-soft) 100%);
+}
+
+.search-result-heart_moment {
+  background: var(--color-private-surface-soft);
+  border-color: var(--color-brand-glow);
+}
+
+.search-result-plan {
+  background: linear-gradient(135deg, var(--color-surface-raised) 0%, var(--color-discovery-surface-soft) 100%);
+}
+
+.search-result-kind {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 800;
+  color: var(--color-brand-text);
+  margin-bottom: var(--space-2);
+}
+
+.search-result-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+  line-height: 1.3;
+}
+
+.search-result-excerpt {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--space-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.search-result-date {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+/* Activity Cards */
+.activity-result-wrapper {
+  list-style: none;
+}
+
+.activity-result-link {
+  text-decoration: none;
+  display: block;
+}
+
+.activity-card {
+  border-radius: var(--radius-large);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+}
+
+.activity-card-date {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.activity-card-memory, .activity-card-heart_moment, .activity-card-milestone {
+  background: linear-gradient(135deg, var(--color-surface-raised) 0%, var(--color-private-surface-soft) 100%);
+}

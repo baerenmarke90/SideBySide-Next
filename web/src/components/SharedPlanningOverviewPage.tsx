@@ -21,7 +21,6 @@ import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
-import { KanbanBoard } from './KanbanBoard';
 import './SharedPlanningPages.css';
 
 const PAGE_SIZE = 20;
@@ -341,25 +340,42 @@ export function SharedPlanningOverviewPage({
         description={t('m5s3.overview.intro')}
       />
 
-      <KanbanBoard
-        apis={apis}
-        spaceId={spaceId}
-        wishes={wishItems}
-        plans={planItems}
-        placeChoices={placeChoices}
-        onCreateWish={(title, onSuccess) => {
-          createWish.mutate(title, { onSuccess });
-        }}
-        onCreatePlan={(values, onSuccess) => {
-          createPlan.mutate(values, { onSuccess });
-        }}
-        createWishPending={createWish.isPending}
-        createPlanPending={createPlan.isPending}
-        createWishError={createWish.error}
-        createPlanError={createPlan.error}
-      />
+      <div className="future-map">
+        <div className="future-map-path" aria-hidden="true" />
+        
+        <section className="future-map-stop future-map-stop-soon sbs-motion-reveal">
+          <div className="future-map-marker"><span className="marker-dot" /></div>
+          <div className="future-map-content">
+            <h2 className="future-map-heading">{t('m5s3.overview.soon', 'Bald & Geplant')}</h2>
+            <p className="future-map-intro">{t('m5s3.overview.soonIntro', 'Eure nächsten konkreten Schritte.')}</p>
+            {planItems.length > 0 ? (
+              <ul className="planning-list">
+                {planItems.map(plan => (
+                   <PlanningCard key={plan.id} title={plan.title} to={`/plan/${plan.id}`} />
+                ))}
+              </ul>
+            ) : <p className="planning-empty">{t('m5s3.common.empty')}</p>}
+          </div>
+        </section>
 
-      <div className="layout-columns planning-grid">
+        <section className="future-map-stop future-map-stop-someday sbs-motion-reveal" style={{animationDelay: '100ms'}}>
+          <div className="future-map-marker"><span className="marker-dot" /></div>
+          <div className="future-map-content">
+            <h2 className="future-map-heading">{t('m5s3.overview.someday', 'Irgendwann')}</h2>
+            <p className="future-map-intro">{t('m5s3.overview.somedayIntro', 'Wünsche und Träume für die Zukunft.')}</p>
+            {wishItems.length > 0 ? (
+              <ul className="planning-list">
+                {wishItems.map(wish => (
+                   <PlanningCard key={wish.id} title={wish.title} to={`/wish/${wish.id}`} />
+                ))}
+              </ul>
+            ) : <p className="planning-empty">{t('m5s3.common.empty')}</p>}
+          </div>
+        </section>
+
+        <div className="future-map-stop future-map-stop-others sbs-motion-reveal" style={{animationDelay: '200ms'}}>
+          <div className="future-map-marker"><span className="marker-dot" /></div>
+          <div className="future-map-content">
         <PlanningSection
           id="places"
           title={t('m5s3.place.heading')}
@@ -602,6 +618,8 @@ export function SharedPlanningOverviewPage({
             </ul>
           ) : null}
         </PlanningSection>
+          </div>
+        </div>
       </div>
     </div>
   );

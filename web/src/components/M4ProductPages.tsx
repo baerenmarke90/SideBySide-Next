@@ -305,26 +305,31 @@ function SearchResultCard({ item }: { item: SearchResult }) {
   const { t } = useTranslation();
   const path = searchResultPath(item.type, item.id);
   const date = formatDate(item.occurredOn);
+  const isMemoryOrStory = item.type === 'MEMORY' || item.type === 'HEART_MOMENT' || item.type === 'MILESTONE';
+
+  const inner = (
+    <div className={`search-result-card search-result-${item.type.toLowerCase()} sbs-motion-lift`}>
+      <div className="search-result-content">
+        <span className="search-result-kind">
+          {t(`m5s5.kind.${item.type}`)}
+          {item.scope !== 'SHARED' && ` · ${t(`m5s5.scope.${item.scope}`)}`}
+        </span>
+        <h3 className="search-result-title">{item.title || t('m5s5.search.resultFallback')}</h3>
+        {item.excerpt && <p className="search-result-excerpt">{item.excerpt}</p>}
+        {date && <span className="search-result-date">{date}</span>}
+      </div>
+    </div>
+  );
 
   return (
-    <li className="m4-item">
-      <div className="m4-item-heading">
-        <h3>{item.title || t('m5s5.search.resultFallback')}</h3>
-        <span className="m4-item-kind">
-          {t(`m5s5.kind.${item.type}`)} · {t(`m5s5.scope.${item.scope}`)}
-        </span>
-      </div>
-      {item.excerpt ? <p className="m4-item-excerpt">{item.excerpt}</p> : null}
-      {date ? <p className="m4-item-meta">{date}</p> : null}
-      <div className="m4-item-actions">
-        {path ? (
-          <Link className="button-link secondary-link" to={path}>
-            {t('m5s5.common.open')}
-          </Link>
-        ) : (
-          <span className="m4-muted">{t('m5s5.common.noDirectLink')}</span>
-        )}
-      </div>
+    <li className="search-result-wrapper sbs-motion-reveal">
+      {path ? (
+        <Link className="search-result-link" to={path}>
+          {inner}
+        </Link>
+      ) : (
+        inner
+      )}
     </li>
   );
 }
@@ -472,23 +477,24 @@ function ActivityCard({ item }: { item: ActivityItem }) {
   const { t } = useTranslation();
   const path = engagementTargetPath(item.targetType, item.targetId);
 
-  return (
-    <li className="m4-item">
-      <div className="m4-item-heading">
-        <h3>{t(`m5s5.activityKind.${item.kind}`)}</h3>
-        <time className="m4-item-meta" dateTime={item.occurredAt.toISOString()}>
+  const inner = (
+    <div className={`activity-card sbs-motion-lift activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}>
+      <div className="activity-card-content">
+        <h3 className="activity-card-title">{t(`m5s5.activityKind.${item.kind}`)}</h3>
+        <time className="activity-card-date" dateTime={item.occurredAt.toISOString()}>
           {formatDateTime(item.occurredAt)}
         </time>
       </div>
-      <div className="m4-item-actions">
-        {path ? (
-          <Link className="button-link secondary-link" to={path}>
-            {t('m5s5.common.open')}
-          </Link>
-        ) : (
-          <span className="m4-muted">{t('m5s5.common.noDirectLink')}</span>
-        )}
-      </div>
+    </div>
+  );
+
+  return (
+    <li className="activity-result-wrapper sbs-motion-reveal">
+      {path ? (
+        <Link className="activity-result-link" to={path}>
+          {inner}
+        </Link>
+      ) : inner}
     </li>
   );
 }
@@ -553,8 +559,8 @@ export function ActivityProductPage({
         />
       ) : null}
       {items.length > 0 ? (
-        <section className="layout-panel" aria-live="polite">
-          <ul className="m4-list m4-list-rows">
+        <section className="m4-results" aria-live="polite">
+          <ul className="m4-list layout-columns layout-columns-dense">
             {items.map((item) => (
               <ActivityCard key={item.id} item={item} />
             ))}

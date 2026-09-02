@@ -10,6 +10,7 @@
   color: var(--color-text);
   box-shadow: var(--shadow-soft);
   font-weight: 700;
+  transition: transform var(--motion-duration-medium) var(--motion-easing-reveal);
 }
 
 .skip-link:focus {
@@ -18,15 +19,19 @@
 
 .product-shell {
   min-height: 100vh;
-  background: var(--color-background);
+  background: radial-gradient(circle at top, var(--color-entry-aura-brand) 0%, transparent 60%),
+              radial-gradient(circle at bottom left, var(--color-entry-aura-shared) 0%, transparent 50%),
+              var(--color-background);
 }
 
 .product-topbar {
   z-index: 40;
+  background: transparent; /* Assuming header surface handles it, or use header-surface here */
 }
 
 .product-shell-body {
   min-height: calc(100vh - var(--topbar-height));
+  position: relative;
 }
 
 /* Global utilities live in the app bar and stay icon-only in persistent chrome. */
@@ -526,9 +531,8 @@
 
   .shell-sidebar {
     display: block;
-    border-right: 1px solid var(--color-border-subtle);
     padding: var(--space-8) var(--space-4);
-    background: var(--color-surface);
+    background: transparent;
   }
 
   .shell-sidebar-inner {
