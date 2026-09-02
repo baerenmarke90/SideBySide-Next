@@ -665,6 +665,7 @@ private fun DemoShell(
                     onOpenRelations = { place ->
                         controller.navigate("planning/places/${place.id}/relations")
                     },
+                    cachedAt = state.placesCachedAt,
                 )
             }
 
@@ -757,6 +758,7 @@ private fun DemoShell(
                         viewModel.updateChapter(chapter, title, description, startOn, endOn)
                     },
                     onDelete = viewModel::deleteChapter,
+                    cachedAt = state.chaptersCachedAt,
                 )
             }
 

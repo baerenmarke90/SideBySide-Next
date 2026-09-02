@@ -246,6 +246,8 @@ data class ReferenceUiState(
     val places: List<PlaceDetail> = emptyList(),
     val placesBusy: Boolean = false,
     val placesProblem: UiProblem? = null,
+    /** Non-null only while [places] is a stale M2-D18 cache fallback, not a fresh read. */
+    val placesCachedAt: java.time.Instant? = null,
     /** Every shared Story item, as a possible link target for whichever place's relations are open. */
     val placeRelationTargets: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
     /** Ids already linked to that place, across all three kinds. */
@@ -288,6 +290,8 @@ data class ReferenceUiState(
     val chapters: List<ChapterDetail> = emptyList(),
     val chaptersBusy: Boolean = false,
     val chaptersProblem: UiProblem? = null,
+    /** Non-null only while [chapters] is a stale M2-D18 cache fallback, not a fresh read. */
+    val chaptersCachedAt: java.time.Instant? = null,
     /** Every shared Story item, as a possible content target for whichever chapter is open. */
     val chapterContentCandidates: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
     /** The chapter's own content, in the server's display order. */
@@ -2874,10 +2878,24 @@ class ReferenceViewModel(
         mutate { it.copy(placesBusy = true, placesProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listPlaces(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.PLACE,
+                resourceId = de.sidebyside.next.cache.PlaceListResourceId,
+                load = { api.listPlaces(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(PlaceDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(PlaceDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(places = page.items, placesBusy = false) }
+                    mutate {
+                        it.copy(
+                            places = result.value,
+                            placesBusy = false,
+                            placesCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -2998,7 +3016,9 @@ class ReferenceViewModel(
     }
 
     fun clearPlaces() {
-        mutate { it.copy(places = emptyList(), placesBusy = false, placesProblem = null) }
+        mutate {
+            it.copy(places = emptyList(), placesBusy = false, placesProblem = null, placesCachedAt = null)
+        }
     }
 
     /**
@@ -4171,10 +4191,24 @@ class ReferenceViewModel(
         mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listChapters(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.CHAPTER,
+                resourceId = de.sidebyside.next.cache.ChapterListResourceId,
+                load = { api.listChapters(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(ChapterDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(ChapterDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(chapters = page.items, chaptersBusy = false) }
+                    mutate {
+                        it.copy(
+                            chapters = result.value,
+                            chaptersBusy = false,
+                            chaptersCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -4278,7 +4312,9 @@ class ReferenceViewModel(
     }
 
     fun clearChapters() {
-        mutate { it.copy(chapters = emptyList(), chaptersBusy = false, chaptersProblem = null) }
+        mutate {
+            it.copy(chapters = emptyList(), chaptersBusy = false, chaptersProblem = null, chaptersCachedAt = null)
+        }
     }
 
     /**

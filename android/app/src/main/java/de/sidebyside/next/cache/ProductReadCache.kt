@@ -18,6 +18,8 @@ enum class ProductCacheKind(val segment: String) {
     STORY("story"),
     COLLECTION("collection"),
     PLANNING("planning"),
+    PLACE("place"),
+    CHAPTER("chapter"),
 }
 
 /**
@@ -36,6 +38,10 @@ val CollectionListResourceId: UUID = UUID(0L, 0L)
  * one screen, one busy flag, one problem, so there is one cache entry too.
  */
 val PlanningResourceId: UUID = UUID(0L, 0L)
+
+/** Places and Chapters have no filters either — one list each per Account+Space. */
+val PlaceListResourceId: UUID = UUID(0L, 0L)
+val ChapterListResourceId: UUID = UUID(0L, 0L)
 
 /**
  * The current-user Private Area lists this cache covers. `OWNER_ONLY`

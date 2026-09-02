@@ -53,6 +53,8 @@ fun ChaptersScreen(
     onEdit: (chapter: ChapterDetail, title: String, description: String, startOn: String, endOn: String) -> Unit,
     onDelete: (ChapterDetail) -> Unit,
     modifier: Modifier = Modifier,
+    /** Non-null only while [chapters] is a stale M2-D18 cache fallback. */
+    cachedAt: java.time.Instant? = null,
 ) {
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
     var deleting by rememberSaveable { mutableStateOf<String?>(null) }
@@ -65,6 +67,8 @@ fun ChaptersScreen(
         item {
             TextButton(onClick = onBack) { Text(stringResource(R.string.memory_back)) }
         }
+
+        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2)) {
