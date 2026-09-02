@@ -182,6 +182,12 @@
   }
 }
 
+@media (max-width: 839px) {
+  .product-shell .product-main {
+    padding-bottom: calc(10.5rem + env(safe-area-inset-bottom));
+  }
+}
+
 @media (max-width: 359px) {
   .mobile-quick-create .quick-create-tile-grid {
     grid-template-columns: minmax(0, 1fr);
