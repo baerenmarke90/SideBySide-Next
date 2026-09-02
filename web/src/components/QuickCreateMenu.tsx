@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   HEART_MOMENT_CREATE_ROUTE,
   MEMORY_CREATE_ROUTE,
@@ -78,6 +78,7 @@ const PLANNING_TARGETS: readonly QuickCreateTarget[] = [
 
 export function QuickCreateMenu() {
   const { t } = useTranslation();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -102,6 +103,21 @@ export function QuickCreateMenu() {
       document.removeEventListener('keydown', onEscape);
     };
   }, [open]);
+
+  useEffect(() => {
+    const targetId = location.hash.replace(/^#/, '');
+    if (!targetId) return;
+
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    let parent = target.parentElement;
+    while (parent) {
+      if (parent instanceof HTMLDetailsElement) parent.open = true;
+      parent = parent.parentElement;
+    }
+    target.scrollIntoView({ block: 'center' });
+  }, [location.hash, location.pathname]);
 
   function focusMenuItem(index: number): void {
     const items =
