@@ -6041,6 +6041,228 @@
         "title": "ServerAdminSettings",
         "type": "object"
       },
+      "ServerAdminSpaceDetail": {
+        "properties": {
+          "activeMembershipCount": {
+            "title": "Activemembershipcount",
+            "type": "integer"
+          },
+          "anomalyCodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Anomalycodes",
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "firstMembershipAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstmembershipat"
+          },
+          "historicalMembershipCount": {
+            "title": "Historicalmembershipcount",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lastMembershipChangeAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastmembershipchangeat"
+          },
+          "latestMembershipEndedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latestmembershipendedat"
+          },
+          "leftMembershipCount": {
+            "title": "Leftmembershipcount",
+            "type": "integer"
+          },
+          "lifecycleStatus": {
+            "enum": [
+              "active",
+              "inactive",
+              "empty"
+            ],
+            "title": "Lifecyclestatus",
+            "type": "string"
+          },
+          "membershipCount": {
+            "title": "Membershipcount",
+            "type": "integer"
+          },
+          "removedMembershipCount": {
+            "title": "Removedmembershipcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "lifecycleStatus",
+          "membershipCount",
+          "activeMembershipCount",
+          "historicalMembershipCount",
+          "leftMembershipCount",
+          "removedMembershipCount",
+          "firstMembershipAt",
+          "lastMembershipChangeAt",
+          "anomalyCodes",
+          "latestMembershipEndedAt"
+        ],
+        "title": "ServerAdminSpaceDetail",
+        "type": "object"
+      },
+      "ServerAdminSpaceList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminSpaceSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ServerAdminSpaceList",
+        "type": "object"
+      },
+      "ServerAdminSpaceSummary": {
+        "properties": {
+          "activeMembershipCount": {
+            "title": "Activemembershipcount",
+            "type": "integer"
+          },
+          "anomalyCodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Anomalycodes",
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "firstMembershipAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstmembershipat"
+          },
+          "historicalMembershipCount": {
+            "title": "Historicalmembershipcount",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lastMembershipChangeAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastmembershipchangeat"
+          },
+          "leftMembershipCount": {
+            "title": "Leftmembershipcount",
+            "type": "integer"
+          },
+          "lifecycleStatus": {
+            "enum": [
+              "active",
+              "inactive",
+              "empty"
+            ],
+            "title": "Lifecyclestatus",
+            "type": "string"
+          },
+          "membershipCount": {
+            "title": "Membershipcount",
+            "type": "integer"
+          },
+          "removedMembershipCount": {
+            "title": "Removedmembershipcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "createdAt",
+          "lifecycleStatus",
+          "membershipCount",
+          "activeMembershipCount",
+          "historicalMembershipCount",
+          "leftMembershipCount",
+          "removedMembershipCount",
+          "firstMembershipAt",
+          "lastMembershipChangeAt",
+          "anomalyCodes"
+        ],
+        "title": "ServerAdminSpaceSummary",
+        "type": "object"
+      },
       "SessionView": {
         "properties": {
           "account": {
@@ -9019,6 +9241,181 @@
           }
         },
         "summary": "Update Registration Setting",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/spaces": {
+      "get": {
+        "description": "Return lifecycle metadata for Spaces without relationship content.",
+        "operationId": "list_server_admin_spaces_api_v1_server_admin_spaces_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "active",
+                "inactive",
+                "empty",
+                "anomaly"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSpaceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "List Server Admin Spaces",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/spaces/{space_id}": {
+      "get": {
+        "description": "Return one Space's privacy-safe lifecycle projection.",
+        "operationId": "get_server_admin_space_api_v1_server_admin_spaces__space_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Space Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSpaceDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Server Admin Space",
         "tags": [
           "server-admin"
         ]

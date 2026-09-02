@@ -83,9 +83,23 @@ import {
     ServerAdminSettingsFromJSON,
     ServerAdminSettingsToJSON,
 } from '../models/ServerAdminSettings';
+import {
+    type ServerAdminSpaceDetail,
+    ServerAdminSpaceDetailFromJSON,
+    ServerAdminSpaceDetailToJSON,
+} from '../models/ServerAdminSpaceDetail';
+import {
+    type ServerAdminSpaceList,
+    ServerAdminSpaceListFromJSON,
+    ServerAdminSpaceListToJSON,
+} from '../models/ServerAdminSpaceList';
 
 export interface GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequest {
     accountId: string;
+}
+
+export interface GetServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequest {
+    spaceId: string;
 }
 
 export interface IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest {
@@ -96,6 +110,13 @@ export interface ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest {
     query?: string | null;
     status?: ListServerAdminAccountsApiV1ServerAdminAccountsGetStatusEnum;
     verification?: ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum;
+    limit?: number;
+    offset?: number;
+}
+
+export interface ListServerAdminSpacesApiV1ServerAdminSpacesGetRequest {
+    query?: string | null;
+    status?: ListServerAdminSpacesApiV1ServerAdminSpacesGetStatusEnum;
     limit?: number;
     offset?: number;
 }
@@ -328,6 +349,53 @@ export class ServerAdminApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet without sending the request
+     */
+    async getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequestOpts(requestParameters: GetServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/spaces/{space_id}`;
+        urlPath = urlPath.replace('{space_id}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return one Space\'s privacy-safe lifecycle projection.
+     * Get Server Admin Space
+     */
+    async getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRaw(requestParameters: GetServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSpaceDetail>> {
+        const requestOptions = await this.getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSpaceDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Return one Space\'s privacy-safe lifecycle projection.
+     * Get Server Admin Space
+     */
+    async getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet(requestParameters: GetServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSpaceDetail> {
+        const response = await this.getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost without sending the request
      */
     async issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequestOpts(requestParameters: IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest): Promise<runtime.RequestOpts> {
@@ -428,6 +496,61 @@ export class ServerAdminApi extends runtime.BaseAPI {
      */
     async listServerAdminAccountsApiV1ServerAdminAccountsGet(requestParameters: ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminAccountList> {
         const response = await this.listServerAdminAccountsApiV1ServerAdminAccountsGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listServerAdminSpacesApiV1ServerAdminSpacesGet without sending the request
+     */
+    async listServerAdminSpacesApiV1ServerAdminSpacesGetRequestOpts(requestParameters: ListServerAdminSpacesApiV1ServerAdminSpacesGetRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['query'] != null) {
+            queryParameters['query'] = requestParameters['query'];
+        }
+
+        if (requestParameters['status'] != null) {
+            queryParameters['status'] = requestParameters['status'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/spaces`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return lifecycle metadata for Spaces without relationship content.
+     * List Server Admin Spaces
+     */
+    async listServerAdminSpacesApiV1ServerAdminSpacesGetRaw(requestParameters: ListServerAdminSpacesApiV1ServerAdminSpacesGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSpaceList>> {
+        const requestOptions = await this.listServerAdminSpacesApiV1ServerAdminSpacesGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSpaceListFromJSON(jsonValue));
+    }
+
+    /**
+     * Return lifecycle metadata for Spaces without relationship content.
+     * List Server Admin Spaces
+     */
+    async listServerAdminSpacesApiV1ServerAdminSpacesGet(requestParameters: ListServerAdminSpacesApiV1ServerAdminSpacesGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSpaceList> {
+        const response = await this.listServerAdminSpacesApiV1ServerAdminSpacesGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -753,3 +876,14 @@ export const ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum 
     unverified: 'unverified'
 } as const;
 export type ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum = typeof ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum[keyof typeof ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum];
+/**
+ * @export
+ */
+export const ListServerAdminSpacesApiV1ServerAdminSpacesGetStatusEnum = {
+    all: 'all',
+    active: 'active',
+    inactive: 'inactive',
+    empty: 'empty',
+    anomaly: 'anomaly'
+} as const;
+export type ListServerAdminSpacesApiV1ServerAdminSpacesGetStatusEnum = typeof ListServerAdminSpacesApiV1ServerAdminSpacesGetStatusEnum[keyof typeof ListServerAdminSpacesApiV1ServerAdminSpacesGetStatusEnum];
