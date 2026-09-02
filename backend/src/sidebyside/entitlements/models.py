@@ -94,9 +94,7 @@ class EntitlementGrant(IdMixin, TimestampMixin, Base):
         String(32), nullable=False, default=EntitlementTier.FREE.value
     )
     effective_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    effective_until: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    effective_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     capabilities: Mapped[list[str] | None] = mapped_column(postgresql.JSONB, nullable=True)
     metadata_: Mapped[dict[str, Any]] = mapped_column(
         "metadata",

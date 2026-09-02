@@ -72,6 +72,8 @@ export interface SpaceEntitlementView {
     tier: EntitlementTier;
 }
 
+
+
 /**
  * Check if a given object implements the SpaceEntitlementView interface.
  */
@@ -122,3 +124,5 @@ export function SpaceEntitlementViewToJSONTyped(value?: SpaceEntitlementView | n
         'tier': EntitlementTierToJSON(value['tier']),
     };
 }
+
+
