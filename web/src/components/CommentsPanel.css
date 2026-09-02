@@ -36,8 +36,9 @@
   font-size: 0.86rem;
 }
 
-.comment-delete {
-  justify-self: start;
+.comment-actions {
+  display: flex;
+  gap: var(--space-3);
 }
 
 .comment-form {
@@ -47,4 +48,14 @@
 
 .comment-form button {
   justify-self: start;
+}
+
+.comment-edit-form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: var(--space-3);
 }
