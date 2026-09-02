@@ -7,12 +7,10 @@ import {
 } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
-import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
 import type { SearchKind } from '../api/generated/models/SearchKind';
 import type { SearchResult } from '../api/generated/models/SearchResult';
 import {
-  dashboardItemPath,
   engagementTargetPath,
   opaqueNextCursor,
   searchResultPath,
@@ -20,7 +18,6 @@ import {
 } from '../client/m4Product';
 import { normalizeClientError } from '../client/problemDetails';
 import { resolvedLocale, useTranslation } from '../i18n';
-import { postSnackbar } from '../client/snackbar';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -70,17 +67,22 @@ function SearchResultCard({ item }: { item: SearchResult }) {
   const { t } = useTranslation();
   const path = searchResultPath(item.type, item.id);
   const date = formatDate(item.occurredOn);
-  const isMemoryOrStory = item.type === 'MEMORY' || item.type === 'HEART_MOMENT' || item.type === 'MILESTONE';
 
   const inner = (
-    <div className={`search-result-card search-result-${item.type.toLowerCase()} sbs-motion-lift`}>
+    <div
+      className={`search-result-card search-result-${item.type.toLowerCase()} sbs-motion-lift`}
+    >
       <div className="search-result-content">
         <span className="search-result-kind">
           {t(`m5s5.kind.${item.type}`)}
           {item.scope !== 'SHARED' && ` · ${t(`m5s5.scope.${item.scope}`)}`}
         </span>
-        <h3 className="search-result-title">{item.title || t('m5s5.search.resultFallback')}</h3>
-        {item.excerpt && <p className="search-result-excerpt">{item.excerpt}</p>}
+        <h3 className="search-result-title">
+          {item.title || t('m5s5.search.resultFallback')}
+        </h3>
+        {item.excerpt && (
+          <p className="search-result-excerpt">{item.excerpt}</p>
+        )}
         {date && <span className="search-result-date">{date}</span>}
       </div>
     </div>
@@ -243,10 +245,17 @@ function ActivityCard({ item }: { item: ActivityItem }) {
   const path = engagementTargetPath(item.targetType, item.targetId);
 
   const inner = (
-    <div className={`activity-card sbs-motion-lift activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}>
+    <div
+      className={`activity-card sbs-motion-lift activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
+    >
       <div className="activity-card-content">
-        <h3 className="activity-card-title">{t(`m5s5.activityKind.${item.kind}`)}</h3>
-        <time className="activity-card-date" dateTime={item.occurredAt.toISOString()}>
+        <h3 className="activity-card-title">
+          {t(`m5s5.activityKind.${item.kind}`)}
+        </h3>
+        <time
+          className="activity-card-date"
+          dateTime={item.occurredAt.toISOString()}
+        >
           {formatDateTime(item.occurredAt)}
         </time>
       </div>
@@ -259,7 +268,9 @@ function ActivityCard({ item }: { item: ActivityItem }) {
         <Link className="activity-result-link" to={path}>
           {inner}
         </Link>
-      ) : inner}
+      ) : (
+        inner
+      )}
     </li>
   );
 }
