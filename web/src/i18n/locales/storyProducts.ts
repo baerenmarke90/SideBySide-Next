@@ -6,6 +6,7 @@ const storyProducts = {
     addMilestone: 'Meilenstein',
   },
   storyFilters: {
+    title: 'Filter',
     aria: 'Story filtern und sortieren',
     heading: 'Filter',
     type: 'Inhalt',

@@ -14,6 +14,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useSearchParams,
 } from 'react-router-dom';
 import type { AccountView } from './api/generated/models/AccountView';
 import { AttachmentReadRequestParentTypeEnum } from './api/generated/models/AttachmentReadRequest';
@@ -80,7 +81,6 @@ import { IdentityEntry } from './components/IdentityEntry';
 import { LegacyPathRedirect } from './components/LegacyPathRedirect';
 import {
   ActivityProductPage,
-  DashboardProductPage,
   NotificationsProductPage,
   SearchProductPage,
 } from './components/M4ProductPages';
@@ -101,6 +101,7 @@ import {
 import { SharedPlanningOverviewPage } from './components/SharedPlanningOverviewPage';
 import { StoryProductPage } from './components/StoryProductPage';
 import { ThemeControl } from './components/ThemeControl';
+import { TodayPage } from './components/TodayPage';
 import { UiState } from './components/UiState';
 import { WishProductPage } from './components/WishProductPage';
 import { useTranslation } from './i18n';
@@ -198,6 +199,8 @@ function MemoryCreatePage({
   onSaved: () => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const defaultTitle = searchParams.get('title') ?? '';
   const navigate = useNavigate();
   const apis = useMemo(
     () => createReferenceApis(apiBaseUrl, accessToken),
@@ -269,42 +272,59 @@ function MemoryCreatePage({
         className="create-heading"
       />
 
-      <section className="form-card" aria-labelledby="memory-form-heading">
+      <section
+        className="immersive-create-card sbs-motion-reveal"
+        aria-labelledby="memory-form-heading"
+      >
         <h2 id="memory-form-heading" className="sr-only">
           {t('memory.formAria')}
         </h2>
-        <form onSubmit={submit} className="form-grid memory-form">
-          <div className="field-group">
-            <label htmlFor="title">{t('memory.titleLabel')}</label>
+        <form onSubmit={submit} className="immersive-create-form">
+          <div className="immersive-create-hero">
+            <label htmlFor="title" className="sr-only">
+              {t('memory.titleLabel')}
+            </label>
             <input
               id="title"
               name="title"
               required
               maxLength={200}
               placeholder={t('memory.titlePlaceholder')}
+              defaultValue={defaultTitle}
+              className="immersive-create-title"
             />
           </div>
-          <div className="field-group">
-            <label htmlFor="body">{t('memory.bodyLabel')}</label>
-            <textarea
-              id="body"
-              name="body"
-              rows={5}
-              placeholder={t('memory.bodyPlaceholder')}
+
+          <div className="immersive-create-media">
+            <AttachmentDraftPicker
+              id="memory-create-images"
+              attachments={attachments}
+              multiple
             />
           </div>
-          <div className="field-group">
-            <label htmlFor="happenedOn">{t('memory.dateLabel')}</label>
-            <input id="happenedOn" name="happenedOn" type="date" />
-            <p className="field-help">{t('memory.dateHelp')}</p>
-          </div>
-          <AttachmentDraftPicker
-            id="memory-create-images"
-            attachments={attachments}
-            multiple
-          />
+
+          <details className="immersive-create-details">
+            <summary>{t('memory.addMoreDetails')}</summary>
+            <div className="immersive-create-details-content">
+              <div className="field-group">
+                <label htmlFor="body">{t('memory.bodyLabel')}</label>
+                <textarea
+                  id="body"
+                  name="body"
+                  rows={4}
+                  placeholder={t('memory.bodyPlaceholder')}
+                />
+              </div>
+              <div className="field-group">
+                <label htmlFor="happenedOn">{t('memory.dateLabel')}</label>
+                <input id="happenedOn" name="happenedOn" type="date" />
+                <p className="field-help">{t('memory.dateHelp')}</p>
+              </div>
+            </div>
+          </details>
+
           <div
-            className="sharing-note"
+            className="sharing-note immersive-sharing-note"
             role="note"
             aria-label={t('memory.visibilityAria')}
           >
@@ -388,6 +408,15 @@ function AuthenticatedApp({
     void clearProductReadCache();
     previousSpaceId.current = spaceId;
   }, [queryClient, spaceId]);
+
+  // M5 Vault Theme Context Switch
+  useEffect(() => {
+    const isVault = location.pathname.startsWith('/more/private');
+    document.body.classList.toggle('theme-vault', isVault);
+    return () => {
+      document.body.classList.remove('theme-vault');
+    };
+  }, [location.pathname]);
 
   const loadMemoryImage = useCallback(
     (memoryId: string, attachmentId: string) =>
@@ -515,7 +544,7 @@ function AuthenticatedApp({
           />
           <Route
             path={appRoutePath('today')}
-            element={<DashboardProductPage apis={m4Apis} spaceId={spaceId} />}
+            element={<TodayPage apis={m4Apis} spaceId={spaceId} />}
           />
           <Route
             path={ACTIVITY_ROUTE}

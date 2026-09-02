@@ -429,11 +429,19 @@ jobs:
       # <previous commit>..HEAD and fails on the first push because the first
       # commit has no predecessor. The direct invocation scans the complete
       # history, which is the appropriate scope for a secret scan.
+      #
+      # --log-opts="HEAD" pins that history to the checked-out ref's own
+      # ancestry. Without it, gitleaks' git log defaults to --all, which
+      # walks every ref this fetch-depth: 0 checkout knows about — including
+      # unrelated, unmerged branches that happen to share this remote. A
+      # false-positive-triggering string on one such branch then fails
+      # Secret Scan for every other open PR, with no relation to that PR's
+      # own content.
       - name: gitleaks
         run: |
           docker run --rm -v "$PWD:/repo" -w /repo \
             zricethezav/gitleaks:v8.24.3 \
-            detect --source . --redact --verbose --exit-code 1
+            detect --source . --log-opts="HEAD" --redact --verbose --exit-code 1
 
   provenance:
     name: Provenance

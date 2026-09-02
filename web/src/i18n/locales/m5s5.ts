@@ -1,5 +1,9 @@
 const m5s5 = {
   dashboard: {
+    newSpacePartner: 'Willkommen in eurem gemeinsamen Ort mit {{name}}.',
+    newSpaceEmpty: 'Willkommen in eurem gemeinsamen Ort.',
+    newSpaceIntro: 'Alles ist bereit für eure gemeinsame Geschichte.',
+    newSpaceAction: 'Ersten Moment festhalten',
     // The visible landing area is Übersicht; the stable route ID remains `today`.
     eyebrow: 'Übersicht',
     title: 'Euer gemeinsamer Ort',
@@ -19,6 +23,8 @@ const m5s5 = {
     recentTitle: 'Zuletzt bei euch',
     recentEmpty: 'Noch keine gemeinsamen Einträge vorhanden.',
     itemFallback: 'Gemeinsamer Eintrag',
+    thinkingOfYouButton: '❤️ Ich denke an dich',
+    thinkingOfYouSent: 'Liebesgruß gesendet! ❤️',
   },
   search: {
     eyebrow: 'Suche',
@@ -95,16 +101,16 @@ const m5s5 = {
     ANNIVERSARY: 'Jahrestag',
   },
   activityKind: {
-    MEMORY_CREATED: 'Erinnerung hinzugefügt',
+    MEMORY_CREATED: 'Etwas für eure Geschichte festgehalten',
     MILESTONE_CREATED: 'Meilenstein hinzugefügt',
-    HEART_MOMENT_CREATED: 'Herzensmoment hinzugefügt',
-    WISH_CREATED: 'Wunsch hinzugefügt',
-    PLAN_CREATED: 'Plan hinzugefügt',
-    PLAN_COMPLETED: 'Plan abgeschlossen',
+    HEART_MOMENT_CREATED: 'Ein Herzensmoment wurde geteilt',
+    WISH_CREATED: 'Ein neuer gemeinsamer Wunsch',
+    PLAN_CREATED: 'Neuer Plan geschmiedet',
+    PLAN_COMPLETED: 'Gemeinsam geschafft',
     PLACE_CREATED: 'Ort hinzugefügt',
-    CHAPTER_CREATED: 'Kapitel hinzugefügt',
+    CHAPTER_CREATED: 'Neues Kapitel begonnen',
     COLLECTION_CREATED: 'Liste hinzugefügt',
-    COMMENT_CREATED: 'Kommentar hinzugefügt',
+    COMMENT_CREATED: 'Neuer Kommentar hinterlassen',
   },
   notificationKind: {
     COMMENT_CREATED: 'Neuer Kommentar',

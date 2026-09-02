@@ -329,12 +329,16 @@ export function IdentityEntry({
             invitationToken &&
             registrationAvailability === 'available' ? (
             <>
-              <div>
-                <p className="eyebrow">{t('identity.invitationEyebrow')}</p>
-                <h2 id="identity-entry-heading">
-                  {t('identity.registerTitle')}
+              <div className="login-intro">
+                <p className="eyebrow eyebrow-inverse">
+                  {t('identity.invitationEyebrow')}
+                </p>
+                <h2 id="identity-entry-heading" className="invite-hero-title">
+                  {t('identity.invitationTitle')}
                 </h2>
-                <p className="muted">{t('identity.registerBody')}</p>
+                <p className="muted invite-hero-body">
+                  {t('identity.invitationBody')}
+                </p>
               </div>
               <form
                 onSubmit={submitRegistration}
