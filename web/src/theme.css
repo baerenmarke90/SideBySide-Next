@@ -180,17 +180,35 @@ body {
 
 /* M5: Vault Mode (Private Area) */
 body.theme-vault {
-  --color-background: #0a0e17; /* Very dark slate/ocean */
-  --color-surface: #111827;
-  --color-surface-subtle: #1f2937;
-  --color-surface-raised: #1f2937;
-  --color-header-surface: #0a0e17e8;
-  --color-text: #f3f4f6;
+  color-scheme: dark;
+  --color-background: #0f121a;
+  --color-surface: #171b26;
+  --color-surface-subtle: #1f2533;
+  --color-surface-raised: #232938;
+  --color-surface-overlay: #171b26f2;
+  --color-surface-panel: #171b26;
+  --color-surface-panel-tint: #131722;
+  --color-header-surface: #0f121ae8;
+  --color-header-border: #2b3345;
+  --color-text: #f8f9fa;
+  --color-text-secondary: #cbd2e0;
+  --color-text-muted: #94a0b8;
+  --color-border: #3b445a;
+  --color-border-subtle: #272f40;
+  --color-brand: #ff8585;
+  --color-brand-strong: #323a4e;
+  --color-brand-text: #f8f9fa;
+  --color-brand-surface: #1f2533;
+  --color-brand-glow: rgba(255, 133, 133, 0.2);
+  --color-private: #ff8585;
+  --color-private-surface-soft: #231d24;
+  --color-on-accent: #ffffff;
   --color-page-tint-brand: transparent;
   --color-page-tint-shared: transparent;
+  --color-shadow-card: #00000080;
+  --color-shadow-soft: #00000050;
 
-  /* Additional visual clue: lock background pattern or subtle gradient */
-  background: radial-gradient(circle at center, #111827 0, #0a0e17 100%);
+  background: radial-gradient(circle at center, #171b26 0%, #0f121a 100%);
 }
 
 button,

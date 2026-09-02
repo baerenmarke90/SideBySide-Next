@@ -288,3 +288,44 @@ body.theme-vault .private-area-badge {
     width: 2.75rem;
   }
 }
+
+/* M5: Vault Mode Contrast & Readability */
+body.theme-vault .private-area-nav a {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-subtle);
+}
+
+body.theme-vault .private-area-nav a:hover:not([aria-current="page"]) {
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+body.theme-vault .private-area-nav a[aria-current="page"] {
+  background: var(--color-surface-subtle);
+  color: #ffffff;
+  border-color: var(--color-border);
+}
+
+body.theme-vault .private-area-card,
+body.theme-vault .private-area-item,
+body.theme-vault .private-area-section,
+body.theme-vault .private-area-detail-card,
+body.theme-vault .private-area-editor,
+body.theme-vault .private-area-danger {
+  background: var(--color-surface);
+  border-color: var(--color-border-subtle);
+  color: var(--color-text);
+}
+
+body.theme-vault .private-area-excerpt {
+  color: var(--color-text-secondary);
+}
+
+body.theme-vault .back-link {
+  color: var(--color-text-secondary);
+}
+
+body.theme-vault .back-link:hover {
+  color: var(--color-text);
+}
