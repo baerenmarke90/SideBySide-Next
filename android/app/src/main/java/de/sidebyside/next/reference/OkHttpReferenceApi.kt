@@ -61,6 +61,9 @@ import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.SearchPage
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
+import sidebyside.api.models.TransferExportCreate
+import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferScope
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
@@ -1685,6 +1688,47 @@ class OkHttpReferenceApi(
             accessToken,
         ).delete().build(),
     )
+
+    override suspend fun createTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        scope: TransferScope,
+    ): TransferExportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/exports", accessToken)
+            .post(
+                SideBySideJson.encodeToString(TransferExportCreate.serializer(), TransferExportCreate(scope))
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        TransferExportDetail.serializer(),
+    )
+
+    override suspend fun getTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+    ): TransferExportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/exports/$exportId", accessToken)
+            .get()
+            .build(),
+        TransferExportDetail.serializer(),
+    )
+
+    override suspend fun downloadTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+        sink: java.io.OutputStream,
+    ) = withContext(Dispatchers.IO) {
+        val request = authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/transfer/exports/$exportId/download",
+            accessToken,
+        ).get().build()
+        client.newCall(request).execute().use { response ->
+            assertSuccessful(response)
+            response.body.byteStream().use { it.copyTo(sink) }
+            Unit
+        }
+    }
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {
         runCatching { client.newCall(request).execute().use(::assertSuccessful) }

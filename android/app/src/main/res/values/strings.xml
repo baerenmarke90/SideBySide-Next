@@ -444,6 +444,23 @@
     <string name="private_area_card_title">Privater Bereich</string>
     <string name="private_area_card_intro">Notizen und Ideen, die nur dir gehören – dein Partner oder deine Partnerin sieht sie nie.</string>
     <string name="private_area_open">Privaten Bereich öffnen</string>
+
+    <string name="data_export_card_title">Eure Daten</string>
+    <string name="data_export_card_intro">Ladet eure gemeinsame Geschichte als Datei herunter – zum Aufbewahren oder Mitnehmen.</string>
+    <string name="data_export_open">Export öffnen</string>
+    <string name="data_export_title">Eure Daten exportieren</string>
+    <string name="data_export_intro">Erstellt eine Archivdatei mit euren Erinnerungen, Meilensteinen und mehr. Die Zusammenstellung läuft im Hintergrund und kann einen Moment dauern.</string>
+    <string name="data_export_scope_shared">Gemeinsame Inhalte</string>
+    <string name="data_export_scope_personal">Nur meine privaten Inhalte</string>
+    <string name="data_export_start">Export starten</string>
+    <string name="data_export_refresh">Status aktualisieren</string>
+    <string name="data_export_download">Herunterladen</string>
+    <string name="data_export_downloaded">Heruntergeladen.</string>
+    <string name="data_export_status_queued">In der Warteschlange …</string>
+    <string name="data_export_status_running">Wird zusammengestellt …</string>
+    <string name="data_export_status_ready">Bereit zum Herunterladen</string>
+    <string name="data_export_status_failed">Der Export ist fehlgeschlagen. Versuche es erneut.</string>
+    <string name="data_export_status_expired">Dieser Export ist abgelaufen. Starte einen neuen.</string>
     <string name="private_area_title">Privater Bereich</string>
     <string name="private_area_intro">Alles hier ist ausschließlich für dich sichtbar, auch in einer geteilten Beziehung.</string>
 
