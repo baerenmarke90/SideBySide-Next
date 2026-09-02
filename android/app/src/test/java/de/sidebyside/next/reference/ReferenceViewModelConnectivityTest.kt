@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -100,6 +101,79 @@ class ReferenceViewModelConnectivityTest {
 
         assertFalse(model.uiState.value.offline)
         assertNotNull(model.uiState.value.lastSyncedAt)
+
+        model.viewModelScope.cancel()
+        advanceUntilIdle()
+    }
+
+    /**
+     * [ReferenceUiState.reconnectEpoch] is what the currently visible
+     * screen's own `LaunchedEffect` keys off to re-run its normal load call
+     * on reconnect — so it must bump exactly once per genuine offline-to-
+     * online transition, never on a success that was already online.
+     */
+    @Test
+    fun goingOfflineThenBackOnlineBumpsTheReconnectEpochOnce() = runTest(dispatcher) {
+        val tracker = ConnectivityTracker()
+        val model = ReferenceViewModel(
+            config = ReferenceConfig(BASE_URL),
+            api = object : FakeReferenceContract() {},
+            connectivityTracker = tracker,
+        )
+        val startingEpoch = model.uiState.value.reconnectEpoch
+
+        tracker.recordFailure(IOException("no connection"))
+        advanceUntilIdle()
+        assertEquals(startingEpoch, model.uiState.value.reconnectEpoch)
+
+        tracker.recordSuccess()
+        advanceUntilIdle()
+
+        assertEquals(startingEpoch + 1, model.uiState.value.reconnectEpoch)
+
+        model.viewModelScope.cancel()
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun aSuccessWithoutHavingBeenOfflineNeverBumpsTheReconnectEpoch() = runTest(dispatcher) {
+        val tracker = ConnectivityTracker()
+        val model = ReferenceViewModel(
+            config = ReferenceConfig(BASE_URL),
+            api = object : FakeReferenceContract() {},
+            connectivityTracker = tracker,
+        )
+        val startingEpoch = model.uiState.value.reconnectEpoch
+
+        tracker.recordSuccess()
+        advanceUntilIdle()
+
+        assertEquals(startingEpoch, model.uiState.value.reconnectEpoch)
+
+        model.viewModelScope.cancel()
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun eachSeparateOutageBumpsTheReconnectEpochAgain() = runTest(dispatcher) {
+        val tracker = ConnectivityTracker()
+        val model = ReferenceViewModel(
+            config = ReferenceConfig(BASE_URL),
+            api = object : FakeReferenceContract() {},
+            connectivityTracker = tracker,
+        )
+        val startingEpoch = model.uiState.value.reconnectEpoch
+
+        tracker.recordFailure(IOException("no connection"))
+        advanceUntilIdle()
+        tracker.recordSuccess()
+        advanceUntilIdle()
+        tracker.recordFailure(IOException("no connection again"))
+        advanceUntilIdle()
+        tracker.recordSuccess()
+        advanceUntilIdle()
+
+        assertEquals(startingEpoch + 2, model.uiState.value.reconnectEpoch)
 
         model.viewModelScope.cancel()
         advanceUntilIdle()
