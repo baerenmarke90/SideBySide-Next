@@ -6,6 +6,15 @@ const serverAdmin = {
   backToApp: 'Zur Übersicht',
   logout: 'Abmelden',
   refresh: 'Aktualisieren',
+  navigation: {
+    aria: 'Bereiche der Serververwaltung',
+    overview: 'Übersicht',
+    accounts: 'Benutzer',
+    jobs: 'Jobs & Betrieb',
+    security: 'Sicherheit & Anmeldung',
+    settings: 'Einstellungen',
+    activity: 'Aktivitätsprotokoll',
+  },
   access: {
     loading: 'Berechtigung wird geprüft …',
     deniedTitle: 'Kein Zugriff auf die Serververwaltung',
