@@ -80,6 +80,13 @@ fun MoreScreen(
      */
     onOpenDataExport: () -> Unit,
     /**
+     * Opens the M2-D17/S6 Transfer Bundle data import.
+     *
+     * Deliberately without a default, for the same reason as
+     * [onOpenHeartMoments].
+     */
+    onOpenDataImport: () -> Unit,
+    /**
      * Opens the account's notifications.
      *
      * Deliberately without a default, for the same reason as
@@ -387,6 +394,38 @@ fun MoreScreen(
                         modifier = Modifier.heightIn(min = MinimumTouchTarget),
                     ) {
                         Text(stringResource(R.string.data_export_open))
+                    }
+                }
+            }
+        }
+
+        run {
+            val open = onOpenDataImport
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.data_import_card_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.data_import_card_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.data_import_open))
                     }
                 }
             }

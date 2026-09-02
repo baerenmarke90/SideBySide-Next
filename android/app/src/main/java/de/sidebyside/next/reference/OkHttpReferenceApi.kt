@@ -12,11 +12,15 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import okio.BufferedSink
+import okio.source
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
@@ -63,6 +67,7 @@ import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.TransferExportCreate
 import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferImportDetail
 import sidebyside.api.models.TransferScope
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
@@ -162,6 +167,7 @@ class OkHttpReferenceApi(
 ) : ReferenceContract {
     private val baseUrl = apiBaseUrl.trimEnd('/')
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+    private val zipMediaType = "application/zip".toMediaType()
 
     init {
         require(baseUrl.startsWith("https://") || baseUrl.startsWith("http://")) {
@@ -1729,6 +1735,56 @@ class OkHttpReferenceApi(
             Unit
         }
     }
+
+    override suspend fun createTransferImport(
+        spaceId: UUID,
+        accessToken: String,
+        archiveSize: Long,
+        archive: java.io.InputStream,
+    ): TransferImportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/imports", accessToken)
+            .post(streamingRequestBody(zipMediaType, archiveSize, archive))
+            .build(),
+        TransferImportDetail.serializer(),
+    )
+
+    override suspend fun getTransferImport(
+        spaceId: UUID,
+        accessToken: String,
+        importId: UUID,
+    ): TransferImportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/imports/$importId", accessToken)
+            .get()
+            .build(),
+        TransferImportDetail.serializer(),
+    )
+
+    override suspend fun applyTransferImport(
+        spaceId: UUID,
+        accessToken: String,
+        importId: UUID,
+    ): TransferImportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/imports/$importId/apply", accessToken)
+            .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType))
+            .build(),
+        TransferImportDetail.serializer(),
+    )
+
+    /**
+     * A request body that streams [source] straight to the socket instead of
+     * buffering it: import archives may be up to the server's 512MB limit,
+     * too large to hold as one in-memory allocation on a phone.
+     */
+    private fun streamingRequestBody(mediaType: MediaType, size: Long, source: java.io.InputStream): RequestBody =
+        object : RequestBody() {
+            override fun contentType(): MediaType = mediaType
+
+            override fun contentLength(): Long = size
+
+            override fun writeTo(sink: BufferedSink) {
+                source.use { sink.writeAll(it.source()) }
+            }
+        }
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {
         runCatching { client.newCall(request).execute().use(::assertSuccessful) }
