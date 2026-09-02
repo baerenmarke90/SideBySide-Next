@@ -167,12 +167,17 @@ export function StoryProductPage({
         description={t('story.intro')}
       />
 
-            <div className="story-filter-container sbs-motion-reveal">
+      <div className="story-filter-container sbs-motion-reveal">
         <details className="story-filter-details">
           <summary className="story-filter-summary">
             {t('storyFilters.title')}
-            {(filters.kind || filters.year || filters.order !== StoryOrder.DESC) && (
-              <span className="story-filter-active-dot" aria-hidden="true"></span>
+            {(filters.kind ||
+              filters.year ||
+              filters.order !== StoryOrder.DESC) && (
+              <span
+                className="story-filter-active-dot"
+                aria-hidden="true"
+              ></span>
             )}
           </summary>
           <div className="story-filter-dropdown">
@@ -192,9 +197,15 @@ export function StoryProductPage({
                   defaultValue={filters.kind ?? ''}
                 >
                   <option value="">{t('storyFilters.allTypes')}</option>
-                  <option value={StoryKind.MEMORY}>{t('story.kind.memory')}</option>
-                  <option value={StoryKind.HEART_MOMENT}>{t('story.kind.heartMoment')}</option>
-                  <option value={StoryKind.MILESTONE}>{t('story.kind.milestone')}</option>
+                  <option value={StoryKind.MEMORY}>
+                    {t('story.kind.memory')}
+                  </option>
+                  <option value={StoryKind.HEART_MOMENT}>
+                    {t('story.kind.heartMoment')}
+                  </option>
+                  <option value={StoryKind.MILESTONE}>
+                    {t('story.kind.milestone')}
+                  </option>
                 </select>
               </div>
               <div className="field-group">
@@ -209,7 +220,11 @@ export function StoryProductPage({
                   <option value="">{t('storyFilters.anyYear')}</option>
                   {[...Array(10)].map((_, i) => {
                     const year = new Date().getFullYear() - i;
-                    return <option key={year} value={year}>{year}</option>;
+                    return (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    );
                   })}
                 </select>
               </div>
@@ -222,15 +237,21 @@ export function StoryProductPage({
                   name="order"
                   defaultValue={filters.order}
                 >
-                  <option value={StoryOrder.DESC}>{t('storyFilters.newest')}</option>
-                  <option value={StoryOrder.ASC}>{t('storyFilters.oldest')}</option>
+                  <option value={StoryOrder.DESC}>
+                    {t('storyFilters.newest')}
+                  </option>
+                  <option value={StoryOrder.ASC}>
+                    {t('storyFilters.oldest')}
+                  </option>
                 </select>
               </div>
               <div className="story-filter-actions">
                 <button type="submit" className="primary compact-action">
                   {t('storyFilters.apply')}
                 </button>
-                {(filters.kind || filters.year || filters.order !== StoryOrder.DESC) && (
+                {(filters.kind ||
+                  filters.year ||
+                  filters.order !== StoryOrder.DESC) && (
                   <button
                     type="button"
                     className="tertiary compact-action"
@@ -243,18 +264,27 @@ export function StoryProductPage({
             </form>
           </div>
         </details>
-        
-        {(filters.kind || filters.year || filters.order !== StoryOrder.DESC) && (
+
+        {(filters.kind ||
+          filters.year ||
+          filters.order !== StoryOrder.DESC) && (
           <div className="story-active-chips">
-            {filters.kind && <span className="active-chip">{t(`story.kind.${filters.kind}`)}</span>}
-            {filters.year && <span className="active-chip">{filters.year}</span>}
-            {filters.order === StoryOrder.ASC && <span className="active-chip">{t('storyFilters.oldest')}</span>}
+            {filters.kind && (
+              <span className="active-chip">
+                {t(`story.kind.${filters.kind}`)}
+              </span>
+            )}
+            {filters.year && (
+              <span className="active-chip">{filters.year}</span>
+            )}
+            {filters.order === StoryOrder.ASC && (
+              <span className="active-chip">{t('storyFilters.oldest')}</span>
+            )}
           </div>
         )}
       </div>
 
       <div className="layout-single-column">
-
         <div className="layout-main">
           <section className="story-surface" aria-labelledby="timeline-heading">
             <div className="section-head">
