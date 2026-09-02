@@ -358,6 +358,38 @@
   text-align: center;
 }
 
+/* docs/COMPONENT-CONTRACTS.md §9.2 Snackbar. */
+.snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-6);
+  transform: translateX(-50%);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(90vw, 480px);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  box-shadow: var(--shadow-soft);
+}
+
+.snackbar-message {
+  font-size: 0.9rem;
+}
+
+.snackbar-dismiss {
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
 .page-heading-action {
   flex: 0 0 auto;
 }

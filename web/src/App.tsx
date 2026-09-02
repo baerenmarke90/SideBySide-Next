@@ -62,6 +62,7 @@ import {
   WISH_DETAIL_ROUTE_PATTERN,
 } from './client/routes';
 import { createSharedPlanningApis } from './client/sharedPlanning';
+import { postSnackbar } from './client/snackbar';
 import {
   loadAuthorizedMemberships,
   loadAuthorizedSpaces,
@@ -739,6 +740,7 @@ export function App() {
     queryClient.clear();
     void clearProductReadCache();
     setSpaceId(selectedSpaceId);
+    postSnackbar('snackbar.spaceSwitched');
   }
 
   if (!tokens || !account) {

@@ -23,6 +23,7 @@ import {
   memoryDetailPath,
   memoryEditPath,
 } from '../client/routes';
+import { postSnackbar } from '../client/snackbar';
 import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { AttachmentDraftPicker } from './AttachmentDraftPicker';
@@ -195,6 +196,7 @@ export function MemoryProductPage({
       queryClient.removeQueries({ queryKey: memoryKey });
       await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
       navigate(appRoutePath('story'), { replace: true });
+      postSnackbar('snackbar.memoryDeleted');
     },
   });
 
