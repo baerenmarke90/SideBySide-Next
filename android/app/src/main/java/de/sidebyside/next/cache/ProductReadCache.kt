@@ -16,6 +16,7 @@ enum class ProductCacheKind(val segment: String) {
     MILESTONE("milestone"),
     HEART_MOMENT("heartMoment"),
     STORY("story"),
+    PLANNING("planning"),
 }
 
 /**
@@ -24,6 +25,13 @@ enum class ProductCacheKind(val segment: String) {
  * Web's per-filter synthetic `resourceId`, collapsed to a single constant.
  */
 val StoryTimelineResourceId: UUID = UUID(0L, 0L)
+
+/**
+ * Wishes and Plans are fetched and cached together as one snapshot, matching
+ * `loadPlanning()`'s existing combined fetch/combined error state — there is
+ * one screen, one busy flag, one problem, so there is one cache entry too.
+ */
+val PlanningResourceId: UUID = UUID(0L, 0L)
 
 /**
  * The current-user Private Area lists this cache covers. `OWNER_ONLY`

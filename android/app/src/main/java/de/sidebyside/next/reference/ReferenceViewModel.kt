@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.ActivityItem
@@ -235,6 +236,8 @@ data class ReferenceUiState(
     val plans: List<PlanDetail> = emptyList(),
     val planningBusy: Boolean = false,
     val planningProblem: UiProblem? = null,
+    /** Non-null only while [openWishes]/[plans] are a stale M2-D18 cache fallback, not a fresh read. */
+    val planningCachedAt: java.time.Instant? = null,
     val relatedPersons: List<RelatedPersonView> = emptyList(),
     val relatedPersonsBusy: Boolean = false,
     val relatedPersonsProblem: UiProblem? = null,
@@ -313,6 +316,17 @@ private data class ImageDraft(
     val attemptId: Long,
     val uploadState: DraftUploadState,
     val preparedAttachment: PreparedAttachment? = null,
+)
+
+/**
+ * What `loadPlanning()` fetches and caches as one unit: [Wish][WishDetail]
+ * carries every status, not just `OPEN`, so the `OPEN` filter [ReferenceUiState.openWishes]
+ * applies can run identically against a fresh read and a cache fallback.
+ */
+@Serializable
+private data class PlanningSnapshot(
+    val wishes: List<WishDetail>,
+    val plans: List<PlanDetail>,
 )
 
 class ReferenceViewModel(
@@ -2234,19 +2248,31 @@ class ReferenceViewModel(
         mutate { it.copy(planningBusy = true, planningProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching {
-                val token = currentSession.tokens.accessToken
-                api.listWishes(spaceId, token).items to api.listPlans(spaceId, token).items
-            }
-                .onSuccess { (wishes, plans) ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.PLANNING,
+                resourceId = de.sidebyside.next.cache.PlanningResourceId,
+                load = {
+                    val token = currentSession.tokens.accessToken
+                    PlanningSnapshot(
+                        wishes = api.listWishes(spaceId, token).items,
+                        plans = api.listPlans(spaceId, token).items,
+                    )
+                },
+                serialize = { SideBySideJson.encodeToString(PlanningSnapshot.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(PlanningSnapshot.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
                     mutate {
                         it.copy(
-                            openWishes = wishes.filter { wish ->
+                            openWishes = result.value.wishes.filter { wish ->
                                 wish.status == WishStatus.OPEN
                             },
-                            plans = plans,
+                            plans = result.value.plans,
                             planningBusy = false,
+                            planningCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
                         )
                     }
                 }
@@ -2333,6 +2359,7 @@ class ReferenceViewModel(
                 plans = emptyList(),
                 planningBusy = false,
                 planningProblem = null,
+                planningCachedAt = null,
             )
         }
     }
