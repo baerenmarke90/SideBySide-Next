@@ -10,6 +10,7 @@ import { createServerAdminApis } from '../client/serverAdmin';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { ServerAdminAccountsPanel } from './ServerAdminAccountsPanel';
+import { ServerAdminSpacesPanel } from './ServerAdminSpacesPanel';
 import { ThemeControl } from './ThemeControl';
 import { UiState } from './UiState';
 import './ServerAdminPage.css';
@@ -17,6 +18,7 @@ import './ServerAdminPage.css';
 const SERVER_ADMIN_SECTIONS = [
   'overview',
   'accounts',
+  'spaces',
   'jobs',
   'security',
   'settings',
@@ -48,6 +50,7 @@ export function ServerAdminSectionNavigation({
   const sections: Array<{ id: ServerAdminSection; label: string }> = [
     { id: 'overview', label: t('serverAdmin.navigation.overview') },
     { id: 'accounts', label: t('serverAdmin.navigation.accounts') },
+    { id: 'spaces', label: t('serverAdmin.navigation.spaces') },
     { id: 'jobs', label: t('serverAdmin.navigation.jobs') },
     { id: 'security', label: t('serverAdmin.navigation.security') },
     { id: 'settings', label: t('serverAdmin.navigation.settings') },
@@ -728,6 +731,15 @@ export function ServerAdminPage({
       void queryClient.invalidateQueries({
         queryKey: ['server-admin', 'action-activity'],
       });
+      return;
+    }
+    if (section === 'spaces') {
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'spaces'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'space'],
+      });
     }
   }
 
@@ -873,6 +885,10 @@ export function ServerAdminPage({
                   })
                 }
               />
+            ) : null}
+
+            {section === 'spaces' ? (
+              <ServerAdminSpacesPanel api={apis.serverAdmin} />
             ) : null}
 
             {section === 'activity' ? (
