@@ -44,6 +44,7 @@ import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.SearchPage
 import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferImportDetail
 import sidebyside.api.models.TransferScope
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
@@ -864,6 +865,32 @@ interface ReferenceContract {
         exportId: UUID,
         sink: java.io.OutputStream,
     )
+
+    /**
+     * Uploads [archive] to stage a Transfer Bundle import. Validation runs as
+     * a background job; the returned descriptor's `status` starts `QUEUED` —
+     * [getTransferImport] is how a caller learns whether it reached
+     * `READY_TO_APPLY` or `FAILED`.
+     *
+     * [archive] is streamed rather than buffered, the same reasoning as
+     * [downloadTransferExport] but in the other direction: the server's
+     * 512MB limit applies here too.
+     */
+    suspend fun createTransferImport(
+        spaceId: UUID,
+        accessToken: String,
+        archiveSize: Long,
+        archive: java.io.InputStream,
+    ): TransferImportDetail
+
+    suspend fun getTransferImport(spaceId: UUID, accessToken: String, importId: UUID): TransferImportDetail
+
+    /**
+     * Applies a validated import. The M2-D18 contract requires the client to
+     * show the validated summary first — apply is explicit, never automatic
+     * once validation finishes.
+     */
+    suspend fun applyTransferImport(spaceId: UUID, accessToken: String, importId: UUID): TransferImportDetail
 }
 
 private fun unsupportedProfileOperation(): Nothing =

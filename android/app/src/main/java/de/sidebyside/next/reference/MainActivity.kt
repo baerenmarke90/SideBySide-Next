@@ -955,6 +955,36 @@ private fun DemoShell(
                 )
             }
 
+            composable(DATA_IMPORT_ROUTE) {
+                val importContext = LocalContext.current
+                val importScope = rememberCoroutineScope()
+                val importPickerLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.OpenDocument(),
+                ) { uri ->
+                    if (uri != null) {
+                        importScope.launch {
+                            val size = importContext.contentResolver
+                                .openFileDescriptor(uri, "r")
+                                ?.use { it.statSize } ?: -1L
+                            importContext.contentResolver.openInputStream(uri)?.use { stream ->
+                                viewModel.uploadImport(size, stream)
+                            }
+                        }
+                    }
+                }
+
+                de.sidebyside.next.transfer.DataImportScreen(
+                    import = state.import,
+                    busy = state.importBusy,
+                    problem = state.importProblem,
+                    onBack = { controller.popBackStack() },
+                    onPickArchive = { importPickerLauncher.launch(arrayOf("application/zip")) },
+                    onRefreshImport = viewModel::refreshImport,
+                    onApplyImport = viewModel::applyImport,
+                    onStartOver = viewModel::clearImport,
+                )
+            }
+
             composable(SEARCH_ROUTE) {
                 DisposableEffect(Unit) { onDispose(viewModel::clearSearch) }
 
@@ -1022,6 +1052,7 @@ private fun DemoShell(
                     onOpenPreferences = { navController.navigate(PREFERENCES_ROUTE) },
                     onOpenPrivateArea = { navController.navigate(PRIVATE_AREA_ROUTE) },
                     onOpenDataExport = { navController.navigate(DATA_EXPORT_ROUTE) },
+                    onOpenDataImport = { navController.navigate(DATA_IMPORT_ROUTE) },
                     onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
                     onOpenSearch = { navController.navigate(SEARCH_ROUTE) },
                     unreadNotificationCount = state.unreadNotificationCount,
@@ -1088,6 +1119,9 @@ private const val PRIVATE_AREA_ROUTE = "more/private"
 
 /** No Web equivalent exists yet to match — this UI is Android-first. */
 private const val DATA_EXPORT_ROUTE = "more/data-export"
+
+/** No Web equivalent exists yet to match — this UI is Android-first. */
+private const val DATA_IMPORT_ROUTE = "more/data-import"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
 private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
 private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"

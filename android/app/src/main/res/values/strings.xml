@@ -461,6 +461,25 @@
     <string name="data_export_status_ready">Bereit zum Herunterladen</string>
     <string name="data_export_status_failed">Der Export ist fehlgeschlagen. Versuche es erneut.</string>
     <string name="data_export_status_expired">Dieser Export ist abgelaufen. Starte einen neuen.</string>
+
+    <string name="data_import_card_title">Daten importieren</string>
+    <string name="data_import_card_intro">Spielt eine zuvor exportierte SideBySide-Datei in diesen Space ein.</string>
+    <string name="data_import_open">Import öffnen</string>
+    <string name="data_import_title">Daten importieren</string>
+    <string name="data_import_intro">Wählt eine SideBySide-Exportdatei aus. Sie wird zunächst geprüft; erst nach eurer Bestätigung werden die Inhalte tatsächlich übernommen.</string>
+    <string name="data_import_pick_archive">Datei auswählen</string>
+    <string name="data_import_refresh">Status aktualisieren</string>
+    <string name="data_import_apply">Import übernehmen</string>
+    <string name="data_import_start_over">Neu starten</string>
+    <string name="data_import_summary">%1$d Einträge, %2$d Medien, von %3$d Mitgliedern</string>
+    <string name="data_import_status_queued">In der Warteschlange …</string>
+    <string name="data_import_status_validating">Wird geprüft …</string>
+    <string name="data_import_status_ready_to_apply">Geprüft – bereit zur Übernahme</string>
+    <string name="data_import_status_applying">Wird übernommen …</string>
+    <string name="data_import_status_completed">Import abgeschlossen.</string>
+    <string name="data_import_status_failed">Der Import ist fehlgeschlagen. Starte einen neuen Versuch.</string>
+    <string name="data_import_status_expired">Dieser Import ist abgelaufen. Starte einen neuen.</string>
+
     <string name="private_area_title">Privater Bereich</string>
     <string name="private_area_intro">Alles hier ist ausschließlich für dich sichtbar, auch in einer geteilten Beziehung.</string>
 
