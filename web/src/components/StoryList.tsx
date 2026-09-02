@@ -78,8 +78,10 @@ export function StoryList({
               const cardClasses = [
                 'story-card',
                 `story-card-${item.kind.toLowerCase().replace('_', '-')}`,
-                firstMemoryAttachment ? 'has-image' : ''
-              ].filter(Boolean).join(' ');
+                firstMemoryAttachment ? 'has-image' : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
 
               return (
                 <li key={storyItemKey(item)} className="sbs-motion-reveal">
