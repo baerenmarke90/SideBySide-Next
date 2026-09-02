@@ -141,7 +141,8 @@ export function TodayPage({
 
       {dashboardQuery.data &&
         (dashboardQuery.data.upcoming.length === 0 &&
-        dashboardQuery.data.recentShared.length === 0 ? (
+        dashboardQuery.data.recentShared.length === 0 &&
+        !dashboardQuery.data.retrospective ? (
           <div className="new-space-experience sbs-motion-reveal">
             <h1 className="new-space-title">
               {dashboardQuery.data.space.partner
@@ -224,6 +225,20 @@ export function TodayPage({
                 )}
               </div>
             </section>
+
+            {dashboardQuery.data.retrospective ? (
+              <section
+                className="today-section sbs-motion-reveal"
+                style={{ animationDelay: '300ms' }}
+              >
+                <h2 className="today-section-title">
+                  {t('m5s5.dashboard.retrospectiveTitle')}
+                </h2>
+                <div className="today-stream">
+                  <VisualMemoryCard item={dashboardQuery.data.retrospective} />
+                </div>
+              </section>
+            ) : null}
           </div>
         ))}
     </div>
