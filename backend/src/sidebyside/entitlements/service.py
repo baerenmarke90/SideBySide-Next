@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session
 
+from sidebyside.config import Deployment, get_settings
 from sidebyside.core import clock
 from sidebyside.entitlements.models import (
     Capability,
@@ -19,8 +21,14 @@ from sidebyside.entitlements.models import (
     EntitlementTier,
 )
 
-GRACE_PERIOD_DAYS = 14
-ALL_PREMIUM_CAPABILITIES = [c.value for c in Capability]
+ALL_PREMIUM_CAPABILITIES = [capability.value for capability in Capability]
+CLOUD_ONLY_CAPABILITIES = frozenset({Capability.STORAGE_CLOUD_QUOTA_50GB.value})
+_EFFECTIVE_STATUS_PRIORITY = {
+    EntitlementStatus.ACTIVE: 0,
+    EntitlementStatus.GRANDFATHERED: 1,
+    EntitlementStatus.TRIAL: 2,
+    EntitlementStatus.GRACE_PERIOD: 3,
+}
 
 
 @dataclass(frozen=True)
@@ -39,7 +47,13 @@ def evaluate_grant_validity(
     grant: EntitlementGrant,
     at: datetime,
 ) -> tuple[bool, bool, EntitlementStatus]:
-    """Evaluate whether a single grant is currently active or in grace period.
+    """Evaluate whether a single grant is effective at trusted server time.
+
+    Grace is an explicit lifecycle state. An ``ACTIVE`` grant expires at its
+    configured end and never receives an implicit extension. Provider adapters
+    may transition eligible recurring subscriptions to ``GRACE_PERIOD`` after a
+    renewal failure; the grace grant remains effective only through its explicit
+    ``effective_until`` value.
 
     Returns ``(is_effective, is_in_grace_period, effective_status)``.
     """
@@ -65,35 +79,51 @@ def evaluate_grant_validity(
     if grant.status == EntitlementStatus.ACTIVE.value:
         if grant.effective_until is None or at <= grant.effective_until:
             return True, False, EntitlementStatus.ACTIVE
-        grace_limit = grant.effective_until + timedelta(days=GRACE_PERIOD_DAYS)
-        if at <= grace_limit:
-            return True, True, EntitlementStatus.GRACE_PERIOD
         return False, False, EntitlementStatus.EXPIRED
 
     if grant.status == EntitlementStatus.GRACE_PERIOD.value:
-        if grant.effective_until is None:
-            return True, True, EntitlementStatus.GRACE_PERIOD
-        grace_limit = grant.effective_until + timedelta(days=GRACE_PERIOD_DAYS)
-        if at <= grace_limit:
+        # An unbounded grace period would silently turn a temporary renewal
+        # failure into a permanent Premium grant. Fail closed instead.
+        if grant.effective_until is not None and at <= grant.effective_until:
             return True, True, EntitlementStatus.GRACE_PERIOD
         return False, False, EntitlementStatus.EXPIRED
 
     return False, False, EntitlementStatus.EXPIRED
 
 
+def _grant_capabilities(grant: EntitlementGrant, deployment: Deployment) -> set[str]:
+    """Resolve one grant's capabilities for the current operating model."""
+    capabilities = set(
+        grant.capabilities if grant.capabilities is not None else ALL_PREMIUM_CAPABILITIES
+    )
+    if deployment is Deployment.SELF_HOSTED:
+        capabilities.difference_update(CLOUD_ONLY_CAPABILITIES)
+    return capabilities
+
+
+def _ordered_capabilities(capabilities: set[str]) -> list[str]:
+    """Return stable capability ordering while retaining future known strings."""
+    canonical = [capability for capability in ALL_PREMIUM_CAPABILITIES if capability in capabilities]
+    extras = sorted(capabilities.difference(ALL_PREMIUM_CAPABILITIES))
+    return canonical + extras
+
+
 def get_effective_space_entitlement(
     session: Session,
     space_id: UUID,
     at: datetime | None = None,
+    *,
+    deployment: Deployment | None = None,
 ) -> EffectiveEntitlement:
-    """Resolve the effective entitlement state for the given Space.
+    """Resolve the effective, reconciled entitlement state for a Space.
 
-    Precedence order for multiple grants on the same space:
-    1. An active Premium grant (ACTIVE, GRANDFATHERED, TRIAL)
-    2. A Premium grant in 14-day GRACE_PERIOD
-    3. Fallback to Free/Core baseline (EXPIRED or no grants)
+    All simultaneously effective grants contribute capabilities. This prevents a
+    newer capability-limited promotion from masking an older still-valid grant.
+    The operating model is evaluated independently so Cloud-only capabilities
+    can never become applicable to Self-Hosted installations.
     """
     current_time = clock.ensure_utc(at) if at is not None else clock.now()
+    effective_deployment = deployment if deployment is not None else get_settings().deployment
 
     grants = (
         session.execute(
@@ -115,50 +145,50 @@ def get_effective_space_entitlement(
             capabilities=[],
         )
 
-    # First check for full active/grandfathered/trial Premium grant
+    effective_grants: list[tuple[EntitlementGrant, bool, EntitlementStatus]] = []
     for grant in grants:
         if grant.tier != EntitlementTier.PREMIUM.value:
             continue
         is_effective, in_grace, effective_status = evaluate_grant_validity(grant, current_time)
-        if is_effective and not in_grace:
-            capabilities = (
-                list(grant.capabilities)
-                if grant.capabilities is not None
-                else list(ALL_PREMIUM_CAPABILITIES)
-            )
-            return EffectiveEntitlement(
-                space_id=space_id,
-                tier=EntitlementTier.PREMIUM,
-                status=effective_status,
-                effective_until=grant.effective_until,
-                is_in_grace_period=False,
-                capabilities=capabilities,
-            )
+        if is_effective:
+            effective_grants.append((grant, in_grace, effective_status))
 
-    # Next check for Premium grant in Grace Period
-    for grant in grants:
-        if grant.tier != EntitlementTier.PREMIUM.value:
-            continue
-        is_effective, in_grace, effective_status = evaluate_grant_validity(grant, current_time)
-        if is_effective and in_grace:
-            capabilities = (
-                list(grant.capabilities)
-                if grant.capabilities is not None
-                else list(ALL_PREMIUM_CAPABILITIES)
-            )
-            return EffectiveEntitlement(
-                space_id=space_id,
-                tier=EntitlementTier.PREMIUM,
-                status=EntitlementStatus.GRACE_PERIOD,
-                effective_until=grant.effective_until,
-                is_in_grace_period=True,
-                capabilities=capabilities,
-            )
+    if effective_grants:
+        capability_union: set[str] = set()
+        for grant, _, _ in effective_grants:
+            capability_union.update(_grant_capabilities(grant, effective_deployment))
 
-    # No active or grace grant found; return latest status
+        effective_status = min(
+            (status for _, _, status in effective_grants),
+            key=_EFFECTIVE_STATUS_PRIORITY.__getitem__,
+        )
+        in_grace_period = any(in_grace for _, in_grace, _ in effective_grants)
+
+        # The scalar expiry represents when the overall Premium entitlement
+        # ceases to be backed by any currently effective grant. An indefinite
+        # grant therefore makes the overall end unbounded, while individual
+        # capability changes remain represented by the capability list itself.
+        effective_until_values = [grant.effective_until for grant, _, _ in effective_grants]
+        effective_until = (
+            None
+            if any(value is None for value in effective_until_values)
+            else max(value for value in effective_until_values if value is not None)
+        )
+
+        return EffectiveEntitlement(
+            space_id=space_id,
+            tier=EntitlementTier.PREMIUM,
+            status=effective_status,
+            effective_until=effective_until,
+            is_in_grace_period=in_grace_period,
+            capabilities=_ordered_capabilities(capability_union),
+        )
+
+    # No effective grant found. Preserve an explicit latest revocation signal;
+    # all other non-effective states converge to the Free/Expired presentation.
     latest_grant = grants[0]
     latest_status = (
-        EntitlementStatus(latest_grant.status)
+        EntitlementStatus.REVOKED
         if latest_grant.status == EntitlementStatus.REVOKED.value
         else EntitlementStatus.EXPIRED
     )
@@ -177,10 +207,17 @@ def has_capability(
     space_id: UUID,
     capability: str | Capability,
     at: datetime | None = None,
+    *,
+    deployment: Deployment | None = None,
 ) -> bool:
     """Check if the given Space holds the specified capability."""
     cap_str = capability.value if isinstance(capability, Capability) else str(capability)
-    entitlement = get_effective_space_entitlement(session, space_id, at=at)
+    entitlement = get_effective_space_entitlement(
+        session,
+        space_id,
+        at=at,
+        deployment=deployment,
+    )
     return cap_str in entitlement.capabilities
 
 
@@ -198,45 +235,67 @@ def record_grant(
     capabilities: list[str] | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> EntitlementGrant:
-    """Idempotently record or update an entitlement grant."""
+    """Idempotently record, update, or re-bind normalized source evidence.
+
+    A provider source/reference identity may back only one grant repository-wide.
+    Replaying the same receipt/license therefore atomically updates that grant
+    and can move it to a replacement Space during an authorized restore. The
+    previous Space immediately stops seeing the grant instead of retaining a
+    duplicate Premium entitlement.
+    """
     source_str = (
         source_type.value if isinstance(source_type, EntitlementSourceType) else str(source_type)
     )
     status_str = status.value if isinstance(status, EntitlementStatus) else str(status)
     tier_str = tier.value if isinstance(tier, EntitlementTier) else str(tier)
 
-    existing: EntitlementGrant | None = None
     if external_reference is not None:
-        existing = (
-            session.execute(
-                select(EntitlementGrant).where(
-                    EntitlementGrant.space_id == space_id,
-                    EntitlementGrant.source_type == source_str,
-                    EntitlementGrant.external_reference == external_reference,
-                )
-            )
-            .scalars()
-            .first()
-        )
-
-    if existing is not None:
-        existing.status = status_str
-        existing.tier = tier_str
-        existing.effective_from = effective_from
-        existing.effective_until = effective_until
-        existing.capabilities = capabilities
+        update_values: dict[str, Any] = {
+            "space_id": space_id,
+            "status": status_str,
+            "tier": tier_str,
+            "effective_from": effective_from,
+            "effective_until": effective_until,
+            "capabilities": capabilities,
+            "updated_at": clock.now(),
+        }
         if account_id is not None:
-            existing.account_id = account_id
+            update_values["account_id"] = account_id
         if metadata is not None:
-            existing.metadata_ = metadata
-        session.flush()
-        return existing
+            update_values["metadata"] = metadata
+
+        statement = (
+            postgresql.insert(EntitlementGrant)
+            .values(
+                space_id=space_id,
+                account_id=account_id,
+                source_type=source_str,
+                external_reference=external_reference,
+                status=status_str,
+                tier=tier_str,
+                effective_from=effective_from,
+                effective_until=effective_until,
+                capabilities=capabilities,
+                metadata=metadata or {},
+            )
+            .on_conflict_do_update(
+                index_elements=["source_type", "external_reference"],
+                set_=update_values,
+            )
+            .returning(EntitlementGrant.id)
+        )
+        grant_id = session.execute(statement).scalar_one()
+        grant = session.get(EntitlementGrant, grant_id)
+        if grant is None:
+            raise RuntimeError("Entitlement grant disappeared after source reconciliation.")
+        session.refresh(grant)
+        return grant
 
     grant = EntitlementGrant(
         space_id=space_id,
         account_id=account_id,
         source_type=source_str,
-        external_reference=external_reference,
+        external_reference=None,
         status=status_str,
         tier=tier_str,
         effective_from=effective_from,
