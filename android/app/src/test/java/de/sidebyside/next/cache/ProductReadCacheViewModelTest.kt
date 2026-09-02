@@ -35,6 +35,8 @@ import sidebyside.api.models.ChapterDetail
 import sidebyside.api.models.ChapterPage
 import sidebyside.api.models.CollectionDetail
 import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.DashboardSpaceSummary
+import sidebyside.api.models.DashboardView
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemorySummary
 import sidebyside.api.models.PlaceDetail
@@ -408,6 +410,41 @@ class ProductReadCacheViewModelTest {
         assertNotNull(model.uiState.value.chaptersProblem)
     }
 
+    @Test
+    fun loadTodayFallsBackToTheCachedDashboardOnceOffline() = runTest(dispatcher) {
+        val api = TodayApi()
+        val model = signedIn(api)
+
+        model.loadToday()
+        advanceUntilIdle()
+        assertNotNull(model.uiState.value.dashboard)
+        assertNull(model.uiState.value.todayCachedAt)
+
+        api.nextFailure = IOException("offline")
+        model.loadToday()
+        advanceUntilIdle()
+
+        assertNotNull(model.uiState.value.dashboard)
+        assertNotNull(model.uiState.value.todayCachedAt)
+        assertNull(model.uiState.value.todayProblem)
+    }
+
+    @Test
+    fun loadTodayNeverFallsBackOnA401EvenWithACachedRow() = runTest(dispatcher) {
+        val api = TodayApi()
+        val model = signedIn(api)
+
+        model.loadToday()
+        advanceUntilIdle()
+
+        api.nextFailure = ReferenceApiException(code = "unauthenticated", message = "expired", status = 401)
+        model.loadToday()
+        advanceUntilIdle()
+
+        assertNull(model.uiState.value.todayCachedAt)
+        assertNotNull(model.uiState.value.todayProblem)
+    }
+
     private suspend fun TestScope.signedIn(api: ReferenceContract): ReferenceViewModel {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, productReadCache = cache)
         model.signIn("someone@example.test", "secret")
@@ -743,6 +780,37 @@ private class ChaptersApi : FakeReferenceContract() {
                 ),
             ),
             nextCursor = null,
+        )
+    }
+}
+
+private class TodayApi : FakeReferenceContract() {
+    var nextFailure: Throwable? = null
+
+    override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+        account = AccountView(displayName = email, id = UUID.randomUUID()),
+        tokens = TokenView(
+            accessExpiresAt = OffsetDateTime.now(),
+            accessToken = "access",
+            refreshExpiresAt = OffsetDateTime.now(),
+            refreshToken = "refresh",
+        ),
+    )
+
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+
+    override suspend fun getDashboard(spaceId: UUID, accessToken: String): DashboardView {
+        nextFailure?.let {
+            nextFailure = null
+            throw it
+        }
+        return DashboardView(
+            recentShared = emptyList(),
+            relationshipDuration = null,
+            retrospective = null,
+            space = DashboardSpaceSummary(partner = null, spaceId = spaceId),
+            upcoming = emptyList(),
         )
     }
 }

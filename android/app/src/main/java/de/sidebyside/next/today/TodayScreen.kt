@@ -42,7 +42,7 @@ import sidebyside.api.models.DurationDisplayMode
 private val ReadingMeasure: Dp = 560.dp
 
 /**
- * Heute.
+ * Today.
  *
  * The first destination in the Information Architecture, and the first thing a
  * couple sees. The server assembles nearly all of it in one call, so this
@@ -65,6 +65,8 @@ fun TodayScreen(
      */
     onOpenActivity: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Non-null only while [dashboard] is a stale M2-D18 cache fallback. */
+    cachedAt: java.time.Instant? = null,
 ) {
     if (dashboard == null) {
         problem?.let { UiStatePanel(problem = it, modifier = modifier) }
@@ -88,6 +90,8 @@ fun TodayScreen(
                 modifier = Modifier.semantics { heading() },
             )
         }
+
+        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
         item {
             Button(

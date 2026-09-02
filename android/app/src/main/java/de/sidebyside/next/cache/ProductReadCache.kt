@@ -20,6 +20,7 @@ enum class ProductCacheKind(val segment: String) {
     PLANNING("planning"),
     PLACE("place"),
     CHAPTER("chapter"),
+    DASHBOARD("dashboard"),
 }
 
 /**
@@ -42,6 +43,9 @@ val PlanningResourceId: UUID = UUID(0L, 0L)
 /** Places and Chapters have no filters either — one list each per Account+Space. */
 val PlaceListResourceId: UUID = UUID(0L, 0L)
 val ChapterListResourceId: UUID = UUID(0L, 0L)
+
+/** There is exactly one Today dashboard per Account+Space. */
+val TodayDashboardResourceId: UUID = UUID(0L, 0L)
 
 /**
  * The current-user Private Area lists this cache covers. `OWNER_ONLY`
