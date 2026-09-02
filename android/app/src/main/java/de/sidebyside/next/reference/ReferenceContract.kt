@@ -82,6 +82,7 @@ import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
 import sidebyside.api.models.PlanComplete
+import sidebyside.api.models.PlanCreate
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
 import sidebyside.api.models.PlanReturnToWishResponse
@@ -358,6 +359,9 @@ interface ReferenceContract {
     ): WishToPlanResponse
 
     suspend fun listPlans(spaceId: UUID, accessToken: String): PlanPage
+
+    /** Direct plan creation (M3-D30): a plan that never started as a wish. */
+    suspend fun createPlan(spaceId: UUID, accessToken: String, fields: PlanCreate): PlanDetail
 
     suspend fun updatePlan(
         spaceId: UUID,

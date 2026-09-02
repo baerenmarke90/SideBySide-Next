@@ -33,15 +33,14 @@ import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
+import de.sidebyside.next.shell.PlacePicker
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStatePanel
-import java.time.LocalDate
-import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 import java.util.UUID
+import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanStatus
 import sidebyside.api.models.WishDetail
@@ -63,14 +62,18 @@ private val ReadingMeasure: Dp = 560.dp
 fun PlanScreen(
     wishes: List<WishDetail>,
     plans: List<PlanDetail>,
+    places: List<PlaceDetail>,
     busy: Boolean,
     problem: UiProblem?,
     onAddWish: (String) -> Unit,
-    onPlanWish: (UUID) -> Unit,
+    onEditWish: (id: UUID, title: String) -> Unit,
+    onPlanWish: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
     onRemoveWish: (UUID) -> Unit,
-    onSchedule: (UUID, OffsetDateTime) -> Unit,
+    onCreatePlan: (title: String, description: String, placeId: UUID?) -> Unit,
+    onEditPlan: (id: UUID, title: String, description: String, placeId: UUID?) -> Unit,
+    onSchedule: (id: UUID, startOn: String) -> Unit,
     onUnschedule: (UUID) -> Unit,
-    onComplete: (UUID, LocalDate) -> Unit,
+    onComplete: (id: UUID, experiencedOn: String) -> Unit,
     onReturnToWish: (UUID) -> Unit,
     onDeletePlan: (UUID) -> Unit,
     /**
@@ -101,6 +104,11 @@ fun PlanScreen(
     var draft by rememberSaveable { mutableStateOf("") }
     var returnTarget by rememberSaveable { mutableStateOf<String?>(null) }
     var deleteTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var editWishTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var planWishTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var editPlanTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var scheduleTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var completeTarget by rememberSaveable { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -269,7 +277,8 @@ fun PlanScreen(
             WishCard(
                 wish = wishes[index],
                 busy = busy,
-                onPlan = { onPlanWish(wishes[index].id) },
+                onEdit = { editWishTarget = wishes[index].id.toString() },
+                onPlan = { planWishTarget = wishes[index].id.toString() },
                 onRemove = { onRemoveWish(wishes[index].id) },
             )
         }
@@ -283,6 +292,23 @@ fun PlanScreen(
                     .padding(top = SideBySideTheme.spacing.step4)
                     .semantics { heading() },
             )
+        }
+
+        item {
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding)) {
+                    PlanForm(
+                        places = places,
+                        busy = busy,
+                        submitLabel = stringResource(R.string.plan_add),
+                        onSubmit = onCreatePlan,
+                    )
+                }
+            }
         }
 
         if (plans.isEmpty() && !busy) {
@@ -300,17 +326,175 @@ fun PlanScreen(
             PlanCard(
                 plan = plans[index],
                 busy = busy,
-                onSchedule = {
-                    // A date picker belongs to the slice that adds one; until
-                    // then a plan is scheduled for today and moved from there.
-                    onSchedule(plans[index].id, OffsetDateTime.now())
-                },
+                onEdit = { editPlanTarget = plans[index].id.toString() },
+                onSchedule = { scheduleTarget = plans[index].id.toString() },
                 onUnschedule = { onUnschedule(plans[index].id) },
-                onComplete = { onComplete(plans[index].id, LocalDate.now()) },
+                onComplete = { completeTarget = plans[index].id.toString() },
                 onReturnToWish = { returnTarget = plans[index].id.toString() },
                 onDelete = { deleteTarget = plans[index].id.toString() },
             )
         }
+    }
+
+    editWishTarget?.let { id ->
+        val wish = wishes.firstOrNull { it.id.toString() == id }
+        if (wish == null) {
+            editWishTarget = null
+            return@let
+        }
+        AlertDialog(
+            onDismissRequest = { editWishTarget = null },
+            title = { Text(stringResource(R.string.plan_wish_edit_title)) },
+            text = {
+                var title by rememberSaveable(wish.id) { mutableStateOf(wish.title) }
+                Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it.take(200) },
+                        label = { Text(stringResource(R.string.plan_wish_hint)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        onClick = {
+                            editWishTarget = null
+                            onEditWish(wish.id, title)
+                        },
+                        enabled = !busy && title.isNotBlank(),
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.plan_wish_save_changes))
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { editWishTarget = null }) { Text(stringResource(R.string.plan_cancel)) }
+            },
+        )
+    }
+
+    planWishTarget?.let { id ->
+        val wish = wishes.firstOrNull { it.id.toString() == id }
+        if (wish == null) {
+            planWishTarget = null
+            return@let
+        }
+        AlertDialog(
+            onDismissRequest = { planWishTarget = null },
+            title = { Text(stringResource(R.string.plan_wish_make_plan)) },
+            text = {
+                PlanForm(
+                    places = places,
+                    busy = busy,
+                    initialTitle = wish.title,
+                    submitLabel = stringResource(R.string.plan_wish_make_plan_confirm),
+                    onSubmit = { title, description, placeId ->
+                        planWishTarget = null
+                        onPlanWish(wish.id, title, description, placeId)
+                    },
+                )
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { planWishTarget = null }) { Text(stringResource(R.string.plan_cancel)) }
+            },
+        )
+    }
+
+    editPlanTarget?.let { id ->
+        val plan = plans.firstOrNull { it.id.toString() == id }
+        if (plan == null) {
+            editPlanTarget = null
+            return@let
+        }
+        AlertDialog(
+            onDismissRequest = { editPlanTarget = null },
+            title = { Text(stringResource(R.string.plan_edit_title)) },
+            text = {
+                PlanForm(
+                    places = places,
+                    busy = busy,
+                    initialTitle = plan.title,
+                    initialDescription = plan.description.orEmpty(),
+                    initialPlaceId = plan.placeId,
+                    submitLabel = stringResource(R.string.plan_save_changes),
+                    onSubmit = { title, description, placeId ->
+                        editPlanTarget = null
+                        onEditPlan(plan.id, title, description, placeId)
+                    },
+                )
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { editPlanTarget = null }) { Text(stringResource(R.string.plan_cancel)) }
+            },
+        )
+    }
+
+    scheduleTarget?.let { id ->
+        AlertDialog(
+            onDismissRequest = { scheduleTarget = null },
+            title = { Text(stringResource(R.string.plan_schedule)) },
+            text = {
+                var startOn by rememberSaveable(id) { mutableStateOf("") }
+                Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+                    OutlinedTextField(
+                        value = startOn,
+                        onValueChange = { startOn = it },
+                        label = { Text(stringResource(R.string.plan_schedule_date_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        onClick = {
+                            scheduleTarget = null
+                            plans.firstOrNull { it.id.toString() == id }?.let { onSchedule(it.id, startOn) }
+                        },
+                        enabled = !busy && startOn.isNotBlank(),
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.plan_schedule_confirm))
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { scheduleTarget = null }) { Text(stringResource(R.string.plan_cancel)) }
+            },
+        )
+    }
+
+    completeTarget?.let { id ->
+        AlertDialog(
+            onDismissRequest = { completeTarget = null },
+            title = { Text(stringResource(R.string.plan_complete)) },
+            text = {
+                var experiencedOn by rememberSaveable(id) { mutableStateOf("") }
+                Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+                    OutlinedTextField(
+                        value = experiencedOn,
+                        onValueChange = { experiencedOn = it },
+                        label = { Text(stringResource(R.string.plan_complete_date_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        onClick = {
+                            completeTarget = null
+                            plans.firstOrNull { it.id.toString() == id }?.let { onComplete(it.id, experiencedOn) }
+                        },
+                        enabled = !busy && experiencedOn.isNotBlank(),
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.plan_complete_confirm))
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { completeTarget = null }) { Text(stringResource(R.string.plan_cancel)) }
+            },
+        )
     }
 
     returnTarget?.let { id ->
@@ -367,6 +551,7 @@ fun PlanScreen(
 private fun WishCard(
     wish: WishDetail,
     busy: Boolean,
+    onEdit: () -> Unit,
     onPlan: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -387,6 +572,13 @@ private fun WishCard(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
                 if (wish.capabilities.canEdit) {
+                    TextButton(
+                        onClick = onEdit,
+                        enabled = !busy,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.plan_wish_edit))
+                    }
                     FilledTonalButton(
                         onClick = onPlan,
                         enabled = !busy,
@@ -413,6 +605,7 @@ private fun WishCard(
 private fun PlanCard(
     plan: PlanDetail,
     busy: Boolean,
+    onEdit: () -> Unit,
     onSchedule: () -> Unit,
     onUnschedule: () -> Unit,
     onComplete: () -> Unit,
@@ -456,7 +649,7 @@ private fun PlanCard(
                 Text(
                     text = stringResource(
                         R.string.plan_scheduled_for,
-                        start.atZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+                        start.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDate()
                             .format(dateFormat),
                     ),
                     style = MaterialTheme.typography.bodySmall,
@@ -475,6 +668,9 @@ private fun PlanCard(
                 // Only the moves the plan's current status actually allows.
                 Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
                     if (plan.capabilities.canEdit) {
+                        TextButton(onClick = onEdit, enabled = !busy) {
+                            Text(stringResource(R.string.plan_edit))
+                        }
                         when (plan.status) {
                             PlanStatus.IDEA -> {
                                 FilledTonalButton(
@@ -514,6 +710,62 @@ private fun PlanCard(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Title, description, and an optional Place — shared by direct Plan creation
+ * and Plan editing, and by Wish-to-Plan conversion (which is the same
+ * fields; only the submit label and what happens next differ).
+ */
+@Composable
+private fun PlanForm(
+    places: List<PlaceDetail>,
+    busy: Boolean,
+    submitLabel: String,
+    initialTitle: String = "",
+    initialDescription: String = "",
+    initialPlaceId: UUID? = null,
+    onSubmit: (title: String, description: String, placeId: UUID?) -> Unit,
+) {
+    var title by rememberSaveable { mutableStateOf(initialTitle) }
+    var description by rememberSaveable { mutableStateOf(initialDescription) }
+    var placeId by rememberSaveable { mutableStateOf(initialPlaceId) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it.take(200) },
+            label = { Text(stringResource(R.string.plan_title_hint)) },
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text(stringResource(R.string.plan_description_hint)) },
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        PlacePicker(
+            places = places,
+            selectedPlaceId = placeId,
+            onSelect = { placeId = it },
+            busy = busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Button(
+            onClick = {
+                onSubmit(title, description, placeId)
+                title = ""
+                description = ""
+                placeId = null
+            },
+            enabled = !busy && title.isNotBlank(),
+            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+        ) {
+            Text(submitLabel)
         }
     }
 }

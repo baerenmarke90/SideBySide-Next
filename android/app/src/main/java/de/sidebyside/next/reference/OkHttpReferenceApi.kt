@@ -105,6 +105,7 @@ import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
 import sidebyside.api.models.PlanComplete
+import sidebyside.api.models.PlanCreate
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
 import sidebyside.api.models.PlanReturnToWishResponse
@@ -667,6 +668,19 @@ class OkHttpReferenceApi(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/plans?limit=50", accessToken)
             .get().build(),
         PlanPage.serializer(),
+    )
+
+    override suspend fun createPlan(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PlanCreate,
+    ): PlanDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/plans", accessToken)
+            .post(
+                SideBySideJson.encodeToString(PlanCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        PlanDetail.serializer(),
     )
 
     override suspend fun updatePlan(
