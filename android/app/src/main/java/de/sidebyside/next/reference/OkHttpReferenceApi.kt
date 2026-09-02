@@ -1,5 +1,6 @@
 package de.sidebyside.next.reference
 
+import de.sidebyside.next.connectivity.ConnectivityTracker
 import de.sidebyside.next.demo.DemoPersona
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -148,6 +149,13 @@ private const val EMPTY_JSON_BODY = "{}"
 class OkHttpReferenceApi(
     apiBaseUrl: String,
     private val client: OkHttpClient = OkHttpClient(),
+    /**
+     * `null` (every existing test's default) makes this class behave exactly
+     * as before. A real instance sees every request this class ever makes,
+     * since both [executeJson] and [executeEmpty] are this class's only two
+     * ways to reach the network.
+     */
+    private val connectivityTracker: ConnectivityTracker? = null,
 ) : ReferenceContract {
     private val baseUrl = apiBaseUrl.trimEnd('/')
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
@@ -1077,12 +1085,16 @@ class OkHttpReferenceApi(
     }
 
     private suspend fun <T> executeJson(request: Request, serializer: KSerializer<T>): T = withContext(Dispatchers.IO) {
-        client.newCall(request).execute().use { response ->
-            assertSuccessful(response)
-            val body = response.body.string()
-            if (body.isBlank()) throw ReferenceApiException(null, "Empty API response.")
-            SideBySideJson.decodeFromString(serializer, body)
-        }
+        runCatching {
+            client.newCall(request).execute().use { response ->
+                assertSuccessful(response)
+                val body = response.body.string()
+                if (body.isBlank()) throw ReferenceApiException(null, "Empty API response.")
+                SideBySideJson.decodeFromString(serializer, body)
+            }
+        }.onSuccess { connectivityTracker?.recordSuccess() }
+            .onFailure { connectivityTracker?.recordFailure(it) }
+            .getOrThrow()
     }
 
     override suspend fun listPlaces(
@@ -1675,7 +1687,10 @@ class OkHttpReferenceApi(
     )
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {
-        client.newCall(request).execute().use(::assertSuccessful)
+        runCatching { client.newCall(request).execute().use(::assertSuccessful) }
+            .onSuccess { connectivityTracker?.recordSuccess() }
+            .onFailure { connectivityTracker?.recordFailure(it) }
+            .getOrThrow()
     }
 
     private fun assertSuccessful(response: Response) {

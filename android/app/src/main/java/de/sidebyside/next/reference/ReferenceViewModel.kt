@@ -136,6 +136,15 @@ data class DraftImageUiItem(
 data class ReferenceUiState(
     val configured: Boolean = false,
     val instanceAvailability: InstanceAvailability = InstanceAvailability.CHECKING,
+    /**
+     * The M2-D18 application-level connectivity state: `true` only after a
+     * transport/server-availability failure, cleared by the next successful
+     * request. Never set directly by a screen — see
+     * `de.sidebyside.next.connectivity.ConnectivityTracker`.
+     */
+    val offline: Boolean = false,
+    /** The last request of any kind that succeeded, regardless of which screen made it. */
+    val lastSyncedAt: java.time.Instant? = null,
     val loggedIn: Boolean = false,
     /**
      * Authenticated, but with no Space to open yet.
@@ -348,6 +357,13 @@ class ReferenceViewModel(
      * behave exactly as before, network-only.
      */
     private val productReadCache: de.sidebyside.next.cache.ProductReadCache? = null,
+    /**
+     * The M2-D18 application-level connectivity state. `null` (the default
+     * every existing test relies on) means [ReferenceUiState.offline] never
+     * changes from its initial value — no behavior change for callers that
+     * do not configure it.
+     */
+    private val connectivityTracker: de.sidebyside.next.connectivity.ConnectivityTracker? = null,
 ) : ViewModel() {
     private val injectedApi: ReferenceContract? = api
 
@@ -386,6 +402,15 @@ class ReferenceViewModel(
 
     init {
         if (config.isConfigured) refreshInstanceAvailability()
+        connectivityTracker?.let { tracker ->
+            viewModelScope.launch {
+                tracker.state.collect { connectivity ->
+                    mutate {
+                        it.copy(offline = connectivity.offline, lastSyncedAt = connectivity.lastSyncedAt)
+                    }
+                }
+            }
+        }
     }
 
     fun refreshInstanceAvailability() {

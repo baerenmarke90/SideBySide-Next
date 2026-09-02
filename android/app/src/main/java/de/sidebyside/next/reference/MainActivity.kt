@@ -109,6 +109,7 @@ private fun referenceViewModelFactory(context: Context): ViewModelProvider.Facto
     viewModelFactory {
         initializer {
             val database = de.sidebyside.next.cache.ReadCacheDatabase.getInstance(context)
+            val connectivityTracker = de.sidebyside.next.connectivity.ConnectivityTracker()
             ReferenceViewModel(
                 spaceStore = SharedPreferencesSpaceStore(context),
                 productReadCache = de.sidebyside.next.cache.ProductReadCache(
@@ -117,6 +118,8 @@ private fun referenceViewModelFactory(context: Context): ViewModelProvider.Facto
                     database.protectedCacheDao(),
                     de.sidebyside.next.cache.AndroidKeystoreProtectedPayloadCipher(),
                 ),
+                connectivityTracker = connectivityTracker,
+                apiFactory = { baseUrl -> OkHttpReferenceApi(baseUrl, connectivityTracker = connectivityTracker) },
             )
         }
     }
@@ -324,6 +327,12 @@ private fun DemoShell(
         ),
         navController = navController,
         secureWhen = ::isSecureRoute,
+        banner = {
+            de.sidebyside.next.shell.OfflineStatusBanner(
+                offline = state.offline,
+                lastSyncedAt = state.lastSyncedAt,
+            )
+        },
         detailRoutes = { controller ->
             composable(
                 route = MEMORY_ROUTE,

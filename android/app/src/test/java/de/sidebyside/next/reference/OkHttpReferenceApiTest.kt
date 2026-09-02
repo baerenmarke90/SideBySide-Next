@@ -14,11 +14,13 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AuthorSummary
+import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.MediaType
 import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.PlaceCreate
@@ -242,6 +244,75 @@ class OkHttpReferenceApiTest {
             "/api/v1/spaces/$spaceId/profiles/$accountId/avatar/content",
             requests.single().url.encodedPath,
         )
+    }
+
+    @Test
+    fun aSuccessfulRequestRecordsItWithTheConnectivityTracker() = runTest {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(
+                        SideBySideJson
+                            .encodeToString(
+                                InstanceAccessStatus.serializer(),
+                                InstanceAccessStatus(
+                                    maintenanceMode = false,
+                                    registrationAvailable = true,
+                                    registrationUnavailableReason = null,
+                                ),
+                            )
+                            .toResponseBody("application/json".toMediaType()),
+                    )
+                    .build()
+            }
+            .build()
+        val tracker = de.sidebyside.next.connectivity.ConnectivityTracker()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client, connectivityTracker = tracker)
+
+        api.getInstanceStatus()
+
+        assertFalse(tracker.state.value.offline)
+        assertNotNull(tracker.state.value.lastSyncedAt)
+    }
+
+    @Test
+    fun aTransportFailureMarksTheConnectivityTrackerOffline() = runTest {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { throw java.io.IOException("no connection") }
+            .build()
+        val tracker = de.sidebyside.next.connectivity.ConnectivityTracker()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client, connectivityTracker = tracker)
+
+        runCatching { api.getInstanceStatus() }
+
+        assertTrue(tracker.state.value.offline)
+    }
+
+    @Test
+    fun a401NeverMarksTheConnectivityTrackerOffline() = runTest {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(401)
+                    .message("Unauthorized")
+                    .body("{}".toResponseBody("application/json".toMediaType()))
+                    .build()
+            }
+            .build()
+        val tracker = de.sidebyside.next.connectivity.ConnectivityTracker()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client, connectivityTracker = tracker)
+
+        runCatching { api.getInstanceStatus() }
+
+        assertFalse(tracker.state.value.offline)
     }
 
     private fun jsonClient(
