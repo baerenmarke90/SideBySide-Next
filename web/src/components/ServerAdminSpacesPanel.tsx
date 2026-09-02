@@ -1,10 +1,4 @@
-import {
-  type RefObject,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ServerAdminApi } from '../api/generated/apis/ServerAdminApi';
 import type { ServerAdminSpaceDetail } from '../api/generated/models/ServerAdminSpaceDetail';
@@ -63,11 +57,7 @@ function SpaceDetail({
       <div className="server-admin-account-detail-heading">
         <div>
           <p className="eyebrow">{t('serverAdmin.spaces.detail.eyebrow')}</p>
-          <h2
-            id="server-space-detail-title"
-            ref={headingRef}
-            tabIndex={-1}
-          >
+          <h2 id="server-space-detail-title" ref={headingRef} tabIndex={-1}>
             {t('serverAdmin.spaces.detail.title')}
           </h2>
           <p className="server-admin-muted server-admin-actor-id">{space.id}</p>
