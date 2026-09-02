@@ -273,3 +273,15 @@ Core ServerAdmin operations required to run a Self-Hosted SideBySide
 installation are operational administration and are not Premium-paywalled.
 Hosted-service-specific capabilities must continue to use the authoritative
 deployment and entitlement model rather than hardcoded client branching.
+
+## Space lifecycle directory
+
+`GET /api/v1/server-admin/spaces` and `GET /api/v1/server-admin/spaces/{spaceId}`
+expose a deliberately narrow, read-only lifecycle projection derived from `Space` and
+`Membership` state. The projection contains IDs, creation/lifecycle timestamps,
+Membership status counts and coarse anomaly codes only.
+
+It does **not** expose Account identity correlation, Space profile/relationship dates,
+Memories, Notes, messages, media, OWNER_ONLY state or behavioral/engagement analytics.
+Space termination, partner removal and reactivation remain outside this operator surface
+until the authoritative lifecycle decisions in #518 are complete.

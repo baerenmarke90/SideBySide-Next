@@ -12,7 +12,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response
-from sqlalchemy import distinct, exists, func, or_, select
+from sqlalchemy import case, distinct, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from sidebyside.administration import account_operations
@@ -44,13 +44,20 @@ from sidebyside.identity.models import (
 )
 from sidebyside.jobs.models import Job, JobStatus
 from sidebyside.mail import sender as mail_sender
-from sidebyside.relationship.models import Membership, MembershipStatus
+from sidebyside.relationship.models import (
+    MAX_ACTIVE_PARTNERS,
+    Membership,
+    MembershipStatus,
+    Space,
+)
 
 router = APIRouter(prefix="/server-admin", tags=["server-admin"])
 _PROCESS_STARTED_AT = now()
 
 AccountStatusFilter = Literal["all", "active", "suspended"]
 VerificationFilter = Literal["all", "verified", "unverified"]
+SpaceStatusFilter = Literal["all", "active", "inactive", "empty", "anomaly"]
+SpaceLifecycleStatus = Literal["active", "inactive", "empty"]
 
 
 class ServerAdminFailedJob(ApiModel):
@@ -165,6 +172,31 @@ class ServerAdminAccountDetail(ServerAdminAccountSummary):
 
 class ServerAdminAccountList(ApiModel):
     items: list[ServerAdminAccountSummary]
+    total: int
+    limit: int
+    offset: int
+
+
+class ServerAdminSpaceSummary(ApiModel):
+    id: UUID
+    created_at: datetime
+    lifecycle_status: SpaceLifecycleStatus
+    membership_count: int
+    active_membership_count: int
+    historical_membership_count: int
+    left_membership_count: int
+    removed_membership_count: int
+    first_membership_at: datetime | None
+    last_membership_change_at: datetime | None
+    anomaly_codes: list[str]
+
+
+class ServerAdminSpaceDetail(ServerAdminSpaceSummary):
+    latest_membership_ended_at: datetime | None
+
+
+class ServerAdminSpaceList(ApiModel):
+    items: list[ServerAdminSpaceSummary]
     total: int
     limit: int
     offset: int
@@ -318,6 +350,119 @@ def _account_detail(
         ),
         local_password_available=local_password_available,
     )
+
+
+def _space_aggregate_subquery() -> Any:
+    return (
+        select(
+            Membership.space_id.label("space_id"),
+            func.count(Membership.id).label("membership_count"),
+            func.sum(
+                case(
+                    (Membership.status == MembershipStatus.ACTIVE.value, 1),
+                    else_=0,
+                )
+            ).label("active_membership_count"),
+            func.sum(
+                case(
+                    (Membership.status == MembershipStatus.LEFT.value, 1),
+                    else_=0,
+                )
+            ).label("left_membership_count"),
+            func.sum(
+                case(
+                    (Membership.status == MembershipStatus.REMOVED.value, 1),
+                    else_=0,
+                )
+            ).label("removed_membership_count"),
+            func.min(func.coalesce(Membership.joined_at, Membership.created_at)).label(
+                "first_membership_at"
+            ),
+            func.max(
+                func.coalesce(
+                    Membership.ended_at,
+                    Membership.joined_at,
+                    Membership.created_at,
+                )
+            ).label("last_membership_change_at"),
+            func.max(Membership.ended_at).label("latest_membership_ended_at"),
+        )
+        .group_by(Membership.space_id)
+        .subquery()
+    )
+
+
+def _space_projection(aggregate: Any) -> tuple[Any, ...]:
+    return (
+        Space.id.label("id"),
+        Space.created_at.label("created_at"),
+        func.coalesce(aggregate.c.membership_count, 0).label("membership_count"),
+        func.coalesce(aggregate.c.active_membership_count, 0).label("active_membership_count"),
+        func.coalesce(aggregate.c.left_membership_count, 0).label("left_membership_count"),
+        func.coalesce(aggregate.c.removed_membership_count, 0).label("removed_membership_count"),
+        aggregate.c.first_membership_at,
+        aggregate.c.last_membership_change_at,
+        aggregate.c.latest_membership_ended_at,
+    )
+
+
+def _space_lifecycle_status(
+    *, active_membership_count: int, membership_count: int
+) -> SpaceLifecycleStatus:
+    if active_membership_count > 0:
+        return "active"
+    if membership_count > 0:
+        return "inactive"
+    return "empty"
+
+
+def _space_anomaly_codes(*, active_membership_count: int, membership_count: int) -> list[str]:
+    codes: list[str] = []
+    if membership_count == 0:
+        codes.append("no_memberships")
+    if active_membership_count > MAX_ACTIVE_PARTNERS:
+        codes.append("too_many_active_memberships")
+    return codes
+
+
+def _space_summary_from_row(row: Any) -> ServerAdminSpaceSummary:
+    values = row._mapping
+    membership_count = int(values["membership_count"] or 0)
+    active_membership_count = int(values["active_membership_count"] or 0)
+    return ServerAdminSpaceSummary(
+        id=values["id"],
+        created_at=values["created_at"],
+        lifecycle_status=_space_lifecycle_status(
+            active_membership_count=active_membership_count,
+            membership_count=membership_count,
+        ),
+        membership_count=membership_count,
+        active_membership_count=active_membership_count,
+        historical_membership_count=max(0, membership_count - active_membership_count),
+        left_membership_count=int(values["left_membership_count"] or 0),
+        removed_membership_count=int(values["removed_membership_count"] or 0),
+        first_membership_at=values["first_membership_at"],
+        last_membership_change_at=values["last_membership_change_at"],
+        anomaly_codes=_space_anomaly_codes(
+            active_membership_count=active_membership_count,
+            membership_count=membership_count,
+        ),
+    )
+
+
+def _space_detail_from_row(row: Any) -> ServerAdminSpaceDetail:
+    summary = _space_summary_from_row(row)
+    return ServerAdminSpaceDetail(
+        **summary.model_dump(),
+        latest_membership_ended_at=row._mapping["latest_membership_ended_at"],
+    )
+
+
+def _parse_space_id(space_id: str) -> UUID:
+    parsed = parse_id(space_id)
+    if parsed is None:
+        raise NotFoundError("Space not found.", "SERVER_ADMIN_SPACE_NOT_FOUND")
+    return parsed
 
 
 def _parse_account_id(account_id: str) -> UUID:
@@ -512,6 +657,96 @@ def get_server_admin_overview(
         ],
         warning_codes=warning_codes,
     )
+
+
+@router.get(
+    "/spaces",
+    response_model=ServerAdminSpaceList,
+    responses=problem_responses(401, 403, 422),
+)
+def list_server_admin_spaces(
+    _: CurrentServerAdmin,
+    session: DbSession,
+    query: Annotated[str | None, Query(max_length=64)] = None,
+    space_status: Annotated[SpaceStatusFilter, Query(alias="status")] = "all",
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ServerAdminSpaceList:
+    """Return lifecycle metadata for Spaces without relationship content."""
+    aggregate = _space_aggregate_subquery()
+    membership_count = func.coalesce(aggregate.c.membership_count, 0)
+    active_membership_count = func.coalesce(aggregate.c.active_membership_count, 0)
+    conditions: list[Any] = []
+
+    if query is not None and query.strip():
+        parsed = parse_id(query.strip())
+        if parsed is None:
+            return ServerAdminSpaceList(items=[], total=0, limit=limit, offset=offset)
+        conditions.append(Space.id == parsed)
+
+    if space_status == "active":
+        conditions.append(active_membership_count > 0)
+    elif space_status == "inactive":
+        conditions.extend((active_membership_count == 0, membership_count > 0))
+    elif space_status == "empty":
+        conditions.append(membership_count == 0)
+    elif space_status == "anomaly":
+        conditions.append(
+            or_(
+                membership_count == 0,
+                active_membership_count > MAX_ACTIVE_PARTNERS,
+            )
+        )
+
+    count_statement = (
+        select(func.count())
+        .select_from(Space)
+        .outerjoin(aggregate, aggregate.c.space_id == Space.id)
+    )
+    if conditions:
+        count_statement = count_statement.where(*conditions)
+    total = session.execute(count_statement).scalar_one()
+
+    statement = (
+        select(*_space_projection(aggregate))
+        .select_from(Space)
+        .outerjoin(aggregate, aggregate.c.space_id == Space.id)
+    )
+    if conditions:
+        statement = statement.where(*conditions)
+    statement = statement.order_by(Space.created_at.desc()).limit(limit).offset(offset)
+    rows = session.execute(statement).all()
+    return ServerAdminSpaceList(
+        items=[_space_summary_from_row(row) for row in rows],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/spaces/{space_id}",
+    response_model=ServerAdminSpaceDetail,
+    responses=problem_responses(401, 403, 404),
+)
+def get_server_admin_space(
+    _: CurrentServerAdmin,
+    session: DbSession,
+    space_id: Annotated[str, Path(max_length=64)],
+) -> ServerAdminSpaceDetail:
+    """Return one Space's privacy-safe lifecycle projection."""
+    parsed = _parse_space_id(space_id)
+    aggregate = _space_aggregate_subquery()
+    statement = (
+        select(*_space_projection(aggregate))
+        .select_from(Space)
+        .outerjoin(aggregate, aggregate.c.space_id == Space.id)
+        .where(Space.id == parsed)
+    )
+    row = session.execute(statement).one_or_none()
+    if row is None:
+        raise NotFoundError("Space not found.", "SERVER_ADMIN_SPACE_NOT_FOUND")
+    return _space_detail_from_row(row)
 
 
 @router.get(

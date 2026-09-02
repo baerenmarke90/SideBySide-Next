@@ -9,8 +9,10 @@ All URIs are relative to *http://localhost*
 | [**getServerAdminActivityApiV1ServerAdminActivityGet**](ServerAdminApi.md#getserveradminactivityapiv1serveradminactivityget) | **GET** /api/v1/server-admin/activity | Get Server Admin Activity |
 | [**getServerAdminOverviewApiV1ServerAdminOverviewGet**](ServerAdminApi.md#getserveradminoverviewapiv1serveradminoverviewget) | **GET** /api/v1/server-admin/overview | Get Server Admin Overview |
 | [**getServerAdminSettingsApiV1ServerAdminSettingsGet**](ServerAdminApi.md#getserveradminsettingsapiv1serveradminsettingsget) | **GET** /api/v1/server-admin/settings | Get Server Admin Settings |
+| [**getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet**](ServerAdminApi.md#getserveradminspaceapiv1serveradminspacesspaceidget) | **GET** /api/v1/server-admin/spaces/{space_id} | Get Server Admin Space |
 | [**issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost**](ServerAdminApi.md#issueserveradminoperatorrecoveryapiv1serveradminaccountsaccountidrecoveryoperatorpost) | **POST** /api/v1/server-admin/accounts/{accountId}/recovery/operator | Issue Server Admin Operator Recovery |
 | [**listServerAdminAccountsApiV1ServerAdminAccountsGet**](ServerAdminApi.md#listserveradminaccountsapiv1serveradminaccountsget) | **GET** /api/v1/server-admin/accounts | List Server Admin Accounts |
+| [**listServerAdminSpacesApiV1ServerAdminSpacesGet**](ServerAdminApi.md#listserveradminspacesapiv1serveradminspacesget) | **GET** /api/v1/server-admin/spaces | List Server Admin Spaces |
 | [**requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost**](ServerAdminApi.md#requestserveradminaccountrecoveryemailapiv1serveradminaccountsaccountidrecoveryemailpost) | **POST** /api/v1/server-admin/accounts/{accountId}/recovery/email | Request Server Admin Account Recovery Email |
 | [**revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost**](ServerAdminApi.md#revokeserveradminaccountsessionsapiv1serveradminaccountsaccountidsessionsrevokepost) | **POST** /api/v1/server-admin/accounts/{accountId}/sessions/revoke | Revoke Server Admin Account Sessions |
 | [**updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut**](ServerAdminApi.md#updatemaintenancesettingapiv1serveradminsettingsmaintenanceput) | **PUT** /api/v1/server-admin/settings/maintenance | Update Maintenance Setting |
@@ -326,6 +328,76 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet
+
+> ServerAdminSpaceDetail getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet(spaceId)
+
+Get Server Admin Space
+
+Return one Space\&#39;s privacy-safe lifecycle projection.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { GetServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    spaceId: spaceId_example,
+  } satisfies GetServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequest;
+
+  try {
+    const data = await api.getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **spaceId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ServerAdminSpaceDetail**](ServerAdminSpaceDetail.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost
 
 > ServerAdminRecoveryProof issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost(accountId)
@@ -455,6 +527,85 @@ example().catch(console.error);
 ### Return type
 
 [**ServerAdminAccountList**](ServerAdminAccountList.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## listServerAdminSpacesApiV1ServerAdminSpacesGet
+
+> ServerAdminSpaceList listServerAdminSpacesApiV1ServerAdminSpacesGet(query, status, limit, offset)
+
+List Server Admin Spaces
+
+Return lifecycle metadata for Spaces without relationship content.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { ListServerAdminSpacesApiV1ServerAdminSpacesGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string (optional)
+    query: query_example,
+    // 'all' | 'active' | 'inactive' | 'empty' | 'anomaly' (optional)
+    status: status_example,
+    // number (optional)
+    limit: 56,
+    // number (optional)
+    offset: 56,
+  } satisfies ListServerAdminSpacesApiV1ServerAdminSpacesGetRequest;
+
+  try {
+    const data = await api.listServerAdminSpacesApiV1ServerAdminSpacesGet(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **query** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **status** | `all`, `active`, `inactive`, `empty`, `anomaly` |  | [Optional] [Defaults to `&#39;all&#39;`] [Enum: all, active, inactive, empty, anomaly] |
+| **limit** | `number` |  | [Optional] [Defaults to `50`] |
+| **offset** | `number` |  | [Optional] [Defaults to `0`] |
+
+### Return type
+
+[**ServerAdminSpaceList**](ServerAdminSpaceList.md)
 
 ### Authorization
 
