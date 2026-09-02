@@ -5,24 +5,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -69,26 +61,8 @@ fun StoryScreen(
     header: (@Composable () -> Unit)? = null,
 ) {
     val days = items.toStoryDays()
-    val listState = rememberLazyListState()
-
-    // Reads onLoadMore/loadingMore fresh on every check rather than
-    // recreating this long-lived effect each time either changes — the
-    // effect itself is keyed only on listState, which stays the same
-    // instance for the composable's whole lifetime.
-    val currentOnLoadMore = rememberUpdatedState(onLoadMore)
-    val currentLoadingMore = rememberUpdatedState(loadingMore)
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.layoutInfo }.collect { layoutInfo ->
-            val total = layoutInfo.totalItemsCount
-            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
-            val nearEnd = total > 0 && lastVisible >= total - 1 - LOAD_MORE_LOOKAHEAD
-            val loadMore = currentOnLoadMore.value
-            if (nearEnd && loadMore != null && !currentLoadingMore.value) loadMore()
-        }
-    }
 
     LazyColumn(
-        state = listState,
         modifier = modifier.fillMaxWidth(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             SideBySideTheme.spacing.pageMargin,
@@ -123,11 +97,7 @@ fun StoryScreen(
             }
         }
 
-        // Scrolling near the end already triggers the next page via the
-        // LaunchedEffect above; this stays as an explicit, always-available
-        // affordance too — for TalkBack navigation, which does not always
-        // produce the same scroll-position signal a swipe does, and so a
-        // Story that simply stopped after one page never loses history with
+        // A Story that simply stopped after one page would lose history with
         // nothing on screen to say so.
         onLoadMore?.let { more ->
             item(key = "load-more") {
@@ -197,65 +167,26 @@ private fun StoryEntryCard(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            if (entry.images.size == 1) {
-                StoryImage(
-                    image = entry.images.single(),
-                    store = imageStore,
-                    generation = generation,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f),
-                )
-            } else if (entry.images.size > 1) {
-                StoryImageCarousel(
-                    images = entry.images,
-                    imageStore = imageStore,
-                    generation = generation,
-                )
+            if (entry.images.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(
+                        SideBySideTheme.spacing.step2,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    for (image in entry.images.take(MAX_IMAGES_PER_ENTRY)) {
+                        StoryImage(
+                            image = image,
+                            store = imageStore,
+                            generation = generation,
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f),
+                        )
+                    }
+                }
             }
         }
-    }
-}
-
-/**
- * A swipeable gallery for a Memory with more than one photograph.
- *
- * Unlike the single-image case, a carousel has no fixed on-screen width
- * budget to divide between images — it shows every one of them, in order,
- * rather than the first few. The position label doubles as the swipe
- * affordance's accessible name, since a bare `HorizontalPager` announces
- * nothing about how many pages exist or which one is current.
- */
-@Composable
-private fun StoryImageCarousel(
-    images: List<StoryImageRef>,
-    imageStore: StoryImageStore,
-    generation: Long,
-) {
-    val pagerState = rememberPagerState(pageCount = { images.size })
-    Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2)) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f),
-        ) { page ->
-            StoryImage(
-                image = images[page],
-                store = imageStore,
-                generation = generation,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        Text(
-            text = stringResource(
-                R.string.story_carousel_position,
-                pagerState.currentPage + 1,
-                images.size,
-            ),
-            style = MaterialTheme.typography.labelSmall,
-            color = SideBySideTheme.colors.textSecondary,
-        )
     }
 }
 
@@ -280,12 +211,10 @@ private fun StoryEmpty() {
 }
 
 /**
- * How many items before the actual end of the list the next page starts
- * loading — early enough that scrolling never outruns it and shows a bare
- * bottom, without starting so early that a short fling triggers a load the
- * user was never really approaching.
+ * A row shows at most this many photographs side by side before each becomes
+ * too small to recognise. The rest belong to the Memory's own screen.
  */
-private const val LOAD_MORE_LOOKAHEAD = 3
+private const val MAX_IMAGES_PER_ENTRY = 3
 
 private fun StoryEntryKind.labelRes(): Int = when (this) {
     StoryEntryKind.MEMORY -> R.string.story_kind_memory

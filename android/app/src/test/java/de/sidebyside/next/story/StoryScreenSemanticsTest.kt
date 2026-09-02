@@ -1,13 +1,10 @@
 package de.sidebyside.next.story
 
 import android.content.Context
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.core.app.ApplicationProvider
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
@@ -17,7 +14,6 @@ import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,8 +21,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import sidebyside.api.models.AuthorSummary
 import sidebyside.api.models.HeartEmotion
-import sidebyside.api.models.MediaType
-import sidebyside.api.models.MemoryAttachmentSummary
 import sidebyside.api.models.MemorySummary
 import sidebyside.api.models.MilestoneSummary
 import sidebyside.api.models.ResourceCapabilities
@@ -101,105 +95,30 @@ class StoryScreenSemanticsTest {
             .assertIsDisplayed()
     }
 
-    @Test
-    fun aSingleImageNeverShowsACarouselPositionLabel() {
-        // A single photograph has nothing to page between; a one-of-one
-        // position label would be a fact no one asked for, not a helpful
-        // indicator.
-        render(listOf(memory(attachments = listOf(imageAttachment(position = 0)))))
-
-        composeRule
-            .onAllNodesWithText(context.getString(R.string.story_carousel_position, 1, 1))
-            .assertCountEquals(0)
-    }
-
-    @Test
-    @Config(qualifiers = "w320dp-h800dp")
-    fun multiplePhotographsShowASwipeableCarouselWithAPositionLabel() {
-        render(
-            listOf(
-                memory(
-                    attachments = listOf(
-                        imageAttachment(position = 0),
-                        imageAttachment(position = 1),
-                        imageAttachment(position = 2),
-                    ),
-                ),
-            ),
-        )
-
-        composeRule
-            .onNodeWithText(context.getString(R.string.story_carousel_position, 1, 3))
-            .assertIsDisplayed()
-    }
-
-    @Test
-    @Config(qualifiers = "w320dp-h800dp")
-    fun scrollingNearTheEndOfTheStoryLoadsTheNextPageWithoutTappingAnything() {
-        // Twelve entries sharing one day, so the LazyColumn's own item count
-        // is exactly predictable: one day heading, twelve entries, and the
-        // manual "load more" row — 14 items, indices 0..13 — rather than
-        // guessing around interleaved per-entry day headings.
-        val items = (0 until 12).map { index -> memory(title = "Entry $index") }
-        var loadMoreCalls = 0
-        render(items = items, onLoadMore = { loadMoreCalls++ }, loadingMore = false)
-
-        composeRule.onNode(hasScrollAction()).performScrollToIndex(13)
-        composeRule.waitForIdle()
-
-        assertTrue(loadMoreCalls > 0)
-    }
-
-    private fun render(
-        items: List<StoryItem>,
-        onLoadMore: (() -> Unit)? = null,
-        loadingMore: Boolean = false,
-    ) {
+    private fun render(items: List<StoryItem>) {
         val store = StoryImageStore(scope = CoroutineScope(Dispatchers.Unconfined)) {
             error("This test renders no photographs.")
         }
         composeRule.setContent {
             SideBySideTheme {
-                StoryScreen(
-                    items = items,
-                    imageStore = store,
-                    generation = 0,
-                    onLoadMore = onLoadMore,
-                    loadingMore = loadingMore,
-                )
+                StoryScreen(items = items, imageStore = store, generation = 0)
             }
         }
     }
 }
-
-private fun imageAttachment(position: Int) = MemoryAttachmentSummary(
-    hasThumbnail = true,
-    height = 100,
-    id = UUID.randomUUID(),
-    mediaType = MediaType.IMAGE,
-    mimeType = "image/jpeg",
-    position = position,
-    propertySize = 1024,
-    status = "READY",
-    width = 100,
-)
 
 private val CAPABILITIES = ResourceCapabilities(canComment = true, canDelete = true, canEdit = true)
 private val AUTHOR = AuthorSummary(displayName = "Lea", id = UUID.randomUUID())
 private val CREATED: OffsetDateTime = OffsetDateTime.now()
 private val DAY: LocalDate = LocalDate.of(2026, 8, 20)
 
-private fun memory(
-    date: LocalDate = DAY,
-    title: String = "A day by the sea",
-    attachments: List<MemoryAttachmentSummary> = emptyList(),
-) =
+private fun memory(date: LocalDate = DAY, title: String = "A day by the sea") =
     StoryItem.MemoryWrapper(
         StoryMemoryItem(
             effectiveDate = date,
             kind = StoryMemoryItem.Kind.MEMORY,
             memory = MemorySummary(
-                attachments = attachments,
+                attachments = emptyList(),
                 author = AUTHOR,
                 capabilities = CAPABILITIES,
                 createdAt = CREATED,

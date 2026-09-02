@@ -143,7 +143,6 @@
     <string name="story_kind_heart_moment">Herzmoment</string>
     <string name="story_by_author">von %1$s</string>
     <string name="story_image_unavailable">Bild nicht geladen</string>
-    <string name="story_carousel_position">Bild %1$d von %2$d</string>
     <string name="story_empty_title">Eure Geschichte beginnt hier</string>
     <string name="story_empty_body">Sobald ihr eine Erinnerung festhaltet, erscheint sie an diesem Ort — nach Tagen geordnet.</string>
     <string name="story_title">Eure Geschichte</string>
