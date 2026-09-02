@@ -1,5 +1,6 @@
 package de.sidebyside.next.notifications
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,11 +35,14 @@ import sidebyside.api.models.NotificationKind
 private val ReadingMeasure: Dp = 560.dp
 
 /**
- * The account's own notifications. #357 scopes this to list, unread count
- * and mark-one/mark-all — resolving [NotificationItem.targetId] into a deep
- * link to the underlying content is a speculative destination this slice
- * deliberately leaves out, per #357's own "no speculative destination"
- * exclusion.
+ * The account's own notifications.
+ *
+ * A notification whose [NotificationItem.targetType]/[NotificationItem.targetId]
+ * resolves to a route (see `engagementTargetRoute` in `MainActivity.kt`)
+ * opens it on tap, per the M2-D18 cross-client Deep Link contract's "small
+ * logical target tuple" — #357's original "no speculative destination"
+ * exclusion no longer applies now that a resolver exists. A kind Android has
+ * no detail route for yet (Wish, Plan) stays a plain, unclickable row.
  */
 @Composable
 fun NotificationsScreen(
@@ -49,6 +53,7 @@ fun NotificationsScreen(
     onBack: () -> Unit,
     onMarkRead: (NotificationItem) -> Unit,
     onMarkAllRead: () -> Unit,
+    onOpen: (NotificationItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -114,10 +119,16 @@ fun NotificationsScreen(
         items(count = notifications.size, key = { index -> notifications[index].id.toString() }) { index ->
             val notification = notifications[index]
             val unread = notification.readAt == null
+            // The same resolver `onOpen` ultimately navigates with, so a row
+            // never looks tappable without actually having somewhere to go.
+            val opensSomewhere = de.sidebyside.next.reference
+                .engagementTargetRoute(notification.targetType, notification.targetId) != null
             Surface(
                 shape = RoundedCornerShape(SideBySideTheme.radii.card),
                 color = if (unread) SideBySideTheme.colors.surfaceSubtle else SideBySideTheme.colors.surface,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (opensSomewhere) Modifier.clickable { onOpen(notification) } else Modifier),
             ) {
                 Row(
                     modifier = Modifier

@@ -1,5 +1,6 @@
 package de.sidebyside.next.reference
 
+import de.sidebyside.next.connectivity.ConnectivityTracker
 import de.sidebyside.next.demo.DemoPersona
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +61,9 @@ import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.SearchPage
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
+import sidebyside.api.models.TransferExportCreate
+import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferScope
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
@@ -148,6 +152,13 @@ private const val EMPTY_JSON_BODY = "{}"
 class OkHttpReferenceApi(
     apiBaseUrl: String,
     private val client: OkHttpClient = OkHttpClient(),
+    /**
+     * `null` (every existing test's default) makes this class behave exactly
+     * as before. A real instance sees every request this class ever makes,
+     * since both [executeJson] and [executeEmpty] are this class's only two
+     * ways to reach the network.
+     */
+    private val connectivityTracker: ConnectivityTracker? = null,
 ) : ReferenceContract {
     private val baseUrl = apiBaseUrl.trimEnd('/')
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
@@ -1077,12 +1088,16 @@ class OkHttpReferenceApi(
     }
 
     private suspend fun <T> executeJson(request: Request, serializer: KSerializer<T>): T = withContext(Dispatchers.IO) {
-        client.newCall(request).execute().use { response ->
-            assertSuccessful(response)
-            val body = response.body.string()
-            if (body.isBlank()) throw ReferenceApiException(null, "Empty API response.")
-            SideBySideJson.decodeFromString(serializer, body)
-        }
+        runCatching {
+            client.newCall(request).execute().use { response ->
+                assertSuccessful(response)
+                val body = response.body.string()
+                if (body.isBlank()) throw ReferenceApiException(null, "Empty API response.")
+                SideBySideJson.decodeFromString(serializer, body)
+            }
+        }.onSuccess { connectivityTracker?.recordSuccess() }
+            .onFailure { connectivityTracker?.recordFailure(it) }
+            .getOrThrow()
     }
 
     override suspend fun listPlaces(
@@ -1674,8 +1689,52 @@ class OkHttpReferenceApi(
         ).delete().build(),
     )
 
+    override suspend fun createTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        scope: TransferScope,
+    ): TransferExportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/exports", accessToken)
+            .post(
+                SideBySideJson.encodeToString(TransferExportCreate.serializer(), TransferExportCreate(scope))
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        TransferExportDetail.serializer(),
+    )
+
+    override suspend fun getTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+    ): TransferExportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/exports/$exportId", accessToken)
+            .get()
+            .build(),
+        TransferExportDetail.serializer(),
+    )
+
+    override suspend fun downloadTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+        sink: java.io.OutputStream,
+    ) = withContext(Dispatchers.IO) {
+        val request = authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/transfer/exports/$exportId/download",
+            accessToken,
+        ).get().build()
+        client.newCall(request).execute().use { response ->
+            assertSuccessful(response)
+            response.body.byteStream().use { it.copyTo(sink) }
+            Unit
+        }
+    }
+
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {
-        client.newCall(request).execute().use(::assertSuccessful)
+        runCatching { client.newCall(request).execute().use(::assertSuccessful) }
+            .onSuccess { connectivityTracker?.recordSuccess() }
+            .onFailure { connectivityTracker?.recordFailure(it) }
+            .getOrThrow()
     }
 
     private fun assertSuccessful(response: Response) {

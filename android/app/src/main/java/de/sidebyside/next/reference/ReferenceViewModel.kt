@@ -91,6 +91,8 @@ import sidebyside.api.models.PlanSchedule
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
 import sidebyside.api.models.StoryPage
+import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferScope
 import sidebyside.api.models.WishCreate
 import sidebyside.api.models.WishDetail
 import sidebyside.api.models.WishStatus
@@ -136,6 +138,15 @@ data class DraftImageUiItem(
 data class ReferenceUiState(
     val configured: Boolean = false,
     val instanceAvailability: InstanceAvailability = InstanceAvailability.CHECKING,
+    /**
+     * The M2-D18 application-level connectivity state: `true` only after a
+     * transport/server-availability failure, cleared by the next successful
+     * request. Never set directly by a screen — see
+     * `de.sidebyside.next.connectivity.ConnectivityTracker`.
+     */
+    val offline: Boolean = false,
+    /** The last request of any kind that succeeded, regardless of which screen made it. */
+    val lastSyncedAt: java.time.Instant? = null,
     val loggedIn: Boolean = false,
     /**
      * Authenticated, but with no Space to open yet.
@@ -281,6 +292,12 @@ data class ReferenceUiState(
     val activity: List<ActivityItem> = emptyList(),
     val activityBusy: Boolean = false,
     val activityProblem: UiProblem? = null,
+    /** The M2-D17/S6 Transfer Bundle export currently tracked, if any. */
+    val export: TransferExportDetail? = null,
+    val exportBusy: Boolean = false,
+    val exportProblem: UiProblem? = null,
+    /** Set once [export] has actually been saved to a location the user chose; reset by a new export. */
+    val exportDownloaded: Boolean = false,
     val searchResults: List<SearchResult> = emptyList(),
     val searchBusy: Boolean = false,
     val searchProblem: UiProblem? = null,
@@ -348,6 +365,13 @@ class ReferenceViewModel(
      * behave exactly as before, network-only.
      */
     private val productReadCache: de.sidebyside.next.cache.ProductReadCache? = null,
+    /**
+     * The M2-D18 application-level connectivity state. `null` (the default
+     * every existing test relies on) means [ReferenceUiState.offline] never
+     * changes from its initial value — no behavior change for callers that
+     * do not configure it.
+     */
+    private val connectivityTracker: de.sidebyside.next.connectivity.ConnectivityTracker? = null,
 ) : ViewModel() {
     private val injectedApi: ReferenceContract? = api
 
@@ -386,6 +410,15 @@ class ReferenceViewModel(
 
     init {
         if (config.isConfigured) refreshInstanceAvailability()
+        connectivityTracker?.let { tracker ->
+            viewModelScope.launch {
+                tracker.state.collect { connectivity ->
+                    mutate {
+                        it.copy(offline = connectivity.offline, lastSyncedAt = connectivity.lastSyncedAt)
+                    }
+                }
+            }
+        }
     }
 
     fun refreshInstanceAvailability() {
@@ -458,6 +491,7 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearExport()
         clearSearch()
         clearCollections()
         clearChapters()
@@ -556,6 +590,7 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearExport()
         clearSearch()
         clearCollections()
         clearChapters()
@@ -621,6 +656,7 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearExport()
         clearSearch()
         clearCollections()
         clearChapters()
@@ -692,6 +728,7 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearExport()
         clearSearch()
         clearCollections()
         clearChapters()
@@ -3900,6 +3937,84 @@ class ReferenceViewModel(
 
     fun clearActivity() {
         mutate { it.copy(activity = emptyList(), activityBusy = false, activityProblem = null) }
+    }
+
+    /** Starts a Transfer Bundle export. [refreshExport] is how the caller learns it finished. */
+    fun createExport(scope: TransferScope) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(exportBusy = true, exportProblem = null, exportDownloaded = false) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.createTransferExport(spaceId, currentSession.tokens.accessToken, scope) }
+                .onSuccess { export ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(export = export, exportBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(exportBusy = false, exportProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /** Re-reads the tracked export's status — assembly runs as a background job on the server. */
+    fun refreshExport() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val exportId = _uiState.value.export?.id ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(exportBusy = true, exportProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getTransferExport(spaceId, currentSession.tokens.accessToken, exportId) }
+                .onSuccess { export ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(export = export, exportBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(exportBusy = false, exportProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /**
+     * Streams the ready export into [sink] — a destination the caller
+     * already opened (typically from a Storage Access Framework picker), so
+     * this never buffers the whole archive in memory.
+     *
+     * `suspend` rather than fire-and-forget like every other network call
+     * here: the caller's own `.use { }` around [sink] must stay open for
+     * exactly as long as this call takes, not just until it is launched.
+     */
+    suspend fun downloadExport(sink: java.io.OutputStream) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val exportId = _uiState.value.export?.id ?: return
+        val operationEpoch = sessionEpoch
+        if (!isCurrentSession(operationEpoch, currentSession)) return
+
+        mutate { it.copy(exportBusy = true, exportProblem = null) }
+        runCatching { api.downloadTransferExport(spaceId, currentSession.tokens.accessToken, exportId, sink) }
+            .onSuccess {
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate { it.copy(exportBusy = false, exportDownloaded = true) }
+            }
+            .onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                mutate { it.copy(exportBusy = false, exportProblem = problemFor(throwable)) }
+            }
+    }
+
+    fun clearExport() {
+        mutate { it.copy(export = null, exportBusy = false, exportProblem = null, exportDownloaded = false) }
     }
 
     fun search(query: String) {

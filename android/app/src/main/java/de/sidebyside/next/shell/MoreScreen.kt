@@ -73,6 +73,13 @@ fun MoreScreen(
      */
     onOpenPrivateArea: () -> Unit,
     /**
+     * Opens the M2-D17/S6 Transfer Bundle data export.
+     *
+     * Deliberately without a default, for the same reason as
+     * [onOpenHeartMoments].
+     */
+    onOpenDataExport: () -> Unit,
+    /**
      * Opens the account's notifications.
      *
      * Deliberately without a default, for the same reason as
@@ -348,6 +355,38 @@ fun MoreScreen(
                         modifier = Modifier.heightIn(min = MinimumTouchTarget),
                     ) {
                         Text(stringResource(R.string.private_area_open))
+                    }
+                }
+            }
+        }
+
+        run {
+            val open = onOpenDataExport
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.data_export_card_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.data_export_card_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    OutlinedButton(
+                        onClick = open,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.data_export_open))
                     }
                 }
             }

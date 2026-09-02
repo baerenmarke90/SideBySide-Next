@@ -72,15 +72,19 @@ fun RelatedPersonsScreen(
         birthdayYearKnown: Boolean,
         visibility: ContentVisibility,
     ) -> Unit,
+    onEdit: (
+        personId: UUID,
+        displayName: String,
+        relationship: PersonRelationship,
+        birthday: LocalDate?,
+        birthdayYearKnown: Boolean,
+        visibility: ContentVisibility,
+    ) -> Unit,
     onOpenDates: (UUID) -> Unit,
     onDelete: (UUID, RelatedPersonDeletePolicy) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var name by rememberSaveable { mutableStateOf("") }
-    var relationship by rememberSaveable { mutableStateOf(PersonRelationship.OTHER) }
-    var birthday by rememberSaveable { mutableStateOf("") }
-    var yearUnknown by rememberSaveable { mutableStateOf(false) }
-    var keepPrivate by rememberSaveable { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf<String?>(null) }
     var deleteTarget by rememberSaveable { mutableStateOf<String?>(null) }
 
     LazyColumn(
@@ -120,108 +124,14 @@ fun RelatedPersonsScreen(
                 color = SideBySideTheme.colors.surface,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(
-                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
-                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
-                ) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it.take(120) },
-                        label = { Text(stringResource(R.string.related_person_name_hint)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        text = stringResource(R.string.related_person_relationship),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = SideBySideTheme.colors.textSecondary,
-                    )
-                    Column(Modifier.selectableGroup()) {
-                        for (option in PersonRelationship.entries) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = MinimumTouchTarget)
-                                    .selectable(
-                                        selected = option == relationship,
-                                        enabled = !busy,
-                                        role = Role.RadioButton,
-                                        onClick = { relationship = option },
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                RadioButton(selected = option == relationship, onClick = null)
-                                Text(
-                                    text = stringResource(option.labelRes()),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = SideBySideTheme.colors.textPrimary,
-                                    modifier = Modifier.padding(start = SideBySideTheme.spacing.step3),
-                                )
-                            }
-                        }
-                    }
-                    OutlinedTextField(
-                        value = birthday,
-                        onValueChange = { birthday = it },
-                        label = { Text(stringResource(R.string.related_person_birthday_hint)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Row(
-                        modifier = Modifier
-                            .heightIn(min = MinimumTouchTarget)
-                            .toggleable(
-                                value = yearUnknown,
-                                role = Role.Checkbox,
-                                onValueChange = { yearUnknown = it },
-                            ),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // The row carries the click; the checkbox must not
-                        // take a second stop in the screen reader's order.
-                        Checkbox(checked = yearUnknown, onCheckedChange = null)
-                        Text(
-                            text = stringResource(R.string.related_person_birthday_year_unknown),
-                            modifier = Modifier.padding(start = SideBySideTheme.spacing.step2),
-                        )
-                    }
-                    Row(
-                        modifier = Modifier
-                            .heightIn(min = MinimumTouchTarget)
-                            .toggleable(
-                                value = keepPrivate,
-                                role = Role.Checkbox,
-                                onValueChange = { keepPrivate = it },
-                            ),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = keepPrivate, onCheckedChange = null)
-                        Text(
-                            text = stringResource(R.string.related_person_keep_private),
-                            modifier = Modifier.padding(start = SideBySideTheme.spacing.step2),
-                        )
-                    }
-                    Button(
-                        onClick = {
-                            val parsedBirthday = birthday.trim().takeIf { it.isNotBlank() }
-                                ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-                            onAdd(
-                                name,
-                                relationship,
-                                parsedBirthday,
-                                // A known year only means something once a
-                                // birthday exists at all; the server rejects
-                                // year-known without a date.
-                                parsedBirthday != null && !yearUnknown,
-                                if (keepPrivate) ContentVisibility.PRIVATE else ContentVisibility.SHARED,
-                            )
-                            name = ""
-                            birthday = ""
+                Column(modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding)) {
+                    RelatedPersonForm(
+                        submitLabel = stringResource(R.string.related_person_add),
+                        busy = busy,
+                        onSubmit = { displayName, relationship, birthday, birthdayYearKnown, visibility ->
+                            onAdd(displayName, relationship, birthday, birthdayYearKnown, visibility)
                         },
-                        enabled = !busy && name.isNotBlank(),
-                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
-                    ) {
-                        Text(stringResource(R.string.related_person_add))
-                    }
+                    )
                 }
             }
         }
@@ -266,6 +176,13 @@ fun RelatedPersonsScreen(
                             Text(stringResource(R.string.related_person_open))
                         }
                         TextButton(
+                            onClick = { editing = person.id.toString() },
+                            enabled = !busy,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.related_person_edit))
+                        }
+                        TextButton(
                             onClick = { deleteTarget = person.id.toString() },
                             enabled = !busy,
                             modifier = Modifier.heightIn(min = MinimumTouchTarget),
@@ -276,6 +193,23 @@ fun RelatedPersonsScreen(
                 }
             }
         }
+    }
+
+    editing?.let { id ->
+        val target = people.firstOrNull { it.id.toString() == id }
+        if (target == null) {
+            editing = null
+            return@let
+        }
+        EditRelatedPersonDialog(
+            person = target,
+            busy = busy,
+            onDismiss = { editing = null },
+            onSave = { displayName, relationship, birthday, birthdayYearKnown, visibility ->
+                editing = null
+                onEdit(target.id, displayName, relationship, birthday, birthdayYearKnown, visibility)
+            },
+        )
     }
 
     deleteTarget?.let { id ->
@@ -293,6 +227,180 @@ fun RelatedPersonsScreen(
             },
         )
     }
+}
+
+/**
+ * Shared by the inline add card and [EditRelatedPersonDialog], so the two
+ * never drift into two different sets of fields for the same resource.
+ */
+@Composable
+private fun RelatedPersonForm(
+    submitLabel: String,
+    busy: Boolean,
+    initialName: String = "",
+    initialRelationship: PersonRelationship = PersonRelationship.OTHER,
+    initialBirthday: String = "",
+    initialYearUnknown: Boolean = false,
+    initialKeepPrivate: Boolean = false,
+    onSubmit: (
+        displayName: String,
+        relationship: PersonRelationship,
+        birthday: LocalDate?,
+        birthdayYearKnown: Boolean,
+        visibility: ContentVisibility,
+    ) -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf(initialName) }
+    var relationship by rememberSaveable { mutableStateOf(initialRelationship) }
+    var birthday by rememberSaveable { mutableStateOf(initialBirthday) }
+    var yearUnknown by rememberSaveable { mutableStateOf(initialYearUnknown) }
+    var keepPrivate by rememberSaveable { mutableStateOf(initialKeepPrivate) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it.take(120) },
+            label = { Text(stringResource(R.string.related_person_name_hint)) },
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = stringResource(R.string.related_person_relationship),
+            style = MaterialTheme.typography.labelLarge,
+            color = SideBySideTheme.colors.textSecondary,
+        )
+        Column(Modifier.selectableGroup()) {
+            for (option in PersonRelationship.entries) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = MinimumTouchTarget)
+                        .selectable(
+                            selected = option == relationship,
+                            enabled = !busy,
+                            role = Role.RadioButton,
+                            onClick = { relationship = option },
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = option == relationship, onClick = null)
+                    Text(
+                        text = stringResource(option.labelRes()),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.padding(start = SideBySideTheme.spacing.step3),
+                    )
+                }
+            }
+        }
+        OutlinedTextField(
+            value = birthday,
+            onValueChange = { birthday = it },
+            label = { Text(stringResource(R.string.related_person_birthday_hint)) },
+            singleLine = true,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            modifier = Modifier
+                .heightIn(min = MinimumTouchTarget)
+                .toggleable(
+                    value = yearUnknown,
+                    enabled = !busy,
+                    role = Role.Checkbox,
+                    onValueChange = { yearUnknown = it },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The row carries the click; the checkbox must not take a
+            // second stop in the screen reader's order.
+            Checkbox(checked = yearUnknown, onCheckedChange = null, enabled = !busy)
+            Text(
+                text = stringResource(R.string.related_person_birthday_year_unknown),
+                modifier = Modifier.padding(start = SideBySideTheme.spacing.step2),
+            )
+        }
+        Row(
+            modifier = Modifier
+                .heightIn(min = MinimumTouchTarget)
+                .toggleable(
+                    value = keepPrivate,
+                    enabled = !busy,
+                    role = Role.Checkbox,
+                    onValueChange = { keepPrivate = it },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = keepPrivate, onCheckedChange = null, enabled = !busy)
+            Text(
+                text = stringResource(R.string.related_person_keep_private),
+                modifier = Modifier.padding(start = SideBySideTheme.spacing.step2),
+            )
+        }
+        Button(
+            onClick = {
+                val parsedBirthday = birthday.trim().takeIf { it.isNotBlank() }
+                    ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                onSubmit(
+                    name,
+                    relationship,
+                    parsedBirthday,
+                    // A known year only means something once a birthday
+                    // exists at all; the server rejects year-known without
+                    // a date.
+                    parsedBirthday != null && !yearUnknown,
+                    if (keepPrivate) ContentVisibility.PRIVATE else ContentVisibility.SHARED,
+                )
+                name = ""
+                birthday = ""
+            },
+            enabled = !busy && name.isNotBlank(),
+            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+        ) {
+            Text(submitLabel)
+        }
+    }
+}
+
+@Composable
+private fun EditRelatedPersonDialog(
+    person: RelatedPersonView,
+    busy: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (
+        displayName: String,
+        relationship: PersonRelationship,
+        birthday: LocalDate?,
+        birthdayYearKnown: Boolean,
+        visibility: ContentVisibility,
+    ) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.related_person_edit_title, person.displayName)) },
+        text = {
+            LazyColumn(modifier = Modifier.heightIn(max = 480.dp)) {
+                item {
+                    RelatedPersonForm(
+                        submitLabel = stringResource(R.string.related_person_save),
+                        busy = busy,
+                        initialName = person.displayName,
+                        initialRelationship = person.relationship,
+                        initialBirthday = person.birthday?.toString().orEmpty(),
+                        initialYearUnknown = person.birthday != null && !person.birthdayYearKnown,
+                        initialKeepPrivate = person.visibility == ContentVisibility.PRIVATE,
+                        onSubmit = { displayName, relationship, birthday, birthdayYearKnown, visibility ->
+                            onSave(displayName, relationship, birthday, birthdayYearKnown, visibility)
+                        },
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.related_person_cancel)) }
+        },
+    )
 }
 
 /**
