@@ -10,7 +10,8 @@
   color: var(--color-text);
   box-shadow: var(--shadow-soft);
   font-weight: 700;
-  transition: transform var(--motion-duration-medium) var(--motion-easing-reveal);
+  transition: transform var(--motion-duration-medium)
+    var(--motion-easing-reveal);
 }
 
 .skip-link:focus {
@@ -19,29 +20,38 @@
 
 .product-shell {
   min-height: 100vh;
-  background: radial-gradient(circle at top, var(--color-entry-aura-brand) 0%, transparent 60%),
-              radial-gradient(circle at bottom left, var(--color-entry-aura-shared) 0%, transparent 50%),
-              var(--color-background);
+  background:
+    radial-gradient(
+      circle at top,
+      var(--color-entry-aura-brand) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      var(--color-entry-aura-shared) 0%,
+      transparent 50%
+    ),
+    var(--color-background);
 }
 
 .product-topbar {
   z-index: 40;
-  background: transparent; /* Assuming header surface handles it, or use header-surface here */
+  background: transparent;
 }
 
 .product-shell-body {
-  min-height: calc(100vh - var(--topbar-height));
   position: relative;
+  min-height: calc(100vh - var(--topbar-height));
 }
 
 /* Global utilities live in the app bar and stay icon-only in persistent chrome. */
 .shell-utility-link,
 .header-profile-trigger {
+  display: inline-grid;
   width: 44px;
   min-width: 44px;
   height: 44px;
   min-height: 44px;
-  display: inline-grid;
   place-items: center;
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-pill);
@@ -97,8 +107,8 @@
   z-index: 80;
   top: calc(100% + var(--space-2));
   right: 0;
-  width: min(18rem, calc(100vw - 2rem));
   display: grid;
+  width: min(18rem, calc(100vw - 2rem));
   gap: var(--space-1);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
@@ -108,8 +118,8 @@
 }
 
 .header-profile-menu-item {
-  min-height: 44px;
   display: flex;
+  min-height: 44px;
   align-items: center;
   gap: var(--space-3);
   border: 0;
@@ -130,9 +140,9 @@
 
 .header-profile-menu-logout {
   width: 100%;
+  margin-top: var(--space-1);
   border-top: 1px solid var(--color-border-subtle);
   border-radius: 0 0 var(--radius-medium) var(--radius-medium);
-  margin-top: var(--space-1);
   color: var(--color-text-secondary);
 }
 
@@ -142,8 +152,8 @@
  * stays reachable through the product flow rather than becoming a utility.
  */
 .shell-primary-action {
-  display: none;
   position: relative;
+  display: none;
   margin-bottom: var(--space-6);
 }
 
@@ -176,9 +186,9 @@
   z-index: 70;
   top: calc(100% + var(--space-2));
   left: 0;
+  display: grid;
   width: 100%;
   min-width: 13rem;
-  display: grid;
   gap: var(--space-1);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
@@ -197,8 +207,8 @@
 }
 
 .quick-create-menu-item {
-  min-height: 44px;
   display: flex;
+  min-height: 44px;
   align-items: center;
   gap: var(--space-2);
   border-radius: var(--radius-medium);
@@ -214,8 +224,8 @@
 
 .quick-create-separator {
   height: 1px;
-  border: 0;
   margin: var(--space-1) var(--space-2);
+  border: 0;
   background: var(--color-border-subtle);
 }
 
@@ -240,8 +250,8 @@
 }
 
 .shell-nav-link {
-  min-height: 48px;
   display: flex;
+  min-height: 48px;
   align-items: center;
   gap: var(--space-3);
   border-radius: var(--radius-medium);
@@ -266,11 +276,11 @@
 }
 
 .shell-nav-icon {
+  display: grid;
   width: 1.5rem;
   height: 1.5rem;
-  display: grid;
-  place-items: center;
   flex: 0 0 auto;
+  place-items: center;
 }
 
 .shell-nav-icon svg {
@@ -291,14 +301,14 @@
 }
 
 .shell-nav-link-active::before {
-  content: "";
   position: absolute;
-  left: 0;
   top: 15%;
   bottom: 15%;
+  left: 0;
   width: 3.5px;
   border-radius: var(--radius-pill);
   background: var(--color-brand);
+  content: "";
 }
 
 .shell-nav-link-active .shell-nav-icon {
@@ -354,8 +364,8 @@
 }
 
 .offline-banner {
-  min-height: 44px;
   display: flex;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
@@ -371,16 +381,16 @@
 /* docs/COMPONENT-CONTRACTS.md §9.2 Snackbar. */
 .snackbar {
   position: fixed;
-  left: 50%;
-  bottom: var(--space-6);
-  transform: translateX(-50%);
   z-index: 210;
+  bottom: var(--space-6);
+  left: 50%;
   display: flex;
+  max-width: min(90vw, 480px);
+  transform: translateX(-50%);
   align-items: center;
   gap: var(--space-3);
-  max-width: min(90vw, 480px);
-  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-4);
   background: var(--color-surface-raised);
   color: var(--color-text);
   box-shadow: var(--shadow-soft);
@@ -392,12 +402,12 @@
 
 .snackbar-dismiss {
   border: 0;
+  padding: var(--space-1);
   background: transparent;
   color: var(--color-text);
   font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
-  padding: var(--space-1);
 }
 
 .page-heading-action {
@@ -405,11 +415,11 @@
 }
 
 .ui-state {
-  min-height: 10rem;
   display: grid;
+  min-height: 10rem;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-4);
   align-items: start;
+  gap: var(--space-4);
   border: 2px dashed var(--color-brand-glow);
   border-radius: var(--radius-card);
   padding: clamp(var(--space-5), 4vw, var(--space-8));
@@ -417,9 +427,9 @@
 }
 
 .ui-state-mark {
+  display: grid;
   width: 2.75rem;
   height: 2.75rem;
-  display: grid;
   place-items: center;
   border-radius: var(--radius-large);
   background: var(--color-brand-surface);
@@ -564,14 +574,14 @@
 }
 
 .invite-hero-title {
+  color: var(--color-brand-text);
   font-family: var(--font-display);
   font-size: 1.8rem;
-  color: var(--color-brand-text);
   line-height: 1.2;
 }
 
 .invite-hero-body {
-  font-size: 1.1rem;
   margin-top: 1rem;
   color: var(--color-text-secondary);
+  font-size: 1.1rem;
 }
