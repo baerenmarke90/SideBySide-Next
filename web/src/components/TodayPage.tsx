@@ -1,13 +1,13 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import { type M4ProductApis, dashboardItemPath } from '../client/m4Product';
-import { resolvedLocale, useTranslation } from '../i18n';
+import { normalizeClientError } from '../client/problemDetails';
 import { postSnackbar } from '../client/snackbar';
+import { resolvedLocale, useTranslation } from '../i18n';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
-import { useState, useRef } from 'react';
-import { normalizeClientError } from '../client/problemDetails';
 import './TodayPage.css';
 
 async function apiCall<T>(request: () => Promise<T>): Promise<T> {
@@ -25,32 +25,47 @@ function formatDate(value: Date | null): string | null {
   }).format(value);
 }
 
-
 function VisualMemoryCard({ item }: { item: DashboardItem }) {
   const { t } = useTranslation();
   const path = dashboardItemPath(item.type, item.id);
-  const date = formatDate(item.occurredOn) ?? formatDate(item.scheduledAt) ?? formatDate(item.createdAt);
+  const date =
+    formatDate(item.occurredOn) ??
+    formatDate(item.scheduledAt) ??
+    formatDate(item.createdAt);
 
   const inner = (
-    <div className={`today-card today-card-${item.type.toLowerCase()} sbs-motion-lift`}>
+    <div
+      className={`today-card today-card-${item.type.toLowerCase()} sbs-motion-lift`}
+    >
       <div className="today-card-content">
         <span className="today-card-kind">{t(`m5s5.kind.${item.type}`)}</span>
-        <h3 className="today-card-title">{item.titleOrText || t('m5s5.dashboard.itemFallback')}</h3>
+        <h3 className="today-card-title">
+          {item.titleOrText || t('m5s5.dashboard.itemFallback')}
+        </h3>
         {date && <span className="today-card-date">{date}</span>}
       </div>
     </div>
   );
 
   if (path) {
-    return <Link to={path} className="today-card-link">{inner}</Link>;
+    return (
+      <Link to={path} className="today-card-link">
+        {inner}
+      </Link>
+    );
   }
   return inner;
 }
 
-function ThinkingOfYouHero({ apis, spaceId }: { apis: M4ProductApis; spaceId: string; }) {
+function ThinkingOfYouHero({
+  apis,
+  spaceId,
+}: {
+  apis: M4ProductApis;
+  spaceId: string;
+}) {
   const { t } = useTranslation();
   const [active, setActive] = useState(false);
-
   const clientRequestIdRef = useRef<string>('');
 
   const mutation = useMutation({
@@ -59,18 +74,17 @@ function ThinkingOfYouHero({ apis, spaceId }: { apis: M4ProductApis; spaceId: st
         apis.notifications.sendThinkingOfYou({
           spaceId,
           thinkingOfYouCreate: { clientRequestId: clientRequestIdRef.current },
-        })
+        }),
       ),
     onSuccess: () => {
       setActive(true);
       postSnackbar('m5s5.dashboard.thinkingOfYouSent');
       setTimeout(() => setActive(false), 2500);
     },
-    onError: (err: unknown) => {
-      postSnackbar(err instanceof Error ? err.message : 'm5s5.common.error');
-    }
+    onError: () => {
+      postSnackbar('m5s5.common.error');
+    },
   });
-
 
   function handleClick() {
     if (active || mutation.isPending) return;
@@ -84,13 +98,16 @@ function ThinkingOfYouHero({ apis, spaceId }: { apis: M4ProductApis; spaceId: st
       className={`today-hero-action ${active ? 'sbs-motion-success active' : 'sbs-motion-lift'} ${mutation.isPending ? 'pending' : ''}`}
       onClick={handleClick}
       aria-label={t('m5s5.dashboard.thinkingOfYouButton')}
+      aria-busy={mutation.isPending}
       disabled={mutation.isPending}
     >
       <span className="today-hero-icon" aria-hidden="true">
         {active ? '✨' : '❤️'}
       </span>
       <span className="today-hero-text">
-        {active ? t('m5s5.dashboard.thinkingOfYouSent') : t('m5s5.dashboard.thinkingOfYouButton')}
+        {active
+          ? t('m5s5.dashboard.thinkingOfYouSent')
+          : t('m5s5.dashboard.thinkingOfYouButton')}
       </span>
     </button>
   );
@@ -112,23 +129,35 @@ export function TodayPage({
 
   return (
     <div className="page today-page">
-      {dashboardQuery.isLoading && <UiState kind="loading" title={t('states.loading.title')} />}
-      {dashboardQuery.error && <ProblemState error={dashboardQuery.error} onRetry={() => dashboardQuery.refetch()} />}
-      
-      {dashboardQuery.data && (
-        dashboardQuery.data.upcoming.length === 0 &&
+      {dashboardQuery.isLoading && (
+        <UiState kind="loading" title={t('states.loading.title')} />
+      )}
+      {dashboardQuery.error && (
+        <ProblemState
+          error={dashboardQuery.error}
+          onRetry={() => dashboardQuery.refetch()}
+        />
+      )}
+
+      {dashboardQuery.data &&
+        (dashboardQuery.data.upcoming.length === 0 &&
         dashboardQuery.data.recentShared.length === 0 ? (
           <div className="new-space-experience sbs-motion-reveal">
             <h1 className="new-space-title">
               {dashboardQuery.data.space.partner
-                ? t('m5s5.dashboard.newSpacePartner', { name: dashboardQuery.data.space.partner.displayName })
+                ? t('m5s5.dashboard.newSpacePartner', {
+                    name: dashboardQuery.data.space.partner.displayName,
+                  })
                 : t('m5s5.dashboard.newSpaceEmpty')}
             </h1>
             <p className="new-space-body">
               {t('m5s5.dashboard.newSpaceIntro')}
             </p>
             <div className="new-space-actions">
-              <Link className="button-link primary new-space-cta" to={'/story/memories/new'}>
+              <Link
+                className="button-link primary new-space-cta"
+                to="/story/memories/new"
+              >
                 {t('m5s5.dashboard.newSpaceAction')}
               </Link>
             </div>
@@ -138,41 +167,63 @@ export function TodayPage({
             <header className="today-hero sbs-motion-reveal">
               <h1 className="today-hero-greeting">
                 {dashboardQuery.data.space.partner
-                  ? t('m5s5.dashboard.partner', { name: dashboardQuery.data.space.partner.displayName })
+                  ? t('m5s5.dashboard.partner', {
+                      name: dashboardQuery.data.space.partner.displayName,
+                    })
                   : t('m5s5.dashboard.durationTitle')}
               </h1>
               <p className="today-hero-subtitle">
                 {dashboardQuery.data.relationshipDuration
-                  ? t('m5s5.dashboard.durationDays', { count: dashboardQuery.data.relationshipDuration.daysTogether })
+                  ? t('m5s5.dashboard.durationDays', {
+                      count:
+                        dashboardQuery.data.relationshipDuration.daysTogether,
+                    })
                   : t('m5s5.dashboard.durationEmpty')}
               </p>
               <ThinkingOfYouHero apis={apis} spaceId={spaceId} />
             </header>
 
-            <section className="today-section sbs-motion-reveal" style={{ animationDelay: '100ms' }}>
-              <h2 className="today-section-title">{t('m5s5.dashboard.upcomingTitle')}</h2>
+            <section
+              className="today-section sbs-motion-reveal"
+              style={{ animationDelay: '100ms' }}
+            >
+              <h2 className="today-section-title">
+                {t('m5s5.dashboard.upcomingTitle')}
+              </h2>
               <div className="today-stream">
                 {dashboardQuery.data.upcoming.length > 0 ? (
-                  dashboardQuery.data.upcoming.map((item: DashboardItem) => <VisualMemoryCard key={item.id} item={item} />)
+                  dashboardQuery.data.upcoming.map((item: DashboardItem) => (
+                    <VisualMemoryCard key={item.id} item={item} />
+                  ))
                 ) : (
-                  <p className="today-empty">{t('m5s5.dashboard.upcomingEmpty')}</p>
+                  <p className="today-empty">
+                    {t('m5s5.dashboard.upcomingEmpty')}
+                  </p>
                 )}
               </div>
             </section>
 
-            <section className="today-section sbs-motion-reveal" style={{ animationDelay: '200ms' }}>
-              <h2 className="today-section-title">{t('m5s5.dashboard.recentTitle')}</h2>
+            <section
+              className="today-section sbs-motion-reveal"
+              style={{ animationDelay: '200ms' }}
+            >
+              <h2 className="today-section-title">
+                {t('m5s5.dashboard.recentTitle')}
+              </h2>
               <div className="today-stream">
                 {dashboardQuery.data.recentShared.length > 0 ? (
-                  dashboardQuery.data.recentShared.map((item: DashboardItem) => <VisualMemoryCard key={item.id} item={item} />)
+                  dashboardQuery.data.recentShared.map((item: DashboardItem) => (
+                    <VisualMemoryCard key={item.id} item={item} />
+                  ))
                 ) : (
-                  <p className="today-empty">{t('m5s5.dashboard.recentEmpty')}</p>
+                  <p className="today-empty">
+                    {t('m5s5.dashboard.recentEmpty')}
+                  </p>
                 )}
               </div>
             </section>
           </div>
-        )
-      )}
+        ))}
     </div>
   );
 }
