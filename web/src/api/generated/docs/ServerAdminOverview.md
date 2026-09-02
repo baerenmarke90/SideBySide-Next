@@ -9,7 +9,9 @@ Name | Type
 ------------ | -------------
 `accountCount` | number
 `accountsLast24h` | number
+`accountsLast30d` | number
 `accountsLast7d` | number
+`activeSessionCount` | number
 `activeSpaceCount` | number
 `applicationStatus` | string
 `buildRevision` | string
@@ -17,20 +19,31 @@ Name | Type
 `databaseStatus` | string
 `demoMode` | boolean
 `deployment` | string
+`enabledAccountCount` | number
 `environment` | string
 `jobsFailed` | number
 `jobsPending` | number
 `jobsRunning` | number
 `lastSuccessfulJobAt` | Date
+`localPasswordAccountCount` | number
 `mailTransport` | string
 `mediaObjectCount` | number
 `mediaStatus` | string
 `mediaStore` | string
 `mediaStoredBytes` | number
+`oidcAccountCount` | number
 `oidcConnectionCount` | number
+`oldestPendingJobAt` | Date
+`passkeyAccountCount` | number
 `processStartedAt` | Date
 `publicBaseUrl` | string
 `recentFailedJobs` | [Array&lt;ServerAdminFailedJob&gt;](ServerAdminFailedJob.md)
+`serverAdminAllowlistCount` | number
+`serverAdminVerifiedMatchCount` | number
+`suspendedAccountCount` | number
+`unverifiedPrimaryEmailCount` | number
+`verifiedPrimaryEmailCount` | number
+`warningCodes` | Array&lt;string&gt;
 `workerStatus` | string
 
 ## Example
@@ -42,7 +55,9 @@ import type { ServerAdminOverview } from ''
 const example = {
   "accountCount": null,
   "accountsLast24h": null,
+  "accountsLast30d": null,
   "accountsLast7d": null,
+  "activeSessionCount": null,
   "activeSpaceCount": null,
   "applicationStatus": null,
   "buildRevision": null,
@@ -50,20 +65,31 @@ const example = {
   "databaseStatus": null,
   "demoMode": null,
   "deployment": null,
+  "enabledAccountCount": null,
   "environment": null,
   "jobsFailed": null,
   "jobsPending": null,
   "jobsRunning": null,
   "lastSuccessfulJobAt": null,
+  "localPasswordAccountCount": null,
   "mailTransport": null,
   "mediaObjectCount": null,
   "mediaStatus": null,
   "mediaStore": null,
   "mediaStoredBytes": null,
+  "oidcAccountCount": null,
   "oidcConnectionCount": null,
+  "oldestPendingJobAt": null,
+  "passkeyAccountCount": null,
   "processStartedAt": null,
   "publicBaseUrl": null,
   "recentFailedJobs": null,
+  "serverAdminAllowlistCount": null,
+  "serverAdminVerifiedMatchCount": null,
+  "suspendedAccountCount": null,
+  "unverifiedPrimaryEmailCount": null,
+  "verifiedPrimaryEmailCount": null,
+  "warningCodes": null,
   "workerStatus": null,
 } satisfies ServerAdminOverview
 

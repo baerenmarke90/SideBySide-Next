@@ -861,6 +861,14 @@ SERVER_ADMIN_ONLY: tuple[tuple[str, str], ...] = (
     ("PUT", "/api/v1/server-admin/settings/registration"),
     ("PUT", "/api/v1/server-admin/settings/maintenance"),
     ("GET", "/api/v1/server-admin/activity"),
+    ("GET", "/api/v1/server-admin/activity/actions"),
+    ("GET", "/api/v1/server-admin/accounts"),
+    ("GET", "/api/v1/server-admin/accounts/{accountId}"),
+    ("PUT", "/api/v1/server-admin/accounts/{accountId}/suspension"),
+    ("POST", "/api/v1/server-admin/accounts/{accountId}/sessions/revoke"),
+    ("POST", "/api/v1/server-admin/accounts/{accountId}/recovery/email"),
+    ("POST", "/api/v1/server-admin/accounts/{accountId}/recovery/operator"),
+    ("POST", "/api/v1/server-admin/accounts/{accountId}/emails/{accountEmailId}/verify"),
 )
 """Instance-scoped operations that require authenticated ServerAdmin authority."""
 

@@ -9,6 +9,7 @@ import { DEFAULT_APP_ROUTE } from '../client/routes';
 import { createServerAdminApis } from '../client/serverAdmin';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
+import { ServerAdminAccountsPanel } from './ServerAdminAccountsPanel';
 import { ThemeControl } from './ThemeControl';
 import { UiState } from './UiState';
 import './ServerAdminPage.css';
@@ -104,6 +105,25 @@ function healthLabel(status: string, t: (key: string) => string): string {
       return t('serverAdmin.health.notProbed');
     default:
       return t('serverAdmin.health.unknown');
+  }
+}
+
+function warningLabel(code: string, t: (key: string) => string): string {
+  switch (code) {
+    case 'maintenance_mode_enabled':
+      return t('serverAdmin.warnings.maintenance');
+    case 'registration_disabled':
+      return t('serverAdmin.warnings.registration');
+    case 'server_admin_allowlist_empty':
+      return t('serverAdmin.warnings.adminAllowlistEmpty');
+    case 'server_admin_allowlist_unmatched':
+      return t('serverAdmin.warnings.adminAllowlistUnmatched');
+    case 'mail_disabled_with_unverified_accounts':
+      return t('serverAdmin.warnings.mailVerification');
+    case 'failed_jobs_present':
+      return t('serverAdmin.warnings.failedJobs');
+    default:
+      return code;
   }
 }
 
@@ -295,9 +315,24 @@ export function ServerAdminActivityPanel({
 function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
   const { t } = useTranslation();
   const lastSuccessfulJob = formatDate(overview.lastSuccessfulJobAt);
+  const oldestPendingJob = formatDate(overview.oldestPendingJobAt);
 
   return (
     <>
+      {overview.warningCodes.length > 0 ? (
+        <section
+          className="server-admin-panel server-admin-panel-wide server-admin-warning-panel"
+          aria-labelledby="server-warnings-title"
+        >
+          <h2 id="server-warnings-title">{t('serverAdmin.warnings.title')}</h2>
+          <ul>
+            {overview.warningCodes.map((code) => (
+              <li key={code}>{warningLabel(code, t)}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section
         className="server-admin-panel"
         aria-labelledby="server-health-title"
@@ -334,6 +369,14 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
             value={formatNumber(overview.accountCount)}
           />
           <Metric
+            label={t('serverAdmin.usage.enabledAccounts')}
+            value={formatNumber(overview.enabledAccountCount)}
+          />
+          <Metric
+            label={t('serverAdmin.usage.suspendedAccounts')}
+            value={formatNumber(overview.suspendedAccountCount)}
+          />
+          <Metric
             label={t('serverAdmin.usage.spaces')}
             value={formatNumber(overview.activeSpaceCount)}
           />
@@ -346,12 +389,53 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
             value={formatNumber(overview.accountsLast7d)}
           />
           <Metric
+            label={t('serverAdmin.usage.accounts30d')}
+            value={formatNumber(overview.accountsLast30d)}
+          />
+          <Metric
+            label={t('serverAdmin.usage.activeSessions')}
+            value={formatNumber(overview.activeSessionCount)}
+          />
+          <Metric
+            label={t('serverAdmin.usage.verifiedEmails')}
+            value={formatNumber(overview.verifiedPrimaryEmailCount)}
+          />
+          <Metric
+            label={t('serverAdmin.usage.unverifiedEmails')}
+            value={formatNumber(overview.unverifiedPrimaryEmailCount)}
+          />
+          <Metric
             label={t('serverAdmin.usage.mediaObjects')}
             value={formatNumber(overview.mediaObjectCount)}
           />
           <Metric
             label={t('serverAdmin.usage.mediaBytes')}
             value={formatBytes(overview.mediaStoredBytes)}
+          />
+        </dl>
+      </section>
+
+      <section
+        className="server-admin-panel"
+        aria-labelledby="server-security-title"
+      >
+        <h2 id="server-security-title">{t('serverAdmin.security.title')}</h2>
+        <dl className="server-admin-metrics">
+          <Metric
+            label={t('serverAdmin.security.localPassword')}
+            value={formatNumber(overview.localPasswordAccountCount)}
+          />
+          <Metric
+            label={t('serverAdmin.security.oidc')}
+            value={formatNumber(overview.oidcAccountCount)}
+          />
+          <Metric
+            label={t('serverAdmin.security.passkey')}
+            value={formatNumber(overview.passkeyAccountCount)}
+          />
+          <Metric
+            label={t('serverAdmin.security.serverAdmins')}
+            value={`${formatNumber(overview.serverAdminVerifiedMatchCount)} / ${formatNumber(overview.serverAdminAllowlistCount)}`}
           />
         </dl>
       </section>
@@ -373,6 +457,10 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
           <Metric
             label={t('serverAdmin.jobs.failed')}
             value={formatNumber(overview.jobsFailed)}
+          />
+          <Metric
+            label={t('serverAdmin.jobs.oldestPending')}
+            value={oldestPendingJob ?? '–'}
           />
           <Metric
             label={t('serverAdmin.jobs.lastSuccess')}
@@ -512,6 +600,9 @@ export function ServerAdminPage({
       void queryClient.invalidateQueries({
         queryKey: ['server-admin', 'activity'],
       });
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'overview'],
+      });
     },
   });
   const maintenanceMutation = useMutation({
@@ -523,6 +614,9 @@ export function ServerAdminPage({
       queryClient.setQueryData(['server-admin', 'settings'], settings);
       void queryClient.invalidateQueries({
         queryKey: ['server-admin', 'activity'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'overview'],
       });
     },
   });
@@ -536,6 +630,12 @@ export function ServerAdminPage({
     void overviewQuery.refetch();
     void settingsQuery.refetch();
     void activityQuery.refetch();
+    void queryClient.invalidateQueries({
+      queryKey: ['server-admin', 'accounts'],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ['server-admin', 'action-activity'],
+    });
   }
 
   function updateMaintenance(enabled: boolean) {
@@ -651,6 +751,11 @@ export function ServerAdminPage({
           ) : overviewQuery.data ? (
             <OverviewContent overview={overviewQuery.data} />
           ) : null}
+
+          <ServerAdminAccountsPanel
+            api={apis.serverAdmin}
+            onOverviewChanged={() => void overviewQuery.refetch()}
+          />
 
           {activityQuery.isPending ? (
             <section className="server-admin-panel server-admin-panel-wide">

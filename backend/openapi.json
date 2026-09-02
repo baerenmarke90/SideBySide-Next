@@ -5298,6 +5298,337 @@
         "title": "SearchScope",
         "type": "string"
       },
+      "ServerAdminAccountDetail": {
+        "properties": {
+          "activeMembershipCount": {
+            "title": "Activemembershipcount",
+            "type": "integer"
+          },
+          "activeSessionCount": {
+            "title": "Activesessioncount",
+            "type": "integer"
+          },
+          "authMethods": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Authmethods",
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "disabledAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabledat"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "emailVerified": {
+            "title": "Emailverified",
+            "type": "boolean"
+          },
+          "emails": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminAccountEmail"
+            },
+            "title": "Emails",
+            "type": "array"
+          },
+          "historicalMembershipCount": {
+            "title": "Historicalmembershipcount",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lastSessionActivityAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastsessionactivityat"
+          },
+          "localPasswordAvailable": {
+            "title": "Localpasswordavailable",
+            "type": "boolean"
+          },
+          "mailRecoveryAvailable": {
+            "title": "Mailrecoveryavailable",
+            "type": "boolean"
+          },
+          "passkeyCount": {
+            "title": "Passkeycount",
+            "type": "integer"
+          },
+          "primaryEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primaryemail"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "primaryEmail",
+          "emailVerified",
+          "createdAt",
+          "disabledAt",
+          "authMethods",
+          "activeSessionCount",
+          "activeMembershipCount",
+          "emails",
+          "passkeyCount",
+          "historicalMembershipCount",
+          "lastSessionActivityAt",
+          "mailRecoveryAvailable",
+          "localPasswordAvailable"
+        ],
+        "title": "ServerAdminAccountDetail",
+        "type": "object"
+      },
+      "ServerAdminAccountEmail": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "isPrimary": {
+            "title": "Isprimary",
+            "type": "boolean"
+          },
+          "verifiedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verifiedat"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "isPrimary",
+          "verifiedAt"
+        ],
+        "title": "ServerAdminAccountEmail",
+        "type": "object"
+      },
+      "ServerAdminAccountList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminAccountSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ServerAdminAccountList",
+        "type": "object"
+      },
+      "ServerAdminAccountSummary": {
+        "properties": {
+          "activeMembershipCount": {
+            "title": "Activemembershipcount",
+            "type": "integer"
+          },
+          "activeSessionCount": {
+            "title": "Activesessioncount",
+            "type": "integer"
+          },
+          "authMethods": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Authmethods",
+            "type": "array"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "disabledAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabledat"
+          },
+          "displayName": {
+            "title": "Displayname",
+            "type": "string"
+          },
+          "emailVerified": {
+            "title": "Emailverified",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "primaryEmail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primaryemail"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "primaryEmail",
+          "emailVerified",
+          "createdAt",
+          "disabledAt",
+          "authMethods",
+          "activeSessionCount",
+          "activeMembershipCount"
+        ],
+        "title": "ServerAdminAccountSummary",
+        "type": "object"
+      },
+      "ServerAdminAccountSuspensionUpdate": {
+        "properties": {
+          "suspended": {
+            "title": "Suspended",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "suspended"
+        ],
+        "title": "ServerAdminAccountSuspensionUpdate",
+        "type": "object"
+      },
+      "ServerAdminActionActivityItem": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actorId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actorid"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "effectCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectcount"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "targetAccountId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetaccountid"
+          }
+        },
+        "required": [
+          "id",
+          "actorId",
+          "targetAccountId",
+          "action",
+          "effectCount",
+          "createdAt"
+        ],
+        "title": "ServerAdminActionActivityItem",
+        "type": "object"
+      },
       "ServerAdminActivityItem": {
         "properties": {
           "actorId": {
@@ -5344,6 +5675,19 @@
           "createdAt"
         ],
         "title": "ServerAdminActivityItem",
+        "type": "object"
+      },
+      "ServerAdminEmailVerificationRequest": {
+        "properties": {
+          "confirmationEmail": {
+            "title": "Confirmationemail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmationEmail"
+        ],
+        "title": "ServerAdminEmailVerificationRequest",
         "type": "object"
       },
       "ServerAdminFailedJob": {
@@ -5400,8 +5744,16 @@
             "title": "Accountslast24H",
             "type": "integer"
           },
+          "accountsLast30d": {
+            "title": "Accountslast30D",
+            "type": "integer"
+          },
           "accountsLast7d": {
             "title": "Accountslast7D",
+            "type": "integer"
+          },
+          "activeSessionCount": {
+            "title": "Activesessioncount",
             "type": "integer"
           },
           "activeSpaceCount": {
@@ -5432,6 +5784,10 @@
             "title": "Deployment",
             "type": "string"
           },
+          "enabledAccountCount": {
+            "title": "Enabledaccountcount",
+            "type": "integer"
+          },
           "environment": {
             "title": "Environment",
             "type": "string"
@@ -5460,6 +5816,10 @@
             ],
             "title": "Lastsuccessfuljobat"
           },
+          "localPasswordAccountCount": {
+            "title": "Localpasswordaccountcount",
+            "type": "integer"
+          },
           "mailTransport": {
             "title": "Mailtransport",
             "type": "string"
@@ -5480,8 +5840,28 @@
             "title": "Mediastoredbytes",
             "type": "integer"
           },
+          "oidcAccountCount": {
+            "title": "Oidcaccountcount",
+            "type": "integer"
+          },
           "oidcConnectionCount": {
             "title": "Oidcconnectioncount",
+            "type": "integer"
+          },
+          "oldestPendingJobAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldestpendingjobat"
+          },
+          "passkeyAccountCount": {
+            "title": "Passkeyaccountcount",
             "type": "integer"
           },
           "processStartedAt": {
@@ -5498,6 +5878,33 @@
               "$ref": "#/components/schemas/ServerAdminFailedJob"
             },
             "title": "Recentfailedjobs",
+            "type": "array"
+          },
+          "serverAdminAllowlistCount": {
+            "title": "Serveradminallowlistcount",
+            "type": "integer"
+          },
+          "serverAdminVerifiedMatchCount": {
+            "title": "Serveradminverifiedmatchcount",
+            "type": "integer"
+          },
+          "suspendedAccountCount": {
+            "title": "Suspendedaccountcount",
+            "type": "integer"
+          },
+          "unverifiedPrimaryEmailCount": {
+            "title": "Unverifiedprimaryemailcount",
+            "type": "integer"
+          },
+          "verifiedPrimaryEmailCount": {
+            "title": "Verifiedprimaryemailcount",
+            "type": "integer"
+          },
+          "warningCodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warningcodes",
             "type": "array"
           },
           "workerStatus": {
@@ -5521,18 +5928,76 @@
           "demoMode",
           "databaseProvider",
           "accountCount",
-          "activeSpaceCount",
+          "enabledAccountCount",
+          "suspendedAccountCount",
+          "verifiedPrimaryEmailCount",
+          "unverifiedPrimaryEmailCount",
           "accountsLast24h",
           "accountsLast7d",
+          "accountsLast30d",
+          "activeSessionCount",
+          "localPasswordAccountCount",
+          "oidcAccountCount",
+          "passkeyAccountCount",
+          "serverAdminAllowlistCount",
+          "serverAdminVerifiedMatchCount",
+          "activeSpaceCount",
           "mediaObjectCount",
           "mediaStoredBytes",
           "jobsPending",
           "jobsRunning",
           "jobsFailed",
+          "oldestPendingJobAt",
           "lastSuccessfulJobAt",
-          "recentFailedJobs"
+          "recentFailedJobs",
+          "warningCodes"
         ],
         "title": "ServerAdminOverview",
+        "type": "object"
+      },
+      "ServerAdminRecoveryEmailResult": {
+        "properties": {
+          "requested": {
+            "title": "Requested",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "requested"
+        ],
+        "title": "ServerAdminRecoveryEmailResult",
+        "type": "object"
+      },
+      "ServerAdminRecoveryProof": {
+        "properties": {
+          "expiresAt": {
+            "format": "date-time",
+            "title": "Expiresat",
+            "type": "string"
+          },
+          "recoveryUrl": {
+            "title": "Recoveryurl",
+            "type": "string"
+          }
+        },
+        "required": [
+          "recoveryUrl",
+          "expiresAt"
+        ],
+        "title": "ServerAdminRecoveryProof",
+        "type": "object"
+      },
+      "ServerAdminSessionRevocationResult": {
+        "properties": {
+          "revokedSessions": {
+            "title": "Revokedsessions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revokedSessions"
+        ],
+        "title": "ServerAdminSessionRevocationResult",
         "type": "object"
       },
       "ServerAdminSettingUpdate": {
@@ -7689,6 +8154,581 @@
         ]
       }
     },
+    "/api/v1/server-admin/accounts": {
+      "get": {
+        "description": "Return Account identity/security metadata without relationship content.",
+        "operationId": "list_server_admin_accounts_api_v1_server_admin_accounts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 320,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Query"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "active",
+                "suspended"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "verification",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "verified",
+                "unverified"
+              ],
+              "title": "Verification",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminAccountList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "List Server Admin Accounts",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/accounts/{accountId}": {
+      "get": {
+        "operationId": "get_server_admin_account_api_v1_server_admin_accounts__accountId__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminAccountDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Server Admin Account",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/accounts/{accountId}/emails/{accountEmailId}/verify": {
+      "post": {
+        "operationId": "verify_server_admin_account_email_api_v1_server_admin_accounts__accountId__emails__accountEmailId__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "accountEmailId",
+            "required": true,
+            "schema": {
+              "title": "Accountemailid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAdminEmailVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminAccountEmail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Verify Server Admin Account Email",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/accounts/{accountId}/recovery/email": {
+      "post": {
+        "operationId": "request_server_admin_account_recovery_email_api_v1_server_admin_accounts__accountId__recovery_email_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminRecoveryEmailResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "A capability required for this operation is not configured on this instance."
+          }
+        },
+        "summary": "Request Server Admin Account Recovery Email",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/accounts/{accountId}/recovery/operator": {
+      "post": {
+        "operationId": "issue_server_admin_operator_recovery_api_v1_server_admin_accounts__accountId__recovery_operator_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminRecoveryProof"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Issue Server Admin Operator Recovery",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/accounts/{accountId}/sessions/revoke": {
+      "post": {
+        "operationId": "revoke_server_admin_account_sessions_api_v1_server_admin_accounts__accountId__sessions_revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSessionRevocationResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Revoke Server Admin Account Sessions",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/accounts/{accountId}/suspension": {
+      "put": {
+        "operationId": "update_server_admin_account_suspension_api_v1_server_admin_accounts__accountId__suspension_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "title": "Accountid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAdminAccountSuspensionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminAccountDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Update Server Admin Account Suspension",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
     "/api/v1/server-admin/activity": {
       "get": {
         "operationId": "get_server_admin_activity_api_v1_server_admin_activity_get",
@@ -7729,6 +8769,51 @@
           }
         },
         "summary": "Get Server Admin Activity",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/activity/actions": {
+      "get": {
+        "operationId": "get_server_admin_action_activity_api_v1_server_admin_activity_actions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServerAdminActionActivityItem"
+                  },
+                  "title": "Response Get Server Admin Action Activity Api V1 Server Admin Activity Actions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          }
+        },
+        "summary": "Get Server Admin Action Activity",
         "tags": [
           "server-admin"
         ]

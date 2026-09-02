@@ -44,7 +44,19 @@ export interface ServerAdminOverview {
      * @type {number}
      * @memberof ServerAdminOverview
      */
+    accountsLast30d: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
     accountsLast7d: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    activeSessionCount: number;
     /**
      * 
      * @type {number}
@@ -89,6 +101,12 @@ export interface ServerAdminOverview {
     deployment: string;
     /**
      * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    enabledAccountCount: number;
+    /**
+     * 
      * @type {string}
      * @memberof ServerAdminOverview
      */
@@ -117,6 +135,12 @@ export interface ServerAdminOverview {
      * @memberof ServerAdminOverview
      */
     lastSuccessfulJobAt: Date | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    localPasswordAccountCount: number;
     /**
      * 
      * @type {string}
@@ -152,7 +176,25 @@ export interface ServerAdminOverview {
      * @type {number}
      * @memberof ServerAdminOverview
      */
+    oidcAccountCount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
     oidcConnectionCount: number;
+    /**
+     * 
+     * @type {Date}
+     * @memberof ServerAdminOverview
+     */
+    oldestPendingJobAt: Date | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    passkeyAccountCount: number;
     /**
      * 
      * @type {Date}
@@ -173,6 +215,42 @@ export interface ServerAdminOverview {
     recentFailedJobs: Array<ServerAdminFailedJob>;
     /**
      * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    serverAdminAllowlistCount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    serverAdminVerifiedMatchCount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    suspendedAccountCount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    unverifiedPrimaryEmailCount: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof ServerAdminOverview
+     */
+    verifiedPrimaryEmailCount: number;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ServerAdminOverview
+     */
+    warningCodes: Array<string>;
+    /**
+     * 
      * @type {string}
      * @memberof ServerAdminOverview
      */
@@ -185,7 +263,9 @@ export interface ServerAdminOverview {
 export function instanceOfServerAdminOverview(value: object): value is ServerAdminOverview {
     if (!('accountCount' in value) || value['accountCount'] === undefined) return false;
     if (!('accountsLast24h' in value) || value['accountsLast24h'] === undefined) return false;
+    if (!('accountsLast30d' in value) || value['accountsLast30d'] === undefined) return false;
     if (!('accountsLast7d' in value) || value['accountsLast7d'] === undefined) return false;
+    if (!('activeSessionCount' in value) || value['activeSessionCount'] === undefined) return false;
     if (!('activeSpaceCount' in value) || value['activeSpaceCount'] === undefined) return false;
     if (!('applicationStatus' in value) || value['applicationStatus'] === undefined) return false;
     if (!('buildRevision' in value) || value['buildRevision'] === undefined) return false;
@@ -193,20 +273,31 @@ export function instanceOfServerAdminOverview(value: object): value is ServerAdm
     if (!('databaseStatus' in value) || value['databaseStatus'] === undefined) return false;
     if (!('demoMode' in value) || value['demoMode'] === undefined) return false;
     if (!('deployment' in value) || value['deployment'] === undefined) return false;
+    if (!('enabledAccountCount' in value) || value['enabledAccountCount'] === undefined) return false;
     if (!('environment' in value) || value['environment'] === undefined) return false;
     if (!('jobsFailed' in value) || value['jobsFailed'] === undefined) return false;
     if (!('jobsPending' in value) || value['jobsPending'] === undefined) return false;
     if (!('jobsRunning' in value) || value['jobsRunning'] === undefined) return false;
     if (!('lastSuccessfulJobAt' in value) || value['lastSuccessfulJobAt'] === undefined) return false;
+    if (!('localPasswordAccountCount' in value) || value['localPasswordAccountCount'] === undefined) return false;
     if (!('mailTransport' in value) || value['mailTransport'] === undefined) return false;
     if (!('mediaObjectCount' in value) || value['mediaObjectCount'] === undefined) return false;
     if (!('mediaStatus' in value) || value['mediaStatus'] === undefined) return false;
     if (!('mediaStore' in value) || value['mediaStore'] === undefined) return false;
     if (!('mediaStoredBytes' in value) || value['mediaStoredBytes'] === undefined) return false;
+    if (!('oidcAccountCount' in value) || value['oidcAccountCount'] === undefined) return false;
     if (!('oidcConnectionCount' in value) || value['oidcConnectionCount'] === undefined) return false;
+    if (!('oldestPendingJobAt' in value) || value['oldestPendingJobAt'] === undefined) return false;
+    if (!('passkeyAccountCount' in value) || value['passkeyAccountCount'] === undefined) return false;
     if (!('processStartedAt' in value) || value['processStartedAt'] === undefined) return false;
     if (!('publicBaseUrl' in value) || value['publicBaseUrl'] === undefined) return false;
     if (!('recentFailedJobs' in value) || value['recentFailedJobs'] === undefined) return false;
+    if (!('serverAdminAllowlistCount' in value) || value['serverAdminAllowlistCount'] === undefined) return false;
+    if (!('serverAdminVerifiedMatchCount' in value) || value['serverAdminVerifiedMatchCount'] === undefined) return false;
+    if (!('suspendedAccountCount' in value) || value['suspendedAccountCount'] === undefined) return false;
+    if (!('unverifiedPrimaryEmailCount' in value) || value['unverifiedPrimaryEmailCount'] === undefined) return false;
+    if (!('verifiedPrimaryEmailCount' in value) || value['verifiedPrimaryEmailCount'] === undefined) return false;
+    if (!('warningCodes' in value) || value['warningCodes'] === undefined) return false;
     if (!('workerStatus' in value) || value['workerStatus'] === undefined) return false;
     return true;
 }
@@ -223,7 +314,9 @@ export function ServerAdminOverviewFromJSONTyped(json: any, ignoreDiscriminator:
         
         'accountCount': json['accountCount'],
         'accountsLast24h': json['accountsLast24h'],
+        'accountsLast30d': json['accountsLast30d'],
         'accountsLast7d': json['accountsLast7d'],
+        'activeSessionCount': json['activeSessionCount'],
         'activeSpaceCount': json['activeSpaceCount'],
         'applicationStatus': json['applicationStatus'],
         'buildRevision': json['buildRevision'],
@@ -231,20 +324,31 @@ export function ServerAdminOverviewFromJSONTyped(json: any, ignoreDiscriminator:
         'databaseStatus': json['databaseStatus'],
         'demoMode': json['demoMode'],
         'deployment': json['deployment'],
+        'enabledAccountCount': json['enabledAccountCount'],
         'environment': json['environment'],
         'jobsFailed': json['jobsFailed'],
         'jobsPending': json['jobsPending'],
         'jobsRunning': json['jobsRunning'],
         'lastSuccessfulJobAt': (json['lastSuccessfulJobAt'] == null ? null : new Date(json['lastSuccessfulJobAt'])),
+        'localPasswordAccountCount': json['localPasswordAccountCount'],
         'mailTransport': json['mailTransport'],
         'mediaObjectCount': json['mediaObjectCount'],
         'mediaStatus': json['mediaStatus'],
         'mediaStore': json['mediaStore'],
         'mediaStoredBytes': json['mediaStoredBytes'],
+        'oidcAccountCount': json['oidcAccountCount'],
         'oidcConnectionCount': json['oidcConnectionCount'],
+        'oldestPendingJobAt': (json['oldestPendingJobAt'] == null ? null : new Date(json['oldestPendingJobAt'])),
+        'passkeyAccountCount': json['passkeyAccountCount'],
         'processStartedAt': (new Date(json['processStartedAt'])),
         'publicBaseUrl': json['publicBaseUrl'],
         'recentFailedJobs': ((json['recentFailedJobs'] as Array<any>).map(ServerAdminFailedJobFromJSON)),
+        'serverAdminAllowlistCount': json['serverAdminAllowlistCount'],
+        'serverAdminVerifiedMatchCount': json['serverAdminVerifiedMatchCount'],
+        'suspendedAccountCount': json['suspendedAccountCount'],
+        'unverifiedPrimaryEmailCount': json['unverifiedPrimaryEmailCount'],
+        'verifiedPrimaryEmailCount': json['verifiedPrimaryEmailCount'],
+        'warningCodes': json['warningCodes'],
         'workerStatus': json['workerStatus'],
     };
 }
@@ -262,7 +366,9 @@ export function ServerAdminOverviewToJSONTyped(value?: ServerAdminOverview | nul
         
         'accountCount': value['accountCount'],
         'accountsLast24h': value['accountsLast24h'],
+        'accountsLast30d': value['accountsLast30d'],
         'accountsLast7d': value['accountsLast7d'],
+        'activeSessionCount': value['activeSessionCount'],
         'activeSpaceCount': value['activeSpaceCount'],
         'applicationStatus': value['applicationStatus'],
         'buildRevision': value['buildRevision'],
@@ -270,20 +376,31 @@ export function ServerAdminOverviewToJSONTyped(value?: ServerAdminOverview | nul
         'databaseStatus': value['databaseStatus'],
         'demoMode': value['demoMode'],
         'deployment': value['deployment'],
+        'enabledAccountCount': value['enabledAccountCount'],
         'environment': value['environment'],
         'jobsFailed': value['jobsFailed'],
         'jobsPending': value['jobsPending'],
         'jobsRunning': value['jobsRunning'],
         'lastSuccessfulJobAt': value['lastSuccessfulJobAt'] == null ? value['lastSuccessfulJobAt'] : value['lastSuccessfulJobAt'].toISOString(),
+        'localPasswordAccountCount': value['localPasswordAccountCount'],
         'mailTransport': value['mailTransport'],
         'mediaObjectCount': value['mediaObjectCount'],
         'mediaStatus': value['mediaStatus'],
         'mediaStore': value['mediaStore'],
         'mediaStoredBytes': value['mediaStoredBytes'],
+        'oidcAccountCount': value['oidcAccountCount'],
         'oidcConnectionCount': value['oidcConnectionCount'],
+        'oldestPendingJobAt': value['oldestPendingJobAt'] == null ? value['oldestPendingJobAt'] : value['oldestPendingJobAt'].toISOString(),
+        'passkeyAccountCount': value['passkeyAccountCount'],
         'processStartedAt': value['processStartedAt'].toISOString(),
         'publicBaseUrl': value['publicBaseUrl'],
         'recentFailedJobs': ((value['recentFailedJobs'] as Array<any>).map(ServerAdminFailedJobToJSON)),
+        'serverAdminAllowlistCount': value['serverAdminAllowlistCount'],
+        'serverAdminVerifiedMatchCount': value['serverAdminVerifiedMatchCount'],
+        'suspendedAccountCount': value['suspendedAccountCount'],
+        'unverifiedPrimaryEmailCount': value['unverifiedPrimaryEmailCount'],
+        'verifiedPrimaryEmailCount': value['verifiedPrimaryEmailCount'],
+        'warningCodes': value['warningCodes'],
         'workerStatus': value['workerStatus'],
     };
 }

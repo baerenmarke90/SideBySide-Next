@@ -4,12 +4,147 @@ All URIs are relative to *http://localhost*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**getServerAdminAccountApiV1ServerAdminAccountsAccountIdGet**](ServerAdminApi.md#getserveradminaccountapiv1serveradminaccountsaccountidget) | **GET** /api/v1/server-admin/accounts/{accountId} | Get Server Admin Account |
+| [**getServerAdminActionActivityApiV1ServerAdminActivityActionsGet**](ServerAdminApi.md#getserveradminactionactivityapiv1serveradminactivityactionsget) | **GET** /api/v1/server-admin/activity/actions | Get Server Admin Action Activity |
 | [**getServerAdminActivityApiV1ServerAdminActivityGet**](ServerAdminApi.md#getserveradminactivityapiv1serveradminactivityget) | **GET** /api/v1/server-admin/activity | Get Server Admin Activity |
 | [**getServerAdminOverviewApiV1ServerAdminOverviewGet**](ServerAdminApi.md#getserveradminoverviewapiv1serveradminoverviewget) | **GET** /api/v1/server-admin/overview | Get Server Admin Overview |
 | [**getServerAdminSettingsApiV1ServerAdminSettingsGet**](ServerAdminApi.md#getserveradminsettingsapiv1serveradminsettingsget) | **GET** /api/v1/server-admin/settings | Get Server Admin Settings |
+| [**issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost**](ServerAdminApi.md#issueserveradminoperatorrecoveryapiv1serveradminaccountsaccountidrecoveryoperatorpost) | **POST** /api/v1/server-admin/accounts/{accountId}/recovery/operator | Issue Server Admin Operator Recovery |
+| [**listServerAdminAccountsApiV1ServerAdminAccountsGet**](ServerAdminApi.md#listserveradminaccountsapiv1serveradminaccountsget) | **GET** /api/v1/server-admin/accounts | List Server Admin Accounts |
+| [**requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost**](ServerAdminApi.md#requestserveradminaccountrecoveryemailapiv1serveradminaccountsaccountidrecoveryemailpost) | **POST** /api/v1/server-admin/accounts/{accountId}/recovery/email | Request Server Admin Account Recovery Email |
+| [**revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost**](ServerAdminApi.md#revokeserveradminaccountsessionsapiv1serveradminaccountsaccountidsessionsrevokepost) | **POST** /api/v1/server-admin/accounts/{accountId}/sessions/revoke | Revoke Server Admin Account Sessions |
 | [**updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut**](ServerAdminApi.md#updatemaintenancesettingapiv1serveradminsettingsmaintenanceput) | **PUT** /api/v1/server-admin/settings/maintenance | Update Maintenance Setting |
 | [**updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPut**](ServerAdminApi.md#updateregistrationsettingapiv1serveradminsettingsregistrationput) | **PUT** /api/v1/server-admin/settings/registration | Update Registration Setting |
+| [**updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut**](ServerAdminApi.md#updateserveradminaccountsuspensionapiv1serveradminaccountsaccountidsuspensionput) | **PUT** /api/v1/server-admin/accounts/{accountId}/suspension | Update Server Admin Account Suspension |
+| [**verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost**](ServerAdminApi.md#verifyserveradminaccountemailapiv1serveradminaccountsaccountidemailsaccountemailidverifypost) | **POST** /api/v1/server-admin/accounts/{accountId}/emails/{accountEmailId}/verify | Verify Server Admin Account Email |
 
+
+
+## getServerAdminAccountApiV1ServerAdminAccountsAccountIdGet
+
+> ServerAdminAccountDetail getServerAdminAccountApiV1ServerAdminAccountsAccountIdGet(accountId)
+
+Get Server Admin Account
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    accountId: accountId_example,
+  } satisfies GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequest;
+
+  try {
+    const data = await api.getServerAdminAccountApiV1ServerAdminAccountsAccountIdGet(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **accountId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ServerAdminAccountDetail**](ServerAdminAccountDetail.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getServerAdminActionActivityApiV1ServerAdminActivityActionsGet
+
+> Array&lt;ServerAdminActionActivityItem&gt; getServerAdminActionActivityApiV1ServerAdminActivityActionsGet()
+
+Get Server Admin Action Activity
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { GetServerAdminActionActivityApiV1ServerAdminActivityActionsGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  try {
+    const data = await api.getServerAdminActionActivityApiV1ServerAdminActivityActionsGet();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**Array&lt;ServerAdminActionActivityItem&gt;**](ServerAdminActionActivityItem.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## getServerAdminActivityApiV1ServerAdminActivityGet
@@ -191,6 +326,295 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost
+
+> ServerAdminRecoveryProof issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost(accountId)
+
+Issue Server Admin Operator Recovery
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    accountId: accountId_example,
+  } satisfies IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest;
+
+  try {
+    const data = await api.issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **accountId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ServerAdminRecoveryProof**](ServerAdminRecoveryProof.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## listServerAdminAccountsApiV1ServerAdminAccountsGet
+
+> ServerAdminAccountList listServerAdminAccountsApiV1ServerAdminAccountsGet(query, status, verification, limit, offset)
+
+List Server Admin Accounts
+
+Return Account identity/security metadata without relationship content.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string (optional)
+    query: query_example,
+    // 'all' | 'active' | 'suspended' (optional)
+    status: status_example,
+    // 'all' | 'verified' | 'unverified' (optional)
+    verification: verification_example,
+    // number (optional)
+    limit: 56,
+    // number (optional)
+    offset: 56,
+  } satisfies ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest;
+
+  try {
+    const data = await api.listServerAdminAccountsApiV1ServerAdminAccountsGet(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **query** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **status** | `all`, `active`, `suspended` |  | [Optional] [Defaults to `&#39;all&#39;`] [Enum: all, active, suspended] |
+| **verification** | `all`, `verified`, `unverified` |  | [Optional] [Defaults to `&#39;all&#39;`] [Enum: all, verified, unverified] |
+| **limit** | `number` |  | [Optional] [Defaults to `50`] |
+| **offset** | `number` |  | [Optional] [Defaults to `0`] |
+
+### Return type
+
+[**ServerAdminAccountList**](ServerAdminAccountList.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost
+
+> ServerAdminRecoveryEmailResult requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost(accountId)
+
+Request Server Admin Account Recovery Email
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { RequestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    accountId: accountId_example,
+  } satisfies RequestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRequest;
+
+  try {
+    const data = await api.requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **accountId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ServerAdminRecoveryEmailResult**](ServerAdminRecoveryEmailResult.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+| **503** | A capability required for this operation is not configured on this instance. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost
+
+> ServerAdminSessionRevocationResult revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost(accountId)
+
+Revoke Server Admin Account Sessions
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { RevokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    accountId: accountId_example,
+  } satisfies RevokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequest;
+
+  try {
+    const data = await api.revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **accountId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ServerAdminSessionRevocationResult**](ServerAdminSessionRevocationResult.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut
 
 > ServerAdminSettings updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut(serverAdminSettingUpdate)
@@ -322,6 +746,153 @@ No authorization required
 | **200** | Successful Response |  -  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut
+
+> ServerAdminAccountDetail updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut(accountId, serverAdminAccountSuspensionUpdate)
+
+Update Server Admin Account Suspension
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { UpdateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    accountId: accountId_example,
+    // ServerAdminAccountSuspensionUpdate
+    serverAdminAccountSuspensionUpdate: ...,
+  } satisfies UpdateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRequest;
+
+  try {
+    const data = await api.updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **accountId** | `string` |  | [Defaults to `undefined`] |
+| **serverAdminAccountSuspensionUpdate** | [ServerAdminAccountSuspensionUpdate](ServerAdminAccountSuspensionUpdate.md) |  | |
+
+### Return type
+
+[**ServerAdminAccountDetail**](ServerAdminAccountDetail.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost
+
+> ServerAdminAccountEmail verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost(accountId, accountEmailId, serverAdminEmailVerificationRequest)
+
+Verify Server Admin Account Email
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { VerifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    accountId: accountId_example,
+    // string
+    accountEmailId: accountEmailId_example,
+    // ServerAdminEmailVerificationRequest
+    serverAdminEmailVerificationRequest: ...,
+  } satisfies VerifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRequest;
+
+  try {
+    const data = await api.verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **accountId** | `string` |  | [Defaults to `undefined`] |
+| **accountEmailId** | `string` |  | [Defaults to `undefined`] |
+| **serverAdminEmailVerificationRequest** | [ServerAdminEmailVerificationRequest](ServerAdminEmailVerificationRequest.md) |  | |
+
+### Return type
+
+[**ServerAdminAccountEmail**](ServerAdminAccountEmail.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
 | **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)

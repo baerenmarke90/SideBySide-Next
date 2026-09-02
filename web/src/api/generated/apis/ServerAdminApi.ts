@@ -19,15 +19,60 @@ import {
     ProblemDetailsToJSON,
 } from '../models/ProblemDetails';
 import {
+    type ServerAdminAccountDetail,
+    ServerAdminAccountDetailFromJSON,
+    ServerAdminAccountDetailToJSON,
+} from '../models/ServerAdminAccountDetail';
+import {
+    type ServerAdminAccountEmail,
+    ServerAdminAccountEmailFromJSON,
+    ServerAdminAccountEmailToJSON,
+} from '../models/ServerAdminAccountEmail';
+import {
+    type ServerAdminAccountList,
+    ServerAdminAccountListFromJSON,
+    ServerAdminAccountListToJSON,
+} from '../models/ServerAdminAccountList';
+import {
+    type ServerAdminAccountSuspensionUpdate,
+    ServerAdminAccountSuspensionUpdateFromJSON,
+    ServerAdminAccountSuspensionUpdateToJSON,
+} from '../models/ServerAdminAccountSuspensionUpdate';
+import {
+    type ServerAdminActionActivityItem,
+    ServerAdminActionActivityItemFromJSON,
+    ServerAdminActionActivityItemToJSON,
+} from '../models/ServerAdminActionActivityItem';
+import {
     type ServerAdminActivityItem,
     ServerAdminActivityItemFromJSON,
     ServerAdminActivityItemToJSON,
 } from '../models/ServerAdminActivityItem';
 import {
+    type ServerAdminEmailVerificationRequest,
+    ServerAdminEmailVerificationRequestFromJSON,
+    ServerAdminEmailVerificationRequestToJSON,
+} from '../models/ServerAdminEmailVerificationRequest';
+import {
     type ServerAdminOverview,
     ServerAdminOverviewFromJSON,
     ServerAdminOverviewToJSON,
 } from '../models/ServerAdminOverview';
+import {
+    type ServerAdminRecoveryEmailResult,
+    ServerAdminRecoveryEmailResultFromJSON,
+    ServerAdminRecoveryEmailResultToJSON,
+} from '../models/ServerAdminRecoveryEmailResult';
+import {
+    type ServerAdminRecoveryProof,
+    ServerAdminRecoveryProofFromJSON,
+    ServerAdminRecoveryProofToJSON,
+} from '../models/ServerAdminRecoveryProof';
+import {
+    type ServerAdminSessionRevocationResult,
+    ServerAdminSessionRevocationResultFromJSON,
+    ServerAdminSessionRevocationResultToJSON,
+} from '../models/ServerAdminSessionRevocationResult';
 import {
     type ServerAdminSettingUpdate,
     ServerAdminSettingUpdateFromJSON,
@@ -39,6 +84,30 @@ import {
     ServerAdminSettingsToJSON,
 } from '../models/ServerAdminSettings';
 
+export interface GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequest {
+    accountId: string;
+}
+
+export interface IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest {
+    accountId: string;
+}
+
+export interface ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest {
+    query?: string | null;
+    status?: ListServerAdminAccountsApiV1ServerAdminAccountsGetStatusEnum;
+    verification?: ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum;
+    limit?: number;
+    offset?: number;
+}
+
+export interface RequestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRequest {
+    accountId: string;
+}
+
+export interface RevokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequest {
+    accountId: string;
+}
+
 export interface UpdateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequest {
     serverAdminSettingUpdate: ServerAdminSettingUpdate;
 }
@@ -47,10 +116,103 @@ export interface UpdateRegistrationSettingApiV1ServerAdminSettingsRegistrationPu
     serverAdminSettingUpdate: ServerAdminSettingUpdate;
 }
 
+export interface UpdateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRequest {
+    accountId: string;
+    serverAdminAccountSuspensionUpdate: ServerAdminAccountSuspensionUpdate;
+}
+
+export interface VerifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRequest {
+    accountId: string;
+    accountEmailId: string;
+    serverAdminEmailVerificationRequest: ServerAdminEmailVerificationRequest;
+}
+
 /**
  * 
  */
 export class ServerAdminApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for getServerAdminAccountApiV1ServerAdminAccountsAccountIdGet without sending the request
+     */
+    async getServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequestOpts(requestParameters: GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['accountId'] == null) {
+            throw new runtime.RequiredError(
+                'accountId',
+                'Required parameter "accountId" was null or undefined when calling getServerAdminAccountApiV1ServerAdminAccountsAccountIdGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/accounts/{accountId}`;
+        urlPath = urlPath.replace('{accountId}', encodeURIComponent(String(requestParameters['accountId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get Server Admin Account
+     */
+    async getServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRaw(requestParameters: GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminAccountDetail>> {
+        const requestOptions = await this.getServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminAccountDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Get Server Admin Account
+     */
+    async getServerAdminAccountApiV1ServerAdminAccountsAccountIdGet(requestParameters: GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminAccountDetail> {
+        const response = await this.getServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getServerAdminActionActivityApiV1ServerAdminActivityActionsGet without sending the request
+     */
+    async getServerAdminActionActivityApiV1ServerAdminActivityActionsGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/activity/actions`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get Server Admin Action Activity
+     */
+    async getServerAdminActionActivityApiV1ServerAdminActivityActionsGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ServerAdminActionActivityItem>>> {
+        const requestOptions = await this.getServerAdminActionActivityApiV1ServerAdminActivityActionsGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(ServerAdminActionActivityItemFromJSON));
+    }
+
+    /**
+     * Get Server Admin Action Activity
+     */
+    async getServerAdminActionActivityApiV1ServerAdminActivityActionsGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ServerAdminActionActivityItem>> {
+        const response = await this.getServerAdminActionActivityApiV1ServerAdminActivityActionsGetRaw(initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for getServerAdminActivityApiV1ServerAdminActivityGet without sending the request
@@ -166,6 +328,200 @@ export class ServerAdminApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost without sending the request
+     */
+    async issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequestOpts(requestParameters: IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['accountId'] == null) {
+            throw new runtime.RequiredError(
+                'accountId',
+                'Required parameter "accountId" was null or undefined when calling issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/accounts/{accountId}/recovery/operator`;
+        urlPath = urlPath.replace('{accountId}', encodeURIComponent(String(requestParameters['accountId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Issue Server Admin Operator Recovery
+     */
+    async issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRaw(requestParameters: IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminRecoveryProof>> {
+        const requestOptions = await this.issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminRecoveryProofFromJSON(jsonValue));
+    }
+
+    /**
+     * Issue Server Admin Operator Recovery
+     */
+    async issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost(requestParameters: IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminRecoveryProof> {
+        const response = await this.issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listServerAdminAccountsApiV1ServerAdminAccountsGet without sending the request
+     */
+    async listServerAdminAccountsApiV1ServerAdminAccountsGetRequestOpts(requestParameters: ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['query'] != null) {
+            queryParameters['query'] = requestParameters['query'];
+        }
+
+        if (requestParameters['status'] != null) {
+            queryParameters['status'] = requestParameters['status'];
+        }
+
+        if (requestParameters['verification'] != null) {
+            queryParameters['verification'] = requestParameters['verification'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/accounts`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return Account identity/security metadata without relationship content.
+     * List Server Admin Accounts
+     */
+    async listServerAdminAccountsApiV1ServerAdminAccountsGetRaw(requestParameters: ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminAccountList>> {
+        const requestOptions = await this.listServerAdminAccountsApiV1ServerAdminAccountsGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminAccountListFromJSON(jsonValue));
+    }
+
+    /**
+     * Return Account identity/security metadata without relationship content.
+     * List Server Admin Accounts
+     */
+    async listServerAdminAccountsApiV1ServerAdminAccountsGet(requestParameters: ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminAccountList> {
+        const response = await this.listServerAdminAccountsApiV1ServerAdminAccountsGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost without sending the request
+     */
+    async requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRequestOpts(requestParameters: RequestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['accountId'] == null) {
+            throw new runtime.RequiredError(
+                'accountId',
+                'Required parameter "accountId" was null or undefined when calling requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/accounts/{accountId}/recovery/email`;
+        urlPath = urlPath.replace('{accountId}', encodeURIComponent(String(requestParameters['accountId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Request Server Admin Account Recovery Email
+     */
+    async requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRaw(requestParameters: RequestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminRecoveryEmailResult>> {
+        const requestOptions = await this.requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminRecoveryEmailResultFromJSON(jsonValue));
+    }
+
+    /**
+     * Request Server Admin Account Recovery Email
+     */
+    async requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost(requestParameters: RequestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminRecoveryEmailResult> {
+        const response = await this.requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost without sending the request
+     */
+    async revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequestOpts(requestParameters: RevokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['accountId'] == null) {
+            throw new runtime.RequiredError(
+                'accountId',
+                'Required parameter "accountId" was null or undefined when calling revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/accounts/{accountId}/sessions/revoke`;
+        urlPath = urlPath.replace('{accountId}', encodeURIComponent(String(requestParameters['accountId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Revoke Server Admin Account Sessions
+     */
+    async revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRaw(requestParameters: RevokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSessionRevocationResult>> {
+        const requestOptions = await this.revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSessionRevocationResultFromJSON(jsonValue));
+    }
+
+    /**
+     * Revoke Server Admin Account Sessions
+     */
+    async revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost(requestParameters: RevokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSessionRevocationResult> {
+        const response = await this.revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut without sending the request
      */
     async updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequestOpts(requestParameters: UpdateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequest): Promise<runtime.RequestOpts> {
@@ -259,4 +615,141 @@ export class ServerAdminApi extends runtime.BaseAPI {
         return await response.value();
     }
 
+    /**
+     * Creates request options for updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut without sending the request
+     */
+    async updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRequestOpts(requestParameters: UpdateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['accountId'] == null) {
+            throw new runtime.RequiredError(
+                'accountId',
+                'Required parameter "accountId" was null or undefined when calling updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut().'
+            );
+        }
+
+        if (requestParameters['serverAdminAccountSuspensionUpdate'] == null) {
+            throw new runtime.RequiredError(
+                'serverAdminAccountSuspensionUpdate',
+                'Required parameter "serverAdminAccountSuspensionUpdate" was null or undefined when calling updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/server-admin/accounts/{accountId}/suspension`;
+        urlPath = urlPath.replace('{accountId}', encodeURIComponent(String(requestParameters['accountId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ServerAdminAccountSuspensionUpdateToJSON(requestParameters['serverAdminAccountSuspensionUpdate']),
+        };
+    }
+
+    /**
+     * Update Server Admin Account Suspension
+     */
+    async updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRaw(requestParameters: UpdateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminAccountDetail>> {
+        const requestOptions = await this.updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminAccountDetailFromJSON(jsonValue));
+    }
+
+    /**
+     * Update Server Admin Account Suspension
+     */
+    async updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut(requestParameters: UpdateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminAccountDetail> {
+        const response = await this.updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPutRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost without sending the request
+     */
+    async verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRequestOpts(requestParameters: VerifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['accountId'] == null) {
+            throw new runtime.RequiredError(
+                'accountId',
+                'Required parameter "accountId" was null or undefined when calling verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost().'
+            );
+        }
+
+        if (requestParameters['accountEmailId'] == null) {
+            throw new runtime.RequiredError(
+                'accountEmailId',
+                'Required parameter "accountEmailId" was null or undefined when calling verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost().'
+            );
+        }
+
+        if (requestParameters['serverAdminEmailVerificationRequest'] == null) {
+            throw new runtime.RequiredError(
+                'serverAdminEmailVerificationRequest',
+                'Required parameter "serverAdminEmailVerificationRequest" was null or undefined when calling verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/server-admin/accounts/{accountId}/emails/{accountEmailId}/verify`;
+        urlPath = urlPath.replace('{accountId}', encodeURIComponent(String(requestParameters['accountId'])));
+        urlPath = urlPath.replace('{accountEmailId}', encodeURIComponent(String(requestParameters['accountEmailId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ServerAdminEmailVerificationRequestToJSON(requestParameters['serverAdminEmailVerificationRequest']),
+        };
+    }
+
+    /**
+     * Verify Server Admin Account Email
+     */
+    async verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRaw(requestParameters: VerifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminAccountEmail>> {
+        const requestOptions = await this.verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminAccountEmailFromJSON(jsonValue));
+    }
+
+    /**
+     * Verify Server Admin Account Email
+     */
+    async verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPost(requestParameters: VerifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminAccountEmail> {
+        const response = await this.verifyServerAdminAccountEmailApiV1ServerAdminAccountsAccountIdEmailsAccountEmailIdVerifyPostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }
+
+/**
+ * @export
+ */
+export const ListServerAdminAccountsApiV1ServerAdminAccountsGetStatusEnum = {
+    all: 'all',
+    active: 'active',
+    suspended: 'suspended'
+} as const;
+export type ListServerAdminAccountsApiV1ServerAdminAccountsGetStatusEnum = typeof ListServerAdminAccountsApiV1ServerAdminAccountsGetStatusEnum[keyof typeof ListServerAdminAccountsApiV1ServerAdminAccountsGetStatusEnum];
+/**
+ * @export
+ */
+export const ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum = {
+    all: 'all',
+    verified: 'verified',
+    unverified: 'unverified'
+} as const;
+export type ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum = typeof ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum[keyof typeof ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum];

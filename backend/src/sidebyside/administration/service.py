@@ -10,7 +10,9 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from sidebyside.administration.models import (
+    AdministrationAction,
     AdministrationSetting,
+    InstanceAdministrationActionEvent,
     InstanceAdministrationEvent,
     InstanceAdministrationSettings,
 )
@@ -114,11 +116,45 @@ def update_setting(
     return settings
 
 
+def record_action(
+    session: Session,
+    *,
+    actor_id: UUID | None,
+    action: AdministrationAction,
+    target_account_id: UUID | None = None,
+    effect_count: int | None = None,
+) -> InstanceAdministrationActionEvent:
+    """Record one privileged Account operation without storing user payloads."""
+    event = InstanceAdministrationActionEvent(
+        actor_id=actor_id,
+        target_account_id=target_account_id,
+        action=action.value,
+        effect_count=effect_count,
+    )
+    session.add(event)
+    session.flush()
+    return event
+
+
 def recent_events(session: Session, *, limit: int = 20) -> list[InstanceAdministrationEvent]:
     return list(
         session.execute(
             select(InstanceAdministrationEvent)
             .order_by(InstanceAdministrationEvent.created_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+
+
+def recent_action_events(
+    session: Session, *, limit: int = 50
+) -> list[InstanceAdministrationActionEvent]:
+    return list(
+        session.execute(
+            select(InstanceAdministrationActionEvent)
+            .order_by(InstanceAdministrationActionEvent.created_at.desc())
             .limit(limit)
         )
         .scalars()
