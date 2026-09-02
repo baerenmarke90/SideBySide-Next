@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+from sidebyside.config import Deployment
 from sidebyside.entitlements.models import (
     Capability,
     EntitlementGrant,
@@ -69,7 +70,7 @@ def test_free_space_defaults_to_expired_with_no_capabilities() -> None:
     assert not has_capability(session, space_id, Capability.CHAPTER_RICH_PRESENTATION)
 
 
-def test_active_premium_grant_provides_all_premium_capabilities() -> None:
+def test_active_premium_grant_provides_all_cloud_premium_capabilities() -> None:
     space_id = uuid4()
     now = datetime(2026, 9, 1, 12, 0, 0, tzinfo=UTC)
     grant = EntitlementGrant(
@@ -83,16 +84,27 @@ def test_active_premium_grant_provides_all_premium_capabilities() -> None:
         capabilities=None,
     )
     session = FakeSession([grant])
-    effective = get_effective_space_entitlement(session, space_id, at=now)
+    effective = get_effective_space_entitlement(
+        session,
+        space_id,
+        at=now,
+        deployment=Deployment.CLOUD,
+    )
 
     assert effective.tier == EntitlementTier.PREMIUM
     assert effective.status == EntitlementStatus.ACTIVE
     assert effective.is_in_grace_period is False
     assert set(effective.capabilities) == set(ALL_PREMIUM_CAPABILITIES)
-    assert has_capability(session, space_id, Capability.RECAP_PDF_YEARBOOK, at=now)
+    assert has_capability(
+        session,
+        space_id,
+        Capability.RECAP_PDF_YEARBOOK,
+        at=now,
+        deployment=Deployment.CLOUD,
+    )
 
 
-def test_14_day_grace_period_keeps_capabilities_active() -> None:
+def test_active_grant_does_not_receive_implicit_grace_after_period_end() -> None:
     space_id = uuid4()
     effective_until = datetime(2026, 9, 1, 0, 0, 0, tzinfo=UTC)
     grant = EntitlementGrant(
@@ -107,27 +119,138 @@ def test_14_day_grace_period_keeps_capabilities_active() -> None:
     )
     session = FakeSession([grant])
 
-    # Day 5 after expiry: in grace period, capabilities active
-    day_5 = effective_until + timedelta(days=5)
-    effective_5 = get_effective_space_entitlement(session, space_id, at=day_5)
+    after_expiry = effective_until + timedelta(days=1)
+    effective = get_effective_space_entitlement(
+        session,
+        space_id,
+        at=after_expiry,
+        deployment=Deployment.CLOUD,
+    )
+
+    assert effective.tier == EntitlementTier.FREE
+    assert effective.status == EntitlementStatus.EXPIRED
+    assert effective.is_in_grace_period is False
+    assert effective.capabilities == []
+
+
+def test_explicit_14_day_grace_period_keeps_capabilities_active() -> None:
+    space_id = uuid4()
+    grace_start = datetime(2026, 9, 1, 0, 0, 0, tzinfo=UTC)
+    grace_end = grace_start + timedelta(days=14)
+    grant = EntitlementGrant(
+        id=uuid4(),
+        space_id=space_id,
+        source_type=EntitlementSourceType.CLOUD_STRIPE.value,
+        status=EntitlementStatus.GRACE_PERIOD.value,
+        tier=EntitlementTier.PREMIUM.value,
+        effective_from=grace_start,
+        effective_until=grace_end,
+        capabilities=None,
+    )
+    session = FakeSession([grant])
+
+    day_5 = grace_start + timedelta(days=5)
+    effective_5 = get_effective_space_entitlement(
+        session,
+        space_id,
+        at=day_5,
+        deployment=Deployment.CLOUD,
+    )
     assert effective_5.tier == EntitlementTier.PREMIUM
     assert effective_5.status == EntitlementStatus.GRACE_PERIOD
     assert effective_5.is_in_grace_period is True
-    assert has_capability(session, space_id, Capability.STORAGE_CLOUD_QUOTA_50GB, at=day_5)
+    assert has_capability(
+        session,
+        space_id,
+        Capability.STORAGE_CLOUD_QUOTA_50GB,
+        at=day_5,
+        deployment=Deployment.CLOUD,
+    )
 
-    # Day 14 after expiry: last day of grace period, still active
-    day_14 = effective_until + timedelta(days=14)
-    effective_14 = get_effective_space_entitlement(session, space_id, at=day_14)
+    effective_14 = get_effective_space_entitlement(
+        session,
+        space_id,
+        at=grace_end,
+        deployment=Deployment.CLOUD,
+    )
     assert effective_14.is_in_grace_period is True
-    assert has_capability(session, space_id, Capability.STORAGE_CLOUD_QUOTA_50GB, at=day_14)
+    assert has_capability(
+        session,
+        space_id,
+        Capability.STORAGE_CLOUD_QUOTA_50GB,
+        at=grace_end,
+        deployment=Deployment.CLOUD,
+    )
 
-    # Day 15 after expiry: grace period elapsed, transitions to Free/Expired
-    day_15 = effective_until + timedelta(days=15)
-    effective_15 = get_effective_space_entitlement(session, space_id, at=day_15)
+    day_15 = grace_end + timedelta(days=1)
+    effective_15 = get_effective_space_entitlement(
+        session,
+        space_id,
+        at=day_15,
+        deployment=Deployment.CLOUD,
+    )
     assert effective_15.tier == EntitlementTier.FREE
     assert effective_15.status == EntitlementStatus.EXPIRED
     assert effective_15.is_in_grace_period is False
-    assert not has_capability(session, space_id, Capability.STORAGE_CLOUD_QUOTA_50GB, at=day_15)
+    assert not has_capability(
+        session,
+        space_id,
+        Capability.STORAGE_CLOUD_QUOTA_50GB,
+        at=day_15,
+        deployment=Deployment.CLOUD,
+    )
+
+
+def test_unbounded_grace_period_fails_closed() -> None:
+    now = datetime(2026, 9, 1, 12, 0, 0, tzinfo=UTC)
+    grant = EntitlementGrant(
+        id=uuid4(),
+        space_id=uuid4(),
+        source_type=EntitlementSourceType.CLOUD_STRIPE.value,
+        status=EntitlementStatus.GRACE_PERIOD.value,
+        tier=EntitlementTier.PREMIUM.value,
+        effective_from=now - timedelta(days=1),
+        effective_until=None,
+    )
+
+    is_effective, in_grace, status = evaluate_grant_validity(grant, now)
+    assert is_effective is False
+    assert in_grace is False
+    assert status == EntitlementStatus.EXPIRED
+
+
+def test_self_hosted_premium_excludes_cloud_quota_capability() -> None:
+    space_id = uuid4()
+    now = datetime(2026, 9, 1, 12, 0, 0, tzinfo=UTC)
+    grant = EntitlementGrant(
+        id=uuid4(),
+        space_id=space_id,
+        source_type=EntitlementSourceType.SELF_HOSTED_KEY.value,
+        status=EntitlementStatus.ACTIVE.value,
+        tier=EntitlementTier.PREMIUM.value,
+        effective_from=now - timedelta(days=1),
+        effective_until=now + timedelta(days=365),
+        capabilities=None,
+    )
+    session = FakeSession([grant])
+
+    effective = get_effective_space_entitlement(
+        session,
+        space_id,
+        at=now,
+        deployment=Deployment.SELF_HOSTED,
+    )
+
+    assert effective.tier == EntitlementTier.PREMIUM
+    assert Capability.STORAGE_CLOUD_QUOTA_50GB.value not in effective.capabilities
+    assert Capability.RECAP_PDF_YEARBOOK.value in effective.capabilities
+    assert not has_capability(
+        session,
+        space_id,
+        Capability.STORAGE_CLOUD_QUOTA_50GB,
+        at=now,
+        deployment=Deployment.SELF_HOSTED,
+    )
 
 
 def test_grandfathered_and_trial_grants() -> None:
@@ -181,7 +304,48 @@ def test_revoked_grant_is_not_effective() -> None:
     assert effective.capabilities == []
 
 
-def test_multiple_grants_precedence() -> None:
+def test_multiple_effective_grants_union_capabilities() -> None:
+    space_id = uuid4()
+    now = datetime(2026, 9, 1, 12, 0, 0, tzinfo=UTC)
+    subscription = EntitlementGrant(
+        id=uuid4(),
+        space_id=space_id,
+        source_type=EntitlementSourceType.CLOUD_STRIPE.value,
+        status=EntitlementStatus.ACTIVE.value,
+        tier=EntitlementTier.PREMIUM.value,
+        effective_from=now - timedelta(days=30),
+        effective_until=now + timedelta(days=30),
+        capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
+    )
+    promotion = EntitlementGrant(
+        id=uuid4(),
+        space_id=space_id,
+        source_type=EntitlementSourceType.ADMIN_GRANT.value,
+        status=EntitlementStatus.GRANDFATHERED.value,
+        tier=EntitlementTier.PREMIUM.value,
+        effective_from=now - timedelta(days=1),
+        effective_until=now + timedelta(days=10),
+        capabilities=[Capability.THEME_BESPOKE_PACKS.value],
+    )
+    session = FakeSession([promotion, subscription])
+
+    effective = get_effective_space_entitlement(
+        session,
+        space_id,
+        at=now,
+        deployment=Deployment.CLOUD,
+    )
+
+    assert effective.tier == EntitlementTier.PREMIUM
+    assert effective.status == EntitlementStatus.ACTIVE
+    assert set(effective.capabilities) == {
+        Capability.RECAP_PDF_YEARBOOK.value,
+        Capability.THEME_BESPOKE_PACKS.value,
+    }
+    assert effective.effective_until == subscription.effective_until
+
+
+def test_multiple_grants_ignore_expired_and_keep_active() -> None:
     space_id = uuid4()
     now = datetime(2026, 9, 1, 12, 0, 0, tzinfo=UTC)
     expired_grant = EntitlementGrant(
@@ -225,7 +389,7 @@ def test_grant_validity_future_grant() -> None:
     assert status == EntitlementStatus.ACTIVE
 
 
-def test_record_and_revoke_grant() -> None:
+def test_record_and_revoke_unreferenced_grant() -> None:
     space_id = uuid4()
     account_id = uuid4()
     session = FakeSession([])
@@ -235,35 +399,20 @@ def test_record_and_revoke_grant() -> None:
         session,
         space_id=space_id,
         account_id=account_id,
-        source_type=EntitlementSourceType.GOOGLE_PLAY,
-        status=EntitlementStatus.ACTIVE,
+        source_type=EntitlementSourceType.ADMIN_GRANT,
+        status=EntitlementStatus.GRANDFATHERED,
         tier=EntitlementTier.PREMIUM,
         effective_from=now,
-        effective_until=now + timedelta(days=30),
-        external_reference="order-12345",
+        effective_until=None,
+        external_reference=None,
     )
 
     assert grant.space_id == space_id
     assert grant.account_id == account_id
-    assert grant.external_reference == "order-12345"
-    assert grant.status == EntitlementStatus.ACTIVE.value
+    assert grant.external_reference is None
+    assert grant.status == EntitlementStatus.GRANDFATHERED.value
 
-    # Idempotent update
-    updated = record_grant(
-        session,
-        space_id=space_id,
-        source_type=EntitlementSourceType.GOOGLE_PLAY,
-        status=EntitlementStatus.ACTIVE,
-        tier=EntitlementTier.PREMIUM,
-        effective_from=now,
-        effective_until=now + timedelta(days=60),
-        external_reference="order-12345",
-    )
-    assert updated.id == grant.id
-    assert updated.effective_until == now + timedelta(days=60)
-
-    # Revoke
-    revoked = revoke_grant(session, grant.id, reason="chargeback")
+    revoked = revoke_grant(session, grant.id, reason="operator-revoked")
     assert revoked is not None
     assert revoked.status == EntitlementStatus.REVOKED.value
-    assert revoked.metadata_["revocation_reason"] == "chargeback"
+    assert revoked.metadata_["revocation_reason"] == "operator-revoked"
