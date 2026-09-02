@@ -40,8 +40,13 @@ def upgrade() -> None:
         ),
         sa.Column(
             "source_type",
-            sa.String(length=64),
+            sa.String(length=32),
             nullable=False,
+        ),
+        sa.Column(
+            "external_reference",
+            sa.String(length=255),
+            nullable=True,
         ),
         sa.Column(
             "status",
@@ -52,6 +57,7 @@ def upgrade() -> None:
             "tier",
             sa.String(length=32),
             nullable=False,
+            server_default=sa.text("'FREE'"),
         ),
         sa.Column(
             "effective_from",
@@ -66,11 +72,10 @@ def upgrade() -> None:
         sa.Column(
             "capabilities",
             postgresql.JSONB(astext_type=sa.Text()),
-            nullable=False,
-            server_default=sa.text("'[]'::jsonb"),
+            nullable=True,
         ),
         sa.Column(
-            "metadata_json",
+            "metadata",
             postgresql.JSONB(astext_type=sa.Text()),
             nullable=False,
             server_default=sa.text("'{}'::jsonb"),
@@ -87,6 +92,20 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("now()"),
         ),
+        sa.CheckConstraint(
+            "source_type IN ("
+            "'GOOGLE_PLAY', 'CLOUD_STRIPE', 'SELF_HOSTED_KEY', 'ADMIN_GRANT', 'TEST_FIXTURE'"
+            ")",
+            name="entitlement_source_type_valid",
+        ),
+        sa.CheckConstraint(
+            "status IN ('ACTIVE', 'TRIAL', 'GRACE_PERIOD', 'EXPIRED', 'REVOKED', 'GRANDFATHERED')",
+            name="entitlement_status_valid",
+        ),
+        sa.CheckConstraint(
+            "tier IN ('FREE', 'PREMIUM')",
+            name="entitlement_tier_valid",
+        ),
     )
     op.create_index(
         "ix_entitlement_grants_space_id",
@@ -98,9 +117,18 @@ def upgrade() -> None:
         "entitlement_grants",
         ["account_id"],
     )
+    op.create_index(
+        "ix_entitlement_grants_space_id_status",
+        "entitlement_grants",
+        ["space_id", "status"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index(
+        "ix_entitlement_grants_space_id_status",
+        table_name="entitlement_grants",
+    )
     op.drop_index(
         "ix_entitlement_grants_account_id",
         table_name="entitlement_grants",
