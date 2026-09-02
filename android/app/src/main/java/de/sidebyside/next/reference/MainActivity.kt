@@ -108,7 +108,14 @@ class MainActivity : ComponentActivity() {
 private fun referenceViewModelFactory(context: Context): ViewModelProvider.Factory =
     viewModelFactory {
         initializer {
-            ReferenceViewModel(spaceStore = SharedPreferencesSpaceStore(context))
+            val database = de.sidebyside.next.cache.ReadCacheDatabase.getInstance(context)
+            ReferenceViewModel(
+                spaceStore = SharedPreferencesSpaceStore(context),
+                productReadCache = de.sidebyside.next.cache.ProductReadCache(
+                    database.productCacheDao(),
+                    database.cacheContextDao(),
+                ),
+            )
         }
     }
 
@@ -352,6 +359,7 @@ private fun DemoShell(
                     onCancelEditing = viewModel::cancelEditingMemory,
                     onSave = viewModel::saveMemory,
                     onDelete = viewModel::deleteMemory,
+                    cachedAt = state.openMemoryCachedAt,
                     comments = memoryId?.let { id ->
                         {
                             MemoryComments(
@@ -407,6 +415,7 @@ private fun DemoShell(
                     onCancelEditing = viewModel::cancelEditingMemory,
                     onSave = viewModel::saveMilestone,
                     onDelete = viewModel::deleteMilestone,
+                    cachedAt = state.openMilestoneCachedAt,
                     comments = id?.let { parentId ->
                         {
                             MemoryComments(
@@ -465,6 +474,7 @@ private fun DemoShell(
                     generation = viewModel.storyGeneration,
                     problem = state.memoryProblem,
                     onBack = { controller.popBackStack() },
+                    cachedAt = state.openSharedHeartMomentCachedAt,
                     comments = id?.let { parentId ->
                         {
                             MemoryComments(

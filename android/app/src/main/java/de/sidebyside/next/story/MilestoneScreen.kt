@@ -64,6 +64,8 @@ fun MilestoneScreen(
     onSave: (title: String, body: String, happenedOn: String) -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Non-null only while [milestone] is a stale M2-D18 cache fallback. */
+    cachedAt: java.time.Instant? = null,
     comments: (@Composable () -> Unit)? = null,
 ) {
     if (gone) {
@@ -103,6 +105,8 @@ fun MilestoneScreen(
         }
 
         problem?.let { current -> item { UiStatePanel(problem = current) } }
+
+        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
         savedMessage?.let { text ->
             item {

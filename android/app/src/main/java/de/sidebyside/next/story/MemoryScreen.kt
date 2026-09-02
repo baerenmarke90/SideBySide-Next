@@ -67,6 +67,8 @@ fun MemoryScreen(
     onSave: (title: String, body: String, happenedOn: String) -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Non-null only while [memory] is a stale M2-D18 cache fallback. */
+    cachedAt: java.time.Instant? = null,
     /** Rendered below the memory; absent while it is being edited. */
     comments: (@Composable () -> Unit)? = null,
 ) {
@@ -118,6 +120,8 @@ fun MemoryScreen(
             // still in the form, and saving again is the recovery.
             item { UiStatePanel(problem = current) }
         }
+
+        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
         savedMessage?.let { text ->
             item {

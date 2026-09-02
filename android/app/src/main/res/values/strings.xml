@@ -616,4 +616,7 @@
     <string name="chapter_content_choose">Inhalt auswählen</string>
     <string name="chapter_content_link">Hinzufügen</string>
     <string name="chapter_content_none_available">Alle aktuell verfügbaren gemeinsamen Story-Inhalte sind bereits im Kapitel.</string>
+
+    <string name="cache_banner_title">Offline – zuletzt gespeicherter Stand</string>
+    <string name="cache_banner_body">Zuletzt synchronisiert am %1$s. Die Verbindung wird automatisch wiederhergestellt, sobald der Server erreichbar ist.</string>
 </resources>

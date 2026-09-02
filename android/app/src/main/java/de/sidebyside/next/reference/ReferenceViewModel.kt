@@ -177,6 +177,8 @@ data class ReferenceUiState(
     val commentsHaveMore: Boolean = false,
     /** The memory currently open, if any. */
     val openMemory: MemoryDetail? = null,
+    /** Non-null only while [openMemory] is a stale M2-D18 cache fallback, not a fresh read. */
+    val openMemoryCachedAt: java.time.Instant? = null,
     val memoryBusy: Boolean = false,
     /**
      * Whether the open memory is being changed.
@@ -279,7 +281,11 @@ data class ReferenceUiState(
     val chapterContentProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
+    /** Non-null only while [openMilestone] is a stale M2-D18 cache fallback, not a fresh read. */
+    val openMilestoneCachedAt: java.time.Instant? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
+    /** Non-null only while [openSharedHeartMoment] is a stale M2-D18 cache fallback, not a fresh read. */
+    val openSharedHeartMomentCachedAt: java.time.Instant? = null,
     val commentsBusy: Boolean = false,
     val commentsProblem: UiProblem? = null,
     /** A problem belonging to the open memory rather than to the whole screen. */
@@ -304,6 +310,12 @@ class ReferenceViewModel(
     api: ReferenceContract? = null,
     private val apiFactory: (String) -> ReferenceContract = ::OkHttpReferenceApi,
     private val spaceStore: SpacePreferenceStore = InMemorySpacePreferenceStore(),
+    /**
+     * The M2-D18 read cache for shared Story detail content. `null` (the
+     * default every existing test relies on) disables it entirely — reads
+     * behave exactly as before, network-only.
+     */
+    private val productReadCache: de.sidebyside.next.cache.ProductReadCache? = null,
 ) : ViewModel() {
     private val injectedApi: ReferenceContract? = api
 
@@ -418,6 +430,7 @@ class ReferenceViewModel(
         clearCollections()
         clearChapters()
         clearChapterContent()
+        clearProductReadCache()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -514,6 +527,7 @@ class ReferenceViewModel(
         clearCollections()
         clearChapters()
         clearChapterContent()
+        clearProductReadCache()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -578,6 +592,7 @@ class ReferenceViewModel(
         clearCollections()
         clearChapters()
         clearChapterContent()
+        clearProductReadCache()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -648,6 +663,7 @@ class ReferenceViewModel(
         clearCollections()
         clearChapters()
         clearChapterContent()
+        clearProductReadCache()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -831,10 +847,24 @@ class ReferenceViewModel(
         mutate { it.copy(memoryBusy = true) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.getMemory(spaceId, currentSession.tokens.accessToken, memoryId) }
-                .onSuccess { memory ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.MEMORY,
+                resourceId = memoryId,
+                load = { api.getMemory(spaceId, currentSession.tokens.accessToken, memoryId) },
+                serialize = { SideBySideJson.encodeToString(MemoryDetail.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(MemoryDetail.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(openMemory = memory, memoryBusy = false) }
+                    mutate {
+                        it.copy(
+                            openMemory = result.value,
+                            openMemoryCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                            memoryBusy = false,
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -994,12 +1024,24 @@ class ReferenceViewModel(
         mutate { it.copy(memoryBusy = true) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching {
-                api.getMilestone(spaceId, currentSession.tokens.accessToken, milestoneId)
-            }
-                .onSuccess { milestone ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.MILESTONE,
+                resourceId = milestoneId,
+                load = { api.getMilestone(spaceId, currentSession.tokens.accessToken, milestoneId) },
+                serialize = { SideBySideJson.encodeToString(MilestoneDetail.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(MilestoneDetail.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(openMilestone = milestone, memoryBusy = false) }
+                    mutate {
+                        it.copy(
+                            openMilestone = result.value,
+                            openMilestoneCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                            memoryBusy = false,
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -1024,12 +1066,28 @@ class ReferenceViewModel(
         mutate { it.copy(memoryBusy = true, memoryProblem = null, openMemoryGone = false) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching {
-                api.getHeartMoment(spaceId, currentSession.tokens.accessToken, heartMomentId)
-            }
-                .onSuccess { moment ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.HEART_MOMENT,
+                resourceId = heartMomentId,
+                // Symmetric with the write-time gate: a cached row can only ever
+                // have been written while still SHARED, but a moment can turn
+                // PRIVATE after being cached, so a stale row is refused here too.
+                canPersist = { it.visibility == ContentVisibility.SHARED },
+                load = { api.getHeartMoment(spaceId, currentSession.tokens.accessToken, heartMomentId) },
+                serialize = { SideBySideJson.encodeToString(HeartMomentDetail.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(HeartMomentDetail.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(openSharedHeartMoment = moment, memoryBusy = false) }
+                    mutate {
+                        it.copy(
+                            openSharedHeartMoment = result.value,
+                            openSharedHeartMomentCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                            memoryBusy = false,
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -4188,6 +4246,19 @@ class ReferenceViewModel(
         }
     }
 
+    /**
+     * The M2-D18 persistent-cache wipe. Unlike every other `clearXxx`
+     * function here, this one does not touch in-memory [ReferenceUiState] —
+     * it wipes the on-disk Room database, which a fresh `_uiState` value
+     * (as [logout] assigns) does nothing to by itself. Fire-and-forget: the
+     * caller's own session/state transition does not wait on disk I/O, and
+     * nothing reads the cache again until a later screen asks for it.
+     */
+    private fun clearProductReadCache() {
+        val cache = productReadCache ?: return
+        viewModelScope.launch { cache.clearAll() }
+    }
+
     fun logout() {
         // Leaving the demo is a different exit: it also has to put the endpoint
         // back, so a later normal sign-in does not silently reach the demo.
@@ -4198,6 +4269,7 @@ class ReferenceViewModel(
         clearHeartMoments()
         clearComments()
         closeStoryItem()
+        clearProductReadCache()
         session = null
         activeSpaceId = null
         imageDrafts = emptyList()
@@ -4347,6 +4419,34 @@ class ReferenceViewModel(
 
     private inline fun mutate(update: (ReferenceUiState) -> ReferenceUiState) {
         _uiState.value = update(_uiState.value)
+    }
+
+    /**
+     * Reads one shared Story detail resource through the M2-D18 cache when
+     * one is configured, or plain network-only when [productReadCache] is
+     * `null` (every existing test's default, and the state before this
+     * device ever configures a cache instance). Centralizing the branch here
+     * keeps each of the three call sites the same shape they were before the
+     * cache existed.
+     */
+    private suspend fun <T> loadProductDetail(
+        accountId: java.util.UUID,
+        spaceId: java.util.UUID,
+        kind: de.sidebyside.next.cache.ProductCacheKind,
+        resourceId: java.util.UUID,
+        canPersist: (T) -> Boolean = { true },
+        load: suspend () -> T,
+        serialize: (T) -> String,
+        deserialize: (String) -> T,
+    ): Result<de.sidebyside.next.cache.ProductReadResult<T>> {
+        val cache = productReadCache
+        return if (cache != null) {
+            cache.loadWithFallback(accountId, spaceId, kind, resourceId, canPersist, load, serialize, deserialize)
+        } else {
+            runCatching { load() }.map {
+                de.sidebyside.next.cache.ProductReadResult(it, fromCache = false, refreshedAt = java.time.Instant.now())
+            }
+        }
     }
 
     /** Null for a blank date, which is allowed, and for an unparseable one. */
