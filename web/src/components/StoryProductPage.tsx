@@ -167,67 +167,91 @@ export function StoryProductPage({
         description={t('story.intro')}
       />
 
-      <form
-        className="story-filter-compact sbs-motion-reveal"
-        onSubmit={applyFilters}
-        key={cacheResourceId}
-        aria-label={t('storyFilters.aria')}
-      >
-        <div className="field-group">
-          <label htmlFor="story-filter-type">
-            {t('storyFilters.type')}
-          </label>
-          <select
-            id="story-filter-type"
-            name="type"
-            defaultValue={filters.kind ?? ''}
-          >
-            <option value="">{t('storyFilters.allTypes')}</option>
-            <option value={StoryKind.MEMORY}>{t('story.kind.memory')}</option>
-            <option value={StoryKind.HEART_MOMENT}>{t('story.kind.heartMoment')}</option>
-            <option value={StoryKind.MILESTONE}>{t('story.kind.milestone')}</option>
-          </select>
-        </div>
-        <div className="field-group">
-          <label htmlFor="story-filter-year">
-            {t('storyFilters.year')}
-          </label>
-          <input
-            id="story-filter-year"
-            name="year"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            defaultValue={filters.year ?? ''}
-            placeholder={t('storyFilters.anyYear')}
-          />
-        </div>
-        <div className="field-group">
-          <label htmlFor="story-filter-order">
-            {t('storyFilters.order')}
-          </label>
-          <select
-            id="story-filter-order"
-            name="order"
-            defaultValue={filters.order}
-          >
-            <option value={StoryOrder.DESC}>{t('storyFilters.newest')}</option>
-            <option value={StoryOrder.ASC}>{t('storyFilters.oldest')}</option>
-          </select>
-        </div>
-        <div className="story-filter-actions">
-          <button type="submit" className="primary compact-action">
-            {t('storyFilters.apply')}
-          </button>
-          <button
-            type="button"
-            className="tertiary compact-action"
-            onClick={() => setSearchParams({}, { replace: true })}
-          >
-            {t('storyFilters.reset')}
-          </button>
-        </div>
-      </form>
+            <div className="story-filter-container sbs-motion-reveal">
+        <details className="story-filter-details">
+          <summary className="story-filter-summary">
+            {t('storyFilters.title')}
+            {(filters.kind || filters.year || filters.order !== StoryOrder.DESC) && (
+              <span className="story-filter-active-dot" aria-hidden="true"></span>
+            )}
+          </summary>
+          <div className="story-filter-dropdown">
+            <form
+              className="story-filter-compact"
+              onSubmit={applyFilters}
+              key={cacheResourceId}
+              aria-label={t('storyFilters.aria')}
+            >
+              <div className="field-group">
+                <label htmlFor="story-filter-type">
+                  {t('storyFilters.type')}
+                </label>
+                <select
+                  id="story-filter-type"
+                  name="type"
+                  defaultValue={filters.kind ?? ''}
+                >
+                  <option value="">{t('storyFilters.allTypes')}</option>
+                  <option value={StoryKind.MEMORY}>{t('story.kind.memory')}</option>
+                  <option value={StoryKind.HEART_MOMENT}>{t('story.kind.heartMoment')}</option>
+                  <option value={StoryKind.MILESTONE}>{t('story.kind.milestone')}</option>
+                </select>
+              </div>
+              <div className="field-group">
+                <label htmlFor="story-filter-year">
+                  {t('storyFilters.year')}
+                </label>
+                <select
+                  id="story-filter-year"
+                  name="year"
+                  defaultValue={filters.year ?? ''}
+                >
+                  <option value="">{t('storyFilters.anyYear')}</option>
+                  {[...Array(10)].map((_, i) => {
+                    const year = new Date().getFullYear() - i;
+                    return <option key={year} value={year}>{year}</option>;
+                  })}
+                </select>
+              </div>
+              <div className="field-group">
+                <label htmlFor="story-filter-order">
+                  {t('storyFilters.order')}
+                </label>
+                <select
+                  id="story-filter-order"
+                  name="order"
+                  defaultValue={filters.order}
+                >
+                  <option value={StoryOrder.DESC}>{t('storyFilters.newest')}</option>
+                  <option value={StoryOrder.ASC}>{t('storyFilters.oldest')}</option>
+                </select>
+              </div>
+              <div className="story-filter-actions">
+                <button type="submit" className="primary compact-action">
+                  {t('storyFilters.apply')}
+                </button>
+                {(filters.kind || filters.year || filters.order !== StoryOrder.DESC) && (
+                  <button
+                    type="button"
+                    className="tertiary compact-action"
+                    onClick={() => setSearchParams({}, { replace: true })}
+                  >
+                    {t('storyFilters.reset')}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </details>
+        
+        {(filters.kind || filters.year || filters.order !== StoryOrder.DESC) && (
+          <div className="story-active-chips">
+            {filters.kind && <span className="active-chip">{t(`story.kind.${filters.kind}`)}</span>}
+            {filters.year && <span className="active-chip">{filters.year}</span>}
+            {filters.order === StoryOrder.ASC && <span className="active-chip">{t('storyFilters.oldest')}</span>}
+          </div>
+        )}
+      </div>
 
       <div className="layout-single-column">
 

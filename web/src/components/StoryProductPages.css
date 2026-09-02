@@ -148,7 +148,7 @@
   height: 24px;
   border-radius: 50%;
   background: var(--color-surface-raised);
-  border: 4px solid var(--color-brand-koralle);
+  border: 4px solid var(--color-brand);
   box-shadow: 0 0 0 4px var(--color-background);
 }
 
@@ -284,7 +284,7 @@
 
 .story-memory-link {
   font-weight: 700;
-  color: var(--color-brand-koralle);
+  color: var(--color-brand);
   text-decoration: none;
 }
 
@@ -354,4 +354,55 @@
     margin-left: 0;
     margin-top: var(--space-2);
   }
+}
+
+.story-filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.story-filter-details {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  padding: 0;
+  max-width: 400px;
+}
+
+.story-filter-summary {
+  padding: var(--space-3) var(--space-4);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.story-filter-active-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-brand);
+}
+
+.story-filter-dropdown {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.story-active-chips {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.active-chip {
+  background: var(--color-brand-surface);
+  color: var(--color-brand-strong);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 600;
 }

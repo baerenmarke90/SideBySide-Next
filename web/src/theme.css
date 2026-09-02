@@ -4,16 +4,14 @@
   background: var(--color-background);
 
   /* Brand Tokens (M5) */
-  --color-brand-koralle: #ff5e6c;
-  --color-brand-koralle-glow: #ff5e6c40;
-  --color-brand-ocean: #231e28;
+      --color-brand-ocean: #231e28;
   --color-brand-ocean-light: #3d3446;
 
   --color-surface-raised: #ffffff;
   --color-surface-overlay: #ffffffea;
   --color-header-surface: #faf7f5e8;
   --color-header-border: #ede6dfcc;
-  --color-brand-text: #c83244;
+  --color-brand-text: #4f2daa;
   --color-brand-glow: #ff5e6c33;
   --color-on-accent: #ffffff;
   --color-text-inverse-muted: rgb(255 255 255 / 90%);
@@ -42,9 +40,7 @@
   color-scheme: dark;
 
   /* Brand Tokens (M5) */
-  --color-brand-koralle: #ff7a88;
-  --color-brand-koralle-glow: #ff7a8840;
-  --color-brand-ocean: #18141d;
+      --color-brand-ocean: #18141d;
   --color-brand-ocean-light: #2c2636;
 
   --color-background: #18141d;
@@ -59,10 +55,10 @@
   --color-text-muted: #9d92a8;
   --color-border: #483e58;
   --color-border-subtle: #332b40;
-  --color-brand: #794bb5;
-  --color-brand-strong: #9e7dc3;
-  --color-brand-text: #bca2d8;
-  --color-brand-surface: #35234a;
+  --color-brand: #7C4DFF;
+  --color-brand-strong: #7c4dff;
+  --color-brand-text: #bda7ff;
+  --color-brand-surface: #332842;
   --color-surface-panel: #231e2b;
   --color-surface-panel-tint: #1e1925;
   --color-page-tint-brand: #794bb515;
@@ -78,13 +74,13 @@
   --color-entry-trust-accent: #7fd1c1;
   --color-entry-aura-brand: #794bb524;
   --color-entry-aura-shared: #e6a08c14;
-  --color-shared: #7fd1c1;
-  --color-shared-accent: #338a7e;
-  --color-shared-surface: #182b28;
-  --color-private: #ff5a79;
-  --color-error: #ff5a79;
-  --color-error-surface: #381e28;
-  --color-focus: #9570c9;
+  --color-shared: #8fe0ce;
+  --color-shared-accent: #4fb8a5;
+  --color-shared-surface: #183c34;
+  --color-private: #F45B88;
+  --color-error: #ffb1c1;
+  --color-error-surface: #44202d;
+  --color-focus: #bda7ff;
   --color-on-accent: #ffffff;
   --color-shadow-card: #00000060;
   --color-shadow-soft: #00000040;
@@ -102,9 +98,7 @@
     color-scheme: dark;
 
     /* Brand Tokens (M5) */
-    --color-brand-koralle: #ff7a88;
-    --color-brand-koralle-glow: #ff7a8840;
-    --color-brand-ocean: #18141d;
+            --color-brand-ocean: #18141d;
     --color-brand-ocean-light: #2c2636;
 
     --color-background: #18141d;
@@ -119,10 +113,10 @@
     --color-text-muted: #9d92a8;
     --color-border: #483e58;
     --color-border-subtle: #332b40;
-    --color-brand: #794bb5;
-    --color-brand-strong: #9e7dc3;
-    --color-brand-text: #bca2d8;
-    --color-brand-surface: #35234a;
+    --color-brand: #7C4DFF;
+    --color-brand-strong: #7c4dff;
+    --color-brand-text: #bda7ff;
+    --color-brand-surface: #332842;
     --color-surface-panel: #231e2b;
     --color-surface-panel-tint: #1e1925;
     --color-page-tint-brand: #794bb515;
@@ -138,13 +132,13 @@
     --color-entry-trust-accent: #7fd1c1;
     --color-entry-aura-brand: #794bb524;
     --color-entry-aura-shared: #e6a08c14;
-    --color-shared: #7fd1c1;
-    --color-shared-accent: #338a7e;
-    --color-shared-surface: #182b28;
-    --color-private: #ff5a79;
-    --color-error: #ff5a79;
-    --color-error-surface: #381e28;
-    --color-focus: #9570c9;
+    --color-shared: #8fe0ce;
+    --color-shared-accent: #4fb8a5;
+    --color-shared-surface: #183c34;
+    --color-private: #F45B88;
+    --color-error: #ffb1c1;
+    --color-error-surface: #44202d;
+    --color-focus: #bda7ff;
     --color-on-accent: #ffffff;
     --color-shadow-card: #00000060;
     --color-shadow-soft: #00000040;
@@ -199,7 +193,7 @@ body.theme-vault {
   --color-brand-text: #b82542;
   --color-brand-surface: #ffe6eb;
   --color-brand-glow: rgba(255, 90, 121, 0.15);
-  --color-private: #ff5a79;
+  --color-private: #F45B88;
   --color-private-surface-soft: #ffe6eb;
   --color-on-accent: #ffffff;
   --color-page-tint-brand: transparent;

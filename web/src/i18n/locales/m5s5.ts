@@ -1,5 +1,9 @@
 const m5s5 = {
   dashboard: {
+    newSpacePartner: 'Willkommen in eurem gemeinsamen Ort mit {{name}}.',
+    newSpaceEmpty: 'Willkommen in eurem gemeinsamen Ort.',
+    newSpaceIntro: 'Alles ist bereit für eure gemeinsame Geschichte.',
+    newSpaceAction: 'Ersten Moment festhalten',
     // The visible landing area is Übersicht; the stable route ID remains `today`.
     eyebrow: 'Übersicht',
     title: 'Euer gemeinsamer Ort',

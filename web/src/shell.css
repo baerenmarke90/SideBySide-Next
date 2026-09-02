@@ -298,11 +298,11 @@
   bottom: 15%;
   width: 3.5px;
   border-radius: var(--radius-pill);
-  background: var(--color-brand-koralle);
+  background: var(--color-brand);
 }
 
 .shell-nav-link-active .shell-nav-icon {
-  color: var(--color-brand-koralle);
+  color: var(--color-brand);
 }
 
 .mobile-bottom-nav .shell-nav-link-active::before {
@@ -561,4 +561,17 @@
   .header-profile-trigger {
     transition: none;
   }
+}
+
+.invite-hero-title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--color-brand-text);
+  line-height: 1.2;
+}
+
+.invite-hero-body {
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  color: var(--color-text-secondary);
 }

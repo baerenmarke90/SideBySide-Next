@@ -122,6 +122,7 @@ export function AppShell({
   }
 
   const location = useLocation();
+  const isPrivateArea = location.pathname.startsWith('/more/private');
 
   return (
     <div className="product-shell">
@@ -133,8 +134,8 @@ export function AppShell({
       <header className="app-header product-topbar">
         <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
         <div className="header-actions">
-          <span className={`shared-context ${location.pathname.startsWith('/private') ? 'private-context' : ''}`}>
-            {location.pathname.startsWith('/private') ? (
+          <span className={`shared-context ${isPrivateArea ? 'private-context' : ''}`}>
+            {isPrivateArea ? (
               <><span aria-hidden="true">🔒</span> {t('privateArea.privacyLabel', 'Nur für mich')}</>
             ) : (
               <><span aria-hidden="true">♥</span> {t('header.sharedArea')}</>

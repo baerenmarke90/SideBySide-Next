@@ -504,7 +504,7 @@
   bottom: 0;
   left: 23px;
   width: 4px;
-  background: linear-gradient(to bottom, var(--color-brand-koralle), var(--color-discovery-surface-soft), var(--color-surface-raised));
+  background: linear-gradient(to bottom, var(--color-brand), var(--color-discovery-surface-soft), var(--color-surface-raised));
   border-radius: var(--radius-pill);
 }
 
@@ -519,7 +519,7 @@
   top: var(--space-2);
   width: 14px;
   height: 14px;
-  background: var(--color-brand-koralle);
+  background: var(--color-brand);
   border-radius: 50%;
   box-shadow: 0 0 0 6px var(--color-background);
   z-index: 2;
@@ -527,7 +527,7 @@
 
 .future-map-stop-someday .future-map-marker {
   background: var(--color-private-surface-soft);
-  border: 3px solid var(--color-brand-koralle);
+  border: 3px solid var(--color-brand);
 }
 
 .future-map-stop-others .future-map-marker {
@@ -550,4 +550,38 @@
   font-size: 1rem;
   color: var(--color-text-secondary);
   margin-bottom: var(--space-4);
+}
+
+.planning-secondary-area {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  margin-bottom: var(--space-3);
+  padding: 0;
+}
+.planning-secondary-summary {
+  padding: var(--space-3) var(--space-4);
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.planning-secondary-summary .area-meta {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.planning-secondary-area .area-content {
+  padding: 0 var(--space-4) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+}
+.planning-secondary-area .area-intro {
+  color: var(--color-text-secondary);
+  margin: var(--space-3) 0;
+}
+.planning-secondary-area .area-create {
+  margin-top: var(--space-4);
+  border-top: 1px dashed var(--color-border-subtle);
+  padding-top: var(--space-4);
 }

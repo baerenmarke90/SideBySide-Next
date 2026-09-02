@@ -16,7 +16,7 @@
 .demo-instance-banner strong {
   flex: 0 0 auto;
   font-weight: 800;
-  color: var(--color-brand-koralle);
+  color: var(--color-brand);
 }
 
 .demo-launch {

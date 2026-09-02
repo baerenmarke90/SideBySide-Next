@@ -1,5 +1,6 @@
 const m5s3 = {
   common: {
+    saved: 'gespeichert',
     back: '← Zurück zu Planen',
     title: 'Titel',
     description: 'Beschreibung',
@@ -22,6 +23,11 @@ const m5s3 = {
     confirmDelete: 'Endgültig löschen',
   },
   overview: {
+    soon: 'Bald & Geplant',
+    soonIntro: 'Eure nächsten konkreten Schritte.',
+    someday: 'Irgendwann',
+    somedayIntro: 'Wünsche und Träume für die Zukunft.',
+    others: 'Weitere gemeinsame Dinge',
     eyebrow: 'Gemeinsam planen',
     title: 'Eure Wünsche und Pläne',
     intro:

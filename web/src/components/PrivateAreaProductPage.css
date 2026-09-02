@@ -20,13 +20,13 @@
 .private-area-context {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  border-left: 4px solid var(--color-brand-koralle);
+  border-left: 4px solid var(--color-brand);
 }
 
 body.theme-vault .private-area-context {
   background: linear-gradient(135deg, #161a26 0%, #1e2436 100%);
   border-color: #2e374f;
-  border-left-color: var(--color-brand-koralle);
+  border-left-color: var(--color-brand);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -58,7 +58,7 @@ body.theme-vault .private-area-context {
   border-radius: 999px;
   background: var(--color-brand-surface);
   color: var(--color-brand-text);
-  border: 1px solid var(--color-brand-koralle);
+  border: 1px solid var(--color-brand);
   font-size: 0.85rem;
   font-weight: 700;
 }
@@ -74,8 +74,8 @@ body.theme-vault .private-area-badge {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--color-brand-koralle);
-  box-shadow: 0 0 8px var(--color-brand-koralle);
+  background: var(--color-brand);
+  box-shadow: 0 0 8px var(--color-brand);
 }
 
 .private-area-nav {

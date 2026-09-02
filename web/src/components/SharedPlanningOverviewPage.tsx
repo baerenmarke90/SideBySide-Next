@@ -99,35 +99,34 @@ function PlanningSection({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="layout-panel" aria-labelledby={`${id}-heading`}>
-      <div className="layout-section-head">
-        <div>
-          <h2 id={`${id}-heading`}>{title}</h2>
-          <p>{intro}</p>
+    <details className="planning-secondary-area" aria-labelledby={`${id}-heading`}>
+      <summary className="planning-secondary-summary">
+        <span className="area-title" id={`${id}-heading`}>{title}</span>
+        <span className="area-meta">{t('m5s3.common.saved')}</span>
+      </summary>
+      <div className="area-content">
+        <p className="area-intro">{intro}</p>
+        
+        {loading ? <UiState kind="loading" title={t('states.loading.title')} /> : null}
+        {error ? <ProblemState error={error} onRetry={onRetry} /> : null}
+        
+        {empty && !loading && !error ? (
+          <p className="planning-empty">{t('m5s3.common.empty')}</p>
+        ) : (
+          <ul className="planning-list">{children}</ul>
+        )}
+        
+        {hasMore ? (
+          <button type="button" className="tertiary compact-action" onClick={onLoadMore} disabled={loadingMore}>
+            {loadingMore ? t('m5s3.common.loadingMore') : t('m5s3.common.loadMore')}
+          </button>
+        ) : null}
+
+        <div className="area-create">
+          {create}
         </div>
-        {create}
       </div>
-      {loading ? (
-        <UiState kind="loading" title={t('m5s3.common.loading')} />
-      ) : null}
-      {error ? <ProblemState error={error} onRetry={onRetry} /> : null}
-      {!loading && !error && empty ? (
-        <p className="planning-empty">{t('m5s3.common.empty')}</p>
-      ) : null}
-      {children}
-      {hasMore ? (
-        <button
-          type="button"
-          className="secondary compact-action"
-          onClick={onLoadMore}
-          disabled={loadingMore}
-        >
-          {loadingMore
-            ? t('m5s3.common.loadingMore')
-            : t('m5s3.common.loadMore')}
-        </button>
-      ) : null}
-    </section>
+    </details>
   );
 }
 
@@ -346,8 +345,8 @@ export function SharedPlanningOverviewPage({
         <section className="future-map-stop future-map-stop-soon sbs-motion-reveal">
           <div className="future-map-marker"><span className="marker-dot" /></div>
           <div className="future-map-content">
-            <h2 className="future-map-heading">{t('m5s3.overview.soon', 'Bald & Geplant')}</h2>
-            <p className="future-map-intro">{t('m5s3.overview.soonIntro', 'Eure nächsten konkreten Schritte.')}</p>
+            <h2 className="future-map-heading">{t('m5s3.overview.soon')}</h2>
+            <p className="future-map-intro">{t('m5s3.overview.soonIntro')}</p>
             {planItems.length > 0 ? (
               <ul className="planning-list">
                 {planItems.map(plan => (
@@ -361,8 +360,8 @@ export function SharedPlanningOverviewPage({
         <section className="future-map-stop future-map-stop-someday sbs-motion-reveal" style={{animationDelay: '100ms'}}>
           <div className="future-map-marker"><span className="marker-dot" /></div>
           <div className="future-map-content">
-            <h2 className="future-map-heading">{t('m5s3.overview.someday', 'Irgendwann')}</h2>
-            <p className="future-map-intro">{t('m5s3.overview.somedayIntro', 'Wünsche und Träume für die Zukunft.')}</p>
+            <h2 className="future-map-heading">{t('m5s3.overview.someday')}</h2>
+            <p className="future-map-intro">{t('m5s3.overview.somedayIntro')}</p>
             {wishItems.length > 0 ? (
               <ul className="planning-list">
                 {wishItems.map(wish => (
@@ -376,6 +375,7 @@ export function SharedPlanningOverviewPage({
         <div className="future-map-stop future-map-stop-others sbs-motion-reveal" style={{animationDelay: '200ms'}}>
           <div className="future-map-marker"><span className="marker-dot" /></div>
           <div className="future-map-content">
+            <h2 className="future-map-heading">{t('m5s3.overview.others')}</h2>
         <PlanningSection
           id="places"
           title={t('m5s3.place.heading')}

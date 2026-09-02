@@ -104,9 +104,8 @@ const de = {
   identity: {
     entryAria: 'Zugang zu SidebySide',
     invitationEyebrow: 'Einladung zu SidebySide',
-    invitationTitle: 'Ihr möchtet SidebySide gemeinsam nutzen',
-    invitationBody:
-      'Melde dich mit deinem bestehenden Konto an oder erstelle über diese Einladung ein neues Konto.',
+    invitationTitle: 'Dein Partner hat einen gemeinsamen Ort für euch vorbereitet.',
+    invitationBody: 'Erstelle dein Profil, um gemeinsam Erinnerungen, Meilensteine und Wünsche für die Zukunft festzuhalten. Privat und nur für euch.',
     invitationExistingAccountBody:
       'Melde dich mit deinem bestehenden Konto an, um diese Einladung anzunehmen.',
     createAccount: 'Neues Konto erstellen',

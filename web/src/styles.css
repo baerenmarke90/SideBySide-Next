@@ -42,9 +42,9 @@
   --color-text-muted: #8e8496;
   --color-border: #e3dbd4;
   --color-border-subtle: #ede6df;
-  --color-brand: #ff5e6c;
-  --color-brand-strong: #d92d43;
-  --color-brand-surface: #fff0f2;
+  --color-brand: #7C4DFF;
+  --color-brand-strong: #4f2daa;
+  --color-brand-surface: #EEE7FF;
   --color-surface-panel: #ffffff;
   --color-surface-panel-tint: #fcfaf8;
   --color-page-tint-brand: #ff5e6c12;
@@ -1311,7 +1311,7 @@ code {
 
 .immersive-create-title:focus {
   outline: none;
-  border-bottom-color: var(--color-brand-koralle);
+  border-bottom-color: var(--color-brand);
 }
 
 .immersive-create-media {
@@ -1352,4 +1352,17 @@ code {
   border: none;
   padding: 0;
   color: var(--color-text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sbs-motion-reveal,
+  .sbs-motion-lift,
+  .sbs-motion-success,
+  .sbs-motion-pulse,
+  .sbs-motion-context-change {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important; /* ensure end state is visible */
+  }
 }

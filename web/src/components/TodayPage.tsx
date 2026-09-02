@@ -1,12 +1,12 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
-import type { M4ProductApis } from '../client/m4Product';
+import { type M4ProductApis, dashboardItemPath } from '../client/m4Product';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { postSnackbar } from '../client/snackbar';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { normalizeClientError } from '../client/problemDetails';
 import './TodayPage.css';
 
@@ -25,24 +25,6 @@ function formatDate(value: Date | null): string | null {
   }).format(value);
 }
 
-function dashboardItemPath(type: string, id: string): string | null {
-  switch (type) {
-    case 'Memory':
-      return `/memory/${id}`;
-    case 'Plan':
-      return `/plan/${id}`;
-    case 'Wish':
-      return `/wish/${id}`;
-    case 'Place':
-      return `/place/${id}`;
-    case 'Milestone':
-      return `/milestone/${id}`;
-    case 'HeartMoment':
-      return `/heart/${id}`;
-    default:
-      return null;
-  }
-}
 
 function VisualMemoryCard({ item }: { item: DashboardItem }) {
   const { t } = useTranslation();
@@ -69,26 +51,30 @@ function ThinkingOfYouHero({ apis, spaceId }: { apis: M4ProductApis; spaceId: st
   const { t } = useTranslation();
   const [active, setActive] = useState(false);
 
+  const clientRequestIdRef = useRef<string>('');
+
   const mutation = useMutation({
     mutationFn: () =>
       apiCall(() =>
         apis.notifications.sendThinkingOfYou({
           spaceId,
-          thinkingOfYouCreate: { clientRequestId: crypto.randomUUID() },
+          thinkingOfYouCreate: { clientRequestId: clientRequestIdRef.current },
         })
       ),
     onSuccess: () => {
       setActive(true);
-      postSnackbar(t('m5s5.dashboard.thinkingOfYouSent'));
+      postSnackbar('m5s5.dashboard.thinkingOfYouSent');
       setTimeout(() => setActive(false), 2500);
     },
     onError: (err: unknown) => {
-      postSnackbar(err instanceof Error ? err.message : t('m5s5.common.error'));
+      postSnackbar(err instanceof Error ? err.message : 'm5s5.common.error');
     }
   });
 
+
   function handleClick() {
     if (active || mutation.isPending) return;
+    clientRequestIdRef.current = crypto.randomUUID();
     mutation.mutate();
   }
 
@@ -131,20 +117,19 @@ export function TodayPage({
       
       {dashboardQuery.data && (
         dashboardQuery.data.upcoming.length === 0 &&
-        dashboardQuery.data.recentShared.length === 0 &&
-        !dashboardQuery.data.relationshipDuration ? (
-          <div className="new-space-experience sbs-motion-reveal" style={{ textAlign: 'center', marginTop: '4rem' }}>
-            <h1 className="new-space-title" style={{ fontSize: '2rem', fontFamily: 'var(--font-heading)', color: 'var(--color-brand-text)' }}>
+        dashboardQuery.data.recentShared.length === 0 ? (
+          <div className="new-space-experience sbs-motion-reveal">
+            <h1 className="new-space-title">
               {dashboardQuery.data.space.partner
-                ? `Willkommen in eurem gemeinsamen Ort mit ${dashboardQuery.data.space.partner.displayName}.`
-                : 'Willkommen in eurem gemeinsamen Ort.'}
+                ? t('m5s5.dashboard.newSpacePartner', { name: dashboardQuery.data.space.partner.displayName })
+                : t('m5s5.dashboard.newSpaceEmpty')}
             </h1>
-            <p className="new-space-body" style={{ color: 'var(--color-text-secondary)', margin: '1rem 0 2rem', fontSize: '1.2rem' }}>
-              Alles ist bereit für eure gemeinsame Geschichte.
+            <p className="new-space-body">
+              {t('m5s5.dashboard.newSpaceIntro')}
             </p>
             <div className="new-space-actions">
-              <Link className="button-link primary" to={'/story/memories/new'} style={{ fontSize: '1.1rem', padding: '0.8rem 1.5rem' }}>
-                Ersten Moment festhalten
+              <Link className="button-link primary new-space-cta" to={'/story/memories/new'}>
+                {t('m5s5.dashboard.newSpaceAction')}
               </Link>
             </div>
           </div>
