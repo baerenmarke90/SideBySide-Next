@@ -208,9 +208,9 @@ test('compact authenticated shell keeps global quick create reachable and access
 
   await page.keyboard.press('Escape');
   await expect(quickCreate).toBeFocused();
-  await expect(page.getByRole('menu', { name: navigation.newContent })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole('menu', { name: navigation.newContent }),
+  ).toHaveCount(0);
   expect(unexpectedRequests).toEqual([]);
 });
 
@@ -224,16 +224,16 @@ test('authenticated shell removes decorative motion when reduced motion is prefe
   await page.goto('/today');
   await signIn(page);
 
-  const mainAnimation = await page.locator('#main-content').evaluate((element) =>
-    getComputedStyle(element).animationName,
-  );
+  const mainAnimation = await page
+    .locator('#main-content')
+    .evaluate((element) => getComputedStyle(element).animationName);
   expect(mainAnimation).toBe('none');
 
   const quickCreate = page.getByRole('button', {
     name: navigation.newContent,
   });
-  const quickCreateTransition = await quickCreate.evaluate((element) =>
-    getComputedStyle(element).transitionDuration,
+  const quickCreateTransition = await quickCreate.evaluate(
+    (element) => getComputedStyle(element).transitionDuration,
   );
   expect(quickCreateTransition).toBe('0s');
 
