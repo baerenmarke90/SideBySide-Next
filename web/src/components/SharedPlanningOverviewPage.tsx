@@ -557,21 +557,13 @@ export function SharedPlanningOverviewPage({
                         <label htmlFor="chapter-start">
                           {t('m5s3.chapter.startOn')}
                         </label>
-                        <input
-                          id="chapter-start"
-                          name="startOn"
-                          type="date"
-                        />
+                        <input id="chapter-start" name="startOn" type="date" />
                       </div>
                       <div className="field-group">
                         <label htmlFor="chapter-end">
                           {t('m5s3.chapter.endOn')}
                         </label>
-                        <input
-                          id="chapter-end"
-                          name="endOn"
-                          type="date"
-                        />
+                        <input id="chapter-end" name="endOn" type="date" />
                       </div>
                     </div>
                     <label htmlFor="chapter-place">
