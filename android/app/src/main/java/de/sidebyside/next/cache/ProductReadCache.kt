@@ -16,6 +16,7 @@ enum class ProductCacheKind(val segment: String) {
     MILESTONE("milestone"),
     HEART_MOMENT("heartMoment"),
     STORY("story"),
+    COLLECTION("collection"),
     PLANNING("planning"),
 }
 
@@ -25,6 +26,9 @@ enum class ProductCacheKind(val segment: String) {
  * Web's per-filter synthetic `resourceId`, collapsed to a single constant.
  */
 val StoryTimelineResourceId: UUID = UUID(0L, 0L)
+
+/** Shared Collections have no filters either — one list per Account+Space. */
+val CollectionListResourceId: UUID = UUID(0L, 0L)
 
 /**
  * Wishes and Plans are fetched and cached together as one snapshot, matching

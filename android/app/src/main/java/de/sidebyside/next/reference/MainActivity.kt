@@ -710,6 +710,7 @@ private fun DemoShell(
                     onAdd = viewModel::addCollection,
                     onEdit = viewModel::updateCollection,
                     onDelete = viewModel::deleteCollection,
+                    cachedAt = state.collectionsCachedAt,
                 )
             }
 

@@ -283,6 +283,8 @@ data class ReferenceUiState(
     val collections: List<CollectionDetail> = emptyList(),
     val collectionsBusy: Boolean = false,
     val collectionsProblem: UiProblem? = null,
+    /** Non-null only while [collections] is a stale M2-D18 cache fallback, not a fresh read. */
+    val collectionsCachedAt: java.time.Instant? = null,
     val chapters: List<ChapterDetail> = emptyList(),
     val chaptersBusy: Boolean = false,
     val chaptersProblem: UiProblem? = null,
@@ -3901,10 +3903,24 @@ class ReferenceViewModel(
         mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listCollections(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.COLLECTION,
+                resourceId = de.sidebyside.next.cache.CollectionListResourceId,
+                load = { api.listCollections(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(CollectionDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(CollectionDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(collections = page.items, collectionsBusy = false) }
+                    mutate {
+                        it.copy(
+                            collections = result.value,
+                            collectionsBusy = false,
+                            collectionsCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -4136,7 +4152,14 @@ class ReferenceViewModel(
     }
 
     fun clearCollections() {
-        mutate { it.copy(collections = emptyList(), collectionsBusy = false, collectionsProblem = null) }
+        mutate {
+            it.copy(
+                collections = emptyList(),
+                collectionsBusy = false,
+                collectionsProblem = null,
+                collectionsCachedAt = null,
+            )
+        }
     }
 
     fun loadChapters() {
