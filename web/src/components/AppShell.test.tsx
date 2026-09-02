@@ -137,11 +137,19 @@ describe('AppShell', () => {
     expect(header).toContain('href="/server-admin"');
   });
 
-  it('offers the global quick-create trigger and keeps every destination compact', () => {
+  it('offers global quick-create triggers for expanded and compact shells', () => {
     const html = renderShell('/story');
+    const quickCreateButtons =
+      html.match(/<button\b[^>]*quick-create-trigger[^>]*>/g) ?? [];
+    const menuIds = quickCreateButtons.map(
+      (button) => button.match(/aria-controls="([^"]+)"/)?.[1],
+    );
 
     expect(html).toContain('shell-primary-action');
-    expect(html).toContain('quick-create-trigger');
+    expect(html).toContain('mobile-quick-create');
+    expect(quickCreateButtons).toHaveLength(2);
+    expect(menuIds.every(Boolean)).toBe(true);
+    expect(new Set(menuIds).size).toBe(2);
     expect(html).toContain(`>${navigation.newContent}<`);
     expect(html).toContain('aria-haspopup="menu"');
     expect(html).toContain('aria-expanded="false"');
