@@ -20,6 +20,7 @@ from sidebyside.api.v1 import (
     dashboard,
     demo,
     engagement,
+    entitlements,
     health,
     heart_moments,
     instance,
@@ -70,6 +71,7 @@ normal_router.include_router(comments.router)
 normal_router.include_router(people.router)
 normal_router.include_router(profiles.router)
 normal_router.include_router(spaces.router)
+normal_router.include_router(entitlements.router)
 normal_router.include_router(wishes.router)
 normal_router.include_router(places.router)
 normal_router.include_router(place_relations.router)

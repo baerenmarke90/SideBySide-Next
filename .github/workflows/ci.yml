@@ -134,7 +134,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend_integration == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     # Run database tests and schema/migration checks separately from the static
     # and unit gate. This executes expensive integration tests exactly once per

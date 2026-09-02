@@ -14,6 +14,8 @@ from sidebyside.core.clock import now
 from sidebyside.identity import service as accounts
 from sidebyside.identity.models import AccountEmail, DeviceSession
 from sidebyside.jobs.models import Job, JobStatus
+from sidebyside.relationship import service as relationship
+from sidebyside.relationship.models import Space
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -55,8 +57,10 @@ def _admin(session):  # type: ignore[no-untyped-def]
 
 def test_server_admin_endpoints_require_authentication(client) -> None:  # type: ignore[no-untyped-def]
     response = client.get("/api/v1/server-admin/overview")
+    spaces = client.get("/api/v1/server-admin/spaces")
 
     assert response.status_code == 401
+    assert spaces.status_code == 401
 
 
 def test_allowlisted_but_unverified_email_does_not_grant_server_admin(
@@ -70,11 +74,14 @@ def test_allowlisted_but_unverified_email_does_not_grant_server_admin(
 
     capability = client.get("/api/v1/auth/capabilities", headers=auth(token))
     overview = client.get("/api/v1/server-admin/overview", headers=auth(token))
+    spaces = client.get("/api/v1/server-admin/spaces", headers=auth(token))
 
     assert capability.status_code == 200
     assert capability.json() == {"serverAdmin": False}
     assert overview.status_code == 403
     assert overview.json()["code"] == "SERVER_ADMIN_REQUIRED"
+    assert spaces.status_code == 403
+    assert spaces.json()["code"] == "SERVER_ADMIN_REQUIRED"
 
 
 def test_verified_allowlisted_account_gets_server_admin_capability_and_extended_overview(
@@ -189,6 +196,117 @@ def test_account_directory_exposes_identity_metadata_only(
     assert by_id.status_code == 200
     assert by_id.json()["total"] == 1
     assert by_id.json()["items"][0]["id"] == str(target.id)
+
+
+def test_space_directory_exposes_only_lifecycle_metadata(
+    client,
+    session,
+    server_admin_allowlist,
+) -> None:  # type: ignore[no-untyped-def]
+    _, token = _admin(session)
+
+    active_owner = make_account(session, "Active owner")
+    active_space = make_space(session, active_owner)
+
+    inactive_owner = make_account(session, "Inactive owner")
+    inactive_space = make_space(session, inactive_owner)
+    membership = relationship.require_membership(session, inactive_owner, inactive_space.id)
+    relationship.end_membership(membership)
+
+    empty_space = Space()
+    session.add(empty_space)
+    session.flush()
+
+    response = client.get(
+        "/api/v1/server-admin/spaces?status=all&limit=50",
+        headers=auth(token),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    by_id = {item["id"]: item for item in payload["items"]}
+    assert str(active_space.id) in by_id
+    assert str(inactive_space.id) in by_id
+    assert str(empty_space.id) in by_id
+
+    expected_fields = {
+        "id",
+        "createdAt",
+        "lifecycleStatus",
+        "membershipCount",
+        "activeMembershipCount",
+        "historicalMembershipCount",
+        "leftMembershipCount",
+        "removedMembershipCount",
+        "firstMembershipAt",
+        "lastMembershipChangeAt",
+        "anomalyCodes",
+    }
+    assert set(by_id[str(active_space.id)]) == expected_fields
+    assert by_id[str(active_space.id)]["lifecycleStatus"] == "active"
+    assert by_id[str(active_space.id)]["activeMembershipCount"] == 1
+    assert by_id[str(active_space.id)]["historicalMembershipCount"] == 0
+
+    inactive = by_id[str(inactive_space.id)]
+    assert inactive["lifecycleStatus"] == "inactive"
+    assert inactive["activeMembershipCount"] == 0
+    assert inactive["historicalMembershipCount"] == 1
+    assert inactive["leftMembershipCount"] == 1
+    assert inactive["removedMembershipCount"] == 0
+
+    empty = by_id[str(empty_space.id)]
+    assert empty["lifecycleStatus"] == "empty"
+    assert empty["membershipCount"] == 0
+    assert empty["anomalyCodes"] == ["no_memberships"]
+
+    inactive_filter = client.get(
+        "/api/v1/server-admin/spaces?status=inactive",
+        headers=auth(token),
+    )
+    assert inactive_filter.status_code == 200
+    assert {item["id"] for item in inactive_filter.json()["items"]} == {str(inactive_space.id)}
+
+    anomaly_filter = client.get(
+        "/api/v1/server-admin/spaces?status=anomaly",
+        headers=auth(token),
+    )
+    assert anomaly_filter.status_code == 200
+    assert {item["id"] for item in anomaly_filter.json()["items"]} == {str(empty_space.id)}
+
+    by_exact_id = client.get(
+        f"/api/v1/server-admin/spaces?query={inactive_space.id}",
+        headers=auth(token),
+    )
+    assert by_exact_id.status_code == 200
+    assert by_exact_id.json()["total"] == 1
+    assert by_exact_id.json()["items"][0]["id"] == str(inactive_space.id)
+
+    invalid_id = client.get(
+        "/api/v1/server-admin/spaces?query=not-a-space-id",
+        headers=auth(token),
+    )
+    assert invalid_id.status_code == 200
+    assert invalid_id.json()["total"] == 0
+    assert invalid_id.json()["items"] == []
+
+    detail = client.get(
+        f"/api/v1/server-admin/spaces/{inactive_space.id}",
+        headers=auth(token),
+    )
+    assert detail.status_code == 200
+    detail_payload = detail.json()
+    assert set(detail_payload) == expected_fields | {"latestMembershipEndedAt"}
+    assert detail_payload["latestMembershipEndedAt"] is not None
+    serialized = detail.text.lower()
+    for forbidden in (
+        "displayname",
+        "email",
+        "relationshipstartedon",
+        "memory",
+        "owner_only",
+        "media",
+    ):
+        assert forbidden not in serialized
 
 
 def test_server_admin_can_suspend_account_and_sessions_are_revoked(

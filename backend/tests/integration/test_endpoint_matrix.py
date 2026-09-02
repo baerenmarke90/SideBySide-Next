@@ -130,6 +130,7 @@ PRIVATE_COLLECTION_FIXTURES = {
 
 SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("GET", "/api/v1/spaces/{spaceId}"),
+    Endpoint("GET", "/api/v1/spaces/{spaceId}/entitlements"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/profile"),
     Endpoint("PUT", "/api/v1/spaces/{spaceId}/profile", body=PROFILE, if_match=True),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/invitations"),
@@ -857,6 +858,8 @@ AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
 
 SERVER_ADMIN_ONLY: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/server-admin/overview"),
+    ("GET", "/api/v1/server-admin/spaces"),
+    ("GET", "/api/v1/server-admin/spaces/{space_id}"),
     ("GET", "/api/v1/server-admin/settings"),
     ("PUT", "/api/v1/server-admin/settings/registration"),
     ("PUT", "/api/v1/server-admin/settings/maintenance"),
