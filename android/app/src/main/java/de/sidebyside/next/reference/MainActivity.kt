@@ -596,9 +596,8 @@ private fun DemoShell(
                     statusMessage = state.heartMomentStatus
                         ?.let { stringResource(it.resourceId, *it.args.toTypedArray()) },
                     onBack = { controller.popBackStack() },
-                    onCreate = { text, emotion, visibility ->
-                        viewModel.createHeartMoment(text, emotion, "", visibility)
-                    },
+                    onCreate = viewModel::createHeartMoment,
+                    onEdit = viewModel::updateHeartMoment,
                     onChangeVisibility = viewModel::changeHeartMomentVisibility,
                     onDelete = viewModel::deleteHeartMoment,
                 )

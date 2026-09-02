@@ -206,7 +206,6 @@
     <string name="heart_moment_deleted">Herzmoment gelöscht.</string>
     <string name="heart_moment_now_private">Nur noch für dich sichtbar.</string>
     <string name="heart_moment_now_shared">Jetzt mit deinem Partner geteilt.</string>
-    <string name="heart_moment_error_text_required">Bitte schreibe ein paar Worte.</string>
     <string name="heart_moment_make_private">Nur für mich behalten</string>
     <string name="heart_moment_make_shared">Mit meinem Partner teilen</string>
     <string name="heart_moment_make_private_title">Nur noch für dich?</string>
@@ -218,6 +217,8 @@
     <string name="heart_moment_delete_body">Er verschwindet endgültig. Das lässt sich nicht rückgängig machen.</string>
     <string name="heart_moment_back">Zurück</string>
     <string name="heart_moment_edit">Bearbeiten</string>
+    <string name="heart_moment_happened_on">Datum (JJJJ-MM-TT)</string>
+    <string name="heart_moment_save_changes">Änderungen speichern</string>
     <string name="heart_moment_cancel">Abbrechen</string>
     <string name="heart_emotion_loved">Geliebt</string>
     <string name="heart_emotion_seen">Gesehen</string>
