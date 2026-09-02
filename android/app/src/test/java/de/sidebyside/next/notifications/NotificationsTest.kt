@@ -118,6 +118,31 @@ class NotificationsTest {
         assertEquals(0, model.uiState.value.unreadNotificationCount)
     }
 
+    @Test
+    fun loadingMoreAppendsTheNextPageAndTracksTheCursor() = runTest(dispatcher) {
+        val first = notification()
+        val second = notification()
+        val api = NotificationApi(
+            pages = listOf(
+                NotificationPage(hasMore = true, items = listOf(first), nextCursor = "page-2"),
+                NotificationPage(hasMore = false, items = listOf(second), nextCursor = null),
+            ),
+        )
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.loadNotifications()
+        advanceUntilIdle()
+        assertTrue(model.uiState.value.notificationsHasMore)
+
+        model.loadMoreNotifications()
+        advanceUntilIdle()
+
+        assertEquals(listOf(first, second), model.uiState.value.notifications)
+        assertTrue(!model.uiState.value.notificationsHasMore)
+        assertEquals(listOf(null, "page-2"), api.cursorsSeen)
+    }
+
     private suspend fun TestScope.signIn(model: ReferenceViewModel) {
         model.signIn("someone@example.test", "secret")
         advanceUntilIdle()
@@ -141,8 +166,11 @@ private fun notification() = NotificationItem(
 private class NotificationApi(
     private val notifications: List<NotificationItem> = emptyList(),
     private val unreadCount: Int = 0,
+    private val pages: List<NotificationPage>? = null,
 ) : FakeReferenceContract() {
     val markedRead = mutableListOf<UUID>()
+    val cursorsSeen = mutableListOf<String?>()
+    private var pageIndex = 0
     var markAllCallCount = 0
         private set
     var listCallCount = 0
@@ -169,6 +197,8 @@ private class NotificationApi(
         cursor: String?,
     ): NotificationPage {
         listCallCount += 1
+        cursorsSeen += cursor
+        pages?.let { return it[pageIndex++] }
         return NotificationPage(hasMore = false, items = notifications, nextCursor = null)
     }
 

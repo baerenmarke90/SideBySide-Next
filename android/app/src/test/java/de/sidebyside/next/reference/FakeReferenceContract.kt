@@ -678,6 +678,7 @@ abstract class FakeReferenceContract : ReferenceContract {
         spaceId: UUID,
         accessToken: String,
         query: String,
+        kind: sidebyside.api.models.SearchKind?,
         cursor: String?,
     ): SearchPage = notExercised("search")
 

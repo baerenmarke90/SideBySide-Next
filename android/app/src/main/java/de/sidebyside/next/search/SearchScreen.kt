@@ -10,7 +10,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,22 +44,27 @@ import sidebyside.api.models.SearchResult
 private val ReadingMeasure: Dp = 560.dp
 
 /**
- * Global Search. #357 scopes this to a query and a flat result list — the
+ * Global Search. #357 scoped this to a query and a flat result list; the
  * server already restricts results to shared Space content plus the
  * caller's own private content, so nothing here needs a scope filter to
- * stay correct; a type filter is left for later since the query alone
- * already satisfies the slice.
+ * stay correct. The type filter and load-more below close #608, matching
+ * Web's own kind `<select>` and infinite-scroll result list.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     results: List<SearchResult>,
     busy: Boolean,
     problem: UiProblem?,
     onBack: () -> Unit,
-    onSearch: (String) -> Unit,
+    onSearch: (query: String, kind: SearchKind?) -> Unit,
     modifier: Modifier = Modifier,
+    onLoadMore: (() -> Unit)? = null,
+    loadingMore: Boolean = false,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    var kind by rememberSaveable { mutableStateOf<SearchKind?>(null) }
+    var kindMenuOpen by rememberSaveable { mutableStateOf(false) }
     var submitted by rememberSaveable { mutableStateOf(false) }
 
     LazyColumn(
@@ -92,10 +103,41 @@ fun SearchScreen(
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                ExposedDropdownMenuBox(
+                    expanded = kindMenuOpen,
+                    onExpandedChange = { kindMenuOpen = it },
+                ) {
+                    OutlinedTextField(
+                        value = kind?.let { stringResource(it.labelRes()) } ?: stringResource(R.string.search_kind_all),
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = !busy,
+                        label = { Text(stringResource(R.string.search_kind_filter_label)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = kindMenuOpen) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                    )
+                    DropdownMenu(
+                        expanded = kindMenuOpen,
+                        onDismissRequest = { kindMenuOpen = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.search_kind_all)) },
+                            onClick = { kind = null; kindMenuOpen = false },
+                        )
+                        for (option in SearchKind.entries) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(option.labelRes())) },
+                                onClick = { kind = option; kindMenuOpen = false },
+                            )
+                        }
+                    }
+                }
                 Button(
                     onClick = {
                         submitted = true
-                        onSearch(query)
+                        onSearch(query, kind)
                     },
                     enabled = !busy && query.isNotBlank(),
                     modifier = Modifier.heightIn(min = MinimumTouchTarget),
@@ -145,6 +187,20 @@ fun SearchScreen(
                             color = SideBySideTheme.colors.textSecondary,
                         )
                     }
+                }
+            }
+        }
+
+        // A result list that simply stopped after one page would look like
+        // "that's everything" with nothing on screen to say otherwise.
+        onLoadMore?.let { more ->
+            item(key = "load-more") {
+                TextButton(onClick = more, enabled = !loadingMore) {
+                    Text(
+                        stringResource(
+                            if (loadingMore) R.string.load_more_busy else R.string.load_more,
+                        ),
+                    )
                 }
             }
         }

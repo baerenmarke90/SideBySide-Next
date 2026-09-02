@@ -598,6 +598,8 @@
     <string name="search_intro">Durchsucht eure gemeinsame Story und deine privaten Inhalte.</string>
     <string name="search_query_hint">Suchbegriff</string>
     <string name="search_submit">Suchen</string>
+    <string name="search_kind_filter_label">Art</string>
+    <string name="search_kind_all">Alle Arten</string>
     <string name="search_empty">Keine Treffer.</string>
     <string name="search_result_kind_memory">Erinnerung</string>
     <string name="search_result_kind_heart_moment">Herzmoment</string>
