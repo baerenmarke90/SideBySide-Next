@@ -92,6 +92,7 @@ import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferImportDetail
 import sidebyside.api.models.TransferScope
 import sidebyside.api.models.WishCreate
 import sidebyside.api.models.WishDetail
@@ -298,6 +299,10 @@ data class ReferenceUiState(
     val exportProblem: UiProblem? = null,
     /** Set once [export] has actually been saved to a location the user chose; reset by a new export. */
     val exportDownloaded: Boolean = false,
+    /** The M2-D17/S6 Transfer Bundle import currently tracked, if any. */
+    val import: TransferImportDetail? = null,
+    val importBusy: Boolean = false,
+    val importProblem: UiProblem? = null,
     val searchResults: List<SearchResult> = emptyList(),
     val searchBusy: Boolean = false,
     val searchProblem: UiProblem? = null,
@@ -492,6 +497,7 @@ class ReferenceViewModel(
         clearNotifications()
         clearActivity()
         clearExport()
+        clearImport()
         clearSearch()
         clearCollections()
         clearChapters()
@@ -591,6 +597,7 @@ class ReferenceViewModel(
         clearNotifications()
         clearActivity()
         clearExport()
+        clearImport()
         clearSearch()
         clearCollections()
         clearChapters()
@@ -657,6 +664,7 @@ class ReferenceViewModel(
         clearNotifications()
         clearActivity()
         clearExport()
+        clearImport()
         clearSearch()
         clearCollections()
         clearChapters()
@@ -729,6 +737,7 @@ class ReferenceViewModel(
         clearNotifications()
         clearActivity()
         clearExport()
+        clearImport()
         clearSearch()
         clearCollections()
         clearChapters()
@@ -4015,6 +4024,88 @@ class ReferenceViewModel(
 
     fun clearExport() {
         mutate { it.copy(export = null, exportBusy = false, exportProblem = null, exportDownloaded = false) }
+    }
+
+    /**
+     * Uploads [archive] to stage a Transfer Bundle import. [refreshImport] is
+     * how the caller learns whether it reached `READY_TO_APPLY` or `FAILED`.
+     *
+     * `suspend` for the same reason [downloadExport] is: the caller's own
+     * `.use { }` around [archive] (typically opened from a Storage Access
+     * Framework picker) must stay open for exactly as long as this call
+     * takes, not just until it is launched.
+     */
+    suspend fun uploadImport(archiveSize: Long, archive: java.io.InputStream) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+        if (!isCurrentSession(operationEpoch, currentSession)) return
+
+        mutate { it.copy(importBusy = true, importProblem = null) }
+        runCatching { api.createTransferImport(spaceId, currentSession.tokens.accessToken, archiveSize, archive) }
+            .onSuccess { imported ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate { it.copy(import = imported, importBusy = false) }
+            }
+            .onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                mutate { it.copy(importBusy = false, importProblem = problemFor(throwable)) }
+            }
+    }
+
+    /** Re-reads the tracked import's status — validation runs as a background job on the server. */
+    fun refreshImport() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val importId = _uiState.value.import?.id ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(importBusy = true, importProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getTransferImport(spaceId, currentSession.tokens.accessToken, importId) }
+                .onSuccess { imported ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(import = imported, importBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(importBusy = false, importProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /**
+     * Applies a validated import. The M2-D18 contract requires the client to
+     * show the validated summary before this is ever called — apply is
+     * explicit, never automatic once validation finishes.
+     */
+    fun applyImport() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val importId = _uiState.value.import?.id ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(importBusy = true, importProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.applyTransferImport(spaceId, currentSession.tokens.accessToken, importId) }
+                .onSuccess { imported ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(import = imported, importBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(importBusy = false, importProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearImport() {
+        mutate { it.copy(import = null, importBusy = false, importProblem = null) }
     }
 
     fun search(query: String) {
