@@ -31,6 +31,8 @@ import org.robolectric.annotation.Config
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AccountView
 import sidebyside.api.models.AuthorSummary
+import sidebyside.api.models.CollectionDetail
+import sidebyside.api.models.CollectionPage
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemorySummary
 import sidebyside.api.models.PrivateNoteDetail
@@ -254,6 +256,41 @@ class ProductReadCacheViewModelTest {
         assertNotNull(model.uiState.value.privateNotesProblem)
     }
 
+    @Test
+    fun loadCollectionsFallsBackToTheCachedListOnceOffline() = runTest(dispatcher) {
+        val api = CollectionsApi()
+        val model = signedIn(api)
+
+        model.loadCollections()
+        advanceUntilIdle()
+        assertEquals(1, model.uiState.value.collections.size)
+        assertNull(model.uiState.value.collectionsCachedAt)
+
+        api.nextFailure = IOException("offline")
+        model.loadCollections()
+        advanceUntilIdle()
+
+        assertEquals(1, model.uiState.value.collections.size)
+        assertNotNull(model.uiState.value.collectionsCachedAt)
+        assertNull(model.uiState.value.collectionsProblem)
+    }
+
+    @Test
+    fun loadCollectionsNeverFallsBackOnA401EvenWithACachedRow() = runTest(dispatcher) {
+        val api = CollectionsApi()
+        val model = signedIn(api)
+
+        model.loadCollections()
+        advanceUntilIdle()
+
+        api.nextFailure = ReferenceApiException(code = "unauthenticated", message = "expired", status = 401)
+        model.loadCollections()
+        advanceUntilIdle()
+
+        assertNull(model.uiState.value.collectionsCachedAt)
+        assertNotNull(model.uiState.value.collectionsProblem)
+    }
+
     private suspend fun TestScope.signedIn(api: ReferenceContract): ReferenceViewModel {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, productReadCache = cache)
         model.signIn("someone@example.test", "secret")
@@ -384,6 +421,49 @@ private class PrivateNotesApi : FakeReferenceContract() {
                     pinned = false,
                     spaceId = spaceId,
                     title = "Just for me",
+                    updatedAt = OffsetDateTime.now(),
+                    version = 1,
+                ),
+            ),
+            nextCursor = null,
+        )
+    }
+}
+
+private class CollectionsApi : FakeReferenceContract() {
+    var nextFailure: Throwable? = null
+
+    override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+        account = AccountView(displayName = email, id = UUID.randomUUID()),
+        tokens = TokenView(
+            accessExpiresAt = OffsetDateTime.now(),
+            accessToken = "access",
+            refreshExpiresAt = OffsetDateTime.now(),
+            refreshToken = "refresh",
+        ),
+    )
+
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+
+    override suspend fun listCollections(spaceId: UUID, accessToken: String, cursor: String?): CollectionPage {
+        nextFailure?.let {
+            nextFailure = null
+            throw it
+        }
+        return CollectionPage(
+            hasMore = false,
+            items = listOf(
+                CollectionDetail(
+                    capabilities = ResourceCapabilities(canComment = false, canDelete = true, canEdit = true),
+                    createdAt = OffsetDateTime.now(),
+                    createdBy = UUID.randomUUID(),
+                    creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+                    icon = null,
+                    id = UUID.randomUUID(),
+                    items = emptyList(),
+                    spaceId = spaceId,
+                    title = "Packing list",
                     updatedAt = OffsetDateTime.now(),
                     version = 1,
                 ),
