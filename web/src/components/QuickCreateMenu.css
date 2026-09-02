@@ -126,9 +126,71 @@
   border-color: var(--color-border-subtle);
 }
 
+.mobile-quick-create {
+  position: fixed;
+  z-index: 65;
+  right: var(--space-4);
+  bottom: calc(5.75rem + env(safe-area-inset-bottom));
+  width: min(22rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.mobile-quick-create .quick-create {
+  pointer-events: none;
+}
+
+.mobile-quick-create .quick-create-trigger,
+.mobile-quick-create .quick-create-menu {
+  pointer-events: auto;
+}
+
+.mobile-quick-create .quick-create-trigger {
+  width: auto;
+  min-height: 48px;
+  margin-left: auto;
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-4);
+  background: var(--color-surface-raised);
+  box-shadow: 0 10px 28px var(--color-shadow-brand);
+}
+
+.mobile-quick-create .quick-create-polished .quick-create-menu {
+  position: absolute;
+  top: auto;
+  right: 0;
+  bottom: calc(100% + var(--space-3));
+  left: auto;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: min(70vh, 32rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 0;
+  background: var(--color-surface-overlay);
+}
+
+.mobile-quick-create .quick-create-tile-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media (max-width: 1080px) {
   .quick-create-tile-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mobile-quick-create .quick-create-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 359px) {
+  .mobile-quick-create .quick-create-tile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 840px) {
+  .mobile-quick-create {
+    display: none;
   }
 }
 
