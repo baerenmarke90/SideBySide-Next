@@ -29,4 +29,53 @@ describe('SharedPlanningOverviewPage', () => {
     expect(html).not.toContain('GiftIdea');
     expect(html).not.toContain('PrivateCollection');
   });
+
+  it('shows a Collection icon as a prefix, and offers an icon field when creating one', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s3', 'collections', 'space-1'], {
+      pages: [
+        {
+          items: [
+            {
+              capabilities: {
+                canComment: false,
+                canDelete: true,
+                canEdit: true,
+              },
+              createdAt: new Date('2026-08-01T10:00:00Z'),
+              createdBy: 'account-1',
+              creator: { id: 'account-1', displayName: 'Lea' },
+              icon: '🧳',
+              id: 'collection-1',
+              items: [],
+              spaceId: 'space-1',
+              title: 'Packing list',
+              updatedAt: new Date('2026-08-01T10:00:00Z'),
+              version: 1,
+            },
+          ],
+          hasMore: false,
+          nextCursor: null,
+        },
+      ],
+      pageParams: [null],
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <SharedPlanningOverviewPage
+            apis={{} as SharedPlanningApis}
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // #606: the icon field existed on the API but was never exposed here.
+    expect(html).toContain('🧳 Packing list');
+    expect(html).toContain('collection-icon');
+  });
 });
