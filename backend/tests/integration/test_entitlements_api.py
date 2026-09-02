@@ -152,6 +152,25 @@ def test_source_reference_restore_rebinds_one_grant_between_spaces(session) -> N
     )
     session.flush()
 
+    # A later source refresh may update validity/capabilities, but it must not
+    # implicitly move ownership just because an adapter supplies another Space.
+    refreshed = entitlement_service.record_grant(
+        session,
+        space_id=replacement_space.id,
+        account_id=anna.id,
+        source_type=EntitlementSourceType.SELF_HOSTED_KEY,
+        status=EntitlementStatus.ACTIVE,
+        tier=EntitlementTier.PREMIUM,
+        effective_from=current_time,
+        effective_until=current_time + timedelta(days=730),
+        external_reference="license-restore-001",
+        source_event_at=current_time + timedelta(minutes=1),
+        capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
+    )
+    assert refreshed.id == original.id
+    assert refreshed.space_id == original_space.id
+    assert refreshed.effective_until == current_time + timedelta(days=730)
+
     restored = entitlement_service.restore_grant_to_space(
         session,
         source_type=EntitlementSourceType.SELF_HOSTED_KEY,
