@@ -16,6 +16,11 @@ import sidebyside.api.models.CollectionItemCreate
 import sidebyside.api.models.CollectionItemDetail
 import sidebyside.api.models.CollectionItemUpdate
 import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.ChapterCreate
+import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.ChapterPage
+import sidebyside.api.models.ChapterContent
+import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
@@ -38,6 +43,8 @@ import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.SearchPage
+import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferScope
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -796,6 +803,67 @@ interface ReferenceContract {
         ifMatch: Int,
         itemIds: List<UUID>,
     ): CollectionDetail
+
+    suspend fun listChapters(spaceId: UUID, accessToken: String, cursor: String? = null): ChapterPage
+
+    suspend fun createChapter(spaceId: UUID, accessToken: String, fields: ChapterCreate): ChapterDetail
+
+    /** The contract accepts a partial correction; unset fields are left unchanged. */
+    suspend fun updateChapter(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        ifMatch: Int,
+        fields: ChapterUpdate,
+    ): ChapterDetail
+
+    suspend fun deleteChapter(spaceId: UUID, accessToken: String, chapterId: UUID, ifMatch: Int)
+
+    /**
+     * The chapter's own curated content, in the server's display order.
+     * A read-only derived view of the typed relations below — there is no
+     * manual relation position, so this client never reorders it.
+     */
+    suspend fun getChapterContent(spaceId: UUID, accessToken: String, chapterId: UUID): ChapterContent
+
+    /** Same [RelationTargetKind] and privacy shape as the Place relation endpoints. */
+    suspend fun linkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: RelationTargetKind,
+        targetId: UUID,
+    )
+
+    suspend fun unlinkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: RelationTargetKind,
+        targetId: UUID,
+    )
+
+    /**
+     * Starts the M2-D17/S6 Transfer Bundle export. Assembly runs as a
+     * background job on the server; the returned descriptor's `status`
+     * starts `QUEUED`, never `READY` — [getTransferExport] is how a caller
+     * learns it finished.
+     */
+    suspend fun createTransferExport(spaceId: UUID, accessToken: String, scope: TransferScope): TransferExportDetail
+
+    suspend fun getTransferExport(spaceId: UUID, accessToken: String, exportId: UUID): TransferExportDetail
+
+    /**
+     * Streams the ready export's archive into [sink] rather than returning
+     * it as a `ByteArray`: the server allows archives up to 512MB, too large
+     * to safely hold as one in-memory allocation on a phone.
+     */
+    suspend fun downloadTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+        sink: java.io.OutputStream,
+    )
 }
 
 private fun unsupportedProfileOperation(): Nothing =

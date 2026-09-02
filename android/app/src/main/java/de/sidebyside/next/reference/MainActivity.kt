@@ -57,6 +57,8 @@ import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.chapter.ChapterContentScreen
+import de.sidebyside.next.chapter.ChaptersScreen
 import de.sidebyside.next.collection.CollectionDetailScreen
 import de.sidebyside.next.collection.CollectionsScreen
 import de.sidebyside.next.place.PlaceRelationsScreen
@@ -80,6 +82,7 @@ import de.sidebyside.next.story.MilestoneScreen
 import de.sidebyside.next.story.SharedHeartMomentScreen
 import de.sidebyside.next.story.StoryScreen
 import kotlinx.coroutines.launch
+import sidebyside.api.models.EngagementTarget
 import sidebyside.api.models.ProfileVisibility
 
 class MainActivity : ComponentActivity() {
@@ -106,7 +109,19 @@ class MainActivity : ComponentActivity() {
 private fun referenceViewModelFactory(context: Context): ViewModelProvider.Factory =
     viewModelFactory {
         initializer {
-            ReferenceViewModel(spaceStore = SharedPreferencesSpaceStore(context))
+            val database = de.sidebyside.next.cache.ReadCacheDatabase.getInstance(context)
+            val connectivityTracker = de.sidebyside.next.connectivity.ConnectivityTracker()
+            ReferenceViewModel(
+                spaceStore = SharedPreferencesSpaceStore(context),
+                productReadCache = de.sidebyside.next.cache.ProductReadCache(
+                    database.productCacheDao(),
+                    database.cacheContextDao(),
+                    database.protectedCacheDao(),
+                    de.sidebyside.next.cache.AndroidKeystoreProtectedPayloadCipher(),
+                ),
+                connectivityTracker = connectivityTracker,
+                apiFactory = { baseUrl -> OkHttpReferenceApi(baseUrl, connectivityTracker = connectivityTracker) },
+            )
         }
     }
 
@@ -313,6 +328,12 @@ private fun DemoShell(
         ),
         navController = navController,
         secureWhen = ::isSecureRoute,
+        banner = {
+            de.sidebyside.next.shell.OfflineStatusBanner(
+                offline = state.offline,
+                lastSyncedAt = state.lastSyncedAt,
+            )
+        },
         detailRoutes = { controller ->
             composable(
                 route = MEMORY_ROUTE,
@@ -350,6 +371,7 @@ private fun DemoShell(
                     onCancelEditing = viewModel::cancelEditingMemory,
                     onSave = viewModel::saveMemory,
                     onDelete = viewModel::deleteMemory,
+                    cachedAt = state.openMemoryCachedAt,
                     comments = memoryId?.let { id ->
                         {
                             MemoryComments(
@@ -405,6 +427,7 @@ private fun DemoShell(
                     onCancelEditing = viewModel::cancelEditingMemory,
                     onSave = viewModel::saveMilestone,
                     onDelete = viewModel::deleteMilestone,
+                    cachedAt = state.openMilestoneCachedAt,
                     comments = id?.let { parentId ->
                         {
                             MemoryComments(
@@ -463,6 +486,7 @@ private fun DemoShell(
                     generation = viewModel.storyGeneration,
                     problem = state.memoryProblem,
                     onBack = { controller.popBackStack() },
+                    cachedAt = state.openSharedHeartMomentCachedAt,
                     comments = id?.let { parentId ->
                         {
                             MemoryComments(
@@ -550,6 +574,7 @@ private fun DemoShell(
                     problem = state.relatedPersonsProblem,
                     onBack = { controller.popBackStack() },
                     onAdd = viewModel::addRelatedPerson,
+                    onEdit = viewModel::updateRelatedPerson,
                     onOpenDates = { personId ->
                         controller.navigate("people/related-persons/$personId/important-dates")
                     },
@@ -651,6 +676,7 @@ private fun DemoShell(
                     onOpenRelations = { place ->
                         controller.navigate("planning/places/${place.id}/relations")
                     },
+                    cachedAt = state.placesCachedAt,
                 )
             }
 
@@ -696,6 +722,7 @@ private fun DemoShell(
                     onAdd = viewModel::addCollection,
                     onEdit = viewModel::updateCollection,
                     onDelete = viewModel::deleteCollection,
+                    cachedAt = state.collectionsCachedAt,
                 )
             }
 
@@ -726,6 +753,54 @@ private fun DemoShell(
                 )
             }
 
+            composable(CHAPTERS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadChapters() }
+
+                ChaptersScreen(
+                    chapters = state.chapters,
+                    busy = state.chaptersBusy,
+                    problem = state.chaptersProblem,
+                    onBack = { controller.popBackStack() },
+                    onOpen = { chapter -> controller.navigate("planning/chapters/${chapter.id}/content") },
+                    onAdd = { title, description, startOn, endOn ->
+                        viewModel.addChapter(title, description, startOn, endOn)
+                    },
+                    onEdit = { chapter, title, description, startOn, endOn ->
+                        viewModel.updateChapter(chapter, title, description, startOn, endOn)
+                    },
+                    onDelete = viewModel::deleteChapter,
+                    cachedAt = state.chaptersCachedAt,
+                )
+            }
+
+            composable(
+                route = CHAPTER_CONTENT_ROUTE,
+                arguments = listOf(navArgument(CHAPTER_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val chapterId = entry.arguments?.getString(CHAPTER_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val chapter = state.chapters.firstOrNull { it.id == chapterId }
+
+                LaunchedEffect(chapterId, state.activeSpaceId) {
+                    chapterId?.let(viewModel::loadChapterContent)
+                }
+
+                ChapterContentScreen(
+                    chapterTitle = chapter?.title.orEmpty(),
+                    candidates = state.chapterContentCandidates,
+                    linked = state.chapterLinkedContent,
+                    busy = state.chapterContentBusy,
+                    problem = state.chapterContentProblem,
+                    onBack = { controller.popBackStack() },
+                    onLink = { target ->
+                        chapterId?.let { viewModel.linkChapterContent(it, target) }
+                    },
+                    onUnlink = { target ->
+                        chapterId?.let { viewModel.unlinkChapterContent(it, target) }
+                    },
+                )
+            }
+
             composable(PRIVATE_AREA_ROUTE) {
                 PrivateAreaScreen(
                     onBack = { controller.popBackStack() },
@@ -746,6 +821,7 @@ private fun DemoShell(
                     onAdd = viewModel::addPrivateNote,
                     onEdit = viewModel::updatePrivateNote,
                     onDelete = viewModel::deletePrivateNote,
+                    cachedAt = state.privateNotesCachedAt,
                 )
             }
 
@@ -761,6 +837,7 @@ private fun DemoShell(
                     onEdit = viewModel::updateGiftIdea,
                     onChangeStatus = viewModel::changeGiftIdeaStatus,
                     onDelete = viewModel::deleteGiftIdea,
+                    cachedAt = state.giftIdeasCachedAt,
                 )
             }
 
@@ -778,6 +855,7 @@ private fun DemoShell(
                     onAdd = viewModel::addPrivateCollection,
                     onEdit = viewModel::updatePrivateCollection,
                     onDelete = viewModel::deletePrivateCollection,
+                    cachedAt = state.privateCollectionsCachedAt,
                 )
             }
 
@@ -822,6 +900,12 @@ private fun DemoShell(
                     onBack = { controller.popBackStack() },
                     onMarkRead = viewModel::markNotificationRead,
                     onMarkAllRead = viewModel::markAllNotificationsRead,
+                    onOpen = { notification ->
+                        engagementTargetRoute(notification.targetType, notification.targetId)?.let {
+                            viewModel.markNotificationRead(notification)
+                            controller.navigate(it)
+                        }
+                    },
                 )
             }
 
@@ -833,6 +917,41 @@ private fun DemoShell(
                     busy = state.activityBusy,
                     problem = state.activityProblem,
                     onBack = { controller.popBackStack() },
+                    onOpen = { entry ->
+                        engagementTargetRoute(entry.targetType, entry.targetId)?.let { controller.navigate(it) }
+                    },
+                )
+            }
+
+            composable(DATA_EXPORT_ROUTE) {
+                val exportContext = LocalContext.current
+                val exportScope = rememberCoroutineScope()
+                val exportDownloadLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.CreateDocument("application/zip"),
+                ) { uri ->
+                    if (uri != null) {
+                        exportScope.launch {
+                            exportContext.contentResolver.openOutputStream(uri)?.use { stream ->
+                                viewModel.downloadExport(stream)
+                            }
+                        }
+                    }
+                }
+
+                de.sidebyside.next.transfer.DataExportScreen(
+                    export = state.export,
+                    busy = state.exportBusy,
+                    problem = state.exportProblem,
+                    downloaded = state.exportDownloaded,
+                    onBack = { controller.popBackStack() },
+                    onCreateExport = viewModel::createExport,
+                    onRefreshExport = viewModel::refreshExport,
+                    onDownloadExport = {
+                        val exportId = state.export?.id
+                        if (exportId != null) {
+                            exportDownloadLauncher.launch("sidebyside-export-$exportId.zip")
+                        }
+                    },
                 )
             }
 
@@ -859,6 +978,7 @@ private fun DemoShell(
                     gestureSent = state.thinkingOfYouSent,
                     onSendThinkingOfYou = viewModel::sendThinkingOfYou,
                     onOpenActivity = { navController.navigate(ACTIVITY_ROUTE) },
+                    cachedAt = state.todayCachedAt,
                 )
             }
 
@@ -883,6 +1003,8 @@ private fun DemoShell(
                     onDeletePlan = viewModel::deletePlan,
                     onOpenPlaces = { navController.navigate(PLACES_ROUTE) },
                     onOpenCollections = { navController.navigate(COLLECTIONS_ROUTE) },
+                    onOpenChapters = { navController.navigate(CHAPTERS_ROUTE) },
+                    cachedAt = state.planningCachedAt,
                 )
             }
 
@@ -899,6 +1021,7 @@ private fun DemoShell(
                     onOpenRelatedPersons = { navController.navigate(RELATED_PERSONS_ROUTE) },
                     onOpenPreferences = { navController.navigate(PREFERENCES_ROUTE) },
                     onOpenPrivateArea = { navController.navigate(PRIVATE_AREA_ROUTE) },
+                    onOpenDataExport = { navController.navigate(DATA_EXPORT_ROUTE) },
                     onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
                     onOpenSearch = { navController.navigate(SEARCH_ROUTE) },
                     unreadNotificationCount = state.unreadNotificationCount,
@@ -957,7 +1080,14 @@ private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/
 
 private const val COLLECTIONS_ROUTE = "planning/collections"
 
+private const val CHAPTERS_ROUTE = "planning/chapters"
+private const val CHAPTER_ID_ARGUMENT = "chapterId"
+private const val CHAPTER_CONTENT_ROUTE = "planning/chapters/{$CHAPTER_ID_ARGUMENT}/content"
+
 private const val PRIVATE_AREA_ROUTE = "more/private"
+
+/** No Web equivalent exists yet to match — this UI is Android-first. */
+private const val DATA_EXPORT_ROUTE = "more/data-export"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
 private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
 private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"
@@ -980,6 +1110,32 @@ private const val ACTIVITY_ROUTE = "today/activity"
  * routes with "private" in their path.
  */
 private const val SEARCH_ROUTE = "search"
+
+/**
+ * The M2-D18 cross-client Deep Link contract's "small logical target
+ * tuple... maps to the current client's canonical route," applied to
+ * Notifications and Activity: each entry names a resource kind and id
+ * rather than a client-specific path, and this is where that tuple becomes
+ * an actual in-app route. Reuses the route templates above rather than a
+ * second copy of the same path shapes.
+ *
+ * `null` for [targetId] being absent, or for a kind with no per-resource
+ * route on Android yet — Wish and Plan both live in one shared list screen,
+ * not a route of their own. A caller's tap on such an entry does nothing
+ * rather than navigating to a route that cannot be built.
+ */
+internal fun engagementTargetRoute(targetType: EngagementTarget?, targetId: java.util.UUID?): String? {
+    if (targetId == null) return null
+    return when (targetType) {
+        EngagementTarget.MEMORY -> MEMORY_ROUTE.replace("{$MEMORY_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.MILESTONE -> MILESTONE_ROUTE.replace("{$ITEM_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.HEART_MOMENT -> HEART_MOMENT_ROUTE.replace("{$ITEM_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.PLACE -> PLACE_RELATIONS_ROUTE.replace("{$PLACE_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.CHAPTER -> CHAPTER_CONTENT_ROUTE.replace("{$CHAPTER_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.COLLECTION -> COLLECTION_DETAIL_ROUTE.replace("{$COLLECTION_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.WISH, EngagementTarget.PLAN, null -> null
+    }
+}
 
 /**
  * Whether [route] is inside the owner-only Private Area subtree — the hub
@@ -1050,6 +1206,7 @@ private fun StoryDestination(
         onOpenHeartMoment = onOpenHeartMoment,
         onLoadMore = viewModel::loadMoreStory.takeIf { state.storyHasMore },
         loadingMore = state.storyLoadingMore,
+        cachedAt = state.storyCachedAt,
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),

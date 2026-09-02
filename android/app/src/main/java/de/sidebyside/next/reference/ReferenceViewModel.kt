@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.ActivityItem
 import sidebyside.api.models.AttachmentReadRequest
@@ -30,6 +32,9 @@ import sidebyside.api.models.CollectionDetail
 import sidebyside.api.models.CollectionItemCreate
 import sidebyside.api.models.CollectionItemDetail
 import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.ChapterCreate
+import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
@@ -85,6 +90,9 @@ import sidebyside.api.models.MembershipView
 import sidebyside.api.models.PlanSchedule
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
+import sidebyside.api.models.StoryPage
+import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferScope
 import sidebyside.api.models.WishCreate
 import sidebyside.api.models.WishDetail
 import sidebyside.api.models.WishStatus
@@ -130,6 +138,15 @@ data class DraftImageUiItem(
 data class ReferenceUiState(
     val configured: Boolean = false,
     val instanceAvailability: InstanceAvailability = InstanceAvailability.CHECKING,
+    /**
+     * The M2-D18 application-level connectivity state: `true` only after a
+     * transport/server-availability failure, cleared by the next successful
+     * request. Never set directly by a screen — see
+     * `de.sidebyside.next.connectivity.ConnectivityTracker`.
+     */
+    val offline: Boolean = false,
+    /** The last request of any kind that succeeded, regardless of which screen made it. */
+    val lastSyncedAt: java.time.Instant? = null,
     val loggedIn: Boolean = false,
     /**
      * Authenticated, but with no Space to open yet.
@@ -171,9 +188,13 @@ data class ReferenceUiState(
     /** Whether the server says there is more Story past what is loaded. */
     val storyHasMore: Boolean = false,
     val storyLoadingMore: Boolean = false,
+    /** Non-null only while [storyItems] is a stale M2-D18 cache fallback, not a fresh read. */
+    val storyCachedAt: java.time.Instant? = null,
     val commentsHaveMore: Boolean = false,
     /** The memory currently open, if any. */
     val openMemory: MemoryDetail? = null,
+    /** Non-null only while [openMemory] is a stale M2-D18 cache fallback, not a fresh read. */
+    val openMemoryCachedAt: java.time.Instant? = null,
     val memoryBusy: Boolean = false,
     /**
      * Whether the open memory is being changed.
@@ -220,12 +241,16 @@ data class ReferenceUiState(
     val dashboard: DashboardView? = null,
     val todayBusy: Boolean = false,
     val todayProblem: UiProblem? = null,
+    /** Non-null only while [dashboard] is a stale M2-D18 cache fallback, not a fresh read. */
+    val todayCachedAt: java.time.Instant? = null,
     /** Set once the gesture has been accepted, so the screen can say so. */
     val thinkingOfYouSent: Boolean = false,
     val openWishes: List<WishDetail> = emptyList(),
     val plans: List<PlanDetail> = emptyList(),
     val planningBusy: Boolean = false,
     val planningProblem: UiProblem? = null,
+    /** Non-null only while [openWishes]/[plans] are a stale M2-D18 cache fallback, not a fresh read. */
+    val planningCachedAt: java.time.Instant? = null,
     val relatedPersons: List<RelatedPersonView> = emptyList(),
     val relatedPersonsBusy: Boolean = false,
     val relatedPersonsProblem: UiProblem? = null,
@@ -234,6 +259,8 @@ data class ReferenceUiState(
     val places: List<PlaceDetail> = emptyList(),
     val placesBusy: Boolean = false,
     val placesProblem: UiProblem? = null,
+    /** Non-null only while [places] is a stale M2-D18 cache fallback, not a fresh read. */
+    val placesCachedAt: java.time.Instant? = null,
     /** Every shared Story item, as a possible link target for whichever place's relations are open. */
     val placeRelationTargets: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
     /** Ids already linked to that place, across all three kinds. */
@@ -244,14 +271,20 @@ data class ReferenceUiState(
     val privateNotes: List<PrivateNoteDetail> = emptyList(),
     val privateNotesBusy: Boolean = false,
     val privateNotesProblem: UiProblem? = null,
+    /** Non-null only while [privateNotes] is a stale M2-D18 cache fallback, not a fresh read. */
+    val privateNotesCachedAt: java.time.Instant? = null,
     /** Owner-only: the server already filters this to the caller's own gift ideas. */
     val giftIdeas: List<GiftIdeaDetail> = emptyList(),
     val giftIdeasBusy: Boolean = false,
     val giftIdeasProblem: UiProblem? = null,
+    /** Non-null only while [giftIdeas] is a stale M2-D18 cache fallback, not a fresh read. */
+    val giftIdeasCachedAt: java.time.Instant? = null,
     /** Owner-only: items ride along inside each [PrivateCollectionDetail]. */
     val privateCollections: List<PrivateCollectionDetail> = emptyList(),
     val privateCollectionsBusy: Boolean = false,
     val privateCollectionsProblem: UiProblem? = null,
+    /** Non-null only while [privateCollections] is a stale M2-D18 cache fallback, not a fresh read. */
+    val privateCollectionsCachedAt: java.time.Instant? = null,
     val notifications: List<NotificationItem> = emptyList(),
     val unreadNotificationCount: Int = 0,
     val notificationsBusy: Boolean = false,
@@ -259,15 +292,38 @@ data class ReferenceUiState(
     val activity: List<ActivityItem> = emptyList(),
     val activityBusy: Boolean = false,
     val activityProblem: UiProblem? = null,
+    /** The M2-D17/S6 Transfer Bundle export currently tracked, if any. */
+    val export: TransferExportDetail? = null,
+    val exportBusy: Boolean = false,
+    val exportProblem: UiProblem? = null,
+    /** Set once [export] has actually been saved to a location the user chose; reset by a new export. */
+    val exportDownloaded: Boolean = false,
     val searchResults: List<SearchResult> = emptyList(),
     val searchBusy: Boolean = false,
     val searchProblem: UiProblem? = null,
     val collections: List<CollectionDetail> = emptyList(),
     val collectionsBusy: Boolean = false,
     val collectionsProblem: UiProblem? = null,
+    /** Non-null only while [collections] is a stale M2-D18 cache fallback, not a fresh read. */
+    val collectionsCachedAt: java.time.Instant? = null,
+    val chapters: List<ChapterDetail> = emptyList(),
+    val chaptersBusy: Boolean = false,
+    val chaptersProblem: UiProblem? = null,
+    /** Non-null only while [chapters] is a stale M2-D18 cache fallback, not a fresh read. */
+    val chaptersCachedAt: java.time.Instant? = null,
+    /** Every shared Story item, as a possible content target for whichever chapter is open. */
+    val chapterContentCandidates: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
+    /** The chapter's own content, in the server's display order. */
+    val chapterLinkedContent: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
+    val chapterContentBusy: Boolean = false,
+    val chapterContentProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
+    /** Non-null only while [openMilestone] is a stale M2-D18 cache fallback, not a fresh read. */
+    val openMilestoneCachedAt: java.time.Instant? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
+    /** Non-null only while [openSharedHeartMoment] is a stale M2-D18 cache fallback, not a fresh read. */
+    val openSharedHeartMomentCachedAt: java.time.Instant? = null,
     val commentsBusy: Boolean = false,
     val commentsProblem: UiProblem? = null,
     /** A problem belonging to the open memory rather than to the whole screen. */
@@ -287,11 +343,35 @@ private data class ImageDraft(
     val preparedAttachment: PreparedAttachment? = null,
 )
 
+/**
+ * What `loadPlanning()` fetches and caches as one unit: [Wish][WishDetail]
+ * carries every status, not just `OPEN`, so the `OPEN` filter [ReferenceUiState.openWishes]
+ * applies can run identically against a fresh read and a cache fallback.
+ */
+@Serializable
+private data class PlanningSnapshot(
+    val wishes: List<WishDetail>,
+    val plans: List<PlanDetail>,
+)
+
 class ReferenceViewModel(
     private val config: ReferenceConfig = ReferenceConfig.fromBuildConfig(),
     api: ReferenceContract? = null,
     private val apiFactory: (String) -> ReferenceContract = ::OkHttpReferenceApi,
     private val spaceStore: SpacePreferenceStore = InMemorySpacePreferenceStore(),
+    /**
+     * The M2-D18 read cache for shared Story detail content. `null` (the
+     * default every existing test relies on) disables it entirely — reads
+     * behave exactly as before, network-only.
+     */
+    private val productReadCache: de.sidebyside.next.cache.ProductReadCache? = null,
+    /**
+     * The M2-D18 application-level connectivity state. `null` (the default
+     * every existing test relies on) means [ReferenceUiState.offline] never
+     * changes from its initial value — no behavior change for callers that
+     * do not configure it.
+     */
+    private val connectivityTracker: de.sidebyside.next.connectivity.ConnectivityTracker? = null,
 ) : ViewModel() {
     private val injectedApi: ReferenceContract? = api
 
@@ -330,6 +410,15 @@ class ReferenceViewModel(
 
     init {
         if (config.isConfigured) refreshInstanceAvailability()
+        connectivityTracker?.let { tracker ->
+            viewModelScope.launch {
+                tracker.state.collect { connectivity ->
+                    mutate {
+                        it.copy(offline = connectivity.offline, lastSyncedAt = connectivity.lastSyncedAt)
+                    }
+                }
+            }
+        }
     }
 
     fun refreshInstanceAvailability() {
@@ -402,8 +491,12 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearExport()
         clearSearch()
         clearCollections()
+        clearChapters()
+        clearChapterContent()
+        clearProductReadCache()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -455,6 +548,7 @@ class ReferenceViewModel(
                             lastMemoryBody = null,
                             lastImageBytes = null,
                             storyItems = emptyList(),
+                            storyCachedAt = null,
                             availableSpaces = activeMemberships(memberships),
                             activeSpaceId = space,
                         )
@@ -496,8 +590,12 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearExport()
         clearSearch()
         clearCollections()
+        clearChapters()
+        clearChapterContent()
+        clearProductReadCache()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -558,8 +656,12 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearExport()
         clearSearch()
         clearCollections()
+        clearChapters()
+        clearChapterContent()
+        clearProductReadCache()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -626,8 +728,12 @@ class ReferenceViewModel(
         clearPrivateCollections()
         clearNotifications()
         clearActivity()
+        clearExport()
         clearSearch()
         clearCollections()
+        clearChapters()
+        clearChapterContent()
+        clearProductReadCache()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -643,6 +749,7 @@ class ReferenceViewModel(
                 lastMemoryBody = null,
                 lastImageBytes = null,
                 storyItems = emptyList(),
+                storyCachedAt = null,
             )
         }
         refreshStory()
@@ -811,10 +918,24 @@ class ReferenceViewModel(
         mutate { it.copy(memoryBusy = true) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.getMemory(spaceId, currentSession.tokens.accessToken, memoryId) }
-                .onSuccess { memory ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.MEMORY,
+                resourceId = memoryId,
+                load = { api.getMemory(spaceId, currentSession.tokens.accessToken, memoryId) },
+                serialize = { SideBySideJson.encodeToString(MemoryDetail.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(MemoryDetail.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(openMemory = memory, memoryBusy = false) }
+                    mutate {
+                        it.copy(
+                            openMemory = result.value,
+                            openMemoryCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                            memoryBusy = false,
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -974,12 +1095,24 @@ class ReferenceViewModel(
         mutate { it.copy(memoryBusy = true) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching {
-                api.getMilestone(spaceId, currentSession.tokens.accessToken, milestoneId)
-            }
-                .onSuccess { milestone ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.MILESTONE,
+                resourceId = milestoneId,
+                load = { api.getMilestone(spaceId, currentSession.tokens.accessToken, milestoneId) },
+                serialize = { SideBySideJson.encodeToString(MilestoneDetail.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(MilestoneDetail.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(openMilestone = milestone, memoryBusy = false) }
+                    mutate {
+                        it.copy(
+                            openMilestone = result.value,
+                            openMilestoneCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                            memoryBusy = false,
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -1004,12 +1137,28 @@ class ReferenceViewModel(
         mutate { it.copy(memoryBusy = true, memoryProblem = null, openMemoryGone = false) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching {
-                api.getHeartMoment(spaceId, currentSession.tokens.accessToken, heartMomentId)
-            }
-                .onSuccess { moment ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.HEART_MOMENT,
+                resourceId = heartMomentId,
+                // Symmetric with the write-time gate: a cached row can only ever
+                // have been written while still SHARED, but a moment can turn
+                // PRIVATE after being cached, so a stale row is refused here too.
+                canPersist = { it.visibility == ContentVisibility.SHARED },
+                load = { api.getHeartMoment(spaceId, currentSession.tokens.accessToken, heartMomentId) },
+                serialize = { SideBySideJson.encodeToString(HeartMomentDetail.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(HeartMomentDetail.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(openSharedHeartMoment = moment, memoryBusy = false) }
+                    mutate {
+                        it.copy(
+                            openSharedHeartMoment = result.value,
+                            openSharedHeartMomentCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                            memoryBusy = false,
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -1558,10 +1707,24 @@ class ReferenceViewModel(
         mutate { it.copy(todayBusy = true, todayProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.getDashboard(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { view ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.DASHBOARD,
+                resourceId = de.sidebyside.next.cache.TodayDashboardResourceId,
+                load = { api.getDashboard(spaceId, currentSession.tokens.accessToken) },
+                serialize = { SideBySideJson.encodeToString(DashboardView.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(DashboardView.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(dashboard = view, todayBusy = false) }
+                    mutate {
+                        it.copy(
+                            dashboard = result.value,
+                            todayBusy = false,
+                            todayCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -1625,6 +1788,7 @@ class ReferenceViewModel(
                 dashboard = null,
                 todayBusy = false,
                 todayProblem = null,
+                todayCachedAt = null,
                 thinkingOfYouSent = false,
             )
         }
@@ -2144,19 +2308,31 @@ class ReferenceViewModel(
         mutate { it.copy(planningBusy = true, planningProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching {
-                val token = currentSession.tokens.accessToken
-                api.listWishes(spaceId, token).items to api.listPlans(spaceId, token).items
-            }
-                .onSuccess { (wishes, plans) ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.PLANNING,
+                resourceId = de.sidebyside.next.cache.PlanningResourceId,
+                load = {
+                    val token = currentSession.tokens.accessToken
+                    PlanningSnapshot(
+                        wishes = api.listWishes(spaceId, token).items,
+                        plans = api.listPlans(spaceId, token).items,
+                    )
+                },
+                serialize = { SideBySideJson.encodeToString(PlanningSnapshot.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(PlanningSnapshot.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
                     mutate {
                         it.copy(
-                            openWishes = wishes.filter { wish ->
+                            openWishes = result.value.wishes.filter { wish ->
                                 wish.status == WishStatus.OPEN
                             },
-                            plans = plans,
+                            plans = result.value.plans,
                             planningBusy = false,
+                            planningCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
                         )
                     }
                 }
@@ -2243,6 +2419,7 @@ class ReferenceViewModel(
                 plans = emptyList(),
                 planningBusy = false,
                 planningProblem = null,
+                planningCachedAt = null,
             )
         }
     }
@@ -2290,17 +2467,27 @@ class ReferenceViewModel(
         val operationEpoch = sessionEpoch
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.getTimeline(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { story ->
-                    if (isCurrentSession(operationEpoch, currentSession)) {
-                        storyCursor = story.nextCursor
-                        mutate {
-                            it.copy(
-                                storyItems = story.items,
-                                storyHasMore = story.hasMore,
-                                error = null,
-                            )
-                        }
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.STORY,
+                resourceId = de.sidebyside.next.cache.StoryTimelineResourceId,
+                load = { api.getTimeline(spaceId, currentSession.tokens.accessToken) },
+                serialize = { SideBySideJson.encodeToString(StoryPage.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(StoryPage.serializer(), it) },
+            )
+                .onSuccess { result ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    // Offline pagination is out of scope: a cache fallback shows
+                    // only the items it has, with no cursor to load more with.
+                    storyCursor = if (result.fromCache) null else result.value.nextCursor
+                    mutate {
+                        it.copy(
+                            storyItems = result.value.items,
+                            storyHasMore = if (result.fromCache) false else result.value.hasMore,
+                            storyCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                            error = null,
+                        )
                     }
                 }
                 .onFailure {
@@ -2745,10 +2932,24 @@ class ReferenceViewModel(
         mutate { it.copy(placesBusy = true, placesProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listPlaces(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.PLACE,
+                resourceId = de.sidebyside.next.cache.PlaceListResourceId,
+                load = { api.listPlaces(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(PlaceDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(PlaceDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(places = page.items, placesBusy = false) }
+                    mutate {
+                        it.copy(
+                            places = result.value,
+                            placesBusy = false,
+                            placesCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -2869,7 +3070,9 @@ class ReferenceViewModel(
     }
 
     fun clearPlaces() {
-        mutate { it.copy(places = emptyList(), placesBusy = false, placesProblem = null) }
+        mutate {
+            it.copy(places = emptyList(), placesBusy = false, placesProblem = null, placesCachedAt = null)
+        }
     }
 
     /**
@@ -2999,10 +3202,25 @@ class ReferenceViewModel(
         mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listPrivateNotes(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProtectedList(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                ownerId = currentSession.account.id,
+                kind = de.sidebyside.next.cache.ProtectedCacheKind.PRIVATE_NOTE,
+                resourceId = de.sidebyside.next.cache.PrivateAreaListResourceId,
+                load = { api.listPrivateNotes(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(PrivateNoteDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(PrivateNoteDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(privateNotes = page.items, privateNotesBusy = false) }
+                    mutate {
+                        it.copy(
+                            privateNotes = result.value,
+                            privateNotesBusy = false,
+                            privateNotesCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -3096,7 +3314,14 @@ class ReferenceViewModel(
     }
 
     fun clearPrivateNotes() {
-        mutate { it.copy(privateNotes = emptyList(), privateNotesBusy = false, privateNotesProblem = null) }
+        mutate {
+            it.copy(
+                privateNotes = emptyList(),
+                privateNotesBusy = false,
+                privateNotesProblem = null,
+                privateNotesCachedAt = null,
+            )
+        }
     }
 
     fun loadGiftIdeas() {
@@ -3108,10 +3333,25 @@ class ReferenceViewModel(
         mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listGiftIdeas(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProtectedList(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                ownerId = currentSession.account.id,
+                kind = de.sidebyside.next.cache.ProtectedCacheKind.GIFT_IDEA,
+                resourceId = de.sidebyside.next.cache.PrivateAreaListResourceId,
+                load = { api.listGiftIdeas(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(GiftIdeaDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(GiftIdeaDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(giftIdeas = page.items, giftIdeasBusy = false) }
+                    mutate {
+                        it.copy(
+                            giftIdeas = result.value,
+                            giftIdeasBusy = false,
+                            giftIdeasCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -3278,7 +3518,14 @@ class ReferenceViewModel(
     }
 
     fun clearGiftIdeas() {
-        mutate { it.copy(giftIdeas = emptyList(), giftIdeasBusy = false, giftIdeasProblem = null) }
+        mutate {
+            it.copy(
+                giftIdeas = emptyList(),
+                giftIdeasBusy = false,
+                giftIdeasProblem = null,
+                giftIdeasCachedAt = null,
+            )
+        }
     }
 
     fun loadPrivateCollections() {
@@ -3290,10 +3537,25 @@ class ReferenceViewModel(
         mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listPrivateCollections(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProtectedList(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                ownerId = currentSession.account.id,
+                kind = de.sidebyside.next.cache.ProtectedCacheKind.PRIVATE_COLLECTION,
+                resourceId = de.sidebyside.next.cache.PrivateAreaListResourceId,
+                load = { api.listPrivateCollections(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(PrivateCollectionDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(PrivateCollectionDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(privateCollections = page.items, privateCollectionsBusy = false) }
+                    mutate {
+                        it.copy(
+                            privateCollections = result.value,
+                            privateCollectionsBusy = false,
+                            privateCollectionsCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -3547,7 +3809,12 @@ class ReferenceViewModel(
 
     fun clearPrivateCollections() {
         mutate {
-            it.copy(privateCollections = emptyList(), privateCollectionsBusy = false, privateCollectionsProblem = null)
+            it.copy(
+                privateCollections = emptyList(),
+                privateCollectionsBusy = false,
+                privateCollectionsProblem = null,
+                privateCollectionsCachedAt = null,
+            )
         }
     }
 
@@ -3672,6 +3939,84 @@ class ReferenceViewModel(
         mutate { it.copy(activity = emptyList(), activityBusy = false, activityProblem = null) }
     }
 
+    /** Starts a Transfer Bundle export. [refreshExport] is how the caller learns it finished. */
+    fun createExport(scope: TransferScope) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(exportBusy = true, exportProblem = null, exportDownloaded = false) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.createTransferExport(spaceId, currentSession.tokens.accessToken, scope) }
+                .onSuccess { export ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(export = export, exportBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(exportBusy = false, exportProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /** Re-reads the tracked export's status — assembly runs as a background job on the server. */
+    fun refreshExport() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val exportId = _uiState.value.export?.id ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(exportBusy = true, exportProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getTransferExport(spaceId, currentSession.tokens.accessToken, exportId) }
+                .onSuccess { export ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(export = export, exportBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(exportBusy = false, exportProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /**
+     * Streams the ready export into [sink] — a destination the caller
+     * already opened (typically from a Storage Access Framework picker), so
+     * this never buffers the whole archive in memory.
+     *
+     * `suspend` rather than fire-and-forget like every other network call
+     * here: the caller's own `.use { }` around [sink] must stay open for
+     * exactly as long as this call takes, not just until it is launched.
+     */
+    suspend fun downloadExport(sink: java.io.OutputStream) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val exportId = _uiState.value.export?.id ?: return
+        val operationEpoch = sessionEpoch
+        if (!isCurrentSession(operationEpoch, currentSession)) return
+
+        mutate { it.copy(exportBusy = true, exportProblem = null) }
+        runCatching { api.downloadTransferExport(spaceId, currentSession.tokens.accessToken, exportId, sink) }
+            .onSuccess {
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                mutate { it.copy(exportBusy = false, exportDownloaded = true) }
+            }
+            .onFailure { throwable ->
+                if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                mutate { it.copy(exportBusy = false, exportProblem = problemFor(throwable)) }
+            }
+    }
+
+    fun clearExport() {
+        mutate { it.copy(export = null, exportBusy = false, exportProblem = null, exportDownloaded = false) }
+    }
+
     fun search(query: String) {
         if (query.isBlank()) {
             clearSearch()
@@ -3710,10 +4055,24 @@ class ReferenceViewModel(
         mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listCollections(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.COLLECTION,
+                resourceId = de.sidebyside.next.cache.CollectionListResourceId,
+                load = { api.listCollections(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(CollectionDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(CollectionDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(collections = page.items, collectionsBusy = false) }
+                    mutate {
+                        it.copy(
+                            collections = result.value,
+                            collectionsBusy = false,
+                            collectionsCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -3945,7 +4304,263 @@ class ReferenceViewModel(
     }
 
     fun clearCollections() {
-        mutate { it.copy(collections = emptyList(), collectionsBusy = false, collectionsProblem = null) }
+        mutate {
+            it.copy(
+                collections = emptyList(),
+                collectionsBusy = false,
+                collectionsProblem = null,
+                collectionsCachedAt = null,
+            )
+        }
+    }
+
+    fun loadChapters() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.CHAPTER,
+                resourceId = de.sidebyside.next.cache.ChapterListResourceId,
+                load = { api.listChapters(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(ChapterDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(ChapterDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            chapters = result.value,
+                            chaptersBusy = false,
+                            chaptersCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chaptersBusy = false, chaptersProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addChapter(title: String, description: String, startOn: String, endOn: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createChapter(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    ChapterCreate(
+                        title = title,
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        startOn = parseHappenedOn(startOn),
+                        endOn = parseHappenedOn(endOn),
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chaptersBusy = false) }
+                    loadChapters()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chaptersBusy = false, chaptersProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updateChapter(chapter: ChapterDetail, title: String, description: String, startOn: String, endOn: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateChapter(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    chapter.id,
+                    chapter.version,
+                    ChapterUpdate(
+                        title = title,
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        startOn = parseHappenedOn(startOn),
+                        endOn = parseHappenedOn(endOn),
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chaptersBusy = false) }
+                    loadChapters()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chaptersBusy = false, chaptersProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deleteChapter(chapter: ChapterDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteChapter(spaceId, currentSession.tokens.accessToken, chapter.id, chapter.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chaptersBusy = false) }
+                    loadChapters()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chaptersBusy = false, chaptersProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearChapters() {
+        mutate {
+            it.copy(chapters = emptyList(), chaptersBusy = false, chaptersProblem = null, chaptersCachedAt = null)
+        }
+    }
+
+    /**
+     * Loads a chapter's own curated content plus every shared Story item as
+     * a possible addition. Mirrors [loadPlaceRelations]'s reasoning: reads
+     * the timeline rather than a content-bearing relation endpoint, which is
+     * also why a private HeartMoment can never appear here.
+     */
+    fun loadChapterContent(chapterId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chapterContentBusy = true, chapterContentProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                val accessToken = currentSession.tokens.accessToken
+                val timeline = api.getTimeline(spaceId, accessToken)
+                val candidates = timeline.items.map { it.toRelationTargetItem() }
+                val content = api.getChapterContent(spaceId, accessToken, chapterId)
+                val linked = content.items.mapNotNull { entry ->
+                    candidates.firstOrNull { it.id == entry.targetId }
+                }
+                candidates to linked
+            }
+                .onSuccess { (candidates, linked) ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            chapterContentCandidates = candidates,
+                            chapterLinkedContent = linked,
+                            chapterContentBusy = false,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chapterContentBusy = false, chapterContentProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun linkChapterContent(chapterId: java.util.UUID, target: de.sidebyside.next.place.RelationTargetItem) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chapterContentBusy = true, chapterContentProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.linkChapterTarget(spaceId, currentSession.tokens.accessToken, chapterId, target.kind, target.id)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chapterContentBusy = false) }
+                    loadChapterContent(chapterId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chapterContentBusy = false, chapterContentProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun unlinkChapterContent(chapterId: java.util.UUID, target: de.sidebyside.next.place.RelationTargetItem) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chapterContentBusy = true, chapterContentProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.unlinkChapterTarget(spaceId, currentSession.tokens.accessToken, chapterId, target.kind, target.id)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chapterContentBusy = false) }
+                    loadChapterContent(chapterId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chapterContentBusy = false, chapterContentProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearChapterContent() {
+        mutate {
+            it.copy(
+                chapterContentCandidates = emptyList(),
+                chapterLinkedContent = emptyList(),
+                chapterContentBusy = false,
+                chapterContentProblem = null,
+            )
+        }
+    }
+
+    /**
+     * The M2-D18 persistent-cache wipe. Unlike every other `clearXxx`
+     * function here, this one does not touch in-memory [ReferenceUiState] —
+     * it wipes the on-disk Room database, which a fresh `_uiState` value
+     * (as [logout] assigns) does nothing to by itself. Fire-and-forget: the
+     * caller's own session/state transition does not wait on disk I/O, and
+     * nothing reads the cache again until a later screen asks for it.
+     */
+    private fun clearProductReadCache() {
+        val cache = productReadCache ?: return
+        viewModelScope.launch { cache.clearAll() }
     }
 
     fun logout() {
@@ -3958,6 +4573,7 @@ class ReferenceViewModel(
         clearHeartMoments()
         clearComments()
         closeStoryItem()
+        clearProductReadCache()
         session = null
         activeSpaceId = null
         imageDrafts = emptyList()
@@ -4107,6 +4723,61 @@ class ReferenceViewModel(
 
     private inline fun mutate(update: (ReferenceUiState) -> ReferenceUiState) {
         _uiState.value = update(_uiState.value)
+    }
+
+    /**
+     * Reads one shared Story detail resource through the M2-D18 cache when
+     * one is configured, or plain network-only when [productReadCache] is
+     * `null` (every existing test's default, and the state before this
+     * device ever configures a cache instance). Centralizing the branch here
+     * keeps each of the three call sites the same shape they were before the
+     * cache existed.
+     */
+    private suspend fun <T> loadProductDetail(
+        accountId: java.util.UUID,
+        spaceId: java.util.UUID,
+        kind: de.sidebyside.next.cache.ProductCacheKind,
+        resourceId: java.util.UUID,
+        canPersist: (T) -> Boolean = { true },
+        load: suspend () -> T,
+        serialize: (T) -> String,
+        deserialize: (String) -> T,
+    ): Result<de.sidebyside.next.cache.ProductReadResult<T>> {
+        val cache = productReadCache
+        return if (cache != null) {
+            cache.loadWithFallback(accountId, spaceId, kind, resourceId, canPersist, load, serialize, deserialize)
+        } else {
+            runCatching { load() }.map {
+                de.sidebyside.next.cache.ProductReadResult(it, fromCache = false, refreshedAt = java.time.Instant.now())
+            }
+        }
+    }
+
+    /**
+     * The `OWNER_ONLY` counterpart to [loadProductDetail], for the
+     * current-user Private Area lists. [ownerId] is always the signed-in
+     * account itself: the server already scopes each list to its owner, and
+     * the cache namespace records that owner explicitly rather than assuming
+     * it always equals [accountId], per M2-D18's Android decision.
+     */
+    private suspend fun <T> loadProtectedList(
+        accountId: java.util.UUID,
+        spaceId: java.util.UUID,
+        ownerId: java.util.UUID,
+        kind: de.sidebyside.next.cache.ProtectedCacheKind,
+        resourceId: java.util.UUID,
+        load: suspend () -> T,
+        serialize: (T) -> String,
+        deserialize: (String) -> T,
+    ): Result<de.sidebyside.next.cache.ProductReadResult<T>> {
+        val cache = productReadCache
+        return if (cache != null) {
+            cache.loadProtectedWithFallback(accountId, spaceId, ownerId, kind, resourceId, load, serialize, deserialize)
+        } else {
+            runCatching { load() }.map {
+                de.sidebyside.next.cache.ProductReadResult(it, fromCache = false, refreshedAt = java.time.Instant.now())
+            }
+        }
     }
 
     /** Null for a blank date, which is allowed, and for an unparseable one. */

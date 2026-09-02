@@ -14,11 +14,14 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AuthorSummary
+import sidebyside.api.models.ExportStatus
+import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.MediaType
 import sidebyside.api.models.PartnerProfileView
 import sidebyside.api.models.PlaceCreate
@@ -26,6 +29,8 @@ import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.ResourceCapabilities
+import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferScope
 import sidebyside.api.models.UploadDescriptor
 
 class OkHttpReferenceApiTest {
@@ -243,6 +248,184 @@ class OkHttpReferenceApiTest {
             requests.single().url.encodedPath,
         )
     }
+
+    @Test
+    fun aSuccessfulRequestRecordsItWithTheConnectivityTracker() = runTest {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(
+                        SideBySideJson
+                            .encodeToString(
+                                InstanceAccessStatus.serializer(),
+                                InstanceAccessStatus(
+                                    maintenanceMode = false,
+                                    registrationAvailable = true,
+                                    registrationUnavailableReason = null,
+                                ),
+                            )
+                            .toResponseBody("application/json".toMediaType()),
+                    )
+                    .build()
+            }
+            .build()
+        val tracker = de.sidebyside.next.connectivity.ConnectivityTracker()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client, connectivityTracker = tracker)
+
+        api.getInstanceStatus()
+
+        assertFalse(tracker.state.value.offline)
+        assertNotNull(tracker.state.value.lastSyncedAt)
+    }
+
+    @Test
+    fun aTransportFailureMarksTheConnectivityTrackerOffline() = runTest {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { throw java.io.IOException("no connection") }
+            .build()
+        val tracker = de.sidebyside.next.connectivity.ConnectivityTracker()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client, connectivityTracker = tracker)
+
+        runCatching { api.getInstanceStatus() }
+
+        assertTrue(tracker.state.value.offline)
+    }
+
+    @Test
+    fun a401NeverMarksTheConnectivityTrackerOffline() = runTest {
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(401)
+                    .message("Unauthorized")
+                    .body("{}".toResponseBody("application/json".toMediaType()))
+                    .build()
+            }
+            .build()
+        val tracker = de.sidebyside.next.connectivity.ConnectivityTracker()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client, connectivityTracker = tracker)
+
+        runCatching { api.getInstanceStatus() }
+
+        assertFalse(tracker.state.value.offline)
+    }
+
+    @Test
+    fun createTransferExportSendsTheChosenScope() = runTest {
+        val requests = mutableListOf<Request>()
+        val spaceId = UUID.fromString("00000000-0000-0000-0000-000000000040")
+        val exportId = UUID.fromString("00000000-0000-0000-0000-000000000041")
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                requests += request
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(202)
+                    .message("Accepted")
+                    .body(
+                        SideBySideJson
+                            .encodeToString(TransferExportDetail.serializer(), exportDetail(exportId))
+                            .toResponseBody("application/json".toMediaType()),
+                    )
+                    .build()
+            }
+            .build()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client)
+
+        val result = api.createTransferExport(spaceId, "secret", TransferScope.SHARED)
+
+        val request = requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("/api/v1/spaces/$spaceId/transfer/exports", request.url.encodedPath)
+        assertTrue(requestBody(request).contains("\"scope\":\"SHARED\""))
+        assertEquals(exportId, result.id)
+        assertEquals(ExportStatus.QUEUED, result.status)
+    }
+
+    @Test
+    fun getTransferExportReadsTheGivenExport() = runTest {
+        val requests = mutableListOf<Request>()
+        val spaceId = UUID.fromString("00000000-0000-0000-0000-000000000042")
+        val exportId = UUID.fromString("00000000-0000-0000-0000-000000000043")
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                requests += request
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(
+                        SideBySideJson
+                            .encodeToString(
+                                TransferExportDetail.serializer(),
+                                exportDetail(exportId, status = ExportStatus.READY),
+                            )
+                            .toResponseBody("application/json".toMediaType()),
+                    )
+                    .build()
+            }
+            .build()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client)
+
+        val result = api.getTransferExport(spaceId, "secret", exportId)
+
+        assertEquals(
+            "/api/v1/spaces/$spaceId/transfer/exports/$exportId",
+            requests.single().url.encodedPath,
+        )
+        assertEquals(ExportStatus.READY, result.status)
+    }
+
+    @Test
+    fun downloadTransferExportStreamsIntoTheGivenSinkWithoutBufferingItWhole() = runTest {
+        val spaceId = UUID.fromString("00000000-0000-0000-0000-000000000044")
+        val exportId = UUID.fromString("00000000-0000-0000-0000-000000000045")
+        val archiveBytes = ByteArray(4096) { it.toByte() }
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                Response.Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(archiveBytes.toResponseBody("application/zip".toMediaType()))
+                    .build()
+            }
+            .build()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client)
+        val sink = java.io.ByteArrayOutputStream()
+
+        api.downloadTransferExport(spaceId, "secret", exportId, sink)
+
+        assertTrue(archiveBytes.contentEquals(sink.toByteArray()))
+    }
+
+    private fun exportDetail(
+        exportId: UUID,
+        status: ExportStatus = ExportStatus.QUEUED,
+    ): TransferExportDetail = TransferExportDetail(
+        artifactSize = null,
+        createdAt = OffsetDateTime.now(),
+        downloadUrl = null,
+        errorCode = null,
+        expiresAt = OffsetDateTime.now().plusHours(24),
+        id = exportId,
+        readyAt = null,
+        scope = TransferScope.SHARED,
+        status = status,
+    )
 
     private fun jsonClient(
         requests: MutableList<Request>,

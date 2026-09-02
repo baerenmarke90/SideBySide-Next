@@ -16,6 +16,11 @@ import sidebyside.api.models.CollectionItemCreate
 import sidebyside.api.models.CollectionItemDetail
 import sidebyside.api.models.CollectionItemUpdate
 import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.ChapterCreate
+import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.ChapterPage
+import sidebyside.api.models.ChapterContent
+import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
@@ -728,6 +733,74 @@ abstract class FakeReferenceContract : ReferenceContract {
         ifMatch: Int,
         itemIds: List<UUID>,
     ): CollectionDetail = notExercised("reorderCollectionItems")
+
+    override suspend fun listChapters(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): ChapterPage = notExercised("listChapters")
+
+    override suspend fun createChapter(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ChapterCreate,
+    ): ChapterDetail = notExercised("createChapter")
+
+    override suspend fun updateChapter(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        ifMatch: Int,
+        fields: ChapterUpdate,
+    ): ChapterDetail = notExercised("updateChapter")
+
+    override suspend fun deleteChapter(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteChapter")
+
+    override suspend fun getChapterContent(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+    ): ChapterContent = notExercised("getChapterContent")
+
+    override suspend fun linkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ): Unit = notExercised("linkChapterTarget")
+
+    override suspend fun unlinkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ): Unit = notExercised("unlinkChapterTarget")
+
+    override suspend fun createTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        scope: sidebyside.api.models.TransferScope,
+    ): sidebyside.api.models.TransferExportDetail = notExercised("createTransferExport")
+
+    override suspend fun getTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+    ): sidebyside.api.models.TransferExportDetail = notExercised("getTransferExport")
+
+    override suspend fun downloadTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+        sink: java.io.OutputStream,
+    ): Unit = notExercised("downloadTransferExport")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

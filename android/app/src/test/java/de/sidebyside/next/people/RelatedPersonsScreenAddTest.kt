@@ -52,6 +52,7 @@ class RelatedPersonsScreenAddTest {
                         addedBirthday = birthday
                         addedYearKnown = yearKnown
                     },
+                    onEdit = { _, _, _, _, _, _ -> },
                     onOpenDates = {},
                     onDelete = { _, _ -> },
                 )
@@ -84,6 +85,7 @@ class RelatedPersonsScreenAddTest {
                         addedBirthday = birthday
                         addedYearKnown = yearKnown
                     },
+                    onEdit = { _, _, _, _, _, _ -> },
                     onOpenDates = {},
                     onDelete = { _, _ -> },
                 )
@@ -118,6 +120,7 @@ class RelatedPersonsScreenAddTest {
                         addedBirthday = birthday
                         addedYearKnown = yearKnown
                     },
+                    onEdit = { _, _, _, _, _, _ -> },
                     onOpenDates = {},
                     onDelete = { _, _ -> },
                 )

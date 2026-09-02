@@ -22,6 +22,7 @@
     <string name="state_retry">Erneut versuchen</string>
     <string name="state_offline_title">Du bist gerade offline.</string>
     <string name="state_offline_body">Stelle die Verbindung wieder her und versuche es erneut.</string>
+    <string name="offline_banner_last_synced">Zuletzt synchronisiert am %1$s. Die Verbindung wird automatisch wiederhergestellt, sobald der Server erreichbar ist.</string>
     <string name="state_session_title">Deine Sitzung ist nicht mehr gültig.</string>
     <string name="state_session_body">Bitte melde dich erneut an.</string>
     <string name="state_permission_title">Dieser Inhalt ist nicht verfügbar.</string>
@@ -327,6 +328,7 @@
     <string name="related_person_save">Speichern</string>
     <string name="related_person_open">Wichtige Tage öffnen</string>
     <string name="related_person_edit">Bearbeiten</string>
+    <string name="related_person_edit_title">%1$s bearbeiten</string>
     <string name="related_person_delete">Löschen</string>
     <string name="related_person_cancel">Abbrechen</string>
     <string name="related_person_delete_title">%1$s löschen?</string>
@@ -442,6 +444,23 @@
     <string name="private_area_card_title">Privater Bereich</string>
     <string name="private_area_card_intro">Notizen und Ideen, die nur dir gehören – dein Partner oder deine Partnerin sieht sie nie.</string>
     <string name="private_area_open">Privaten Bereich öffnen</string>
+
+    <string name="data_export_card_title">Eure Daten</string>
+    <string name="data_export_card_intro">Ladet eure gemeinsame Geschichte als Datei herunter – zum Aufbewahren oder Mitnehmen.</string>
+    <string name="data_export_open">Export öffnen</string>
+    <string name="data_export_title">Eure Daten exportieren</string>
+    <string name="data_export_intro">Erstellt eine Archivdatei mit euren Erinnerungen, Meilensteinen und mehr. Die Zusammenstellung läuft im Hintergrund und kann einen Moment dauern.</string>
+    <string name="data_export_scope_shared">Gemeinsame Inhalte</string>
+    <string name="data_export_scope_personal">Nur meine privaten Inhalte</string>
+    <string name="data_export_start">Export starten</string>
+    <string name="data_export_refresh">Status aktualisieren</string>
+    <string name="data_export_download">Herunterladen</string>
+    <string name="data_export_downloaded">Heruntergeladen.</string>
+    <string name="data_export_status_queued">In der Warteschlange …</string>
+    <string name="data_export_status_running">Wird zusammengestellt …</string>
+    <string name="data_export_status_ready">Bereit zum Herunterladen</string>
+    <string name="data_export_status_failed">Der Export ist fehlgeschlagen. Versuche es erneut.</string>
+    <string name="data_export_status_expired">Dieser Export ist abgelaufen. Starte einen neuen.</string>
     <string name="private_area_title">Privater Bereich</string>
     <string name="private_area_intro">Alles hier ist ausschließlich für dich sichtbar, auch in einer geteilten Beziehung.</string>
 
@@ -586,4 +605,37 @@
     <string name="collection_item_move_up">Nach oben</string>
     <string name="collection_item_move_down">Nach unten</string>
     <string name="collection_items_empty">Noch keine Einträge in dieser Liste.</string>
+
+    <string name="chapters_open">Kapitel verwalten</string>
+    <string name="chapters_title">Kapitel</string>
+    <string name="chapters_intro">Fasst mehrere Erinnerungen, Herzmomente und Meilensteine zu einem Abschnitt eurer Geschichte zusammen.</string>
+    <string name="chapters_empty">Noch keine Kapitel.</string>
+    <string name="chapter_add">Kapitel hinzufügen</string>
+    <string name="chapter_title_hint">Titel</string>
+    <string name="chapter_description_hint">Beschreibung</string>
+    <string name="chapter_start_on_hint">Beginn (JJJJ-MM-TT, optional)</string>
+    <string name="chapter_end_on_hint">Ende (JJJJ-MM-TT, optional)</string>
+    <string name="chapter_period">%1$s – %2$s</string>
+    <string name="chapter_no_period">Kein Zeitraum hinterlegt</string>
+    <string name="chapter_edit">Bearbeiten</string>
+    <string name="chapter_edit_title">Kapitel bearbeiten</string>
+    <string name="chapter_delete">Löschen</string>
+    <string name="chapter_delete_title">%1$s löschen?</string>
+    <string name="chapter_delete_warning">Das Kapitel wird gelöscht. Erinnerungen, Herzmomente und Meilensteine selbst bleiben erhalten.</string>
+    <string name="chapter_delete_confirm">Endgültig löschen</string>
+    <string name="chapter_cancel">Abbrechen</string>
+    <string name="chapter_save_changes">Änderungen speichern</string>
+    <string name="chapter_open">Öffnen</string>
+
+    <string name="chapter_content_title">Inhalt des Kapitels</string>
+    <string name="chapter_content_intro">Auswählbar sind ausschließlich Inhalte aus eurer gemeinsamen Story. Private Herzmomente erscheinen hier nicht.</string>
+    <string name="chapter_content_empty">Noch keine Inhalte in diesem Kapitel.</string>
+    <string name="chapter_content_unlink">Aus Kapitel entfernen</string>
+    <string name="chapter_content_add_heading">Zum Kapitel hinzufügen</string>
+    <string name="chapter_content_choose">Inhalt auswählen</string>
+    <string name="chapter_content_link">Hinzufügen</string>
+    <string name="chapter_content_none_available">Alle aktuell verfügbaren gemeinsamen Story-Inhalte sind bereits im Kapitel.</string>
+
+    <string name="cache_banner_title">Offline – zuletzt gespeicherter Stand</string>
+    <string name="cache_banner_body">Zuletzt synchronisiert am %1$s. Die Verbindung wird automatisch wiederhergestellt, sobald der Server erreichbar ist.</string>
 </resources>

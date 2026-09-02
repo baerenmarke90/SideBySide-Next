@@ -1,6 +1,7 @@
 package de.sidebyside.next.shell
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -87,6 +88,13 @@ fun AppShell(
     currentDestination: AppDestination,
     onSelectDestination: (AppDestination) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Shown once, above [content], regardless of which destination is open —
+     * the M2-D18 application-level connectivity state, or any later shell-wide
+     * notice that shouldn't repeat itself per screen. `null` shows nothing,
+     * same as every caller before this parameter existed.
+     */
+    banner: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     // A single destination is not a choice, so no navigation surface is drawn
@@ -103,14 +111,17 @@ fun AppShell(
             }
         },
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 // The content area must not apply the same insets again.
                 .consumeWindowInsets(padding),
         ) {
-            content()
+            banner?.invoke()
+            Box(modifier = Modifier.weight(1f)) {
+                content()
+            }
         }
     }
 }

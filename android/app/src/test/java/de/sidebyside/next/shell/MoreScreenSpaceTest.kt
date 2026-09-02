@@ -91,6 +91,7 @@ class MoreScreenSpaceTest {
                     onOpenRelatedPersons = {},
                     onOpenPreferences = {},
                     onOpenPrivateArea = {},
+                    onOpenDataExport = {},
                     onOpenNotifications = {},
                     onOpenSearch = {},
                     spaces = spaces,

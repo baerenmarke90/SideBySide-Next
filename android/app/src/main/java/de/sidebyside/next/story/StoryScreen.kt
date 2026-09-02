@@ -56,6 +56,8 @@ fun StoryScreen(
     /** Null where there is no more Story to load. */
     onLoadMore: (() -> Unit)? = null,
     loadingMore: Boolean = false,
+    /** Non-null only while [items] is a stale M2-D18 cache fallback. */
+    cachedAt: java.time.Instant? = null,
     header: (@Composable () -> Unit)? = null,
 ) {
     val days = items.toStoryDays()
@@ -68,6 +70,8 @@ fun StoryScreen(
         verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step6),
     ) {
         header?.let { item(key = "header") { it() } }
+
+        cachedAt?.let { item(key = "cached-banner") { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
         if (days.isEmpty()) {
             item(key = "empty") { StoryEmpty() }

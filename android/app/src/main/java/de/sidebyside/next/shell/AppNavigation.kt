@@ -41,6 +41,8 @@ fun AppNavigation(
      * defaults to never-secure so existing callers are unaffected.
      */
     secureWhen: (route: String?) -> Boolean = { false },
+    /** Forwarded to [AppShell] as-is; see there for what it is for. */
+    banner: (@Composable () -> Unit)? = null,
     destinationContent: @Composable (AppDestination) -> Unit,
 ) {
     require(destinations.isNotEmpty()) { "The shell needs at least one destination." }
@@ -58,6 +60,7 @@ fun AppNavigation(
             onSelectDestination = { destination ->
                 navController.navigateToPrimary(destination)
             },
+            banner = banner,
         ) {
             NavHost(
                 navController = navController,

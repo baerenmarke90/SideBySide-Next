@@ -1,5 +1,6 @@
 package de.sidebyside.next.reference
 
+import de.sidebyside.next.connectivity.ConnectivityTracker
 import de.sidebyside.next.demo.DemoPersona
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +32,11 @@ import sidebyside.api.models.CollectionItemDetail
 import sidebyside.api.models.CollectionItemUpdate
 import sidebyside.api.models.CollectionOrder
 import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.ChapterCreate
+import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.ChapterPage
+import sidebyside.api.models.ChapterContent
+import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
@@ -55,6 +61,9 @@ import sidebyside.api.models.RelatedPersonView
 import sidebyside.api.models.SearchPage
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
+import sidebyside.api.models.TransferExportCreate
+import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferScope
 import sidebyside.api.models.MemoryCreate
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
@@ -143,6 +152,13 @@ private const val EMPTY_JSON_BODY = "{}"
 class OkHttpReferenceApi(
     apiBaseUrl: String,
     private val client: OkHttpClient = OkHttpClient(),
+    /**
+     * `null` (every existing test's default) makes this class behave exactly
+     * as before. A real instance sees every request this class ever makes,
+     * since both [executeJson] and [executeEmpty] are this class's only two
+     * ways to reach the network.
+     */
+    private val connectivityTracker: ConnectivityTracker? = null,
 ) : ReferenceContract {
     private val baseUrl = apiBaseUrl.trimEnd('/')
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
@@ -1072,12 +1088,16 @@ class OkHttpReferenceApi(
     }
 
     private suspend fun <T> executeJson(request: Request, serializer: KSerializer<T>): T = withContext(Dispatchers.IO) {
-        client.newCall(request).execute().use { response ->
-            assertSuccessful(response)
-            val body = response.body.string()
-            if (body.isBlank()) throw ReferenceApiException(null, "Empty API response.")
-            SideBySideJson.decodeFromString(serializer, body)
-        }
+        runCatching {
+            client.newCall(request).execute().use { response ->
+                assertSuccessful(response)
+                val body = response.body.string()
+                if (body.isBlank()) throw ReferenceApiException(null, "Empty API response.")
+                SideBySideJson.decodeFromString(serializer, body)
+            }
+        }.onSuccess { connectivityTracker?.recordSuccess() }
+            .onFailure { connectivityTracker?.recordFailure(it) }
+            .getOrThrow()
     }
 
     override suspend fun listPlaces(
@@ -1579,8 +1599,142 @@ class OkHttpReferenceApi(
         CollectionDetail.serializer(),
     )
 
+    override suspend fun listChapters(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): ChapterPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/chapters?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        ChapterPage.serializer(),
+    )
+
+    override suspend fun createChapter(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ChapterCreate,
+    ): ChapterDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/chapters", accessToken)
+            .post(
+                SideBySideJson.encodeToString(ChapterCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ChapterDetail.serializer(),
+    )
+
+    override suspend fun updateChapter(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        ifMatch: Int,
+        fields: ChapterUpdate,
+    ): ChapterDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(ChapterUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ChapterDetail.serializer(),
+    )
+
+    override suspend fun deleteChapter(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
+
+    override suspend fun getChapterContent(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+    ): ChapterContent = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId/content",
+            accessToken,
+        ).get().build(),
+        ChapterContent.serializer(),
+    )
+
+    override suspend fun linkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId/${kind.segment}/$targetId",
+            accessToken,
+        ).put(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+    )
+
+    override suspend fun unlinkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId/${kind.segment}/$targetId",
+            accessToken,
+        ).delete().build(),
+    )
+
+    override suspend fun createTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        scope: TransferScope,
+    ): TransferExportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/exports", accessToken)
+            .post(
+                SideBySideJson.encodeToString(TransferExportCreate.serializer(), TransferExportCreate(scope))
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        TransferExportDetail.serializer(),
+    )
+
+    override suspend fun getTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+    ): TransferExportDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/transfer/exports/$exportId", accessToken)
+            .get()
+            .build(),
+        TransferExportDetail.serializer(),
+    )
+
+    override suspend fun downloadTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+        sink: java.io.OutputStream,
+    ) = withContext(Dispatchers.IO) {
+        val request = authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/transfer/exports/$exportId/download",
+            accessToken,
+        ).get().build()
+        client.newCall(request).execute().use { response ->
+            assertSuccessful(response)
+            response.body.byteStream().use { it.copyTo(sink) }
+            Unit
+        }
+    }
+
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {
-        client.newCall(request).execute().use(::assertSuccessful)
+        runCatching { client.newCall(request).execute().use(::assertSuccessful) }
+            .onSuccess { connectivityTracker?.recordSuccess() }
+            .onFailure { connectivityTracker?.recordFailure(it) }
+            .getOrThrow()
     }
 
     private fun assertSuccessful(response: Response) {

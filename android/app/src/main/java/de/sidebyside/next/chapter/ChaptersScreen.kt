@@ -1,4 +1,4 @@
-package de.sidebyside.next.privatearea
+package de.sidebyside.next.chapter
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,26 +34,26 @@ import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStatePanel
-import sidebyside.api.models.PrivateCollectionDetail
+import sidebyside.api.models.ChapterDetail
 
 private val ReadingMeasure: Dp = 560.dp
 
 /**
- * The account's own lists. Owner-only per #356; each card opens onto
- * [PrivateCollectionDetailScreen] for its items.
+ * The couple's shared Chapters — a curated span of their Story. Each card
+ * opens onto [ChapterContentScreen] for its content.
  */
 @Composable
-fun PrivateCollectionsScreen(
-    collections: List<PrivateCollectionDetail>,
+fun ChaptersScreen(
+    chapters: List<ChapterDetail>,
     busy: Boolean,
     problem: UiProblem?,
     onBack: () -> Unit,
-    onOpen: (PrivateCollectionDetail) -> Unit,
-    onAdd: (title: String, icon: String) -> Unit,
-    onEdit: (collection: PrivateCollectionDetail, title: String, icon: String) -> Unit,
-    onDelete: (PrivateCollectionDetail) -> Unit,
+    onOpen: (ChapterDetail) -> Unit,
+    onAdd: (title: String, description: String, startOn: String, endOn: String) -> Unit,
+    onEdit: (chapter: ChapterDetail, title: String, description: String, startOn: String, endOn: String) -> Unit,
+    onDelete: (ChapterDetail) -> Unit,
     modifier: Modifier = Modifier,
-    /** Non-null only while [collections] is a stale M2-D18 cache fallback. */
+    /** Non-null only while [chapters] is a stale M2-D18 cache fallback. */
     cachedAt: java.time.Instant? = null,
 ) {
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
@@ -73,13 +73,13 @@ fun PrivateCollectionsScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2)) {
                 Text(
-                    text = stringResource(R.string.private_collections_title),
+                    text = stringResource(R.string.chapters_title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontFamily = FrauncesFamily),
                     color = SideBySideTheme.colors.textPrimary,
                     modifier = Modifier.semantics { heading() },
                 )
                 Text(
-                    text = stringResource(R.string.private_collections_intro),
+                    text = stringResource(R.string.chapters_intro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = SideBySideTheme.colors.textSecondary,
                     modifier = Modifier.widthIn(max = ReadingMeasure),
@@ -96,8 +96,8 @@ fun PrivateCollectionsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding)) {
-                    PrivateCollectionForm(
-                        submitLabel = stringResource(R.string.private_collection_add),
+                    ChapterForm(
+                        submitLabel = stringResource(R.string.chapter_add),
                         busy = busy,
                         onSubmit = onAdd,
                     )
@@ -105,18 +105,18 @@ fun PrivateCollectionsScreen(
             }
         }
 
-        if (collections.isEmpty() && !busy) {
+        if (chapters.isEmpty() && !busy) {
             item {
                 Text(
-                    text = stringResource(R.string.private_collections_empty),
+                    text = stringResource(R.string.chapters_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = SideBySideTheme.colors.textSecondary,
                 )
             }
         }
 
-        items(count = collections.size, key = { index -> collections[index].id.toString() }) { index ->
-            val collection = collections[index]
+        items(count = chapters.size, key = { index -> chapters[index].id.toString() }) { index ->
+            val chapter = chapters[index]
             Surface(
                 shape = RoundedCornerShape(SideBySideTheme.radii.card),
                 color = SideBySideTheme.colors.surface,
@@ -127,37 +127,49 @@ fun PrivateCollectionsScreen(
                     verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2),
                 ) {
                     Text(
-                        text = collection.icon?.takeIf { it.isNotBlank() }?.let { "$it ${collection.title}" }
-                            ?: collection.title,
+                        text = chapter.title,
                         style = MaterialTheme.typography.titleMedium,
                         color = SideBySideTheme.colors.textPrimary,
                     )
+                    chapter.description?.takeIf { it.isNotBlank() }?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = SideBySideTheme.colors.textSecondary,
+                        )
+                    }
+                    val startOn = chapter.startOn
+                    val endOn = chapter.endOn
                     Text(
-                        text = stringResource(R.string.private_collection_item_count, collection.items.size),
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = if (startOn != null && endOn != null) {
+                            stringResource(R.string.chapter_period, startOn.toString(), endOn.toString())
+                        } else {
+                            stringResource(R.string.chapter_no_period)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
                         color = SideBySideTheme.colors.textSecondary,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
                         TextButton(
-                            onClick = { onOpen(collection) },
+                            onClick = { onOpen(chapter) },
                             enabled = !busy,
                             modifier = Modifier.heightIn(min = MinimumTouchTarget),
                         ) {
-                            Text(stringResource(R.string.private_collection_open))
+                            Text(stringResource(R.string.chapter_open))
                         }
                         TextButton(
-                            onClick = { editing = collection.id.toString() },
+                            onClick = { editing = chapter.id.toString() },
                             enabled = !busy,
                             modifier = Modifier.heightIn(min = MinimumTouchTarget),
                         ) {
-                            Text(stringResource(R.string.private_collection_edit))
+                            Text(stringResource(R.string.chapter_edit))
                         }
                         TextButton(
-                            onClick = { deleting = collection.id.toString() },
+                            onClick = { deleting = chapter.id.toString() },
                             enabled = !busy,
                             modifier = Modifier.heightIn(min = MinimumTouchTarget),
                         ) {
-                            Text(stringResource(R.string.private_collection_delete))
+                            Text(stringResource(R.string.chapter_delete))
                         }
                     }
                 }
@@ -166,43 +178,45 @@ fun PrivateCollectionsScreen(
     }
 
     editing?.let { id ->
-        val target = collections.firstOrNull { it.id.toString() == id }
+        val target = chapters.firstOrNull { it.id.toString() == id }
         if (target == null) {
             editing = null
             return@let
         }
         AlertDialog(
             onDismissRequest = { editing = null },
-            title = { Text(stringResource(R.string.private_collection_edit_title)) },
+            title = { Text(stringResource(R.string.chapter_edit_title)) },
             text = {
-                PrivateCollectionForm(
-                    submitLabel = stringResource(R.string.private_collection_save_changes),
+                ChapterForm(
+                    submitLabel = stringResource(R.string.chapter_save_changes),
                     busy = busy,
                     initialTitle = target.title,
-                    initialIcon = target.icon.orEmpty(),
-                    onSubmit = { title, icon ->
+                    initialDescription = target.description.orEmpty(),
+                    initialStartOn = target.startOn?.toString().orEmpty(),
+                    initialEndOn = target.endOn?.toString().orEmpty(),
+                    onSubmit = { title, description, startOn, endOn ->
                         editing = null
-                        onEdit(target, title, icon)
+                        onEdit(target, title, description, startOn, endOn)
                     },
                 )
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { editing = null }) { Text(stringResource(R.string.private_collection_cancel)) }
+                TextButton(onClick = { editing = null }) { Text(stringResource(R.string.chapter_cancel)) }
             },
         )
     }
 
     deleting?.let { id ->
-        val target = collections.firstOrNull { it.id.toString() == id }
+        val target = chapters.firstOrNull { it.id.toString() == id }
         if (target == null) {
             deleting = null
             return@let
         }
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text(stringResource(R.string.private_collection_delete_title, target.title)) },
-            text = { Text(stringResource(R.string.private_collection_delete_warning)) },
+            title = { Text(stringResource(R.string.chapter_delete_title, target.title)) },
+            text = { Text(stringResource(R.string.chapter_delete_warning)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -210,48 +224,69 @@ fun PrivateCollectionsScreen(
                         onDelete(target)
                     },
                 ) {
-                    Text(stringResource(R.string.private_collection_delete_confirm))
+                    Text(stringResource(R.string.chapter_delete_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.private_collection_cancel)) }
+                TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.chapter_cancel)) }
             },
         )
     }
 }
 
 @Composable
-private fun PrivateCollectionForm(
+private fun ChapterForm(
     submitLabel: String,
     busy: Boolean,
     initialTitle: String = "",
-    initialIcon: String = "",
-    onSubmit: (title: String, icon: String) -> Unit,
+    initialDescription: String = "",
+    initialStartOn: String = "",
+    initialEndOn: String = "",
+    onSubmit: (title: String, description: String, startOn: String, endOn: String) -> Unit,
 ) {
     var title by rememberSaveable { mutableStateOf(initialTitle) }
-    var icon by rememberSaveable { mutableStateOf(initialIcon) }
+    var description by rememberSaveable { mutableStateOf(initialDescription) }
+    var startOn by rememberSaveable { mutableStateOf(initialStartOn) }
+    var endOn by rememberSaveable { mutableStateOf(initialEndOn) }
 
     Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
         OutlinedTextField(
             value = title,
             onValueChange = { title = it.take(200) },
-            label = { Text(stringResource(R.string.private_collection_title_hint)) },
+            label = { Text(stringResource(R.string.chapter_title_hint)) },
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
         )
         OutlinedTextField(
-            value = icon,
-            onValueChange = { icon = it.take(8) },
-            label = { Text(stringResource(R.string.private_collection_icon_hint)) },
+            value = description,
+            onValueChange = { description = it },
+            label = { Text(stringResource(R.string.chapter_description_hint)) },
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = startOn,
+            onValueChange = { startOn = it },
+            label = { Text(stringResource(R.string.chapter_start_on_hint)) },
+            singleLine = true,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = endOn,
+            onValueChange = { endOn = it },
+            label = { Text(stringResource(R.string.chapter_end_on_hint)) },
             singleLine = true,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
         )
         Button(
             onClick = {
-                onSubmit(title, icon)
+                onSubmit(title, description, startOn, endOn)
                 title = ""
-                icon = ""
+                description = ""
+                startOn = ""
+                endOn = ""
             },
             enabled = !busy && title.isNotBlank(),
             modifier = Modifier.heightIn(min = MinimumTouchTarget),
