@@ -81,6 +81,10 @@ class InvitationTest {
         assertTrue(model.uiState.value.loggedIn)
         assertFalse(model.uiState.value.awaitingSpace)
         assertEquals(SPACE, model.uiState.value.activeSpaceId)
+        // #572: acceptance used to only set the never-rendered `status`
+        // field in the signed-in shell; this is what the account actually
+        // sees now.
+        assertEquals(R.string.invitation_accepted, model.uiState.value.snackbarMessage?.text?.resourceId)
     }
 
     @Test

@@ -111,6 +111,152 @@ class ProductReadCacheTest {
     }
 
     @Test
+    fun onA502FallsBackToTheCachedValue() = runTest {
+        cache.loadWithFallback(
+            accountId = account,
+            spaceId = space,
+            kind = ProductCacheKind.MEMORY,
+            resourceId = resource,
+            load = { "A day by the sea" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        val result = cache.loadWithFallback(
+            accountId = account,
+            spaceId = space,
+            kind = ProductCacheKind.MEMORY,
+            resourceId = resource,
+            load = { throw ReferenceApiException(code = null, message = "bad gateway", status = 502) },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        assertTrue(result.getOrThrow().fromCache)
+    }
+
+    @Test
+    fun onA504FallsBackToTheCachedValue() = runTest {
+        cache.loadWithFallback(
+            accountId = account,
+            spaceId = space,
+            kind = ProductCacheKind.MEMORY,
+            resourceId = resource,
+            load = { "A day by the sea" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        val result = cache.loadWithFallback(
+            accountId = account,
+            spaceId = space,
+            kind = ProductCacheKind.MEMORY,
+            resourceId = resource,
+            load = { throw ReferenceApiException(code = null, message = "gateway timeout", status = 504) },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        assertTrue(result.getOrThrow().fromCache)
+    }
+
+    /**
+     * The #328 "reconciled after reconnect" requirement, at the cache layer:
+     * a plain network-authoritative re-fetch already overwrites whatever was
+     * cached before, so content the server has since changed or removed can
+     * never keep being served from a stale row once a fresh read succeeds
+     * again. No separate reconciliation mechanism exists, or needs to.
+     */
+    @Test
+    fun aFreshSuccessAfterReconnectReplacesTheStaleCachedValue() = runTest {
+        cache.loadWithFallback(
+            accountId = account,
+            spaceId = space,
+            kind = ProductCacheKind.MEMORY,
+            resourceId = resource,
+            load = { "A day by the sea" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        val refreshed = cache.loadWithFallback(
+            accountId = account,
+            spaceId = space,
+            kind = ProductCacheKind.MEMORY,
+            resourceId = resource,
+            load = { "A day by the sea, now with a title" },
+            serialize = { it },
+            deserialize = { it },
+        )
+        assertEquals("A day by the sea, now with a title", refreshed.getOrThrow().value)
+
+        val offlineFallback = cache.loadWithFallback(
+            accountId = account,
+            spaceId = space,
+            kind = ProductCacheKind.MEMORY,
+            resourceId = resource,
+            load = { throw IOException("offline") },
+            serialize = { it },
+            deserialize = { it },
+        )
+        assertEquals("A day by the sea, now with a title", offlineFallback.getOrThrow().value)
+    }
+
+    /**
+     * The in-memory database every other test here uses proves the fallback
+     * *decision*, but its storage dies with the JVM the same way a plain
+     * in-memory map would — it cannot prove data survives a real process
+     * death. A cold start reopens the same on-disk file in a brand-new
+     * `RoomDatabase` instance, which this test does explicitly rather than
+     * relying on construction alone (per M2-D18/#328 acceptance item 13).
+     */
+    @Test
+    fun aFileBackedDatabaseSurvivesBeingClosedAndReopenedInANewInstance() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val dbName = "process-death-test-${UUID.randomUUID()}.db"
+
+        val firstProcess = Room.databaseBuilder(context, ReadCacheDatabase::class.java, dbName)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            ProductReadCache(firstProcess.productCacheDao(), firstProcess.cacheContextDao()).loadWithFallback(
+                accountId = account,
+                spaceId = space,
+                kind = ProductCacheKind.MEMORY,
+                resourceId = resource,
+                load = { "A day by the sea" },
+                serialize = { it },
+                deserialize = { it },
+            )
+        } finally {
+            firstProcess.close()
+        }
+
+        val secondProcess = Room.databaseBuilder(context, ReadCacheDatabase::class.java, dbName)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val result = ProductReadCache(secondProcess.productCacheDao(), secondProcess.cacheContextDao())
+                .loadWithFallback(
+                    accountId = account,
+                    spaceId = space,
+                    kind = ProductCacheKind.MEMORY,
+                    resourceId = resource,
+                    load = { throw IOException("offline after restart") },
+                    serialize = { it },
+                    deserialize = { it },
+                )
+
+            assertTrue(result.isSuccess)
+            assertTrue(result.getOrThrow().fromCache)
+            assertEquals("A day by the sea", result.getOrThrow().value)
+        } finally {
+            secondProcess.close()
+            context.deleteDatabase(dbName)
+        }
+    }
+
+    @Test
     fun aPlain500NeverFallsBackToTheCache() = runTest {
         cache.loadWithFallback(
             accountId = account,

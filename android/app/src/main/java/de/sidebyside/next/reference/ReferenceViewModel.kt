@@ -104,6 +104,12 @@ data class UiMessage(
     val args: List<Any> = emptyList(),
 )
 
+/** See [ReferenceUiState.snackbarMessage]. */
+data class SnackbarMessage(
+    val id: Long,
+    val text: UiMessage,
+)
+
 enum class DraftUploadState {
     UPLOADING,
     VALIDATING,
@@ -193,6 +199,18 @@ data class ReferenceUiState(
     val profile: ProfileUiState = ProfileUiState(),
     val busy: Boolean = false,
     val status: UiMessage? = null,
+    /**
+     * A one-shot Snackbar event (docs/COMPONENT-CONTRACTS.md §9.2), distinct
+     * from [status]: [status] is a persistent inline message the M2/G2
+     * reference flow still renders in place, but nothing in the signed-in
+     * shell ever reads it, so it cannot serve a transient confirmation. This
+     * carries an [SnackbarMessage.id] precisely so the same text posted
+     * twice in a row is still shown twice — a plain nullable [UiMessage]
+     * would not survive an unchanged value being set again, since a
+     * `LaunchedEffect` keyed on it would see no change to react to. Cleared
+     * by [snackbarShown] once the shell has actually displayed it.
+     */
+    val snackbarMessage: SnackbarMessage? = null,
     val error: UiMessage? = null,
     val draftImages: List<DraftImageUiItem> = emptyList(),
     val lastMemoryTitle: String? = null,
@@ -422,6 +440,7 @@ class ReferenceViewModel(
     /** Kept across a failed attempt so a retry is the same gesture, not a second one. */
     private var pendingGestureId: java.util.UUID? = null
     private var nextAttemptId: Long = 1
+    private var nextSnackbarId: Long = 1
 
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
     val uiState: StateFlow<ReferenceUiState> = _uiState.asStateFlow()
@@ -431,14 +450,15 @@ class ReferenceViewModel(
         connectivityTracker?.let { tracker ->
             viewModelScope.launch {
                 tracker.state.collect { connectivity ->
+                    val cameBackOnline = _uiState.value.offline && !connectivity.offline
                     mutate {
-                        val cameBackOnline = it.offline && !connectivity.offline
                         it.copy(
                             offline = connectivity.offline,
                             lastSyncedAt = connectivity.lastSyncedAt,
                             reconnectEpoch = if (cameBackOnline) it.reconnectEpoch + 1 else it.reconnectEpoch,
                         )
                     }
+                    if (cameBackOnline) reconcileMembership()
                 }
             }
         }
@@ -738,6 +758,41 @@ class ReferenceViewModel(
         // chose anything.
         state.accountId?.let { spaceStore.rememberSpace(it, spaceId) }
 
+        clearSpaceBoundState()
+        activeSpaceId = spaceId
+        imageDrafts = emptyList()
+        mutate {
+            it.copy(
+                activeSpaceId = spaceId,
+                profile = ProfileUiState(),
+                busy = false,
+                error = null,
+                draftImages = emptyList(),
+                lastMemoryTitle = null,
+                lastMemoryBody = null,
+                lastImageBytes = null,
+                storyItems = emptyList(),
+                storyCachedAt = null,
+            )
+        }
+        postSnackbar(R.string.space_switched)
+        refreshStory()
+    }
+
+    private fun activeMemberships(
+        memberships: List<AccountMembershipView>,
+    ): List<AccountMembershipView> =
+        memberships.filter { it.status.equals("ACTIVE", ignoreCase = true) }
+
+    /**
+     * Everything bound to the outgoing Space — draft, loaded Story, pending
+     * upload, cache — belongs to the Space it was made in and must not
+     * survive into a different one. Shared by [selectSpace] and
+     * [reconcileMembership]'s "no active Space left" branch: losing the
+     * last membership is the same kind of identity/relationship transition
+     * M2-D18 requires clearing for.
+     */
+    private fun clearSpaceBoundState() {
         sessionEpoch += 1
         storyImages.reset()
         clearHeartMoments()
@@ -762,30 +817,67 @@ class ReferenceViewModel(
         clearChapterContent()
         clearProductReadCache()
         closeStoryItem()
-        activeSpaceId = spaceId
-        imageDrafts = emptyList()
-        mutate {
-            it.copy(
-                activeSpaceId = spaceId,
-                profile = ProfileUiState(),
-                busy = false,
-                error = null,
-                status = message(R.string.space_switched),
-                draftImages = emptyList(),
-                lastMemoryTitle = null,
-                lastMemoryBody = null,
-                lastImageBytes = null,
-                storyItems = emptyList(),
-                storyCachedAt = null,
-            )
-        }
-        refreshStory()
     }
 
-    private fun activeMemberships(
-        memberships: List<AccountMembershipView>,
-    ): List<AccountMembershipView> =
-        memberships.filter { it.status.equals("ACTIVE", ignoreCase = true) }
+    /**
+     * The proactive half of #328's "membership/authorization changes are
+     * reconciled after reconnect": once per genuine offline-to-online
+     * transition (see [reconnectEpoch]), re-lists memberships and reacts if
+     * the currently active Space is no longer one of them.
+     *
+     * A revoked membership is the exact same situation sign-in itself
+     * already handles when an account has no active Space yet — this reuses
+     * [awaitingSpace][ReferenceUiState.awaitingSpace] and [selectSpace]
+     * rather than inventing a third state. If another active Space still
+     * exists, switches to it the same way a manual choice would. Only when
+     * none remains does the account fall back to `awaitingSpace`, matching
+     * sign-in's own transition field-for-field.
+     *
+     * A failure here — still offline enough for this specific call, or the
+     * whole session having become invalid — is swallowed. This is a
+     * proactive extra, not the only place a revoked membership eventually
+     * surfaces: every screen's own reconnect refresh already gets the same
+     * 401/403 the normal way regardless of whether this succeeds.
+     */
+    private fun reconcileMembership() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val currentActiveSpaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            val memberships = runCatching { api.listMemberships(currentSession.tokens.accessToken) }
+                .getOrNull() ?: return@launch
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+
+            val active = activeMemberships(memberships)
+            mutate { it.copy(availableSpaces = active) }
+            if (active.any { it.spaceId == currentActiveSpaceId }) return@launch
+
+            val nextSpace = activeSpaceOf(memberships, _uiState.value.accountId)
+            if (nextSpace != null) {
+                selectSpace(nextSpace)
+                return@launch
+            }
+
+            clearSpaceBoundState()
+            activeSpaceId = null
+            mutate {
+                it.copy(
+                    loggedIn = false,
+                    awaitingSpace = true,
+                    activeSpaceId = null,
+                    availableSpaces = emptyList(),
+                    spacePartnerNames = emptyMap(),
+                    profile = ProfileUiState(),
+                    busy = false,
+                    error = null,
+                    status = null,
+                )
+            }
+        }
+    }
 
     private fun apiFor(baseUrl: String): ReferenceContract? =
         injectedApi ?: baseUrl.takeIf(String::isNotBlank)?.let(apiFactory)
@@ -1088,9 +1180,9 @@ class ReferenceViewModel(
                             openMemory = null,
                             memoryBusy = false,
                             openMemoryGone = true,
-                            status = message(R.string.memory_deleted),
                         )
                     }
+                    postSnackbar(R.string.memory_deleted)
                     refreshStory()
                 }
                 .onFailure { throwable ->
@@ -1868,9 +1960,9 @@ class ReferenceViewModel(
                             activeSpaceId = space,
                             invitationBusy = false,
                             invitationProblem = null,
-                            status = message(R.string.invitation_accepted),
                         )
                     }
+                    postSnackbar(R.string.invitation_accepted)
                     refreshStory()
                 }
                 .onFailure { throwable ->
@@ -4895,4 +4987,17 @@ class ReferenceViewModel(
 
     private fun message(resourceId: Int, vararg args: Any): UiMessage =
         UiMessage(resourceId = resourceId, args = args.toList())
+
+    private fun postSnackbar(resourceId: Int, vararg args: Any) {
+        mutate { it.copy(snackbarMessage = SnackbarMessage(nextSnackbarId++, message(resourceId, *args))) }
+    }
+
+    /**
+     * Clears a shown Snackbar event, guarded by [id] so a late clear can
+     * never wipe a newer message posted in between — the shell calls this
+     * once it has actually displayed [ReferenceUiState.snackbarMessage].
+     */
+    fun snackbarShown(id: Long) {
+        mutate { if (it.snackbarMessage?.id == id) it.copy(snackbarMessage = null) else it }
+    }
 }
