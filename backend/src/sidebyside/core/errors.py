@@ -103,6 +103,14 @@ class ServiceUnavailableError(DomainError):
     title = "Service unavailable"
 
 
+class PremiumEntitlementRequiredError(ForbiddenError):
+    def __init__(self, capability: str) -> None:
+        super().__init__(
+            detail=f"This operation requires the '{capability}' commercial capability.",
+            code=ErrorCode.PREMIUM_ENTITLEMENT_REQUIRED,
+        )
+
+
 class ErrorCode:
     """Stable error codes.
 
@@ -121,6 +129,7 @@ class ErrorCode:
     IF_MATCH_MALFORMED = "IF_MATCH_MALFORMED"
     REGISTRATION_DISABLED = "REGISTRATION_DISABLED"
     MAINTENANCE_MODE = "MAINTENANCE_MODE"
+    PREMIUM_ENTITLEMENT_REQUIRED = "PREMIUM_ENTITLEMENT_REQUIRED"
     ATTACHMENT_TYPE_NOT_ALLOWED = "ATTACHMENT_TYPE_NOT_ALLOWED"
     ATTACHMENT_TOO_LARGE = "ATTACHMENT_TOO_LARGE"
     ATTACHMENT_VALIDATION_FAILED = "ATTACHMENT_VALIDATION_FAILED"
