@@ -106,6 +106,11 @@ def upgrade() -> None:
             "tier IN ('FREE', 'PREMIUM')",
             name="entitlement_tier_valid",
         ),
+        sa.UniqueConstraint(
+            "source_type",
+            "external_reference",
+            name="uq_entitlement_grants_source_reference",
+        ),
     )
     op.create_index(
         "ix_entitlement_grants_space_id",
