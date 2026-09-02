@@ -1,0 +1,626 @@
+/* Issue #595: post-merge relationship-first polish.
+ *
+ * This layer deliberately overrides the established shell/product styles
+ * without introducing a second component system. Domain routes, data and
+ * interaction contracts remain owned by their existing components.
+ */
+
+/* -------------------------------------------------------------------------
+ * Global QuickCreate / "+ Neu festhalten"
+ * ---------------------------------------------------------------------- */
+.quick-create-trigger {
+  min-height: 52px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3);
+  border: 1px solid var(--color-brand-glow);
+  border-radius: var(--radius-large);
+  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-raised),
+    var(--color-brand-surface)
+  );
+  color: var(--color-brand-text);
+  box-shadow:
+    0 12px 30px var(--color-shadow-brand),
+    inset 0 1px 0 var(--color-surface-raised);
+  font-weight: 800;
+}
+
+.quick-create-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 34px var(--color-shadow-brand),
+    inset 0 1px 0 var(--color-surface-raised);
+}
+
+.quick-create-trigger-chevron {
+  margin-left: auto;
+  color: var(--color-brand);
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.quick-create-menu-expanded {
+  width: min(44rem, calc(100vw - 3rem));
+  min-width: 34rem;
+  gap: var(--space-3);
+  border-color: var(--color-brand-glow);
+  border-radius: var(--radius-large);
+  padding: var(--space-4);
+  background: linear-gradient(
+    145deg,
+    var(--color-surface-overlay),
+    var(--color-surface-raised)
+  );
+  box-shadow:
+    0 28px 70px var(--color-shadow-soft),
+    inset 0 1px 0 var(--color-surface-raised);
+  backdrop-filter: blur(18px);
+}
+
+.quick-create-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.quick-create-tile {
+  min-width: 0;
+  min-height: 8.75rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  padding: var(--space-4) var(--space-3);
+  background: linear-gradient(
+    150deg,
+    var(--color-surface-raised),
+    var(--color-surface-overlay)
+  );
+  box-shadow:
+    0 10px 24px var(--color-shadow-soft),
+    inset 0 1px 0 var(--color-surface-raised);
+  text-align: center;
+  transition:
+    transform var(--motion-duration-medium) var(--motion-easing-lift),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-duration-medium) var(--motion-easing-lift);
+}
+
+.quick-create-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--color-brand-glow);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+.quick-create-tile-icon {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-brand);
+  box-shadow: inset 0 1px 0 var(--color-surface-raised);
+}
+
+.quick-create-tile-icon svg {
+  width: 1.65rem;
+  height: 1.65rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.quick-create-tone-lavender {
+  background: var(--color-brand-surface);
+}
+
+.quick-create-tone-blush {
+  background: var(--color-private-surface-soft);
+  color: var(--color-private);
+}
+
+.quick-create-tone-mint {
+  background: var(--color-shared-surface);
+  color: var(--color-shared);
+}
+
+.quick-create-tone-gold,
+.quick-create-tone-sand {
+  background: var(--color-discovery-surface-soft);
+  color: var(--color-text);
+}
+
+.quick-create-tile-label {
+  max-width: 100%;
+  color: var(--color-text);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------------------
+ * Planning: recognisable create affordance + rail geometry
+ * ---------------------------------------------------------------------- */
+.future-map {
+  --future-map-gutter: 3rem;
+  --future-map-rail-center: 1.5rem;
+  padding-left: var(--future-map-gutter);
+}
+
+.future-map-path {
+  left: calc(var(--future-map-rail-center) - 1px);
+  width: 2px;
+}
+
+.future-map-marker {
+  top: var(--space-2);
+  left: calc(
+    var(--future-map-rail-center) - var(--future-map-gutter) - 10px
+  );
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 4px solid var(--color-surface-raised);
+  background: var(--color-brand);
+  box-shadow:
+    0 0 0 3px var(--color-brand-glow),
+    0 4px 12px var(--color-shadow-soft);
+}
+
+.future-map-stop-someday .future-map-marker,
+.future-map-stop-others .future-map-marker {
+  border-width: 4px;
+}
+
+.future-map-stop-someday .future-map-marker {
+  border-color: var(--color-surface-raised);
+  background: var(--color-private);
+}
+
+.future-map-stop-others .future-map-marker {
+  border-color: var(--color-surface-raised);
+  background: var(--color-text-muted);
+}
+
+.future-map-content > .planning-create {
+  margin-top: var(--space-4);
+}
+
+.planning-create summary {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-brand-glow);
+  border-radius: var(--radius-large);
+  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-raised),
+    var(--color-brand-surface)
+  );
+  color: var(--color-brand-text);
+  box-shadow: 0 8px 20px var(--color-shadow-soft);
+  font-weight: 800;
+  list-style: none;
+}
+
+.planning-create summary::-webkit-details-marker {
+  display: none;
+}
+
+.planning-create summary::before {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-brand-surface);
+  color: var(--color-brand);
+  content: "+";
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.planning-create[open] summary::before {
+  content: "−";
+}
+
+/* -------------------------------------------------------------------------
+ * Today: less static cards without inventing media that the Dashboard DTO
+ * does not expose. Real media remains projection-driven.
+ * ---------------------------------------------------------------------- */
+.today-stream {
+  gap: var(--space-5);
+  padding-bottom: var(--space-4);
+}
+
+.today-card-link {
+  flex-basis: 310px;
+  border-radius: var(--radius-large);
+  color: inherit;
+}
+
+.today-card-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 4px;
+}
+
+.today-card {
+  isolation: isolate;
+  min-height: 220px;
+  height: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  padding: var(--space-5);
+  background: linear-gradient(
+    145deg,
+    var(--color-surface-raised),
+    var(--color-surface-overlay)
+  );
+  box-shadow:
+    0 18px 42px var(--color-shadow-soft),
+    inset 0 1px 0 var(--color-surface-raised);
+  transition:
+    transform var(--motion-duration-medium) var(--motion-easing-lift),
+    box-shadow var(--motion-duration-medium) var(--motion-easing-lift);
+}
+
+.today-card::before {
+  position: absolute;
+  z-index: -2;
+  top: -28%;
+  right: -20%;
+  width: 72%;
+  aspect-ratio: 1;
+  border-radius: 44% 56% 63% 37% / 48% 38% 62% 52%;
+  background: var(--color-brand-surface);
+  opacity: 0.7;
+  filter: blur(2px);
+  content: "";
+  transform: rotate(18deg);
+}
+
+.today-card::after {
+  position: absolute;
+  z-index: -1;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    130deg,
+    transparent 30%,
+    var(--color-surface-overlay) 68%,
+    transparent 100%
+  );
+  opacity: 0.45;
+  content: "";
+  pointer-events: none;
+}
+
+.today-card:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 24px 54px var(--color-shadow-soft),
+    inset 0 1px 0 var(--color-surface-raised);
+}
+
+.today-card-content {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.today-card-kind {
+  align-self: flex-start;
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--color-brand-glow);
+  border-radius: var(--radius-pill);
+  padding: 0.3rem 0.65rem;
+  background: var(--color-surface-overlay);
+  backdrop-filter: blur(10px);
+}
+
+.today-card-title {
+  max-width: 18ch;
+  margin: 0;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.today-card-date {
+  margin-top: auto;
+  padding-top: var(--space-5);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.today-card-important_date::before,
+.today-card-birthday::before,
+.today-card-anniversary::before {
+  background: var(--color-discovery-surface-soft);
+}
+
+.today-card-heart_moment::before {
+  background: var(--color-private-surface-soft);
+}
+
+.today-card-plan::before,
+.today-card-place::before,
+.today-card-collection::before {
+  background: var(--color-shared-surface);
+}
+
+.today-card-memory,
+.today-card-heart_moment,
+.today-card-milestone,
+.today-card-plan,
+.today-card-wish,
+.today-card-place {
+  min-height: 220px;
+  border-radius: var(--radius-large);
+  padding: var(--space-5);
+  background: linear-gradient(
+    145deg,
+    var(--color-surface-raised),
+    var(--color-surface-overlay)
+  );
+}
+
+.today-card-heart_moment {
+  border-color: var(--color-border-subtle);
+}
+
+/* -------------------------------------------------------------------------
+ * Story: corrected rail, full-card navigation and better card proportions.
+ * ---------------------------------------------------------------------- */
+.story-timeline {
+  max-width: 860px;
+  gap: var(--space-10);
+}
+
+.story-month {
+  --story-rail-gutter: 3.5rem;
+  --story-rail-center: 1rem;
+  padding-left: var(--story-rail-gutter);
+}
+
+.story-month::before {
+  left: calc(var(--story-rail-center) - 1px);
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--color-brand-glow),
+    var(--color-border-subtle)
+  );
+}
+
+.month-heading {
+  min-height: 2rem;
+  margin-bottom: var(--space-5);
+}
+
+.month-dot {
+  left: calc(var(--story-rail-center) - var(--story-rail-gutter) - 12px);
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border: 4px solid var(--color-brand);
+  background: var(--color-surface-raised);
+  box-shadow:
+    0 0 0 5px var(--color-background),
+    0 4px 14px var(--color-shadow-brand);
+}
+
+.story-card-link {
+  display: block;
+  border-radius: var(--radius-large);
+  color: inherit;
+  text-decoration: none;
+}
+
+.story-card-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 4px;
+}
+
+.story-card {
+  isolation: isolate;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  padding: var(--space-5) var(--space-6);
+  background: linear-gradient(
+    145deg,
+    var(--color-surface-raised),
+    var(--color-surface-overlay)
+  );
+  box-shadow:
+    0 16px 38px var(--color-shadow-soft),
+    inset 0 1px 0 var(--color-surface-raised);
+}
+
+.story-card::after {
+  position: absolute;
+  z-index: -1;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    120deg,
+    transparent 25%,
+    var(--color-surface-overlay) 68%,
+    transparent
+  );
+  opacity: 0.35;
+  content: "";
+  pointer-events: none;
+}
+
+.story-card-link:hover .story-card {
+  transform: translateY(-3px);
+  border-color: var(--color-brand-glow);
+  box-shadow: var(--shadow-card);
+}
+
+.story-card-meta {
+  margin-bottom: var(--space-4);
+}
+
+.story-card-meta time {
+  margin-left: auto;
+}
+
+.story-card h4 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.story-card-footer {
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+}
+
+.story-card-milestone {
+  border-color: var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  background: linear-gradient(
+    135deg,
+    var(--color-discovery-surface-soft),
+    var(--color-surface-raised) 58%,
+    var(--color-surface-overlay)
+  );
+  text-align: left;
+}
+
+.story-card-heart-moment {
+  border-color: transparent;
+  border-radius: var(--radius-large);
+  background: linear-gradient(
+    135deg,
+    var(--color-private-surface-soft),
+    var(--color-surface-raised) 62%,
+    var(--color-surface-overlay)
+  );
+  text-align: left;
+}
+
+.story-card-heart-moment .story-card-meta {
+  justify-content: flex-start;
+}
+
+.story-card-heart-moment h4 {
+  color: var(--color-brand-strong);
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+}
+
+.story-card-memory.has-image {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.story-card-memory.has-image .story-card-meta,
+.story-card-memory.has-image h4,
+.story-card-memory.has-image .story-preview,
+.story-card-memory.has-image .story-card-footer {
+  margin-right: var(--space-2);
+  margin-left: var(--space-2);
+  padding: 0;
+}
+
+.story-card-memory.has-image .story-card-meta {
+  margin-top: var(--space-1);
+  margin-bottom: 0;
+}
+
+.story-card-memory.has-image .story-card-footer {
+  margin-top: 0;
+  margin-bottom: var(--space-1);
+  padding-top: var(--space-4);
+}
+
+.story-card-memory.has-image .story-media-preview,
+.story-card-memory.has-image .story-media-skeleton,
+.story-card-memory.has-image .story-media-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0;
+  border-radius: calc(var(--radius-large) - var(--space-2));
+  object-fit: cover;
+}
+
+@media (max-width: 1100px) {
+  .quick-create-menu-expanded {
+    width: min(36rem, calc(100vw - 2rem));
+    min-width: 32rem;
+  }
+
+  .quick-create-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-create-tile {
+    min-height: 7.5rem;
+  }
+}
+
+@media (max-width: 599px) {
+  .future-map {
+    --future-map-gutter: 2.25rem;
+    --future-map-rail-center: 1.125rem;
+  }
+
+  .story-month {
+    --story-rail-gutter: 2.75rem;
+    --story-rail-center: 0.875rem;
+  }
+
+  .month-heading h3 {
+    font-size: 1.3rem;
+  }
+
+  .story-card {
+    padding: var(--space-4);
+  }
+
+  .story-card-meta time {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .story-card-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .today-card-link {
+    flex-basis: min(82vw, 300px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-create-trigger,
+  .quick-create-tile,
+  .today-card,
+  .story-card {
+    transition: none;
+  }
+
+  .quick-create-trigger:hover,
+  .quick-create-tile:hover,
+  .today-card:hover,
+  .story-card-link:hover .story-card {
+    transform: none;
+  }
+}
