@@ -134,11 +134,18 @@ export function AppShell({
       <header className="app-header product-topbar">
         <Brand to={DEFAULT_APP_ROUTE} ariaLabel={t('brand.homeAria')} />
         <div className="header-actions">
-          <span className={`shared-context ${isPrivateArea ? 'private-context' : ''}`}>
+          <span
+            className={`shared-context ${isPrivateArea ? 'private-context' : ''}`}
+          >
             {isPrivateArea ? (
-              <><span aria-hidden="true">🔒</span> {t('privateArea.privacyLabel', 'Nur für mich')}</>
+              <>
+                <span aria-hidden="true">🔒</span>{' '}
+                {t('privateArea.privacyLabel')}
+              </>
             ) : (
-              <><span aria-hidden="true">♥</span> {t('header.sharedArea')}</>
+              <>
+                <span aria-hidden="true">♥</span> {t('header.sharedArea')}
+              </>
             )}
           </span>
           <NavLink
