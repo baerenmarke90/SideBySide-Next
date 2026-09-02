@@ -375,9 +375,7 @@ def _space_aggregate_subquery() -> Any:
                     else_=0,
                 )
             ).label("removed_membership_count"),
-            func.min(func.coalesce(Membership.joined_at, Membership.created_at)).label(
-                "first_membership_at"
-            ),
+            func.min(Membership.created_at).label("first_membership_at"),
             func.max(
                 func.coalesce(
                     Membership.ended_at,
@@ -714,7 +712,9 @@ def list_server_admin_spaces(
     )
     if conditions:
         statement = statement.where(*conditions)
-    statement = statement.order_by(Space.created_at.desc()).limit(limit).offset(offset)
+    statement = (
+        statement.order_by(Space.created_at.desc(), Space.id.desc()).limit(limit).offset(offset)
+    )
     rows = session.execute(statement).all()
     return ServerAdminSpaceList(
         items=[_space_summary_from_row(row) for row in rows],
