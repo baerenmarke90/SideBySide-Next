@@ -561,4 +561,29 @@
     <string name="search_result_kind_private_collection">Private Liste</string>
     <string name="search_result_kind_private_collection_item">Eintrag in privater Liste</string>
     <string name="search_result_untitled">Ohne Titel</string>
+
+    <string name="collections_open">Listen verwalten</string>
+    <string name="collections_title">Listen</string>
+    <string name="collections_intro">Gemeinsame Listen, die ihr beide sehen und bearbeiten könnt.</string>
+    <string name="collections_empty">Noch keine gemeinsamen Listen.</string>
+    <string name="collection_add">Liste hinzufügen</string>
+    <string name="collection_title_hint">Titel</string>
+    <string name="collection_icon_hint">Symbol (optional)</string>
+    <string name="collection_open">Öffnen</string>
+    <string name="collection_edit">Bearbeiten</string>
+    <string name="collection_edit_title">Liste bearbeiten</string>
+    <string name="collection_delete">Löschen</string>
+    <string name="collection_delete_title">%1$s löschen?</string>
+    <string name="collection_delete_warning">Diese Liste und alle ihre Einträge werden endgültig gelöscht.</string>
+    <string name="collection_delete_confirm">Endgültig löschen</string>
+    <string name="collection_cancel">Abbrechen</string>
+    <string name="collection_save_changes">Änderungen speichern</string>
+    <string name="collection_item_count">%1$d Einträge</string>
+
+    <string name="collection_item_add">Eintrag hinzufügen</string>
+    <string name="collection_item_title_hint">Titel</string>
+    <string name="collection_item_delete">Löschen</string>
+    <string name="collection_item_move_up">Nach oben</string>
+    <string name="collection_item_move_down">Nach unten</string>
+    <string name="collection_items_empty">Noch keine Einträge in dieser Liste.</string>
 </resources>

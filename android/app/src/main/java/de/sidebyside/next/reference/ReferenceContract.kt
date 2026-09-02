@@ -10,6 +10,13 @@ import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentPage
+import sidebyside.api.models.CollectionCreate
+import sidebyside.api.models.CollectionDetail
+import sidebyside.api.models.CollectionItemCreate
+import sidebyside.api.models.CollectionItemDetail
+import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartMomentCreate
@@ -742,6 +749,53 @@ interface ReferenceContract {
 
     /** Searches shared Space content plus the caller's own private content. */
     suspend fun search(spaceId: UUID, accessToken: String, query: String, cursor: String? = null): SearchPage
+
+    suspend fun listCollections(spaceId: UUID, accessToken: String, cursor: String? = null): CollectionPage
+
+    suspend fun createCollection(spaceId: UUID, accessToken: String, fields: CollectionCreate): CollectionDetail
+
+    suspend fun updateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: CollectionUpdate,
+    ): CollectionDetail
+
+    suspend fun deleteCollection(spaceId: UUID, accessToken: String, collectionId: UUID, ifMatch: Int)
+
+    suspend fun createCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: CollectionItemCreate,
+    ): CollectionItemDetail
+
+    suspend fun updateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: CollectionItemUpdate,
+    ): CollectionItemDetail
+
+    suspend fun deleteCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    )
+
+    /** Same exact-set contract as [reorderPrivateCollectionItems]. */
+    suspend fun reorderCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): CollectionDetail
 }
 
 private fun unsupportedProfileOperation(): Nothing =

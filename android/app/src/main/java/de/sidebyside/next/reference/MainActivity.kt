@@ -57,6 +57,8 @@ import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.collection.CollectionDetailScreen
+import de.sidebyside.next.collection.CollectionsScreen
 import de.sidebyside.next.place.PlaceRelationsScreen
 import de.sidebyside.next.place.PlacesScreen
 import de.sidebyside.next.notifications.NotificationsScreen
@@ -680,6 +682,50 @@ private fun DemoShell(
                 )
             }
 
+            composable(COLLECTIONS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadCollections() }
+
+                CollectionsScreen(
+                    collections = state.collections,
+                    busy = state.collectionsBusy,
+                    problem = state.collectionsProblem,
+                    onBack = { controller.popBackStack() },
+                    onOpen = { collection ->
+                        controller.navigate("planning/collections/${collection.id}")
+                    },
+                    onAdd = viewModel::addCollection,
+                    onEdit = viewModel::updateCollection,
+                    onDelete = viewModel::deleteCollection,
+                )
+            }
+
+            composable(
+                route = COLLECTION_DETAIL_ROUTE,
+                arguments = listOf(navArgument(COLLECTION_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val collectionId = entry.arguments?.getString(COLLECTION_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val collection = state.collections.firstOrNull { it.id == collectionId }
+
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadCollections() }
+
+                CollectionDetailScreen(
+                    collection = collection,
+                    busy = state.collectionsBusy,
+                    problem = state.collectionsProblem,
+                    onBack = { controller.popBackStack() },
+                    onAddItem = { title -> collection?.let { viewModel.addCollectionItem(it, title) } },
+                    onToggleCompleted = { item ->
+                        collection?.let { viewModel.toggleCollectionItemCompleted(it, item) }
+                    },
+                    onDeleteItem = { item ->
+                        collection?.let { viewModel.deleteCollectionItem(it, item) }
+                    },
+                    onMoveUp = { item -> collection?.let { viewModel.moveCollectionItemUp(it, item) } },
+                    onMoveDown = { item -> collection?.let { viewModel.moveCollectionItemDown(it, item) } },
+                )
+            }
+
             composable(PRIVATE_AREA_ROUTE) {
                 PrivateAreaScreen(
                     onBack = { controller.popBackStack() },
@@ -836,6 +882,7 @@ private fun DemoShell(
                     onReturnToWish = viewModel::returnPlanToWish,
                     onDeletePlan = viewModel::deletePlan,
                     onOpenPlaces = { navController.navigate(PLACES_ROUTE) },
+                    onOpenCollections = { navController.navigate(COLLECTIONS_ROUTE) },
                 )
             }
 
@@ -908,12 +955,15 @@ private const val PLACES_ROUTE = "planning/places"
 private const val PLACE_ID_ARGUMENT = "placeId"
 private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/relations"
 
+private const val COLLECTIONS_ROUTE = "planning/collections"
+
 private const val PRIVATE_AREA_ROUTE = "more/private"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
 private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
 private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"
 private const val COLLECTION_ID_ARGUMENT = "collectionId"
 private const val PRIVATE_COLLECTION_DETAIL_ROUTE = "more/private/collections/{$COLLECTION_ID_ARGUMENT}"
+private const val COLLECTION_DETAIL_ROUTE = "planning/collections/{$COLLECTION_ID_ARGUMENT}"
 
 /** Matches the Web path from `web/src/client/routes.ts` (`MORE_NOTIFICATIONS_ROUTE`). */
 private const val NOTIFICATIONS_ROUTE = "more/notifications"

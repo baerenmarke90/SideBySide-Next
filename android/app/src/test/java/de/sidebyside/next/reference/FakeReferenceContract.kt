@@ -10,6 +10,13 @@ import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentPage
+import sidebyside.api.models.CollectionCreate
+import sidebyside.api.models.CollectionDetail
+import sidebyside.api.models.CollectionItemCreate
+import sidebyside.api.models.CollectionItemDetail
+import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartMomentCreate
@@ -662,6 +669,65 @@ abstract class FakeReferenceContract : ReferenceContract {
         query: String,
         cursor: String?,
     ): SearchPage = notExercised("search")
+
+    override suspend fun listCollections(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): CollectionPage = notExercised("listCollections")
+
+    override suspend fun createCollection(
+        spaceId: UUID,
+        accessToken: String,
+        fields: CollectionCreate,
+    ): CollectionDetail = notExercised("createCollection")
+
+    override suspend fun updateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: CollectionUpdate,
+    ): CollectionDetail = notExercised("updateCollection")
+
+    override suspend fun deleteCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteCollection")
+
+    override suspend fun createCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: CollectionItemCreate,
+    ): CollectionItemDetail = notExercised("createCollectionItem")
+
+    override suspend fun updateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: CollectionItemUpdate,
+    ): CollectionItemDetail = notExercised("updateCollectionItem")
+
+    override suspend fun deleteCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteCollectionItem")
+
+    override suspend fun reorderCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): CollectionDetail = notExercised("reorderCollectionItems")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

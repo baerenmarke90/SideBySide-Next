@@ -25,6 +25,12 @@ import sidebyside.api.models.ActivityItem
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
+import sidebyside.api.models.CollectionCreate
+import sidebyside.api.models.CollectionDetail
+import sidebyside.api.models.CollectionItemCreate
+import sidebyside.api.models.CollectionItemDetail
+import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartEmotion
@@ -256,6 +262,9 @@ data class ReferenceUiState(
     val searchResults: List<SearchResult> = emptyList(),
     val searchBusy: Boolean = false,
     val searchProblem: UiProblem? = null,
+    val collections: List<CollectionDetail> = emptyList(),
+    val collectionsBusy: Boolean = false,
+    val collectionsProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -394,6 +403,7 @@ class ReferenceViewModel(
         clearNotifications()
         clearActivity()
         clearSearch()
+        clearCollections()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -487,6 +497,7 @@ class ReferenceViewModel(
         clearNotifications()
         clearActivity()
         clearSearch()
+        clearCollections()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -548,6 +559,7 @@ class ReferenceViewModel(
         clearNotifications()
         clearActivity()
         clearSearch()
+        clearCollections()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -615,6 +627,7 @@ class ReferenceViewModel(
         clearNotifications()
         clearActivity()
         clearSearch()
+        clearCollections()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -3686,6 +3699,253 @@ class ReferenceViewModel(
 
     fun clearSearch() {
         mutate { it.copy(searchResults = emptyList(), searchBusy = false, searchProblem = null) }
+    }
+
+    fun loadCollections() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listCollections(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collections = page.items, collectionsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addCollection(title: String, icon: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createCollection(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    CollectionCreate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updateCollection(collection: CollectionDetail, title: String, icon: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateCollection(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    collection.version,
+                    CollectionUpdate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deleteCollection(collection: CollectionDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteCollection(spaceId, currentSession.tokens.accessToken, collection.id, collection.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addCollectionItem(collection: CollectionDetail, title: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    CollectionItemCreate(title = title),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun toggleCollectionItemCompleted(collection: CollectionDetail, item: CollectionItemDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                    CollectionItemUpdate(completed = !item.completed),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deleteCollectionItem(collection: CollectionDetail, item: CollectionItemDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun moveCollectionItemUp(collection: CollectionDetail, item: CollectionItemDetail) {
+        reorderCollectionItem(collection, item, offset = -1)
+    }
+
+    fun moveCollectionItemDown(collection: CollectionDetail, item: CollectionItemDetail) {
+        reorderCollectionItem(collection, item, offset = 1)
+    }
+
+    /** Same by-construction exact-set reasoning as [reorderCollectionItem] for PrivateCollection. */
+    private fun reorderCollectionItem(collection: CollectionDetail, item: CollectionItemDetail, offset: Int) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        val currentOrder = collection.items.sortedBy { it.position }.map { it.id }
+        val index = currentOrder.indexOf(item.id)
+        val targetIndex = index + offset
+        if (index < 0 || targetIndex < 0 || targetIndex >= currentOrder.size) return
+        val newOrder = currentOrder.toMutableList()
+        val moved = newOrder.removeAt(index)
+        newOrder.add(targetIndex, moved)
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.reorderCollectionItems(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    collection.version,
+                    newOrder,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearCollections() {
+        mutate { it.copy(collections = emptyList(), collectionsBusy = false, collectionsProblem = null) }
     }
 
     fun logout() {
