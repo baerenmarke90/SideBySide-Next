@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import type { ServerAdminActivityItem } from '../api/generated/models/ServerAdminActivityItem';
 import type { ServerAdminOverview } from '../api/generated/models/ServerAdminOverview';
 import type { ServerAdminSettings } from '../api/generated/models/ServerAdminSettings';
 import { PUBLIC_START_ROUTE } from '../client/publicStart';
-import { DEFAULT_APP_ROUTE } from '../client/routes';
+import { DEFAULT_APP_ROUTE, SERVER_ADMIN_ROUTE } from '../client/routes';
 import { createServerAdminApis } from '../client/serverAdmin';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
@@ -13,6 +13,63 @@ import { ServerAdminAccountsPanel } from './ServerAdminAccountsPanel';
 import { ThemeControl } from './ThemeControl';
 import { UiState } from './UiState';
 import './ServerAdminPage.css';
+
+const SERVER_ADMIN_SECTIONS = [
+  'overview',
+  'accounts',
+  'jobs',
+  'security',
+  'settings',
+  'activity',
+] as const;
+
+export type ServerAdminSection = (typeof SERVER_ADMIN_SECTIONS)[number];
+
+export function resolveServerAdminSection(value: string | null): ServerAdminSection {
+  return SERVER_ADMIN_SECTIONS.includes(value as ServerAdminSection)
+    ? (value as ServerAdminSection)
+    : 'overview';
+}
+
+function sectionHref(section: ServerAdminSection): string {
+  return section === 'overview'
+    ? SERVER_ADMIN_ROUTE
+    : `${SERVER_ADMIN_ROUTE}?section=${section}`;
+}
+
+export function ServerAdminSectionNavigation({
+  activeSection,
+}: {
+  activeSection: ServerAdminSection;
+}) {
+  const { t } = useTranslation();
+  const sections: Array<{ id: ServerAdminSection; label: string }> = [
+    { id: 'overview', label: t('serverAdmin.navigation.overview') },
+    { id: 'accounts', label: t('serverAdmin.navigation.accounts') },
+    { id: 'jobs', label: t('serverAdmin.navigation.jobs') },
+    { id: 'security', label: t('serverAdmin.navigation.security') },
+    { id: 'settings', label: t('serverAdmin.navigation.settings') },
+    { id: 'activity', label: t('serverAdmin.navigation.activity') },
+  ];
+
+  return (
+    <nav
+      className="server-admin-section-nav"
+      aria-label={t('serverAdmin.navigation.aria')}
+    >
+      {sections.map((section) => (
+        <Link
+          key={section.id}
+          className="server-admin-section-link"
+          to={sectionHref(section.id)}
+          aria-current={section.id === activeSection ? 'page' : undefined}
+        >
+          {section.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 export function ServerAdminAccessGate({
   loading,
@@ -312,14 +369,20 @@ export function ServerAdminActivityPanel({
   );
 }
 
-function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
+function OverviewContent({
+  overview,
+  section,
+}: {
+  overview: ServerAdminOverview;
+  section: Extract<ServerAdminSection, 'overview' | 'jobs' | 'security'>;
+}) {
   const { t } = useTranslation();
   const lastSuccessfulJob = formatDate(overview.lastSuccessfulJobAt);
   const oldestPendingJob = formatDate(overview.oldestPendingJobAt);
 
   return (
     <>
-      {overview.warningCodes.length > 0 ? (
+      {section === 'overview' && overview.warningCodes.length > 0 ? (
         <section
           className="server-admin-panel server-admin-panel-wide server-admin-warning-panel"
           aria-labelledby="server-warnings-title"
@@ -333,226 +396,236 @@ function OverviewContent({ overview }: { overview: ServerAdminOverview }) {
         </section>
       ) : null}
 
-      <section
-        className="server-admin-panel"
-        aria-labelledby="server-health-title"
-      >
-        <h2 id="server-health-title">{t('serverAdmin.health.title')}</h2>
-        <div className="server-admin-status-list">
-          <StatusRow
-            label={t('serverAdmin.health.application')}
-            status={overview.applicationStatus}
-          />
-          <StatusRow
-            label={t('serverAdmin.health.database')}
-            status={overview.databaseStatus}
-          />
-          <StatusRow
-            label={t('serverAdmin.health.worker')}
-            status={overview.workerStatus}
-          />
-          <StatusRow
-            label={t('serverAdmin.health.media')}
-            status={overview.mediaStatus}
-          />
-        </div>
-      </section>
-
-      <section
-        className="server-admin-panel"
-        aria-labelledby="server-usage-title"
-      >
-        <h2 id="server-usage-title">{t('serverAdmin.usage.title')}</h2>
-        <dl className="server-admin-metrics">
-          <Metric
-            label={t('serverAdmin.usage.accounts')}
-            value={formatNumber(overview.accountCount)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.enabledAccounts')}
-            value={formatNumber(overview.enabledAccountCount)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.suspendedAccounts')}
-            value={formatNumber(overview.suspendedAccountCount)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.spaces')}
-            value={formatNumber(overview.activeSpaceCount)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.accounts24h')}
-            value={formatNumber(overview.accountsLast24h)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.accounts7d')}
-            value={formatNumber(overview.accountsLast7d)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.accounts30d')}
-            value={formatNumber(overview.accountsLast30d)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.activeSessions')}
-            value={formatNumber(overview.activeSessionCount)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.verifiedEmails')}
-            value={formatNumber(overview.verifiedPrimaryEmailCount)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.unverifiedEmails')}
-            value={formatNumber(overview.unverifiedPrimaryEmailCount)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.mediaObjects')}
-            value={formatNumber(overview.mediaObjectCount)}
-          />
-          <Metric
-            label={t('serverAdmin.usage.mediaBytes')}
-            value={formatBytes(overview.mediaStoredBytes)}
-          />
-        </dl>
-      </section>
-
-      <section
-        className="server-admin-panel"
-        aria-labelledby="server-security-title"
-      >
-        <h2 id="server-security-title">{t('serverAdmin.security.title')}</h2>
-        <dl className="server-admin-metrics">
-          <Metric
-            label={t('serverAdmin.security.localPassword')}
-            value={formatNumber(overview.localPasswordAccountCount)}
-          />
-          <Metric
-            label={t('serverAdmin.security.oidc')}
-            value={formatNumber(overview.oidcAccountCount)}
-          />
-          <Metric
-            label={t('serverAdmin.security.passkey')}
-            value={formatNumber(overview.passkeyAccountCount)}
-          />
-          <Metric
-            label={t('serverAdmin.security.serverAdmins')}
-            value={`${formatNumber(overview.serverAdminVerifiedMatchCount)} / ${formatNumber(overview.serverAdminAllowlistCount)}`}
-          />
-        </dl>
-      </section>
-
-      <section
-        className="server-admin-panel"
-        aria-labelledby="server-jobs-title"
-      >
-        <h2 id="server-jobs-title">{t('serverAdmin.jobs.title')}</h2>
-        <dl className="server-admin-metrics server-admin-job-metrics">
-          <Metric
-            label={t('serverAdmin.jobs.pending')}
-            value={formatNumber(overview.jobsPending)}
-          />
-          <Metric
-            label={t('serverAdmin.jobs.running')}
-            value={formatNumber(overview.jobsRunning)}
-          />
-          <Metric
-            label={t('serverAdmin.jobs.failed')}
-            value={formatNumber(overview.jobsFailed)}
-          />
-          <Metric
-            label={t('serverAdmin.jobs.oldestPending')}
-            value={oldestPendingJob ?? '–'}
-          />
-          <Metric
-            label={t('serverAdmin.jobs.lastSuccess')}
-            value={lastSuccessfulJob ?? t('serverAdmin.jobs.noSuccess')}
-          />
-        </dl>
-        <h3>{t('serverAdmin.jobs.failuresTitle')}</h3>
-        {overview.recentFailedJobs.length === 0 ? (
-          <p className="server-admin-muted">
-            {t('serverAdmin.jobs.noFailures')}
-          </p>
-        ) : (
-          <div className="server-admin-table-scroll">
-            <table className="server-admin-table">
-              <thead>
-                <tr>
-                  <th scope="col">{t('serverAdmin.jobs.kind')}</th>
-                  <th scope="col">{t('serverAdmin.jobs.attempts')}</th>
-                  <th scope="col">{t('serverAdmin.jobs.finishedAt')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overview.recentFailedJobs.map((job) => (
-                  <tr key={job.id}>
-                    <td>{job.kind}</td>
-                    <td>
-                      {formatNumber(job.attempts)} /{' '}
-                      {formatNumber(job.maxAttempts)}
-                    </td>
-                    <td>{formatDate(job.finishedAt) ?? '–'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {section === 'overview' ? (
+        <section
+          className="server-admin-panel"
+          aria-labelledby="server-health-title"
+        >
+          <h2 id="server-health-title">{t('serverAdmin.health.title')}</h2>
+          <div className="server-admin-status-list">
+            <StatusRow
+              label={t('serverAdmin.health.application')}
+              status={overview.applicationStatus}
+            />
+            <StatusRow
+              label={t('serverAdmin.health.database')}
+              status={overview.databaseStatus}
+            />
+            <StatusRow
+              label={t('serverAdmin.health.worker')}
+              status={overview.workerStatus}
+            />
+            <StatusRow
+              label={t('serverAdmin.health.media')}
+              status={overview.mediaStatus}
+            />
           </div>
-        )}
-      </section>
+        </section>
+      ) : null}
 
-      <section
-        className="server-admin-panel"
-        aria-labelledby="server-configuration-title"
-      >
-        <h2 id="server-configuration-title">
-          {t('serverAdmin.configuration.title')}
-        </h2>
-        <dl className="server-admin-config-list">
-          <Metric
-            label={t('serverAdmin.configuration.deployment')}
-            value={overview.deployment}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.environment')}
-            value={overview.environment}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.revision')}
-            value={overview.buildRevision}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.startedAt')}
-            value={formatDate(overview.processStartedAt) ?? '–'}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.publicBaseUrl')}
-            value={overview.publicBaseUrl}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.mediaStore')}
-            value={overview.mediaStore}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.mailTransport')}
-            value={overview.mailTransport}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.oidcConnections')}
-            value={formatNumber(overview.oidcConnectionCount)}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.databaseProvider')}
-            value={overview.databaseProvider}
-          />
-          <Metric
-            label={t('serverAdmin.configuration.demoMode')}
-            value={t(
-              overview.demoMode
-                ? 'serverAdmin.configuration.enabled'
-                : 'serverAdmin.configuration.disabled',
-            )}
-          />
-        </dl>
-      </section>
+      {section === 'overview' ? (
+        <section
+          className="server-admin-panel"
+          aria-labelledby="server-usage-title"
+        >
+          <h2 id="server-usage-title">{t('serverAdmin.usage.title')}</h2>
+          <dl className="server-admin-metrics">
+            <Metric
+              label={t('serverAdmin.usage.accounts')}
+              value={formatNumber(overview.accountCount)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.enabledAccounts')}
+              value={formatNumber(overview.enabledAccountCount)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.suspendedAccounts')}
+              value={formatNumber(overview.suspendedAccountCount)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.spaces')}
+              value={formatNumber(overview.activeSpaceCount)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.accounts24h')}
+              value={formatNumber(overview.accountsLast24h)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.accounts7d')}
+              value={formatNumber(overview.accountsLast7d)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.accounts30d')}
+              value={formatNumber(overview.accountsLast30d)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.activeSessions')}
+              value={formatNumber(overview.activeSessionCount)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.verifiedEmails')}
+              value={formatNumber(overview.verifiedPrimaryEmailCount)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.unverifiedEmails')}
+              value={formatNumber(overview.unverifiedPrimaryEmailCount)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.mediaObjects')}
+              value={formatNumber(overview.mediaObjectCount)}
+            />
+            <Metric
+              label={t('serverAdmin.usage.mediaBytes')}
+              value={formatBytes(overview.mediaStoredBytes)}
+            />
+          </dl>
+        </section>
+      ) : null}
+
+      {section === 'security' ? (
+        <section
+          className="server-admin-panel"
+          aria-labelledby="server-security-title"
+        >
+          <h2 id="server-security-title">{t('serverAdmin.security.title')}</h2>
+          <dl className="server-admin-metrics">
+            <Metric
+              label={t('serverAdmin.security.localPassword')}
+              value={formatNumber(overview.localPasswordAccountCount)}
+            />
+            <Metric
+              label={t('serverAdmin.security.oidc')}
+              value={formatNumber(overview.oidcAccountCount)}
+            />
+            <Metric
+              label={t('serverAdmin.security.passkey')}
+              value={formatNumber(overview.passkeyAccountCount)}
+            />
+            <Metric
+              label={t('serverAdmin.security.serverAdmins')}
+              value={`${formatNumber(overview.serverAdminVerifiedMatchCount)} / ${formatNumber(overview.serverAdminAllowlistCount)}`}
+            />
+          </dl>
+        </section>
+      ) : null}
+
+      {section === 'jobs' ? (
+        <section
+          className="server-admin-panel server-admin-panel-wide"
+          aria-labelledby="server-jobs-title"
+        >
+          <h2 id="server-jobs-title">{t('serverAdmin.jobs.title')}</h2>
+          <dl className="server-admin-metrics server-admin-job-metrics">
+            <Metric
+              label={t('serverAdmin.jobs.pending')}
+              value={formatNumber(overview.jobsPending)}
+            />
+            <Metric
+              label={t('serverAdmin.jobs.running')}
+              value={formatNumber(overview.jobsRunning)}
+            />
+            <Metric
+              label={t('serverAdmin.jobs.failed')}
+              value={formatNumber(overview.jobsFailed)}
+            />
+            <Metric
+              label={t('serverAdmin.jobs.oldestPending')}
+              value={oldestPendingJob ?? '–'}
+            />
+            <Metric
+              label={t('serverAdmin.jobs.lastSuccess')}
+              value={lastSuccessfulJob ?? t('serverAdmin.jobs.noSuccess')}
+            />
+          </dl>
+          <h3>{t('serverAdmin.jobs.failuresTitle')}</h3>
+          {overview.recentFailedJobs.length === 0 ? (
+            <p className="server-admin-muted">
+              {t('serverAdmin.jobs.noFailures')}
+            </p>
+          ) : (
+            <div className="server-admin-table-scroll">
+              <table className="server-admin-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{t('serverAdmin.jobs.kind')}</th>
+                    <th scope="col">{t('serverAdmin.jobs.attempts')}</th>
+                    <th scope="col">{t('serverAdmin.jobs.finishedAt')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overview.recentFailedJobs.map((job) => (
+                    <tr key={job.id}>
+                      <td>{job.kind}</td>
+                      <td>
+                        {formatNumber(job.attempts)} /{' '}
+                        {formatNumber(job.maxAttempts)}
+                      </td>
+                      <td>{formatDate(job.finishedAt) ?? '–'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {section === 'security' ? (
+        <section
+          className="server-admin-panel"
+          aria-labelledby="server-configuration-title"
+        >
+          <h2 id="server-configuration-title">
+            {t('serverAdmin.configuration.title')}
+          </h2>
+          <dl className="server-admin-config-list">
+            <Metric
+              label={t('serverAdmin.configuration.deployment')}
+              value={overview.deployment}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.environment')}
+              value={overview.environment}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.revision')}
+              value={overview.buildRevision}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.startedAt')}
+              value={formatDate(overview.processStartedAt) ?? '–'}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.publicBaseUrl')}
+              value={overview.publicBaseUrl}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.mediaStore')}
+              value={overview.mediaStore}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.mailTransport')}
+              value={overview.mailTransport}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.oidcConnections')}
+              value={formatNumber(overview.oidcConnectionCount)}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.databaseProvider')}
+              value={overview.databaseProvider}
+            />
+            <Metric
+              label={t('serverAdmin.configuration.demoMode')}
+              value={t(
+                overview.demoMode
+                  ? 'serverAdmin.configuration.enabled'
+                  : 'serverAdmin.configuration.disabled',
+              )}
+            />
+          </dl>
+        </section>
+      ) : null}
     </>
   );
 }
@@ -567,6 +640,10 @@ export function ServerAdminPage({
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const section = resolveServerAdminSection(searchParams.get('section'));
+  const overviewSection =
+    section === 'overview' || section === 'jobs' || section === 'security';
   const queryClient = useQueryClient();
   const apis = useMemo(
     () => createServerAdminApis(apiBaseUrl, accessToken),
@@ -577,18 +654,21 @@ export function ServerAdminPage({
     queryFn: () =>
       apis.serverAdmin.getServerAdminOverviewApiV1ServerAdminOverviewGet(),
     retry: false,
+    enabled: overviewSection,
   });
   const settingsQuery = useQuery({
     queryKey: ['server-admin', 'settings'],
     queryFn: () =>
       apis.serverAdmin.getServerAdminSettingsApiV1ServerAdminSettingsGet(),
     retry: false,
+    enabled: section === 'settings',
   });
   const activityQuery = useQuery({
     queryKey: ['server-admin', 'activity'],
     queryFn: () =>
       apis.serverAdmin.getServerAdminActivityApiV1ServerAdminActivityGet(),
     retry: false,
+    enabled: section === 'activity',
   });
   const registrationMutation = useMutation({
     mutationFn: (enabled: boolean) =>
@@ -621,21 +701,32 @@ export function ServerAdminPage({
     },
   });
   const refreshing =
-    overviewQuery.isFetching ||
-    settingsQuery.isFetching ||
-    activityQuery.isFetching;
+    (overviewSection && overviewQuery.isFetching) ||
+    (section === 'settings' && settingsQuery.isFetching) ||
+    (section === 'activity' && activityQuery.isFetching);
   const mutationError = registrationMutation.error ?? maintenanceMutation.error;
 
-  function refreshAll() {
-    void overviewQuery.refetch();
-    void settingsQuery.refetch();
-    void activityQuery.refetch();
-    void queryClient.invalidateQueries({
-      queryKey: ['server-admin', 'accounts'],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ['server-admin', 'action-activity'],
-    });
+  function refreshCurrentSection() {
+    if (overviewSection) {
+      void overviewQuery.refetch();
+      return;
+    }
+    if (section === 'settings') {
+      void settingsQuery.refetch();
+      return;
+    }
+    if (section === 'activity') {
+      void activityQuery.refetch();
+      return;
+    }
+    if (section === 'accounts') {
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'accounts'],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'action-activity'],
+      });
+    }
   }
 
   function updateMaintenance(enabled: boolean) {
@@ -681,109 +772,135 @@ export function ServerAdminPage({
             <h1>{t('serverAdmin.title')}</h1>
             <p className="server-admin-intro">{t('serverAdmin.intro')}</p>
           </div>
-          <button type="button" onClick={refreshAll} disabled={refreshing}>
+          <button
+            type="button"
+            onClick={refreshCurrentSection}
+            disabled={refreshing}
+          >
             {t('serverAdmin.refresh')}
           </button>
         </div>
 
-        <div className="server-admin-grid">
-          {settingsQuery.isPending ? (
-            <section className="server-admin-panel server-admin-panel-wide">
-              <UiState
-                kind="loading"
-                title={t('serverAdmin.settings.loadingTitle')}
-                body={t('serverAdmin.settings.loadingBody')}
-              />
-            </section>
-          ) : settingsQuery.error ? (
-            <section className="server-admin-panel server-admin-panel-wide">
-              <UiState
-                kind="error"
-                title={t('serverAdmin.settings.errorTitle')}
-                body={t('serverAdmin.settings.errorBody')}
-                action={
-                  <button
-                    type="button"
-                    onClick={() => void settingsQuery.refetch()}
-                  >
-                    {t('serverAdmin.refresh')}
-                  </button>
+        <div className="server-admin-workspace">
+          <ServerAdminSectionNavigation activeSection={section} />
+
+          <div className="server-admin-grid">
+            {section === 'settings' ? (
+              settingsQuery.isPending ? (
+                <section className="server-admin-panel server-admin-panel-wide">
+                  <UiState
+                    kind="loading"
+                    title={t('serverAdmin.settings.loadingTitle')}
+                    body={t('serverAdmin.settings.loadingBody')}
+                  />
+                </section>
+              ) : settingsQuery.error ? (
+                <section className="server-admin-panel server-admin-panel-wide">
+                  <UiState
+                    kind="error"
+                    title={t('serverAdmin.settings.errorTitle')}
+                    body={t('serverAdmin.settings.errorBody')}
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => void settingsQuery.refetch()}
+                      >
+                        {t('serverAdmin.refresh')}
+                      </button>
+                    }
+                  />
+                </section>
+              ) : settingsQuery.data ? (
+                <ServerAdminSettingsPanel
+                  settings={settingsQuery.data}
+                  registrationPending={registrationMutation.isPending}
+                  maintenancePending={maintenanceMutation.isPending}
+                  mutationError={mutationError}
+                  onRegistrationChange={(enabled) =>
+                    registrationMutation.mutate(enabled)
+                  }
+                  onMaintenanceChange={updateMaintenance}
+                />
+              ) : null
+            ) : null}
+
+            {overviewSection ? (
+              overviewQuery.isPending ? (
+                <section className="server-admin-panel server-admin-panel-wide">
+                  <UiState
+                    kind="loading"
+                    title={t('serverAdmin.states.loadingTitle')}
+                    body={t('serverAdmin.states.loadingBody')}
+                  />
+                </section>
+              ) : overviewQuery.error ? (
+                <section className="server-admin-panel server-admin-panel-wide">
+                  <UiState
+                    kind="error"
+                    title={t('serverAdmin.states.errorTitle')}
+                    body={t('serverAdmin.states.errorBody')}
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => void overviewQuery.refetch()}
+                      >
+                        {t('serverAdmin.refresh')}
+                      </button>
+                    }
+                  />
+                </section>
+              ) : overviewQuery.data ? (
+                <OverviewContent
+                  overview={overviewQuery.data}
+                  section={section as Extract<
+                    ServerAdminSection,
+                    'overview' | 'jobs' | 'security'
+                  >}
+                />
+              ) : null
+            ) : null}
+
+            {section === 'accounts' ? (
+              <ServerAdminAccountsPanel
+                api={apis.serverAdmin}
+                onOverviewChanged={() =>
+                  void queryClient.invalidateQueries({
+                    queryKey: ['server-admin', 'overview'],
+                  })
                 }
               />
-            </section>
-          ) : settingsQuery.data ? (
-            <ServerAdminSettingsPanel
-              settings={settingsQuery.data}
-              registrationPending={registrationMutation.isPending}
-              maintenancePending={maintenanceMutation.isPending}
-              mutationError={mutationError}
-              onRegistrationChange={(enabled) =>
-                registrationMutation.mutate(enabled)
-              }
-              onMaintenanceChange={updateMaintenance}
-            />
-          ) : null}
+            ) : null}
 
-          {overviewQuery.isPending ? (
-            <section className="server-admin-panel server-admin-panel-wide">
-              <UiState
-                kind="loading"
-                title={t('serverAdmin.states.loadingTitle')}
-                body={t('serverAdmin.states.loadingBody')}
-              />
-            </section>
-          ) : overviewQuery.error ? (
-            <section className="server-admin-panel server-admin-panel-wide">
-              <UiState
-                kind="error"
-                title={t('serverAdmin.states.errorTitle')}
-                body={t('serverAdmin.states.errorBody')}
-                action={
-                  <button
-                    type="button"
-                    onClick={() => void overviewQuery.refetch()}
-                  >
-                    {t('serverAdmin.refresh')}
-                  </button>
-                }
-              />
-            </section>
-          ) : overviewQuery.data ? (
-            <OverviewContent overview={overviewQuery.data} />
-          ) : null}
-
-          <ServerAdminAccountsPanel
-            api={apis.serverAdmin}
-            onOverviewChanged={() => void overviewQuery.refetch()}
-          />
-
-          {activityQuery.isPending ? (
-            <section className="server-admin-panel server-admin-panel-wide">
-              <UiState
-                kind="loading"
-                title={t('serverAdmin.activity.loadingTitle')}
-                body={t('serverAdmin.activity.loadingBody')}
-              />
-            </section>
-          ) : activityQuery.error ? (
-            <section className="server-admin-panel server-admin-panel-wide">
-              <UiState
-                kind="error"
-                title={t('serverAdmin.activity.errorTitle')}
-                body={t('serverAdmin.activity.errorBody')}
-                action={
-                  <button
-                    type="button"
-                    onClick={() => void activityQuery.refetch()}
-                  >
-                    {t('serverAdmin.refresh')}
-                  </button>
-                }
-              />
-            </section>
-          ) : activityQuery.data ? (
-            <ServerAdminActivityPanel activity={activityQuery.data} />
-          ) : null}
+            {section === 'activity' ? (
+              activityQuery.isPending ? (
+                <section className="server-admin-panel server-admin-panel-wide">
+                  <UiState
+                    kind="loading"
+                    title={t('serverAdmin.activity.loadingTitle')}
+                    body={t('serverAdmin.activity.loadingBody')}
+                  />
+                </section>
+              ) : activityQuery.error ? (
+                <section className="server-admin-panel server-admin-panel-wide">
+                  <UiState
+                    kind="error"
+                    title={t('serverAdmin.activity.errorTitle')}
+                    body={t('serverAdmin.activity.errorBody')}
+                    action={
+                      <button
+                        type="button"
+                        onClick={() => void activityQuery.refetch()}
+                      >
+                        {t('serverAdmin.refresh')}
+                      </button>
+                    }
+                  />
+                </section>
+              ) : activityQuery.data ? (
+                <ServerAdminActivityPanel activity={activityQuery.data} />
+              ) : null
+            ) : null}
+          </div>
         </div>
 
         <p className="server-admin-privacy-note">
