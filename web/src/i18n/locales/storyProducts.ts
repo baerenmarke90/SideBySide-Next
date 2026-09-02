@@ -48,6 +48,10 @@ const storyProducts = {
     placeholder: 'Schreib etwas dazu …',
     send: 'Kommentieren',
     sending: 'Wird gesendet …',
+    edit: 'Bearbeiten',
+    save: 'Speichern',
+    saving: 'Wird gespeichert …',
+    cancel: 'Abbrechen',
     delete: 'Eigenen Kommentar löschen',
   },
   upload: {

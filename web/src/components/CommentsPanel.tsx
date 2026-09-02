@@ -1,4 +1,5 @@
 import type { FormEvent } from 'react';
+import { useState } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -96,6 +97,7 @@ export function CommentsPanel({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const queryKey = ['comments', spaceId, parentKind, parentId] as const;
   const commentsQuery = useInfiniteQuery({
     queryKey,
@@ -155,6 +157,42 @@ export function CommentsPanel({
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      comment,
+      body,
+    }: {
+      comment: CommentDetail;
+      body: string;
+    }) => {
+      try {
+        return await commentsApi.updateComment({
+          spaceId,
+          commentId: comment.id,
+          ifMatch: String(comment.version),
+          commentUpdate: { body },
+        });
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
+    onSuccess: async () => {
+      setEditingId(null);
+      await queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  function submitEdit(
+    event: FormEvent<HTMLFormElement>,
+    comment: CommentDetail,
+  ) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const body = String(data.get('editedComment') || '').trim();
+    if (!body) return;
+    updateMutation.mutate({ comment, body });
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -209,17 +247,62 @@ export function CommentsPanel({
                     {edited ? ` · ${t('comments.edited')}` : ''}
                   </span>
                 </div>
-                <p>{comment.body}</p>
-                {own ? (
-                  <button
-                    type="button"
-                    className="tertiary comment-delete"
-                    onClick={() => deleteMutation.mutate(comment)}
-                    disabled={deleteMutation.isPending}
+                {own && editingId === comment.id ? (
+                  <form
+                    className="comment-edit-form"
+                    onSubmit={(event) => submitEdit(event, comment)}
                   >
-                    {t('comments.delete')}
-                  </button>
-                ) : null}
+                    <label htmlFor={`${parentKind}-${comment.id}-edit`}>
+                      {t('comments.inputLabel')}
+                    </label>
+                    <textarea
+                      id={`${parentKind}-${comment.id}-edit`}
+                      name="editedComment"
+                      rows={3}
+                      maxLength={2000}
+                      required
+                      defaultValue={comment.body}
+                    />
+                    <div className="comment-edit-actions">
+                      <button type="submit" disabled={updateMutation.isPending}>
+                        {updateMutation.isPending
+                          ? t('comments.saving')
+                          : t('comments.save')}
+                      </button>
+                      <button
+                        type="button"
+                        className="tertiary"
+                        onClick={() => setEditingId(null)}
+                        disabled={updateMutation.isPending}
+                      >
+                        {t('comments.cancel')}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <p>{comment.body}</p>
+                    {own ? (
+                      <div className="comment-actions">
+                        <button
+                          type="button"
+                          className="tertiary comment-edit"
+                          onClick={() => setEditingId(comment.id)}
+                        >
+                          {t('comments.edit')}
+                        </button>
+                        <button
+                          type="button"
+                          className="tertiary comment-delete"
+                          onClick={() => deleteMutation.mutate(comment)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          {t('comments.delete')}
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                )}
               </li>
             );
           })}
@@ -262,6 +345,9 @@ export function CommentsPanel({
 
       {createMutation.error ? (
         <ProblemState error={createMutation.error} />
+      ) : null}
+      {updateMutation.error ? (
+        <ProblemState error={updateMutation.error} />
       ) : null}
       {deleteMutation.error ? (
         <ProblemState error={deleteMutation.error} />
