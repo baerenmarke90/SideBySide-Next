@@ -15,9 +15,7 @@ import type { SharedPlanningApis } from '../client/sharedPlanning';
 import {
   chapterDetailPath,
   collectionDetailPath,
-  planDetailPath,
   placeDetailPath,
-  wishDetailPath,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
@@ -48,14 +46,6 @@ function formatDate(value: Date | null): string | null {
     dateStyle: 'medium',
     timeZone: 'UTC',
   }).format(value);
-}
-
-function statusLabel(
-  t: ReturnType<typeof useTranslation>['t'],
-  domain: 'wish' | 'plan',
-  status: string,
-): string {
-  return t(`m5s3.${domain}.status.${status}`);
 }
 
 function PlanningCard({
@@ -278,31 +268,6 @@ export function SharedPlanningOverviewPage({
   const collectionItems =
     collections.data?.pages.flatMap((page) => page.items) ?? [];
 
-  function submitWish(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    createWish.mutate(String(data.get('title')).trim(), {
-      onSuccess: () => form.reset(),
-    });
-  }
-
-  function submitPlan(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    const description = String(data.get('description')).trim();
-    const placeId = String(data.get('placeId')).trim();
-    createPlan.mutate(
-      {
-        title: String(data.get('title')).trim(),
-        description: description || undefined,
-        placeId: placeId || undefined,
-      },
-      { onSuccess: () => form.reset() },
-    );
-  }
-
   function submitPlace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -376,118 +341,25 @@ export function SharedPlanningOverviewPage({
         description={t('m5s3.overview.intro')}
       />
 
-      {/* M5 Kanban Board */}
-      <div style={{ marginBottom: '2rem' }}>
-        <KanbanBoard
-          apis={apis}
-          spaceId={spaceId}
-          wishes={wishItems}
-          plans={planItems}
-        />
-      </div>
+      <KanbanBoard
+        apis={apis}
+        spaceId={spaceId}
+        wishes={wishItems}
+        plans={planItems}
+        placeChoices={placeChoices}
+        onCreateWish={(title, onSuccess) => {
+          createWish.mutate(title, { onSuccess });
+        }}
+        onCreatePlan={(values, onSuccess) => {
+          createPlan.mutate(values, { onSuccess });
+        }}
+        createWishPending={createWish.isPending}
+        createPlanPending={createPlan.isPending}
+        createWishError={createWish.error}
+        createPlanError={createPlan.error}
+      />
 
       <div className="layout-columns planning-grid">
-        <PlanningSection
-          id="wishes"
-          title={t('m5s3.wish.heading')}
-          intro={t('m5s3.wish.intro')}
-          loading={wishes.isLoading}
-          error={wishes.error}
-          empty={wishItems.length === 0}
-          onRetry={() => void wishes.refetch()}
-          hasMore={Boolean(wishes.hasNextPage)}
-          loadingMore={wishes.isFetchingNextPage}
-          onLoadMore={() => void wishes.fetchNextPage()}
-          create={
-            <details className="planning-create">
-              <summary>{t('m5s3.wish.create')}</summary>
-              <form
-                onSubmit={submitWish}
-                className="form-grid planning-create-form"
-              >
-                <label htmlFor="wish-title">{t('m5s3.common.title')}</label>
-                <input id="wish-title" name="title" required maxLength={200} />
-                <button type="submit" disabled={createWish.isPending}>
-                  {createWish.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.save')}
-                </button>
-                {createWish.error ? (
-                  <ProblemState error={createWish.error} />
-                ) : null}
-              </form>
-            </details>
-          }
-        >
-          {wishItems.length > 0 ? (
-            <ul className="planning-list">
-              {wishItems.map((wish) => (
-                <PlanningCard
-                  key={wish.id}
-                  title={wish.title}
-                  meta={statusLabel(t, 'wish', wish.status)}
-                  to={wishDetailPath(wish.id)}
-                />
-              ))}
-            </ul>
-          ) : null}
-        </PlanningSection>
-
-        <PlanningSection
-          id="plans"
-          title={t('m5s3.plan.heading')}
-          intro={t('m5s3.plan.intro')}
-          loading={plans.isLoading}
-          error={plans.error}
-          empty={planItems.length === 0}
-          onRetry={() => void plans.refetch()}
-          hasMore={Boolean(plans.hasNextPage)}
-          loadingMore={plans.isFetchingNextPage}
-          onLoadMore={() => void plans.fetchNextPage()}
-          create={
-            <details className="planning-create">
-              <summary>{t('m5s3.plan.create')}</summary>
-              <form
-                onSubmit={submitPlan}
-                className="form-grid planning-create-form"
-              >
-                <label htmlFor="plan-title">{t('m5s3.common.title')}</label>
-                <input id="plan-title" name="title" required maxLength={200} />
-                <label htmlFor="plan-description">
-                  {t('m5s3.common.description')}
-                </label>
-                <textarea id="plan-description" name="description" rows={3} />
-                <label htmlFor="plan-place">{t('m5s3.common.place')}</label>
-                <select id="plan-place" name="placeId" defaultValue="">
-                  <option value="">{t('m5s3.common.noPlace')}</option>
-                  {placeChoices}
-                </select>
-                <button type="submit" disabled={createPlan.isPending}>
-                  {createPlan.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.save')}
-                </button>
-                {createPlan.error ? (
-                  <ProblemState error={createPlan.error} />
-                ) : null}
-              </form>
-            </details>
-          }
-        >
-          {planItems.length > 0 ? (
-            <ul className="planning-list">
-              {planItems.map((plan) => (
-                <PlanningCard
-                  key={plan.id}
-                  title={plan.title}
-                  meta={statusLabel(t, 'plan', plan.status)}
-                  to={planDetailPath(plan.id)}
-                />
-              ))}
-            </ul>
-          ) : null}
-        </PlanningSection>
-
         <PlanningSection
           id="places"
           title={t('m5s3.place.heading')}

@@ -13,7 +13,7 @@
   --color-surface-overlay: #ffffffea;
   --color-header-surface: #f8f9fae8;
   --color-header-border: #e2e8f0cc;
-  --color-brand-text: #c92a2a;
+  --color-brand-text: #2b2d42;
   --color-brand-glow: #ff6b6b33;
   --color-on-accent: #ffffff;
   --color-text-inverse-muted: rgb(255 255 255 / 90%);
@@ -60,9 +60,9 @@
   --color-border: #454c5e;
   --color-border-subtle: #293042;
   --color-brand: #ff8585;
-  --color-brand-strong: #d63031;
-  --color-brand-text: #ff8585;
-  --color-brand-surface: #3a1e24;
+  --color-brand-strong: #323a4e;
+  --color-brand-text: #f8f9fa;
+  --color-brand-surface: #242938;
   --color-surface-panel: #1c202d;
   --color-surface-panel-tint: #181b26;
   --color-page-tint-brand: #ff6b6b15;
@@ -120,9 +120,9 @@
     --color-border: #454c5e;
     --color-border-subtle: #293042;
     --color-brand: #ff8585;
-    --color-brand-strong: #d63031;
-    --color-brand-text: #ff8585;
-    --color-brand-surface: #3a1e24;
+    --color-brand-strong: #323a4e;
+    --color-brand-text: #f8f9fa;
+    --color-brand-surface: #242938;
     --color-surface-panel: #1c202d;
     --color-surface-panel-tint: #181b26;
     --color-page-tint-brand: #ff6b6b15;

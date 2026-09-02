@@ -260,27 +260,6 @@
   outline-offset: 2px;
 }
 
-.shell-nav-link-active {
-  position: relative;
-  background: var(--color-brand-surface);
-  color: var(--color-brand-text);
-}
-
-.shell-nav-link-active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 20%;
-  bottom: 20%;
-  width: 3px;
-  border-radius: var(--radius-pill);
-  background: var(--color-brand-strong);
-}
-
-.mobile-bottom-nav .shell-nav-link-active::before {
-  display: none;
-}
-
 .shell-nav-icon {
   width: 1.5rem;
   height: 1.5rem;
@@ -297,6 +276,32 @@
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.shell-nav-link-active {
+  position: relative;
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+  font-weight: 750;
+}
+
+.shell-nav-link-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3.5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-koralle);
+}
+
+.shell-nav-link-active .shell-nav-icon {
+  color: var(--color-brand-koralle);
+}
+
+.mobile-bottom-nav .shell-nav-link-active::before {
+  display: none;
 }
 
 .shell-utility-link .shell-nav-icon {
