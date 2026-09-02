@@ -31,10 +31,14 @@ import org.robolectric.annotation.Config
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AccountView
 import sidebyside.api.models.AuthorSummary
+import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.ChapterPage
 import sidebyside.api.models.CollectionDetail
 import sidebyside.api.models.CollectionPage
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemorySummary
+import sidebyside.api.models.PlaceDetail
+import sidebyside.api.models.PlacePage
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
 import sidebyside.api.models.PlanStatus
@@ -334,6 +338,76 @@ class ProductReadCacheViewModelTest {
         assertNotNull(model.uiState.value.collectionsProblem)
     }
 
+    @Test
+    fun loadPlacesFallsBackToTheCachedListOnceOffline() = runTest(dispatcher) {
+        val api = PlacesApi()
+        val model = signedIn(api)
+
+        model.loadPlaces()
+        advanceUntilIdle()
+        assertEquals(1, model.uiState.value.places.size)
+        assertNull(model.uiState.value.placesCachedAt)
+
+        api.nextFailure = IOException("offline")
+        model.loadPlaces()
+        advanceUntilIdle()
+
+        assertEquals(1, model.uiState.value.places.size)
+        assertNotNull(model.uiState.value.placesCachedAt)
+        assertNull(model.uiState.value.placesProblem)
+    }
+
+    @Test
+    fun loadPlacesNeverFallsBackOnA401EvenWithACachedRow() = runTest(dispatcher) {
+        val api = PlacesApi()
+        val model = signedIn(api)
+
+        model.loadPlaces()
+        advanceUntilIdle()
+
+        api.nextFailure = ReferenceApiException(code = "unauthenticated", message = "expired", status = 401)
+        model.loadPlaces()
+        advanceUntilIdle()
+
+        assertNull(model.uiState.value.placesCachedAt)
+        assertNotNull(model.uiState.value.placesProblem)
+    }
+
+    @Test
+    fun loadChaptersFallsBackToTheCachedListOnceOffline() = runTest(dispatcher) {
+        val api = ChaptersApi()
+        val model = signedIn(api)
+
+        model.loadChapters()
+        advanceUntilIdle()
+        assertEquals(1, model.uiState.value.chapters.size)
+        assertNull(model.uiState.value.chaptersCachedAt)
+
+        api.nextFailure = IOException("offline")
+        model.loadChapters()
+        advanceUntilIdle()
+
+        assertEquals(1, model.uiState.value.chapters.size)
+        assertNotNull(model.uiState.value.chaptersCachedAt)
+        assertNull(model.uiState.value.chaptersProblem)
+    }
+
+    @Test
+    fun loadChaptersNeverFallsBackOnA401EvenWithACachedRow() = runTest(dispatcher) {
+        val api = ChaptersApi()
+        val model = signedIn(api)
+
+        model.loadChapters()
+        advanceUntilIdle()
+
+        api.nextFailure = ReferenceApiException(code = "unauthenticated", message = "expired", status = 401)
+        model.loadChapters()
+        advanceUntilIdle()
+
+        assertNull(model.uiState.value.chaptersCachedAt)
+        assertNotNull(model.uiState.value.chaptersProblem)
+    }
+
     private suspend fun TestScope.signedIn(api: ReferenceContract): ReferenceViewModel {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, productReadCache = cache)
         model.signIn("someone@example.test", "secret")
@@ -574,6 +648,96 @@ private class CollectionsApi : FakeReferenceContract() {
                     items = emptyList(),
                     spaceId = spaceId,
                     title = "Packing list",
+                    updatedAt = OffsetDateTime.now(),
+                    version = 1,
+                ),
+            ),
+            nextCursor = null,
+        )
+    }
+}
+
+private class PlacesApi : FakeReferenceContract() {
+    var nextFailure: Throwable? = null
+
+    override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+        account = AccountView(displayName = email, id = UUID.randomUUID()),
+        tokens = TokenView(
+            accessExpiresAt = OffsetDateTime.now(),
+            accessToken = "access",
+            refreshExpiresAt = OffsetDateTime.now(),
+            refreshToken = "refresh",
+        ),
+    )
+
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+
+    override suspend fun listPlaces(spaceId: UUID, accessToken: String, cursor: String?): PlacePage {
+        nextFailure?.let {
+            nextFailure = null
+            throw it
+        }
+        return PlacePage(
+            hasMore = false,
+            items = listOf(
+                PlaceDetail(
+                    address = null,
+                    capabilities = ResourceCapabilities(canComment = false, canDelete = true, canEdit = true),
+                    createdAt = OffsetDateTime.now(),
+                    createdBy = UUID.randomUUID(),
+                    creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+                    description = null,
+                    id = UUID.randomUUID(),
+                    latitude = null,
+                    longitude = null,
+                    name = "By the sea",
+                    spaceId = spaceId,
+                    updatedAt = OffsetDateTime.now(),
+                    version = 1,
+                ),
+            ),
+            nextCursor = null,
+        )
+    }
+}
+
+private class ChaptersApi : FakeReferenceContract() {
+    var nextFailure: Throwable? = null
+
+    override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+        account = AccountView(displayName = email, id = UUID.randomUUID()),
+        tokens = TokenView(
+            accessExpiresAt = OffsetDateTime.now(),
+            accessToken = "access",
+            refreshExpiresAt = OffsetDateTime.now(),
+            refreshToken = "refresh",
+        ),
+    )
+
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+
+    override suspend fun listChapters(spaceId: UUID, accessToken: String, cursor: String?): ChapterPage {
+        nextFailure?.let {
+            nextFailure = null
+            throw it
+        }
+        return ChapterPage(
+            hasMore = false,
+            items = listOf(
+                ChapterDetail(
+                    capabilities = ResourceCapabilities(canComment = false, canDelete = true, canEdit = true),
+                    createdAt = OffsetDateTime.now(),
+                    createdBy = UUID.randomUUID(),
+                    creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+                    description = null,
+                    endOn = null,
+                    id = UUID.randomUUID(),
+                    placeId = null,
+                    spaceId = spaceId,
+                    startOn = null,
+                    title = "The first summer",
                     updatedAt = OffsetDateTime.now(),
                     version = 1,
                 ),
