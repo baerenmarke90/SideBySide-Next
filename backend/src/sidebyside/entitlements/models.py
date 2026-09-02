@@ -90,6 +90,11 @@ class EntitlementGrant(IdMixin, TimestampMixin, Base):
     )
     source_type: Mapped[str] = mapped_column(String(32), nullable=False)
     external_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    source_event_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=text("now()"),
+    )
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     tier: Mapped[str] = mapped_column(
         String(32), nullable=False, default=EntitlementTier.FREE.value
