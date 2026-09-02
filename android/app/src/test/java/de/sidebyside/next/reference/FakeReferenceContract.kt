@@ -783,6 +783,25 @@ abstract class FakeReferenceContract : ReferenceContract {
         targetId: UUID,
     ): Unit = notExercised("unlinkChapterTarget")
 
+    override suspend fun createTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        scope: sidebyside.api.models.TransferScope,
+    ): sidebyside.api.models.TransferExportDetail = notExercised("createTransferExport")
+
+    override suspend fun getTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+    ): sidebyside.api.models.TransferExportDetail = notExercised("getTransferExport")
+
+    override suspend fun downloadTransferExport(
+        spaceId: UUID,
+        accessToken: String,
+        exportId: UUID,
+        sink: java.io.OutputStream,
+    ): Unit = notExercised("downloadTransferExport")
+
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")
 }

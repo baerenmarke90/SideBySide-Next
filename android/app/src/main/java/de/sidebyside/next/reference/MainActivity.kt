@@ -923,6 +923,38 @@ private fun DemoShell(
                 )
             }
 
+            composable(DATA_EXPORT_ROUTE) {
+                val exportContext = LocalContext.current
+                val exportScope = rememberCoroutineScope()
+                val exportDownloadLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.CreateDocument("application/zip"),
+                ) { uri ->
+                    if (uri != null) {
+                        exportScope.launch {
+                            exportContext.contentResolver.openOutputStream(uri)?.use { stream ->
+                                viewModel.downloadExport(stream)
+                            }
+                        }
+                    }
+                }
+
+                de.sidebyside.next.transfer.DataExportScreen(
+                    export = state.export,
+                    busy = state.exportBusy,
+                    problem = state.exportProblem,
+                    downloaded = state.exportDownloaded,
+                    onBack = { controller.popBackStack() },
+                    onCreateExport = viewModel::createExport,
+                    onRefreshExport = viewModel::refreshExport,
+                    onDownloadExport = {
+                        val exportId = state.export?.id
+                        if (exportId != null) {
+                            exportDownloadLauncher.launch("sidebyside-export-$exportId.zip")
+                        }
+                    },
+                )
+            }
+
             composable(SEARCH_ROUTE) {
                 DisposableEffect(Unit) { onDispose(viewModel::clearSearch) }
 
@@ -989,6 +1021,7 @@ private fun DemoShell(
                     onOpenRelatedPersons = { navController.navigate(RELATED_PERSONS_ROUTE) },
                     onOpenPreferences = { navController.navigate(PREFERENCES_ROUTE) },
                     onOpenPrivateArea = { navController.navigate(PRIVATE_AREA_ROUTE) },
+                    onOpenDataExport = { navController.navigate(DATA_EXPORT_ROUTE) },
                     onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
                     onOpenSearch = { navController.navigate(SEARCH_ROUTE) },
                     unreadNotificationCount = state.unreadNotificationCount,
@@ -1052,6 +1085,9 @@ private const val CHAPTER_ID_ARGUMENT = "chapterId"
 private const val CHAPTER_CONTENT_ROUTE = "planning/chapters/{$CHAPTER_ID_ARGUMENT}/content"
 
 private const val PRIVATE_AREA_ROUTE = "more/private"
+
+/** No Web equivalent exists yet to match — this UI is Android-first. */
+private const val DATA_EXPORT_ROUTE = "more/data-export"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
 private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
 private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"
