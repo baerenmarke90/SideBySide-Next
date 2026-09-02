@@ -50,6 +50,8 @@ fun SharedHeartMomentScreen(
     problem: UiProblem?,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Non-null only while [moment] is a stale M2-D18 cache fallback. */
+    cachedAt: java.time.Instant? = null,
     comments: (@Composable () -> Unit)? = null,
 ) {
     if (moment == null) {
@@ -78,6 +80,8 @@ fun SharedHeartMomentScreen(
         item {
             TextButton(onClick = onBack) { Text(stringResource(R.string.memory_back)) }
         }
+
+        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
         problem?.let { current -> item { UiStatePanel(problem = current) } }
 
