@@ -95,8 +95,9 @@ M5 turns the already delivered M0-M4 Core into a complete product on both client
 - bounded Read Cache/offline-read behavior;
 - systematic domain parity;
 - Accessibility;
-- Performance;
 - final Core client Privacy/Security evidence.
+
+**2026-09-02 gate scope decision:** dedicated Performance evidence and manual Accessibility acceptance are deprioritized for G4 (see `docs/IMPLEMENTATION-STATUS.md`); the existing per-PR Cross-Cutting Quality review and per-slice automated Accessibility semantics stand as the accepted evidence instead. Domain parity is produced as a pragmatic Web/Android feature audit — closing or explicitly accepting real gaps — rather than a formal evidence document.
 
 **Scope protection:** M5 does not absorb new Relationship Depth domains merely because it is active. New Vibe/Energy, Love Note, achievement, Question or Recap runtime belongs to M7 after G5. M5 may provide reusable navigation/settings/client primitives but does not invent those new Domain contracts.
 
@@ -104,7 +105,7 @@ M5 turns the already delivered M0-M4 Core into a complete product on both client
 
 | Phase | Human goal | Scope | Outcome |
 |---|---|---|---|
-| **M5 · Client Completion & Parity** | Web and Android are fully usable | complete client integration, Export/Import, Read Cache, Deep Links, Accessibility, Performance, parity | **G4 Core Release Candidate** |
+| **M5 · Client Completion & Parity** | Web and Android are fully usable | complete client integration, Export/Import, Read Cache, Deep Links, Accessibility, parity audit | **G4 Core Release Candidate** |
 | **M6 · Operate & Launch** | the Core can be safely operated and released | Self-Hosted, Cloud/Managed, Backup/Restore/Upgrade, administration, observability, Entitlements/Billing adapters, hardening, release engineering and final launch QA | **G5 Launch-ready** |
 | **M7 · Relationship Depth** | deepen everyday connection without making it mandatory | module configuration, Daily Check-in/Vibe/Energy, partner notes/support gestures, Questions, shared achievements, monthly/yearly recaps | optional post-launch relationship depth |
 | **M8 · Discover & Integrations** | bring optional external inspiration into the product | Shopping, Recipes, Events/Entertainment, external media and provider adapters | integrations without Core dependency |
@@ -248,14 +249,21 @@ M7 and M8 may evolve independently after G5 where their shared foundations permi
 
 G4 is evaluated after M5. At minimum:
 
-- Web and Android are domain-equivalent for the Core;
+- Web and Android are domain-equivalent for the Core, established through a
+  pragmatic Web/Android parity audit rather than a formal evidence document;
 - Read Cache/offline-read works without pretending Offline Write exists;
 - Export/Import is versioned and tested;
 - Deep Links and route identity are stable;
-- Design System and Accessibility are verified;
-- client performance is acceptable;
+- Design System is verified and the per-slice automated Accessibility
+  semantics (contrast, screen-reader names, focus order, touch targets) are
+  delivered — manual acceptance testing is deprioritized for now, per the
+  2026-09-02 gate scope decision above;
 - Privacy and Security gates pass;
 - no M7 domain is required merely to declare the Core client-complete.
+
+Dedicated Performance evidence is not a separate G4 requirement; the existing
+per-PR Cross-Cutting Quality review already covers query count, payload size,
+and resource impact.
 
 ### G5 — Launch-ready
 

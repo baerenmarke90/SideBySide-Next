@@ -128,7 +128,7 @@ Historical M2 project control and binding milestone boundaries are documented in
 
 M2 is **Domain + API + minimal vertical Web/Android reference flows**. These reference flows provide technical E2E evidence for the critical Memory/Media/Story Core and do not imply full client parity.
 
-M5 is **Client Completion & Parity**: complete client integration, Deep Links, Read Cache, Export/Import, systematic Web/Android parity, Accessibility, and Performance. Per ADR 0006/#433, new M7 Relationship Depth domains are not pulled into M5; M5 completes the M0-M4 Core first.
+M5 is **Client Completion & Parity**: complete client integration, Deep Links, Read Cache, Export/Import, systematic Web/Android parity, and Accessibility. Per ADR 0006/#433, new M7 Relationship Depth domains are not pulled into M5; M5 completes the M0-M4 Core first.
 
 ### Privacy terminology
 
@@ -166,7 +166,7 @@ The S3 adapter (#87) ran in parallel and is delivered. Video (#88) is not part o
 
 Demonstrated are M2 Domain/API, Story Privacy, Media/parent Authorization, Cross-Tenant/race/data integrity, OpenAPI, migrations, PostgreSQL integration, and a real critical Memory/Media/Story flow in Web and Android against the same SideBySide stack.
 
-Manual Accessibility acceptance was deliberately moved from G2 into final client/release QA. As of 2026-09-02, this manual acceptance step is deprioritized and is **not** required for G4; the per-slice automated accessibility semantics already delivered (contrast, TalkBack/screen-reader names, focus order, touch targets, dynamic type) stand as the accepted evidence instead. Full client parity remains M5/G4.
+Manual Accessibility acceptance was deliberately moved from G2 into final client/release QA. As of 2026-09-02, this manual acceptance step is deprioritized and is **not** required for G4; the per-slice automated accessibility semantics already delivered (contrast, TalkBack/screen-reader names, focus order, touch targets, dynamic type) stand as the accepted evidence instead. Dedicated Performance evidence is deprioritized the same way, for the same date: the existing per-PR [Cross-Cutting Quality](CROSS-CUTTING-QUALITY.md) review already covers query count, payload size, and resource impact, and a separate evidence artifact would not meaningfully add to that. Full client parity remains part of M5/G4, produced as a pragmatic Web/Android feature audit — closing or explicitly accepting real gaps — rather than a formal evidence document.
 
 ## M3 — Planning & Private Area
 
@@ -212,7 +212,7 @@ The final M4 migration order is `0028 -> 0029 -> 0030 -> 0031 -> 0032`. M4 remai
 ## Later milestones
 
 - [x] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules
-- [ ] **M5 — Client Completion & Parity:** complete Web/Android Core productization, Export/Import, Read Cache, Deep Links, final Accessibility/Performance/parity evidence -> G4
+- [ ] **M5 — Client Completion & Parity:** complete Web/Android Core productization, Export/Import, Read Cache, Deep Links, final Accessibility evidence, and a Web/Android parity audit -> G4
 - [ ] **M6 — Operate & Launch:** Managed/Self-Hosted operation, Backup/Restore/Upgrade, administration, observability, Entitlements/Billing adapters, hardening, release engineering and launch QA -> G5
   - [x] **#190 — Self-Hosted recovery evidence:** coordinated PostgreSQL and durable LocalMediaStore backup/restore, fresh-target integrity/privacy acceptance, reproducible `0032`-to-head upgrade validation, S3 responsibility boundary, operator runbook, and required CI gate delivered.
 - [ ] **M7 — Relationship Depth:** module readiness, Daily Check-in/Vibe/Energy, partner notes/support gestures, Questions, shared achievements, monthly/yearly recaps
@@ -225,7 +225,7 @@ The final M4 migration order is `0028 -> 0029 -> 0030 -> 0031 -> 0032`. M4 remai
 
 ## Active milestone
 
-**M5 — Client Completion & Parity** is active. M4's backend/API contracts are stable on `main`; M5 productizes them across Web and Android together with Export/Import, Read Cache, Deep Links, Accessibility, Performance, and systematic parity.
+**M5 — Client Completion & Parity** is active. M4's backend/API contracts are stable on `main`; M5 productizes them across Web and Android together with Export/Import, Read Cache, Deep Links, Accessibility, and systematic parity.
 
 M4 completion does **not** declare G4 passed. G4 requires the complete M5 client/parity/Core Release Candidate evidence defined by the Roadmap and binding specifications. New M7 Relationship Depth runtime is not part of that gate.
 
