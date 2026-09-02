@@ -104,8 +104,10 @@ const de = {
   identity: {
     entryAria: 'Zugang zu SidebySide',
     invitationEyebrow: 'Einladung zu SidebySide',
-    invitationTitle: 'Dein Partner hat einen gemeinsamen Ort für euch vorbereitet.',
-    invitationBody: 'Erstelle dein Profil, um gemeinsam Erinnerungen, Meilensteine und Wünsche für die Zukunft festzuhalten. Privat und nur für euch.',
+    invitationTitle:
+      'Dein Partner hat einen gemeinsamen Ort für euch vorbereitet.',
+    invitationBody:
+      'Erstelle dein Profil, um gemeinsam Erinnerungen, Meilensteine und Wünsche für die Zukunft festzuhalten. Privat und nur für euch.',
     invitationExistingAccountBody:
       'Melde dich mit deinem bestehenden Konto an, um diese Einladung anzunehmen.',
     createAccount: 'Neues Konto erstellen',
@@ -172,19 +174,19 @@ const de = {
       'Der Bestätigungslink ist möglicherweise abgelaufen oder wurde bereits verwendet.',
   },
   login: {
-    introHeading: 'Euer gemeinsamer Raum für die Dinge, die bleiben.',
+    introHeading: 'Euer Ort für das, was euch verbindet.',
     introBody:
-      'Erinnerungen, Wünsche und Pläne an einem ruhigen Ort – nur für euch zwei.',
+      'Erinnerungen, Wünsche und Pläne an einem ruhigen gemeinsamen Ort.',
     eyebrow: 'Willkommen zurück',
     heading: 'Anmelden',
-    body: 'Melde dich mit deinem SidebySide-Konto an.',
+    body: 'Melde dich an und geh zurück zu eurem gemeinsamen Ort.',
     email: 'E-Mail',
     password: 'Passwort',
     submit: 'Anmelden',
     pending: 'Anmeldung läuft …',
     errorFallback:
       'Anmeldung fehlgeschlagen. Bitte prüfe deine Zugangsdaten und versuche es erneut.',
-    assurance: 'Euer gemeinsamer Space bleibt nur für euch bestimmt.',
+    assurance: 'Deine Anmeldung führt dich direkt zurück zu SidebySide.',
   },
   story: {
     savedTitle: 'Erinnerung gespeichert.',
@@ -232,6 +234,7 @@ const de = {
     titlePlaceholder: 'Zum Beispiel: Unser Tag am See',
     bodyLabel: 'Erinnerung',
     bodyPlaceholder: 'Was möchtet ihr von diesem Moment behalten?',
+    addMoreDetails: 'Mehr Details hinzufügen (optional)',
     dateLabel: 'Datum',
     dateHelp: 'Optional – wenn der Moment an einem bestimmten Tag war.',
     photoLabel: 'Fotos',
