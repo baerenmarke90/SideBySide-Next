@@ -49,6 +49,12 @@ def upgrade() -> None:
             nullable=True,
         ),
         sa.Column(
+            "source_event_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
             "status",
             sa.String(length=32),
             nullable=False,
