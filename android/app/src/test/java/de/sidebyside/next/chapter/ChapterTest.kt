@@ -105,6 +105,33 @@ class ChapterTest {
     }
 
     @Test
+    fun addingCarriesTheChosenPlace() = runTest(dispatcher) {
+        val place = UUID.fromString("dddddddd-dddd-4ddd-8ddd-dddddddddddd")
+        val api = ChapterApi()
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.addChapter("Our first year", "", "", "", place)
+        advanceUntilIdle()
+
+        assertEquals(place, api.created.single().placeId)
+    }
+
+    @Test
+    fun editingCanChangeThePlace() = runTest(dispatcher) {
+        val place = UUID.fromString("dddddddd-dddd-4ddd-8ddd-dddddddddddd")
+        val target = chapter("Our first year", version = 3)
+        val api = ChapterApi(chapters = listOf(target))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.updateChapter(target, "Our first year", "", "", "", place)
+        advanceUntilIdle()
+
+        assertEquals(place, api.updatedFields.single().placeId)
+    }
+
+    @Test
     fun updatingSendsTheCurrentVersionAsIfMatch() = runTest(dispatcher) {
         val target = chapter("Old title", version = 4)
         val api = ChapterApi(chapters = listOf(target))
@@ -178,6 +205,7 @@ private class ChapterApi(
 ) : FakeReferenceContract() {
     val created = mutableListOf<ChapterCreate>()
     val updated = mutableListOf<Pair<UUID, Int>>()
+    val updatedFields = mutableListOf<ChapterUpdate>()
     val deleted = mutableListOf<Pair<UUID, Int>>()
 
     override suspend fun signIn(email: String, password: String): SessionView = SessionView(
@@ -216,6 +244,7 @@ private class ChapterApi(
         fields: ChapterUpdate,
     ): ChapterDetail {
         updated += chapterId to ifMatch
+        updatedFields += fields
         return chapter(fields.title ?: "Updated")
     }
 

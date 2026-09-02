@@ -802,19 +802,23 @@ private fun DemoShell(
             }
 
             composable(CHAPTERS_ROUTE) {
-                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadChapters() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) {
+                    viewModel.loadChapters()
+                    viewModel.loadPlaces()
+                }
 
                 ChaptersScreen(
                     chapters = state.chapters,
+                    places = state.places,
                     busy = state.chaptersBusy,
                     problem = state.chaptersProblem,
                     onBack = { controller.popBackStack() },
                     onOpen = { chapter -> controller.navigate("planning/chapters/${chapter.id}/content") },
-                    onAdd = { title, description, startOn, endOn ->
-                        viewModel.addChapter(title, description, startOn, endOn)
+                    onAdd = { title, description, startOn, endOn, placeId ->
+                        viewModel.addChapter(title, description, startOn, endOn, placeId)
                     },
-                    onEdit = { chapter, title, description, startOn, endOn ->
-                        viewModel.updateChapter(chapter, title, description, startOn, endOn)
+                    onEdit = { chapter, title, description, startOn, endOn, placeId ->
+                        viewModel.updateChapter(chapter, title, description, startOn, endOn, placeId)
                     },
                     onDelete = viewModel::deleteChapter,
                     cachedAt = state.chaptersCachedAt,
@@ -1070,19 +1074,22 @@ private fun DemoShell(
             }
 
             AppDestination.Plan -> {
-                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadPlanning() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) {
+                    viewModel.loadPlanning()
+                    viewModel.loadPlaces()
+                }
                 PlanScreen(
                     wishes = state.openWishes,
                     plans = state.plans,
+                    places = state.places,
                     busy = state.planningBusy,
                     problem = state.planningProblem,
                     onAddWish = viewModel::addWish,
-                    onPlanWish = { wishId ->
-                        // The plan starts from the wish's own words; giving it
-                        // more belongs to the plan, not to this tap.
-                        viewModel.planWish(wishId, "", "")
-                    },
+                    onEditWish = viewModel::updateWish,
+                    onPlanWish = viewModel::planWish,
                     onRemoveWish = viewModel::removeWish,
+                    onCreatePlan = viewModel::createPlan,
+                    onEditPlan = viewModel::updatePlan,
                     onSchedule = viewModel::schedulePlan,
                     onUnschedule = viewModel::unschedulePlan,
                     onComplete = viewModel::completePlan,

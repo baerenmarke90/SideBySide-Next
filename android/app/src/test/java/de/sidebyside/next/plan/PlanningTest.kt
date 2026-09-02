@@ -115,12 +115,100 @@ class PlanningTest {
 
         model.loadPlanning()
         advanceUntilIdle()
-        model.planWish(OPEN_WISH, "", "")
+        model.planWish(OPEN_WISH, "", "", null)
         advanceUntilIdle()
 
         assertEquals(listOf(4), api.planWishVersions)
         // A blank title means the wish's own words carry over.
         assertEquals("A weekend by the sea", api.conversions.single().title)
+    }
+
+    @Test
+    fun planningAWishCanCarryACustomTitleDescriptionAndPlace() = runTest(dispatcher) {
+        val place = UUID.fromString("dddddddd-dddd-4ddd-8ddd-dddddddddddd")
+        val api = PlanningApi(wishes = listOf(aWish(OPEN_WISH, WishStatus.OPEN)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.planWish(OPEN_WISH, "A trip to the coast", "Two nights, no plans", place)
+        advanceUntilIdle()
+
+        val conversion = api.conversions.single()
+        assertEquals("A trip to the coast", conversion.title)
+        assertEquals("Two nights, no plans", conversion.description)
+        assertEquals(place, conversion.placeId)
+    }
+
+    @Test
+    fun editingAWishTitleUsesTheExistingUpdateCallAndVersion() = runTest(dispatcher) {
+        val api = PlanningApi(wishes = listOf(aWish(OPEN_WISH, WishStatus.OPEN, version = 5)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.updateWish(OPEN_WISH, "A weekend inland instead")
+        advanceUntilIdle()
+
+        assertEquals(listOf(5), api.wishUpdateVersions)
+        assertEquals("A weekend inland instead", api.wishUpdates.single().title)
+    }
+
+    @Test
+    fun editingAWishRefusesABlankTitleWithoutSendingAnything() = runTest(dispatcher) {
+        val api = PlanningApi(wishes = listOf(aWish(OPEN_WISH, WishStatus.OPEN)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.updateWish(OPEN_WISH, "   ")
+        advanceUntilIdle()
+
+        assertTrue(api.wishUpdates.isEmpty())
+    }
+
+    @Test
+    fun creatingAPlanDirectlyNeedsNoWish() = runTest(dispatcher) {
+        val place = UUID.fromString("dddddddd-dddd-4ddd-8ddd-dddddddddddd")
+        val api = PlanningApi()
+        val model = signedIn(api)
+
+        model.createPlan("A weekend away", "Somewhere quiet", place)
+        advanceUntilIdle()
+
+        val created = api.directlyCreated.single()
+        assertEquals("A weekend away", created.title)
+        assertEquals("Somewhere quiet", created.description)
+        assertEquals(place, created.placeId)
+    }
+
+    @Test
+    fun creatingAPlanDirectlyRefusesABlankTitleWithoutSendingAnything() = runTest(dispatcher) {
+        val api = PlanningApi()
+        val model = signedIn(api)
+
+        model.createPlan("   ", "", null)
+        advanceUntilIdle()
+
+        assertTrue(api.directlyCreated.isEmpty())
+    }
+
+    @Test
+    fun editingAPlanUsesTheExistingUpdateCallAndVersion() = runTest(dispatcher) {
+        val place = UUID.fromString("dddddddd-dddd-4ddd-8ddd-dddddddddddd")
+        val api = PlanningApi(plans = listOf(aPlan(PlanStatus.IDEA, version = 6)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.updatePlan(PLAN, "A better title", "A written-out description", place)
+        advanceUntilIdle()
+
+        assertEquals(listOf(6), api.planUpdateVersions)
+        val update = api.planUpdates.single()
+        assertEquals("A better title", update.title)
+        assertEquals("A written-out description", update.description)
+        assertEquals(place, update.placeId)
     }
 
     @Test
@@ -130,11 +218,25 @@ class PlanningTest {
 
         model.loadPlanning()
         advanceUntilIdle()
-        model.schedulePlan(PLAN, OffsetDateTime.now())
+        model.schedulePlan(PLAN, "2026-09-20")
         advanceUntilIdle()
 
         assertEquals(listOf(7), api.scheduleVersions)
+        assertEquals(LocalDate.of(2026, 9, 20), api.schedules.single().plannedStart.toLocalDate())
         assertTrue(api.completions.isEmpty())
+    }
+
+    @Test
+    fun schedulingAnUnparseableDateSendsNothing() = runTest(dispatcher) {
+        val api = PlanningApi(plans = listOf(aPlan(PlanStatus.IDEA)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.schedulePlan(PLAN, "not a date")
+        advanceUntilIdle()
+
+        assertTrue(api.schedules.isEmpty())
     }
 
     @Test
@@ -144,10 +246,23 @@ class PlanningTest {
 
         model.loadPlanning()
         advanceUntilIdle()
-        model.completePlan(PLAN, LocalDate.of(2026, 8, 30))
+        model.completePlan(PLAN, "2026-08-30")
         advanceUntilIdle()
 
         assertEquals(LocalDate.of(2026, 8, 30), api.completions.single().experiencedOn)
+    }
+
+    @Test
+    fun completingWithAnUnparseableDateSendsNothing() = runTest(dispatcher) {
+        val api = PlanningApi(plans = listOf(aPlan(PlanStatus.PLANNED)))
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        model.completePlan(PLAN, "not a date")
+        advanceUntilIdle()
+
+        assertTrue(api.completions.isEmpty())
     }
 
     @Test
@@ -173,7 +288,7 @@ class PlanningTest {
 
         model.loadPlanning()
         advanceUntilIdle()
-        model.schedulePlan(PLAN, OffsetDateTime.now())
+        model.schedulePlan(PLAN, "2026-09-20")
         advanceUntilIdle()
 
         assertEquals(UiStateKind.Conflict, model.uiState.value.planningProblem?.kind)
@@ -244,8 +359,14 @@ private class PlanningApi(
     private val scheduleFailure: Throwable? = null,
 ) : FakeReferenceContract() {
     val created = mutableListOf<WishCreate>()
+    val wishUpdates = mutableListOf<sidebyside.api.models.WishUpdate>()
+    val wishUpdateVersions = mutableListOf<Int>()
     val conversions = mutableListOf<WishToPlan>()
     val planWishVersions = mutableListOf<Int>()
+    val directlyCreated = mutableListOf<sidebyside.api.models.PlanCreate>()
+    val planUpdates = mutableListOf<sidebyside.api.models.PlanUpdate>()
+    val planUpdateVersions = mutableListOf<Int>()
+    val schedules = mutableListOf<PlanSchedule>()
     val scheduleVersions = mutableListOf<Int>()
     val completions = mutableListOf<PlanComplete>()
     val returnVersions = mutableListOf<Int>()
@@ -291,6 +412,18 @@ private class PlanningApi(
         return aWish(OPEN_WISH, WishStatus.OPEN)
     }
 
+    override suspend fun updateWish(
+        spaceId: UUID,
+        accessToken: String,
+        wishId: UUID,
+        ifMatch: Int,
+        update: sidebyside.api.models.WishUpdate,
+    ): WishDetail {
+        wishUpdateVersions += ifMatch
+        wishUpdates += update
+        return aWish(wishId, WishStatus.OPEN, version = ifMatch + 1)
+    }
+
     override suspend fun planWish(
         spaceId: UUID,
         accessToken: String,
@@ -306,6 +439,27 @@ private class PlanningApi(
         )
     }
 
+    override suspend fun createPlan(
+        spaceId: UUID,
+        accessToken: String,
+        fields: sidebyside.api.models.PlanCreate,
+    ): PlanDetail {
+        directlyCreated += fields
+        return aPlan(PlanStatus.IDEA)
+    }
+
+    override suspend fun updatePlan(
+        spaceId: UUID,
+        accessToken: String,
+        planId: UUID,
+        ifMatch: Int,
+        update: sidebyside.api.models.PlanUpdate,
+    ): PlanDetail {
+        planUpdateVersions += ifMatch
+        planUpdates += update
+        return aPlan(PlanStatus.IDEA, version = ifMatch + 1)
+    }
+
     override suspend fun schedulePlan(
         spaceId: UUID,
         accessToken: String,
@@ -314,6 +468,7 @@ private class PlanningApi(
         schedule: PlanSchedule,
     ): PlanDetail {
         scheduleVersions += ifMatch
+        schedules += schedule
         scheduleFailure?.let { throw it }
         return aPlan(PlanStatus.PLANNED, version = ifMatch + 1)
     }

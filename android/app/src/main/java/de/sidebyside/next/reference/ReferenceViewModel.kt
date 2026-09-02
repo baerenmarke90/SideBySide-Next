@@ -85,11 +85,13 @@ import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
 import sidebyside.api.models.NotificationItem
 import sidebyside.api.models.PlanComplete
+import sidebyside.api.models.PlanCreate
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.InvitationView
 import sidebyside.api.models.IssuedInvitationView
 import sidebyside.api.models.MembershipView
 import sidebyside.api.models.PlanSchedule
+import sidebyside.api.models.PlanUpdate
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
 import sidebyside.api.models.StoryPage
@@ -100,6 +102,7 @@ import sidebyside.api.models.WishCreate
 import sidebyside.api.models.WishDetail
 import sidebyside.api.models.WishStatus
 import sidebyside.api.models.WishToPlan
+import sidebyside.api.models.WishUpdate
 
 data class UiMessage(
     val resourceId: Int,
@@ -2547,13 +2550,21 @@ class ReferenceViewModel(
         planningCall { api, spaceId, token -> api.createWish(spaceId, token, WishCreate(title = title)) }
     }
 
+    fun updateWish(wishId: java.util.UUID, title: String) {
+        if (title.isBlank()) return
+        val wish = _uiState.value.openWishes.firstOrNull { it.id == wishId } ?: return
+        planningCall { api, spaceId, token ->
+            api.updateWish(spaceId, token, wishId, wish.version, WishUpdate(title = title))
+        }
+    }
+
     fun removeWish(wishId: java.util.UUID) {
         val wish = _uiState.value.openWishes.firstOrNull { it.id == wishId } ?: return
         planningCall { api, spaceId, token -> api.deleteWish(spaceId, token, wishId, wish.version) }
     }
 
     /** Turns a wish into a plan; both survive, the wish as `PLANNED`. */
-    fun planWish(wishId: java.util.UUID, title: String, description: String) {
+    fun planWish(wishId: java.util.UUID, title: String, description: String, placeId: java.util.UUID?) {
         val wish = _uiState.value.openWishes.firstOrNull { it.id == wishId } ?: return
         planningCall { api, spaceId, token ->
             api.planWish(
@@ -2563,14 +2574,57 @@ class ReferenceViewModel(
                 wish.version,
                 WishToPlan(
                     description = description.takeIf { it.isNotBlank() },
+                    placeId = placeId,
                     title = title.ifBlank { wish.title },
                 ),
             )
         }
     }
 
-    fun schedulePlan(planId: java.util.UUID, start: java.time.OffsetDateTime) {
+    /** Direct plan creation (M3-D30): a plan that never started as a wish. */
+    fun createPlan(title: String, description: String, placeId: java.util.UUID?) {
+        if (title.isBlank()) return
+        planningCall { api, spaceId, token ->
+            api.createPlan(
+                spaceId,
+                token,
+                PlanCreate(
+                    title = title,
+                    description = description.trim().takeIf { it.isNotBlank() },
+                    placeId = placeId,
+                ),
+            )
+        }
+    }
+
+    fun updatePlan(planId: java.util.UUID, title: String, description: String, placeId: java.util.UUID?) {
+        if (title.isBlank()) return
         val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+        planningCall { api, spaceId, token ->
+            api.updatePlan(
+                spaceId,
+                token,
+                planId,
+                plan.version,
+                PlanUpdate(
+                    title = title,
+                    description = description.trim().takeIf { it.isNotBlank() },
+                    placeId = placeId,
+                ),
+            )
+        }
+    }
+
+    /**
+     * `IDEA -> PLANNED`. [startOn] carries the calendar date the couple chose;
+     * the time of day is the moment of scheduling, since no client in this
+     * codebase asks for a time-of-day separately from a date.
+     */
+    fun schedulePlan(planId: java.util.UUID, startOn: String) {
+        val day = parseHappenedOn(startOn) ?: return
+        val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
+        val now = java.time.OffsetDateTime.now()
+        val start = day.atTime(now.toLocalTime()).atOffset(now.offset)
         planningCall { api, spaceId, token ->
             api.schedulePlan(spaceId, token, planId, plan.version, PlanSchedule(plannedStart = start))
         }
@@ -2583,7 +2637,8 @@ class ReferenceViewModel(
         }
     }
 
-    fun completePlan(planId: java.util.UUID, experiencedOn: LocalDate) {
+    fun completePlan(planId: java.util.UUID, experiencedOn: String) {
+        val day = parseHappenedOn(experiencedOn) ?: return
         val plan = _uiState.value.plans.firstOrNull { it.id == planId } ?: return
         planningCall { api, spaceId, token ->
             api.completePlan(
@@ -2591,7 +2646,7 @@ class ReferenceViewModel(
                 token,
                 planId,
                 plan.version,
-                PlanComplete(experiencedOn = experiencedOn),
+                PlanComplete(experiencedOn = day),
             )
         }
     }
@@ -4836,7 +4891,13 @@ class ReferenceViewModel(
         }
     }
 
-    fun addChapter(title: String, description: String, startOn: String, endOn: String) {
+    fun addChapter(
+        title: String,
+        description: String,
+        startOn: String,
+        endOn: String,
+        placeId: java.util.UUID? = null,
+    ) {
         if (title.isBlank()) return
         val api = contract ?: return
         val currentSession = session ?: return
@@ -4855,6 +4916,7 @@ class ReferenceViewModel(
                         description = description.trim().takeIf { it.isNotBlank() },
                         startOn = parseHappenedOn(startOn),
                         endOn = parseHappenedOn(endOn),
+                        placeId = placeId,
                     ),
                 )
             }
@@ -4870,7 +4932,14 @@ class ReferenceViewModel(
         }
     }
 
-    fun updateChapter(chapter: ChapterDetail, title: String, description: String, startOn: String, endOn: String) {
+    fun updateChapter(
+        chapter: ChapterDetail,
+        title: String,
+        description: String,
+        startOn: String,
+        endOn: String,
+        placeId: java.util.UUID? = null,
+    ) {
         if (title.isBlank()) return
         val api = contract ?: return
         val currentSession = session ?: return
@@ -4891,6 +4960,7 @@ class ReferenceViewModel(
                         description = description.trim().takeIf { it.isNotBlank() },
                         startOn = parseHappenedOn(startOn),
                         endOn = parseHappenedOn(endOn),
+                        placeId = placeId,
                     ),
                 )
             }

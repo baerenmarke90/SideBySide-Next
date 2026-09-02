@@ -316,6 +316,12 @@ abstract class FakeReferenceContract : ReferenceContract {
     override suspend fun listPlans(spaceId: UUID, accessToken: String): PlanPage =
         notExercised("listPlans")
 
+    override suspend fun createPlan(
+        spaceId: UUID,
+        accessToken: String,
+        fields: sidebyside.api.models.PlanCreate,
+    ): PlanDetail = notExercised("createPlan")
+
     override suspend fun updatePlan(
         spaceId: UUID,
         accessToken: String,
