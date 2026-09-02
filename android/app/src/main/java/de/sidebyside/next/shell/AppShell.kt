@@ -14,8 +14,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -95,6 +98,14 @@ fun AppShell(
      * same as every caller before this parameter existed.
      */
     banner: (@Composable () -> Unit)? = null,
+    /**
+     * The M2/G2 `docs/COMPONENT-CONTRACTS.md` §9.2 Snackbar surface, shared
+     * across every destination the same way [banner] is — a brief,
+     * non-critical confirmation belongs to the shell, not to whichever
+     * screen happened to trigger it, since the screen the user lands on
+     * after an action is often not the one that started it.
+     */
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     content: @Composable () -> Unit,
 ) {
     // A single destination is not a choice, so no navigation surface is drawn
@@ -110,6 +121,7 @@ fun AppShell(
                 BottomNavigation(destinations, currentDestination, onSelectDestination)
             }
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
             modifier = Modifier

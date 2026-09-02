@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -315,6 +316,19 @@ private fun DemoShell(
     ) -> Unit,
 ) {
     val navController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
+    // Resolved here, in composition, since UiMessage.resolve() calls the
+    // @Composable stringResource() — the LaunchedEffect body below cannot
+    // call it itself. Keyed on the event's own id, not its text, so the
+    // exact same message posted twice in a row is still shown twice.
+    val pendingSnackbar = state.snackbarMessage
+    val pendingSnackbarText = pendingSnackbar?.text?.resolve()
+    LaunchedEffect(pendingSnackbar?.id) {
+        if (pendingSnackbar != null && pendingSnackbarText != null) {
+            snackbarHostState.showSnackbar(pendingSnackbarText)
+            viewModel.snackbarShown(pendingSnackbar.id)
+        }
+    }
     AppNavigation(
         // Planen joins now that #419 put something behind it; a destination
         // with nothing behind it would be dead navigation.
@@ -328,6 +342,7 @@ private fun DemoShell(
         ),
         navController = navController,
         secureWhen = ::isSecureRoute,
+        snackbarHostState = snackbarHostState,
         banner = {
             de.sidebyside.next.shell.OfflineStatusBanner(
                 offline = state.offline,

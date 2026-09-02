@@ -104,6 +104,12 @@ data class UiMessage(
     val args: List<Any> = emptyList(),
 )
 
+/** See [ReferenceUiState.snackbarMessage]. */
+data class SnackbarMessage(
+    val id: Long,
+    val text: UiMessage,
+)
+
 enum class DraftUploadState {
     UPLOADING,
     VALIDATING,
@@ -193,6 +199,18 @@ data class ReferenceUiState(
     val profile: ProfileUiState = ProfileUiState(),
     val busy: Boolean = false,
     val status: UiMessage? = null,
+    /**
+     * A one-shot Snackbar event (docs/COMPONENT-CONTRACTS.md §9.2), distinct
+     * from [status]: [status] is a persistent inline message the M2/G2
+     * reference flow still renders in place, but nothing in the signed-in
+     * shell ever reads it, so it cannot serve a transient confirmation. This
+     * carries an [SnackbarMessage.id] precisely so the same text posted
+     * twice in a row is still shown twice — a plain nullable [UiMessage]
+     * would not survive an unchanged value being set again, since a
+     * `LaunchedEffect` keyed on it would see no change to react to. Cleared
+     * by [snackbarShown] once the shell has actually displayed it.
+     */
+    val snackbarMessage: SnackbarMessage? = null,
     val error: UiMessage? = null,
     val draftImages: List<DraftImageUiItem> = emptyList(),
     val lastMemoryTitle: String? = null,
@@ -422,6 +440,7 @@ class ReferenceViewModel(
     /** Kept across a failed attempt so a retry is the same gesture, not a second one. */
     private var pendingGestureId: java.util.UUID? = null
     private var nextAttemptId: Long = 1
+    private var nextSnackbarId: Long = 1
 
     private val _uiState = MutableStateFlow(ReferenceUiState(configured = config.isConfigured))
     val uiState: StateFlow<ReferenceUiState> = _uiState.asStateFlow()
@@ -748,7 +767,6 @@ class ReferenceViewModel(
                 profile = ProfileUiState(),
                 busy = false,
                 error = null,
-                status = message(R.string.space_switched),
                 draftImages = emptyList(),
                 lastMemoryTitle = null,
                 lastMemoryBody = null,
@@ -757,6 +775,7 @@ class ReferenceViewModel(
                 storyCachedAt = null,
             )
         }
+        postSnackbar(R.string.space_switched)
         refreshStory()
     }
 
@@ -1161,9 +1180,9 @@ class ReferenceViewModel(
                             openMemory = null,
                             memoryBusy = false,
                             openMemoryGone = true,
-                            status = message(R.string.memory_deleted),
                         )
                     }
+                    postSnackbar(R.string.memory_deleted)
                     refreshStory()
                 }
                 .onFailure { throwable ->
@@ -1941,9 +1960,9 @@ class ReferenceViewModel(
                             activeSpaceId = space,
                             invitationBusy = false,
                             invitationProblem = null,
-                            status = message(R.string.invitation_accepted),
                         )
                     }
+                    postSnackbar(R.string.invitation_accepted)
                     refreshStory()
                 }
                 .onFailure { throwable ->
@@ -4968,4 +4987,17 @@ class ReferenceViewModel(
 
     private fun message(resourceId: Int, vararg args: Any): UiMessage =
         UiMessage(resourceId = resourceId, args = args.toList())
+
+    private fun postSnackbar(resourceId: Int, vararg args: Any) {
+        mutate { it.copy(snackbarMessage = SnackbarMessage(nextSnackbarId++, message(resourceId, *args))) }
+    }
+
+    /**
+     * Clears a shown Snackbar event, guarded by [id] so a late clear can
+     * never wipe a newer message posted in between — the shell calls this
+     * once it has actually displayed [ReferenceUiState.snackbarMessage].
+     */
+    fun snackbarShown(id: Long) {
+        mutate { if (it.snackbarMessage?.id == id) it.copy(snackbarMessage = null) else it }
+    }
 }

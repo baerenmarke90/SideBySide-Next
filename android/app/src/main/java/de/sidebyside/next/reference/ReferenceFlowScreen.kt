@@ -332,7 +332,7 @@ fun ReferenceFlowScreen(
 }
 
 @Composable
-private fun UiMessage.resolve(): String = stringResource(resourceId, *args.toTypedArray())
+internal fun UiMessage.resolve(): String = stringResource(resourceId, *args.toTypedArray())
 
 internal fun storyItemLabel(item: StoryItem): UiMessage = when (item) {
     is StoryItem.MemoryWrapper -> UiMessage(R.string.ref_story_memory, listOf(item.value.memory.title))
