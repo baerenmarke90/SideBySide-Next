@@ -167,6 +167,81 @@ test('compact sign-in is keyboard operable, wraps German copy, and is axe-clean'
   await expectNoWcagViolations(page);
 });
 
+test('compact authenticated shell keeps global quick create reachable and accessible', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+
+  await page.goto('/today');
+  await signIn(page);
+
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(
+    page.getByRole('heading', {
+      name: m5s5.dashboard.newSpaceEmpty,
+      level: 1,
+    }),
+  ).toBeVisible();
+
+  const quickCreate = page.getByRole('button', {
+    name: navigation.newContent,
+  });
+  await expect(quickCreate).toBeVisible();
+  await quickCreate.focus();
+  await page.keyboard.press('ArrowDown');
+
+  const memoryTarget = page.getByRole('menuitem', {
+    name: navigation.quickCreateMemory,
+  });
+  await expect(memoryTarget).toBeVisible();
+  await expect(memoryTarget).toBeFocused();
+  await expect(
+    page.getByRole('menuitem', { name: navigation.quickCreateCollection }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('menuitem', { name: navigation.quickCreatePrivateNote }),
+  ).toBeVisible();
+
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+
+  await page.keyboard.press('Escape');
+  await expect(quickCreate).toBeFocused();
+  await expect(
+    page.getByRole('menu', { name: navigation.newContent }),
+  ).toHaveCount(0);
+  expect(unexpectedRequests).toEqual([]);
+});
+
+test('authenticated shell removes decorative motion when reduced motion is preferred', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 320, height: 800 });
+  const unexpectedRequests = await installAuthorizedApiMocks(page);
+
+  await page.goto('/today');
+  await signIn(page);
+
+  const mainAnimation = await page
+    .locator('#main-content')
+    .evaluate((element) => getComputedStyle(element).animationName);
+  expect(mainAnimation).toBe('none');
+
+  const quickCreate = page.getByRole('button', {
+    name: navigation.newContent,
+  });
+  const quickCreateTransition = await quickCreate.evaluate(
+    (element) => getComputedStyle(element).transitionDuration,
+  );
+  expect(quickCreateTransition).toBe('0s');
+
+  await expectNoHorizontalOverflow(page);
+  await expectNoWcagViolations(page);
+  expect(unexpectedRequests).toEqual([]);
+});
+
 test('expanded authenticated shell keeps deep links, back, focus, and accessibility intact', async ({
   page,
 }) => {
