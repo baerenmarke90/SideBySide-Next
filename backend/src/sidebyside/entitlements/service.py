@@ -294,7 +294,6 @@ def record_grant(
 
     if external_reference is not None:
         update_values: dict[str, Any] = {
-            "space_id": space_id,
             "status": status_str,
             "tier": tier_str,
             "effective_from": effective_from,
@@ -391,10 +390,12 @@ def restore_grant_to_space(
         raise ValueError("external_reference must not be blank.")
 
     grant = session.execute(
-        select(EntitlementGrant).where(
+        select(EntitlementGrant)
+        .where(
             EntitlementGrant.source_type == source_str,
             EntitlementGrant.external_reference == reference,
         )
+        .with_for_update()
     ).scalar_one_or_none()
     if grant is None:
         return None
