@@ -18,9 +18,7 @@ export function PrivateAreaFrame({ children }: { children: ReactNode }) {
         aria-label={t('privateArea.privacyLabel')}
       >
         <div className="private-area-header-info">
-          <h1 className="private-area-title-row">
-            {t('privateArea.eyebrow')}
-          </h1>
+          <h1 className="private-area-title-row">{t('privateArea.eyebrow')}</h1>
           <p className="private-area-intro-text">{t('privateArea.intro')}</p>
         </div>
       </section>
