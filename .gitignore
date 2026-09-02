@@ -23,6 +23,7 @@ web/vite.config.d.ts
 
 # Android
 android/.gradle/
+android/.kotlin/
 android/local.properties
 android/**/build/
 *.apk
