@@ -24,6 +24,14 @@ import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentPage
+import sidebyside.api.models.CollectionCreate
+import sidebyside.api.models.CollectionDetail
+import sidebyside.api.models.CollectionItemCreate
+import sidebyside.api.models.CollectionItemDetail
+import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.CollectionOrder
+import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartMomentCreate
@@ -1451,6 +1459,124 @@ class OkHttpReferenceApi(
             accessToken,
         ).get().build(),
         SearchPage.serializer(),
+    )
+
+    override suspend fun listCollections(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): CollectionPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/collections?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        CollectionPage.serializer(),
+    )
+
+    override suspend fun createCollection(
+        spaceId: UUID,
+        accessToken: String,
+        fields: CollectionCreate,
+    ): CollectionDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/collections", accessToken)
+            .post(
+                SideBySideJson.encodeToString(CollectionCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        CollectionDetail.serializer(),
+    )
+
+    override suspend fun updateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: CollectionUpdate,
+    ): CollectionDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/collections/$collectionId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(CollectionUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        CollectionDetail.serializer(),
+    )
+
+    override suspend fun deleteCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/collections/$collectionId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
+    )
+
+    override suspend fun createCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: CollectionItemCreate,
+    ): CollectionItemDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/collections/$collectionId/items",
+            accessToken,
+        ).post(
+            SideBySideJson.encodeToString(CollectionItemCreate.serializer(), fields)
+                .toRequestBody(jsonMediaType),
+        ).build(),
+        CollectionItemDetail.serializer(),
+    )
+
+    override suspend fun updateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: CollectionItemUpdate,
+    ): CollectionItemDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/collections/$collectionId/items/$itemId",
+            accessToken,
+        ).header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(CollectionItemUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        CollectionItemDetail.serializer(),
+    )
+
+    override suspend fun deleteCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/collections/$collectionId/items/$itemId",
+            accessToken,
+        ).header("If-Match", ifMatch.toString()).delete().build(),
+    )
+
+    override suspend fun reorderCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): CollectionDetail = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/collections/$collectionId/order",
+            accessToken,
+        ).header("If-Match", ifMatch.toString())
+            .put(
+                SideBySideJson.encodeToString(CollectionOrder.serializer(), CollectionOrder(itemIds))
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        CollectionDetail.serializer(),
     )
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {
