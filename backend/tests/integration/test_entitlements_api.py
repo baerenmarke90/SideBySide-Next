@@ -17,7 +17,6 @@ from sidebyside.entitlements.models import (
     EntitlementTier,
 )
 from sidebyside.entitlements.service import ALL_PREMIUM_CAPABILITIES
-from sidebyside.memories import service as memory_service
 from sidebyside.relationship.models import Membership, MembershipStatus
 from tests.conftest import (
     auth,
@@ -153,14 +152,13 @@ def test_capability_guard_and_non_destructive_downgrade(client, session) -> None
     ensure_capability(session, space.id, Capability.RECAP_PDF_YEARBOOK)
 
     # Create memory while Premium is active
-    memory = memory_service.create(
-        session,
-        space_id=space.id,
-        author_id=anna.id,
-        title="Our Paris Trip",
-        happened_on=current_time.date(),
+    post_res = client.post(
+        f"/api/v1/spaces/{space.id}/memories",
+        json={"title": "Our Paris Trip", "happenedOn": str(current_time.date())},
+        headers=auth(token),
     )
-    session.flush()
+    assert post_res.status_code == 201
+    memory_id = post_res.json()["id"]
 
     # 3. Grant expires / transitions to EXPIRED
     grant.status = EntitlementStatus.EXPIRED.value
@@ -176,5 +174,5 @@ def test_capability_guard_and_non_destructive_downgrade(client, session) -> None
     assert memories_response.status_code == 200
     memories = memories_response.json()["items"]
     assert len(memories) == 1
-    assert memories[0]["id"] == str(memory.id)
+    assert memories[0]["id"] == memory_id
     assert memories[0]["title"] == "Our Paris Trip"
