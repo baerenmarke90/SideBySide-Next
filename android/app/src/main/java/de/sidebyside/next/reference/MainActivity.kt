@@ -345,7 +345,7 @@ private fun DemoShell(
                 // Loading is tied to the route rather than to the tap, so
                 // returning to this screen after process death still shows the
                 // memory instead of an empty one.
-                LaunchedEffect(memoryId, state.activeSpaceId) {
+                LaunchedEffect(memoryId, state.activeSpaceId, state.reconnectEpoch) {
                     memoryId?.let(viewModel::openMemory)
                     memoryId?.let { viewModel.loadComments(MEMORY_COMMENTS, it) }
                 }
@@ -403,7 +403,7 @@ private fun DemoShell(
                 val id = entry.arguments?.getString(ITEM_ID_ARGUMENT)
                     ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
 
-                LaunchedEffect(id, state.activeSpaceId) {
+                LaunchedEffect(id, state.activeSpaceId, state.reconnectEpoch) {
                     id?.let(viewModel::openMilestone)
                     id?.let { viewModel.loadComments(MILESTONE_COMMENTS, it) }
                 }
@@ -469,7 +469,7 @@ private fun DemoShell(
                 val id = entry.arguments?.getString(ITEM_ID_ARGUMENT)
                     ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
 
-                LaunchedEffect(id, state.activeSpaceId) {
+                LaunchedEffect(id, state.activeSpaceId, state.reconnectEpoch) {
                     id?.let(viewModel::openSharedHeartMoment)
                     id?.let { viewModel.loadComments(HEART_MOMENT_COMMENTS, it) }
                 }
@@ -522,7 +522,7 @@ private fun DemoShell(
             }
 
             composable(INVITATIONS_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadInvitations() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadInvitations() }
                 DisposableEffect(Unit) { onDispose(viewModel::clearInvitations) }
 
                 InvitationsScreen(
@@ -540,7 +540,7 @@ private fun DemoShell(
             composable(HEART_MOMENTS_ROUTE) {
                 // Tied to the route, so returning here after process death
                 // loads again instead of showing an empty list.
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadHeartMoments() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadHeartMoments() }
                 DisposableEffect(Unit) { onDispose(viewModel::clearHeartMoments) }
 
                 HeartMomentsScreen(
@@ -566,7 +566,7 @@ private fun DemoShell(
                 // could render. Every session-changing event already calls
                 // clearRelatedPersons() directly, so nothing leaks across
                 // sign-in/demo/Space boundaries without this.
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadRelatedPersons() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadRelatedPersons() }
 
                 RelatedPersonsScreen(
                     people = state.relatedPersons,
@@ -590,7 +590,7 @@ private fun DemoShell(
                     ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
                 val person = state.relatedPersons.firstOrNull { it.id == personId }
 
-                LaunchedEffect(personId, state.activeSpaceId) {
+                LaunchedEffect(personId, state.activeSpaceId, state.reconnectEpoch) {
                     personId?.let(viewModel::loadImportantDates)
                 }
 
@@ -612,7 +612,7 @@ private fun DemoShell(
             }
 
             composable(PREFERENCES_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadProfilePreferences() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadProfilePreferences() }
 
                 val selfId = state.accountId
                 val partnerAccountId = state.profile.partner?.accountId
@@ -659,7 +659,7 @@ private fun DemoShell(
             }
 
             composable(PLACES_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadPlaces() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadPlaces() }
 
                 PlacesScreen(
                     places = state.places,
@@ -688,7 +688,7 @@ private fun DemoShell(
                     ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
                 val place = state.places.firstOrNull { it.id == placeId }
 
-                LaunchedEffect(placeId, state.activeSpaceId) {
+                LaunchedEffect(placeId, state.activeSpaceId, state.reconnectEpoch) {
                     placeId?.let(viewModel::loadPlaceRelations)
                 }
 
@@ -709,7 +709,7 @@ private fun DemoShell(
             }
 
             composable(COLLECTIONS_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadCollections() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadCollections() }
 
                 CollectionsScreen(
                     collections = state.collections,
@@ -734,7 +734,7 @@ private fun DemoShell(
                     ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
                 val collection = state.collections.firstOrNull { it.id == collectionId }
 
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadCollections() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadCollections() }
 
                 CollectionDetailScreen(
                     collection = collection,
@@ -754,7 +754,7 @@ private fun DemoShell(
             }
 
             composable(CHAPTERS_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadChapters() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadChapters() }
 
                 ChaptersScreen(
                     chapters = state.chapters,
@@ -781,7 +781,7 @@ private fun DemoShell(
                     ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
                 val chapter = state.chapters.firstOrNull { it.id == chapterId }
 
-                LaunchedEffect(chapterId, state.activeSpaceId) {
+                LaunchedEffect(chapterId, state.activeSpaceId, state.reconnectEpoch) {
                     chapterId?.let(viewModel::loadChapterContent)
                 }
 
@@ -811,7 +811,7 @@ private fun DemoShell(
             }
 
             composable(PRIVATE_NOTES_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateNotes() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadPrivateNotes() }
 
                 PrivateNotesScreen(
                     notes = state.privateNotes,
@@ -826,7 +826,7 @@ private fun DemoShell(
             }
 
             composable(GIFT_IDEAS_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadGiftIdeas() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadGiftIdeas() }
 
                 GiftIdeasScreen(
                     ideas = state.giftIdeas,
@@ -842,7 +842,7 @@ private fun DemoShell(
             }
 
             composable(PRIVATE_COLLECTIONS_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateCollections() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadPrivateCollections() }
 
                 PrivateCollectionsScreen(
                     collections = state.privateCollections,
@@ -867,7 +867,7 @@ private fun DemoShell(
                     ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
                 val collection = state.privateCollections.firstOrNull { it.id == collectionId }
 
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateCollections() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadPrivateCollections() }
 
                 PrivateCollectionDetailScreen(
                     collection = collection,
@@ -887,7 +887,7 @@ private fun DemoShell(
             }
 
             composable(NOTIFICATIONS_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) {
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) {
                     viewModel.loadNotifications()
                     viewModel.loadUnreadNotificationCount()
                 }
@@ -910,7 +910,7 @@ private fun DemoShell(
             }
 
             composable(ACTIVITY_ROUTE) {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadActivity() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadActivity() }
 
                 ActivityScreen(
                     entries = state.activity,
@@ -1000,7 +1000,7 @@ private fun DemoShell(
     ) { destination ->
         when (destination) {
             AppDestination.Today -> {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadToday() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadToday() }
                 TodayScreen(
                     dashboard = state.dashboard,
                     busy = state.todayBusy,
@@ -1013,7 +1013,7 @@ private fun DemoShell(
             }
 
             AppDestination.Plan -> {
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadPlanning() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadPlanning() }
                 PlanScreen(
                     wishes = state.openWishes,
                     plans = state.plans,
@@ -1039,11 +1039,11 @@ private fun DemoShell(
             }
 
             AppDestination.More -> {
-                LaunchedEffect(state.activeSpaceId) {
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) {
                     if (state.activeSpaceId != null) viewModel.refreshProfile()
                 }
                 LaunchedEffect(state.availableSpaces) { viewModel.loadSpaceNames() }
-                LaunchedEffect(state.activeSpaceId) { viewModel.loadUnreadNotificationCount() }
+                LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.loadUnreadNotificationCount() }
                 MoreScreen(
                     onSignOut = onSignOut,
                     onOpenHeartMoments = { navController.navigate(HEART_MOMENTS_ROUTE) },
@@ -1209,6 +1209,8 @@ private fun StoryDestination(
     onOpenHeartMoment: (java.util.UUID) -> Unit,
 ) {
     var capturing by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(state.activeSpaceId, state.reconnectEpoch) { viewModel.refreshStory() }
 
     if (capturing) {
         // The system back gesture is how someone leaves a step like this on
