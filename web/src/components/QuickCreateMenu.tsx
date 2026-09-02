@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   HEART_MOMENT_CREATE_ROUTE,
@@ -79,6 +85,7 @@ const PLANNING_TARGETS: readonly QuickCreateTarget[] = [
 export function QuickCreateMenu() {
   const { t } = useTranslation();
   const location = useLocation();
+  const menuId = useId();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -180,7 +187,7 @@ export function QuickCreateMenu() {
         className="button-link quick-create-trigger"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-controls="quick-create-menu"
+        aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={handleTriggerKeyDown}
       >
@@ -195,7 +202,7 @@ export function QuickCreateMenu() {
 
       {open ? (
         <div
-          id="quick-create-menu"
+          id={menuId}
           className="quick-create-menu"
           role="menu"
           aria-label={t('navigation.newContent')}
