@@ -57,6 +57,7 @@ import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.chapter.ChaptersScreen
 import de.sidebyside.next.collection.CollectionDetailScreen
 import de.sidebyside.next.collection.CollectionsScreen
 import de.sidebyside.next.place.PlaceRelationsScreen
@@ -726,6 +727,24 @@ private fun DemoShell(
                 )
             }
 
+            composable(CHAPTERS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadChapters() }
+
+                ChaptersScreen(
+                    chapters = state.chapters,
+                    busy = state.chaptersBusy,
+                    problem = state.chaptersProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = { title, description, startOn, endOn ->
+                        viewModel.addChapter(title, description, startOn, endOn)
+                    },
+                    onEdit = { chapter, title, description, startOn, endOn ->
+                        viewModel.updateChapter(chapter, title, description, startOn, endOn)
+                    },
+                    onDelete = viewModel::deleteChapter,
+                )
+            }
+
             composable(PRIVATE_AREA_ROUTE) {
                 PrivateAreaScreen(
                     onBack = { controller.popBackStack() },
@@ -883,6 +902,7 @@ private fun DemoShell(
                     onDeletePlan = viewModel::deletePlan,
                     onOpenPlaces = { navController.navigate(PLACES_ROUTE) },
                     onOpenCollections = { navController.navigate(COLLECTIONS_ROUTE) },
+                    onOpenChapters = { navController.navigate(CHAPTERS_ROUTE) },
                 )
             }
 
@@ -956,6 +976,8 @@ private const val PLACE_ID_ARGUMENT = "placeId"
 private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/relations"
 
 private const val COLLECTIONS_ROUTE = "planning/collections"
+
+private const val CHAPTERS_ROUTE = "planning/chapters"
 
 private const val PRIVATE_AREA_ROUTE = "more/private"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"

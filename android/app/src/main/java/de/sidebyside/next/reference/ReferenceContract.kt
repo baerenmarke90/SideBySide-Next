@@ -16,6 +16,10 @@ import sidebyside.api.models.CollectionItemCreate
 import sidebyside.api.models.CollectionItemDetail
 import sidebyside.api.models.CollectionItemUpdate
 import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.ChapterCreate
+import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.ChapterPage
+import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
@@ -796,6 +800,21 @@ interface ReferenceContract {
         ifMatch: Int,
         itemIds: List<UUID>,
     ): CollectionDetail
+
+    suspend fun listChapters(spaceId: UUID, accessToken: String, cursor: String? = null): ChapterPage
+
+    suspend fun createChapter(spaceId: UUID, accessToken: String, fields: ChapterCreate): ChapterDetail
+
+    /** The contract accepts a partial correction; unset fields are left unchanged. */
+    suspend fun updateChapter(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        ifMatch: Int,
+        fields: ChapterUpdate,
+    ): ChapterDetail
+
+    suspend fun deleteChapter(spaceId: UUID, accessToken: String, chapterId: UUID, ifMatch: Int)
 }
 
 private fun unsupportedProfileOperation(): Nothing =

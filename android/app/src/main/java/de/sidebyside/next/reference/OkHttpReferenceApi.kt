@@ -31,6 +31,10 @@ import sidebyside.api.models.CollectionItemDetail
 import sidebyside.api.models.CollectionItemUpdate
 import sidebyside.api.models.CollectionOrder
 import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.ChapterCreate
+import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.ChapterPage
+import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
@@ -1577,6 +1581,58 @@ class OkHttpReferenceApi(
                     .toRequestBody(jsonMediaType),
             ).build(),
         CollectionDetail.serializer(),
+    )
+
+    override suspend fun listChapters(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): ChapterPage = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/chapters?limit=50" + cursorQuery(cursor),
+            accessToken,
+        ).get().build(),
+        ChapterPage.serializer(),
+    )
+
+    override suspend fun createChapter(
+        spaceId: UUID,
+        accessToken: String,
+        fields: ChapterCreate,
+    ): ChapterDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/chapters", accessToken)
+            .post(
+                SideBySideJson.encodeToString(ChapterCreate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ChapterDetail.serializer(),
+    )
+
+    override suspend fun updateChapter(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        ifMatch: Int,
+        fields: ChapterUpdate,
+    ): ChapterDetail = executeJson(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .patch(
+                SideBySideJson.encodeToString(ChapterUpdate.serializer(), fields)
+                    .toRequestBody(jsonMediaType),
+            ).build(),
+        ChapterDetail.serializer(),
+    )
+
+    override suspend fun deleteChapter(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        ifMatch: Int,
+    ) = executeEmpty(
+        authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId", accessToken)
+            .header("If-Match", ifMatch.toString())
+            .delete().build(),
     )
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {

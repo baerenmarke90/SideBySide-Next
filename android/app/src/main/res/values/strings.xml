@@ -586,4 +586,24 @@
     <string name="collection_item_move_up">Nach oben</string>
     <string name="collection_item_move_down">Nach unten</string>
     <string name="collection_items_empty">Noch keine Einträge in dieser Liste.</string>
+
+    <string name="chapters_open">Kapitel verwalten</string>
+    <string name="chapters_title">Kapitel</string>
+    <string name="chapters_intro">Fasst mehrere Erinnerungen, Herzmomente und Meilensteine zu einem Abschnitt eurer Geschichte zusammen.</string>
+    <string name="chapters_empty">Noch keine Kapitel.</string>
+    <string name="chapter_add">Kapitel hinzufügen</string>
+    <string name="chapter_title_hint">Titel</string>
+    <string name="chapter_description_hint">Beschreibung</string>
+    <string name="chapter_start_on_hint">Beginn (JJJJ-MM-TT, optional)</string>
+    <string name="chapter_end_on_hint">Ende (JJJJ-MM-TT, optional)</string>
+    <string name="chapter_period">%1$s – %2$s</string>
+    <string name="chapter_no_period">Kein Zeitraum hinterlegt</string>
+    <string name="chapter_edit">Bearbeiten</string>
+    <string name="chapter_edit_title">Kapitel bearbeiten</string>
+    <string name="chapter_delete">Löschen</string>
+    <string name="chapter_delete_title">%1$s löschen?</string>
+    <string name="chapter_delete_warning">Das Kapitel wird gelöscht. Erinnerungen, Herzmomente und Meilensteine selbst bleiben erhalten.</string>
+    <string name="chapter_delete_confirm">Endgültig löschen</string>
+    <string name="chapter_cancel">Abbrechen</string>
+    <string name="chapter_save_changes">Änderungen speichern</string>
 </resources>
