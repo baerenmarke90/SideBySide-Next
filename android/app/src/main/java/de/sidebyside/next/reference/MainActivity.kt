@@ -949,6 +949,7 @@ private fun DemoShell(
                     onOpenPlaces = { navController.navigate(PLACES_ROUTE) },
                     onOpenCollections = { navController.navigate(COLLECTIONS_ROUTE) },
                     onOpenChapters = { navController.navigate(CHAPTERS_ROUTE) },
+                    cachedAt = state.planningCachedAt,
                 )
             }
 

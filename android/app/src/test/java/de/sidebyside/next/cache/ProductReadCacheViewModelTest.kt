@@ -35,6 +35,9 @@ import sidebyside.api.models.CollectionDetail
 import sidebyside.api.models.CollectionPage
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemorySummary
+import sidebyside.api.models.PlanDetail
+import sidebyside.api.models.PlanPage
+import sidebyside.api.models.PlanStatus
 import sidebyside.api.models.PrivateNoteDetail
 import sidebyside.api.models.PrivateNotePage
 import sidebyside.api.models.ResourceCapabilities
@@ -43,6 +46,9 @@ import sidebyside.api.models.StoryItem
 import sidebyside.api.models.StoryMemoryItem
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.TokenView
+import sidebyside.api.models.WishDetail
+import sidebyside.api.models.WishPage
+import sidebyside.api.models.WishStatus
 
 private val SPACE: UUID = UUID.fromString("11111111-1111-4111-8111-111111111111")
 private val OTHER_SPACE: UUID = UUID.fromString("55555555-5555-4555-8555-555555555555")
@@ -257,6 +263,43 @@ class ProductReadCacheViewModelTest {
     }
 
     @Test
+    fun loadPlanningFallsBackToTheCachedWishesAndPlansOnceOffline() = runTest(dispatcher) {
+        val api = PlanningApi()
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+        assertEquals(1, model.uiState.value.openWishes.size)
+        assertEquals(1, model.uiState.value.plans.size)
+        assertNull(model.uiState.value.planningCachedAt)
+
+        api.nextFailure = IOException("offline")
+        model.loadPlanning()
+        advanceUntilIdle()
+
+        assertEquals(1, model.uiState.value.openWishes.size)
+        assertEquals(1, model.uiState.value.plans.size)
+        assertNotNull(model.uiState.value.planningCachedAt)
+        assertNull(model.uiState.value.planningProblem)
+    }
+
+    @Test
+    fun loadPlanningNeverFallsBackOnA401EvenWithACachedRow() = runTest(dispatcher) {
+        val api = PlanningApi()
+        val model = signedIn(api)
+
+        model.loadPlanning()
+        advanceUntilIdle()
+
+        api.nextFailure = ReferenceApiException(code = "unauthenticated", message = "expired", status = 401)
+        model.loadPlanning()
+        advanceUntilIdle()
+
+        assertNull(model.uiState.value.planningCachedAt)
+        assertNotNull(model.uiState.value.planningProblem)
+    }
+
+    @Test
     fun loadCollectionsFallsBackToTheCachedListOnceOffline() = runTest(dispatcher) {
         val api = CollectionsApi()
         val model = signedIn(api)
@@ -428,6 +471,73 @@ private class PrivateNotesApi : FakeReferenceContract() {
             nextCursor = null,
         )
     }
+}
+
+private class PlanningApi : FakeReferenceContract() {
+    var nextFailure: Throwable? = null
+
+    override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+        account = AccountView(displayName = email, id = UUID.randomUUID()),
+        tokens = TokenView(
+            accessExpiresAt = OffsetDateTime.now(),
+            accessToken = "access",
+            refreshExpiresAt = OffsetDateTime.now(),
+            refreshToken = "refresh",
+        ),
+    )
+
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+
+    override suspend fun listWishes(spaceId: UUID, accessToken: String): WishPage {
+        nextFailure?.let {
+            nextFailure = null
+            throw it
+        }
+        return WishPage(
+            hasMore = false,
+            items = listOf(
+                WishDetail(
+                    capabilities = ResourceCapabilities(canComment = false, canDelete = true, canEdit = true),
+                    createdAt = OffsetDateTime.now(),
+                    createdBy = UUID.randomUUID(),
+                    creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+                    id = UUID.randomUUID(),
+                    spaceId = spaceId,
+                    status = WishStatus.OPEN,
+                    title = "Weekend in the mountains",
+                    updatedAt = OffsetDateTime.now(),
+                    version = 1,
+                ),
+            ),
+            nextCursor = null,
+        )
+    }
+
+    override suspend fun listPlans(spaceId: UUID, accessToken: String): PlanPage = PlanPage(
+        hasMore = false,
+        items = listOf(
+            PlanDetail(
+                capabilities = ResourceCapabilities(canComment = false, canDelete = true, canEdit = true),
+                createdAt = OffsetDateTime.now(),
+                createdBy = UUID.randomUUID(),
+                creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+                description = null,
+                experiencedOn = null,
+                id = UUID.randomUUID(),
+                placeId = null,
+                plannedEnd = null,
+                plannedStart = null,
+                sourceWishId = null,
+                spaceId = spaceId,
+                status = PlanStatus.PLANNED,
+                title = "Anniversary trip",
+                updatedAt = OffsetDateTime.now(),
+                version = 1,
+            ),
+        ),
+        nextCursor = null,
+    )
 }
 
 private class CollectionsApi : FakeReferenceContract() {

@@ -49,7 +49,7 @@ import sidebyside.api.models.WishDetail
 private val ReadingMeasure: Dp = 560.dp
 
 /**
- * Planen.
+ * Plan.
  *
  * The contract is a lifecycle, not two lists, so the screen shows it as one:
  * ideas at the top, and below them the plans they became, each carrying only
@@ -95,6 +95,8 @@ fun PlanScreen(
      */
     onOpenChapters: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Non-null only while [wishes]/[plans] are a stale M2-D18 cache fallback. */
+    cachedAt: java.time.Instant? = null,
 ) {
     var draft by rememberSaveable { mutableStateOf("") }
     var returnTarget by rememberSaveable { mutableStateOf<String?>(null) }
@@ -124,6 +126,8 @@ fun PlanScreen(
                 )
             }
         }
+
+        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
         problem?.let { item { UiStatePanel(problem = it) } }
 

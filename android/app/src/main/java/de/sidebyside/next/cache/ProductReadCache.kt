@@ -17,6 +17,7 @@ enum class ProductCacheKind(val segment: String) {
     HEART_MOMENT("heartMoment"),
     STORY("story"),
     COLLECTION("collection"),
+    PLANNING("planning"),
 }
 
 /**
@@ -28,6 +29,13 @@ val StoryTimelineResourceId: UUID = UUID(0L, 0L)
 
 /** Shared Collections have no filters either — one list per Account+Space. */
 val CollectionListResourceId: UUID = UUID(0L, 0L)
+
+/**
+ * Wishes and Plans are fetched and cached together as one snapshot, matching
+ * `loadPlanning()`'s existing combined fetch/combined error state — there is
+ * one screen, one busy flag, one problem, so there is one cache entry too.
+ */
+val PlanningResourceId: UUID = UUID(0L, 0L)
 
 /**
  * The current-user Private Area lists this cache covers. `OWNER_ONLY`
