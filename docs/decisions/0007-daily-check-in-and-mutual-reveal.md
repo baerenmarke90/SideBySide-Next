@@ -318,7 +318,7 @@ product context explicitly.
 Rejected. It leaks into DOM/accessibility/client state, can flash during render,
 and creates different semantics across clients.
 
-### Retain all Daily Check-ins for future insights
+### Retain all Daily Check-ins for future analysis
 
 Rejected. V1 has no approved history/analytics product purpose. Data minimization
 wins until such a purpose receives its own decision.
