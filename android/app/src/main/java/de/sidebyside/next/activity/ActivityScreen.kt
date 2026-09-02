@@ -1,5 +1,6 @@
 package de.sidebyside.next.activity
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,11 +31,14 @@ import sidebyside.api.models.ActivityKind
 private val ReadingMeasure: Dp = 560.dp
 
 /**
- * The couple's shared Activity feed. Read-only per #357: an entry links to
- * nothing yet, the same deliberate scope boundary as Notifications — no
- * per-[sidebyside.api.models.EngagementTarget]-kind navigation resolver
- * exists on Android yet, so this shows what happened without pretending it
- * can open it.
+ * The couple's shared Activity feed.
+ *
+ * An entry whose [ActivityItem.targetType]/[ActivityItem.targetId] resolves
+ * to a route (see `engagementTargetRoute` in `MainActivity.kt`) opens it on
+ * tap, per the M2-D18 cross-client Deep Link contract's "small logical
+ * target tuple" — #357's original "links to nothing yet" scope boundary no
+ * longer applies now that a resolver exists. A kind Android has no detail
+ * route for yet (Wish, Plan) stays a plain, unclickable row.
  */
 @Composable
 fun ActivityScreen(
@@ -42,6 +46,7 @@ fun ActivityScreen(
     busy: Boolean,
     problem: UiProblem?,
     onBack: () -> Unit,
+    onOpen: (ActivityItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -84,10 +89,16 @@ fun ActivityScreen(
 
         items(count = entries.size, key = { index -> entries[index].id.toString() }) { index ->
             val entry = entries[index]
+            // The same resolver `onOpen` ultimately navigates with, so a row
+            // never looks tappable without actually having somewhere to go.
+            val opensSomewhere = de.sidebyside.next.reference
+                .engagementTargetRoute(entry.targetType, entry.targetId) != null
             Surface(
                 shape = RoundedCornerShape(SideBySideTheme.radii.card),
                 color = SideBySideTheme.colors.surface,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (opensSomewhere) Modifier.clickable { onOpen(entry) } else Modifier),
             ) {
                 Text(
                     text = stringResource(entry.kind.labelRes()),

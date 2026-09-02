@@ -82,6 +82,7 @@ import de.sidebyside.next.story.MilestoneScreen
 import de.sidebyside.next.story.SharedHeartMomentScreen
 import de.sidebyside.next.story.StoryScreen
 import kotlinx.coroutines.launch
+import sidebyside.api.models.EngagementTarget
 import sidebyside.api.models.ProfileVisibility
 
 class MainActivity : ComponentActivity() {
@@ -899,6 +900,12 @@ private fun DemoShell(
                     onBack = { controller.popBackStack() },
                     onMarkRead = viewModel::markNotificationRead,
                     onMarkAllRead = viewModel::markAllNotificationsRead,
+                    onOpen = { notification ->
+                        engagementTargetRoute(notification.targetType, notification.targetId)?.let {
+                            viewModel.markNotificationRead(notification)
+                            controller.navigate(it)
+                        }
+                    },
                 )
             }
 
@@ -910,6 +917,9 @@ private fun DemoShell(
                     busy = state.activityBusy,
                     problem = state.activityProblem,
                     onBack = { controller.popBackStack() },
+                    onOpen = { entry ->
+                        engagementTargetRoute(entry.targetType, entry.targetId)?.let { controller.navigate(it) }
+                    },
                 )
             }
 
@@ -1064,6 +1074,32 @@ private const val ACTIVITY_ROUTE = "today/activity"
  * routes with "private" in their path.
  */
 private const val SEARCH_ROUTE = "search"
+
+/**
+ * The M2-D18 cross-client Deep Link contract's "small logical target
+ * tuple... maps to the current client's canonical route," applied to
+ * Notifications and Activity: each entry names a resource kind and id
+ * rather than a client-specific path, and this is where that tuple becomes
+ * an actual in-app route. Reuses the route templates above rather than a
+ * second copy of the same path shapes.
+ *
+ * `null` for [targetId] being absent, or for a kind with no per-resource
+ * route on Android yet — Wish and Plan both live in one shared list screen,
+ * not a route of their own. A caller's tap on such an entry does nothing
+ * rather than navigating to a route that cannot be built.
+ */
+internal fun engagementTargetRoute(targetType: EngagementTarget?, targetId: java.util.UUID?): String? {
+    if (targetId == null) return null
+    return when (targetType) {
+        EngagementTarget.MEMORY -> MEMORY_ROUTE.replace("{$MEMORY_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.MILESTONE -> MILESTONE_ROUTE.replace("{$ITEM_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.HEART_MOMENT -> HEART_MOMENT_ROUTE.replace("{$ITEM_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.PLACE -> PLACE_RELATIONS_ROUTE.replace("{$PLACE_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.CHAPTER -> CHAPTER_CONTENT_ROUTE.replace("{$CHAPTER_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.COLLECTION -> COLLECTION_DETAIL_ROUTE.replace("{$COLLECTION_ID_ARGUMENT}", targetId.toString())
+        EngagementTarget.WISH, EngagementTarget.PLAN, null -> null
+    }
+}
 
 /**
  * Whether [route] is inside the owner-only Private Area subtree — the hub
