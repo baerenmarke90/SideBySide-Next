@@ -76,6 +76,7 @@ import sidebyside.api.models.ProfileVisibility
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchKind
 import sidebyside.api.models.SearchResult
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryUpdate
@@ -322,9 +323,13 @@ data class ReferenceUiState(
     val unreadNotificationCount: Int = 0,
     val notificationsBusy: Boolean = false,
     val notificationsProblem: UiProblem? = null,
+    val notificationsHasMore: Boolean = false,
+    val notificationsLoadingMore: Boolean = false,
     val activity: List<ActivityItem> = emptyList(),
     val activityBusy: Boolean = false,
     val activityProblem: UiProblem? = null,
+    val activityHasMore: Boolean = false,
+    val activityLoadingMore: Boolean = false,
     /** The M2-D17/S6 Transfer Bundle export currently tracked, if any. */
     val export: TransferExportDetail? = null,
     val exportBusy: Boolean = false,
@@ -338,6 +343,8 @@ data class ReferenceUiState(
     val searchResults: List<SearchResult> = emptyList(),
     val searchBusy: Boolean = false,
     val searchProblem: UiProblem? = null,
+    val searchHasMore: Boolean = false,
+    val searchLoadingMore: Boolean = false,
     val collections: List<CollectionDetail> = emptyList(),
     val collectionsBusy: Boolean = false,
     val collectionsProblem: UiProblem? = null,
@@ -444,6 +451,13 @@ class ReferenceViewModel(
     /** Where the next page continues from; opaque and server-issued. */
     private var storyCursor: String? = null
     private var commentsCursor: String? = null
+    private var searchCursor: String? = null
+    private var activityCursor: String? = null
+    private var notificationsCursor: String? = null
+
+    /** The query and kind filter the current [searchCursor] continues, so load-more repeats them. */
+    private var lastSearchQuery: String? = null
+    private var lastSearchKind: SearchKind? = null
 
     /** Kept across a failed attempt so a retry is the same gesture, not a second one. */
     private var pendingGestureId: java.util.UUID? = null
@@ -4018,11 +4032,49 @@ class ReferenceViewModel(
             runCatching { api.listNotifications(spaceId, currentSession.tokens.accessToken) }
                 .onSuccess { page ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(notifications = page.items, notificationsBusy = false) }
+                    notificationsCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            notifications = page.items,
+                            notificationsBusy = false,
+                            notificationsHasMore = page.hasMore,
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
                     mutate { it.copy(notificationsBusy = false, notificationsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun loadMoreNotifications() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val cursor = notificationsCursor ?: return
+        if (_uiState.value.notificationsLoadingMore) return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(notificationsLoadingMore = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listNotifications(spaceId, currentSession.tokens.accessToken, cursor) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    notificationsCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            notifications = it.notifications + page.items,
+                            notificationsHasMore = page.hasMore,
+                            notificationsLoadingMore = false,
+                        )
+                    }
+                }
+                .onFailure {
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate { it.copy(notificationsLoadingMore = false) }
+                    }
                 }
         }
     }
@@ -4092,12 +4144,15 @@ class ReferenceViewModel(
     }
 
     fun clearNotifications() {
+        notificationsCursor = null
         mutate {
             it.copy(
                 notifications = emptyList(),
                 unreadNotificationCount = 0,
                 notificationsBusy = false,
                 notificationsProblem = null,
+                notificationsHasMore = false,
+                notificationsLoadingMore = false,
             )
         }
     }
@@ -4114,7 +4169,10 @@ class ReferenceViewModel(
             runCatching { api.getActivity(spaceId, currentSession.tokens.accessToken) }
                 .onSuccess { page ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(activity = page.items, activityBusy = false) }
+                    activityCursor = page.nextCursor
+                    mutate {
+                        it.copy(activity = page.items, activityBusy = false, activityHasMore = page.hasMore)
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -4123,8 +4181,48 @@ class ReferenceViewModel(
         }
     }
 
+    fun loadMoreActivity() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val cursor = activityCursor ?: return
+        if (_uiState.value.activityLoadingMore) return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(activityLoadingMore = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getActivity(spaceId, currentSession.tokens.accessToken, cursor) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    activityCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            activity = it.activity + page.items,
+                            activityHasMore = page.hasMore,
+                            activityLoadingMore = false,
+                        )
+                    }
+                }
+                .onFailure {
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate { it.copy(activityLoadingMore = false) }
+                    }
+                }
+        }
+    }
+
     fun clearActivity() {
-        mutate { it.copy(activity = emptyList(), activityBusy = false, activityProblem = null) }
+        activityCursor = null
+        mutate {
+            it.copy(
+                activity = emptyList(),
+                activityBusy = false,
+                activityProblem = null,
+                activityHasMore = false,
+                activityLoadingMore = false,
+            )
+        }
     }
 
     /** Starts a Transfer Bundle export. [refreshExport] is how the caller learns it finished. */
@@ -4287,7 +4385,7 @@ class ReferenceViewModel(
         mutate { it.copy(import = null, importBusy = false, importProblem = null) }
     }
 
-    fun search(query: String) {
+    fun search(query: String, kind: SearchKind? = null) {
         if (query.isBlank()) {
             clearSearch()
             return
@@ -4296,14 +4394,24 @@ class ReferenceViewModel(
         val currentSession = session ?: return
         val spaceId = activeSpaceId ?: return
         val operationEpoch = sessionEpoch
+        val trimmed = query.trim()
 
         mutate { it.copy(searchBusy = true, searchProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.search(spaceId, currentSession.tokens.accessToken, query.trim()) }
+            runCatching { api.search(spaceId, currentSession.tokens.accessToken, trimmed, kind) }
                 .onSuccess { page ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(searchResults = page.items, searchBusy = false) }
+                    lastSearchQuery = trimmed
+                    lastSearchKind = kind
+                    searchCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            searchResults = page.items,
+                            searchBusy = false,
+                            searchHasMore = page.nextCursor != null,
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -4312,8 +4420,51 @@ class ReferenceViewModel(
         }
     }
 
+    fun loadMoreSearch() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val cursor = searchCursor ?: return
+        val query = lastSearchQuery ?: return
+        if (_uiState.value.searchLoadingMore) return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(searchLoadingMore = true) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.search(spaceId, currentSession.tokens.accessToken, query, lastSearchKind, cursor) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    searchCursor = page.nextCursor
+                    mutate {
+                        it.copy(
+                            searchResults = it.searchResults + page.items,
+                            searchHasMore = page.nextCursor != null,
+                            searchLoadingMore = false,
+                        )
+                    }
+                }
+                .onFailure {
+                    if (isCurrentSession(operationEpoch, currentSession)) {
+                        mutate { it.copy(searchLoadingMore = false) }
+                    }
+                }
+        }
+    }
+
     fun clearSearch() {
-        mutate { it.copy(searchResults = emptyList(), searchBusy = false, searchProblem = null) }
+        searchCursor = null
+        lastSearchQuery = null
+        lastSearchKind = null
+        mutate {
+            it.copy(
+                searchResults = emptyList(),
+                searchBusy = false,
+                searchProblem = null,
+                searchHasMore = false,
+                searchLoadingMore = false,
+            )
+        }
     }
 
     fun loadCollections() {

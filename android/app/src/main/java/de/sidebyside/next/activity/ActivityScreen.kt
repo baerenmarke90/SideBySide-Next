@@ -48,6 +48,8 @@ fun ActivityScreen(
     onBack: () -> Unit,
     onOpen: (ActivityItem) -> Unit,
     modifier: Modifier = Modifier,
+    onLoadMore: (() -> Unit)? = null,
+    loadingMore: Boolean = false,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -106,6 +108,20 @@ fun ActivityScreen(
                     color = SideBySideTheme.colors.textPrimary,
                     modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
                 )
+            }
+        }
+
+        // An Activity feed that simply stopped after one page would lose
+        // history with nothing on screen to say so.
+        onLoadMore?.let { more ->
+            item(key = "load-more") {
+                TextButton(onClick = more, enabled = !loadingMore) {
+                    Text(
+                        stringResource(
+                            if (loadingMore) R.string.load_more_busy else R.string.load_more,
+                        ),
+                    )
+                }
             }
         }
     }

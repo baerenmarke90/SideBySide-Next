@@ -42,6 +42,7 @@ import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchKind
 import sidebyside.api.models.SearchPage
 import sidebyside.api.models.TransferExportDetail
 import sidebyside.api.models.TransferImportDetail
@@ -763,7 +764,13 @@ interface ReferenceContract {
     suspend fun getActivity(spaceId: UUID, accessToken: String, cursor: String? = null): ActivityPage
 
     /** Searches shared Space content plus the caller's own private content. */
-    suspend fun search(spaceId: UUID, accessToken: String, query: String, cursor: String? = null): SearchPage
+    suspend fun search(
+        spaceId: UUID,
+        accessToken: String,
+        query: String,
+        kind: SearchKind? = null,
+        cursor: String? = null,
+    ): SearchPage
 
     suspend fun listCollections(spaceId: UUID, accessToken: String, cursor: String? = null): CollectionPage
 

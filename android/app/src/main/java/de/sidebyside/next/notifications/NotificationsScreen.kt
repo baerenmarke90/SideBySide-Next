@@ -55,6 +55,8 @@ fun NotificationsScreen(
     onMarkAllRead: () -> Unit,
     onOpen: (NotificationItem) -> Unit,
     modifier: Modifier = Modifier,
+    onLoadMore: (() -> Unit)? = null,
+    loadingMore: Boolean = false,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -151,6 +153,20 @@ fun NotificationsScreen(
                             Text(stringResource(R.string.notification_mark_read))
                         }
                     }
+                }
+            }
+        }
+
+        // Notifications that simply stopped after one page would lose
+        // history with nothing on screen to say so.
+        onLoadMore?.let { more ->
+            item(key = "load-more") {
+                TextButton(onClick = more, enabled = !loadingMore) {
+                    Text(
+                        stringResource(
+                            if (loadingMore) R.string.load_more_busy else R.string.load_more,
+                        ),
+                    )
                 }
             }
         }

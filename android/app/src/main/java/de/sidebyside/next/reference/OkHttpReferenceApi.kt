@@ -62,6 +62,7 @@ import sidebyside.api.models.MemoryAttachmentSet
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchKind
 import sidebyside.api.models.SearchPage
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
@@ -1491,11 +1492,13 @@ class OkHttpReferenceApi(
         spaceId: UUID,
         accessToken: String,
         query: String,
+        kind: SearchKind?,
         cursor: String?,
     ): SearchPage = executeJson(
         authenticatedRequest(
             "$baseUrl/api/v1/spaces/$spaceId/search?q=" +
-                java.net.URLEncoder.encode(query, "UTF-8") + "&limit=50" + cursorQuery(cursor),
+                java.net.URLEncoder.encode(query, "UTF-8") + "&limit=50" +
+                (kind?.let { "&type=${it.value}" } ?: "") + cursorQuery(cursor),
             accessToken,
         ).get().build(),
         SearchPage.serializer(),

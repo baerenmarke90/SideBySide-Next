@@ -91,6 +91,52 @@ class SearchTest {
         assertTrue(model.uiState.value.searchResults.isEmpty())
     }
 
+    @Test
+    fun searchingWithAKindSendsItAlongTheQuery() = runTest(dispatcher) {
+        val api = SearchApi(results = listOf(searchResult("A day by the sea")))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.search("sea", SearchKind.GIFT_IDEA)
+        advanceUntilIdle()
+
+        assertEquals(listOf(SearchKind.GIFT_IDEA), api.kindsSeen)
+    }
+
+    @Test
+    fun loadingMoreRepeatsTheSameQueryAndKindWithTheNewCursor() = runTest(dispatcher) {
+        val first = SearchPage(items = listOf(searchResult("A day by the sea")), nextCursor = "page-2")
+        val second = SearchPage(items = listOf(searchResult("A second find")), nextCursor = null)
+        val api = SearchApi(pages = listOf(first, second))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.search("sea", SearchKind.MEMORY)
+        advanceUntilIdle()
+        assertTrue(model.uiState.value.searchHasMore)
+
+        model.loadMoreSearch()
+        advanceUntilIdle()
+
+        assertEquals(listOf("sea", "sea"), api.queriesSeen)
+        assertEquals(listOf(SearchKind.MEMORY, SearchKind.MEMORY), api.kindsSeen)
+        assertEquals(listOf(null, "page-2"), api.cursorsSeen)
+        assertEquals(2, model.uiState.value.searchResults.size)
+        assertTrue(!model.uiState.value.searchHasMore)
+    }
+
+    @Test
+    fun aResultPageWithoutANextCursorReportsNoMore() = runTest(dispatcher) {
+        val api = SearchApi(results = listOf(searchResult("A day by the sea")))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.search("sea")
+        advanceUntilIdle()
+
+        assertTrue(!model.uiState.value.searchHasMore)
+    }
+
     private suspend fun TestScope.signIn(model: ReferenceViewModel) {
         model.signIn("someone@example.test", "secret")
         advanceUntilIdle()
@@ -111,8 +157,12 @@ private fun searchResult(title: String) = SearchResult(
 
 private class SearchApi(
     private val results: List<SearchResult> = emptyList(),
+    private val pages: List<SearchPage>? = null,
 ) : FakeReferenceContract() {
     val queriesSeen = mutableListOf<String>()
+    val kindsSeen = mutableListOf<SearchKind?>()
+    val cursorsSeen = mutableListOf<String?>()
+    private var pageIndex = 0
 
     override suspend fun signIn(email: String, password: String): SessionView = SessionView(
         account = AccountView(displayName = "Lea", id = UUID.randomUUID()),
@@ -127,8 +177,17 @@ private class SearchApi(
     override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
         listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
 
-    override suspend fun search(spaceId: UUID, accessToken: String, query: String, cursor: String?): SearchPage {
+    override suspend fun search(
+        spaceId: UUID,
+        accessToken: String,
+        query: String,
+        kind: SearchKind?,
+        cursor: String?,
+    ): SearchPage {
         queriesSeen += query
+        kindsSeen += kind
+        cursorsSeen += cursor
+        pages?.let { return it[pageIndex++] }
         return SearchPage(items = results, nextCursor = null)
     }
 }

@@ -84,6 +84,31 @@ class ActivityTest {
         assertTrue(model.uiState.value.activity.isEmpty())
     }
 
+    @Test
+    fun loadingMoreAppendsTheNextPageAndTracksTheCursor() = runTest(dispatcher) {
+        val first = activityItem()
+        val second = activityItem()
+        val api = ActivityApi(
+            pages = listOf(
+                ActivityPage(hasMore = true, items = listOf(first), nextCursor = "page-2"),
+                ActivityPage(hasMore = false, items = listOf(second), nextCursor = null),
+            ),
+        )
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.loadActivity()
+        advanceUntilIdle()
+        assertTrue(model.uiState.value.activityHasMore)
+
+        model.loadMoreActivity()
+        advanceUntilIdle()
+
+        assertEquals(listOf(first, second), model.uiState.value.activity)
+        assertTrue(!model.uiState.value.activityHasMore)
+        assertEquals(listOf(null, "page-2"), api.cursorsSeen)
+    }
+
     private suspend fun TestScope.signIn(model: ReferenceViewModel) {
         model.signIn("someone@example.test", "secret")
         advanceUntilIdle()
@@ -106,7 +131,11 @@ private fun activityItem() = ActivityItem(
 private class ActivityApi(
     private val entries: List<ActivityItem> = emptyList(),
     private val otherSpaces: List<UUID> = emptyList(),
+    private val pages: List<ActivityPage>? = null,
 ) : FakeReferenceContract() {
+    val cursorsSeen = mutableListOf<String?>()
+    private var pageIndex = 0
+
     override suspend fun signIn(email: String, password: String): SessionView = SessionView(
         account = AccountView(displayName = "Lea", id = UUID.randomUUID()),
         tokens = TokenView(
@@ -121,6 +150,9 @@ private class ActivityApi(
         listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE")) +
             otherSpaces.map { AccountMembershipView(role = "PARTNER", spaceId = it, status = "ACTIVE") }
 
-    override suspend fun getActivity(spaceId: UUID, accessToken: String, cursor: String?): ActivityPage =
-        ActivityPage(hasMore = false, items = if (spaceId == SPACE) entries else emptyList(), nextCursor = null)
+    override suspend fun getActivity(spaceId: UUID, accessToken: String, cursor: String?): ActivityPage {
+        cursorsSeen += cursor
+        pages?.let { return it[pageIndex++] }
+        return ActivityPage(hasMore = false, items = if (spaceId == SPACE) entries else emptyList(), nextCursor = null)
+    }
 }
