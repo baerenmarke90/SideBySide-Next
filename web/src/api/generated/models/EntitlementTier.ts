@@ -18,8 +18,8 @@
  * @export
  */
 export const EntitlementTier = {
-    Free: 'FREE',
-    Premium: 'PREMIUM'
+    FREE: 'FREE',
+    PREMIUM: 'PREMIUM'
 } as const;
 export type EntitlementTier = typeof EntitlementTier[keyof typeof EntitlementTier];
 
@@ -50,3 +50,5 @@ export function EntitlementTierToJSON(value?: EntitlementTier | null): any {
 export function EntitlementTierToJSONTyped(value: any, ignoreDiscriminator: boolean): EntitlementTier {
     return value as EntitlementTier;
 }
+
+

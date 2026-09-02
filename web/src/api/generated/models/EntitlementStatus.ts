@@ -18,12 +18,12 @@
  * @export
  */
 export const EntitlementStatus = {
-    Active: 'ACTIVE',
-    Trial: 'TRIAL',
-    GracePeriod: 'GRACE_PERIOD',
-    Expired: 'EXPIRED',
-    Revoked: 'REVOKED',
-    Grandfathered: 'GRANDFATHERED'
+    ACTIVE: 'ACTIVE',
+    TRIAL: 'TRIAL',
+    GRACE_PERIOD: 'GRACE_PERIOD',
+    EXPIRED: 'EXPIRED',
+    REVOKED: 'REVOKED',
+    GRANDFATHERED: 'GRANDFATHERED'
 } as const;
 export type EntitlementStatus = typeof EntitlementStatus[keyof typeof EntitlementStatus];
 
@@ -54,3 +54,5 @@ export function EntitlementStatusToJSON(value?: EntitlementStatus | null): any {
 export function EntitlementStatusToJSONTyped(value: any, ignoreDiscriminator: boolean): EntitlementStatus {
     return value as EntitlementStatus;
 }
+
+

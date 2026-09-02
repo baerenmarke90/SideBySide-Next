@@ -13,13 +13,6 @@
  */
 
 import { mapValues } from '../runtime';
-import type { EntitlementStatus } from './EntitlementStatus';
-import {
-    EntitlementStatusFromJSON,
-    EntitlementStatusFromJSONTyped,
-    EntitlementStatusToJSON,
-    EntitlementStatusToJSONTyped,
-} from './EntitlementStatus';
 import type { EntitlementTier } from './EntitlementTier';
 import {
     EntitlementTierFromJSON,
@@ -27,6 +20,13 @@ import {
     EntitlementTierToJSON,
     EntitlementTierToJSONTyped,
 } from './EntitlementTier';
+import type { EntitlementStatus } from './EntitlementStatus';
+import {
+    EntitlementStatusFromJSON,
+    EntitlementStatusFromJSONTyped,
+    EntitlementStatusToJSON,
+    EntitlementStatusToJSONTyped,
+} from './EntitlementStatus';
 
 /**
  * Effective commercial entitlement representation for a Space.
