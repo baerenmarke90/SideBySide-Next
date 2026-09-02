@@ -564,6 +564,7 @@ private fun DemoShell(
                     problem = state.relatedPersonsProblem,
                     onBack = { controller.popBackStack() },
                     onAdd = viewModel::addRelatedPerson,
+                    onEdit = viewModel::updateRelatedPerson,
                     onOpenDates = { personId ->
                         controller.navigate("people/related-persons/$personId/important-dates")
                     },
