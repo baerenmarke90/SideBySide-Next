@@ -13,6 +13,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects import postgresql
@@ -118,6 +119,11 @@ class EntitlementGrant(IdMixin, TimestampMixin, Base):
         CheckConstraint(
             "tier IN ('FREE', 'PREMIUM')",
             name="entitlement_tier_valid",
+        ),
+        UniqueConstraint(
+            "source_type",
+            "external_reference",
+            name="uq_entitlement_grants_source_reference",
         ),
         Index("ix_entitlement_grants_space_id_status", "space_id", "status"),
     )
