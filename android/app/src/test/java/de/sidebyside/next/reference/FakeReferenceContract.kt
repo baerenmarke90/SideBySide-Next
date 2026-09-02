@@ -5,10 +5,18 @@ import java.util.UUID
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
+import sidebyside.api.models.ActivityPage
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentPage
+import sidebyside.api.models.CollectionCreate
+import sidebyside.api.models.CollectionDetail
+import sidebyside.api.models.CollectionItemCreate
+import sidebyside.api.models.CollectionItemDetail
+import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartMomentCreate
@@ -25,12 +33,32 @@ import sidebyside.api.models.MembershipView
 import sidebyside.api.models.ImportantDateFields
 import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryAttachmentSet
+import sidebyside.api.models.PlaceCreate
+import sidebyside.api.models.PlaceDetail
+import sidebyside.api.models.PlacePage
+import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.GiftIdeaCreate
+import sidebyside.api.models.GiftIdeaDetail
+import sidebyside.api.models.GiftIdeaPage
+import sidebyside.api.models.GiftIdeaUpdate
+import sidebyside.api.models.PrivateCollectionCreate
+import sidebyside.api.models.PrivateCollectionDetail
+import sidebyside.api.models.PrivateCollectionItemCreate
+import sidebyside.api.models.PrivateCollectionItemDetail
+import sidebyside.api.models.PrivateCollectionItemUpdate
+import sidebyside.api.models.PrivateCollectionPage
+import sidebyside.api.models.PrivateCollectionUpdate
+import sidebyside.api.models.PrivateNoteCreate
+import sidebyside.api.models.PrivateNoteDetail
+import sidebyside.api.models.PrivateNotePage
+import sidebyside.api.models.PrivateNoteUpdate
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchPage
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -38,6 +66,10 @@ import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.NotificationItem
+import sidebyside.api.models.NotificationPage
+import sidebyside.api.models.NotificationUnreadCount
+import sidebyside.api.models.NotificationsReadAllResult
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.PlanPage
@@ -439,6 +471,263 @@ abstract class FakeReferenceContract : ReferenceContract {
         preferenceId: UUID,
         ifMatch: Int,
     ): Unit = notExercised("deleteProfilePreference")
+
+    override suspend fun listPlaces(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PlacePage = notExercised("listPlaces")
+
+    override suspend fun createPlace(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PlaceCreate,
+    ): PlaceDetail = notExercised("createPlace")
+
+    override suspend fun updatePlace(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        ifMatch: Int,
+        fields: PlaceUpdate,
+    ): PlaceDetail = notExercised("updatePlace")
+
+    override suspend fun deletePlace(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePlace")
+
+    override suspend fun listPlaceRelationTargets(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+    ): List<UUID> = notExercised("listPlaceRelationTargets")
+
+    override suspend fun linkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ): Unit = notExercised("linkPlaceTarget")
+
+    override suspend fun unlinkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ): Unit = notExercised("unlinkPlaceTarget")
+
+    override suspend fun listPrivateNotes(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PrivateNotePage = notExercised("listPrivateNotes")
+
+    override suspend fun createPrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PrivateNoteCreate,
+    ): PrivateNoteDetail = notExercised("createPrivateNote")
+
+    override suspend fun updatePrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        noteId: UUID,
+        ifMatch: Int,
+        fields: PrivateNoteUpdate,
+    ): PrivateNoteDetail = notExercised("updatePrivateNote")
+
+    override suspend fun deletePrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        noteId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePrivateNote")
+
+    override suspend fun listGiftIdeas(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): GiftIdeaPage = notExercised("listGiftIdeas")
+
+    override suspend fun createGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        fields: GiftIdeaCreate,
+    ): GiftIdeaDetail = notExercised("createGiftIdea")
+
+    override suspend fun updateGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        giftIdeaId: UUID,
+        ifMatch: Int,
+        fields: GiftIdeaUpdate,
+    ): GiftIdeaDetail = notExercised("updateGiftIdea")
+
+    override suspend fun deleteGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        giftIdeaId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteGiftIdea")
+
+    override suspend fun listPrivateCollections(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): PrivateCollectionPage = notExercised("listPrivateCollections")
+
+    override suspend fun createPrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PrivateCollectionCreate,
+    ): PrivateCollectionDetail = notExercised("createPrivateCollection")
+
+    override suspend fun updatePrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionUpdate,
+    ): PrivateCollectionDetail = notExercised("updatePrivateCollection")
+
+    override suspend fun deletePrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePrivateCollection")
+
+    override suspend fun createPrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: PrivateCollectionItemCreate,
+    ): PrivateCollectionItemDetail = notExercised("createPrivateCollectionItem")
+
+    override suspend fun updatePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionItemUpdate,
+    ): PrivateCollectionItemDetail = notExercised("updatePrivateCollectionItem")
+
+    override suspend fun deletePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deletePrivateCollectionItem")
+
+    override suspend fun reorderPrivateCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): PrivateCollectionDetail = notExercised("reorderPrivateCollectionItems")
+
+    override suspend fun listNotifications(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): NotificationPage = notExercised("listNotifications")
+
+    override suspend fun getNotificationUnreadCount(
+        spaceId: UUID,
+        accessToken: String,
+    ): NotificationUnreadCount = notExercised("getNotificationUnreadCount")
+
+    override suspend fun markNotificationRead(
+        spaceId: UUID,
+        accessToken: String,
+        notificationId: UUID,
+    ): NotificationItem = notExercised("markNotificationRead")
+
+    override suspend fun markAllNotificationsRead(
+        spaceId: UUID,
+        accessToken: String,
+    ): NotificationsReadAllResult = notExercised("markAllNotificationsRead")
+
+    override suspend fun getActivity(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): ActivityPage = notExercised("getActivity")
+
+    override suspend fun search(
+        spaceId: UUID,
+        accessToken: String,
+        query: String,
+        cursor: String?,
+    ): SearchPage = notExercised("search")
+
+    override suspend fun listCollections(
+        spaceId: UUID,
+        accessToken: String,
+        cursor: String?,
+    ): CollectionPage = notExercised("listCollections")
+
+    override suspend fun createCollection(
+        spaceId: UUID,
+        accessToken: String,
+        fields: CollectionCreate,
+    ): CollectionDetail = notExercised("createCollection")
+
+    override suspend fun updateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: CollectionUpdate,
+    ): CollectionDetail = notExercised("updateCollection")
+
+    override suspend fun deleteCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteCollection")
+
+    override suspend fun createCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: CollectionItemCreate,
+    ): CollectionItemDetail = notExercised("createCollectionItem")
+
+    override suspend fun updateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: CollectionItemUpdate,
+    ): CollectionItemDetail = notExercised("updateCollectionItem")
+
+    override suspend fun deleteCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    ): Unit = notExercised("deleteCollectionItem")
+
+    override suspend fun reorderCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): CollectionDetail = notExercised("reorderCollectionItems")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

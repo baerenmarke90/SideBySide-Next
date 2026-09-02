@@ -53,11 +53,11 @@ The operating model and the product tier are separate axes.
 - **Self-Hosted vs. Cloud/Managed** answers who operates the infrastructure, storage, backups, updates, monitoring, and comparable services.
 - **Free vs. Premium** answers which product capabilities are commercially eligible.
 
-The authoritative classification of capabilities already implemented on the M0-M3 baseline is recorded in [`FREEMIUM-FEATURE-MATRIX.md`](./FREEMIUM-FEATURE-MATRIX.md).
+The authoritative classification of capabilities across the entire roadmap (M0–M8) is recorded in [`FREEMIUM-FEATURE-MATRIX.md`](./FREEMIUM-FEATURE-MATRIX.md) (Version 1.1) and architecturally specified in [ADR 0006](m6/ADR-0006-ENTITLEMENT-ARCHITECTURE.md).
 
-The current baseline deliberately keeps the implemented M0-M3 relationship Core available as Free/Core or as the Free side of a Mixed capability. Premium is primarily expected to add richer presentation, automation, advanced organization, insights, personalization, integrations, and justified managed-resource services rather than revoke access to users' existing relationship history.
+The baseline deliberately keeps the relationship Core available as Free/Core or as the Free side of a Mixed capability. Premium adds richer presentation, automation, advanced organization, insights, personalization, integrations, and managed-resource services rather than revoking access to users' existing relationship history.
 
-For future/unimplemented capabilities whose final classification is not yet promoted into versioned repository documentation, issue #262 remains the working product-decision source.
+Entitlements are owned at the couple/Space level: when one partner purchases Premium, both partners in the Space receive full Premium capabilities immediately. Downgrades are strictly non-destructive: existing content is never deleted or made unexportable.
 
 ## Official apps and clients
 
@@ -104,7 +104,7 @@ The review must be revisited before merge if implementation decisions changed an
 
 A change must not silently introduce a business-model contradiction. If a development decision requires changing this model or the authoritative Free/Premium feature matrix, the product decision and documentation change must be explicit and traceable before merge.
 
-For capabilities already covered by `FREEMIUM-FEATURE-MATRIX.md`, that versioned matrix is authoritative. Until remaining future/unimplemented decisions tracked in issue #262 are promoted into repository documentation, #262 remains the working source only for those pending decisions.
+[`FREEMIUM-FEATURE-MATRIX.md`](./FREEMIUM-FEATURE-MATRIX.md) (Version 1.1) is authoritative for all product capabilities across M0–M8.
 
 The concrete implementation and pull-request rules are defined in [`AGENTS.md`](../AGENTS.md).
 

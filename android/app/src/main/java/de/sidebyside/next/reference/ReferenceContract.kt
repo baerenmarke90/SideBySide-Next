@@ -5,10 +5,18 @@ import java.util.UUID
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
+import sidebyside.api.models.ActivityPage
 import sidebyside.api.models.AttachmentUploadCreate
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
 import sidebyside.api.models.CommentPage
+import sidebyside.api.models.CollectionCreate
+import sidebyside.api.models.CollectionDetail
+import sidebyside.api.models.CollectionItemCreate
+import sidebyside.api.models.CollectionItemDetail
+import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.CollectionPage
+import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartMomentCreate
@@ -29,6 +37,7 @@ import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchPage
 import sidebyside.api.models.ThinkingOfYouAccepted
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryCreate
@@ -36,7 +45,30 @@ import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.NotificationItem
+import sidebyside.api.models.NotificationPage
+import sidebyside.api.models.NotificationUnreadCount
+import sidebyside.api.models.NotificationsReadAllResult
 import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.PlaceCreate
+import sidebyside.api.models.PlaceDetail
+import sidebyside.api.models.PlacePage
+import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.GiftIdeaCreate
+import sidebyside.api.models.GiftIdeaDetail
+import sidebyside.api.models.GiftIdeaPage
+import sidebyside.api.models.GiftIdeaUpdate
+import sidebyside.api.models.PrivateCollectionCreate
+import sidebyside.api.models.PrivateCollectionDetail
+import sidebyside.api.models.PrivateCollectionItemCreate
+import sidebyside.api.models.PrivateCollectionItemDetail
+import sidebyside.api.models.PrivateCollectionItemUpdate
+import sidebyside.api.models.PrivateCollectionPage
+import sidebyside.api.models.PrivateCollectionUpdate
+import sidebyside.api.models.PrivateNoteCreate
+import sidebyside.api.models.PrivateNoteDetail
+import sidebyside.api.models.PrivateNotePage
+import sidebyside.api.models.PrivateNoteUpdate
 import sidebyside.api.models.ProfilePreferenceCreate
 import sidebyside.api.models.ProfilePreferenceUpdate
 import sidebyside.api.models.ProfilePreferenceView
@@ -542,6 +574,228 @@ interface ReferenceContract {
         preferenceId: UUID,
         ifMatch: Int,
     )
+
+    suspend fun listPlaces(spaceId: UUID, accessToken: String, cursor: String? = null): PlacePage
+
+    suspend fun createPlace(spaceId: UUID, accessToken: String, fields: PlaceCreate): PlaceDetail
+
+    /** The contract accepts a partial correction; unset fields are left unchanged. */
+    suspend fun updatePlace(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        ifMatch: Int,
+        fields: PlaceUpdate,
+    ): PlaceDetail
+
+    suspend fun deletePlace(spaceId: UUID, accessToken: String, placeId: UUID, ifMatch: Int)
+
+    /**
+     * A Story item kind, with the URL segment its typed-relation endpoints
+     * use. Mirrors [CommentParent] deliberately rather than reusing it: the
+     * two happen to share the same three segments today, but coupling
+     * Place's relation endpoints to a type named for comments would be the
+     * wrong abstraction to reach for.
+     */
+    enum class RelationTargetKind(val segment: String) {
+        MEMORY("memories"),
+        MILESTONE("milestones"),
+        HEART_MOMENT("heart-moments"),
+    }
+
+    /**
+     * The Story items already linked to a place, as IDs only — the server
+     * deliberately does not return their content here (a second, separately
+     * authorized read path), so the caller resolves labels itself from
+     * whatever Story items it can already read, e.g. via [getTimeline].
+     */
+    suspend fun listPlaceRelationTargets(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: RelationTargetKind,
+    ): List<UUID>
+
+    suspend fun linkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: RelationTargetKind,
+        targetId: UUID,
+    )
+
+    suspend fun unlinkPlaceTarget(
+        spaceId: UUID,
+        accessToken: String,
+        placeId: UUID,
+        kind: RelationTargetKind,
+        targetId: UUID,
+    )
+
+    /**
+     * Owner-only: the server filters to what the caller owns, so the path
+     * carries no accountId and the response never contains another
+     * account's PrivateNote.
+     */
+    suspend fun listPrivateNotes(spaceId: UUID, accessToken: String, cursor: String? = null): PrivateNotePage
+
+    suspend fun createPrivateNote(spaceId: UUID, accessToken: String, fields: PrivateNoteCreate): PrivateNoteDetail
+
+    /** The contract accepts a partial correction; unset fields are left unchanged. */
+    suspend fun updatePrivateNote(
+        spaceId: UUID,
+        accessToken: String,
+        noteId: UUID,
+        ifMatch: Int,
+        fields: PrivateNoteUpdate,
+    ): PrivateNoteDetail
+
+    suspend fun deletePrivateNote(spaceId: UUID, accessToken: String, noteId: UUID, ifMatch: Int)
+
+    /** Owner-only, same server-side filtering as [listPrivateNotes]. */
+    suspend fun listGiftIdeas(spaceId: UUID, accessToken: String, cursor: String? = null): GiftIdeaPage
+
+    suspend fun createGiftIdea(spaceId: UUID, accessToken: String, fields: GiftIdeaCreate): GiftIdeaDetail
+
+    /**
+     * The contract accepts a partial correction; unset fields are left
+     * unchanged. A status change is the same operation with only [fields]'s
+     * `status` set — the server validates the transition (M3-D17's
+     * transition graph), so this client never encodes that graph itself.
+     */
+    suspend fun updateGiftIdea(
+        spaceId: UUID,
+        accessToken: String,
+        giftIdeaId: UUID,
+        ifMatch: Int,
+        fields: GiftIdeaUpdate,
+    ): GiftIdeaDetail
+
+    suspend fun deleteGiftIdea(spaceId: UUID, accessToken: String, giftIdeaId: UUID, ifMatch: Int)
+
+    /**
+     * Owner-only, same server-side filtering as [listPrivateNotes]. Items
+     * are not listed separately: [PrivateCollectionDetail.items] already
+     * carries them, in server order.
+     */
+    suspend fun listPrivateCollections(spaceId: UUID, accessToken: String, cursor: String? = null): PrivateCollectionPage
+
+    suspend fun createPrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        fields: PrivateCollectionCreate,
+    ): PrivateCollectionDetail
+
+    suspend fun updatePrivateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionUpdate,
+    ): PrivateCollectionDetail
+
+    suspend fun deletePrivateCollection(spaceId: UUID, accessToken: String, collectionId: UUID, ifMatch: Int)
+
+    suspend fun createPrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: PrivateCollectionItemCreate,
+    ): PrivateCollectionItemDetail
+
+    suspend fun updatePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: PrivateCollectionItemUpdate,
+    ): PrivateCollectionItemDetail
+
+    suspend fun deletePrivateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    )
+
+    /**
+     * The server accepts only an exact permutation of the collection's
+     * current item ids — not a subset, not an addition. [itemIds] must be
+     * built from the collection's own current items, never invented.
+     */
+    suspend fun reorderPrivateCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): PrivateCollectionDetail
+
+    suspend fun listNotifications(spaceId: UUID, accessToken: String, cursor: String? = null): NotificationPage
+
+    suspend fun getNotificationUnreadCount(spaceId: UUID, accessToken: String): NotificationUnreadCount
+
+    suspend fun markNotificationRead(
+        spaceId: UUID,
+        accessToken: String,
+        notificationId: UUID,
+    ): NotificationItem
+
+    suspend fun markAllNotificationsRead(spaceId: UUID, accessToken: String): NotificationsReadAllResult
+
+    suspend fun getActivity(spaceId: UUID, accessToken: String, cursor: String? = null): ActivityPage
+
+    /** Searches shared Space content plus the caller's own private content. */
+    suspend fun search(spaceId: UUID, accessToken: String, query: String, cursor: String? = null): SearchPage
+
+    suspend fun listCollections(spaceId: UUID, accessToken: String, cursor: String? = null): CollectionPage
+
+    suspend fun createCollection(spaceId: UUID, accessToken: String, fields: CollectionCreate): CollectionDetail
+
+    suspend fun updateCollection(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        fields: CollectionUpdate,
+    ): CollectionDetail
+
+    suspend fun deleteCollection(spaceId: UUID, accessToken: String, collectionId: UUID, ifMatch: Int)
+
+    suspend fun createCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        fields: CollectionItemCreate,
+    ): CollectionItemDetail
+
+    suspend fun updateCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+        fields: CollectionItemUpdate,
+    ): CollectionItemDetail
+
+    suspend fun deleteCollectionItem(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        itemId: UUID,
+        ifMatch: Int,
+    )
+
+    /** Same exact-set contract as [reorderPrivateCollectionItems]. */
+    suspend fun reorderCollectionItems(
+        spaceId: UUID,
+        accessToken: String,
+        collectionId: UUID,
+        ifMatch: Int,
+        itemIds: List<UUID>,
+    ): CollectionDetail
 }
 
 private fun unsupportedProfileOperation(): Nothing =

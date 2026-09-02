@@ -57,7 +57,19 @@ import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.collection.CollectionDetailScreen
+import de.sidebyside.next.collection.CollectionsScreen
+import de.sidebyside.next.place.PlaceRelationsScreen
+import de.sidebyside.next.place.PlacesScreen
+import de.sidebyside.next.notifications.NotificationsScreen
+import de.sidebyside.next.privatearea.GiftIdeasScreen
+import de.sidebyside.next.privatearea.PrivateAreaScreen
+import de.sidebyside.next.privatearea.PrivateCollectionDetailScreen
+import de.sidebyside.next.privatearea.PrivateCollectionsScreen
+import de.sidebyside.next.privatearea.PrivateNotesScreen
+import de.sidebyside.next.search.SearchScreen
 import de.sidebyside.next.plan.PlanScreen
+import de.sidebyside.next.activity.ActivityScreen
 import de.sidebyside.next.today.TodayScreen
 import de.sidebyside.next.shell.MoreScreen
 import de.sidebyside.next.shell.ShellSurface
@@ -300,6 +312,7 @@ private fun DemoShell(
             AppDestination.More,
         ),
         navController = navController,
+        secureWhen = ::isSecureRoute,
         detailRoutes = { controller ->
             composable(
                 route = MEMORY_ROUTE,
@@ -619,6 +632,221 @@ private fun DemoShell(
                     onDelete = viewModel::deleteProfilePreference,
                 )
             }
+
+            composable(PLACES_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPlaces() }
+
+                PlacesScreen(
+                    places = state.places,
+                    busy = state.placesBusy,
+                    problem = state.placesProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = { name, description, address, latitude, longitude ->
+                        viewModel.addPlace(name, description, address, latitude, longitude)
+                    },
+                    onEdit = { place, name, description, address, latitude, longitude ->
+                        viewModel.updatePlace(place, name, description, address, latitude, longitude)
+                    },
+                    onDelete = viewModel::deletePlace,
+                    onOpenRelations = { place ->
+                        controller.navigate("planning/places/${place.id}/relations")
+                    },
+                )
+            }
+
+            composable(
+                route = PLACE_RELATIONS_ROUTE,
+                arguments = listOf(navArgument(PLACE_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val placeId = entry.arguments?.getString(PLACE_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val place = state.places.firstOrNull { it.id == placeId }
+
+                LaunchedEffect(placeId, state.activeSpaceId) {
+                    placeId?.let(viewModel::loadPlaceRelations)
+                }
+
+                PlaceRelationsScreen(
+                    placeName = place?.name.orEmpty(),
+                    targets = state.placeRelationTargets,
+                    linkedIds = state.placeLinkedTargetIds,
+                    busy = state.placeRelationsBusy,
+                    problem = state.placeRelationsProblem,
+                    onBack = { controller.popBackStack() },
+                    onLink = { target ->
+                        placeId?.let { viewModel.linkPlaceRelation(it, target.kind, target.id) }
+                    },
+                    onUnlink = { target ->
+                        placeId?.let { viewModel.unlinkPlaceRelation(it, target.kind, target.id) }
+                    },
+                )
+            }
+
+            composable(COLLECTIONS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadCollections() }
+
+                CollectionsScreen(
+                    collections = state.collections,
+                    busy = state.collectionsBusy,
+                    problem = state.collectionsProblem,
+                    onBack = { controller.popBackStack() },
+                    onOpen = { collection ->
+                        controller.navigate("planning/collections/${collection.id}")
+                    },
+                    onAdd = viewModel::addCollection,
+                    onEdit = viewModel::updateCollection,
+                    onDelete = viewModel::deleteCollection,
+                )
+            }
+
+            composable(
+                route = COLLECTION_DETAIL_ROUTE,
+                arguments = listOf(navArgument(COLLECTION_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val collectionId = entry.arguments?.getString(COLLECTION_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val collection = state.collections.firstOrNull { it.id == collectionId }
+
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadCollections() }
+
+                CollectionDetailScreen(
+                    collection = collection,
+                    busy = state.collectionsBusy,
+                    problem = state.collectionsProblem,
+                    onBack = { controller.popBackStack() },
+                    onAddItem = { title -> collection?.let { viewModel.addCollectionItem(it, title) } },
+                    onToggleCompleted = { item ->
+                        collection?.let { viewModel.toggleCollectionItemCompleted(it, item) }
+                    },
+                    onDeleteItem = { item ->
+                        collection?.let { viewModel.deleteCollectionItem(it, item) }
+                    },
+                    onMoveUp = { item -> collection?.let { viewModel.moveCollectionItemUp(it, item) } },
+                    onMoveDown = { item -> collection?.let { viewModel.moveCollectionItemDown(it, item) } },
+                )
+            }
+
+            composable(PRIVATE_AREA_ROUTE) {
+                PrivateAreaScreen(
+                    onBack = { controller.popBackStack() },
+                    onOpenNotes = { controller.navigate(PRIVATE_NOTES_ROUTE) },
+                    onOpenGiftIdeas = { controller.navigate(GIFT_IDEAS_ROUTE) },
+                    onOpenCollections = { controller.navigate(PRIVATE_COLLECTIONS_ROUTE) },
+                )
+            }
+
+            composable(PRIVATE_NOTES_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateNotes() }
+
+                PrivateNotesScreen(
+                    notes = state.privateNotes,
+                    busy = state.privateNotesBusy,
+                    problem = state.privateNotesProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = viewModel::addPrivateNote,
+                    onEdit = viewModel::updatePrivateNote,
+                    onDelete = viewModel::deletePrivateNote,
+                )
+            }
+
+            composable(GIFT_IDEAS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadGiftIdeas() }
+
+                GiftIdeasScreen(
+                    ideas = state.giftIdeas,
+                    busy = state.giftIdeasBusy,
+                    problem = state.giftIdeasProblem,
+                    onBack = { controller.popBackStack() },
+                    onAdd = viewModel::addGiftIdea,
+                    onEdit = viewModel::updateGiftIdea,
+                    onChangeStatus = viewModel::changeGiftIdeaStatus,
+                    onDelete = viewModel::deleteGiftIdea,
+                )
+            }
+
+            composable(PRIVATE_COLLECTIONS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateCollections() }
+
+                PrivateCollectionsScreen(
+                    collections = state.privateCollections,
+                    busy = state.privateCollectionsBusy,
+                    problem = state.privateCollectionsProblem,
+                    onBack = { controller.popBackStack() },
+                    onOpen = { collection ->
+                        controller.navigate("more/private/collections/${collection.id}")
+                    },
+                    onAdd = viewModel::addPrivateCollection,
+                    onEdit = viewModel::updatePrivateCollection,
+                    onDelete = viewModel::deletePrivateCollection,
+                )
+            }
+
+            composable(
+                route = PRIVATE_COLLECTION_DETAIL_ROUTE,
+                arguments = listOf(navArgument(COLLECTION_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val collectionId = entry.arguments?.getString(COLLECTION_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val collection = state.privateCollections.firstOrNull { it.id == collectionId }
+
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadPrivateCollections() }
+
+                PrivateCollectionDetailScreen(
+                    collection = collection,
+                    busy = state.privateCollectionsBusy,
+                    problem = state.privateCollectionsProblem,
+                    onBack = { controller.popBackStack() },
+                    onAddItem = { title -> collection?.let { viewModel.addPrivateCollectionItem(it, title) } },
+                    onToggleCompleted = { item ->
+                        collection?.let { viewModel.toggleCollectionItemCompleted(it, item) }
+                    },
+                    onDeleteItem = { item ->
+                        collection?.let { viewModel.deletePrivateCollectionItem(it, item) }
+                    },
+                    onMoveUp = { item -> collection?.let { viewModel.moveCollectionItemUp(it, item) } },
+                    onMoveDown = { item -> collection?.let { viewModel.moveCollectionItemDown(it, item) } },
+                )
+            }
+
+            composable(NOTIFICATIONS_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) {
+                    viewModel.loadNotifications()
+                    viewModel.loadUnreadNotificationCount()
+                }
+
+                NotificationsScreen(
+                    notifications = state.notifications,
+                    unreadCount = state.unreadNotificationCount,
+                    busy = state.notificationsBusy,
+                    problem = state.notificationsProblem,
+                    onBack = { controller.popBackStack() },
+                    onMarkRead = viewModel::markNotificationRead,
+                    onMarkAllRead = viewModel::markAllNotificationsRead,
+                )
+            }
+
+            composable(ACTIVITY_ROUTE) {
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadActivity() }
+
+                ActivityScreen(
+                    entries = state.activity,
+                    busy = state.activityBusy,
+                    problem = state.activityProblem,
+                    onBack = { controller.popBackStack() },
+                )
+            }
+
+            composable(SEARCH_ROUTE) {
+                DisposableEffect(Unit) { onDispose(viewModel::clearSearch) }
+
+                SearchScreen(
+                    results = state.searchResults,
+                    busy = state.searchBusy,
+                    problem = state.searchProblem,
+                    onBack = { controller.popBackStack() },
+                    onSearch = viewModel::search,
+                )
+            }
         },
     ) { destination ->
         when (destination) {
@@ -630,6 +858,7 @@ private fun DemoShell(
                     problem = state.todayProblem,
                     gestureSent = state.thinkingOfYouSent,
                     onSendThinkingOfYou = viewModel::sendThinkingOfYou,
+                    onOpenActivity = { navController.navigate(ACTIVITY_ROUTE) },
                 )
             }
 
@@ -652,6 +881,8 @@ private fun DemoShell(
                     onComplete = viewModel::completePlan,
                     onReturnToWish = viewModel::returnPlanToWish,
                     onDeletePlan = viewModel::deletePlan,
+                    onOpenPlaces = { navController.navigate(PLACES_ROUTE) },
+                    onOpenCollections = { navController.navigate(COLLECTIONS_ROUTE) },
                 )
             }
 
@@ -660,12 +891,17 @@ private fun DemoShell(
                     if (state.activeSpaceId != null) viewModel.refreshProfile()
                 }
                 LaunchedEffect(state.availableSpaces) { viewModel.loadSpaceNames() }
+                LaunchedEffect(state.activeSpaceId) { viewModel.loadUnreadNotificationCount() }
                 MoreScreen(
                     onSignOut = onSignOut,
                     onOpenHeartMoments = { navController.navigate(HEART_MOMENTS_ROUTE) },
                     onOpenInvitations = { navController.navigate(INVITATIONS_ROUTE) },
                     onOpenRelatedPersons = { navController.navigate(RELATED_PERSONS_ROUTE) },
                     onOpenPreferences = { navController.navigate(PREFERENCES_ROUTE) },
+                    onOpenPrivateArea = { navController.navigate(PRIVATE_AREA_ROUTE) },
+                    onOpenNotifications = { navController.navigate(NOTIFICATIONS_ROUTE) },
+                    onOpenSearch = { navController.navigate(SEARCH_ROUTE) },
+                    unreadNotificationCount = state.unreadNotificationCount,
                     signOutEnabled = !state.busy && !state.profile.busy,
                     spaces = state.availableSpaces,
                     spacePartnerNames = state.spacePartnerNames,
@@ -714,6 +950,51 @@ private const val IMPORTANT_DATES_ROUTE =
     "people/related-persons/{$PERSON_ID_ARGUMENT}/important-dates"
 
 private const val PREFERENCES_ROUTE = "profile/preferences"
+
+private const val PLACES_ROUTE = "planning/places"
+private const val PLACE_ID_ARGUMENT = "placeId"
+private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/relations"
+
+private const val COLLECTIONS_ROUTE = "planning/collections"
+
+private const val PRIVATE_AREA_ROUTE = "more/private"
+private const val PRIVATE_NOTES_ROUTE = "more/private/notes"
+private const val GIFT_IDEAS_ROUTE = "more/private/gift-ideas"
+private const val PRIVATE_COLLECTIONS_ROUTE = "more/private/collections"
+private const val COLLECTION_ID_ARGUMENT = "collectionId"
+private const val PRIVATE_COLLECTION_DETAIL_ROUTE = "more/private/collections/{$COLLECTION_ID_ARGUMENT}"
+private const val COLLECTION_DETAIL_ROUTE = "planning/collections/{$COLLECTION_ID_ARGUMENT}"
+
+/** Matches the Web path from `web/src/client/routes.ts` (`MORE_NOTIFICATIONS_ROUTE`). */
+private const val NOTIFICATIONS_ROUTE = "more/notifications"
+
+/** Matches the Web path from `web/src/client/routes.ts` (`ACTIVITY_ROUTE`). */
+private const val ACTIVITY_ROUTE = "today/activity"
+
+/**
+ * Matches the Web path from `web/src/client/routes.ts` (`SEARCH_ROUTE`).
+ * Secured the same way as the Private Area subtree (see `secureWhen`
+ * above): a result's `SearchKind` can be `PRIVATE_NOTE`, `GIFT_IDEA`, or a
+ * PrivateCollection kind just as easily as a shared one, so the screen as a
+ * whole gets the same screenshot/Recents protection rather than only the
+ * routes with "private" in their path.
+ */
+private const val SEARCH_ROUTE = "search"
+
+/**
+ * Whether [route] is inside the owner-only Private Area subtree — the hub
+ * and every screen under it, matched by prefix so a new private-area screen
+ * is secure by default rather than needing to opt in.
+ */
+internal fun isPrivateAreaRoute(route: String?): Boolean =
+    route != null && (route == PRIVATE_AREA_ROUTE || route.startsWith("$PRIVATE_AREA_ROUTE/"))
+
+/**
+ * Every route that gets [de.sidebyside.next.shell.SecureWindowEffect]: the
+ * Private Area subtree, and Search — a result's `SearchKind` can be a
+ * private one just as easily as a shared one.
+ */
+internal fun isSecureRoute(route: String?): Boolean = isPrivateAreaRoute(route) || route == SEARCH_ROUTE
 
 private val MEMORY_COMMENTS = ReferenceContract.CommentParent.MEMORY
 private val MILESTONE_COMMENTS = ReferenceContract.CommentParent.MILESTONE

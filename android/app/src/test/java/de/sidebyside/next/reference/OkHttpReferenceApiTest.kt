@@ -1,5 +1,6 @@
 package de.sidebyside.next.reference
 
+import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.coroutines.test.runTest
@@ -17,10 +18,14 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import sidebyside.api.models.AttachmentDetail
+import sidebyside.api.models.AuthorSummary
 import sidebyside.api.models.MediaType
 import sidebyside.api.models.PartnerProfileView
+import sidebyside.api.models.PlaceCreate
+import sidebyside.api.models.PlaceDetail
 import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
+import sidebyside.api.models.ResourceCapabilities
 import sidebyside.api.models.UploadDescriptor
 
 class OkHttpReferenceApiTest {
@@ -145,6 +150,67 @@ class OkHttpReferenceApiTest {
         assertEquals("PATCH", request.method)
         assertEquals("3", request.header("If-Match"))
         assertEquals("{\"profileAttachmentId\":null}", requestBody(request))
+    }
+
+    @Test
+    fun placeCoordinatesRoundTripAsJsonNumbersNotStrings() = runTest {
+        // Found on the device: no BigDecimal serializer was registered at
+        // all, so decoding any response carrying a Place coordinate failed
+        // outright. This proves both directions against real JSON rather
+        // than the in-memory fake, which never exercises encoding at all.
+        val requests = mutableListOf<Request>()
+        val spaceId = UUID.fromString("00000000-0000-0000-0000-000000000031")
+        val responsePlace = PlaceDetail(
+            address = null,
+            capabilities = ResourceCapabilities(canComment = true, canDelete = true, canEdit = true),
+            createdAt = OffsetDateTime.parse("2026-08-31T08:00:00Z"),
+            createdBy = UUID.randomUUID(),
+            creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+            description = null,
+            id = UUID.fromString("00000000-0000-0000-0000-000000000032"),
+            latitude = BigDecimal("52.520008"),
+            longitude = BigDecimal("13.404954"),
+            name = "Brandenburg Gate",
+            spaceId = spaceId,
+            updatedAt = OffsetDateTime.parse("2026-08-31T08:00:00Z"),
+            version = 1,
+        )
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                requests += request
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(
+                        SideBySideJson
+                            .encodeToString(PlaceDetail.serializer(), responsePlace)
+                            .toResponseBody("application/json".toMediaType()),
+                    )
+                    .build()
+            }
+            .build()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client)
+
+        val result = api.createPlace(
+            spaceId,
+            "secret",
+            PlaceCreate(
+                name = "Brandenburg Gate",
+                latitude = BigDecimal("52.520008"),
+                longitude = BigDecimal("13.404954"),
+            ),
+        )
+
+        assertEquals(BigDecimal("52.520008"), result.latitude)
+        assertEquals(BigDecimal("13.404954"), result.longitude)
+
+        val sentBody = requestBody(requests.single())
+        assertTrue(sentBody.contains("\"latitude\":52.520008"))
+        assertTrue(sentBody.contains("\"longitude\":13.404954"))
+        assertFalse(sentBody.contains("\"latitude\":\"52.520008\""))
     }
 
     @Test

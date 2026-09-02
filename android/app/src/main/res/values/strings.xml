@@ -262,6 +262,7 @@
     <string name="load_more">Weitere laden</string>
     <string name="load_more_busy">Wird geladen …</string>
     <string name="today_title">Heute</string>
+    <string name="today_open_activity">Aktivität ansehen</string>
     <string name="today_together_years">Seit %1$d Jahren und %2$d Monaten zusammen</string>
     <string name="today_together_years_only">Seit %1$d Jahren zusammen</string>
     <string name="today_together_months">Seit %1$d Monaten zusammen</string>
@@ -397,4 +398,192 @@
     <string name="preference_cancel">Abbrechen</string>
     <string name="preference_save_changes">Änderungen speichern</string>
     <string name="preference_edit_title">Eintrag bearbeiten</string>
+
+    <string name="places_open">Orte verwalten</string>
+    <string name="places_title">Orte</string>
+    <string name="places_intro">Gemeinsame Orte funktionieren auch nur mit einem Namen – Koordinaten sind optional.</string>
+    <string name="places_empty">Noch keine Orte.</string>
+
+    <string name="place_add">Ort hinzufügen</string>
+    <string name="place_name_hint">Name</string>
+    <string name="place_description_hint">Beschreibung</string>
+    <string name="place_address_hint">Adresse</string>
+    <string name="place_latitude_hint">Breitengrad</string>
+    <string name="place_longitude_hint">Längengrad</string>
+    <string name="place_coordinate_help">Koordinaten sind optional. Wenn du sie angibst, müssen Breitengrad und Längengrad gemeinsam gesetzt sein.</string>
+    <string name="place_coordinate_error">Bitte gib Breitengrad und Längengrad gemeinsam an oder lasse beide Felder leer.</string>
+    <string name="place_no_address">Keine Adresse hinterlegt</string>
+    <string name="place_no_coordinates">Dieser Ort ist bewusst ohne Koordinaten gespeichert.</string>
+    <string name="place_coordinates">%1$s, %2$s</string>
+
+    <string name="place_edit">Bearbeiten</string>
+    <string name="place_edit_title">Ort bearbeiten</string>
+    <string name="place_delete">Löschen</string>
+    <string name="place_delete_title">%1$s löschen?</string>
+    <string name="place_delete_warning">Der Ort und seine Verknüpfungen werden gelöscht. Erinnerungen, Herzmomente und Meilensteine selbst bleiben erhalten.</string>
+    <string name="place_delete_confirm">Endgültig löschen</string>
+    <string name="place_cancel">Abbrechen</string>
+    <string name="place_save_changes">Änderungen speichern</string>
+
+    <string name="place_relations">Verknüpfte Inhalte</string>
+
+    <string name="place_relations_title">Verknüpfte gemeinsame Inhalte</string>
+    <string name="place_relations_intro">Auswählbar sind ausschließlich Inhalte aus eurer gemeinsamen Story. Private Herzmomente erscheinen hier nicht.</string>
+    <string name="place_relations_empty">Noch keine Inhalte verknüpft.</string>
+    <string name="place_relation_unlink">Verknüpfung lösen</string>
+    <string name="place_relation_add_heading">Gemeinsamen Inhalt verknüpfen</string>
+    <string name="place_relation_choose">Inhalt auswählen</string>
+    <string name="place_relation_link">Verknüpfen</string>
+    <string name="place_relation_none_available">Alle aktuell verfügbaren gemeinsamen Story-Inhalte sind bereits verknüpft.</string>
+    <string name="place_relation_kind_memory">Erinnerung</string>
+    <string name="place_relation_kind_milestone">Meilenstein</string>
+    <string name="place_relation_kind_heart_moment">Herzmoment</string>
+
+    <string name="private_area_card_title">Privater Bereich</string>
+    <string name="private_area_card_intro">Notizen und Ideen, die nur dir gehören – dein Partner oder deine Partnerin sieht sie nie.</string>
+    <string name="private_area_open">Privaten Bereich öffnen</string>
+    <string name="private_area_title">Privater Bereich</string>
+    <string name="private_area_intro">Alles hier ist ausschließlich für dich sichtbar, auch in einer geteilten Beziehung.</string>
+
+    <string name="private_notes_open">Notizen</string>
+    <string name="private_notes_title">Private Notizen</string>
+    <string name="private_notes_intro">Nur du siehst diese Notizen.</string>
+    <string name="private_notes_empty">Noch keine privaten Notizen.</string>
+
+    <string name="private_note_add">Notiz hinzufügen</string>
+    <string name="private_note_title_hint">Titel</string>
+    <string name="private_note_body_hint">Text</string>
+    <string name="private_note_pinned">Angeheftet</string>
+    <string name="private_note_edit">Bearbeiten</string>
+    <string name="private_note_edit_title">Notiz bearbeiten</string>
+    <string name="private_note_delete">Löschen</string>
+    <string name="private_note_delete_title">%1$s löschen?</string>
+    <string name="private_note_delete_warning">Diese Notiz wird endgültig gelöscht.</string>
+    <string name="private_note_delete_confirm">Endgültig löschen</string>
+    <string name="private_note_cancel">Abbrechen</string>
+    <string name="private_note_save_changes">Änderungen speichern</string>
+
+    <string name="gift_ideas_open">Geschenkideen</string>
+    <string name="gift_ideas_title">Geschenkideen</string>
+    <string name="gift_ideas_intro">Nur du siehst diese Liste – ideal, um Ideen zu sammeln, ohne die Überraschung zu verraten.</string>
+    <string name="gift_ideas_empty">Noch keine Geschenkideen.</string>
+
+    <string name="gift_idea_add">Idee hinzufügen</string>
+    <string name="gift_idea_title_hint">Titel</string>
+    <string name="gift_idea_description_hint">Beschreibung</string>
+    <string name="gift_idea_occasion_hint">Anlass</string>
+    <string name="gift_idea_recipient_hint">Für wen</string>
+    <string name="gift_idea_price_hint">Preis (frei formuliert)</string>
+    <string name="gift_idea_url_hint">Link</string>
+    <string name="gift_idea_target_on_hint">Zieldatum (JJJJ-MM-TT, optional)</string>
+    <string name="gift_idea_pinned">Angeheftet</string>
+    <string name="gift_idea_edit">Bearbeiten</string>
+    <string name="gift_idea_edit_title">Geschenkidee bearbeiten</string>
+    <string name="gift_idea_delete">Löschen</string>
+    <string name="gift_idea_delete_title">%1$s löschen?</string>
+    <string name="gift_idea_delete_warning">Diese Geschenkidee wird endgültig gelöscht.</string>
+    <string name="gift_idea_delete_confirm">Endgültig löschen</string>
+    <string name="gift_idea_cancel">Abbrechen</string>
+    <string name="gift_idea_save_changes">Änderungen speichern</string>
+
+    <string name="gift_idea_status_idea">Idee</string>
+    <string name="gift_idea_status_bought">Gekauft</string>
+    <string name="gift_idea_status_given">Übergeben</string>
+    <string name="gift_idea_mark_as">Als „%1$s“ markieren</string>
+
+    <string name="private_collections_open">Listen</string>
+    <string name="private_collections_title">Private Listen</string>
+    <string name="private_collections_intro">Nur du siehst diese Listen und ihre Einträge.</string>
+    <string name="private_collections_empty">Noch keine privaten Listen.</string>
+    <string name="private_collection_add">Liste hinzufügen</string>
+    <string name="private_collection_title_hint">Titel</string>
+    <string name="private_collection_icon_hint">Symbol (optional)</string>
+    <string name="private_collection_open">Öffnen</string>
+    <string name="private_collection_edit">Bearbeiten</string>
+    <string name="private_collection_edit_title">Liste bearbeiten</string>
+    <string name="private_collection_delete">Löschen</string>
+    <string name="private_collection_delete_title">%1$s löschen?</string>
+    <string name="private_collection_delete_warning">Diese Liste und alle ihre Einträge werden endgültig gelöscht.</string>
+    <string name="private_collection_delete_confirm">Endgültig löschen</string>
+    <string name="private_collection_cancel">Abbrechen</string>
+    <string name="private_collection_save_changes">Änderungen speichern</string>
+    <string name="private_collection_item_count">%1$d Einträge</string>
+
+    <string name="private_collection_item_add">Eintrag hinzufügen</string>
+    <string name="private_collection_item_title_hint">Titel</string>
+    <string name="private_collection_item_delete">Löschen</string>
+    <string name="private_collection_item_move_up">Nach oben</string>
+    <string name="private_collection_item_move_down">Nach unten</string>
+    <string name="private_collection_items_empty">Noch keine Einträge in dieser Liste.</string>
+
+    <string name="notifications_open">Benachrichtigungen</string>
+    <string name="notifications_title">Benachrichtigungen</string>
+    <string name="notifications_intro">Was seit deinem letzten Besuch passiert ist.</string>
+    <string name="notifications_empty">Keine Benachrichtigungen.</string>
+    <string name="notifications_unread_count">%1$d ungelesen</string>
+    <string name="notification_mark_all_read">Alle als gelesen markieren</string>
+    <string name="notification_mark_read">Als gelesen markieren</string>
+    <string name="notification_kind_comment_created">Neuer Kommentar</string>
+    <string name="notification_kind_thinking_of_you">„Ich denke an dich“</string>
+    <string name="notification_kind_reminder_due">Erinnerung fällig</string>
+
+    <string name="activity_title">Aktivität</string>
+    <string name="activity_intro">Was ihr in eurem gemeinsamen Bereich zuletzt festgehalten habt.</string>
+    <string name="activity_empty">Noch keine Aktivität.</string>
+    <string name="activity_kind_memory_created">Erinnerung festgehalten</string>
+    <string name="activity_kind_milestone_created">Meilenstein festgehalten</string>
+    <string name="activity_kind_heart_moment_created">Herzmoment geteilt</string>
+    <string name="activity_kind_wish_created">Wunsch hinzugefügt</string>
+    <string name="activity_kind_plan_created">Plan erstellt</string>
+    <string name="activity_kind_plan_completed">Plan abgeschlossen</string>
+    <string name="activity_kind_place_created">Ort hinzugefügt</string>
+    <string name="activity_kind_chapter_created">Kapitel erstellt</string>
+    <string name="activity_kind_collection_created">Liste erstellt</string>
+    <string name="activity_kind_comment_created">Kommentar geschrieben</string>
+
+    <string name="search_open">Suche</string>
+    <string name="search_title">Suche</string>
+    <string name="search_intro">Durchsucht eure gemeinsame Story und deine privaten Inhalte.</string>
+    <string name="search_query_hint">Suchbegriff</string>
+    <string name="search_submit">Suchen</string>
+    <string name="search_empty">Keine Treffer.</string>
+    <string name="search_result_kind_memory">Erinnerung</string>
+    <string name="search_result_kind_heart_moment">Herzmoment</string>
+    <string name="search_result_kind_milestone">Meilenstein</string>
+    <string name="search_result_kind_wish">Wunsch</string>
+    <string name="search_result_kind_plan">Plan</string>
+    <string name="search_result_kind_place">Ort</string>
+    <string name="search_result_kind_chapter">Kapitel</string>
+    <string name="search_result_kind_collection">Liste</string>
+    <string name="search_result_kind_collection_item">Listeneintrag</string>
+    <string name="search_result_kind_private_note">Private Notiz</string>
+    <string name="search_result_kind_gift_idea">Geschenkidee</string>
+    <string name="search_result_kind_private_collection">Private Liste</string>
+    <string name="search_result_kind_private_collection_item">Eintrag in privater Liste</string>
+    <string name="search_result_untitled">Ohne Titel</string>
+
+    <string name="collections_open">Listen verwalten</string>
+    <string name="collections_title">Listen</string>
+    <string name="collections_intro">Gemeinsame Listen, die ihr beide sehen und bearbeiten könnt.</string>
+    <string name="collections_empty">Noch keine gemeinsamen Listen.</string>
+    <string name="collection_add">Liste hinzufügen</string>
+    <string name="collection_title_hint">Titel</string>
+    <string name="collection_icon_hint">Symbol (optional)</string>
+    <string name="collection_open">Öffnen</string>
+    <string name="collection_edit">Bearbeiten</string>
+    <string name="collection_edit_title">Liste bearbeiten</string>
+    <string name="collection_delete">Löschen</string>
+    <string name="collection_delete_title">%1$s löschen?</string>
+    <string name="collection_delete_warning">Diese Liste und alle ihre Einträge werden endgültig gelöscht.</string>
+    <string name="collection_delete_confirm">Endgültig löschen</string>
+    <string name="collection_cancel">Abbrechen</string>
+    <string name="collection_save_changes">Änderungen speichern</string>
+    <string name="collection_item_count">%1$d Einträge</string>
+
+    <string name="collection_item_add">Eintrag hinzufügen</string>
+    <string name="collection_item_title_hint">Titel</string>
+    <string name="collection_item_delete">Löschen</string>
+    <string name="collection_item_move_up">Nach oben</string>
+    <string name="collection_item_move_down">Nach unten</string>
+    <string name="collection_items_empty">Noch keine Einträge in dieser Liste.</string>
 </resources>

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.sidebyside.next.demo.DemoEndpoint
 import de.sidebyside.next.demo.DemoPersona
+import de.sidebyside.next.place.toRelationTargetItem
 import de.sidebyside.next.profile.ProfileUiState
 import de.sidebyside.next.profile.loadProfileIdentity
 import de.sidebyside.next.profile.removeProfileAvatar
@@ -20,9 +21,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import sidebyside.api.models.AccountMembershipView
+import sidebyside.api.models.ActivityItem
 import sidebyside.api.models.AttachmentReadRequest
 import sidebyside.api.models.CommentCreate
 import sidebyside.api.models.CommentDetail
+import sidebyside.api.models.CollectionCreate
+import sidebyside.api.models.CollectionDetail
+import sidebyside.api.models.CollectionItemCreate
+import sidebyside.api.models.CollectionItemDetail
+import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.HeartEmotion
@@ -38,6 +46,22 @@ import sidebyside.api.models.ImportantDateType
 import sidebyside.api.models.ImportantDateView
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.PersonRelationship
+import sidebyside.api.models.PlaceCreate
+import sidebyside.api.models.PlaceDetail
+import sidebyside.api.models.PlaceUpdate
+import sidebyside.api.models.GiftIdeaCreate
+import sidebyside.api.models.GiftIdeaDetail
+import sidebyside.api.models.GiftIdeaStatus
+import sidebyside.api.models.GiftIdeaUpdate
+import sidebyside.api.models.PrivateCollectionCreate
+import sidebyside.api.models.PrivateCollectionDetail
+import sidebyside.api.models.PrivateCollectionItemCreate
+import sidebyside.api.models.PrivateCollectionItemDetail
+import sidebyside.api.models.PrivateCollectionItemUpdate
+import sidebyside.api.models.PrivateCollectionUpdate
+import sidebyside.api.models.PrivateNoteCreate
+import sidebyside.api.models.PrivateNoteDetail
+import sidebyside.api.models.PrivateNoteUpdate
 import sidebyside.api.models.PreferenceCategory
 import sidebyside.api.models.PreferenceSentiment
 import sidebyside.api.models.ProfilePreferenceCreate
@@ -47,10 +71,12 @@ import sidebyside.api.models.ProfileVisibility
 import sidebyside.api.models.RelatedPersonDeletePolicy
 import sidebyside.api.models.RelatedPersonFields
 import sidebyside.api.models.RelatedPersonView
+import sidebyside.api.models.SearchResult
 import sidebyside.api.models.ThinkingOfYouCreate
 import sidebyside.api.models.MemoryUpdate
 import sidebyside.api.models.MilestoneDetail
 import sidebyside.api.models.MilestoneUpdate
+import sidebyside.api.models.NotificationItem
 import sidebyside.api.models.PlanComplete
 import sidebyside.api.models.PlanDetail
 import sidebyside.api.models.InvitationView
@@ -205,6 +231,40 @@ data class ReferenceUiState(
     val relatedPersonsProblem: UiProblem? = null,
     /** Dates for whichever person's screen is currently open. */
     val personImportantDates: List<ImportantDateView> = emptyList(),
+    val places: List<PlaceDetail> = emptyList(),
+    val placesBusy: Boolean = false,
+    val placesProblem: UiProblem? = null,
+    /** Every shared Story item, as a possible link target for whichever place's relations are open. */
+    val placeRelationTargets: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
+    /** Ids already linked to that place, across all three kinds. */
+    val placeLinkedTargetIds: Set<java.util.UUID> = emptySet(),
+    val placeRelationsBusy: Boolean = false,
+    val placeRelationsProblem: UiProblem? = null,
+    /** Owner-only: the server already filters this to the caller's own notes. */
+    val privateNotes: List<PrivateNoteDetail> = emptyList(),
+    val privateNotesBusy: Boolean = false,
+    val privateNotesProblem: UiProblem? = null,
+    /** Owner-only: the server already filters this to the caller's own gift ideas. */
+    val giftIdeas: List<GiftIdeaDetail> = emptyList(),
+    val giftIdeasBusy: Boolean = false,
+    val giftIdeasProblem: UiProblem? = null,
+    /** Owner-only: items ride along inside each [PrivateCollectionDetail]. */
+    val privateCollections: List<PrivateCollectionDetail> = emptyList(),
+    val privateCollectionsBusy: Boolean = false,
+    val privateCollectionsProblem: UiProblem? = null,
+    val notifications: List<NotificationItem> = emptyList(),
+    val unreadNotificationCount: Int = 0,
+    val notificationsBusy: Boolean = false,
+    val notificationsProblem: UiProblem? = null,
+    val activity: List<ActivityItem> = emptyList(),
+    val activityBusy: Boolean = false,
+    val activityProblem: UiProblem? = null,
+    val searchResults: List<SearchResult> = emptyList(),
+    val searchBusy: Boolean = false,
+    val searchProblem: UiProblem? = null,
+    val collections: List<CollectionDetail> = emptyList(),
+    val collectionsBusy: Boolean = false,
+    val collectionsProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -335,6 +395,15 @@ class ReferenceViewModel(
         clearInvitations()
         clearRelatedPersons()
         clearProfilePreferences()
+        clearPlaces()
+        clearPlaceRelations()
+        clearPrivateNotes()
+        clearGiftIdeas()
+        clearPrivateCollections()
+        clearNotifications()
+        clearActivity()
+        clearSearch()
+        clearCollections()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -420,6 +489,15 @@ class ReferenceViewModel(
         clearInvitations()
         clearRelatedPersons()
         clearProfilePreferences()
+        clearPlaces()
+        clearPlaceRelations()
+        clearPrivateNotes()
+        clearGiftIdeas()
+        clearPrivateCollections()
+        clearNotifications()
+        clearActivity()
+        clearSearch()
+        clearCollections()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -473,6 +551,15 @@ class ReferenceViewModel(
         clearInvitations()
         clearRelatedPersons()
         clearProfilePreferences()
+        clearPlaces()
+        clearPlaceRelations()
+        clearPrivateNotes()
+        clearGiftIdeas()
+        clearPrivateCollections()
+        clearNotifications()
+        clearActivity()
+        clearSearch()
+        clearCollections()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -532,6 +619,15 @@ class ReferenceViewModel(
         clearInvitations()
         clearRelatedPersons()
         clearProfilePreferences()
+        clearPlaces()
+        clearPlaceRelations()
+        clearPrivateNotes()
+        clearGiftIdeas()
+        clearPrivateCollections()
+        clearNotifications()
+        clearActivity()
+        clearSearch()
+        clearCollections()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -2617,6 +2713,1239 @@ class ReferenceViewModel(
                 ),
             )
         }
+    }
+
+    /**
+     * Enforces the same latitude/longitude pairing the server enforces as
+     * `PLACE_COORDINATE_PAIR_REQUIRED`, so a client mistake is refused before
+     * the request rather than surfacing only as a 400.
+     *
+     * Returns `null` when the pairing is invalid (exactly one of the two set,
+     * or either unparsable); both blank is valid and yields `null to null`.
+     */
+    private fun pairedCoordinates(
+        latitude: String,
+        longitude: String,
+    ): Pair<java.math.BigDecimal?, java.math.BigDecimal?>? {
+        val lat = latitude.trim()
+        val lng = longitude.trim()
+        if (lat.isBlank() && lng.isBlank()) return null to null
+        if (lat.isBlank() || lng.isBlank()) return null
+        val parsedLat = runCatching { java.math.BigDecimal(lat) }.getOrNull() ?: return null
+        val parsedLng = runCatching { java.math.BigDecimal(lng) }.getOrNull() ?: return null
+        return parsedLat to parsedLng
+    }
+
+    fun loadPlaces() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placesBusy = true, placesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listPlaces(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(places = page.items, placesBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(placesBusy = false, placesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addPlace(
+        name: String,
+        description: String,
+        address: String,
+        latitude: String,
+        longitude: String,
+    ) {
+        if (name.isBlank()) return
+        val coordinates = pairedCoordinates(latitude, longitude) ?: return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placesBusy = true, placesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createPlace(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    PlaceCreate(
+                        name = name,
+                        address = address.trim().takeIf { it.isNotBlank() },
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        latitude = coordinates.first,
+                        longitude = coordinates.second,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placesBusy = false) }
+                    loadPlaces()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(placesBusy = false, placesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updatePlace(
+        place: PlaceDetail,
+        name: String,
+        description: String,
+        address: String,
+        latitude: String,
+        longitude: String,
+    ) {
+        if (name.isBlank()) return
+        val coordinates = pairedCoordinates(latitude, longitude) ?: return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placesBusy = true, placesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePlace(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    place.id,
+                    place.version,
+                    PlaceUpdate(
+                        name = name,
+                        address = address.trim().takeIf { it.isNotBlank() },
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        latitude = coordinates.first,
+                        longitude = coordinates.second,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placesBusy = false) }
+                    loadPlaces()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(placesBusy = false, placesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deletePlace(place: PlaceDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placesBusy = true, placesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deletePlace(spaceId, currentSession.tokens.accessToken, place.id, place.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placesBusy = false) }
+                    loadPlaces()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(placesBusy = false, placesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearPlaces() {
+        mutate { it.copy(places = emptyList(), placesBusy = false, placesProblem = null) }
+    }
+
+    /**
+     * Loads what a place's relations screen needs: the shared Story as
+     * possible targets, and which of them are already linked to [placeId].
+     *
+     * Reads the Story timeline rather than any place-specific endpoint for
+     * the target list, because the typed-relation endpoints return only
+     * linked ids, never content — a second, separately authorized read path
+     * for content was deliberately not built. This is also why a private
+     * HeartMoment can never appear here: the timeline itself never carries
+     * one that is not the caller's own or shared.
+     */
+    fun loadPlaceRelations(placeId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placeRelationsBusy = true, placeRelationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                val accessToken = currentSession.tokens.accessToken
+                val timeline = api.getTimeline(spaceId, accessToken)
+                val linkedIds = ReferenceContract.RelationTargetKind.entries
+                    .flatMap { kind -> api.listPlaceRelationTargets(spaceId, accessToken, placeId, kind) }
+                    .toSet()
+                timeline.items.map { it.toRelationTargetItem() } to linkedIds
+            }
+                .onSuccess { (targets, linkedIds) ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            placeRelationTargets = targets,
+                            placeLinkedTargetIds = linkedIds,
+                            placeRelationsBusy = false,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(placeRelationsBusy = false, placeRelationsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun linkPlaceRelation(
+        placeId: java.util.UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: java.util.UUID,
+    ) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placeRelationsBusy = true, placeRelationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.linkPlaceTarget(spaceId, currentSession.tokens.accessToken, placeId, kind, targetId)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placeRelationsBusy = false) }
+                    loadPlaceRelations(placeId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(placeRelationsBusy = false, placeRelationsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun unlinkPlaceRelation(
+        placeId: java.util.UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: java.util.UUID,
+    ) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(placeRelationsBusy = true, placeRelationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.unlinkPlaceTarget(spaceId, currentSession.tokens.accessToken, placeId, kind, targetId)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(placeRelationsBusy = false) }
+                    loadPlaceRelations(placeId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(placeRelationsBusy = false, placeRelationsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun clearPlaceRelations() {
+        mutate {
+            it.copy(
+                placeRelationTargets = emptyList(),
+                placeLinkedTargetIds = emptySet(),
+                placeRelationsBusy = false,
+                placeRelationsProblem = null,
+            )
+        }
+    }
+
+    fun loadPrivateNotes() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listPrivateNotes(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateNotes = page.items, privateNotesBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(privateNotesBusy = false, privateNotesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addPrivateNote(title: String, body: String, pinned: Boolean) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createPrivateNote(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    PrivateNoteCreate(title = title, body = body, pinned = pinned),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateNotesBusy = false) }
+                    loadPrivateNotes()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(privateNotesBusy = false, privateNotesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updatePrivateNote(note: PrivateNoteDetail, title: String, body: String, pinned: Boolean) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePrivateNote(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    note.id,
+                    note.version,
+                    PrivateNoteUpdate(title = title, body = body, pinned = pinned),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateNotesBusy = false) }
+                    loadPrivateNotes()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(privateNotesBusy = false, privateNotesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deletePrivateNote(note: PrivateNoteDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deletePrivateNote(spaceId, currentSession.tokens.accessToken, note.id, note.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateNotesBusy = false) }
+                    loadPrivateNotes()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(privateNotesBusy = false, privateNotesProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearPrivateNotes() {
+        mutate { it.copy(privateNotes = emptyList(), privateNotesBusy = false, privateNotesProblem = null) }
+    }
+
+    fun loadGiftIdeas() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listGiftIdeas(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeas = page.items, giftIdeasBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addGiftIdea(
+        title: String,
+        description: String,
+        occasion: String,
+        recipient: String,
+        priceText: String,
+        url: String,
+        targetOn: String,
+        pinned: Boolean,
+    ) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createGiftIdea(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    GiftIdeaCreate(
+                        title = title,
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        occasion = occasion.trim().takeIf { it.isNotBlank() },
+                        pinned = pinned,
+                        priceText = priceText.trim().takeIf { it.isNotBlank() },
+                        recipient = recipient.trim().takeIf { it.isNotBlank() },
+                        targetOn = parseHappenedOn(targetOn),
+                        url = url.trim().takeIf { it.isNotBlank() },
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeasBusy = false) }
+                    loadGiftIdeas()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updateGiftIdea(
+        idea: GiftIdeaDetail,
+        title: String,
+        description: String,
+        occasion: String,
+        recipient: String,
+        priceText: String,
+        url: String,
+        targetOn: String,
+        pinned: Boolean,
+    ) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateGiftIdea(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    idea.id,
+                    idea.version,
+                    GiftIdeaUpdate(
+                        title = title,
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        occasion = occasion.trim().takeIf { it.isNotBlank() },
+                        pinned = pinned,
+                        priceText = priceText.trim().takeIf { it.isNotBlank() },
+                        recipient = recipient.trim().takeIf { it.isNotBlank() },
+                        targetOn = parseHappenedOn(targetOn),
+                        url = url.trim().takeIf { it.isNotBlank() },
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeasBusy = false) }
+                    loadGiftIdeas()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    /**
+     * A status change alone, sent as its own partial update rather than
+     * folded into [updateGiftIdea]: the server owns M3-D17's transition
+     * graph and rejects an invalid one, so this client never encodes which
+     * transitions are allowed — it only ever proposes a target status.
+     */
+    fun changeGiftIdeaStatus(idea: GiftIdeaDetail, status: GiftIdeaStatus) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateGiftIdea(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    idea.id,
+                    idea.version,
+                    GiftIdeaUpdate(status = status),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeasBusy = false) }
+                    loadGiftIdeas()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deleteGiftIdea(idea: GiftIdeaDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteGiftIdea(spaceId, currentSession.tokens.accessToken, idea.id, idea.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(giftIdeasBusy = false) }
+                    loadGiftIdeas()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(giftIdeasBusy = false, giftIdeasProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearGiftIdeas() {
+        mutate { it.copy(giftIdeas = emptyList(), giftIdeasBusy = false, giftIdeasProblem = null) }
+    }
+
+    fun loadPrivateCollections() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listPrivateCollections(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollections = page.items, privateCollectionsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun addPrivateCollection(title: String, icon: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createPrivateCollection(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    PrivateCollectionCreate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun updatePrivateCollection(collection: PrivateCollectionDetail, title: String, icon: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePrivateCollection(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    collection.version,
+                    PrivateCollectionUpdate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun deletePrivateCollection(collection: PrivateCollectionDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deletePrivateCollection(spaceId, currentSession.tokens.accessToken, collection.id, collection.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun addPrivateCollectionItem(collection: PrivateCollectionDetail, title: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createPrivateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    PrivateCollectionItemCreate(title = title),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun toggleCollectionItemCompleted(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePrivateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                    PrivateCollectionItemUpdate(completed = !item.completed),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun deletePrivateCollectionItem(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deletePrivateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun moveCollectionItemUp(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
+        reorderCollectionItem(collection, item, offset = -1)
+    }
+
+    fun moveCollectionItemDown(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
+        reorderCollectionItem(collection, item, offset = 1)
+    }
+
+    /**
+     * Swaps [item] with its neighbour [offset] positions away and sends the
+     * whole resulting order. A swap always keeps the same set of ids the
+     * collection already has, so it satisfies the server's exact-set order
+     * contract by construction rather than by re-checking it here.
+     */
+    private fun reorderCollectionItem(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail, offset: Int) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        val currentOrder = collection.items.sortedBy { it.position }.map { it.id }
+        val index = currentOrder.indexOf(item.id)
+        val targetIndex = index + offset
+        if (index < 0 || targetIndex < 0 || targetIndex >= currentOrder.size) return
+        val newOrder = currentOrder.toMutableList()
+        val moved = newOrder.removeAt(index)
+        newOrder.add(targetIndex, moved)
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.reorderPrivateCollectionItems(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    collection.version,
+                    newOrder,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
+    fun clearPrivateCollections() {
+        mutate {
+            it.copy(privateCollections = emptyList(), privateCollectionsBusy = false, privateCollectionsProblem = null)
+        }
+    }
+
+    fun loadNotifications() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(notificationsBusy = true, notificationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listNotifications(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(notifications = page.items, notificationsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(notificationsBusy = false, notificationsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun loadUnreadNotificationCount() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getNotificationUnreadCount(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { count ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(unreadNotificationCount = count.unreadCount) }
+                }
+        }
+    }
+
+    fun markNotificationRead(notification: NotificationItem) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(notificationsBusy = true, notificationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.markNotificationRead(spaceId, currentSession.tokens.accessToken, notification.id)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(notificationsBusy = false) }
+                    loadNotifications()
+                    loadUnreadNotificationCount()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(notificationsBusy = false, notificationsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun markAllNotificationsRead() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(notificationsBusy = true, notificationsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.markAllNotificationsRead(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(notificationsBusy = false) }
+                    loadNotifications()
+                    loadUnreadNotificationCount()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(notificationsBusy = false, notificationsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearNotifications() {
+        mutate {
+            it.copy(
+                notifications = emptyList(),
+                unreadNotificationCount = 0,
+                notificationsBusy = false,
+                notificationsProblem = null,
+            )
+        }
+    }
+
+    fun loadActivity() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(activityBusy = true, activityProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.getActivity(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(activity = page.items, activityBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(activityBusy = false, activityProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearActivity() {
+        mutate { it.copy(activity = emptyList(), activityBusy = false, activityProblem = null) }
+    }
+
+    fun search(query: String) {
+        if (query.isBlank()) {
+            clearSearch()
+            return
+        }
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(searchBusy = true, searchProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.search(spaceId, currentSession.tokens.accessToken, query.trim()) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(searchResults = page.items, searchBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(searchBusy = false, searchProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearSearch() {
+        mutate { it.copy(searchResults = emptyList(), searchBusy = false, searchProblem = null) }
+    }
+
+    fun loadCollections() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listCollections(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collections = page.items, collectionsBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addCollection(title: String, icon: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createCollection(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    CollectionCreate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updateCollection(collection: CollectionDetail, title: String, icon: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateCollection(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    collection.version,
+                    CollectionUpdate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deleteCollection(collection: CollectionDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteCollection(spaceId, currentSession.tokens.accessToken, collection.id, collection.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addCollectionItem(collection: CollectionDetail, title: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    CollectionItemCreate(title = title),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun toggleCollectionItemCompleted(collection: CollectionDetail, item: CollectionItemDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                    CollectionItemUpdate(completed = !item.completed),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deleteCollectionItem(collection: CollectionDetail, item: CollectionItemDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun moveCollectionItemUp(collection: CollectionDetail, item: CollectionItemDetail) {
+        reorderCollectionItem(collection, item, offset = -1)
+    }
+
+    fun moveCollectionItemDown(collection: CollectionDetail, item: CollectionItemDetail) {
+        reorderCollectionItem(collection, item, offset = 1)
+    }
+
+    /** Same by-construction exact-set reasoning as [reorderCollectionItem] for PrivateCollection. */
+    private fun reorderCollectionItem(collection: CollectionDetail, item: CollectionItemDetail, offset: Int) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        val currentOrder = collection.items.sortedBy { it.position }.map { it.id }
+        val index = currentOrder.indexOf(item.id)
+        val targetIndex = index + offset
+        if (index < 0 || targetIndex < 0 || targetIndex >= currentOrder.size) return
+        val newOrder = currentOrder.toMutableList()
+        val moved = newOrder.removeAt(index)
+        newOrder.add(targetIndex, moved)
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.reorderCollectionItems(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    collection.version,
+                    newOrder,
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearCollections() {
+        mutate { it.copy(collections = emptyList(), collectionsBusy = false, collectionsProblem = null) }
     }
 
     fun logout() {
