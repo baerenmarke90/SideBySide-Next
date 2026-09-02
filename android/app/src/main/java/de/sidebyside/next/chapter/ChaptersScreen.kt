@@ -32,9 +32,12 @@ import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
+import de.sidebyside.next.shell.PlacePicker
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStatePanel
+import java.util.UUID
 import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.PlaceDetail
 
 private val ReadingMeasure: Dp = 560.dp
 
@@ -45,12 +48,20 @@ private val ReadingMeasure: Dp = 560.dp
 @Composable
 fun ChaptersScreen(
     chapters: List<ChapterDetail>,
+    places: List<PlaceDetail>,
     busy: Boolean,
     problem: UiProblem?,
     onBack: () -> Unit,
     onOpen: (ChapterDetail) -> Unit,
-    onAdd: (title: String, description: String, startOn: String, endOn: String) -> Unit,
-    onEdit: (chapter: ChapterDetail, title: String, description: String, startOn: String, endOn: String) -> Unit,
+    onAdd: (title: String, description: String, startOn: String, endOn: String, placeId: UUID?) -> Unit,
+    onEdit: (
+        chapter: ChapterDetail,
+        title: String,
+        description: String,
+        startOn: String,
+        endOn: String,
+        placeId: UUID?,
+    ) -> Unit,
     onDelete: (ChapterDetail) -> Unit,
     modifier: Modifier = Modifier,
     /** Non-null only while [chapters] is a stale M2-D18 cache fallback. */
@@ -97,6 +108,7 @@ fun ChaptersScreen(
             ) {
                 Column(modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding)) {
                     ChapterForm(
+                        places = places,
                         submitLabel = stringResource(R.string.chapter_add),
                         busy = busy,
                         onSubmit = onAdd,
@@ -188,15 +200,17 @@ fun ChaptersScreen(
             title = { Text(stringResource(R.string.chapter_edit_title)) },
             text = {
                 ChapterForm(
+                    places = places,
                     submitLabel = stringResource(R.string.chapter_save_changes),
                     busy = busy,
                     initialTitle = target.title,
                     initialDescription = target.description.orEmpty(),
                     initialStartOn = target.startOn?.toString().orEmpty(),
                     initialEndOn = target.endOn?.toString().orEmpty(),
-                    onSubmit = { title, description, startOn, endOn ->
+                    initialPlaceId = target.placeId,
+                    onSubmit = { title, description, startOn, endOn, placeId ->
                         editing = null
-                        onEdit(target, title, description, startOn, endOn)
+                        onEdit(target, title, description, startOn, endOn, placeId)
                     },
                 )
             },
@@ -236,18 +250,21 @@ fun ChaptersScreen(
 
 @Composable
 private fun ChapterForm(
+    places: List<PlaceDetail>,
     submitLabel: String,
     busy: Boolean,
     initialTitle: String = "",
     initialDescription: String = "",
     initialStartOn: String = "",
     initialEndOn: String = "",
-    onSubmit: (title: String, description: String, startOn: String, endOn: String) -> Unit,
+    initialPlaceId: UUID? = null,
+    onSubmit: (title: String, description: String, startOn: String, endOn: String, placeId: UUID?) -> Unit,
 ) {
     var title by rememberSaveable { mutableStateOf(initialTitle) }
     var description by rememberSaveable { mutableStateOf(initialDescription) }
     var startOn by rememberSaveable { mutableStateOf(initialStartOn) }
     var endOn by rememberSaveable { mutableStateOf(initialEndOn) }
+    var placeId by rememberSaveable { mutableStateOf(initialPlaceId) }
 
     Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
         OutlinedTextField(
@@ -280,13 +297,21 @@ private fun ChapterForm(
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
         )
+        PlacePicker(
+            places = places,
+            selectedPlaceId = placeId,
+            onSelect = { placeId = it },
+            busy = busy,
+            modifier = Modifier.fillMaxWidth(),
+        )
         Button(
             onClick = {
-                onSubmit(title, description, startOn, endOn)
+                onSubmit(title, description, startOn, endOn, placeId)
                 title = ""
                 description = ""
                 startOn = ""
                 endOn = ""
+                placeId = null
             },
             enabled = !busy && title.isNotBlank(),
             modifier = Modifier.heightIn(min = MinimumTouchTarget),
