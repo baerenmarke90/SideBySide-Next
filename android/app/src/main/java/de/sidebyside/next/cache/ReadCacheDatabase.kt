@@ -12,13 +12,14 @@ import androidx.room.RoomDatabase
  * (evict) rather than risk serving a malformed row.
  */
 @Database(
-    entities = [ProductCacheEntity::class, CacheContextEntity::class],
-    version = 1,
+    entities = [ProductCacheEntity::class, CacheContextEntity::class, ProtectedCacheEntity::class],
+    version = 2,
     exportSchema = false,
 )
 abstract class ReadCacheDatabase : RoomDatabase() {
     abstract fun productCacheDao(): ProductCacheDao
     abstract fun cacheContextDao(): CacheContextDao
+    abstract fun protectedCacheDao(): ProtectedCacheDao
 
     companion object {
         private const val DATABASE_NAME = "sidebyside-read-cache.db"

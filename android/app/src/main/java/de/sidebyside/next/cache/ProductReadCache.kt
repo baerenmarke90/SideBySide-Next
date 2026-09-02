@@ -25,6 +25,21 @@ enum class ProductCacheKind(val segment: String) {
  */
 val StoryTimelineResourceId: UUID = UUID(0L, 0L)
 
+/**
+ * The current-user Private Area lists this cache covers. `OWNER_ONLY`
+ * content, unlike [ProductCacheKind]'s `SPACE_SHARED` kinds: server-side
+ * filtering already scopes each list to its owner, and the cache namespace
+ * additionally carries the owner per M2-D18's Android decision.
+ */
+enum class ProtectedCacheKind(val segment: String) {
+    PRIVATE_NOTE("privateNote"),
+    GIFT_IDEA("giftIdea"),
+    PRIVATE_COLLECTION("privateCollection"),
+}
+
+/** Each Private Area surface here is one whole list, not a per-item resource. */
+val PrivateAreaListResourceId: UUID = UUID(0L, 0L)
+
 data class ProductReadResult<T>(
     val value: T,
     val fromCache: Boolean,
@@ -33,21 +48,39 @@ data class ProductReadResult<T>(
 
 private const val MAX_AGE_MILLIS = 7L * 24 * 60 * 60 * 1000
 private const val SCOPE = "SPACE_SHARED"
+private const val PROTECTED_SCOPE = "OWNER_ONLY"
 
 /**
- * The M2-D18 read cache for shared Story detail content, backed by Room.
+ * The M2-D18 read cache for shared Story content and the current-user
+ * Private Area, backed by Room.
  *
  * A cache attempt is only ever made after [isServerAvailabilityFailure]
  * accepts the failure — the same rule the Web client's
  * `mayUseOfflineProductCache` enforces — so a `401`/`403`/Privacy-safe
  * `404`/`409` is never silently papered over with a stale row.
+ *
+ * [protectedDao]/[protectedCipher] are both null unless the caller configures
+ * `OWNER_ONLY` persistence; [loadProtectedWithFallback] then behaves as
+ * memory-only (fresh reads succeed, nothing survives to fall back to), which
+ * is also what M2-D18 requires when Keystore-backed encryption cannot be set
+ * up safely on a given device.
  */
 class ProductReadCache(
     private val productDao: ProductCacheDao,
     private val contextDao: CacheContextDao,
+    private val protectedDao: ProtectedCacheDao? = null,
+    private val protectedCipher: ProtectedPayloadCipher? = null,
 ) {
     private fun cacheKey(accountId: UUID, spaceId: UUID, kind: ProductCacheKind, resourceId: UUID): String =
         "$accountId:$spaceId:$SCOPE:${kind.segment}:$resourceId"
+
+    private fun protectedCacheKey(
+        accountId: UUID,
+        spaceId: UUID,
+        ownerId: UUID,
+        kind: ProtectedCacheKind,
+        resourceId: UUID,
+    ): String = "$accountId:$spaceId:$PROTECTED_SCOPE:$ownerId:${kind.segment}:$resourceId"
 
     /**
      * Wipes every cached row when the recorded Account+Space marker does not
@@ -132,9 +165,87 @@ class ProductReadCache(
         )
     }
 
+    /**
+     * The `OWNER_ONLY` counterpart to [loadWithFallback]: same fallback
+     * eligibility and freshness rule, but the cached bytes are encrypted with
+     * [protectedCipher] before ever reaching [protectedDao], and a decrypt
+     * failure — a corrupted row, or an unreadable key after e.g. a Keystore
+     * reset — is treated as no usable cache rather than surfaced as a crash,
+     * per M2-D18's "fail closed" requirement.
+     */
+    suspend fun <T> loadProtectedWithFallback(
+        accountId: UUID,
+        spaceId: UUID,
+        ownerId: UUID,
+        kind: ProtectedCacheKind,
+        resourceId: UUID,
+        load: suspend () -> T,
+        serialize: (T) -> String,
+        deserialize: (String) -> T,
+    ): Result<ProductReadResult<T>> {
+        ensureContext(accountId, spaceId)
+        val dao = protectedDao
+        val cipher = protectedCipher
+        val key = protectedCacheKey(accountId, spaceId, ownerId, kind, resourceId)
+
+        val networkResult = runCatching { load() }
+        val value = networkResult.getOrNull()
+        if (value != null) {
+            if (dao != null && cipher != null) {
+                // A failure here (e.g. the Keystore key became unusable) means
+                // falling back to memory-only owner content, per M2-D18 — not
+                // persisting the plaintext as a weaker substitute.
+                runCatching {
+                    val encrypted = cipher.encrypt(serialize(value))
+                    dao.put(
+                        ProtectedCacheEntity(
+                            cacheKey = key,
+                            accountId = accountId.toString(),
+                            spaceId = spaceId.toString(),
+                            ownerId = ownerId.toString(),
+                            kind = kind.segment,
+                            resourceId = resourceId.toString(),
+                            ciphertext = encrypted.ciphertext,
+                            iv = encrypted.iv,
+                            refreshedAtEpochMs = System.currentTimeMillis(),
+                        ),
+                    )
+                }
+            }
+            return Result.success(ProductReadResult(value, fromCache = false, refreshedAt = Instant.now()))
+        }
+
+        val throwable = networkResult.exceptionOrNull()
+            ?: return Result.failure(IllegalStateException("Neither a value nor a failure was produced."))
+        if (!isServerAvailabilityFailure(throwable)) return Result.failure(throwable)
+        // No persistence configured at all: there is nothing to fall back to.
+        if (dao == null || cipher == null) return Result.failure(throwable)
+
+        val cached = dao.get(key)
+        if (cached == null || !isFresh(cached.refreshedAtEpochMs)) {
+            if (cached != null) dao.delete(key)
+            return Result.failure(throwable)
+        }
+
+        val decrypted = runCatching {
+            deserialize(cipher.decrypt(EncryptedPayload(cached.ciphertext, cached.iv)))
+        }.getOrElse {
+            dao.delete(key)
+            return Result.failure(throwable)
+        }
+        return Result.success(
+            ProductReadResult(
+                decrypted,
+                fromCache = true,
+                refreshedAt = Instant.ofEpochMilli(cached.refreshedAtEpochMs),
+            ),
+        )
+    }
+
     /** The full wipe M2-D18 requires on logout, Account switch, and Space switch. */
     suspend fun clearAll() {
         productDao.clearAll()
+        protectedDao?.clearAll()
         contextDao.clear()
     }
 }

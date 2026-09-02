@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -247,6 +248,259 @@ class ProductReadCacheTest {
     }
 
     @Test
+    fun aProtectedFreshNetworkReadPersistsCiphertextNotPlaintext() = runTest {
+        val cipher = FakeProtectedPayloadCipher()
+        val protectedCache = ProductReadCache(
+            database.productCacheDao(),
+            database.cacheContextDao(),
+            database.protectedCacheDao(),
+            cipher,
+        )
+        val owner = account
+
+        val result = protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = owner,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { "A secret note" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        assertTrue(result.isSuccess)
+        assertFalse(result.getOrThrow().fromCache)
+        val row = database.protectedCacheDao().get(
+            "$account:$space:OWNER_ONLY:$owner:privateNote:$PrivateAreaListResourceId",
+        )
+        assertNotNull(row)
+        assertFalse(String(row!!.ciphertext, Charsets.UTF_8).contains("secret"))
+    }
+
+    @Test
+    fun aProtectedOfflineReloadFallsBackToTheDecryptedCachedValue() = runTest {
+        val cipher = FakeProtectedPayloadCipher()
+        val protectedCache = ProductReadCache(
+            database.productCacheDao(),
+            database.cacheContextDao(),
+            database.protectedCacheDao(),
+            cipher,
+        )
+
+        protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { "A secret note" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        val result = protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { throw IOException("offline") },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        assertTrue(result.getOrThrow().fromCache)
+        assertEquals("A secret note", result.getOrThrow().value)
+    }
+
+    @Test
+    fun aProtected401NeverFallsBackToTheCache() = runTest {
+        val cipher = FakeProtectedPayloadCipher()
+        val protectedCache = ProductReadCache(
+            database.productCacheDao(),
+            database.cacheContextDao(),
+            database.protectedCacheDao(),
+            cipher,
+        )
+
+        protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { "A secret note" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        val result = protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { throw ReferenceApiException(code = "unauthenticated", message = "expired", status = 401) },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun aProtectedCipherFailureOnWriteFallsBackToMemoryOnlyRatherThanPersistingPlaintext() = runTest {
+        // M2-D18: if Keystore-backed encryption cannot be set up safely, the
+        // platform falls back to memory-only owner content rather than
+        // weaken the rule by ever writing plaintext.
+        val cipher = FakeProtectedPayloadCipher(shouldFail = { true })
+        val protectedCache = ProductReadCache(
+            database.productCacheDao(),
+            database.cacheContextDao(),
+            database.protectedCacheDao(),
+            cipher,
+        )
+
+        val result = protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { "A secret note" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals("A secret note", result.getOrThrow().value)
+        assertEquals(
+            null,
+            database.protectedCacheDao().get(
+                "$account:$space:OWNER_ONLY:$account:privateNote:$PrivateAreaListResourceId",
+            ),
+        )
+    }
+
+    @Test
+    fun aProtectedCorruptedRowFailsClosedAndIsRemoved() = runTest {
+        database.protectedCacheDao().put(
+            ProtectedCacheEntity(
+                cacheKey = "$account:$space:OWNER_ONLY:$account:privateNote:$PrivateAreaListResourceId",
+                accountId = account.toString(),
+                spaceId = space.toString(),
+                ownerId = account.toString(),
+                kind = "privateNote",
+                resourceId = PrivateAreaListResourceId.toString(),
+                ciphertext = byteArrayOf(1, 2, 3),
+                iv = ByteArray(0),
+                refreshedAtEpochMs = System.currentTimeMillis(),
+            ),
+        )
+        // A cipher whose decrypt always throws stands in for a corrupted row
+        // or an unreadable key: either way, this must fail closed.
+        val cipher = FakeProtectedPayloadCipher(shouldFail = { true })
+        val protectedCache = ProductReadCache(
+            database.productCacheDao(),
+            database.cacheContextDao(),
+            database.protectedCacheDao(),
+            cipher,
+        )
+
+        val result = protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { throw IOException("offline") },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        assertTrue(result.isFailure)
+        assertEquals(
+            null,
+            database.protectedCacheDao().get(
+                "$account:$space:OWNER_ONLY:$account:privateNote:$PrivateAreaListResourceId",
+            ),
+        )
+    }
+
+    @Test
+    fun aDifferentOwnerNeverSeesAnotherOwnersProtectedRow() = runTest {
+        val cipher = FakeProtectedPayloadCipher()
+        val protectedCache = ProductReadCache(
+            database.productCacheDao(),
+            database.cacheContextDao(),
+            database.protectedCacheDao(),
+            cipher,
+        )
+        val otherOwner = UUID.fromString("66666666-6666-4666-8666-666666666666")
+
+        protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { "Account's own secret note" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        val result = protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = otherOwner,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { throw IOException("offline") },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun clearAllRemovesProtectedRowsToo() = runTest {
+        val cipher = FakeProtectedPayloadCipher()
+        val protectedCache = ProductReadCache(
+            database.productCacheDao(),
+            database.cacheContextDao(),
+            database.protectedCacheDao(),
+            cipher,
+        )
+
+        protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { "A secret note" },
+            serialize = { it },
+            deserialize = { it },
+        )
+
+        protectedCache.clearAll()
+
+        val result = protectedCache.loadProtectedWithFallback(
+            accountId = account,
+            spaceId = space,
+            ownerId = account,
+            kind = ProtectedCacheKind.PRIVATE_NOTE,
+            resourceId = PrivateAreaListResourceId,
+            load = { throw IOException("offline") },
+            serialize = { it },
+            deserialize = { it },
+        )
+        assertTrue(result.isFailure)
+    }
+
+    @Test
     fun aDifferentSpaceWipesThePreviousSpacesCacheOnNextUse() = runTest {
         cache.loadWithFallback(
             accountId = account,
@@ -275,4 +529,26 @@ class ProductReadCacheTest {
             .get("$account:$space:SPACE_SHARED:memory:$resource")
         assertEquals(null, staleFromOldSpace)
     }
+}
+
+/**
+ * A reversible stand-in for [AndroidKeystoreProtectedPayloadCipher], which
+ * Robolectric cannot exercise (no `AndroidKeyStore` provider on the JVM).
+ * [shouldFail] simulates a Keystore operation that cannot complete, the
+ * scenario M2-D18 requires falling back to memory-only content for.
+ */
+internal class FakeProtectedPayloadCipher(
+    private val shouldFail: () -> Boolean = { false },
+) : ProtectedPayloadCipher {
+    override fun encrypt(plaintext: String): EncryptedPayload {
+        if (shouldFail()) throw IllegalStateException("simulated Keystore failure")
+        return EncryptedPayload(ciphertext = xor(plaintext.toByteArray(Charsets.UTF_8)), iv = ByteArray(0))
+    }
+
+    override fun decrypt(payload: EncryptedPayload): String {
+        if (shouldFail()) throw IllegalStateException("simulated Keystore failure")
+        return String(xor(payload.ciphertext), Charsets.UTF_8)
+    }
+
+    private fun xor(bytes: ByteArray): ByteArray = ByteArray(bytes.size) { i -> (bytes[i].toInt() xor 0x5A).toByte() }
 }
