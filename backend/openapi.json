@@ -1444,6 +1444,28 @@
         "title": "EngagementTarget",
         "type": "string"
       },
+      "EntitlementStatus": {
+        "description": "Lifecycle state of an entitlement grant.",
+        "enum": [
+          "ACTIVE",
+          "TRIAL",
+          "GRACE_PERIOD",
+          "EXPIRED",
+          "REVOKED",
+          "GRANDFATHERED"
+        ],
+        "title": "EntitlementStatus",
+        "type": "string"
+      },
+      "EntitlementTier": {
+        "description": "High-level commercial product tier.",
+        "enum": [
+          "FREE",
+          "PREMIUM"
+        ],
+        "title": "EntitlementTier",
+        "type": "string"
+      },
       "ExportStatus": {
         "enum": [
           "QUEUED",
@@ -6360,6 +6382,54 @@
           "password"
         ],
         "title": "SignInRequest",
+        "type": "object"
+      },
+      "SpaceEntitlementView": {
+        "description": "Effective commercial entitlement representation for a Space.",
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "effectiveUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveuntil"
+          },
+          "isInGracePeriod": {
+            "title": "Isingraceperiod",
+            "type": "boolean"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EntitlementStatus"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/EntitlementTier"
+          }
+        },
+        "required": [
+          "spaceId",
+          "tier",
+          "status",
+          "isInGracePeriod",
+          "capabilities"
+        ],
+        "title": "SpaceEntitlementView",
         "type": "object"
       },
       "SpaceProfileUpdate": {
@@ -12385,6 +12455,59 @@
         "summary": "Get Dashboard",
         "tags": [
           "dashboard"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/entitlements": {
+      "get": {
+        "description": "Return the effective commercial capability entitlement state for the Space.",
+        "operationId": "get_space_entitlements_api_v1_spaces__spaceId__entitlements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceEntitlementView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Space Entitlements",
+        "tags": [
+          "entitlements"
         ]
       }
     },
