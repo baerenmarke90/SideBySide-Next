@@ -128,10 +128,6 @@
   margin-top: 0;
 }
 
-.story-card-link .story-card-memory.has-image .story-card-footer {
-  margin-top: var(--space-5);
-}
-
 .story-card-link .story-card-footer {
   gap: var(--space-3);
 }
