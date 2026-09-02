@@ -3923,6 +3923,40 @@ class ReferenceViewModel(
         }
     }
 
+    fun renameCollectionItem(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail, title: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updatePrivateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                    PrivateCollectionItemUpdate(title = title),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(privateCollectionsBusy = false) }
+                    loadPrivateCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(privateCollectionsBusy = false, privateCollectionsProblem = problemFor(throwable))
+                    }
+                }
+        }
+    }
+
     fun deletePrivateCollectionItem(collection: PrivateCollectionDetail, item: PrivateCollectionItemDetail) {
         val api = contract ?: return
         val currentSession = session ?: return
@@ -4633,6 +4667,38 @@ class ReferenceViewModel(
                     item.id,
                     item.version,
                     CollectionItemUpdate(completed = !item.completed),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(collectionsBusy = false) }
+                    loadCollections()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(collectionsBusy = false, collectionsProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun renameCollectionItem(collection: CollectionDetail, item: CollectionItemDetail, title: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(collectionsBusy = true, collectionsProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateCollectionItem(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    collection.id,
+                    item.id,
+                    item.version,
+                    CollectionItemUpdate(title = title),
                 )
             }
                 .onSuccess {

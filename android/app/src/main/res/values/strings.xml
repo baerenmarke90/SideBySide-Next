@@ -567,6 +567,9 @@
     <string name="private_collection_item_delete">Löschen</string>
     <string name="private_collection_item_move_up">Nach oben</string>
     <string name="private_collection_item_move_down">Nach unten</string>
+    <string name="private_collection_item_edit">Bearbeiten</string>
+    <string name="private_collection_item_save_changes">Änderungen speichern</string>
+    <string name="private_collection_item_cancel">Abbrechen</string>
     <string name="private_collection_items_empty">Noch keine Einträge in dieser Liste.</string>
 
     <string name="notifications_open">Benachrichtigungen</string>
@@ -640,6 +643,9 @@
     <string name="collection_item_delete">Löschen</string>
     <string name="collection_item_move_up">Nach oben</string>
     <string name="collection_item_move_down">Nach unten</string>
+    <string name="collection_item_edit">Bearbeiten</string>
+    <string name="collection_item_save_changes">Änderungen speichern</string>
+    <string name="collection_item_cancel">Abbrechen</string>
     <string name="collection_items_empty">Noch keine Einträge in dieser Liste.</string>
 
     <string name="chapters_open">Kapitel verwalten</string>
