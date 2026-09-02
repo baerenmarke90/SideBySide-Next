@@ -6,15 +6,24 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * The three shared Story detail kinds this first cache slice covers,
- * matching the Web client's own first cut in `productReadCache.ts`
- * (`ProductCacheKind`) rather than caching every domain at once.
+ * The shared Story kinds this cache covers, matching the Web client's own
+ * `productReadCache.ts` (`ProductCacheKind`) rather than caching every
+ * domain at once. `STORY` is the timeline list itself; the other three are
+ * one open detail screen each.
  */
 enum class ProductCacheKind(val segment: String) {
     MEMORY("memory"),
     MILESTONE("milestone"),
     HEART_MOMENT("heartMoment"),
+    STORY("story"),
 }
+
+/**
+ * Android's Story has no filters (unlike Web's kind/year/order), so there is
+ * only ever one timeline per Account+Space — this nil UUID stands in for
+ * Web's per-filter synthetic `resourceId`, collapsed to a single constant.
+ */
+val StoryTimelineResourceId: UUID = UUID(0L, 0L)
 
 data class ProductReadResult<T>(
     val value: T,

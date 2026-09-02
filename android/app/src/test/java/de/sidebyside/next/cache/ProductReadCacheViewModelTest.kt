@@ -32,8 +32,12 @@ import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AccountView
 import sidebyside.api.models.AuthorSummary
 import sidebyside.api.models.MemoryDetail
+import sidebyside.api.models.MemorySummary
 import sidebyside.api.models.ResourceCapabilities
 import sidebyside.api.models.SessionView
+import sidebyside.api.models.StoryItem
+import sidebyside.api.models.StoryMemoryItem
+import sidebyside.api.models.StoryPage
 import sidebyside.api.models.TokenView
 
 private val SPACE: UUID = UUID.fromString("11111111-1111-4111-8111-111111111111")
@@ -175,6 +179,39 @@ class ProductReadCacheViewModelTest {
         )
     }
 
+    @Test
+    fun refreshStoryFallsBackToTheCachedTimelineOnceOffline() = runTest(dispatcher) {
+        val api = StoryApi()
+        // Signing in already runs one refreshStory() itself, which is the
+        // first successful network read the fallback below builds on.
+        val model = signedIn(api)
+        assertEquals(1, model.uiState.value.storyItems.size)
+        assertNull(model.uiState.value.storyCachedAt)
+
+        api.nextFailure = IOException("offline")
+        model.refreshStory()
+        advanceUntilIdle()
+
+        assertEquals(1, model.uiState.value.storyItems.size)
+        assertNotNull(model.uiState.value.storyCachedAt)
+        // No offline pagination: a cache fallback has no cursor to load more with.
+        assertEquals(false, model.uiState.value.storyHasMore)
+        assertNull(model.uiState.value.error)
+    }
+
+    @Test
+    fun refreshStoryNeverFallsBackOnA401EvenWithACachedRow() = runTest(dispatcher) {
+        val api = StoryApi()
+        val model = signedIn(api)
+
+        api.nextFailure = ReferenceApiException(code = "unauthenticated", message = "expired", status = 401)
+        model.refreshStory()
+        advanceUntilIdle()
+
+        assertNull(model.uiState.value.storyCachedAt)
+        assertNotNull(model.uiState.value.error)
+    }
+
     private suspend fun TestScope.signedIn(api: ReferenceContract): ReferenceViewModel {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, productReadCache = cache)
         model.signIn("someone@example.test", "secret")
@@ -227,5 +264,46 @@ private class MemoryApi(
             throw it
         }
         return memoryDetail()
+    }
+}
+
+private fun storyMemoryItem(): StoryItem = StoryItem.MemoryWrapper(
+    StoryMemoryItem(
+        effectiveDate = LocalDate.of(2026, 8, 17),
+        kind = StoryMemoryItem.Kind.MEMORY,
+        memory = MemorySummary(
+            attachments = emptyList(),
+            author = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
+            capabilities = ResourceCapabilities(canComment = true, canDelete = true, canEdit = true),
+            createdAt = OffsetDateTime.now(),
+            happenedOn = LocalDate.of(2026, 8, 17),
+            id = MEMORY,
+            title = "A day by the sea",
+        ),
+    ),
+)
+
+private class StoryApi : FakeReferenceContract() {
+    var nextFailure: Throwable? = null
+
+    override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+        account = AccountView(displayName = email, id = UUID.randomUUID()),
+        tokens = TokenView(
+            accessExpiresAt = OffsetDateTime.now(),
+            accessToken = "access",
+            refreshExpiresAt = OffsetDateTime.now(),
+            refreshToken = "refresh",
+        ),
+    )
+
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+
+    override suspend fun getTimeline(spaceId: UUID, accessToken: String, cursor: String?): StoryPage {
+        nextFailure?.let {
+            nextFailure = null
+            throw it
+        }
+        return StoryPage(hasMore = false, items = listOf(storyMemoryItem()), nextCursor = null)
     }
 }

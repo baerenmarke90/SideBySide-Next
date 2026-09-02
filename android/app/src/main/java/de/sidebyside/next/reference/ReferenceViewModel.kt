@@ -88,6 +88,7 @@ import sidebyside.api.models.MembershipView
 import sidebyside.api.models.PlanSchedule
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
+import sidebyside.api.models.StoryPage
 import sidebyside.api.models.WishCreate
 import sidebyside.api.models.WishDetail
 import sidebyside.api.models.WishStatus
@@ -174,6 +175,8 @@ data class ReferenceUiState(
     /** Whether the server says there is more Story past what is loaded. */
     val storyHasMore: Boolean = false,
     val storyLoadingMore: Boolean = false,
+    /** Non-null only while [storyItems] is a stale M2-D18 cache fallback, not a fresh read. */
+    val storyCachedAt: java.time.Instant? = null,
     val commentsHaveMore: Boolean = false,
     /** The memory currently open, if any. */
     val openMemory: MemoryDetail? = null,
@@ -482,6 +485,7 @@ class ReferenceViewModel(
                             lastMemoryBody = null,
                             lastImageBytes = null,
                             storyItems = emptyList(),
+                            storyCachedAt = null,
                             availableSpaces = activeMemberships(memberships),
                             activeSpaceId = space,
                         )
@@ -679,6 +683,7 @@ class ReferenceViewModel(
                 lastMemoryBody = null,
                 lastImageBytes = null,
                 storyItems = emptyList(),
+                storyCachedAt = null,
             )
         }
         refreshStory()
@@ -2368,17 +2373,27 @@ class ReferenceViewModel(
         val operationEpoch = sessionEpoch
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.getTimeline(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { story ->
-                    if (isCurrentSession(operationEpoch, currentSession)) {
-                        storyCursor = story.nextCursor
-                        mutate {
-                            it.copy(
-                                storyItems = story.items,
-                                storyHasMore = story.hasMore,
-                                error = null,
-                            )
-                        }
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.STORY,
+                resourceId = de.sidebyside.next.cache.StoryTimelineResourceId,
+                load = { api.getTimeline(spaceId, currentSession.tokens.accessToken) },
+                serialize = { SideBySideJson.encodeToString(StoryPage.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(StoryPage.serializer(), it) },
+            )
+                .onSuccess { result ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    // Offline pagination is out of scope: a cache fallback shows
+                    // only the items it has, with no cursor to load more with.
+                    storyCursor = if (result.fromCache) null else result.value.nextCursor
+                    mutate {
+                        it.copy(
+                            storyItems = result.value.items,
+                            storyHasMore = if (result.fromCache) false else result.value.hasMore,
+                            storyCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                            error = null,
+                        )
                     }
                 }
                 .onFailure {
