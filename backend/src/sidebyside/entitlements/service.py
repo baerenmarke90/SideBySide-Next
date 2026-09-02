@@ -339,19 +339,19 @@ def record_grant(
         )
         grant_id = session.execute(statement).scalar_one_or_none()
         if grant_id is None:
-            grant = session.execute(
+            existing_grant = session.execute(
                 select(EntitlementGrant).where(
                     EntitlementGrant.source_type == source_str,
                     EntitlementGrant.external_reference == external_reference,
                 )
             ).scalar_one()
-            return grant
+            return existing_grant
 
-        grant = session.get(EntitlementGrant, grant_id)
-        if grant is None:
+        reconciled_grant = session.get(EntitlementGrant, grant_id)
+        if reconciled_grant is None:
             raise RuntimeError("Entitlement grant disappeared after source reconciliation.")
-        session.refresh(grant)
-        return grant
+        session.refresh(reconciled_grant)
+        return reconciled_grant
 
     grant = EntitlementGrant(
         space_id=space_id,
