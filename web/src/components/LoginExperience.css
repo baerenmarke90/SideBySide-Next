@@ -1,0 +1,452 @@
+/*
+ * #591 — Auth is a product surface, not a generic SaaS card.
+ *
+ * IdentityEntry remains the single authoritative auth flow. This layer only
+ * composes its existing primitives into the SideBySide partner-app language.
+ */
+.login-shell {
+  --login-hero-start: #21172b;
+  --login-hero-middle: #3f2a63;
+  --login-hero-end: #6b4ad7;
+  --login-glow-purple: rgb(124 77 255 / 32%);
+  --login-glow-mint: rgb(54 174 151 / 22%);
+  --login-moment-surface: rgb(255 255 255 / 10%);
+  --login-moment-border: rgb(255 255 255 / 24%);
+
+  min-height: 100svh;
+  grid-template-columns: minmax(0, 1.08fr) minmax(24rem, 0.92fr);
+  background: var(--color-background);
+}
+
+.login-intro {
+  isolation: isolate;
+  min-height: 100svh;
+  padding: clamp(6.5rem, 9vw, 8rem) clamp(2.5rem, 8vw, 7rem);
+  background:
+    radial-gradient(
+      circle at 18% 16%,
+      rgb(255 255 255 / 14%) 0,
+      transparent 21rem
+    ),
+    radial-gradient(
+      circle at 82% 76%,
+      var(--login-glow-mint) 0,
+      transparent 25rem
+    ),
+    linear-gradient(
+      145deg,
+      var(--login-hero-start) 0%,
+      var(--login-hero-middle) 57%,
+      var(--login-hero-end) 120%
+    );
+}
+
+.login-intro::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at center,
+    rgb(255 255 255 / 14%) 0 1px,
+    transparent 1.5px
+  );
+  background-size: 32px 32px;
+  content: "";
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 8%,
+    #000 42%,
+    transparent 94%
+  );
+  opacity: 0.22;
+}
+
+.login-intro .brand {
+  top: clamp(1.75rem, 4vw, 3rem);
+}
+
+.login-intro-content {
+  max-width: 42rem;
+  animation: login-content-in var(--motion-duration-medium)
+    var(--motion-easing-reveal) both;
+}
+
+.login-intro h1 {
+  max-width: 13ch;
+  margin-bottom: var(--space-5);
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 5.4vw, 4.7rem);
+  font-weight: 620;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.login-intro-content > p:not(.eyebrow) {
+  max-width: 34rem;
+  color: rgb(255 255 255 / 90%);
+  font-size: clamp(1.05rem, 1.7vw, 1.2rem);
+  line-height: 1.65;
+}
+
+.entry-illustration {
+  right: clamp(-8rem, -7vw, -4rem);
+  bottom: clamp(-9rem, -8vw, -5rem);
+  width: min(31rem, 44vw);
+  border-color: var(--login-moment-border);
+  background:
+    radial-gradient(
+      circle at 38% 35%,
+      var(--login-glow-purple),
+      transparent 34%
+    ),
+    var(--login-moment-surface);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 5%),
+    0 30px 80px rgb(17 9 29 / 24%);
+}
+
+.entry-illustration::before,
+.entry-illustration::after {
+  position: absolute;
+  width: 42%;
+  aspect-ratio: 4 / 5;
+  border: 1px solid var(--login-moment-border);
+  border-radius: var(--radius-card);
+  background: linear-gradient(
+    155deg,
+    rgb(255 255 255 / 18%),
+    rgb(255 255 255 / 5%)
+  );
+  box-shadow: 0 18px 48px rgb(17 9 29 / 18%);
+  content: "";
+}
+
+.entry-illustration::before {
+  top: 19%;
+  left: 17%;
+  transform: rotate(-8deg);
+}
+
+.entry-illustration::after {
+  right: 15%;
+  bottom: 14%;
+  transform: rotate(9deg);
+}
+
+.entry-orbit {
+  z-index: 1;
+}
+
+.entry-illustration-heart {
+  z-index: 2;
+  top: 39%;
+  left: 43%;
+  display: grid;
+  width: 4.75rem;
+  height: 4.75rem;
+  place-items: center;
+  border: 1px solid var(--login-moment-border);
+  border-radius: 50%;
+  background: rgb(31 20 44 / 50%);
+  color: #fff;
+  font-size: 3.2rem;
+  box-shadow: 0 15px 45px rgb(17 9 29 / 24%);
+  transform: rotate(-5deg);
+}
+
+.login-panel {
+  position: relative;
+  padding: clamp(3rem, 7vw, 7rem);
+  background:
+    radial-gradient(circle at 92% 8%, rgb(124 77 255 / 13%), transparent 22rem),
+    radial-gradient(circle at 10% 94%, rgb(54 174 151 / 10%), transparent 20rem),
+    var(--color-background);
+}
+
+.login-panel::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 1px;
+  height: min(70vh, 38rem);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--color-border),
+    transparent
+  );
+  content: "";
+  transform: translateY(-50%);
+}
+
+.login-card {
+  width: min(100%, 30rem);
+  border: 0;
+  border-radius: 0;
+  padding: var(--space-8) 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  animation: login-card-in var(--motion-duration-medium)
+    var(--motion-easing-reveal) both;
+}
+
+.login-card .eyebrow {
+  color: var(--color-brand-strong);
+}
+
+.login-card h2 {
+  margin-bottom: var(--space-3);
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 3.4vw, 2.85rem);
+  font-weight: 620;
+  letter-spacing: -0.035em;
+}
+
+.login-card .muted {
+  color: var(--color-text-secondary);
+}
+
+.login-card .form-grid {
+  margin-top: var(--space-8);
+  gap: var(--space-4);
+}
+
+.login-card input:not([type="checkbox"], [type="radio"]) {
+  min-height: 52px;
+  border-color: var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface-raised);
+  box-shadow: 0 1px 0 rgb(35 30 40 / 3%);
+}
+
+.login-card input:not([type="checkbox"], [type="radio"]):focus-visible {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 4px var(--color-brand-surface);
+}
+
+.login-form > button[type="submit"] {
+  width: 100%;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    135deg,
+    var(--color-brand),
+    var(--color-brand-strong)
+  );
+  box-shadow: 0 12px 30px rgb(79 45 170 / 20%);
+}
+
+.login-form > button.secondary,
+.login-card > button.secondary {
+  border-radius: var(--radius-pill);
+}
+
+.login-assurance {
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+/* Invite is a state of the auth family; prevent the nested intro block from
+ * inheriting the full-screen hero geometry. */
+.login-card .login-intro {
+  min-height: 0;
+  display: block;
+  overflow: visible;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.login-card .login-intro::before,
+.login-card .login-intro .brand {
+  display: none;
+}
+
+.login-card .eyebrow-inverse {
+  color: var(--color-brand-strong);
+}
+
+.login-card .invite-hero-title {
+  color: var(--color-text);
+}
+
+.login-card .invite-hero-body {
+  color: var(--color-text-secondary);
+}
+
+@keyframes login-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:root[data-theme="dark"] .login-shell {
+  --login-hero-start: #100b16;
+  --login-hero-middle: #26183b;
+  --login-hero-end: #4a317d;
+  --login-glow-purple: rgb(124 77 255 / 28%);
+  --login-glow-mint: rgb(54 174 151 / 17%);
+}
+
+:root[data-theme="dark"] .login-panel {
+  background:
+    radial-gradient(circle at 92% 8%, rgb(124 77 255 / 18%), transparent 22rem),
+    radial-gradient(circle at 10% 94%, rgb(54 174 151 / 10%), transparent 20rem),
+    var(--color-background);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .login-shell {
+    --login-hero-start: #100b16;
+    --login-hero-middle: #26183b;
+    --login-hero-end: #4a317d;
+    --login-glow-purple: rgb(124 77 255 / 28%);
+    --login-glow-mint: rgb(54 174 151 / 17%);
+  }
+}
+
+@media (max-width: 839px) {
+  .login-shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    min-height: 100svh;
+    padding: 0;
+  }
+
+  .login-intro {
+    min-height: 18rem;
+    align-content: end;
+    padding: 6.5rem var(--space-6) 4.75rem;
+    border-radius: 0 0 var(--radius-sheet) var(--radius-sheet);
+  }
+
+  .login-intro h1 {
+    max-width: 18ch;
+    margin-bottom: var(--space-3);
+    font-size: clamp(2.35rem, 8vw, 3.25rem);
+  }
+
+  .login-intro-content > p:not(.eyebrow) {
+    max-width: 30rem;
+    font-size: 1rem;
+  }
+
+  .entry-illustration {
+    right: -8.5rem;
+    bottom: -9rem;
+    width: 21rem;
+    opacity: 0.68;
+  }
+
+  .entry-illustration-heart {
+    width: 3.6rem;
+    height: 3.6rem;
+    font-size: 2.45rem;
+  }
+
+  .login-panel {
+    display: block;
+    margin-top: -2rem;
+    padding: 0 var(--space-5) var(--space-10);
+    background: transparent;
+  }
+
+  .login-panel::before {
+    display: none;
+  }
+
+  .login-card {
+    width: min(100%, 32rem);
+    margin: 0 auto;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-sheet);
+    padding: var(--space-8);
+    background: var(--color-surface-overlay);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px);
+  }
+}
+
+@media (max-width: 599px) {
+  .login-intro {
+    min-height: 14.5rem;
+    padding: 5.75rem var(--space-5) 3.75rem;
+  }
+
+  .login-intro .brand {
+    top: var(--space-5);
+    left: var(--space-5);
+  }
+
+  .login-intro h1 {
+    max-width: 15ch;
+    font-size: clamp(2rem, 9.2vw, 2.6rem);
+  }
+
+  .login-intro-content > p:not(.eyebrow) {
+    max-width: 26rem;
+    font-size: 0.95rem;
+  }
+
+  .entry-illustration {
+    right: -9rem;
+    bottom: -10rem;
+    width: 20rem;
+    opacity: 0.5;
+  }
+
+  .login-panel {
+    margin-top: -1.4rem;
+    padding-inline: var(--space-4);
+  }
+
+  .login-card {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .login-card h2 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-height: 680px) and (min-width: 840px) {
+  .login-intro,
+  .login-shell {
+    min-height: 100vh;
+  }
+
+  .login-intro {
+    padding-block: 5.5rem;
+  }
+
+  .login-intro h1 {
+    font-size: clamp(2.7rem, 4.5vw, 3.7rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-intro-content,
+  .login-card {
+    animation: none;
+  }
+}

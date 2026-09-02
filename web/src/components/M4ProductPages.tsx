@@ -7,12 +7,10 @@ import {
 } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
-import type { DashboardItem } from '../api/generated/models/DashboardItem';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
 import type { SearchKind } from '../api/generated/models/SearchKind';
 import type { SearchResult } from '../api/generated/models/SearchResult';
 import {
-  dashboardItemPath,
   engagementTargetPath,
   opaqueNextCursor,
   searchResultPath,
@@ -65,198 +63,40 @@ function formatDateTime(value: Date): string {
   }).format(value);
 }
 
-function DashboardItemCard({ item }: { item: DashboardItem }) {
-  const { t } = useTranslation();
-  const path = dashboardItemPath(item.type, item.id);
-  const date =
-    formatDate(item.occurredOn) ??
-    (item.scheduledAt ? formatDateTime(item.scheduledAt) : null) ??
-    (item.createdAt ? formatDateTime(item.createdAt) : null);
-
-  return (
-    <li className="m4-item">
-      <div className="m4-item-heading">
-        <h3>{item.titleOrText || t('m5s5.dashboard.itemFallback')}</h3>
-        <span className="m4-item-kind">{t(`m5s5.kind.${item.type}`)}</span>
-      </div>
-      {date ? <p className="m4-item-meta">{date}</p> : null}
-      <div className="m4-item-actions">
-        {path ? (
-          <Link className="button-link secondary-link" to={path}>
-            {t('m5s5.common.open')}
-          </Link>
-        ) : (
-          <span className="m4-muted">{t('m5s5.common.noDirectLink')}</span>
-        )}
-      </div>
-    </li>
-  );
-}
-
-function DashboardSection({
-  title,
-  items,
-  empty,
-}: {
-  title: string;
-  items: DashboardItem[];
-  empty: string;
-}) {
-  return (
-    <section className="layout-panel">
-      <div className="layout-section-head">
-        <div>
-          <h2>{title}</h2>
-        </div>
-      </div>
-      {items.length > 0 ? (
-        <ul className="m4-list m4-list-rows">
-          {items.map((item) => (
-            <DashboardItemCard key={`${item.type}:${item.id}`} item={item} />
-          ))}
-        </ul>
-      ) : (
-        <p className="m4-muted">{empty}</p>
-      )}
-    </section>
-  );
-}
-
-export function DashboardProductPage({
-  apis,
-  spaceId,
-}: {
-  apis: M4ProductApis;
-  spaceId: string;
-}) {
-  const { t } = useTranslation();
-  const dashboardQuery = useQuery({
-    queryKey: ['m5-s5', 'dashboard', spaceId],
-    queryFn: () => apiCall(() => apis.dashboard.getDashboard({ spaceId })),
-    retry: false,
-  });
-
-  return (
-    <div className="page m4-product-page">
-      <PageHeader
-        eyebrow={t('m5s5.dashboard.eyebrow')}
-        title={t('m5s5.dashboard.title')}
-        description={t('m5s5.dashboard.intro')}
-        action={
-          <button
-            type="button"
-            className="secondary compact-action"
-            onClick={() => void dashboardQuery.refetch()}
-            disabled={dashboardQuery.isFetching}
-          >
-            {dashboardQuery.isFetching
-              ? t('m5s5.common.refreshing')
-              : t('m5s5.common.refresh')}
-          </button>
-        }
-      />
-
-      {dashboardQuery.isLoading ? (
-        <UiState kind="loading" title={t('states.loading.title')} />
-      ) : null}
-      {dashboardQuery.error ? (
-        <ProblemState
-          error={dashboardQuery.error}
-          onRetry={() => void dashboardQuery.refetch()}
-        />
-      ) : null}
-
-      {dashboardQuery.data ? (
-        <>
-          <section
-            className="m4-summary-card"
-            aria-labelledby="m4-summary-heading"
-          >
-            <div className="m4-summary-copy">
-              <h2 id="m4-summary-heading">
-                {dashboardQuery.data.space.partner
-                  ? t('m5s5.dashboard.partner', {
-                      name: dashboardQuery.data.space.partner.displayName,
-                    })
-                  : t('m5s5.dashboard.durationTitle')}
-              </h2>
-              <p className="m4-muted">
-                {dashboardQuery.data.relationshipDuration
-                  ? t('m5s5.dashboard.durationSince', {
-                      date: formatDate(
-                        dashboardQuery.data.relationshipDuration.startedOn,
-                      ),
-                    })
-                  : t('m5s5.dashboard.durationEmpty')}
-              </p>
-            </div>
-            {dashboardQuery.data.relationshipDuration ? (
-              <p className="m4-summary-value">
-                {t('m5s5.dashboard.durationDays', {
-                  count: dashboardQuery.data.relationshipDuration.daysTogether,
-                })}
-              </p>
-            ) : null}
-          </section>
-
-          <div className="layout-split">
-            <div className="layout-main">
-              <DashboardSection
-                title={t('m5s5.dashboard.recentTitle')}
-                items={dashboardQuery.data.recentShared}
-                empty={t('m5s5.dashboard.recentEmpty')}
-              />
-            </div>
-            <aside
-              className="layout-rail"
-              aria-label={t('m5s5.dashboard.railAria')}
-            >
-              <DashboardSection
-                title={t('m5s5.dashboard.upcomingTitle')}
-                items={dashboardQuery.data.upcoming}
-                empty={t('m5s5.dashboard.upcomingEmpty')}
-              />
-              <DashboardSection
-                title={t('m5s5.dashboard.retrospectiveTitle')}
-                items={
-                  dashboardQuery.data.retrospective
-                    ? [dashboardQuery.data.retrospective]
-                    : []
-                }
-                empty={t('m5s5.dashboard.retrospectiveEmpty')}
-              />
-            </aside>
-          </div>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
 function SearchResultCard({ item }: { item: SearchResult }) {
   const { t } = useTranslation();
   const path = searchResultPath(item.type, item.id);
   const date = formatDate(item.occurredOn);
 
-  return (
-    <li className="m4-item">
-      <div className="m4-item-heading">
-        <h3>{item.title || t('m5s5.search.resultFallback')}</h3>
-        <span className="m4-item-kind">
-          {t(`m5s5.kind.${item.type}`)} · {t(`m5s5.scope.${item.scope}`)}
+  const inner = (
+    <div
+      className={`search-result-card search-result-${item.type.toLowerCase()} sbs-motion-lift`}
+    >
+      <div className="search-result-content">
+        <span className="search-result-kind">
+          {t(`m5s5.kind.${item.type}`)}
+          {item.scope !== 'SHARED' && ` · ${t(`m5s5.scope.${item.scope}`)}`}
         </span>
-      </div>
-      {item.excerpt ? <p className="m4-item-excerpt">{item.excerpt}</p> : null}
-      {date ? <p className="m4-item-meta">{date}</p> : null}
-      <div className="m4-item-actions">
-        {path ? (
-          <Link className="button-link secondary-link" to={path}>
-            {t('m5s5.common.open')}
-          </Link>
-        ) : (
-          <span className="m4-muted">{t('m5s5.common.noDirectLink')}</span>
+        <h3 className="search-result-title">
+          {item.title || t('m5s5.search.resultFallback')}
+        </h3>
+        {item.excerpt && (
+          <p className="search-result-excerpt">{item.excerpt}</p>
         )}
+        {date && <span className="search-result-date">{date}</span>}
       </div>
+    </div>
+  );
+
+  return (
+    <li className="search-result-wrapper sbs-motion-reveal">
+      {path ? (
+        <Link className="search-result-link" to={path}>
+          {inner}
+        </Link>
+      ) : (
+        inner
+      )}
     </li>
   );
 }
@@ -404,23 +244,33 @@ function ActivityCard({ item }: { item: ActivityItem }) {
   const { t } = useTranslation();
   const path = engagementTargetPath(item.targetType, item.targetId);
 
-  return (
-    <li className="m4-item">
-      <div className="m4-item-heading">
-        <h3>{t(`m5s5.activityKind.${item.kind}`)}</h3>
-        <time className="m4-item-meta" dateTime={item.occurredAt.toISOString()}>
+  const inner = (
+    <div
+      className={`activity-card sbs-motion-lift activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
+    >
+      <div className="activity-card-content">
+        <h3 className="activity-card-title">
+          {t(`m5s5.activityKind.${item.kind}`)}
+        </h3>
+        <time
+          className="activity-card-date"
+          dateTime={item.occurredAt.toISOString()}
+        >
           {formatDateTime(item.occurredAt)}
         </time>
       </div>
-      <div className="m4-item-actions">
-        {path ? (
-          <Link className="button-link secondary-link" to={path}>
-            {t('m5s5.common.open')}
-          </Link>
-        ) : (
-          <span className="m4-muted">{t('m5s5.common.noDirectLink')}</span>
-        )}
-      </div>
+    </div>
+  );
+
+  return (
+    <li className="activity-result-wrapper sbs-motion-reveal">
+      {path ? (
+        <Link className="activity-result-link" to={path}>
+          {inner}
+        </Link>
+      ) : (
+        inner
+      )}
     </li>
   );
 }
@@ -485,8 +335,8 @@ export function ActivityProductPage({
         />
       ) : null}
       {items.length > 0 ? (
-        <section className="layout-panel" aria-live="polite">
-          <ul className="m4-list m4-list-rows">
+        <section className="m4-results" aria-live="polite">
+          <ul className="m4-list layout-columns layout-columns-dense">
             {items.map((item) => (
               <ActivityCard key={item.id} item={item} />
             ))}

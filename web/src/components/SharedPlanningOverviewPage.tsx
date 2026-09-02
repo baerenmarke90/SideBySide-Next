@@ -5,13 +5,12 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import type { WishDetail } from '../api/generated/models/WishDetail';
-import type { PlanDetail } from '../api/generated/models/PlanDetail';
-import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import type { ChapterDetail } from '../api/generated/models/ChapterDetail';
 import type { CollectionDetail } from '../api/generated/models/CollectionDetail';
+import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
+import type { PlanDetail } from '../api/generated/models/PlanDetail';
+import type { WishDetail } from '../api/generated/models/WishDetail';
 import { normalizeClientError } from '../client/problemDetails';
-import type { SharedPlanningApis } from '../client/sharedPlanning';
 import {
   chapterDetailPath,
   collectionDetailPath,
@@ -19,6 +18,7 @@ import {
   placeDetailPath,
   wishDetailPath,
 } from '../client/routes';
+import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -109,35 +109,46 @@ function PlanningSection({
 }) {
   const { t } = useTranslation();
   return (
-    <section className="layout-panel" aria-labelledby={`${id}-heading`}>
-      <div className="layout-section-head">
-        <div>
-          <h2 id={`${id}-heading`}>{title}</h2>
-          <p>{intro}</p>
-        </div>
-        {create}
+    <details
+      className="planning-secondary-area"
+      aria-labelledby={`${id}-heading`}
+    >
+      <summary className="planning-secondary-summary">
+        <span className="area-title" id={`${id}-heading`}>
+          {title}
+        </span>
+        <span className="area-meta">{t('m5s3.common.saved')}</span>
+      </summary>
+      <div className="area-content">
+        <p className="area-intro">{intro}</p>
+
+        {loading ? (
+          <UiState kind="loading" title={t('states.loading.title')} />
+        ) : null}
+        {error ? <ProblemState error={error} onRetry={onRetry} /> : null}
+
+        {empty && !loading && !error ? (
+          <p className="planning-empty">{t('m5s3.common.empty')}</p>
+        ) : (
+          <ul className="planning-list">{children}</ul>
+        )}
+
+        {hasMore ? (
+          <button
+            type="button"
+            className="tertiary compact-action"
+            onClick={onLoadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore
+              ? t('m5s3.common.loadingMore')
+              : t('m5s3.common.loadMore')}
+          </button>
+        ) : null}
+
+        <div className="area-create">{create}</div>
       </div>
-      {loading ? (
-        <UiState kind="loading" title={t('m5s3.common.loading')} />
-      ) : null}
-      {error ? <ProblemState error={error} onRetry={onRetry} /> : null}
-      {!loading && !error && empty ? (
-        <p className="planning-empty">{t('m5s3.common.empty')}</p>
-      ) : null}
-      {children}
-      {hasMore ? (
-        <button
-          type="button"
-          className="secondary compact-action"
-          onClick={onLoadMore}
-          disabled={loadingMore}
-        >
-          {loadingMore
-            ? t('m5s3.common.loadingMore')
-            : t('m5s3.common.loadMore')}
-        </button>
-      ) : null}
-    </section>
+    </details>
   );
 }
 
@@ -375,65 +386,53 @@ export function SharedPlanningOverviewPage({
         description={t('m5s3.overview.intro')}
       />
 
-      <div className="layout-columns planning-grid">
-        <PlanningSection
-          id="wishes"
-          title={t('m5s3.wish.heading')}
-          intro={t('m5s3.wish.intro')}
-          loading={wishes.isLoading}
-          error={wishes.error}
-          empty={wishItems.length === 0}
-          onRetry={() => void wishes.refetch()}
-          hasMore={Boolean(wishes.hasNextPage)}
-          loadingMore={wishes.isFetchingNextPage}
-          onLoadMore={() => void wishes.fetchNextPage()}
-          create={
-            <details className="planning-create">
-              <summary>{t('m5s3.wish.create')}</summary>
-              <form
-                onSubmit={submitWish}
-                className="form-grid planning-create-form"
-              >
-                <label htmlFor="wish-title">{t('m5s3.common.title')}</label>
-                <input id="wish-title" name="title" required maxLength={200} />
-                <button type="submit" disabled={createWish.isPending}>
-                  {createWish.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.save')}
-                </button>
-                {createWish.error ? (
-                  <ProblemState error={createWish.error} />
-                ) : null}
-              </form>
-            </details>
-          }
-        >
-          {wishItems.length > 0 ? (
-            <ul className="planning-list">
-              {wishItems.map((wish) => (
-                <PlanningCard
-                  key={wish.id}
-                  title={wish.title}
-                  meta={statusLabel(t, 'wish', wish.status)}
-                  to={wishDetailPath(wish.id)}
-                />
-              ))}
-            </ul>
-          ) : null}
-        </PlanningSection>
+      <div className="future-map">
+        <div className="future-map-path" aria-hidden="true" />
 
-        <PlanningSection
-          id="plans"
-          title={t('m5s3.plan.heading')}
-          intro={t('m5s3.plan.intro')}
-          loading={plans.isLoading}
-          error={plans.error}
-          empty={planItems.length === 0}
-          onRetry={() => void plans.refetch()}
-          hasMore={Boolean(plans.hasNextPage)}
-          loadingMore={plans.isFetchingNextPage}
-          onLoadMore={() => void plans.fetchNextPage()}
-          create={
+        <section className="future-map-stop future-map-stop-soon sbs-motion-reveal">
+          <div className="future-map-marker">
+            <span className="marker-dot" />
+          </div>
+          <div className="future-map-content">
+            <h2 className="future-map-heading">{t('m5s3.overview.soon')}</h2>
+            <p className="future-map-intro">{t('m5s3.overview.soonIntro')}</p>
+
+            {plans.isLoading ? (
+              <UiState kind="loading" title={t('states.loading.title')} />
+            ) : null}
+            {plans.error ? (
+              <ProblemState
+                error={plans.error}
+                onRetry={() => void plans.refetch()}
+              />
+            ) : null}
+            {!plans.isLoading && !plans.error && planItems.length === 0 ? (
+              <p className="planning-empty">{t('m5s3.common.empty')}</p>
+            ) : null}
+            {planItems.length > 0 ? (
+              <ul className="planning-list">
+                {planItems.map((plan) => (
+                  <PlanningCard
+                    key={plan.id}
+                    title={plan.title}
+                    meta={statusLabel(t, 'plan', plan.status)}
+                    to={planDetailPath(plan.id)}
+                  />
+                ))}
+              </ul>
+            ) : null}
+            {plans.hasNextPage ? (
+              <button
+                type="button"
+                className="tertiary compact-action"
+                onClick={() => void plans.fetchNextPage()}
+                disabled={plans.isFetchingNextPage}
+              >
+                {plans.isFetchingNextPage
+                  ? t('m5s3.common.loadingMore')
+                  : t('m5s3.common.loadMore')}
+              </button>
+            ) : null}
             <details className="planning-create">
               <summary>{t('m5s3.plan.create')}</summary>
               <form
@@ -461,264 +460,348 @@ export function SharedPlanningOverviewPage({
                 ) : null}
               </form>
             </details>
-          }
-        >
-          {planItems.length > 0 ? (
-            <ul className="planning-list">
-              {planItems.map((plan) => (
-                <PlanningCard
-                  key={plan.id}
-                  title={plan.title}
-                  meta={statusLabel(t, 'plan', plan.status)}
-                  to={planDetailPath(plan.id)}
-                />
-              ))}
-            </ul>
-          ) : null}
-        </PlanningSection>
+          </div>
+        </section>
 
-        <PlanningSection
-          id="places"
-          title={t('m5s3.place.heading')}
-          intro={t('m5s3.place.intro')}
-          loading={places.isLoading}
-          error={places.error}
-          empty={placeItems.length === 0}
-          onRetry={() => void places.refetch()}
-          hasMore={Boolean(places.hasNextPage)}
-          loadingMore={places.isFetchingNextPage}
-          onLoadMore={() => void places.fetchNextPage()}
-          create={
-            <details className="planning-create">
-              <summary>{t('m5s3.place.create')}</summary>
-              <form
-                onSubmit={submitPlace}
-                className="form-grid planning-create-form"
-              >
-                <label htmlFor="place-name">{t('m5s3.place.name')}</label>
-                <input id="place-name" name="name" required maxLength={200} />
-                <label htmlFor="place-description">
-                  {t('m5s3.common.description')}
-                </label>
-                <textarea id="place-description" name="description" rows={3} />
-                <label htmlFor="place-address">{t('m5s3.place.address')}</label>
-                <input id="place-address" name="address" />
-                <div className="planning-coordinate-grid">
-                  <div className="field-group">
-                    <label htmlFor="place-latitude">
-                      {t('m5s3.place.latitude')}
-                    </label>
-                    <input
-                      id="place-latitude"
-                      name="latitude"
-                      type="number"
-                      step="any"
-                      min="-90"
-                      max="90"
-                      aria-invalid={placeCoordinateError}
-                      aria-describedby={
-                        placeCoordinateError
-                          ? 'place-coordinate-help place-coordinate-error'
-                          : 'place-coordinate-help'
-                      }
-                    />
-                  </div>
-                  <div className="field-group">
-                    <label htmlFor="place-longitude">
-                      {t('m5s3.place.longitude')}
-                    </label>
-                    <input
-                      id="place-longitude"
-                      name="longitude"
-                      type="number"
-                      step="any"
-                      min="-180"
-                      max="180"
-                      aria-invalid={placeCoordinateError}
-                      aria-describedby={
-                        placeCoordinateError
-                          ? 'place-coordinate-help place-coordinate-error'
-                          : 'place-coordinate-help'
-                      }
-                    />
-                  </div>
-                </div>
-                <p id="place-coordinate-help" className="field-help">
-                  {t('m5s3.place.coordinateHelp')}
-                </p>
-                {placeCoordinateError ? (
-                  <p
-                    id="place-coordinate-error"
-                    className="field-error"
-                    role="alert"
-                  >
-                    {t('m5s3.place.coordinatePairError')}
-                  </p>
-                ) : null}
-                <button type="submit" disabled={createPlace.isPending}>
-                  {createPlace.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.save')}
-                </button>
-                {createPlace.error ? (
-                  <ProblemState error={createPlace.error} />
-                ) : null}
-              </form>
-            </details>
-          }
+        <section
+          className="future-map-stop future-map-stop-someday sbs-motion-reveal"
+          style={{ animationDelay: '100ms' }}
         >
-          {placeItems.length > 0 ? (
-            <ul className="planning-list">
-              {placeItems.map((place) => (
-                <PlanningCard
-                  key={place.id}
-                  title={place.name}
-                  meta={place.address}
-                  to={placeDetailPath(place.id)}
-                />
-              ))}
-            </ul>
-          ) : null}
-        </PlanningSection>
+          <div className="future-map-marker">
+            <span className="marker-dot" />
+          </div>
+          <div className="future-map-content">
+            <h2 className="future-map-heading">{t('m5s3.overview.someday')}</h2>
+            <p className="future-map-intro">
+              {t('m5s3.overview.somedayIntro')}
+            </p>
 
-        <PlanningSection
-          id="chapters"
-          title={t('m5s3.chapter.heading')}
-          intro={t('m5s3.chapter.intro')}
-          loading={chapters.isLoading}
-          error={chapters.error}
-          empty={chapterItems.length === 0}
-          onRetry={() => void chapters.refetch()}
-          hasMore={Boolean(chapters.hasNextPage)}
-          loadingMore={chapters.isFetchingNextPage}
-          onLoadMore={() => void chapters.fetchNextPage()}
-          create={
-            <details className="planning-create">
-              <summary>{t('m5s3.chapter.create')}</summary>
-              <form
-                onSubmit={submitChapter}
-                className="form-grid planning-create-form"
-              >
-                <label htmlFor="chapter-title">{t('m5s3.common.title')}</label>
-                <input
-                  id="chapter-title"
-                  name="title"
-                  required
-                  maxLength={200}
-                />
-                <label htmlFor="chapter-description">
-                  {t('m5s3.common.description')}
-                </label>
-                <textarea
-                  id="chapter-description"
-                  name="description"
-                  rows={3}
-                />
-                <div className="planning-coordinate-grid">
-                  <div className="field-group">
-                    <label htmlFor="chapter-start">
-                      {t('m5s3.chapter.startOn')}
-                    </label>
-                    <input id="chapter-start" name="startOn" type="date" />
-                  </div>
-                  <div className="field-group">
-                    <label htmlFor="chapter-end">
-                      {t('m5s3.chapter.endOn')}
-                    </label>
-                    <input id="chapter-end" name="endOn" type="date" />
-                  </div>
-                </div>
-                <label htmlFor="chapter-place">{t('m5s3.common.place')}</label>
-                <select id="chapter-place" name="placeId" defaultValue="">
-                  <option value="">{t('m5s3.common.noPlace')}</option>
-                  {placeChoices}
-                </select>
-                <button type="submit" disabled={createChapter.isPending}>
-                  {createChapter.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.save')}
-                </button>
-                {createChapter.error ? (
-                  <ProblemState error={createChapter.error} />
-                ) : null}
-              </form>
-            </details>
-          }
-        >
-          {chapterItems.length > 0 ? (
-            <ul className="planning-list">
-              {chapterItems.map((chapter) => {
-                const start = formatDate(chapter.startOn);
-                const end = formatDate(chapter.endOn);
-                const meta =
-                  start && end ? `${start} – ${end}` : (start ?? end);
-                return (
+            {wishes.isLoading ? (
+              <UiState kind="loading" title={t('states.loading.title')} />
+            ) : null}
+            {wishes.error ? (
+              <ProblemState
+                error={wishes.error}
+                onRetry={() => void wishes.refetch()}
+              />
+            ) : null}
+            {!wishes.isLoading && !wishes.error && wishItems.length === 0 ? (
+              <p className="planning-empty">{t('m5s3.common.empty')}</p>
+            ) : null}
+            {wishItems.length > 0 ? (
+              <ul className="planning-list">
+                {wishItems.map((wish) => (
                   <PlanningCard
-                    key={chapter.id}
-                    title={chapter.title}
-                    meta={meta}
-                    to={chapterDetailPath(chapter.id)}
+                    key={wish.id}
+                    title={wish.title}
+                    meta={statusLabel(t, 'wish', wish.status)}
+                    to={wishDetailPath(wish.id)}
                   />
-                );
-              })}
-            </ul>
-          ) : null}
-        </PlanningSection>
-
-        <PlanningSection
-          id="collections"
-          title={t('m5s3.collection.heading')}
-          intro={t('m5s3.collection.intro')}
-          loading={collections.isLoading}
-          error={collections.error}
-          empty={collectionItems.length === 0}
-          onRetry={() => void collections.refetch()}
-          hasMore={Boolean(collections.hasNextPage)}
-          loadingMore={collections.isFetchingNextPage}
-          onLoadMore={() => void collections.fetchNextPage()}
-          create={
+                ))}
+              </ul>
+            ) : null}
+            {wishes.hasNextPage ? (
+              <button
+                type="button"
+                className="tertiary compact-action"
+                onClick={() => void wishes.fetchNextPage()}
+                disabled={wishes.isFetchingNextPage}
+              >
+                {wishes.isFetchingNextPage
+                  ? t('m5s3.common.loadingMore')
+                  : t('m5s3.common.loadMore')}
+              </button>
+            ) : null}
             <details className="planning-create">
-              <summary>{t('m5s3.collection.create')}</summary>
+              <summary>{t('m5s3.wish.create')}</summary>
               <form
-                onSubmit={submitCollection}
+                onSubmit={submitWish}
                 className="form-grid planning-create-form"
               >
-                <label htmlFor="collection-title">
-                  {t('m5s3.common.title')}
-                </label>
-                <input
-                  id="collection-title"
-                  name="title"
-                  required
-                  maxLength={200}
-                />
-                <button type="submit" disabled={createCollection.isPending}>
-                  {createCollection.isPending
+                <label htmlFor="wish-title">{t('m5s3.common.title')}</label>
+                <input id="wish-title" name="title" required maxLength={200} />
+                <button type="submit" disabled={createWish.isPending}>
+                  {createWish.isPending
                     ? t('m5s3.common.saving')
                     : t('m5s3.common.save')}
                 </button>
-                {createCollection.error ? (
-                  <ProblemState error={createCollection.error} />
+                {createWish.error ? (
+                  <ProblemState error={createWish.error} />
                 ) : null}
               </form>
             </details>
-          }
+          </div>
+        </section>
+
+        <div
+          className="future-map-stop future-map-stop-others sbs-motion-reveal"
+          style={{ animationDelay: '200ms' }}
         >
-          {collectionItems.length > 0 ? (
-            <ul className="planning-list">
-              {collectionItems.map((collection) => (
-                <PlanningCard
-                  key={collection.id}
-                  title={collection.title}
-                  meta={t('m5s3.collection.itemCount', {
-                    count: collection.items.length,
+          <div className="future-map-marker">
+            <span className="marker-dot" />
+          </div>
+          <div className="future-map-content">
+            <h2 className="future-map-heading">{t('m5s3.overview.others')}</h2>
+
+            <PlanningSection
+              id="places"
+              title={t('m5s3.place.heading')}
+              intro={t('m5s3.place.intro')}
+              loading={places.isLoading}
+              error={places.error}
+              empty={placeItems.length === 0}
+              onRetry={() => void places.refetch()}
+              hasMore={Boolean(places.hasNextPage)}
+              loadingMore={places.isFetchingNextPage}
+              onLoadMore={() => void places.fetchNextPage()}
+              create={
+                <details className="planning-create">
+                  <summary>{t('m5s3.place.create')}</summary>
+                  <form
+                    onSubmit={submitPlace}
+                    className="form-grid planning-create-form"
+                  >
+                    <label htmlFor="place-name">{t('m5s3.place.name')}</label>
+                    <input
+                      id="place-name"
+                      name="name"
+                      required
+                      maxLength={200}
+                    />
+                    <label htmlFor="place-description">
+                      {t('m5s3.common.description')}
+                    </label>
+                    <textarea
+                      id="place-description"
+                      name="description"
+                      rows={3}
+                    />
+                    <label htmlFor="place-address">
+                      {t('m5s3.place.address')}
+                    </label>
+                    <input id="place-address" name="address" />
+                    <div className="planning-coordinate-grid">
+                      <div className="field-group">
+                        <label htmlFor="place-latitude">
+                          {t('m5s3.place.latitude')}
+                        </label>
+                        <input
+                          id="place-latitude"
+                          name="latitude"
+                          type="number"
+                          step="any"
+                          min="-90"
+                          max="90"
+                          aria-invalid={placeCoordinateError}
+                          aria-describedby={
+                            placeCoordinateError
+                              ? 'place-coordinate-help place-coordinate-error'
+                              : 'place-coordinate-help'
+                          }
+                        />
+                      </div>
+                      <div className="field-group">
+                        <label htmlFor="place-longitude">
+                          {t('m5s3.place.longitude')}
+                        </label>
+                        <input
+                          id="place-longitude"
+                          name="longitude"
+                          type="number"
+                          step="any"
+                          min="-180"
+                          max="180"
+                          aria-invalid={placeCoordinateError}
+                          aria-describedby={
+                            placeCoordinateError
+                              ? 'place-coordinate-help place-coordinate-error'
+                              : 'place-coordinate-help'
+                          }
+                        />
+                      </div>
+                    </div>
+                    <p id="place-coordinate-help" className="field-help">
+                      {t('m5s3.place.coordinateHelp')}
+                    </p>
+                    {placeCoordinateError ? (
+                      <p
+                        id="place-coordinate-error"
+                        className="field-error"
+                        role="alert"
+                      >
+                        {t('m5s3.place.coordinatePairError')}
+                      </p>
+                    ) : null}
+                    <button type="submit" disabled={createPlace.isPending}>
+                      {createPlace.isPending
+                        ? t('m5s3.common.saving')
+                        : t('m5s3.common.save')}
+                    </button>
+                    {createPlace.error ? (
+                      <ProblemState error={createPlace.error} />
+                    ) : null}
+                  </form>
+                </details>
+              }
+            >
+              {placeItems.length > 0 ? (
+                <ul className="planning-list">
+                  {placeItems.map((place) => (
+                    <PlanningCard
+                      key={place.id}
+                      title={place.name}
+                      meta={place.address}
+                      to={placeDetailPath(place.id)}
+                    />
+                  ))}
+                </ul>
+              ) : null}
+            </PlanningSection>
+
+            <PlanningSection
+              id="chapters"
+              title={t('m5s3.chapter.heading')}
+              intro={t('m5s3.chapter.intro')}
+              loading={chapters.isLoading}
+              error={chapters.error}
+              empty={chapterItems.length === 0}
+              onRetry={() => void chapters.refetch()}
+              hasMore={Boolean(chapters.hasNextPage)}
+              loadingMore={chapters.isFetchingNextPage}
+              onLoadMore={() => void chapters.fetchNextPage()}
+              create={
+                <details className="planning-create">
+                  <summary>{t('m5s3.chapter.create')}</summary>
+                  <form
+                    onSubmit={submitChapter}
+                    className="form-grid planning-create-form"
+                  >
+                    <label htmlFor="chapter-title">
+                      {t('m5s3.common.title')}
+                    </label>
+                    <input
+                      id="chapter-title"
+                      name="title"
+                      required
+                      maxLength={200}
+                    />
+                    <label htmlFor="chapter-description">
+                      {t('m5s3.common.description')}
+                    </label>
+                    <textarea
+                      id="chapter-description"
+                      name="description"
+                      rows={3}
+                    />
+                    <div className="planning-coordinate-grid">
+                      <div className="field-group">
+                        <label htmlFor="chapter-start">
+                          {t('m5s3.chapter.startOn')}
+                        </label>
+                        <input id="chapter-start" name="startOn" type="date" />
+                      </div>
+                      <div className="field-group">
+                        <label htmlFor="chapter-end">
+                          {t('m5s3.chapter.endOn')}
+                        </label>
+                        <input id="chapter-end" name="endOn" type="date" />
+                      </div>
+                    </div>
+                    <label htmlFor="chapter-place">
+                      {t('m5s3.common.place')}
+                    </label>
+                    <select id="chapter-place" name="placeId" defaultValue="">
+                      <option value="">{t('m5s3.common.noPlace')}</option>
+                      {placeChoices}
+                    </select>
+                    <button type="submit" disabled={createChapter.isPending}>
+                      {createChapter.isPending
+                        ? t('m5s3.common.saving')
+                        : t('m5s3.common.save')}
+                    </button>
+                    {createChapter.error ? (
+                      <ProblemState error={createChapter.error} />
+                    ) : null}
+                  </form>
+                </details>
+              }
+            >
+              {chapterItems.length > 0 ? (
+                <ul className="planning-list">
+                  {chapterItems.map((chapter) => {
+                    const start = formatDate(chapter.startOn);
+                    const end = formatDate(chapter.endOn);
+                    const meta =
+                      start && end ? `${start} – ${end}` : (start ?? end);
+                    return (
+                      <PlanningCard
+                        key={chapter.id}
+                        title={chapter.title}
+                        meta={meta}
+                        to={chapterDetailPath(chapter.id)}
+                      />
+                    );
                   })}
-                  to={collectionDetailPath(collection.id)}
-                />
-              ))}
-            </ul>
-          ) : null}
-        </PlanningSection>
+                </ul>
+              ) : null}
+            </PlanningSection>
+
+            <PlanningSection
+              id="collections"
+              title={t('m5s3.collection.heading')}
+              intro={t('m5s3.collection.intro')}
+              loading={collections.isLoading}
+              error={collections.error}
+              empty={collectionItems.length === 0}
+              onRetry={() => void collections.refetch()}
+              hasMore={Boolean(collections.hasNextPage)}
+              loadingMore={collections.isFetchingNextPage}
+              onLoadMore={() => void collections.fetchNextPage()}
+              create={
+                <details className="planning-create">
+                  <summary>{t('m5s3.collection.create')}</summary>
+                  <form
+                    onSubmit={submitCollection}
+                    className="form-grid planning-create-form"
+                  >
+                    <label htmlFor="collection-title">
+                      {t('m5s3.common.title')}
+                    </label>
+                    <input
+                      id="collection-title"
+                      name="title"
+                      required
+                      maxLength={200}
+                    />
+                    <button type="submit" disabled={createCollection.isPending}>
+                      {createCollection.isPending
+                        ? t('m5s3.common.saving')
+                        : t('m5s3.common.save')}
+                    </button>
+                    {createCollection.error ? (
+                      <ProblemState error={createCollection.error} />
+                    ) : null}
+                  </form>
+                </details>
+              }
+            >
+              {collectionItems.length > 0 ? (
+                <ul className="planning-list">
+                  {collectionItems.map((collection) => (
+                    <PlanningCard
+                      key={collection.id}
+                      title={collection.title}
+                      meta={t('m5s3.collection.itemCount', {
+                        count: collection.items.length,
+                      })}
+                      to={collectionDetailPath(collection.id)}
+                    />
+                  ))}
+                </ul>
+              ) : null}
+            </PlanningSection>
+          </div>
+        </div>
       </div>
     </div>
   );
