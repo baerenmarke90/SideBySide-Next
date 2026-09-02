@@ -95,7 +95,7 @@ export function SpaceEntitlementViewFromJSONTyped(json: any, ignoreDiscriminator
     return {
         
         'capabilities': json['capabilities'],
-        'effectiveUntil': json['effectiveUntil'] == null ? undefined : (json['effectiveUntil'] === null ? null : (new Date(json['effectiveUntil']))),
+        'effectiveUntil': json['effectiveUntil'] === undefined ? undefined : json['effectiveUntil'] === null ? null : (new Date(json['effectiveUntil'])),
         'isInGracePeriod': json['isInGracePeriod'],
         'spaceId': json['spaceId'],
         'status': EntitlementStatusFromJSON(json['status']),
@@ -115,7 +115,7 @@ export function SpaceEntitlementViewToJSONTyped(value?: SpaceEntitlementView | n
     return {
         
         'capabilities': value['capabilities'],
-        'effectiveUntil': value['effectiveUntil'] == null ? undefined : (value['effectiveUntil'] === null ? null : (value['effectiveUntil'] as any).toISOString()),
+        'effectiveUntil': value['effectiveUntil'] == null ? value['effectiveUntil'] : value['effectiveUntil'].toISOString(),
         'isInGracePeriod': value['isInGracePeriod'],
         'spaceId': value['spaceId'],
         'status': EntitlementStatusToJSON(value['status']),

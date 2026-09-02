@@ -31,7 +31,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * 
+ * Effective commercial entitlement representation for a Space.
  *
  * @param capabilities 
  * @param isInGracePeriod 
@@ -53,10 +53,10 @@ data class SpaceEntitlementView (
     @Contextual @SerialName(value = "spaceId")
     val spaceId: java.util.UUID,
 
-    @SerialName(value = "status")
+    @Contextual @SerialName(value = "status")
     val status: EntitlementStatus,
 
-    @SerialName(value = "tier")
+    @Contextual @SerialName(value = "tier")
     val tier: EntitlementTier,
 
     @Contextual @SerialName(value = "effectiveUntil")
@@ -66,3 +66,4 @@ data class SpaceEntitlementView (
 
 
 }
+
