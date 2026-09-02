@@ -787,6 +787,9 @@ private fun DemoShell(
                     problem = state.collectionsProblem,
                     onBack = { controller.popBackStack() },
                     onAddItem = { title -> collection?.let { viewModel.addCollectionItem(it, title) } },
+                    onRenameItem = { item, title ->
+                        collection?.let { viewModel.renameCollectionItem(it, item, title) }
+                    },
                     onToggleCompleted = { item ->
                         collection?.let { viewModel.toggleCollectionItemCompleted(it, item) }
                     },
@@ -924,6 +927,9 @@ private fun DemoShell(
                     problem = state.privateCollectionsProblem,
                     onBack = { controller.popBackStack() },
                     onAddItem = { title -> collection?.let { viewModel.addPrivateCollectionItem(it, title) } },
+                    onRenameItem = { item, title ->
+                        collection?.let { viewModel.renameCollectionItem(it, item, title) }
+                    },
                     onToggleCompleted = { item ->
                         collection?.let { viewModel.toggleCollectionItemCompleted(it, item) }
                     },
