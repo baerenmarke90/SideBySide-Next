@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   HEART_MOMENT_CREATE_ROUTE,
