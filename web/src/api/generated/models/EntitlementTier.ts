@@ -50,5 +50,3 @@ export function EntitlementTierToJSON(value?: EntitlementTier | null): any {
 export function EntitlementTierToJSONTyped(value: any, ignoreDiscriminator: boolean): EntitlementTier {
     return value as EntitlementTier;
 }
-
-

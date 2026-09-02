@@ -124,5 +124,3 @@ export function SpaceEntitlementViewToJSONTyped(value?: SpaceEntitlementView | n
         'tier': EntitlementTierToJSON(value['tier']),
     };
 }
-
-
