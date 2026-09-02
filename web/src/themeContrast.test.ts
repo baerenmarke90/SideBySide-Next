@@ -26,8 +26,20 @@ function channel(value: number): number {
     : ((normalized + 0.055) / 1.055) ** 2.4;
 }
 
+function normalizeHex(hex: string): string {
+  const value = hex.replace('#', '');
+  if (value.length === 3 || value.length === 4) {
+    return `#${value
+      .slice(0, 3)
+      .split('')
+      .map((digit) => `${digit}${digit}`)
+      .join('')}`;
+  }
+  return `#${value.slice(0, 6)}`;
+}
+
 function luminance(hex: string): number {
-  const value = hex.replace('#', '').slice(0, 6);
+  const value = normalizeHex(hex).replace('#', '');
   const red = Number.parseInt(value.slice(0, 2), 16);
   const green = Number.parseInt(value.slice(2, 4), 16);
   const blue = Number.parseInt(value.slice(4, 6), 16);
@@ -65,7 +77,9 @@ function darkThemeBlock(css: string): string {
 }
 
 function cssVariable(block: string, name: string): string {
-  const match = block.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6,8});`));
+  const match = block.match(
+    new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{3,4}|#[0-9a-fA-F]{6,8});`),
+  );
   if (!match)
     throw new Error(`CSS variable is missing or is not a hex color: --${name}`);
   return match[1];
