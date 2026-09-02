@@ -276,7 +276,7 @@ def record_grant(
                 effective_from=effective_from,
                 effective_until=effective_until,
                 capabilities=capabilities,
-                metadata=metadata or {},
+                metadata_=metadata or {},
             )
             .on_conflict_do_update(
                 index_elements=["source_type", "external_reference"],
