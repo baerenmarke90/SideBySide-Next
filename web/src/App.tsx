@@ -81,11 +81,9 @@ import { IdentityEntry } from './components/IdentityEntry';
 import { LegacyPathRedirect } from './components/LegacyPathRedirect';
 import {
   ActivityProductPage,
-   
   NotificationsProductPage,
   SearchProductPage,
 } from './components/M4ProductPages';
-import { TodayPage } from './components/TodayPage';
 import { MemoryProductPage } from './components/MemoryProductPage';
 import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { MoreOverviewPage } from './components/MoreOverviewPage';
@@ -103,6 +101,7 @@ import {
 import { SharedPlanningOverviewPage } from './components/SharedPlanningOverviewPage';
 import { StoryProductPage } from './components/StoryProductPage';
 import { ThemeControl } from './components/ThemeControl';
+import { TodayPage } from './components/TodayPage';
 import { UiState } from './components/UiState';
 import { WishProductPage } from './components/WishProductPage';
 import { useTranslation } from './i18n';
@@ -273,7 +272,10 @@ function MemoryCreatePage({
         className="create-heading"
       />
 
-      <section className="immersive-create-card sbs-motion-reveal" aria-labelledby="memory-form-heading">
+      <section
+        className="immersive-create-card sbs-motion-reveal"
+        aria-labelledby="memory-form-heading"
+      >
         <h2 id="memory-form-heading" className="sr-only">
           {t('memory.formAria')}
         </h2>
@@ -284,13 +286,12 @@ function MemoryCreatePage({
               name="title"
               required
               maxLength={200}
-              placeholder={t('memory.titlePlaceholder', 'Was möchtest du festhalten?')}
+              placeholder={t('memory.titlePlaceholder')}
               defaultValue={defaultTitle}
               className="immersive-create-title"
-              
             />
           </div>
-          
+
           <div className="immersive-create-media">
             <AttachmentDraftPicker
               id="memory-create-images"
@@ -300,7 +301,7 @@ function MemoryCreatePage({
           </div>
 
           <details className="immersive-create-details">
-            <summary>{t('memory.addMoreDetails', 'Mehr Details hinzufügen (optional)')}</summary>
+            <summary>{t('memory.addMoreDetails')}</summary>
             <div className="immersive-create-details-content">
               <div className="field-group">
                 <label htmlFor="body">{t('memory.bodyLabel')}</label>
@@ -308,7 +309,7 @@ function MemoryCreatePage({
                   id="body"
                   name="body"
                   rows={4}
-                  placeholder={t('memory.bodyPlaceholder', 'Gibt es eine Geschichte dazu?')}
+                  placeholder={t('memory.bodyPlaceholder')}
                 />
               </div>
               <div className="field-group">
