@@ -955,6 +955,8 @@ private fun DemoShell(
                             controller.navigate(it)
                         }
                     },
+                    onLoadMore = viewModel::loadMoreNotifications.takeIf { state.notificationsHasMore },
+                    loadingMore = state.notificationsLoadingMore,
                 )
             }
 
@@ -969,6 +971,8 @@ private fun DemoShell(
                     onOpen = { entry ->
                         engagementTargetRoute(entry.targetType, entry.targetId)?.let { controller.navigate(it) }
                     },
+                    onLoadMore = viewModel::loadMoreActivity.takeIf { state.activityHasMore },
+                    loadingMore = state.activityLoadingMore,
                 )
             }
 
@@ -1043,6 +1047,8 @@ private fun DemoShell(
                     problem = state.searchProblem,
                     onBack = { controller.popBackStack() },
                     onSearch = viewModel::search,
+                    onLoadMore = viewModel::loadMoreSearch.takeIf { state.searchHasMore },
+                    loadingMore = state.searchLoadingMore,
                 )
             }
         },
