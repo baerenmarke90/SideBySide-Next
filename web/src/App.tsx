@@ -389,6 +389,16 @@ function AuthenticatedApp({
     previousSpaceId.current = spaceId;
   }, [queryClient, spaceId]);
 
+  // M5 Vault Theme Context Switch
+  useEffect(() => {
+    const isVault = location.pathname.startsWith('/more/private');
+    if (isVault) {
+      document.body.classList.add('theme-vault');
+    } else {
+      document.body.classList.remove('theme-vault');
+    }
+  }, [location.pathname]);
+
   const loadMemoryImage = useCallback(
     (memoryId: string, attachmentId: string) =>
       loadAuthorizedImage(

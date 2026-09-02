@@ -2,6 +2,13 @@
   color-scheme: light;
   color: var(--color-text);
   background: var(--color-background);
+
+  /* Brand Tokens (M5) */
+  --color-brand-koralle: #ff6b6b;
+  --color-brand-koralle-glow: #ff6b6b40;
+  --color-brand-ocean: #2b2d42;
+  --color-brand-ocean-light: #3d405b;
+
   --color-surface-raised: #ffffff;
   --color-surface-overlay: #ffffffea;
   --color-header-surface: #faf8fce8;
@@ -33,6 +40,13 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+
+  /* Brand Tokens (M5) */
+  --color-brand-koralle: #ff8585; /* Slightly lighter for dark mode */
+  --color-brand-koralle-glow: #ff858540;
+  --color-brand-ocean: #1a1b28; /* Deeper ocean for dark mode */
+  --color-brand-ocean-light: #2b2d42;
+
   --color-background: #1c1525;
   --color-surface: #2a2135;
   --color-surface-subtle: #34283f;
@@ -86,6 +100,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
+
+    /* Brand Tokens (M5) */
+    --color-brand-koralle: #ff8585;
+    --color-brand-koralle-glow: #ff858540;
+    --color-brand-ocean: #1a1b28;
+    --color-brand-ocean-light: #2b2d42;
+
     --color-background: #1c1525;
     --color-surface: #2a2135;
     --color-surface-subtle: #34283f;
@@ -152,6 +173,24 @@ body {
     ),
     var(--color-background);
   background-attachment: fixed;
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease;
+}
+
+/* M5: Vault Mode (Private Area) */
+body.theme-vault {
+  --color-background: #0a0e17; /* Very dark slate/ocean */
+  --color-surface: #111827;
+  --color-surface-subtle: #1f2937;
+  --color-surface-raised: #1f2937;
+  --color-header-surface: #0a0e17e8;
+  --color-text: #f3f4f6;
+  --color-page-tint-brand: transparent;
+  --color-page-tint-shared: transparent;
+
+  /* Additional visual clue: lock background pattern or subtle gradient */
+  background: radial-gradient(circle at center, #111827 0, #0a0e17 100%);
 }
 
 button,

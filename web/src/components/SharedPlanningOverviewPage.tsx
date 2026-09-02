@@ -23,6 +23,7 @@ import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
+import { KanbanBoard } from './KanbanBoard';
 import './SharedPlanningPages.css';
 
 const PAGE_SIZE = 20;
@@ -374,6 +375,16 @@ export function SharedPlanningOverviewPage({
         title={t('m5s3.overview.title')}
         description={t('m5s3.overview.intro')}
       />
+
+      {/* M5 Kanban Board */}
+      <div style={{ marginBottom: '2rem' }}>
+        <KanbanBoard
+          apis={apis}
+          spaceId={spaceId}
+          wishes={wishItems}
+          plans={planItems}
+        />
+      </div>
 
       <div className="layout-columns planning-grid">
         <PlanningSection

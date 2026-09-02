@@ -172,7 +172,7 @@ export function DashboardProductPage({
             className="m4-summary-card"
             aria-labelledby="m4-summary-heading"
           >
-            <div className="m4-summary-copy">
+            <div className="m4-summary-copy" style={{ flex: '1 1 auto' }}>
               <h2 id="m4-summary-heading">
                 {dashboardQuery.data.space.partner
                   ? t('m5s5.dashboard.partner', {
@@ -190,8 +190,38 @@ export function DashboardProductPage({
                   : t('m5s5.dashboard.durationEmpty')}
               </p>
             </div>
+
+            <div
+              className="m4-summary-action"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              <button
+                type="button"
+                className="thinking-of-you-btn"
+                onClick={(e) => {
+                  const btn = e.currentTarget;
+                  btn.classList.remove('animating');
+                  void btn.offsetWidth; // trigger reflow
+                  btn.classList.add('animating');
+                  // Trigger haptic feedback on supported devices
+                  if (navigator.vibrate) navigator.vibrate(50);
+                  // TODO: trigger API call (e.g. apis.activity.postActivity({ type: 'THINKING_OF_YOU' }))
+                }}
+              >
+                ❤️ Ich denke an dich
+              </button>
+            </div>
+
             {dashboardQuery.data.relationshipDuration ? (
-              <p className="m4-summary-value">
+              <p
+                className="m4-summary-value"
+                style={{ width: '100%', textAlign: 'right' }}
+              >
                 {t('m5s5.dashboard.durationDays', {
                   count: dashboardQuery.data.relationshipDuration.daysTogether,
                 })}
@@ -199,23 +229,16 @@ export function DashboardProductPage({
             ) : null}
           </section>
 
-          <div className="layout-split">
-            <div className="layout-main">
-              <DashboardSection
-                title={t('m5s5.dashboard.recentTitle')}
-                items={dashboardQuery.data.recentShared}
-                empty={t('m5s5.dashboard.recentEmpty')}
-              />
-            </div>
-            <aside
-              className="layout-rail"
-              aria-label={t('m5s5.dashboard.railAria')}
-            >
+          <div className="m5-dashboard-grid">
+            <div className="m5-dashboard-column">
               <DashboardSection
                 title={t('m5s5.dashboard.upcomingTitle')}
                 items={dashboardQuery.data.upcoming}
                 empty={t('m5s5.dashboard.upcomingEmpty')}
               />
+              {/* Optional space for future Rules / Reminders */}
+            </div>
+            <div className="m5-dashboard-column">
               <DashboardSection
                 title={t('m5s5.dashboard.retrospectiveTitle')}
                 items={
@@ -225,7 +248,12 @@ export function DashboardProductPage({
                 }
                 empty={t('m5s5.dashboard.retrospectiveEmpty')}
               />
-            </aside>
+              <DashboardSection
+                title={t('m5s5.dashboard.recentTitle')}
+                items={dashboardQuery.data.recentShared}
+                empty={t('m5s5.dashboard.recentEmpty')}
+              />
+            </div>
           </div>
         </>
       ) : null}
