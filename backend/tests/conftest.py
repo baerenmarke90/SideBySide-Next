@@ -80,6 +80,7 @@ def engine() -> Iterator[Engine]:
     from sidebyside.chapters import models as _chapters  # noqa: F401
     from sidebyside.comments import models as _comments  # noqa: F401
     from sidebyside.db.base import Base
+    from sidebyside.entitlements import models as _entitlements  # noqa: F401
     from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
     from sidebyside.identity import models as _identity  # noqa: F401
     from sidebyside.jobs import models as _jobs  # noqa: F401
