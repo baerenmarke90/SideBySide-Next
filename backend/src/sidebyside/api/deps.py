@@ -137,9 +137,14 @@ def ensure_capability(
     space_id: UUID,
     capability: str,
 ) -> None:
-    """Verify that the Space holds the required commercial capability."""
+    """Verify and lock the commercial grant state for a protected write."""
     from sidebyside.core.errors import PremiumEntitlementRequiredError
     from sidebyside.entitlements import service as entitlement_service
 
-    if not entitlement_service.has_capability(session, space_id, capability):
+    if not entitlement_service.has_capability(
+        session,
+        space_id,
+        capability,
+        lock_grants=True,
+    ):
         raise PremiumEntitlementRequiredError(capability)
