@@ -1,4 +1,4 @@
-package de.sidebyside.next.place
+package de.sidebyside.next.chapter
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,28 +34,25 @@ import androidx.compose.ui.unit.dp
 import de.sidebyside.next.design.FrauncesFamily
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.place.RelationTargetItem
+import de.sidebyside.next.place.labelRes
 import de.sidebyside.next.reference.R
-import de.sidebyside.next.reference.ReferenceContract
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiStatePanel
 
 private val ReadingMeasure: Dp = 560.dp
 
 /**
- * What a place is linked to: a Memory, Milestone or HeartMoment already on
- * the shared Story.
- *
- * [targets] and [linkedIds] arrive raw and are filtered here into "linked"
- * and "available to link" — not because the ViewModel could not do it, but
- * because the split is pure presentation, and [linkedIds] already carries
- * the one fact that matters privacy-wise: only Story items the caller can
- * already see ever reach [targets] to begin with.
+ * A chapter's own curated content, plus every shared Story item as a
+ * possible addition. [linked] arrives already in the server's display
+ * order — there is no manual relation position, so this screen never
+ * reorders it, unlike a Collection's items.
  */
 @Composable
-fun PlaceRelationsScreen(
-    placeName: String,
-    targets: List<RelationTargetItem>,
-    linkedIds: Set<java.util.UUID>,
+fun ChapterContentScreen(
+    chapterTitle: String,
+    candidates: List<RelationTargetItem>,
+    linked: List<RelationTargetItem>,
     busy: Boolean,
     problem: UiProblem?,
     onBack: () -> Unit,
@@ -63,8 +60,8 @@ fun PlaceRelationsScreen(
     onUnlink: (RelationTargetItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val linked = targets.filter { it.id in linkedIds }
-    val available = targets.filter { it.id !in linkedIds }
+    val linkedIds = linked.map { it.id }.toSet()
+    val available = candidates.filter { it.id !in linkedIds }
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
 
     LazyColumn(
@@ -79,18 +76,18 @@ fun PlaceRelationsScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2)) {
                 Text(
-                    text = stringResource(R.string.place_relations_title),
+                    text = stringResource(R.string.chapter_content_title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontFamily = FrauncesFamily),
                     color = SideBySideTheme.colors.textPrimary,
                     modifier = Modifier.semantics { heading() },
                 )
                 Text(
-                    text = placeName,
+                    text = chapterTitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = SideBySideTheme.colors.textSecondary,
                 )
                 Text(
-                    text = stringResource(R.string.place_relations_intro),
+                    text = stringResource(R.string.chapter_content_intro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = SideBySideTheme.colors.textSecondary,
                     modifier = Modifier.widthIn(max = ReadingMeasure),
@@ -103,7 +100,7 @@ fun PlaceRelationsScreen(
         if (linked.isEmpty() && !busy) {
             item {
                 Text(
-                    text = stringResource(R.string.place_relations_empty),
+                    text = stringResource(R.string.chapter_content_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = SideBySideTheme.colors.textSecondary,
                 )
@@ -141,7 +138,7 @@ fun PlaceRelationsScreen(
                         enabled = !busy,
                         modifier = Modifier.heightIn(min = MinimumTouchTarget),
                     ) {
-                        Text(stringResource(R.string.place_relation_unlink))
+                        Text(stringResource(R.string.chapter_content_unlink))
                     }
                 }
             }
@@ -158,20 +155,20 @@ fun PlaceRelationsScreen(
                     verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
                 ) {
                     Text(
-                        text = stringResource(R.string.place_relation_add_heading),
+                        text = stringResource(R.string.chapter_content_add_heading),
                         style = MaterialTheme.typography.titleMedium,
                         color = SideBySideTheme.colors.textPrimary,
                         modifier = Modifier.semantics { heading() },
                     )
                     if (available.isEmpty() && !busy) {
                         Text(
-                            text = stringResource(R.string.place_relation_none_available),
+                            text = stringResource(R.string.chapter_content_none_available),
                             style = MaterialTheme.typography.bodyMedium,
                             color = SideBySideTheme.colors.textSecondary,
                         )
                     } else {
                         Text(
-                            text = stringResource(R.string.place_relation_choose),
+                            text = stringResource(R.string.chapter_content_choose),
                             style = MaterialTheme.typography.labelLarge,
                             color = SideBySideTheme.colors.textSecondary,
                         )
@@ -214,7 +211,7 @@ fun PlaceRelationsScreen(
                             enabled = !busy && selectedId != null,
                             modifier = Modifier.heightIn(min = MinimumTouchTarget),
                         ) {
-                            Text(stringResource(R.string.place_relation_link))
+                            Text(stringResource(R.string.chapter_content_link))
                         }
                     }
                 }

@@ -57,6 +57,7 @@ import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.chapter.ChapterContentScreen
 import de.sidebyside.next.chapter.ChaptersScreen
 import de.sidebyside.next.collection.CollectionDetailScreen
 import de.sidebyside.next.collection.CollectionsScreen
@@ -735,6 +736,7 @@ private fun DemoShell(
                     busy = state.chaptersBusy,
                     problem = state.chaptersProblem,
                     onBack = { controller.popBackStack() },
+                    onOpen = { chapter -> controller.navigate("planning/chapters/${chapter.id}/content") },
                     onAdd = { title, description, startOn, endOn ->
                         viewModel.addChapter(title, description, startOn, endOn)
                     },
@@ -742,6 +744,34 @@ private fun DemoShell(
                         viewModel.updateChapter(chapter, title, description, startOn, endOn)
                     },
                     onDelete = viewModel::deleteChapter,
+                )
+            }
+
+            composable(
+                route = CHAPTER_CONTENT_ROUTE,
+                arguments = listOf(navArgument(CHAPTER_ID_ARGUMENT) { type = NavType.StringType }),
+            ) { entry ->
+                val chapterId = entry.arguments?.getString(CHAPTER_ID_ARGUMENT)
+                    ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+                val chapter = state.chapters.firstOrNull { it.id == chapterId }
+
+                LaunchedEffect(chapterId, state.activeSpaceId) {
+                    chapterId?.let(viewModel::loadChapterContent)
+                }
+
+                ChapterContentScreen(
+                    chapterTitle = chapter?.title.orEmpty(),
+                    candidates = state.chapterContentCandidates,
+                    linked = state.chapterLinkedContent,
+                    busy = state.chapterContentBusy,
+                    problem = state.chapterContentProblem,
+                    onBack = { controller.popBackStack() },
+                    onLink = { target ->
+                        chapterId?.let { viewModel.linkChapterContent(it, target) }
+                    },
+                    onUnlink = { target ->
+                        chapterId?.let { viewModel.unlinkChapterContent(it, target) }
+                    },
                 )
             }
 
@@ -978,6 +1008,8 @@ private const val PLACE_RELATIONS_ROUTE = "planning/places/{$PLACE_ID_ARGUMENT}/
 private const val COLLECTIONS_ROUTE = "planning/collections"
 
 private const val CHAPTERS_ROUTE = "planning/chapters"
+private const val CHAPTER_ID_ARGUMENT = "chapterId"
+private const val CHAPTER_CONTENT_ROUTE = "planning/chapters/{$CHAPTER_ID_ARGUMENT}/content"
 
 private const val PRIVATE_AREA_ROUTE = "more/private"
 private const val PRIVATE_NOTES_ROUTE = "more/private/notes"

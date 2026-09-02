@@ -271,6 +271,12 @@ data class ReferenceUiState(
     val chapters: List<ChapterDetail> = emptyList(),
     val chaptersBusy: Boolean = false,
     val chaptersProblem: UiProblem? = null,
+    /** Every shared Story item, as a possible content target for whichever chapter is open. */
+    val chapterContentCandidates: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
+    /** The chapter's own content, in the server's display order. */
+    val chapterLinkedContent: List<de.sidebyside.next.place.RelationTargetItem> = emptyList(),
+    val chapterContentBusy: Boolean = false,
+    val chapterContentProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -411,6 +417,7 @@ class ReferenceViewModel(
         clearSearch()
         clearCollections()
         clearChapters()
+        clearChapterContent()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -506,6 +513,7 @@ class ReferenceViewModel(
         clearSearch()
         clearCollections()
         clearChapters()
+        clearChapterContent()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -569,6 +577,7 @@ class ReferenceViewModel(
         clearSearch()
         clearCollections()
         clearChapters()
+        clearChapterContent()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -638,6 +647,7 @@ class ReferenceViewModel(
         clearSearch()
         clearCollections()
         clearChapters()
+        clearChapterContent()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -4075,6 +4085,107 @@ class ReferenceViewModel(
 
     fun clearChapters() {
         mutate { it.copy(chapters = emptyList(), chaptersBusy = false, chaptersProblem = null) }
+    }
+
+    /**
+     * Loads a chapter's own curated content plus every shared Story item as
+     * a possible addition. Mirrors [loadPlaceRelations]'s reasoning: reads
+     * the timeline rather than a content-bearing relation endpoint, which is
+     * also why a private HeartMoment can never appear here.
+     */
+    fun loadChapterContent(chapterId: java.util.UUID) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chapterContentBusy = true, chapterContentProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                val accessToken = currentSession.tokens.accessToken
+                val timeline = api.getTimeline(spaceId, accessToken)
+                val candidates = timeline.items.map { it.toRelationTargetItem() }
+                val content = api.getChapterContent(spaceId, accessToken, chapterId)
+                val linked = content.items.mapNotNull { entry ->
+                    candidates.firstOrNull { it.id == entry.targetId }
+                }
+                candidates to linked
+            }
+                .onSuccess { (candidates, linked) ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate {
+                        it.copy(
+                            chapterContentCandidates = candidates,
+                            chapterLinkedContent = linked,
+                            chapterContentBusy = false,
+                        )
+                    }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chapterContentBusy = false, chapterContentProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun linkChapterContent(chapterId: java.util.UUID, target: de.sidebyside.next.place.RelationTargetItem) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chapterContentBusy = true, chapterContentProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.linkChapterTarget(spaceId, currentSession.tokens.accessToken, chapterId, target.kind, target.id)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chapterContentBusy = false) }
+                    loadChapterContent(chapterId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chapterContentBusy = false, chapterContentProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun unlinkChapterContent(chapterId: java.util.UUID, target: de.sidebyside.next.place.RelationTargetItem) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chapterContentBusy = true, chapterContentProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.unlinkChapterTarget(spaceId, currentSession.tokens.accessToken, chapterId, target.kind, target.id)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chapterContentBusy = false) }
+                    loadChapterContent(chapterId)
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chapterContentBusy = false, chapterContentProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearChapterContent() {
+        mutate {
+            it.copy(
+                chapterContentCandidates = emptyList(),
+                chapterLinkedContent = emptyList(),
+                chapterContentBusy = false,
+                chapterContentProblem = null,
+            )
+        }
     }
 
     fun logout() {

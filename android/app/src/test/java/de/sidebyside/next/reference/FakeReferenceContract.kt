@@ -19,6 +19,7 @@ import sidebyside.api.models.CollectionPage
 import sidebyside.api.models.ChapterCreate
 import sidebyside.api.models.ChapterDetail
 import sidebyside.api.models.ChapterPage
+import sidebyside.api.models.ChapterContent
 import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
@@ -759,6 +760,28 @@ abstract class FakeReferenceContract : ReferenceContract {
         chapterId: UUID,
         ifMatch: Int,
     ): Unit = notExercised("deleteChapter")
+
+    override suspend fun getChapterContent(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+    ): ChapterContent = notExercised("getChapterContent")
+
+    override suspend fun linkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ): Unit = notExercised("linkChapterTarget")
+
+    override suspend fun unlinkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ): Unit = notExercised("unlinkChapterTarget")
 
     private fun notExercised(name: String): Nothing =
         error("$name is not exercised by this test.")

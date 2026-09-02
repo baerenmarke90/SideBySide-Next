@@ -34,6 +34,7 @@ import sidebyside.api.models.CollectionPage
 import sidebyside.api.models.ChapterCreate
 import sidebyside.api.models.ChapterDetail
 import sidebyside.api.models.ChapterPage
+import sidebyside.api.models.ChapterContent
 import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
@@ -1633,6 +1634,44 @@ class OkHttpReferenceApi(
         authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId", accessToken)
             .header("If-Match", ifMatch.toString())
             .delete().build(),
+    )
+
+    override suspend fun getChapterContent(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+    ): ChapterContent = executeJson(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId/content",
+            accessToken,
+        ).get().build(),
+        ChapterContent.serializer(),
+    )
+
+    override suspend fun linkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId/${kind.segment}/$targetId",
+            accessToken,
+        ).put(EMPTY_JSON_BODY.toRequestBody(jsonMediaType)).build(),
+    )
+
+    override suspend fun unlinkChapterTarget(
+        spaceId: UUID,
+        accessToken: String,
+        chapterId: UUID,
+        kind: ReferenceContract.RelationTargetKind,
+        targetId: UUID,
+    ) = executeEmpty(
+        authenticatedRequest(
+            "$baseUrl/api/v1/spaces/$spaceId/chapters/$chapterId/${kind.segment}/$targetId",
+            accessToken,
+        ).delete().build(),
     )
 
     private suspend fun executeEmpty(request: Request) = withContext(Dispatchers.IO) {
