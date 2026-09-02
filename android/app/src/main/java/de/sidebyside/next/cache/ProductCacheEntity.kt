@@ -10,9 +10,9 @@ import androidx.room.PrimaryKey
  * it was written for — there is no query that reads across accounts or
  * Spaces by construction, only by exact key.
  *
- * This table persists `SPACE_SHARED` content only in this slice.
- * `OWNER_ONLY` ProtectedPayload caching needs Keystore-backed encryption
- * per M2-D18's Android decision and is deliberately out of scope here.
+ * This table persists `SPACE_SHARED` content only. `OWNER_ONLY`
+ * ProtectedPayload content lives encrypted in [ProtectedCacheEntity] instead,
+ * per M2-D18's Android decision.
  */
 @Entity(tableName = "product_read_cache")
 data class ProductCacheEntity(

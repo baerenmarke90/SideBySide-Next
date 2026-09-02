@@ -114,6 +114,8 @@ private fun referenceViewModelFactory(context: Context): ViewModelProvider.Facto
                 productReadCache = de.sidebyside.next.cache.ProductReadCache(
                     database.productCacheDao(),
                     database.cacheContextDao(),
+                    database.protectedCacheDao(),
+                    de.sidebyside.next.cache.AndroidKeystoreProtectedPayloadCipher(),
                 ),
             )
         }
@@ -805,6 +807,7 @@ private fun DemoShell(
                     onAdd = viewModel::addPrivateNote,
                     onEdit = viewModel::updatePrivateNote,
                     onDelete = viewModel::deletePrivateNote,
+                    cachedAt = state.privateNotesCachedAt,
                 )
             }
 
@@ -820,6 +823,7 @@ private fun DemoShell(
                     onEdit = viewModel::updateGiftIdea,
                     onChangeStatus = viewModel::changeGiftIdeaStatus,
                     onDelete = viewModel::deleteGiftIdea,
+                    cachedAt = state.giftIdeasCachedAt,
                 )
             }
 
@@ -837,6 +841,7 @@ private fun DemoShell(
                     onAdd = viewModel::addPrivateCollection,
                     onEdit = viewModel::updatePrivateCollection,
                     onDelete = viewModel::deletePrivateCollection,
+                    cachedAt = state.privateCollectionsCachedAt,
                 )
             }
 

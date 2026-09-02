@@ -54,6 +54,8 @@ fun PrivateNotesScreen(
     onEdit: (note: PrivateNoteDetail, title: String, body: String, pinned: Boolean) -> Unit,
     onDelete: (PrivateNoteDetail) -> Unit,
     modifier: Modifier = Modifier,
+    /** Non-null only while [notes] is a stale M2-D18 cache fallback. */
+    cachedAt: java.time.Instant? = null,
 ) {
     var editing by rememberSaveable { mutableStateOf<String?>(null) }
     var deleting by rememberSaveable { mutableStateOf<String?>(null) }
@@ -66,6 +68,8 @@ fun PrivateNotesScreen(
         item {
             TextButton(onClick = onBack) { Text(stringResource(R.string.memory_back)) }
         }
+
+        cachedAt?.let { item { de.sidebyside.next.shell.CachedContentBanner(it) } }
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2)) {

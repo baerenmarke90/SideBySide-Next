@@ -33,6 +33,8 @@ import sidebyside.api.models.AccountView
 import sidebyside.api.models.AuthorSummary
 import sidebyside.api.models.MemoryDetail
 import sidebyside.api.models.MemorySummary
+import sidebyside.api.models.PrivateNoteDetail
+import sidebyside.api.models.PrivateNotePage
 import sidebyside.api.models.ResourceCapabilities
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.StoryItem
@@ -68,7 +70,12 @@ class ProductReadCacheViewModelTest {
         .setTransactionExecutor { it.run() }
         .allowMainThreadQueries()
         .build()
-    private val cache = ProductReadCache(database.productCacheDao(), database.cacheContextDao())
+    private val cache = ProductReadCache(
+        database.productCacheDao(),
+        database.cacheContextDao(),
+        database.protectedCacheDao(),
+        FakeProtectedPayloadCipher(),
+    )
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -212,6 +219,41 @@ class ProductReadCacheViewModelTest {
         assertNotNull(model.uiState.value.error)
     }
 
+    @Test
+    fun loadPrivateNotesFallsBackToTheEncryptedCachedListOnceOffline() = runTest(dispatcher) {
+        val api = PrivateNotesApi()
+        val model = signedIn(api)
+
+        model.loadPrivateNotes()
+        advanceUntilIdle()
+        assertEquals(1, model.uiState.value.privateNotes.size)
+        assertNull(model.uiState.value.privateNotesCachedAt)
+
+        api.nextFailure = IOException("offline")
+        model.loadPrivateNotes()
+        advanceUntilIdle()
+
+        assertEquals(1, model.uiState.value.privateNotes.size)
+        assertNotNull(model.uiState.value.privateNotesCachedAt)
+        assertNull(model.uiState.value.privateNotesProblem)
+    }
+
+    @Test
+    fun loadPrivateNotesNeverFallsBackOnA401EvenWithACachedRow() = runTest(dispatcher) {
+        val api = PrivateNotesApi()
+        val model = signedIn(api)
+
+        model.loadPrivateNotes()
+        advanceUntilIdle()
+
+        api.nextFailure = ReferenceApiException(code = "unauthenticated", message = "expired", status = 401)
+        model.loadPrivateNotes()
+        advanceUntilIdle()
+
+        assertNull(model.uiState.value.privateNotesCachedAt)
+        assertNotNull(model.uiState.value.privateNotesProblem)
+    }
+
     private suspend fun TestScope.signedIn(api: ReferenceContract): ReferenceViewModel {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api, productReadCache = cache)
         model.signIn("someone@example.test", "secret")
@@ -305,5 +347,48 @@ private class StoryApi : FakeReferenceContract() {
             throw it
         }
         return StoryPage(hasMore = false, items = listOf(storyMemoryItem()), nextCursor = null)
+    }
+}
+
+private class PrivateNotesApi : FakeReferenceContract() {
+    var nextFailure: Throwable? = null
+    private val ownerId: UUID = UUID.randomUUID()
+
+    override suspend fun signIn(email: String, password: String): SessionView = SessionView(
+        account = AccountView(displayName = email, id = ownerId),
+        tokens = TokenView(
+            accessExpiresAt = OffsetDateTime.now(),
+            accessToken = "access",
+            refreshExpiresAt = OffsetDateTime.now(),
+            refreshToken = "refresh",
+        ),
+    )
+
+    override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
+        listOf(AccountMembershipView(role = "PARTNER", spaceId = SPACE, status = "ACTIVE"))
+
+    override suspend fun listPrivateNotes(spaceId: UUID, accessToken: String, cursor: String?): PrivateNotePage {
+        nextFailure?.let {
+            nextFailure = null
+            throw it
+        }
+        return PrivateNotePage(
+            hasMore = false,
+            items = listOf(
+                PrivateNoteDetail(
+                    body = "A private thought",
+                    capabilities = ResourceCapabilities(canComment = false, canDelete = true, canEdit = true),
+                    createdAt = OffsetDateTime.now(),
+                    id = UUID.randomUUID(),
+                    ownerId = ownerId,
+                    pinned = false,
+                    spaceId = spaceId,
+                    title = "Just for me",
+                    updatedAt = OffsetDateTime.now(),
+                    version = 1,
+                ),
+            ),
+            nextCursor = null,
+        )
     }
 }

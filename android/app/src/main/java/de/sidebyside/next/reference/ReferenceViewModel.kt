@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.ActivityItem
 import sidebyside.api.models.AttachmentReadRequest
@@ -252,14 +253,20 @@ data class ReferenceUiState(
     val privateNotes: List<PrivateNoteDetail> = emptyList(),
     val privateNotesBusy: Boolean = false,
     val privateNotesProblem: UiProblem? = null,
+    /** Non-null only while [privateNotes] is a stale M2-D18 cache fallback, not a fresh read. */
+    val privateNotesCachedAt: java.time.Instant? = null,
     /** Owner-only: the server already filters this to the caller's own gift ideas. */
     val giftIdeas: List<GiftIdeaDetail> = emptyList(),
     val giftIdeasBusy: Boolean = false,
     val giftIdeasProblem: UiProblem? = null,
+    /** Non-null only while [giftIdeas] is a stale M2-D18 cache fallback, not a fresh read. */
+    val giftIdeasCachedAt: java.time.Instant? = null,
     /** Owner-only: items ride along inside each [PrivateCollectionDetail]. */
     val privateCollections: List<PrivateCollectionDetail> = emptyList(),
     val privateCollectionsBusy: Boolean = false,
     val privateCollectionsProblem: UiProblem? = null,
+    /** Non-null only while [privateCollections] is a stale M2-D18 cache fallback, not a fresh read. */
+    val privateCollectionsCachedAt: java.time.Instant? = null,
     val notifications: List<NotificationItem> = emptyList(),
     val unreadNotificationCount: Int = 0,
     val notificationsBusy: Boolean = false,
@@ -3092,10 +3099,25 @@ class ReferenceViewModel(
         mutate { it.copy(privateNotesBusy = true, privateNotesProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listPrivateNotes(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProtectedList(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                ownerId = currentSession.account.id,
+                kind = de.sidebyside.next.cache.ProtectedCacheKind.PRIVATE_NOTE,
+                resourceId = de.sidebyside.next.cache.PrivateAreaListResourceId,
+                load = { api.listPrivateNotes(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(PrivateNoteDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(PrivateNoteDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(privateNotes = page.items, privateNotesBusy = false) }
+                    mutate {
+                        it.copy(
+                            privateNotes = result.value,
+                            privateNotesBusy = false,
+                            privateNotesCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -3189,7 +3211,14 @@ class ReferenceViewModel(
     }
 
     fun clearPrivateNotes() {
-        mutate { it.copy(privateNotes = emptyList(), privateNotesBusy = false, privateNotesProblem = null) }
+        mutate {
+            it.copy(
+                privateNotes = emptyList(),
+                privateNotesBusy = false,
+                privateNotesProblem = null,
+                privateNotesCachedAt = null,
+            )
+        }
     }
 
     fun loadGiftIdeas() {
@@ -3201,10 +3230,25 @@ class ReferenceViewModel(
         mutate { it.copy(giftIdeasBusy = true, giftIdeasProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listGiftIdeas(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProtectedList(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                ownerId = currentSession.account.id,
+                kind = de.sidebyside.next.cache.ProtectedCacheKind.GIFT_IDEA,
+                resourceId = de.sidebyside.next.cache.PrivateAreaListResourceId,
+                load = { api.listGiftIdeas(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(GiftIdeaDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(GiftIdeaDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(giftIdeas = page.items, giftIdeasBusy = false) }
+                    mutate {
+                        it.copy(
+                            giftIdeas = result.value,
+                            giftIdeasBusy = false,
+                            giftIdeasCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -3371,7 +3415,14 @@ class ReferenceViewModel(
     }
 
     fun clearGiftIdeas() {
-        mutate { it.copy(giftIdeas = emptyList(), giftIdeasBusy = false, giftIdeasProblem = null) }
+        mutate {
+            it.copy(
+                giftIdeas = emptyList(),
+                giftIdeasBusy = false,
+                giftIdeasProblem = null,
+                giftIdeasCachedAt = null,
+            )
+        }
     }
 
     fun loadPrivateCollections() {
@@ -3383,10 +3434,25 @@ class ReferenceViewModel(
         mutate { it.copy(privateCollectionsBusy = true, privateCollectionsProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.listPrivateCollections(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { page ->
+            loadProtectedList(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                ownerId = currentSession.account.id,
+                kind = de.sidebyside.next.cache.ProtectedCacheKind.PRIVATE_COLLECTION,
+                resourceId = de.sidebyside.next.cache.PrivateAreaListResourceId,
+                load = { api.listPrivateCollections(spaceId, currentSession.tokens.accessToken).items },
+                serialize = { SideBySideJson.encodeToString(ListSerializer(PrivateCollectionDetail.serializer()), it) },
+                deserialize = { SideBySideJson.decodeFromString(ListSerializer(PrivateCollectionDetail.serializer()), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(privateCollections = page.items, privateCollectionsBusy = false) }
+                    mutate {
+                        it.copy(
+                            privateCollections = result.value,
+                            privateCollectionsBusy = false,
+                            privateCollectionsCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -3640,7 +3706,12 @@ class ReferenceViewModel(
 
     fun clearPrivateCollections() {
         mutate {
-            it.copy(privateCollections = emptyList(), privateCollectionsBusy = false, privateCollectionsProblem = null)
+            it.copy(
+                privateCollections = emptyList(),
+                privateCollectionsBusy = false,
+                privateCollectionsProblem = null,
+                privateCollectionsCachedAt = null,
+            )
         }
     }
 
@@ -4457,6 +4528,33 @@ class ReferenceViewModel(
         val cache = productReadCache
         return if (cache != null) {
             cache.loadWithFallback(accountId, spaceId, kind, resourceId, canPersist, load, serialize, deserialize)
+        } else {
+            runCatching { load() }.map {
+                de.sidebyside.next.cache.ProductReadResult(it, fromCache = false, refreshedAt = java.time.Instant.now())
+            }
+        }
+    }
+
+    /**
+     * The `OWNER_ONLY` counterpart to [loadProductDetail], for the
+     * current-user Private Area lists. [ownerId] is always the signed-in
+     * account itself: the server already scopes each list to its owner, and
+     * the cache namespace records that owner explicitly rather than assuming
+     * it always equals [accountId], per M2-D18's Android decision.
+     */
+    private suspend fun <T> loadProtectedList(
+        accountId: java.util.UUID,
+        spaceId: java.util.UUID,
+        ownerId: java.util.UUID,
+        kind: de.sidebyside.next.cache.ProtectedCacheKind,
+        resourceId: java.util.UUID,
+        load: suspend () -> T,
+        serialize: (T) -> String,
+        deserialize: (String) -> T,
+    ): Result<de.sidebyside.next.cache.ProductReadResult<T>> {
+        val cache = productReadCache
+        return if (cache != null) {
+            cache.loadProtectedWithFallback(accountId, spaceId, ownerId, kind, resourceId, load, serialize, deserialize)
         } else {
             runCatching { load() }.map {
                 de.sidebyside.next.cache.ProductReadResult(it, fromCache = false, refreshedAt = java.time.Instant.now())
