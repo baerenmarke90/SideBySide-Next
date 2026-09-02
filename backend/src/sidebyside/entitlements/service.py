@@ -147,13 +147,17 @@ def get_effective_space_entitlement(
     leave locking disabled.
     """
     current_time = clock.ensure_utc(at) if at is not None else clock.now()
-    effective_deployment = deployment if deployment is not None else get_settings().deployment
+    settings = get_settings()
+    effective_deployment = deployment if deployment is not None else settings.deployment
 
-    statement = (
-        select(EntitlementGrant)
-        .where(EntitlementGrant.space_id == space_id)
-        .order_by(EntitlementGrant.created_at.desc())
-    )
+    statement = select(EntitlementGrant).where(EntitlementGrant.space_id == space_id)
+    if settings.environment is Environment.PRODUCTION:
+        # A restored database containing deterministic test evidence must not
+        # turn that evidence into a commercial Production entitlement.
+        statement = statement.where(
+            EntitlementGrant.source_type != EntitlementSourceType.TEST_FIXTURE.value
+        )
+    statement = statement.order_by(EntitlementGrant.created_at.desc())
     if lock_grants:
         statement = statement.with_for_update()
 
