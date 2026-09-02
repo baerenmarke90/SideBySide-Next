@@ -1,4 +1,10 @@
-import { useMemo, useState } from 'react';
+import {
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ServerAdminApi } from '../api/generated/apis/ServerAdminApi';
 import type { ServerAdminSpaceDetail } from '../api/generated/models/ServerAdminSpaceDetail';
@@ -40,17 +46,28 @@ function anomalyLabel(code: string, t: (key: string) => string): string {
   }
 }
 
-function SpaceDetail({ space }: { space: ServerAdminSpaceDetail }) {
+function SpaceDetail({
+  space,
+  headingRef,
+}: {
+  space: ServerAdminSpaceDetail;
+  headingRef: RefObject<HTMLHeadingElement | null>;
+}) {
   const { t } = useTranslation();
   return (
     <section
+      id="server-space-detail"
       className="server-admin-panel server-admin-panel-wide"
       aria-labelledby="server-space-detail-title"
     >
       <div className="server-admin-account-detail-heading">
         <div>
           <p className="eyebrow">{t('serverAdmin.spaces.detail.eyebrow')}</p>
-          <h2 id="server-space-detail-title">
+          <h2
+            id="server-space-detail-title"
+            ref={headingRef}
+            tabIndex={-1}
+          >
             {t('serverAdmin.spaces.detail.title')}
           </h2>
           <p className="server-admin-muted server-admin-actor-id">{space.id}</p>
@@ -124,6 +141,7 @@ export function ServerAdminSpacesPanel({ api }: { api: ServerAdminApi }) {
   const [status, setStatus] = useState<SpaceFilter>('all');
   const [offset, setOffset] = useState(0);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
+  const detailHeadingRef = useRef<HTMLHeadingElement | null>(null);
 
   const request = useMemo(
     () => ({
@@ -148,6 +166,12 @@ export function ServerAdminSpacesPanel({ api }: { api: ServerAdminApi }) {
     enabled: selectedSpaceId !== null,
     retry: false,
   });
+
+  useEffect(() => {
+    if (selectedSpaceId !== null && detailQuery.data) {
+      detailHeadingRef.current?.focus();
+    }
+  }, [detailQuery.data, selectedSpaceId]);
 
   const total = spacesQuery.data?.total ?? 0;
   const canPrevious = offset > 0;
@@ -255,6 +279,8 @@ export function ServerAdminSpacesPanel({ api }: { api: ServerAdminApi }) {
                       <button
                         type="button"
                         className="text-button"
+                        aria-controls="server-space-detail"
+                        aria-expanded={selectedSpaceId === space.id}
                         onClick={() => setSelectedSpaceId(space.id)}
                       >
                         {t('serverAdmin.spaces.open')}
@@ -289,13 +315,20 @@ export function ServerAdminSpacesPanel({ api }: { api: ServerAdminApi }) {
 
       {selectedSpaceId !== null ? (
         detailQuery.isPending ? (
-          <section className="server-admin-panel server-admin-panel-wide">
+          <section
+            id="server-space-detail"
+            className="server-admin-panel server-admin-panel-wide"
+            aria-live="polite"
+          >
             <p className="server-admin-muted">
               {t('serverAdmin.spaces.detail.loading')}
             </p>
           </section>
         ) : detailQuery.error ? (
-          <section className="server-admin-panel server-admin-panel-wide">
+          <section
+            id="server-space-detail"
+            className="server-admin-panel server-admin-panel-wide"
+          >
             <p className="status status-error" role="alert">
               {t('serverAdmin.spaces.detail.error')}
             </p>
@@ -305,7 +338,10 @@ export function ServerAdminSpacesPanel({ api }: { api: ServerAdminApi }) {
           </section>
         ) : detailQuery.data ? (
           <>
-            <SpaceDetail space={detailQuery.data} />
+            <SpaceDetail
+              space={detailQuery.data}
+              headingRef={detailHeadingRef}
+            />
             <button
               type="button"
               className="secondary-button"
