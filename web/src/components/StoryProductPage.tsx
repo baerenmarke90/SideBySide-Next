@@ -212,21 +212,22 @@ export function StoryProductPage({
                 <label htmlFor="story-filter-year">
                   {t('storyFilters.year')}
                 </label>
-                <select
+                <input
                   id="story-filter-year"
                   name="year"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  list="story-year-options"
                   defaultValue={filters.year ?? ''}
-                >
-                  <option value="">{t('storyFilters.anyYear')}</option>
+                  placeholder={t('storyFilters.anyYear')}
+                />
+                <datalist id="story-year-options">
                   {[...Array(10)].map((_, i) => {
                     const year = new Date().getFullYear() - i;
-                    return (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    );
+                    return <option key={year} value={year} />;
                   })}
-                </select>
+                </datalist>
               </div>
               <div className="field-group">
                 <label htmlFor="story-filter-order">
