@@ -1,2 +1,6 @@
 # Synthetic test-only cursor key from PR #77; not a credential.
 e92f7a51ddebc30ed3c4a8555f8d4bd81873e79e:backend/tests/unit/test_transport.py:generic-api-key:12
+
+# Historical false positives from the product-design issue template.
+137e5528c1c26859c27a4bd43b1d6269c861a49f:.github/ISSUE_TEMPLATE/feature.yml:generic-api-key:43
+ed692ab64e22e974e9726d909b723ec1341aba44:.github/ISSUE_TEMPLATE/feature.yml:generic-api-key:43
