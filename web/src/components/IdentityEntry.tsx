@@ -330,7 +330,9 @@ export function IdentityEntry({
             registrationAvailability === 'available' ? (
             <>
               <div className="login-intro">
-                <p className="eyebrow eyebrow-inverse">{t('identity.invitationEyebrow')}</p>
+                <p className="eyebrow eyebrow-inverse">
+                  {t('identity.invitationEyebrow')}
+                </p>
                 <h2 id="identity-entry-heading" className="invite-hero-title">
                   {t('identity.invitationTitle')}
                 </h2>
