@@ -22,6 +22,7 @@
     <string name="state_retry">Erneut versuchen</string>
     <string name="state_offline_title">Du bist gerade offline.</string>
     <string name="state_offline_body">Stelle die Verbindung wieder her und versuche es erneut.</string>
+    <string name="offline_banner_last_synced">Zuletzt synchronisiert am %1$s. Die Verbindung wird automatisch wiederhergestellt, sobald der Server erreichbar ist.</string>
     <string name="state_session_title">Deine Sitzung ist nicht mehr gültig.</string>
     <string name="state_session_body">Bitte melde dich erneut an.</string>
     <string name="state_permission_title">Dieser Inhalt ist nicht verfügbar.</string>
