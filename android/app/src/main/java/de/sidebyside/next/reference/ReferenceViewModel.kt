@@ -230,6 +230,8 @@ data class ReferenceUiState(
     val dashboard: DashboardView? = null,
     val todayBusy: Boolean = false,
     val todayProblem: UiProblem? = null,
+    /** Non-null only while [dashboard] is a stale M2-D18 cache fallback, not a fresh read. */
+    val todayCachedAt: java.time.Instant? = null,
     /** Set once the gesture has been accepted, so the screen can say so. */
     val thinkingOfYouSent: Boolean = false,
     val openWishes: List<WishDetail> = emptyList(),
@@ -1668,10 +1670,24 @@ class ReferenceViewModel(
         mutate { it.copy(todayBusy = true, todayProblem = null) }
         viewModelScope.launch {
             if (!isCurrentSession(operationEpoch, currentSession)) return@launch
-            runCatching { api.getDashboard(spaceId, currentSession.tokens.accessToken) }
-                .onSuccess { view ->
+            loadProductDetail(
+                accountId = currentSession.account.id,
+                spaceId = spaceId,
+                kind = de.sidebyside.next.cache.ProductCacheKind.DASHBOARD,
+                resourceId = de.sidebyside.next.cache.TodayDashboardResourceId,
+                load = { api.getDashboard(spaceId, currentSession.tokens.accessToken) },
+                serialize = { SideBySideJson.encodeToString(DashboardView.serializer(), it) },
+                deserialize = { SideBySideJson.decodeFromString(DashboardView.serializer(), it) },
+            )
+                .onSuccess { result ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
-                    mutate { it.copy(dashboard = view, todayBusy = false) }
+                    mutate {
+                        it.copy(
+                            dashboard = result.value,
+                            todayBusy = false,
+                            todayCachedAt = result.refreshedAt.takeIf { _ -> result.fromCache },
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
@@ -1735,6 +1751,7 @@ class ReferenceViewModel(
                 dashboard = null,
                 todayBusy = false,
                 todayProblem = null,
+                todayCachedAt = null,
                 thinkingOfYouSent = false,
             )
         }

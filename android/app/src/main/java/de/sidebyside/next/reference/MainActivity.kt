@@ -926,6 +926,7 @@ private fun DemoShell(
                     gestureSent = state.thinkingOfYouSent,
                     onSendThinkingOfYou = viewModel::sendThinkingOfYou,
                     onOpenActivity = { navController.navigate(ACTIVITY_ROUTE) },
+                    cachedAt = state.todayCachedAt,
                 )
             }
 
