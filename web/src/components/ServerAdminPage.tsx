@@ -25,7 +25,9 @@ const SERVER_ADMIN_SECTIONS = [
 
 export type ServerAdminSection = (typeof SERVER_ADMIN_SECTIONS)[number];
 
-export function resolveServerAdminSection(value: string | null): ServerAdminSection {
+export function resolveServerAdminSection(
+  value: string | null,
+): ServerAdminSection {
   return SERVER_ADMIN_SECTIONS.includes(value as ServerAdminSection)
     ? (value as ServerAdminSection)
     : 'overview';
@@ -852,10 +854,12 @@ export function ServerAdminPage({
               ) : overviewQuery.data ? (
                 <OverviewContent
                   overview={overviewQuery.data}
-                  section={section as Extract<
-                    ServerAdminSection,
-                    'overview' | 'jobs' | 'security'
-                  >}
+                  section={
+                    section as Extract<
+                      ServerAdminSection,
+                      'overview' | 'jobs' | 'security'
+                    >
+                  }
                 />
               ) : null
             ) : null}
