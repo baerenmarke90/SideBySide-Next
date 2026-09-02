@@ -713,9 +713,7 @@ def list_server_admin_spaces(
     if conditions:
         statement = statement.where(*conditions)
     statement = (
-        statement.order_by(Space.created_at.desc(), Space.id.desc())
-        .limit(limit)
-        .offset(offset)
+        statement.order_by(Space.created_at.desc(), Space.id.desc()).limit(limit).offset(offset)
     )
     rows = session.execute(statement).all()
     return ServerAdminSpaceList(
