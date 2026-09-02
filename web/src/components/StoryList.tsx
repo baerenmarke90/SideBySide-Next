@@ -93,7 +93,9 @@ export function StoryList({
                           </span>
                         ) : null}
                         <time
-                          dateTime={item.effectiveDate.toISOString().slice(0, 10)}
+                          dateTime={item.effectiveDate
+                            .toISOString()
+                            .slice(0, 10)}
                         >
                           {formatStoryDate(item.effectiveDate, locale)}
                         </time>
