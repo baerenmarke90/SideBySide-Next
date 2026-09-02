@@ -35,13 +35,15 @@ describe('StoryList', () => {
     expect(html).toContain('Erinnerung');
     expect(html).toContain('Am See');
     expect(html).toContain('<time');
+    expect(html).toContain('class="story-card-link"');
     expect(html).toContain(
       'href="/story/memories/00000000-0000-0000-0000-000000000002"',
     );
-    expect(html).toContain('Erinnerung öffnen');
+    expect(html).toContain('aria-label="Erinnerung: Am See"');
+    expect(html).not.toContain('Erinnerung öffnen');
   });
 
-  it('links HeartMoments and Milestones to their deep-link detail routes', () => {
+  it('uses the whole HeartMoment and Milestone card as the deep link', () => {
     const heartMoment = {
       kind: 'HEART_MOMENT',
       effectiveDate: new Date('2026-08-26T00:00:00Z'),
@@ -74,9 +76,11 @@ describe('StoryList', () => {
     );
 
     expect(html).toContain('href="/story/heart-moments/heart-1"');
-    expect(html).toContain('Herzmoment öffnen');
+    expect(html).toContain('aria-label="Herzmoment: Thanks for today."');
     expect(html).toContain('href="/story/milestones/milestone-1"');
-    expect(html).toContain('Meilenstein öffnen');
+    expect(html).toContain('aria-label="Meilenstein: First apartment"');
+    expect(html).not.toContain('Herzmoment öffnen');
+    expect(html).not.toContain('Meilenstein öffnen');
   });
 
   it('announces an empty story as a status', () => {

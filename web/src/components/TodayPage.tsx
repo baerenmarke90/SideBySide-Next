@@ -25,18 +25,31 @@ function formatDate(value: Date | null): string | null {
   }).format(value);
 }
 
-function VisualMemoryCard({ item }: { item: DashboardItem }) {
+type TodayCardVariant = 'upcoming' | 'recent' | 'retrospective';
+
+function VisualMemoryCard({
+  item,
+  variant,
+}: {
+  item: DashboardItem;
+  variant: TodayCardVariant;
+}) {
   const { t } = useTranslation();
   const path = dashboardItemPath(item.type, item.id);
   const date =
     formatDate(item.occurredOn) ??
     formatDate(item.scheduledAt) ??
     formatDate(item.createdAt);
+  const shellClass = `today-card-shell today-card-shell-${variant}${path ? ' today-card-link' : ''}`;
 
   const inner = (
     <div
-      className={`today-card today-card-${item.type.toLowerCase()} sbs-motion-lift`}
+      className={`today-card today-card-${item.type.toLowerCase()} today-card-${variant} sbs-motion-lift`}
     >
+      <div className="today-card-visual" aria-hidden="true">
+        <span className="today-card-visual-orb" />
+        <span className="today-card-visual-line" />
+      </div>
       <div className="today-card-content">
         <span className="today-card-kind">{t(`m5s5.kind.${item.type}`)}</span>
         <h3 className="today-card-title">
@@ -49,12 +62,12 @@ function VisualMemoryCard({ item }: { item: DashboardItem }) {
 
   if (path) {
     return (
-      <Link to={path} className="today-card-link">
+      <Link to={path} className={shellClass}>
         {inner}
       </Link>
     );
   }
-  return inner;
+  return <div className={shellClass}>{inner}</div>;
 }
 
 function ThinkingOfYouHero({
@@ -185,7 +198,7 @@ export function TodayPage({
             </header>
 
             <section
-              className="today-section sbs-motion-reveal"
+              className="today-section today-section-upcoming sbs-motion-reveal"
               style={{ animationDelay: '100ms' }}
             >
               <h2 className="today-section-title">
@@ -194,7 +207,11 @@ export function TodayPage({
               <div className="today-stream">
                 {dashboardQuery.data.upcoming.length > 0 ? (
                   dashboardQuery.data.upcoming.map((item: DashboardItem) => (
-                    <VisualMemoryCard key={item.id} item={item} />
+                    <VisualMemoryCard
+                      key={item.id}
+                      item={item}
+                      variant="upcoming"
+                    />
                   ))
                 ) : (
                   <p className="today-empty">
@@ -205,7 +222,7 @@ export function TodayPage({
             </section>
 
             <section
-              className="today-section sbs-motion-reveal"
+              className="today-section today-section-recent sbs-motion-reveal"
               style={{ animationDelay: '200ms' }}
             >
               <h2 className="today-section-title">
@@ -215,7 +232,11 @@ export function TodayPage({
                 {dashboardQuery.data.recentShared.length > 0 ? (
                   dashboardQuery.data.recentShared.map(
                     (item: DashboardItem) => (
-                      <VisualMemoryCard key={item.id} item={item} />
+                      <VisualMemoryCard
+                        key={item.id}
+                        item={item}
+                        variant="recent"
+                      />
                     ),
                   )
                 ) : (
@@ -228,14 +249,17 @@ export function TodayPage({
 
             {dashboardQuery.data.retrospective ? (
               <section
-                className="today-section sbs-motion-reveal"
+                className="today-section today-section-retrospective sbs-motion-reveal"
                 style={{ animationDelay: '300ms' }}
               >
                 <h2 className="today-section-title">
                   {t('m5s5.dashboard.retrospectiveTitle')}
                 </h2>
                 <div className="today-stream">
-                  <VisualMemoryCard item={dashboardQuery.data.retrospective} />
+                  <VisualMemoryCard
+                    item={dashboardQuery.data.retrospective}
+                    variant="retrospective"
+                  />
                 </div>
               </section>
             ) : null}
