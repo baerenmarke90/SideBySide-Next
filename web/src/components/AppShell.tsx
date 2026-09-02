@@ -124,6 +124,13 @@ export function AppShell({
   const location = useLocation();
   const isPrivateArea = location.pathname.startsWith('/more/private');
 
+  useEffect(
+    () => () => {
+      document.body.classList.remove('theme-vault');
+    },
+    [],
+  );
+
   return (
     <div className="product-shell">
       <ThemeControl />
