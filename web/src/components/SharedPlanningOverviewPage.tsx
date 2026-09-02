@@ -567,7 +567,11 @@ export function SharedPlanningOverviewPage({
                         <label htmlFor="chapter-end">
                           {t('m5s3.chapter.endOn')}
                         </label>
-                        <input id="chapter-end" name="endOn" type="date" />
+                        <input
+                          id="chapter-end"
+                          name="endOn"
+                          type="date"
+                        />
                       </div>
                     </div>
                     <label htmlFor="chapter-place">
