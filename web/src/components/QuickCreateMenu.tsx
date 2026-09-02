@@ -117,7 +117,7 @@ export function QuickCreateMenu() {
       parent = parent.parentElement;
     }
     target.scrollIntoView({ block: 'center' });
-  }, [location.hash, location.pathname]);
+  }, [location.hash]);
 
   function focusMenuItem(index: number): void {
     const items =
