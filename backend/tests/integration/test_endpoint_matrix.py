@@ -858,7 +858,7 @@ AUTHENTICATED_ONLY: tuple[tuple[str, str], ...] = (
 SERVER_ADMIN_ONLY: tuple[tuple[str, str], ...] = (
     ("GET", "/api/v1/server-admin/overview"),
     ("GET", "/api/v1/server-admin/spaces"),
-    ("GET", "/api/v1/server-admin/spaces/{spaceId}"),
+    ("GET", "/api/v1/server-admin/spaces/{space_id}"),
     ("GET", "/api/v1/server-admin/settings"),
     ("PUT", "/api/v1/server-admin/settings/registration"),
     ("PUT", "/api/v1/server-admin/settings/maintenance"),
