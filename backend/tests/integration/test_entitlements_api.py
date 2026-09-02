@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
+from sqlalchemy import select
 
 from sidebyside.api.deps import ensure_capability
 from sidebyside.core.clock import now
@@ -12,6 +13,7 @@ from sidebyside.core.errors import PremiumEntitlementRequiredError
 from sidebyside.entitlements import service as entitlement_service
 from sidebyside.entitlements.models import (
     Capability,
+    EntitlementGrant,
     EntitlementSourceType,
     EntitlementStatus,
     EntitlementTier,
@@ -88,13 +90,13 @@ def test_couple_level_entitlement_shared_between_partners_without_cross_space_le
     anna_solo_space = make_space(session, anna)
     session.flush()
 
-    # Anna purchases a Premium subscription for the shared space
+    # Anna applies a Premium license to the shared Self-Hosted space.
     current_time = now()
     entitlement_service.record_grant(
         session,
         space_id=shared_space.id,
         account_id=anna.id,
-        source_type=EntitlementSourceType.GOOGLE_PLAY,
+        source_type=EntitlementSourceType.SELF_HOSTED_KEY,
         status=EntitlementStatus.ACTIVE,
         tier=EntitlementTier.PREMIUM,
         effective_from=current_time,
@@ -102,7 +104,8 @@ def test_couple_level_entitlement_shared_between_partners_without_cross_space_le
     )
     session.flush()
 
-    # Ben reads the shared space entitlements -> inherits Premium
+    # Ben reads the shared space entitlements -> inherits Premium. The Cloud
+    # storage quota capability is deliberately absent on Self-Hosted.
     ben_token = sign_in(session, ben)
     ben_response = client.get(
         f"/api/v1/spaces/{shared_space.id}/entitlements",
@@ -112,7 +115,10 @@ def test_couple_level_entitlement_shared_between_partners_without_cross_space_le
     ben_data = ben_response.json()
     assert ben_data["tier"] == "PREMIUM"
     assert ben_data["status"] == "ACTIVE"
-    assert set(ben_data["capabilities"]) == set(ALL_PREMIUM_CAPABILITIES)
+    expected_capabilities = set(ALL_PREMIUM_CAPABILITIES) - {
+        Capability.STORAGE_CLOUD_QUOTA_50GB.value
+    }
+    assert set(ben_data["capabilities"]) == expected_capabilities
 
     # Anna queries her solo space -> stays Free (no leakage across spaces)
     anna_token = sign_in(session, anna)
@@ -123,6 +129,68 @@ def test_couple_level_entitlement_shared_between_partners_without_cross_space_le
     assert solo_response.status_code == 200
     assert solo_response.json()["tier"] == "FREE"
     assert solo_response.json()["status"] == "EXPIRED"
+
+
+def test_source_reference_restore_rebinds_one_grant_between_spaces(session) -> None:  # type: ignore[no-untyped-def]
+    anna = make_account(session, "Anna")
+    original_space = make_space(session, anna)
+    replacement_space = make_space(session, anna)
+    current_time = now()
+
+    original = entitlement_service.record_grant(
+        session,
+        space_id=original_space.id,
+        account_id=anna.id,
+        source_type=EntitlementSourceType.SELF_HOSTED_KEY,
+        status=EntitlementStatus.ACTIVE,
+        tier=EntitlementTier.PREMIUM,
+        effective_from=current_time,
+        effective_until=current_time + timedelta(days=365),
+        external_reference="license-restore-001",
+        capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
+    )
+    session.flush()
+
+    restored = entitlement_service.record_grant(
+        session,
+        space_id=replacement_space.id,
+        account_id=anna.id,
+        source_type=EntitlementSourceType.SELF_HOSTED_KEY,
+        status=EntitlementStatus.ACTIVE,
+        tier=EntitlementTier.PREMIUM,
+        effective_from=current_time,
+        effective_until=current_time + timedelta(days=365),
+        external_reference="license-restore-001",
+        capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
+    )
+    session.flush()
+
+    assert restored.id == original.id
+    assert restored.space_id == replacement_space.id
+
+    matching_grants = (
+        session.execute(
+            select(EntitlementGrant).where(
+                EntitlementGrant.source_type == EntitlementSourceType.SELF_HOSTED_KEY.value,
+                EntitlementGrant.external_reference == "license-restore-001",
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(matching_grants) == 1
+
+    original_effective = entitlement_service.get_effective_space_entitlement(
+        session,
+        original_space.id,
+    )
+    replacement_effective = entitlement_service.get_effective_space_entitlement(
+        session,
+        replacement_space.id,
+    )
+    assert original_effective.tier == EntitlementTier.FREE
+    assert replacement_effective.tier == EntitlementTier.PREMIUM
+    assert replacement_effective.capabilities == [Capability.RECAP_PDF_YEARBOOK.value]
 
 
 def test_capability_guard_and_non_destructive_downgrade(client, session) -> None:  # type: ignore[no-untyped-def]
