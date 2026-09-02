@@ -54,3 +54,4 @@ export function EntitlementStatusToJSON(value?: EntitlementStatus | null): any {
 export function EntitlementStatusToJSONTyped(value: any, ignoreDiscriminator: boolean): EntitlementStatus {
     return value as EntitlementStatus;
 }
+
