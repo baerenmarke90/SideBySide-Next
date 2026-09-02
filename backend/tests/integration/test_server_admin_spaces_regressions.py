@@ -87,8 +87,7 @@ def test_space_directory_pagination_is_stable_for_equal_created_at(
     session.flush()
 
     expected_ids = [
-        str(space.id)
-        for space in sorted(spaces, key=lambda item: item.id, reverse=True)
+        str(space.id) for space in sorted(spaces, key=lambda item: item.id, reverse=True)
     ]
     page_ids: list[str] = []
     for offset in range(len(spaces)):
