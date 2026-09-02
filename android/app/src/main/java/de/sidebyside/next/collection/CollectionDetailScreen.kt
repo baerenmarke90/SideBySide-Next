@@ -54,6 +54,7 @@ fun CollectionDetailScreen(
     problem: UiProblem?,
     onBack: () -> Unit,
     onAddItem: (title: String) -> Unit,
+    onRenameItem: (CollectionItemDetail, String) -> Unit,
     onToggleCompleted: (CollectionItemDetail) -> Unit,
     onDeleteItem: (CollectionItemDetail) -> Unit,
     onMoveUp: (CollectionItemDetail) -> Unit,
@@ -62,6 +63,7 @@ fun CollectionDetailScreen(
 ) {
     val items = collection?.items.orEmpty().sortedBy { it.position }
     var newItemTitle by rememberSaveable { mutableStateOf("") }
+    var editingItemId by rememberSaveable { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -132,44 +134,87 @@ fun CollectionDetailScreen(
                 color = SideBySideTheme.colors.surface,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Row(
-                    modifier = Modifier
-                        .padding(SideBySideTheme.spacing.cardPadding)
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                        checked = entry.completed,
-                        onCheckedChange = { onToggleCompleted(entry) },
-                        enabled = !busy,
-                    )
-                    Text(
-                        text = entry.title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = SideBySideTheme.colors.textPrimary,
-                        textDecoration = if (entry.completed) TextDecoration.LineThrough else null,
-                        modifier = Modifier.weight(1f).padding(start = SideBySideTheme.spacing.step2),
-                    )
-                    TextButton(
-                        onClick = { onMoveUp(entry) },
-                        enabled = !busy && index > 0,
-                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                if (editingItemId == entry.id.toString()) {
+                    var title by rememberSaveable(entry.id) { mutableStateOf(entry.title) }
+                    Row(
+                        modifier = Modifier
+                            .padding(SideBySideTheme.spacing.cardPadding)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringResource(R.string.collection_item_move_up))
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it.take(200) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Button(
+                            onClick = {
+                                editingItemId = null
+                                onRenameItem(entry, title)
+                            },
+                            enabled = !busy && title.isNotBlank(),
+                            modifier = Modifier
+                                .heightIn(min = MinimumTouchTarget)
+                                .padding(start = SideBySideTheme.spacing.step2),
+                        ) {
+                            Text(stringResource(R.string.collection_item_save_changes))
+                        }
+                        TextButton(
+                            onClick = { editingItemId = null },
+                            enabled = !busy,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.collection_item_cancel))
+                        }
                     }
-                    TextButton(
-                        onClick = { onMoveDown(entry) },
-                        enabled = !busy && index < items.lastIndex,
-                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .padding(SideBySideTheme.spacing.cardPadding)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(stringResource(R.string.collection_item_move_down))
-                    }
-                    TextButton(
-                        onClick = { onDeleteItem(entry) },
-                        enabled = !busy,
-                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
-                    ) {
-                        Text(stringResource(R.string.collection_item_delete))
+                        Checkbox(
+                            checked = entry.completed,
+                            onCheckedChange = { onToggleCompleted(entry) },
+                            enabled = !busy,
+                        )
+                        Text(
+                            text = entry.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = SideBySideTheme.colors.textPrimary,
+                            textDecoration = if (entry.completed) TextDecoration.LineThrough else null,
+                            modifier = Modifier.weight(1f).padding(start = SideBySideTheme.spacing.step2),
+                        )
+                        TextButton(
+                            onClick = { editingItemId = entry.id.toString() },
+                            enabled = !busy,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.collection_item_edit))
+                        }
+                        TextButton(
+                            onClick = { onMoveUp(entry) },
+                            enabled = !busy && index > 0,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.collection_item_move_up))
+                        }
+                        TextButton(
+                            onClick = { onMoveDown(entry) },
+                            enabled = !busy && index < items.lastIndex,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.collection_item_move_down))
+                        }
+                        TextButton(
+                            onClick = { onDeleteItem(entry) },
+                            enabled = !busy,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.collection_item_delete))
+                        }
                     }
                 }
             }

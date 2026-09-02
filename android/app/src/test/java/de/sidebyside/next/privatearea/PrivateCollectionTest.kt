@@ -106,6 +106,34 @@ class PrivateCollectionTest {
     }
 
     @Test
+    fun renamingAnItemSendsOnlyTheNewTitle() = runTest(dispatcher) {
+        val target = collection("Packing list", items = listOf(item("Passport", completed = false)))
+        val api = CollectionApi(collections = listOf(target))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.renameCollectionItem(target, target.items.first(), "Passport (renew soon)")
+        advanceUntilIdle()
+
+        assertEquals(1, api.itemUpdates.size)
+        assertEquals("Passport (renew soon)", api.itemUpdates.first().third.title)
+        assertEquals(null, api.itemUpdates.first().third.completed)
+    }
+
+    @Test
+    fun renamingWithABlankTitleMakesNoCall() = runTest(dispatcher) {
+        val target = collection("Packing list", items = listOf(item("Passport")))
+        val api = CollectionApi(collections = listOf(target))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.renameCollectionItem(target, target.items.first(), "   ")
+        advanceUntilIdle()
+
+        assertTrue(api.itemUpdates.isEmpty())
+    }
+
+    @Test
     fun movingAnItemUpSwapsItWithItsPredecessorAndSendsTheWholeOrder() = runTest(dispatcher) {
         val a = item("A", position = 0)
         val b = item("B", position = 1)
