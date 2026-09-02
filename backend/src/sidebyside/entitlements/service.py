@@ -132,6 +132,7 @@ def get_effective_space_entitlement(
     at: datetime | None = None,
     *,
     deployment: Deployment | None = None,
+    lock_grants: bool = False,
 ) -> EffectiveEntitlement:
     """Resolve the effective, reconciled entitlement state for a Space.
 
@@ -139,19 +140,24 @@ def get_effective_space_entitlement(
     newer capability-limited promotion from masking an older still-valid grant.
     The operating model is evaluated independently so Cloud-only capabilities
     can never become applicable to Self-Hosted installations.
+
+    Protected writes may set ``lock_grants`` to hold the participating grant
+    rows through the caller's transaction, making a concurrent revocation wait
+    until the already-authorized write commits. Read-only presentation queries
+    leave locking disabled.
     """
     current_time = clock.ensure_utc(at) if at is not None else clock.now()
     effective_deployment = deployment if deployment is not None else get_settings().deployment
 
-    grants = (
-        session.execute(
-            select(EntitlementGrant)
-            .where(EntitlementGrant.space_id == space_id)
-            .order_by(EntitlementGrant.created_at.desc())
-        )
-        .scalars()
-        .all()
+    statement = (
+        select(EntitlementGrant)
+        .where(EntitlementGrant.space_id == space_id)
+        .order_by(EntitlementGrant.created_at.desc())
     )
+    if lock_grants:
+        statement = statement.with_for_update()
+
+    grants = session.execute(statement).scalars().all()
 
     if not grants:
         return EffectiveEntitlement(
@@ -227,6 +233,7 @@ def has_capability(
     at: datetime | None = None,
     *,
     deployment: Deployment | None = None,
+    lock_grants: bool = False,
 ) -> bool:
     """Check if the given Space holds the specified capability."""
     cap_str = capability.value if isinstance(capability, Capability) else str(capability)
@@ -235,6 +242,7 @@ def has_capability(
         space_id,
         at=at,
         deployment=deployment,
+        lock_grants=lock_grants,
     )
     return cap_str in entitlement.capabilities
 
