@@ -67,18 +67,31 @@ function CollectionFields({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="field-group">
-      <label htmlFor="private-collection-title">
-        {t('privateArea.collections.titleLabel')}
-      </label>
-      <input
-        id="private-collection-title"
-        name="title"
-        required
-        maxLength={200}
-        defaultValue={collection?.title ?? ''}
-      />
-    </div>
+    <>
+      <div className="field-group">
+        <label htmlFor="private-collection-title">
+          {t('privateArea.collections.titleLabel')}
+        </label>
+        <input
+          id="private-collection-title"
+          name="title"
+          required
+          maxLength={200}
+          defaultValue={collection?.title ?? ''}
+        />
+      </div>
+      <div className="field-group">
+        <label htmlFor="private-collection-icon">
+          {t('privateArea.collections.iconLabel')}
+        </label>
+        <input
+          id="private-collection-icon"
+          name="icon"
+          maxLength={8}
+          defaultValue={collection?.icon ?? ''}
+        />
+      </div>
+    </>
   );
 }
 
@@ -134,7 +147,11 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
             {collections.map((collection) => (
               <li key={collection.id} className="private-area-card">
                 <div className="private-area-card-heading">
-                  <h2>{collection.title}</h2>
+                  <h2>
+                    {collection.icon
+                      ? `${collection.icon} ${collection.title}`
+                      : collection.title}
+                  </h2>
                 </div>
                 <Link
                   className="button-link secondary-link"
@@ -165,11 +182,11 @@ export function PrivateCollectionCreatePage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (title: string) =>
+    mutationFn: ({ title, icon }: { title: string; icon: string }) =>
       privateApiCall(() =>
         api.createPrivateCollection({
           spaceId,
-          privateCollectionCreate: { title },
+          privateCollectionCreate: { title, icon: icon || undefined },
         }),
       ),
     onSuccess: async (collection) => {
@@ -183,7 +200,10 @@ export function PrivateCollectionCreatePage({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    mutation.mutate(String(data.get('title') || '').trim());
+    mutation.mutate({
+      title: String(data.get('title') || '').trim(),
+      icon: String(data.get('icon') || '').trim(),
+    });
   }
 
   return (
@@ -524,7 +544,11 @@ export function PrivateCollectionDetailPage({
           </Link>
         }
         eyebrow={t('privateArea.privacyLabel')}
-        title={collection.title}
+        title={
+          collection.icon
+            ? `${collection.icon} ${collection.title}`
+            : collection.title
+        }
         action={
           collection.capabilities.canEdit ? (
             <Link
@@ -562,16 +586,18 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
     mutationFn: ({
       collection,
       title,
+      icon,
     }: {
       collection: PrivateCollectionDetail;
       title: string;
+      icon: string;
     }) =>
       privateApiCall(() =>
         api.updatePrivateCollection({
           spaceId,
           collectionId: collection.id,
           ifMatch: String(collection.version),
-          privateCollectionUpdate: { title },
+          privateCollectionUpdate: { title, icon: icon || null },
         }),
       ),
     onSuccess: async (collection) => {
@@ -615,6 +641,7 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
     mutation.mutate({
       collection: editableCollection,
       title: String(data.get('title') || '').trim(),
+      icon: String(data.get('icon') || '').trim(),
     });
   }
 
