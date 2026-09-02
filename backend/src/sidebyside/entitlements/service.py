@@ -104,9 +104,7 @@ def _grant_capabilities(grant: EntitlementGrant, deployment: Deployment) -> set[
 def _ordered_capabilities(capabilities: set[str]) -> list[str]:
     """Return stable capability ordering while retaining future known strings."""
     canonical = [
-        capability
-        for capability in ALL_PREMIUM_CAPABILITIES
-        if capability in capabilities
+        capability for capability in ALL_PREMIUM_CAPABILITIES if capability in capabilities
     ]
     extras = sorted(capabilities.difference(ALL_PREMIUM_CAPABILITIES))
     return canonical + extras
