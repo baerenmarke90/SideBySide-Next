@@ -79,6 +79,12 @@
     <string name="ref_authenticated">Authentifiziert</string>
     <string name="ref_logout">Abmelden</string>
     <string name="ref_memory_heading">Erinnerung festhalten</string>
+    <string name="quick_create_trigger">Neu festhalten</string>
+    <string name="quick_create_shared_group">Gemeinsam</string>
+    <string name="quick_create_memory">Erinnerung</string>
+    <string name="quick_create_heart_moment">Herzmoment</string>
+    <string name="quick_create_private_group">Privat</string>
+    <string name="quick_create_private_note">Private Notiz</string>
     <string name="ref_title">Titel</string>
     <string name="ref_memory">Erinnerung</string>
     <string name="ref_date_optional">Datum (JJJJ-MM-TT, optional)</string>

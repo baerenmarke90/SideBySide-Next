@@ -58,6 +58,8 @@ import de.sidebyside.next.profile.ProfilePreferencesScreen
 import de.sidebyside.next.profile.ProfileSettingsContent
 import de.sidebyside.next.shell.AppDestination
 import de.sidebyside.next.shell.AppNavigation
+import de.sidebyside.next.shell.QuickCreateFab
+import de.sidebyside.next.shell.navigateToPrimary
 import de.sidebyside.next.chapter.ChapterContentScreen
 import de.sidebyside.next.chapter.ChaptersScreen
 import de.sidebyside.next.collection.CollectionDetailScreen
@@ -347,6 +349,17 @@ private fun DemoShell(
             de.sidebyside.next.shell.OfflineStatusBanner(
                 offline = state.offline,
                 lastSyncedAt = state.lastSyncedAt,
+            )
+        },
+        floatingActionButton = {
+            QuickCreateFab(
+                // The Story screen's own inline "Erinnerung festhalten"
+                // button is one tap further from here — see
+                // QuickCreateFab's own doc comment for why this does not
+                // also reach into StoryDestination's local capture state.
+                onCreateMemory = { navController.navigateToPrimary(AppDestination.Story) },
+                onCreateHeartMoment = { navController.navigate(HEART_MOMENTS_ROUTE) },
+                onCreatePrivateNote = { navController.navigate(PRIVATE_NOTES_ROUTE) },
             )
         },
         detailRoutes = { controller ->
