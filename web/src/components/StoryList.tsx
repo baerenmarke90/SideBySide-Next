@@ -15,23 +15,14 @@ import {
 } from './storyPresentation';
 import { UiState } from './UiState';
 
-function storyProductLink(item: StoryItem): { path: string; labelKey: string } {
+function storyProductPath(item: StoryItem): string {
   switch (item.kind) {
     case 'MEMORY':
-      return {
-        path: memoryDetailPath(item.memory.id),
-        labelKey: 'memoryProduct.open',
-      };
+      return memoryDetailPath(item.memory.id);
     case 'HEART_MOMENT':
-      return {
-        path: heartMomentDetailPath(item.heartMoment.id),
-        labelKey: 'heartMomentProduct.open',
-      };
+      return heartMomentDetailPath(item.heartMoment.id);
     case 'MILESTONE':
-      return {
-        path: milestoneDetailPath(item.milestone.id),
-        labelKey: 'milestoneProduct.open',
-      };
+      return milestoneDetailPath(item.milestone.id);
   }
 }
 
@@ -74,7 +65,6 @@ export function StoryList({
               const presentation = storyItemPresentation(item, t);
               const firstMemoryAttachment =
                 item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
-              const productLink = storyProductLink(item);
               const cardClasses = [
                 'story-card',
                 `story-card-${item.kind.toLowerCase().replace('_', '-')}`,
@@ -85,52 +75,49 @@ export function StoryList({
 
               return (
                 <li key={storyItemKey(item)} className="sbs-motion-reveal">
-                  <article className={cardClasses}>
-                    <div className="story-card-meta">
-                      <span className="kind-badge">
-                        {presentation.kindLabel}
-                      </span>
-                      {presentation.sharedLabel ? (
-                        <span className="shared-badge">
-                          {presentation.sharedLabel}
+                  <Link
+                    className="story-card-link"
+                    to={storyProductPath(item)}
+                  >
+                    <article className={cardClasses}>
+                      <div className="story-card-meta">
+                        <span className="kind-badge">
+                          {presentation.kindLabel}
                         </span>
+                        {presentation.sharedLabel ? (
+                          <span className="shared-badge">
+                            {presentation.sharedLabel}
+                          </span>
+                        ) : null}
+                        <time
+                          dateTime={item.effectiveDate.toISOString().slice(0, 10)}
+                        >
+                          {formatStoryDate(item.effectiveDate, locale)}
+                        </time>
+                      </div>
+                      {item.kind === 'MEMORY' && firstMemoryAttachment ? (
+                        <MemoryPreview
+                          memoryId={item.memory.id}
+                          attachmentId={firstMemoryAttachment.id}
+                          loadImage={loadMemoryImage}
+                        />
                       ) : null}
-                      <time
-                        dateTime={item.effectiveDate.toISOString().slice(0, 10)}
-                      >
-                        {formatStoryDate(item.effectiveDate, locale)}
-                      </time>
-                    </div>
-                    {item.kind === 'MEMORY' && firstMemoryAttachment ? (
-                      <MemoryPreview
-                        memoryId={item.memory.id}
-                        attachmentId={firstMemoryAttachment.id}
-                        loadImage={loadMemoryImage}
-                      />
-                    ) : null}
-                    <h4>{presentation.title}</h4>
-                    {presentation.preview ? (
-                      <p className="story-preview">{presentation.preview}</p>
-                    ) : null}
-                    <div className="story-card-footer">
-                      <span>
-                        {t('story.byAuthor', { author: presentation.author })}
-                      </span>
-                      <div className="story-card-footer-actions">
+                      <h4>{presentation.title}</h4>
+                      {presentation.preview ? (
+                        <p className="story-preview">{presentation.preview}</p>
+                      ) : null}
+                      <div className="story-card-footer">
+                        <span>
+                          {t('story.byAuthor', { author: presentation.author })}
+                        </span>
                         {presentation.mediaLabel ? (
                           <span className="media-label">
                             ▧ {presentation.mediaLabel}
                           </span>
                         ) : null}
-                        <Link
-                          className="story-memory-link"
-                          to={productLink.path}
-                        >
-                          {t(productLink.labelKey)}
-                        </Link>
                       </div>
-                    </div>
-                  </article>
+                    </article>
+                  </Link>
                 </li>
               );
             })}
