@@ -1617,11 +1617,14 @@ class ReferenceViewModel(
         val spaceId = activeSpaceId ?: return
 
         if (text.isBlank()) {
-            mutate { it.copy(heartMomentStatus = null, heartMomentsProblem = null) }
-            setError(message(R.string.heart_moment_error_text_required))
+            mutate { it.copy(heartMomentStatus = null, heartMomentsProblem = validationProblem()) }
             return
         }
-        val day = parseHappenedOn(happenedOn) ?: LocalDate.now()
+        val day = parseHappenedOn(happenedOn)
+        if (day == null) {
+            mutate { it.copy(heartMomentStatus = null, heartMomentsProblem = validationProblem()) }
+            return
+        }
         val operationEpoch = sessionEpoch
 
         mutate { it.copy(heartMomentsBusy = true, heartMomentsProblem = null) }
@@ -1656,11 +1659,21 @@ class ReferenceViewModel(
         }
     }
 
-    fun updateHeartMoment(heartMomentId: java.util.UUID, text: String, emotion: HeartEmotion) {
+    fun updateHeartMoment(heartMomentId: java.util.UUID, text: String, emotion: HeartEmotion, happenedOn: String) {
         val api = contract ?: return
         val currentSession = session ?: return
         val spaceId = activeSpaceId ?: return
         val current = _uiState.value.heartMoments.firstOrNull { it.id == heartMomentId } ?: return
+
+        if (text.isBlank()) {
+            mutate { it.copy(heartMomentsProblem = validationProblem()) }
+            return
+        }
+        val day = parseHappenedOn(happenedOn)
+        if (day == null) {
+            mutate { it.copy(heartMomentsProblem = validationProblem()) }
+            return
+        }
         val operationEpoch = sessionEpoch
 
         mutate { it.copy(heartMomentsBusy = true, heartMomentsProblem = null) }
@@ -1674,7 +1687,7 @@ class ReferenceViewModel(
                     current.version,
                     // Deliberately without visibility: the contract keeps that
                     // a separate operation because it destroys comments.
-                    HeartMomentUpdate(emotion = emotion, text = text),
+                    HeartMomentUpdate(emotion = emotion, happenedOn = day, text = text),
                 )
             }
                 .onSuccess {

@@ -67,16 +67,19 @@ fun HeartMomentsScreen(
     problem: UiProblem?,
     statusMessage: String?,
     onBack: () -> Unit,
-    onCreate: (text: String, emotion: HeartEmotion, visibility: ContentVisibility) -> Unit,
+    onCreate: (text: String, emotion: HeartEmotion, happenedOn: String, visibility: ContentVisibility) -> Unit,
+    onEdit: (id: UUID, text: String, emotion: HeartEmotion, happenedOn: String) -> Unit,
     onChangeVisibility: (UUID, ContentVisibility) -> Unit,
     onDelete: (UUID) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var text by rememberSaveable { mutableStateOf("") }
     var emotion by rememberSaveable { mutableStateOf(HeartEmotion.GRATEFUL) }
+    var happenedOn by rememberSaveable { mutableStateOf("") }
     var keepPrivate by rememberSaveable { mutableStateOf(false) }
     var visibilityTarget by rememberSaveable { mutableStateOf<String?>(null) }
     var deleteTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var editTarget by rememberSaveable { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
@@ -123,18 +126,22 @@ fun HeartMomentsScreen(
             NewHeartMoment(
                 text = text,
                 emotion = emotion,
+                happenedOn = happenedOn,
                 keepPrivate = keepPrivate,
                 busy = busy,
                 onTextChange = { text = it.take(500) },
                 onEmotionChange = { emotion = it },
+                onHappenedOnChange = { happenedOn = it },
                 onKeepPrivateChange = { keepPrivate = it },
                 onSave = {
                     onCreate(
                         text,
                         emotion,
+                        happenedOn,
                         if (keepPrivate) ContentVisibility.PRIVATE else ContentVisibility.SHARED,
                     )
                     text = ""
+                    happenedOn = ""
                 },
             )
         }
@@ -144,12 +151,26 @@ fun HeartMomentsScreen(
         }
 
         items(count = moments.size, key = { index -> moments[index].id.toString() }) { index ->
-            HeartMomentCard(
-                moment = moments[index],
-                busy = busy,
-                onChangeVisibility = { visibilityTarget = moments[index].id.toString() },
-                onDelete = { deleteTarget = moments[index].id.toString() },
-            )
+            val moment = moments[index]
+            if (editTarget == moment.id.toString()) {
+                EditHeartMoment(
+                    moment = moment,
+                    busy = busy,
+                    onCancel = { editTarget = null },
+                    onSave = { editedText, editedEmotion, editedHappenedOn ->
+                        onEdit(moment.id, editedText, editedEmotion, editedHappenedOn)
+                        editTarget = null
+                    },
+                )
+            } else {
+                HeartMomentCard(
+                    moment = moment,
+                    busy = busy,
+                    onEdit = { editTarget = moment.id.toString() },
+                    onChangeVisibility = { visibilityTarget = moment.id.toString() },
+                    onDelete = { deleteTarget = moment.id.toString() },
+                )
+            }
         }
     }
 
@@ -244,10 +265,12 @@ fun HeartMomentsScreen(
 private fun NewHeartMoment(
     text: String,
     emotion: HeartEmotion,
+    happenedOn: String,
     keepPrivate: Boolean,
     busy: Boolean,
     onTextChange: (String) -> Unit,
     onEmotionChange: (HeartEmotion) -> Unit,
+    onHappenedOnChange: (String) -> Unit,
     onKeepPrivateChange: (Boolean) -> Unit,
     onSave: () -> Unit,
 ) {
@@ -302,6 +325,13 @@ private fun NewHeartMoment(
                     }
                 }
             }
+            OutlinedTextField(
+                value = happenedOn,
+                onValueChange = onHappenedOnChange,
+                label = { Text(stringResource(R.string.heart_moment_happened_on)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -318,10 +348,106 @@ private fun NewHeartMoment(
             }
             Button(
                 onClick = onSave,
-                enabled = !busy && text.isNotBlank(),
+                enabled = !busy && text.isNotBlank() && happenedOn.isNotBlank(),
                 modifier = Modifier.heightIn(min = MinimumTouchTarget),
             ) {
                 Text(stringResource(R.string.heart_moment_save))
+            }
+        }
+    }
+}
+
+/**
+ * Inline edit form for an existing HeartMoment, replacing its card in place.
+ *
+ * Deliberately mirrors [NewHeartMoment]'s text/emotion/date fields without its
+ * private-visibility checkbox: visibility is [HeartMomentsScreen.onChangeVisibility]'s
+ * own separate, destructive operation, never a side effect of this save.
+ */
+@Composable
+private fun EditHeartMoment(
+    moment: HeartMomentDetail,
+    busy: Boolean,
+    onCancel: () -> Unit,
+    onSave: (text: String, emotion: HeartEmotion, happenedOn: String) -> Unit,
+) {
+    var text by rememberSaveable(moment.id) { mutableStateOf(moment.text) }
+    var emotion by rememberSaveable(moment.id) { mutableStateOf(moment.emotion) }
+    var happenedOn by rememberSaveable(moment.id) { mutableStateOf(moment.happenedOn.toString()) }
+
+    Surface(
+        shape = RoundedCornerShape(SideBySideTheme.radii.card),
+        color = SideBySideTheme.colors.surface,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+        ) {
+            Text(
+                text = stringResource(R.string.heart_moment_edit),
+                style = MaterialTheme.typography.titleMedium,
+                color = SideBySideTheme.colors.textPrimary,
+                modifier = Modifier.semantics { heading() },
+            )
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it.take(500) },
+                label = { Text(stringResource(R.string.heart_moment_text)) },
+                minLines = 2,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(
+                text = stringResource(R.string.heart_moment_emotion),
+                style = MaterialTheme.typography.labelLarge,
+                color = SideBySideTheme.colors.textSecondary,
+            )
+            Column(Modifier.selectableGroup()) {
+                for (option in HeartEmotion.entries) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = MinimumTouchTarget)
+                            .selectable(
+                                selected = option == emotion,
+                                enabled = !busy,
+                                role = Role.RadioButton,
+                                onClick = { emotion = option },
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = option == emotion, onClick = null)
+                        Text(
+                            text = stringResource(option.labelRes()),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = SideBySideTheme.colors.textPrimary,
+                            modifier = Modifier.padding(start = SideBySideTheme.spacing.step3),
+                        )
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = happenedOn,
+                onValueChange = { happenedOn = it },
+                label = { Text(stringResource(R.string.heart_moment_happened_on)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
+                Button(
+                    onClick = { onSave(text, emotion, happenedOn) },
+                    enabled = !busy && text.isNotBlank() && happenedOn.isNotBlank(),
+                    modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                ) {
+                    Text(stringResource(R.string.heart_moment_save_changes))
+                }
+                TextButton(
+                    onClick = onCancel,
+                    enabled = !busy,
+                    modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                ) {
+                    Text(stringResource(R.string.heart_moment_cancel))
+                }
             }
         }
     }
@@ -331,6 +457,7 @@ private fun NewHeartMoment(
 private fun HeartMomentCard(
     moment: HeartMomentDetail,
     busy: Boolean,
+    onEdit: () -> Unit,
     onChangeVisibility: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -374,6 +501,13 @@ private fun HeartMomentCard(
             if (moment.capabilities.canEdit || moment.capabilities.canDelete) {
                 Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
                     if (moment.capabilities.canEdit) {
+                        TextButton(
+                            onClick = onEdit,
+                            enabled = !busy,
+                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        ) {
+                            Text(stringResource(R.string.heart_moment_edit))
+                        }
                         TextButton(
                             onClick = onChangeVisibility,
                             enabled = !busy,

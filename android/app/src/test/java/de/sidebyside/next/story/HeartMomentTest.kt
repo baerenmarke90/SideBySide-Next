@@ -81,11 +81,56 @@ class HeartMomentTest {
 
         model.loadHeartMoments()
         advanceUntilIdle()
-        model.updateHeartMoment(MOMENT, "New words", HeartEmotion.LOVED)
+        model.updateHeartMoment(MOMENT, "New words", HeartEmotion.LOVED, "2026-08-20")
         advanceUntilIdle()
 
         assertEquals(1, api.updates.size)
         assertTrue(api.visibilityChanges.isEmpty())
+    }
+
+    @Test
+    fun editingSavesTextEmotionAndDate() = runTest(dispatcher) {
+        val api = HeartMomentApi(page = listOf(moment(ContentVisibility.SHARED)))
+        val model = signedIn(api)
+
+        model.loadHeartMoments()
+        advanceUntilIdle()
+        model.updateHeartMoment(MOMENT, "Corrected words", HeartEmotion.SUPPORTED, "2026-08-20")
+        advanceUntilIdle()
+
+        val update = api.updates.single()
+        assertEquals("Corrected words", update.text)
+        assertEquals(HeartEmotion.SUPPORTED, update.emotion)
+        assertEquals(LocalDate.of(2026, 8, 20), update.happenedOn)
+        assertNull(model.uiState.value.heartMomentsProblem)
+    }
+
+    @Test
+    fun editingRefusesBlankTextWithoutSendingAnything() = runTest(dispatcher) {
+        val api = HeartMomentApi(page = listOf(moment(ContentVisibility.SHARED)))
+        val model = signedIn(api)
+
+        model.loadHeartMoments()
+        advanceUntilIdle()
+        model.updateHeartMoment(MOMENT, "   ", HeartEmotion.LOVED, "2026-08-20")
+        advanceUntilIdle()
+
+        assertTrue(api.updates.isEmpty())
+        assertEquals(UiStateKind.Error, model.uiState.value.heartMomentsProblem?.kind)
+    }
+
+    @Test
+    fun editingRefusesAnUnparseableDateWithoutSendingAnything() = runTest(dispatcher) {
+        val api = HeartMomentApi(page = listOf(moment(ContentVisibility.SHARED)))
+        val model = signedIn(api)
+
+        model.loadHeartMoments()
+        advanceUntilIdle()
+        model.updateHeartMoment(MOMENT, "Corrected words", HeartEmotion.LOVED, "not a date")
+        advanceUntilIdle()
+
+        assertTrue(api.updates.isEmpty())
+        assertEquals(UiStateKind.Error, model.uiState.value.heartMomentsProblem?.kind)
     }
 
     @Test
@@ -124,10 +169,11 @@ class HeartMomentTest {
         val api = HeartMomentApi()
         val model = signedIn(api)
 
-        model.createHeartMoment("Kept to myself", HeartEmotion.GRATEFUL, "", ContentVisibility.PRIVATE)
+        model.createHeartMoment("Kept to myself", HeartEmotion.GRATEFUL, "2026-08-20", ContentVisibility.PRIVATE)
         advanceUntilIdle()
 
         assertEquals(ContentVisibility.PRIVATE, api.created.single().visibility)
+        assertEquals(LocalDate.of(2026, 8, 20), api.created.single().happenedOn)
     }
 
     @Test
@@ -135,10 +181,38 @@ class HeartMomentTest {
         val api = HeartMomentApi()
         val model = signedIn(api)
 
-        model.createHeartMoment("   ", HeartEmotion.LOVED, "", ContentVisibility.SHARED)
+        model.createHeartMoment("   ", HeartEmotion.LOVED, "2026-08-20", ContentVisibility.SHARED)
         advanceUntilIdle()
 
         assertTrue(api.created.isEmpty())
+        assertEquals(UiStateKind.Error, model.uiState.value.heartMomentsProblem?.kind)
+    }
+
+    @Test
+    fun refusesABlankDateSinceHappenedOnIsRequired() = runTest(dispatcher) {
+        // Web requires a date on create too (a native <input type=date required>);
+        // this keeps the client contract the same rather than silently
+        // defaulting an unset date to today.
+        val api = HeartMomentApi()
+        val model = signedIn(api)
+
+        model.createHeartMoment("Kept to myself", HeartEmotion.GRATEFUL, "", ContentVisibility.SHARED)
+        advanceUntilIdle()
+
+        assertTrue(api.created.isEmpty())
+        assertEquals(UiStateKind.Error, model.uiState.value.heartMomentsProblem?.kind)
+    }
+
+    @Test
+    fun refusesAnUnparseableDateWithoutSendingAnything() = runTest(dispatcher) {
+        val api = HeartMomentApi()
+        val model = signedIn(api)
+
+        model.createHeartMoment("Kept to myself", HeartEmotion.GRATEFUL, "not a date", ContentVisibility.SHARED)
+        advanceUntilIdle()
+
+        assertTrue(api.created.isEmpty())
+        assertEquals(UiStateKind.Error, model.uiState.value.heartMomentsProblem?.kind)
     }
 
     @Test
