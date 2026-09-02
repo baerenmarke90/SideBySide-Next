@@ -226,6 +226,10 @@ export function AppShell({
         </main>
       </div>
 
+      <div className="mobile-quick-create">
+        <QuickCreateMenu />
+      </div>
+
       <nav className="mobile-bottom-nav" aria-label={t('navigation.primary')}>
         <PrimaryNavigationLinks />
       </nav>
