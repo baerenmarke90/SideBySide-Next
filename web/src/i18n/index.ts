@@ -14,6 +14,7 @@ import privateArea from './locales/privateArea';
 import profileIdentity from './locales/profileIdentity';
 import profiles from './locales/profiles';
 import serverAdmin from './locales/serverAdmin';
+import snackbar from './locales/snackbar';
 import storyProducts from './locales/storyProducts';
 
 export const DEFAULT_LOCALE = 'de';
@@ -46,6 +47,7 @@ if (!i18n.isInitialized) {
           profileIdentity,
           profiles,
           serverAdmin,
+          ...snackbar,
           ...storyProducts,
         },
       },

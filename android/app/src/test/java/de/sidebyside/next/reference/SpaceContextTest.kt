@@ -135,6 +135,44 @@ class SpaceContextTest {
         assertNull(state.lastImageBytes)
         // The new Space is read; the old one is not read again.
         assertEquals(SECOND_SPACE, api.timelineSpaces.last())
+        // #572: used to only set the never-rendered `status` field in the
+        // signed-in shell; this is what the account actually sees now.
+        assertEquals(R.string.space_switched, state.snackbarMessage?.text?.resourceId)
+    }
+
+    /**
+     * The general Snackbar-event mechanism (#572), pinned once against
+     * [ReferenceViewModel.selectSpace] rather than repeated for every call
+     * site that posts one: each event gets its own id so the exact same
+     * text posted twice in a row is still shown twice, and clearing one by
+     * id can never wipe a newer event posted in between.
+     */
+    @Test
+    fun eachSnackbarPostGetsItsOwnIdAndOnlyAMatchingClearRemovesIt() = runTest(dispatcher) {
+        val api = SpaceApi(memberships = listOf(active(FIRST_SPACE), active(SECOND_SPACE)))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        model.signIn("someone@example.test", "secret")
+        advanceUntilIdle()
+        model.selectSpace(SECOND_SPACE)
+        advanceUntilIdle()
+        val firstEvent = model.uiState.value.snackbarMessage
+        assertTrue(firstEvent != null)
+
+        model.selectSpace(FIRST_SPACE)
+        advanceUntilIdle()
+        val secondEvent = model.uiState.value.snackbarMessage
+        assertTrue(secondEvent != null)
+        // Same text (space_switched) both times, but a distinct event.
+        assertTrue(firstEvent!!.id != secondEvent!!.id)
+
+        // A stale clear for the already-superseded first event must not
+        // touch the second, still-pending one.
+        model.snackbarShown(firstEvent.id)
+        assertEquals(secondEvent, model.uiState.value.snackbarMessage)
+
+        model.snackbarShown(secondEvent.id)
+        assertNull(model.uiState.value.snackbarMessage)
     }
 
     @Test

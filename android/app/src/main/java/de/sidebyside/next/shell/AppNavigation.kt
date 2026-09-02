@@ -2,8 +2,10 @@ package de.sidebyside.next.shell
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
@@ -43,6 +45,13 @@ fun AppNavigation(
     secureWhen: (route: String?) -> Boolean = { false },
     /** Forwarded to [AppShell] as-is; see there for what it is for. */
     banner: (@Composable () -> Unit)? = null,
+    /**
+     * Forwarded to [AppShell] as-is. Hoisted up to this parameter — rather
+     * than left at [AppShell]'s own default — so a caller that needs to
+     * trigger a Snackbar (e.g. from a `LaunchedEffect` reacting to a
+     * ViewModel event) can share the exact instance [AppShell] renders.
+     */
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     destinationContent: @Composable (AppDestination) -> Unit,
 ) {
     require(destinations.isNotEmpty()) { "The shell needs at least one destination." }
@@ -61,6 +70,7 @@ fun AppNavigation(
                 navController.navigateToPrimary(destination)
             },
             banner = banner,
+            snackbarHostState = snackbarHostState,
         ) {
             NavHost(
                 navController = navController,

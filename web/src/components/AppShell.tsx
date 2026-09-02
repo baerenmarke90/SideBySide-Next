@@ -19,6 +19,7 @@ import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
+import { Snackbar } from './Snackbar';
 import { ThemeControl } from './ThemeControl';
 
 function NavigationLink({ route }: { route: AppRouteDefinition }) {
@@ -202,6 +203,8 @@ export function AppShell({
       <nav className="mobile-bottom-nav" aria-label={t('navigation.primary')}>
         <PrimaryNavigationLinks />
       </nav>
+
+      <Snackbar />
     </div>
   );
 }
