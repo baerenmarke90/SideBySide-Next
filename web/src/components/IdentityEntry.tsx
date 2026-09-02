@@ -329,12 +329,14 @@ export function IdentityEntry({
             invitationToken &&
             registrationAvailability === 'available' ? (
             <>
-              <div>
-                <p className="eyebrow">{t('identity.invitationEyebrow')}</p>
-                <h2 id="identity-entry-heading">
-                  {t('identity.registerTitle')}
+              <div className="login-intro">
+                <p className="eyebrow eyebrow-inverse">{t('identity.invitationEyebrow', 'Einladung zu SideBySide')}</p>
+                <h2 id="identity-entry-heading" style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', color: 'var(--color-brand-text)' }}>
+                  {t('identity.registerTitle', 'Dein Partner hat einen gemeinsamen Ort für euch vorbereitet.')}
                 </h2>
-                <p className="muted">{t('identity.registerBody')}</p>
+                <p className="muted" style={{ fontSize: '1.1rem', marginTop: '1rem', color: 'var(--color-text-secondary)' }}>
+                  {t('identity.registerBody', 'Erstelle dein Profil, um gemeinsam Erinnerungen, Meilensteine und Wünsche für die Zukunft festzuhalten. Sicher und nur für euch.')}
+                </p>
               </div>
               <form
                 onSubmit={submitRegistration}

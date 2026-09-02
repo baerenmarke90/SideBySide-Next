@@ -14,6 +14,7 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useSearchParams,
 } from 'react-router-dom';
 import type { AccountView } from './api/generated/models/AccountView';
 import { AttachmentReadRequestParentTypeEnum } from './api/generated/models/AttachmentReadRequest';
@@ -199,6 +200,8 @@ function MemoryCreatePage({
   onSaved: () => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const defaultTitle = searchParams.get('title') ?? '';
   const navigate = useNavigate();
   const apis = useMemo(
     () => createReferenceApis(apiBaseUrl, accessToken),
@@ -282,8 +285,9 @@ function MemoryCreatePage({
               required
               maxLength={200}
               placeholder={t('memory.titlePlaceholder', 'Was möchtest du festhalten?')}
+              defaultValue={defaultTitle}
               className="immersive-create-title"
-              autoFocus
+              
             />
           </div>
           

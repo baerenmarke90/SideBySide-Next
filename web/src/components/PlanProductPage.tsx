@@ -349,6 +349,21 @@ export function PlanProductPage({
           )}
         </section>
 
+        {plan.status === 'COMPLETED' ? (
+          <section className="plan-completed-celebration sbs-motion-reveal">
+            <h2>{t('m5s3.plan.completedTitle', 'Gemeinsam geschafft')}</h2>
+            <p className="plan-completed-intro">
+              {t('m5s3.plan.completedBody', 'Aus einem Plan wurde etwas, das ihr erlebt habt.')}
+            </p>
+            <Link
+              className="button-link primary"
+              to={`/story/memories/new?title=${encodeURIComponent(plan.title)}`}
+            >
+              {t('m5s3.plan.createMemoryFromPlan', 'Erinnerung daraus festhalten')}
+            </Link>
+          </section>
+        ) : null}
+
         {plan.capabilities.canEdit && plan.status !== 'COMPLETED' ? (
           <section className="planning-subsection">
             <h2>{t('m5s3.plan.lifecycleHeading')}</h2>
