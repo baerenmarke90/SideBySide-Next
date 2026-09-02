@@ -212,9 +212,11 @@ export function TodayPage({
               </h2>
               <div className="today-stream">
                 {dashboardQuery.data.recentShared.length > 0 ? (
-                  dashboardQuery.data.recentShared.map((item: DashboardItem) => (
-                    <VisualMemoryCard key={item.id} item={item} />
-                  ))
+                  dashboardQuery.data.recentShared.map(
+                    (item: DashboardItem) => (
+                      <VisualMemoryCard key={item.id} item={item} />
+                    ),
+                  )
                 ) : (
                   <p className="today-empty">
                     {t('m5s5.dashboard.recentEmpty')}
