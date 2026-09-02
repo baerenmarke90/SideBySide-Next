@@ -147,24 +147,22 @@ def test_source_reference_restore_rebinds_one_grant_between_spaces(session) -> N
         effective_from=current_time,
         effective_until=current_time + timedelta(days=365),
         external_reference="license-restore-001",
+        source_event_at=current_time,
         capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
     )
     session.flush()
 
-    restored = entitlement_service.record_grant(
+    restored = entitlement_service.restore_grant_to_space(
         session,
+        source_type=EntitlementSourceType.SELF_HOSTED_KEY,
+        external_reference="license-restore-001",
         space_id=replacement_space.id,
         account_id=anna.id,
-        source_type=EntitlementSourceType.SELF_HOSTED_KEY,
-        status=EntitlementStatus.ACTIVE,
-        tier=EntitlementTier.PREMIUM,
-        effective_from=current_time,
-        effective_until=current_time + timedelta(days=365),
-        external_reference="license-restore-001",
-        capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
+        at=current_time,
     )
     session.flush()
 
+    assert restored is not None
     assert restored.id == original.id
     assert restored.space_id == replacement_space.id
 
@@ -191,6 +189,70 @@ def test_source_reference_restore_rebinds_one_grant_between_spaces(session) -> N
     assert original_effective.tier == EntitlementTier.FREE
     assert replacement_effective.tier == EntitlementTier.PREMIUM
     assert replacement_effective.capabilities == [Capability.RECAP_PDF_YEARBOOK.value]
+
+
+def test_stale_source_evidence_cannot_overwrite_newer_revocation_or_rebind(session) -> None:  # type: ignore[no-untyped-def]
+    anna = make_account(session, "Anna")
+    original_space = make_space(session, anna)
+    other_space = make_space(session, anna)
+    current_time = now()
+    first_event = current_time - timedelta(hours=3)
+    stale_event = current_time - timedelta(hours=2)
+    revocation_event = current_time - timedelta(hours=1)
+
+    grant = entitlement_service.record_grant(
+        session,
+        space_id=original_space.id,
+        account_id=anna.id,
+        source_type=EntitlementSourceType.CLOUD_STRIPE,
+        status=EntitlementStatus.ACTIVE,
+        tier=EntitlementTier.PREMIUM,
+        effective_from=current_time - timedelta(days=10),
+        effective_until=current_time + timedelta(days=30),
+        external_reference="stripe-subscription-001",
+        source_event_at=first_event,
+        capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
+    )
+
+    revoked = entitlement_service.record_grant(
+        session,
+        space_id=original_space.id,
+        account_id=anna.id,
+        source_type=EntitlementSourceType.CLOUD_STRIPE,
+        status=EntitlementStatus.REVOKED,
+        tier=EntitlementTier.PREMIUM,
+        effective_from=current_time - timedelta(days=10),
+        effective_until=current_time + timedelta(days=30),
+        external_reference="stripe-subscription-001",
+        source_event_at=revocation_event,
+        capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
+    )
+    assert revoked.id == grant.id
+    assert revoked.status == EntitlementStatus.REVOKED.value
+    assert revoked.source_event_at == revocation_event
+
+    stale = entitlement_service.record_grant(
+        session,
+        space_id=other_space.id,
+        account_id=anna.id,
+        source_type=EntitlementSourceType.CLOUD_STRIPE,
+        status=EntitlementStatus.ACTIVE,
+        tier=EntitlementTier.PREMIUM,
+        effective_from=current_time - timedelta(days=10),
+        effective_until=current_time + timedelta(days=365),
+        external_reference="stripe-subscription-001",
+        source_event_at=stale_event,
+        capabilities=[Capability.RECAP_PDF_YEARBOOK.value],
+    )
+
+    assert stale.id == grant.id
+    assert stale.status == EntitlementStatus.REVOKED.value
+    assert stale.source_event_at == revocation_event
+    assert stale.space_id == original_space.id
+
+    effective = entitlement_service.get_effective_space_entitlement(session, original_space.id)
+    assert effective.tier == EntitlementTier.FREE
+    assert effective.status == EntitlementStatus.REVOKED
 
 
 def test_capability_guard_and_non_destructive_downgrade(client, session) -> None:  # type: ignore[no-untyped-def]
