@@ -88,6 +88,12 @@ fun PlanScreen(
      * Deliberately without a default, for the same reason as [onOpenPlaces].
      */
     onOpenCollections: () -> Unit,
+    /**
+     * Opens the couple's shared Chapters.
+     *
+     * Deliberately without a default, for the same reason as [onOpenPlaces].
+     */
+    onOpenChapters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var draft by rememberSaveable { mutableStateOf("") }
@@ -178,6 +184,37 @@ fun PlanScreen(
                         modifier = Modifier.heightIn(min = MinimumTouchTarget),
                     ) {
                         Text(stringResource(R.string.collections_open))
+                    }
+                }
+            }
+        }
+
+        item {
+            Surface(
+                shape = RoundedCornerShape(SideBySideTheme.radii.card),
+                color = SideBySideTheme.colors.surface,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+                ) {
+                    Text(
+                        text = stringResource(R.string.chapters_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = SideBySideTheme.colors.textPrimary,
+                        modifier = Modifier.semantics { heading() },
+                    )
+                    Text(
+                        text = stringResource(R.string.chapters_intro),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    FilledTonalButton(
+                        onClick = onOpenChapters,
+                        modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                    ) {
+                        Text(stringResource(R.string.chapters_open))
                     }
                 }
             }

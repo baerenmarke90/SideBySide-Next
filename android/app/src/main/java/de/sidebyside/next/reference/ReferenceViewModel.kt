@@ -30,6 +30,9 @@ import sidebyside.api.models.CollectionDetail
 import sidebyside.api.models.CollectionItemCreate
 import sidebyside.api.models.CollectionItemDetail
 import sidebyside.api.models.CollectionItemUpdate
+import sidebyside.api.models.ChapterCreate
+import sidebyside.api.models.ChapterDetail
+import sidebyside.api.models.ChapterUpdate
 import sidebyside.api.models.CollectionUpdate
 import sidebyside.api.models.CommentUpdate
 import sidebyside.api.models.ContentVisibility
@@ -265,6 +268,9 @@ data class ReferenceUiState(
     val collections: List<CollectionDetail> = emptyList(),
     val collectionsBusy: Boolean = false,
     val collectionsProblem: UiProblem? = null,
+    val chapters: List<ChapterDetail> = emptyList(),
+    val chaptersBusy: Boolean = false,
+    val chaptersProblem: UiProblem? = null,
     /** The Story item currently open that is not a memory. */
     val openMilestone: MilestoneDetail? = null,
     val openSharedHeartMoment: HeartMomentDetail? = null,
@@ -404,6 +410,7 @@ class ReferenceViewModel(
         clearActivity()
         clearSearch()
         clearCollections()
+        clearChapters()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -498,6 +505,7 @@ class ReferenceViewModel(
         clearActivity()
         clearSearch()
         clearCollections()
+        clearChapters()
         closeStoryItem()
         val attemptEpoch = sessionEpoch
         viewModelScope.launch {
@@ -560,6 +568,7 @@ class ReferenceViewModel(
         clearActivity()
         clearSearch()
         clearCollections()
+        clearChapters()
         closeStoryItem()
         session = null
         imageDrafts = emptyList()
@@ -628,6 +637,7 @@ class ReferenceViewModel(
         clearActivity()
         clearSearch()
         clearCollections()
+        clearChapters()
         closeStoryItem()
         activeSpaceId = spaceId
         imageDrafts = emptyList()
@@ -3946,6 +3956,125 @@ class ReferenceViewModel(
 
     fun clearCollections() {
         mutate { it.copy(collections = emptyList(), collectionsBusy = false, collectionsProblem = null) }
+    }
+
+    fun loadChapters() {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching { api.listChapters(spaceId, currentSession.tokens.accessToken) }
+                .onSuccess { page ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chapters = page.items, chaptersBusy = false) }
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chaptersBusy = false, chaptersProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun addChapter(title: String, description: String, startOn: String, endOn: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.createChapter(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    ChapterCreate(
+                        title = title,
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        startOn = parseHappenedOn(startOn),
+                        endOn = parseHappenedOn(endOn),
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chaptersBusy = false) }
+                    loadChapters()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chaptersBusy = false, chaptersProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun updateChapter(chapter: ChapterDetail, title: String, description: String, startOn: String, endOn: String) {
+        if (title.isBlank()) return
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.updateChapter(
+                    spaceId,
+                    currentSession.tokens.accessToken,
+                    chapter.id,
+                    chapter.version,
+                    ChapterUpdate(
+                        title = title,
+                        description = description.trim().takeIf { it.isNotBlank() },
+                        startOn = parseHappenedOn(startOn),
+                        endOn = parseHappenedOn(endOn),
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chaptersBusy = false) }
+                    loadChapters()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chaptersBusy = false, chaptersProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun deleteChapter(chapter: ChapterDetail) {
+        val api = contract ?: return
+        val currentSession = session ?: return
+        val spaceId = activeSpaceId ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate { it.copy(chaptersBusy = true, chaptersProblem = null) }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteChapter(spaceId, currentSession.tokens.accessToken, chapter.id, chapter.version)
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    mutate { it.copy(chaptersBusy = false) }
+                    loadChapters()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate { it.copy(chaptersBusy = false, chaptersProblem = problemFor(throwable)) }
+                }
+        }
+    }
+
+    fun clearChapters() {
+        mutate { it.copy(chapters = emptyList(), chaptersBusy = false, chaptersProblem = null) }
     }
 
     fun logout() {
