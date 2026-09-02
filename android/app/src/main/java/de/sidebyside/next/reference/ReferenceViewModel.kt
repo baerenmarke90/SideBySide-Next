@@ -148,6 +148,19 @@ data class ReferenceUiState(
     val offline: Boolean = false,
     /** The last request of any kind that succeeded, regardless of which screen made it. */
     val lastSyncedAt: java.time.Instant? = null,
+    /**
+     * Bumped once each time [offline] transitions from `true` back to
+     * `false`. The currently visible screen's own `LaunchedEffect` includes
+     * this as a key alongside [activeSpaceId], so reconnecting re-runs
+     * exactly the load call that screen already makes on entry — the same
+     * network-authoritative fetch, not a new sync mechanism. That is
+     * deliberate: it reuses the same read path this whole cache already
+     * goes through rather than adding a second, competing refresh
+     * mechanism, matching M2-D18's "no fragile implicit sync queue"
+     * boundary. Only the screen currently in composition re-fetches; one
+     * left off-screen catches up the normal way, when next opened.
+     */
+    val reconnectEpoch: Int = 0,
     val loggedIn: Boolean = false,
     /**
      * Authenticated, but with no Space to open yet.
@@ -419,7 +432,12 @@ class ReferenceViewModel(
             viewModelScope.launch {
                 tracker.state.collect { connectivity ->
                     mutate {
-                        it.copy(offline = connectivity.offline, lastSyncedAt = connectivity.lastSyncedAt)
+                        val cameBackOnline = it.offline && !connectivity.offline
+                        it.copy(
+                            offline = connectivity.offline,
+                            lastSyncedAt = connectivity.lastSyncedAt,
+                            reconnectEpoch = if (cameBackOnline) it.reconnectEpoch + 1 else it.reconnectEpoch,
+                        )
                     }
                 }
             }
