@@ -21,6 +21,7 @@ import org.junit.Test
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AuthorSummary
 import sidebyside.api.models.ExportStatus
+import sidebyside.api.models.ImportStatus
 import sidebyside.api.models.InstanceAccessStatus
 import sidebyside.api.models.MediaType
 import sidebyside.api.models.PartnerProfileView
@@ -30,6 +31,7 @@ import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.ResourceCapabilities
 import sidebyside.api.models.TransferExportDetail
+import sidebyside.api.models.TransferImportDetail
 import sidebyside.api.models.TransferScope
 import sidebyside.api.models.UploadDescriptor
 
@@ -412,6 +414,137 @@ class OkHttpReferenceApiTest {
         assertTrue(archiveBytes.contentEquals(sink.toByteArray()))
     }
 
+    @Test
+    fun createTransferImportStreamsTheArchiveBodyExactly() = runTest {
+        val requests = mutableListOf<Request>()
+        val spaceId = UUID.fromString("00000000-0000-0000-0000-000000000046")
+        val importId = UUID.fromString("00000000-0000-0000-0000-000000000047")
+        val archiveBytes = ByteArray(4096) { it.toByte() }
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                requests += request
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(202)
+                    .message("Accepted")
+                    .body(
+                        SideBySideJson
+                            .encodeToString(TransferImportDetail.serializer(), importDetail(importId))
+                            .toResponseBody("application/json".toMediaType()),
+                    )
+                    .build()
+            }
+            .build()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client)
+
+        val result = api.createTransferImport(
+            spaceId,
+            "secret",
+            archiveBytes.size.toLong(),
+            java.io.ByteArrayInputStream(archiveBytes),
+        )
+
+        val request = requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("/api/v1/spaces/$spaceId/transfer/imports", request.url.encodedPath)
+        assertEquals("application/zip", request.body?.contentType().toString())
+        assertTrue(archiveBytes.contentEquals(requestBodyBytes(request)))
+        assertEquals(importId, result.id)
+        assertEquals(ImportStatus.QUEUED, result.status)
+    }
+
+    @Test
+    fun getTransferImportReadsTheGivenImport() = runTest {
+        val requests = mutableListOf<Request>()
+        val spaceId = UUID.fromString("00000000-0000-0000-0000-000000000048")
+        val importId = UUID.fromString("00000000-0000-0000-0000-000000000049")
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                requests += request
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(
+                        SideBySideJson
+                            .encodeToString(
+                                TransferImportDetail.serializer(),
+                                importDetail(importId, status = ImportStatus.READY_TO_APPLY),
+                            )
+                            .toResponseBody("application/json".toMediaType()),
+                    )
+                    .build()
+            }
+            .build()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client)
+
+        val result = api.getTransferImport(spaceId, "secret", importId)
+
+        assertEquals(
+            "/api/v1/spaces/$spaceId/transfer/imports/$importId",
+            requests.single().url.encodedPath,
+        )
+        assertEquals(ImportStatus.READY_TO_APPLY, result.status)
+    }
+
+    @Test
+    fun applyTransferImportPostsToTheApplyRoute() = runTest {
+        val requests = mutableListOf<Request>()
+        val spaceId = UUID.fromString("00000000-0000-0000-0000-000000000050")
+        val importId = UUID.fromString("00000000-0000-0000-0000-000000000051")
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                requests += request
+                Response.Builder()
+                    .request(request)
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(202)
+                    .message("Accepted")
+                    .body(
+                        SideBySideJson
+                            .encodeToString(
+                                TransferImportDetail.serializer(),
+                                importDetail(importId, status = ImportStatus.APPLYING),
+                            )
+                            .toResponseBody("application/json".toMediaType()),
+                    )
+                    .build()
+            }
+            .build()
+        val api = OkHttpReferenceApi("https://api.example.invalid", client)
+
+        val result = api.applyTransferImport(spaceId, "secret", importId)
+
+        val request = requests.single()
+        assertEquals("POST", request.method)
+        assertEquals(
+            "/api/v1/spaces/$spaceId/transfer/imports/$importId/apply",
+            request.url.encodedPath,
+        )
+        assertEquals(ImportStatus.APPLYING, result.status)
+    }
+
+    private fun importDetail(
+        importId: UUID,
+        status: ImportStatus = ImportStatus.QUEUED,
+    ): TransferImportDetail = TransferImportDetail(
+        artifactSize = 4096,
+        completedAt = null,
+        createdAt = OffsetDateTime.now(),
+        errorCode = null,
+        expiresAt = OffsetDateTime.now().plusHours(24),
+        id = importId,
+        scope = TransferScope.SHARED,
+        status = status,
+        summary = null,
+        validatedAt = null,
+    )
+
     private fun exportDetail(
         exportId: UUID,
         status: ExportStatus = ExportStatus.QUEUED,
@@ -465,5 +598,10 @@ class OkHttpReferenceApiTest {
     private fun requestBody(request: Request): String = Buffer().use { buffer ->
         request.body?.writeTo(buffer)
         buffer.readUtf8()
+    }
+
+    private fun requestBodyBytes(request: Request): ByteArray = Buffer().use { buffer ->
+        request.body?.writeTo(buffer)
+        buffer.readByteArray()
     }
 }
