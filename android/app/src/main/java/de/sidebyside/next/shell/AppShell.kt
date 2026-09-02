@@ -106,6 +106,14 @@ fun AppShell(
      * after an action is often not the one that started it.
      */
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    /**
+     * The shell-wide quick-create trigger (`docs/m5/ANDROID-DELIVERY-PLAN.md`
+     * quick-actions gap), shown once regardless of which destination is
+     * open — matching Web's `QuickCreateMenu`, which is likewise part of the
+     * shell rather than any one screen. `null` shows nothing, same as every
+     * caller before this parameter existed.
+     */
+    floatingActionButton: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     // A single destination is not a choice, so no navigation surface is drawn
@@ -122,6 +130,7 @@ fun AppShell(
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = { floatingActionButton?.invoke() },
     ) { padding ->
         Column(
             modifier = Modifier

@@ -52,6 +52,8 @@ fun AppNavigation(
      * ViewModel event) can share the exact instance [AppShell] renders.
      */
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
+    /** Forwarded to [AppShell] as-is; see there for what it is for. */
+    floatingActionButton: (@Composable () -> Unit)? = null,
     destinationContent: @Composable (AppDestination) -> Unit,
 ) {
     require(destinations.isNotEmpty()) { "The shell needs at least one destination." }
@@ -71,6 +73,7 @@ fun AppNavigation(
             },
             banner = banner,
             snackbarHostState = snackbarHostState,
+            floatingActionButton = floatingActionButton,
         ) {
             NavHost(
                 navController = navController,
