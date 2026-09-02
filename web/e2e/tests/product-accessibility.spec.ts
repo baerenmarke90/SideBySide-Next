@@ -180,9 +180,12 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
 
   await expect(page).toHaveURL(/\/today$/);
   await expect(
-    page.getByRole('heading', { name: m5s5.dashboard.title, level: 1 }),
+    page.getByRole('heading', {
+      name: m5s5.dashboard.newSpaceEmpty,
+      level: 1,
+    }),
   ).toBeVisible();
-  await expect(page.getByText(m5s5.dashboard.recentEmpty)).toBeVisible();
+  await expect(page.getByText(m5s5.dashboard.newSpaceIntro)).toBeVisible();
 
   const skipLink = page.getByRole('link', {
     name: de.navigation.skipToContent,
@@ -200,7 +203,10 @@ test('expanded authenticated shell keeps deep links, back, focus, and accessibil
   await page.goBack();
   await expect(page).toHaveURL(/\/today(?:#main-content)?$/);
   await expect(
-    page.getByRole('heading', { name: m5s5.dashboard.title, level: 1 }),
+    page.getByRole('heading', {
+      name: m5s5.dashboard.newSpaceEmpty,
+      level: 1,
+    }),
   ).toBeVisible();
 
   await expectNoHorizontalOverflow(page);

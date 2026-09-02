@@ -75,11 +75,17 @@ export function StoryList({
               const firstMemoryAttachment =
                 item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
               const productLink = storyProductLink(item);
+              const cardClasses = [
+                'story-card',
+                `story-card-${item.kind.toLowerCase().replace('_', '-')}`,
+                firstMemoryAttachment ? 'has-image' : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+
               return (
-                <li key={storyItemKey(item)}>
-                  <article
-                    className={`story-card story-card-${item.kind.toLowerCase().replace('_', '-')}`}
-                  >
+                <li key={storyItemKey(item)} className="sbs-motion-reveal">
+                  <article className={cardClasses}>
                     <div className="story-card-meta">
                       <span className="kind-badge">
                         {presentation.kindLabel}

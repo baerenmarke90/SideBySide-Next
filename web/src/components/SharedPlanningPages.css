@@ -7,10 +7,10 @@
 .planning-danger-zone,
 .planning-facts {
   border: 1px solid transparent;
-  box-shadow: var(--shadow-soft);
   border-radius: var(--radius-card);
   padding: clamp(var(--space-5), 3vw, var(--space-6));
   background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .planning-subsection h2,
@@ -35,16 +35,16 @@
 }
 
 .planning-card {
-  min-width: 0;
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   border: 1px solid transparent;
   border-radius: var(--radius-large);
-  box-shadow: var(--shadow-soft);
   padding: var(--space-4);
   background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
 }
 
 .planning-card-copy {
@@ -69,19 +69,19 @@
 }
 
 .planning-create summary {
-  cursor: pointer;
   border: 1px dashed var(--color-brand-glow);
   border-radius: var(--radius-pill);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface-raised);
   color: var(--color-text);
   font-weight: 700;
+  cursor: pointer;
   list-style-position: inside;
 }
 
 .planning-create[open] {
-  flex: 1 1 100%;
   width: 100%;
+  flex: 1 1 100%;
 }
 
 .planning-create-form {
@@ -110,8 +110,8 @@
 
 .planning-action-form {
   margin-top: var(--space-5);
-  padding-top: var(--space-5);
   border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-5);
 }
 
 .planning-facts {
@@ -134,8 +134,8 @@
 .planning-relation-form {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
   align-items: center;
+  gap: var(--space-3);
 }
 
 .planning-order-actions {
@@ -147,22 +147,22 @@
 
 .planning-relation-list li,
 .planning-collection-items li {
-  min-width: 0;
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: var(--space-3);
   border: 1px solid transparent;
   border-radius: var(--radius-large);
-  box-shadow: var(--shadow-soft);
   padding: var(--space-3);
   background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
 }
 
 .planning-relation-list li > div:first-child {
-  min-width: 0;
   display: grid;
-  gap: var(--space-1);
+  min-width: 0;
   flex: 1 1 auto;
+  gap: var(--space-1);
 }
 
 .planning-relation-list strong {
@@ -176,16 +176,16 @@
 
 .planning-relation-form select,
 .planning-inline-create input {
-  flex: 1 1 16rem;
   min-width: 0;
+  flex: 1 1 16rem;
 }
 
 .planning-item-title-form {
-  min-width: 0;
   display: flex;
-  gap: var(--space-2);
-  align-items: center;
+  min-width: 0;
   flex: 1 1 16rem;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .planning-item-title-form input {
@@ -194,18 +194,18 @@
 }
 
 .planning-check {
+  display: grid;
   width: 2.75rem;
   height: 2.75rem;
-  display: grid;
-  place-items: center;
   flex: 0 0 auto;
+  place-items: center;
   border-radius: 50%;
   padding: 0;
 }
 
 .planning-item-completed .planning-item-title-form input {
-  text-decoration: line-through;
   color: var(--color-text-secondary);
+  text-decoration: line-through;
 }
 
 .field-error {
@@ -214,12 +214,141 @@
   font-weight: 700;
 }
 
+.plan-completed-celebration {
+  display: grid;
+  gap: var(--space-3);
+  border: 1px solid var(--color-shared-border);
+  border-radius: var(--radius-card);
+  padding: clamp(var(--space-5), 3vw, var(--space-6));
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-raised),
+    var(--color-shared-surface)
+  );
+  box-shadow: var(--shadow-soft);
+}
+
+.plan-completed-celebration h2,
+.plan-completed-celebration p {
+  margin: 0;
+}
+
+.plan-completed-intro {
+  color: var(--color-text-secondary);
+}
+
+/* Future Map / Zukunftslandkarte Redesign */
+.future-map {
+  position: relative;
+  max-width: 800px;
+  margin: var(--space-8) auto;
+  padding-left: var(--space-8);
+}
+
+.future-map-path {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 23px;
+  width: 4px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to bottom,
+    var(--color-brand),
+    var(--color-discovery-surface-soft),
+    var(--color-surface-raised)
+  );
+}
+
+.future-map-stop {
+  position: relative;
+  margin-bottom: var(--space-8);
+}
+
+.future-map-marker {
+  position: absolute;
+  z-index: 2;
+  top: var(--space-2);
+  left: -23px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  box-shadow: 0 0 0 6px var(--color-background);
+}
+
+.future-map-stop-someday .future-map-marker {
+  border: 3px solid var(--color-brand);
+  background: var(--color-private-surface-soft);
+}
+
+.future-map-stop-others .future-map-marker {
+  border: 3px solid var(--color-border-subtle);
+  background: var(--color-surface-raised);
+}
+
+.future-map-content {
+  padding-left: var(--space-4);
+}
+
+.future-map-heading {
+  margin-bottom: var(--space-1);
+  color: var(--color-text);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.future-map-intro {
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+}
+
+.planning-secondary-area {
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  padding: 0;
+  background: var(--color-surface);
+}
+
+.planning-secondary-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.planning-secondary-summary .area-meta {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.planning-secondary-area .area-content {
+  border-top: 1px solid var(--color-border-subtle);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.planning-secondary-area .area-intro {
+  margin: var(--space-3) 0;
+  color: var(--color-text-secondary);
+}
+
+.planning-secondary-area .area-create {
+  margin-top: var(--space-4);
+  border-top: 1px dashed var(--color-border-subtle);
+  padding-top: var(--space-4);
+}
+
 @media (max-width: 599px) {
   .planning-card,
   .planning-relation-list li,
   .planning-collection-items li {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .planning-create,
@@ -238,6 +367,10 @@
 
   .planning-item-title-form {
     width: 100%;
+  }
+
+  .future-map {
+    padding-left: var(--space-6);
   }
 }
 

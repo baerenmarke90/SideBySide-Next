@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import { normalizeClientError } from '../client/problemDetails';
+import { appRoutePath } from '../client/routes';
 import {
   dateFromInput,
   dateOnlyInput,
@@ -12,7 +13,6 @@ import {
   planningIfMatch,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { appRoutePath } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -348,6 +348,21 @@ export function PlanProductPage({
             <p className="planning-meta">{t('m5s3.common.readOnly')}</p>
           )}
         </section>
+
+        {plan.status === 'COMPLETED' ? (
+          <section className="plan-completed-celebration sbs-motion-reveal">
+            <h2>{t('m5s3.plan.completedTitle')}</h2>
+            <p className="plan-completed-intro">
+              {t('m5s3.plan.completedBody')}
+            </p>
+            <Link
+              className="button-link primary"
+              to={`/story/memories/new?title=${encodeURIComponent(plan.title)}`}
+            >
+              {t('m5s3.plan.createMemoryFromPlan')}
+            </Link>
+          </section>
+        ) : null}
 
         {plan.capabilities.canEdit && plan.status !== 'COMPLETED' ? (
           <section className="planning-subsection">
