@@ -14,7 +14,9 @@ import { normalizeClientError } from '../client/problemDetails';
 import {
   chapterDetailPath,
   collectionDetailPath,
+  planDetailPath,
   placeDetailPath,
+  wishDetailPath,
 } from '../client/routes';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { resolvedLocale, useTranslation } from '../i18n';
@@ -45,6 +47,14 @@ function formatDate(value: Date | null): string | null {
     dateStyle: 'medium',
     timeZone: 'UTC',
   }).format(value);
+}
+
+function statusLabel(
+  t: ReturnType<typeof useTranslation>['t'],
+  domain: 'wish' | 'plan',
+  status: string,
+): string {
+  return t(`m5s3.${domain}.status.${status}`);
 }
 
 function PlanningCard({
@@ -223,6 +233,19 @@ export function SharedPlanningOverviewPage({
   const invalidate = (kind: string) =>
     queryClient.invalidateQueries({ queryKey: ['m5-s3', kind, spaceId] });
 
+  const createWish = useMutation({
+    mutationFn: (title: string) =>
+      apiCall(() => apis.wishes.createWish({ spaceId, wishCreate: { title } })),
+    onSuccess: () => invalidate('wishes'),
+  });
+  const createPlan = useMutation({
+    mutationFn: (values: {
+      title: string;
+      description?: string;
+      placeId?: string;
+    }) => apiCall(() => apis.plans.createPlan({ spaceId, planCreate: values })),
+    onSuccess: () => invalidate('plans'),
+  });
   const createPlace = useMutation({
     mutationFn: (values: {
       name: string;
@@ -264,6 +287,31 @@ export function SharedPlanningOverviewPage({
   const chapterItems = chapters.data?.pages.flatMap((page) => page.items) ?? [];
   const collectionItems =
     collections.data?.pages.flatMap((page) => page.items) ?? [];
+
+  function submitWish(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    createWish.mutate(String(data.get('title')).trim(), {
+      onSuccess: () => form.reset(),
+    });
+  }
+
+  function submitPlan(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const description = String(data.get('description')).trim();
+    const placeId = String(data.get('placeId')).trim();
+    createPlan.mutate(
+      {
+        title: String(data.get('title')).trim(),
+        description: description || undefined,
+        placeId: placeId || undefined,
+      },
+      { onSuccess: () => form.reset() },
+    );
+  }
 
   function submitPlace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -348,19 +396,70 @@ export function SharedPlanningOverviewPage({
           <div className="future-map-content">
             <h2 className="future-map-heading">{t('m5s3.overview.soon')}</h2>
             <p className="future-map-intro">{t('m5s3.overview.soonIntro')}</p>
+
+            {plans.isLoading ? (
+              <UiState kind="loading" title={t('states.loading.title')} />
+            ) : null}
+            {plans.error ? (
+              <ProblemState
+                error={plans.error}
+                onRetry={() => void plans.refetch()}
+              />
+            ) : null}
+            {!plans.isLoading && !plans.error && planItems.length === 0 ? (
+              <p className="planning-empty">{t('m5s3.common.empty')}</p>
+            ) : null}
             {planItems.length > 0 ? (
               <ul className="planning-list">
                 {planItems.map((plan) => (
                   <PlanningCard
                     key={plan.id}
                     title={plan.title}
-                    to={`/plan/${plan.id}`}
+                    meta={statusLabel(t, 'plan', plan.status)}
+                    to={planDetailPath(plan.id)}
                   />
                 ))}
               </ul>
-            ) : (
-              <p className="planning-empty">{t('m5s3.common.empty')}</p>
-            )}
+            ) : null}
+            {plans.hasNextPage ? (
+              <button
+                type="button"
+                className="tertiary compact-action"
+                onClick={() => void plans.fetchNextPage()}
+                disabled={plans.isFetchingNextPage}
+              >
+                {plans.isFetchingNextPage
+                  ? t('m5s3.common.loadingMore')
+                  : t('m5s3.common.loadMore')}
+              </button>
+            ) : null}
+            <details className="planning-create">
+              <summary>{t('m5s3.plan.create')}</summary>
+              <form
+                onSubmit={submitPlan}
+                className="form-grid planning-create-form"
+              >
+                <label htmlFor="plan-title">{t('m5s3.common.title')}</label>
+                <input id="plan-title" name="title" required maxLength={200} />
+                <label htmlFor="plan-description">
+                  {t('m5s3.common.description')}
+                </label>
+                <textarea id="plan-description" name="description" rows={3} />
+                <label htmlFor="plan-place">{t('m5s3.common.place')}</label>
+                <select id="plan-place" name="placeId" defaultValue="">
+                  <option value="">{t('m5s3.common.noPlace')}</option>
+                  {placeChoices}
+                </select>
+                <button type="submit" disabled={createPlan.isPending}>
+                  {createPlan.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.save')}
+                </button>
+                {createPlan.error ? (
+                  <ProblemState error={createPlan.error} />
+                ) : null}
+              </form>
+            </details>
           </div>
         </section>
 
@@ -376,19 +475,61 @@ export function SharedPlanningOverviewPage({
             <p className="future-map-intro">
               {t('m5s3.overview.somedayIntro')}
             </p>
+
+            {wishes.isLoading ? (
+              <UiState kind="loading" title={t('states.loading.title')} />
+            ) : null}
+            {wishes.error ? (
+              <ProblemState
+                error={wishes.error}
+                onRetry={() => void wishes.refetch()}
+              />
+            ) : null}
+            {!wishes.isLoading && !wishes.error && wishItems.length === 0 ? (
+              <p className="planning-empty">{t('m5s3.common.empty')}</p>
+            ) : null}
             {wishItems.length > 0 ? (
               <ul className="planning-list">
                 {wishItems.map((wish) => (
                   <PlanningCard
                     key={wish.id}
                     title={wish.title}
-                    to={`/wish/${wish.id}`}
+                    meta={statusLabel(t, 'wish', wish.status)}
+                    to={wishDetailPath(wish.id)}
                   />
                 ))}
               </ul>
-            ) : (
-              <p className="planning-empty">{t('m5s3.common.empty')}</p>
-            )}
+            ) : null}
+            {wishes.hasNextPage ? (
+              <button
+                type="button"
+                className="tertiary compact-action"
+                onClick={() => void wishes.fetchNextPage()}
+                disabled={wishes.isFetchingNextPage}
+              >
+                {wishes.isFetchingNextPage
+                  ? t('m5s3.common.loadingMore')
+                  : t('m5s3.common.loadMore')}
+              </button>
+            ) : null}
+            <details className="planning-create">
+              <summary>{t('m5s3.wish.create')}</summary>
+              <form
+                onSubmit={submitWish}
+                className="form-grid planning-create-form"
+              >
+                <label htmlFor="wish-title">{t('m5s3.common.title')}</label>
+                <input id="wish-title" name="title" required maxLength={200} />
+                <button type="submit" disabled={createWish.isPending}>
+                  {createWish.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.save')}
+                </button>
+                {createWish.error ? (
+                  <ProblemState error={createWish.error} />
+                ) : null}
+              </form>
+            </details>
           </div>
         </section>
 
