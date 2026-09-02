@@ -1114,6 +1114,7 @@ private fun StoryDestination(
         onOpenHeartMoment = onOpenHeartMoment,
         onLoadMore = viewModel::loadMoreStory.takeIf { state.storyHasMore },
         loadingMore = state.storyLoadingMore,
+        cachedAt = state.storyCachedAt,
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
