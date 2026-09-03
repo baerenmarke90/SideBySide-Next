@@ -671,6 +671,12 @@
   gap: var(--space-2);
 }
 
+.momente-stream-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .momente-stream-card-kind {
   font-size: 0.78rem;
   font-weight: 700;
@@ -713,13 +719,27 @@
     var(--color-surface-subtle)
   );
   border-color: var(--color-brand-glow);
-  justify-content: center;
   padding: var(--space-5);
 }
 
 .momente-stream-card.text-first .momente-stream-card-body {
   padding: 0;
+}
+
+.momente-stream-card.text-first .momente-stream-card-main {
+  flex: 1;
   justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+.momente-stream-card.text-first .momente-stream-card-title {
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.momente-stream-card.text-first .momente-stream-card-quote {
+  font-size: 1.15rem;
+  line-height: 1.45;
 }
 
 /* Milestones and Chapters grid */

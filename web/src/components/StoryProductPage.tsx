@@ -411,23 +411,25 @@ export function StoryProductPage({
                         </div>
                       ) : null}
                       <div className="momente-stream-card-body">
-                        <span className="momente-stream-card-kind">
-                          {item.kind === 'HEART_MOMENT'
-                            ? '♥ '
-                            : item.kind === 'MILESTONE'
-                              ? '★ '
-                              : ''}
-                          {presentation.kindLabel}
-                        </span>
-                        {item.kind === 'HEART_MOMENT' ? (
-                          <blockquote className="momente-stream-card-quote">
-                            "{presentation.title}"
-                          </blockquote>
-                        ) : (
-                          <h4 className="momente-stream-card-title">
-                            {presentation.title}
-                          </h4>
-                        )}
+                        <div className="momente-stream-card-main">
+                          <span className="momente-stream-card-kind">
+                            {item.kind === 'HEART_MOMENT'
+                              ? '♥ '
+                              : item.kind === 'MILESTONE'
+                                ? '★ '
+                                : ''}
+                            {presentation.kindLabel}
+                          </span>
+                          {item.kind === 'HEART_MOMENT' ? (
+                            <blockquote className="momente-stream-card-quote">
+                              "{presentation.title}"
+                            </blockquote>
+                          ) : (
+                            <h4 className="momente-stream-card-title">
+                              {presentation.title}
+                            </h4>
+                          )}
+                        </div>
                         <div className="momente-stream-card-meta">
                           <time
                             dateTime={item.effectiveDate
