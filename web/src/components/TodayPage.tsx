@@ -65,7 +65,9 @@ function VisualMemoryCard({
       <div className="today-card-content">
         <div className="today-card-badges">
           <span className="today-card-kind">
-            <span className="today-card-kind-icon" aria-hidden="true">{kindIcon}</span>
+            <span className="today-card-kind-icon" aria-hidden="true">
+              {kindIcon}
+            </span>
             {t(`m5s5.kind.${item.type}`)}
           </span>
           {variant === 'retrospective' ? (
@@ -179,7 +181,9 @@ export function TodayPage({
         dashboardQuery.data.recentShared.length === 0 &&
         !dashboardQuery.data.retrospective ? (
           <div className="new-space-experience sbs-motion-reveal">
-            <div className="new-space-mark" aria-hidden="true">❤️</div>
+            <div className="new-space-mark" aria-hidden="true">
+              ❤️
+            </div>
             <h1 className="new-space-title">
               {dashboardQuery.data.space.partner
                 ? t('m5s5.dashboard.newSpacePartner', {
