@@ -74,8 +74,8 @@
 
 .planning-card h3 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.18rem;
+  font-family: var(--font-ui);
+  font-size: 1.15rem;
   font-weight: 750;
   color: var(--color-text);
   overflow-wrap: anywhere;
@@ -91,17 +91,55 @@
 
 .planning-create {
   flex: 0 0 auto;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--color-border-subtle);
 }
 
 .planning-create summary {
-  border: 1px dashed var(--color-brand-glow);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  border: 1.5px dashed var(--color-brand);
   border-radius: var(--radius-pill);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-  font-weight: 700;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-strong);
+  font-weight: 750;
+  font-size: 0.92rem;
   cursor: pointer;
-  list-style-position: inside;
+  list-style: none;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.planning-create summary::-webkit-details-marker {
+  display: none;
+}
+
+.planning-create summary:hover {
+  background: var(--color-surface-raised);
+  border-color: var(--color-brand-strong);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+.planning-create summary::before {
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .planning-create[open] {

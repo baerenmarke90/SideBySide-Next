@@ -1,75 +1,58 @@
-# 5. Deliver Fraunces, and let the platform supply the UI face
+# 5. Deliver Literata for Display and Instrument Sans for UI
 
 - **Status:** accepted
-- **Date:** 2026-09-01
-- **Issue:** #361
+- **Date:** 2026-09-01 (updated 2026-09-03)
+- **Issue:** #361, #616
 
 ## Context
 
-`design/tokens.json` named two faces, Inter for UI and Fraunces for display, and
-both clients declared them. Neither delivered them. There was no `@font-face`
-rule and no font file anywhere in the repository, and Android fell back to
-`FontFamily.SansSerif` and `FontFamily.Serif`. The specified typography was
-documented but never reached a user on either platform.
+`design/tokens.json` originally specified Fraunces for display and platform/Inter
+for UI. Through iterative human review, the product voice required a warmer,
+more intimate, and more cohesive typographic identity:
 
-The two faces are not worth the same. A platform's own UI face is already a
-neutral grotesque — Roboto on Android, the system face on the Web — so Inter
-would have cost bytes on both clients for a difference few people could name.
-Fraunces is the opposite: it is what gives an editorial moment a voice, and its
-documented fallback of `Georgia, serif` does not even exist on Android, where
-the fallback is Noto Serif.
-
-The value is concentrated in one face; the cost would have been spread over two.
+1. **Literata** serves as the emotional, editorial display face. It provides
+   the warm, personal voice needed for relationship milestones, memories,
+   the Today hero greeting, and editorial drop caps.
+2. **Instrument Sans** serves as the primary UI face across both Web and Android.
+   Rather than falling back to disparate OS system fonts, Instrument Sans provides
+   a clean, contemporary, and unified visual rhythm for navigation, buttons,
+   forms, metadata, planning cards, and controls.
 
 ## Decision
 
-Deliver **Fraunces only**, self-hosted, as one variable file per client. The UI
-face is the platform's own, and `design/tokens.json` and
-`docs/DESIGN-PRINCIPLES.md` say so rather than naming a face that is not
-shipped.
+Deliver **both Literata and Instrument Sans**, self-hosted, as variable font
+files bundled directly with each client.
 
-Fraunces is used where the design principles reserve it: the page heading on the
-Web, and the Story heading and a memory's own title on Android.
+- **Web:** Self-hosted woff2 files located in `web/public/fonts/` loaded via
+  standard `@font-face` rules.
+- **Android:** Self-hosted TTF resources located in `android/app/src/main/res/font/`
+  mapped onto semantic `SideBySideDisplayFamily` and `SideBySideUiFamily`
+  Compose `FontFamily` definitions.
+
+Literata is used selectively for relationship and storytelling moments (Today
+greeting, memory titles, quotes, drop cap). Instrument Sans is used for UI,
+navigation, metadata, planning cards, and controls.
 
 ## Consequences
 
-**Nothing is fetched at runtime.** The measured cost is 35 kB of woff2 on the
-Web (Latin subset, which is the entire supported locale set) and 360 kB of TTF
-in the APK, which Android needs because it cannot read woff2. A single variable
-file covers every weight in the scale, so no static cuts are bundled.
+**Nothing is fetched at runtime.** No third-party font host or external CDN is
+contacted on either platform. Self-hosted installations function completely
+offline. The CSP `font-src 'self'` remains strictly enforced.
 
-A font host was never a real option here. It would put a third party into the
-path of a product whose premise is that only two people are in it, Self-Hosted
-installations have no external access to rely on, and `web/nginx.conf` already
-sets `font-src 'self'`, which would have blocked it.
+**Licensing.** Both Literata and Instrument Sans are licensed under the SIL Open
+Font License 1.1 (OFL-1.1). Authoritative license files travel alongside the
+font files on both Web (`web/public/fonts/OFL-Literata.txt`,
+`web/public/fonts/OFL-InstrumentSans.txt`) and Android
+(`assets/OFL-Literata.txt`, `assets/OFL-InstrumentSans.txt`).
 
-**Licensing.** Fraunces is under the SIL Open Font License 1.1, which explicitly
-permits embedding and redistribution, including commercially, at no cost and
-without registration. The licence text ships with both copies —
-`web/public/fonts/OFL.txt` and `assets/OFL-Fraunces.txt` in the APK — because
-the OFL requires the font to travel with it. No attribution in the interface is
-required.
-
-The Web copy is the Latin subset that Google Fonts distributes. A subset is
-strictly a modification, which the OFL's Reserved Font Name clause speaks to;
-in practice both Google and the Fraunces authors distribute these subsets under
-the OFL with the name unchanged. Serving the unmodified 360 kB file on the Web
-as well would remove even that question, at roughly 100 kB more transfer after
-compression.
-
-**A face that renders nowhere is not delivered.** Bundling Fraunces initially
-changed nothing on screen, because it was attached only to a `display` role that
-no surface used. That is why this decision names the headings it applies to
-rather than only the file it ships.
+**Variable fonts.** A single variable file per family covers all required weights
+without bundling multiple static cuts.
 
 ## Alternatives considered
 
-- **Deliver both faces.** Rejected: roughly double the cost for a UI difference
-  against an already-neutral platform face.
-- **A third-party font host.** Rejected on privacy grounds, and blocked by the
-  existing CSP.
-- **Keep the fallbacks and rewrite the specification around them.** A legitimate
-  and cheaper outcome, rejected because it would give up the one face that
-  carries the product's character for 35 kB and 360 kB.
-- **Static cuts instead of a variable file.** Rejected: several files to cover
-  the same weights, for no size gain at this scale.
+- **Platform grotesque fallback.** Previously accepted to avoid bundle size, but
+  created inconsistent typographic quality across Android and diverse Web
+  browsers.
+- **Third-party font host.** Rejected on privacy, self-hosting, and CSP grounds.
+- **Fraunces display font.** Superseded by Literata for superior editorial warmth,
+  cleaner x-height, and more harmonious partnership with Instrument Sans.

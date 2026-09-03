@@ -58,6 +58,9 @@ data class DashboardItem (
     @SerialName(value = "titleOrText")
     val titleOrText: kotlin.String?,
 
+    @Contextual @SerialName(value = "previewAttachmentId")
+    val previewAttachmentId: java.util.UUID? = null,
+
     @Contextual @SerialName(value = "type")
     val type: DashboardItemType
 

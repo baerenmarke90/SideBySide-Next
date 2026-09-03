@@ -15,6 +15,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from sidebyside.attachments.binding import attachments_of_memories
+from sidebyside.attachments.models import AttachmentStatus
 from sidebyside.authorization import AuthorizationContext, PrivacyClass, readable
 from sidebyside.chapters.models import Chapter
 from sidebyside.collections.models import Collection
@@ -73,6 +75,7 @@ class DashboardItem:
     occurred_on: date | None = None
     scheduled_at: datetime | None = None
     created_at: datetime | None = None
+    preview_attachment_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -198,7 +201,7 @@ def _retrospective(
 
     if not candidates:
         return None
-    return min(
+    chosen = min(
         candidates,
         key=lambda item: (
             -(item.occurred_on.year if item.occurred_on else 0),
@@ -206,6 +209,24 @@ def _retrospective(
             str(item.id),
         ),
     )
+    if chosen.type == DashboardItemType.MEMORY:
+        galleries = attachments_of_memories(session, [chosen.id])
+        preview_id = None
+        for bound in galleries.get(chosen.id, []):
+            if bound.attachment.status == AttachmentStatus.READY:
+                preview_id = bound.attachment.id
+                break
+        if preview_id is not None:
+            chosen = DashboardItem(
+                type=chosen.type,
+                id=chosen.id,
+                title_or_text=chosen.title_or_text,
+                occurred_on=chosen.occurred_on,
+                scheduled_at=chosen.scheduled_at,
+                created_at=chosen.created_at,
+                preview_attachment_id=preview_id,
+            )
+    return chosen
 
 
 def _is_prior_same_day(value: date, today: date) -> bool:
@@ -333,11 +354,21 @@ def _recent_shared(
 ) -> list[DashboardItem]:
     candidates: list[DashboardItem] = []
 
-    for memory in session.execute(
-        readable(Memory, authorization)
-        .order_by(Memory.created_at.desc(), Memory.id)
-        .limit(SECTION_LIMIT)
-    ).scalars():
+    memories = list(
+        session.execute(
+            readable(Memory, authorization)
+            .order_by(Memory.created_at.desc(), Memory.id)
+            .limit(SECTION_LIMIT)
+        ).scalars()
+    )
+    memory_galleries = attachments_of_memories(session, [m.id for m in memories])
+
+    for memory in memories:
+        preview_id = None
+        for bound in memory_galleries.get(memory.id, []):
+            if bound.attachment.status == AttachmentStatus.READY:
+                preview_id = bound.attachment.id
+                break
         candidates.append(
             DashboardItem(
                 type=DashboardItemType.MEMORY,
@@ -345,6 +376,7 @@ def _recent_shared(
                 title_or_text=_bounded(memory.payload.title),
                 occurred_on=memory.happened_on,
                 created_at=memory.created_at,
+                preview_attachment_id=preview_id,
             )
         )
 

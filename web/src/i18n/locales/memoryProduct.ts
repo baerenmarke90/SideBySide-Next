@@ -1,10 +1,11 @@
 const memoryProduct = {
   open: 'Erinnerung öffnen',
-  backToStory: '← Zurück zur Story',
+  backToStory: '← Zurück zu Momente',
   backToMemory: '← Zurück zur Erinnerung',
   detailEyebrow: 'Erinnerung',
   detailMetaAria: 'Angaben zu dieser Erinnerung',
   detailIntro: 'Alle Details zu diesem gemeinsamen Moment.',
+  provenance: 'Festgehalten von {{author}} · Erstellt am {{createdAt}}',
   loading: 'Erinnerung wird geladen …',
   authorLabel: 'Festgehalten von',
   happenedOnLabel: 'Datum',

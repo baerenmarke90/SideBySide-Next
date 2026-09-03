@@ -6,6 +6,7 @@ import { type M4ProductApis, dashboardItemPath } from '../client/m4Product';
 import { normalizeClientError } from '../client/problemDetails';
 import { postSnackbar } from '../client/snackbar';
 import { resolvedLocale, useTranslation } from '../i18n';
+import { MemoryPreview } from './MemoryPreview';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './TodayPage.css';
@@ -25,14 +26,51 @@ function formatDate(value: Date | null): string | null {
   }).format(value);
 }
 
-type TodayCardVariant = 'upcoming' | 'recent' | 'retrospective';
+export type TodayCardVariant = 'upcoming' | 'recent' | 'retrospective';
+
+export function TodayModuleSection({
+  id,
+  className,
+  title,
+  kicker,
+  headerAction,
+  children,
+  animationDelay,
+}: {
+  id?: string;
+  className?: string;
+  title: string;
+  kicker?: string;
+  headerAction?: React.ReactNode;
+  children: React.ReactNode;
+  animationDelay?: string;
+}) {
+  return (
+    <section
+      id={id}
+      className={`today-section ${className ?? ''} sbs-motion-reveal`}
+      style={animationDelay ? { animationDelay } : undefined}
+    >
+      <div className="today-section-header">
+        <div>
+          {kicker ? <span className="today-section-kicker">{kicker}</span> : null}
+          <h2 className="today-section-title">{title}</h2>
+        </div>
+        {headerAction ? <div className="today-section-action">{headerAction}</div> : null}
+      </div>
+      <div className="today-section-body">{children}</div>
+    </section>
+  );
+}
 
 function VisualMemoryCard({
   item,
   variant,
+  loadMemoryImage,
 }: {
   item: DashboardItem;
   variant: TodayCardVariant;
+  loadMemoryImage?: (memoryId: string, attachmentId: string) => Promise<string>;
 }) {
   const { t } = useTranslation();
   const path = dashboardItemPath(item.type, item.id);
@@ -40,15 +78,24 @@ function VisualMemoryCard({
     formatDate(item.occurredOn) ??
     formatDate(item.scheduledAt) ??
     formatDate(item.createdAt);
-  const shellClass = `today-card-shell today-card-shell-${variant}${path ? ' today-card-link' : ''}`;
+
+  const previewAttachmentId = item.previewAttachmentId;
+  const hasMedia = Boolean(previewAttachmentId && loadMemoryImage);
+  const shellClass = `today-card-shell today-card-shell-${variant}${hasMedia ? ' today-card-shell-media' : ''}${path ? ' today-card-link' : ''}`;
+
   const inner = (
     <div
-      className={`today-card today-card-${item.type.toLowerCase()} today-card-${variant} sbs-motion-lift`}
+      className={`today-card today-card-${item.type.toLowerCase()} today-card-${variant} ${hasMedia ? 'today-card-has-media' : 'today-card-typography-first'} sbs-motion-lift`}
     >
-      <div className="today-card-visual" aria-hidden="true">
-        <span className="today-card-visual-orb" />
-        <span className="today-card-visual-line" />
-      </div>
+      {hasMedia && previewAttachmentId && loadMemoryImage ? (
+        <div className="today-card-media">
+          <MemoryPreview
+            memoryId={item.id}
+            attachmentId={previewAttachmentId}
+            loadImage={loadMemoryImage}
+          />
+        </div>
+      ) : null}
       <div className="today-card-content">
         <div className="today-card-badges">
           <span className="today-card-kind">
@@ -142,9 +189,11 @@ function ThinkingOfYouHero({
 export function TodayPage({
   apis,
   spaceId,
+  loadMemoryImage,
 }: {
   apis: M4ProductApis;
   spaceId: string;
+  loadMemoryImage?: (memoryId: string, attachmentId: string) => Promise<string>;
 }) {
   const { t } = useTranslation();
   const dashboardQuery = useQuery({
@@ -226,20 +275,19 @@ export function TodayPage({
               </div>
             </header>
 
-            <section
-              className="today-section today-section-upcoming sbs-motion-reveal"
-              style={{ animationDelay: '100ms' }}
+            <TodayModuleSection
+              className="today-section-upcoming"
+              title={t('m5s5.dashboard.upcomingTitle')}
+              animationDelay="100ms"
             >
-              <h2 className="today-section-title">
-                {t('m5s5.dashboard.upcomingTitle')}
-              </h2>
-              <div className="today-stream">
+              <div className="today-stream today-stream-upcoming">
                 {dashboardQuery.data.upcoming.length > 0 ? (
                   dashboardQuery.data.upcoming.map((item: DashboardItem) => (
                     <VisualMemoryCard
                       key={item.id}
                       item={item}
                       variant="upcoming"
+                      loadMemoryImage={loadMemoryImage}
                     />
                   ))
                 ) : (
@@ -248,16 +296,14 @@ export function TodayPage({
                   </p>
                 )}
               </div>
-            </section>
+            </TodayModuleSection>
 
-            <section
-              className="today-section today-section-recent sbs-motion-reveal"
-              style={{ animationDelay: '200ms' }}
+            <TodayModuleSection
+              className="today-section-recent"
+              title={t('m5s5.dashboard.recentTitle')}
+              animationDelay="200ms"
             >
-              <h2 className="today-section-title">
-                {t('m5s5.dashboard.recentTitle')}
-              </h2>
-              <div className="today-stream">
+              <div className="today-stream today-stream-recent">
                 {dashboardQuery.data.recentShared.length > 0 ? (
                   dashboardQuery.data.recentShared.map(
                     (item: DashboardItem) => (
@@ -265,6 +311,7 @@ export function TodayPage({
                         key={item.id}
                         item={item}
                         variant="recent"
+                        loadMemoryImage={loadMemoryImage}
                       />
                     ),
                   )
@@ -274,23 +321,22 @@ export function TodayPage({
                   </p>
                 )}
               </div>
-            </section>
+            </TodayModuleSection>
 
             {dashboardQuery.data.retrospective ? (
-              <section
-                className="today-section today-section-retrospective sbs-motion-reveal"
-                style={{ animationDelay: '300ms' }}
+              <TodayModuleSection
+                className="today-section-retrospective"
+                title={t('m5s5.dashboard.retrospectiveTitle')}
+                animationDelay="300ms"
               >
-                <h2 className="today-section-title">
-                  {t('m5s5.dashboard.retrospectiveTitle')}
-                </h2>
-                <div className="today-stream">
+                <div className="today-retrospective-container">
                   <VisualMemoryCard
                     item={dashboardQuery.data.retrospective}
                     variant="retrospective"
+                    loadMemoryImage={loadMemoryImage}
                   />
                 </div>
-              </section>
+              </TodayModuleSection>
             ) : null}
           </div>
         ))}

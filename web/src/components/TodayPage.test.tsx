@@ -77,4 +77,48 @@ describe('TodayPage', () => {
     expect(html).toContain('Marie');
     expect(html).toContain('href="/story/memories/new"');
   });
+
+  it('renders image-first card when previewAttachmentId is present and typography-first card when absent', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [
+        {
+          id: 'mem-photo',
+          type: 'MEMORY',
+          titleOrText: 'Photo Memory',
+          occurredOn: new Date('2026-09-01T12:00:00Z'),
+          previewAttachmentId: 'att-123',
+        },
+        {
+          id: 'mem-text',
+          type: 'MEMORY',
+          titleOrText: 'Text Memory',
+          occurredOn: new Date('2026-08-30T12:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={{} as M4ProductApis}
+            spaceId="space-1"
+            loadMemoryImage={() => Promise.resolve('blob:http://localhost/mock')}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).toContain('today-card-has-media');
+    expect(html).toContain('today-card-typography-first');
+    expect(html).toContain('Photo Memory');
+    expect(html).toContain('Text Memory');
+  });
 });

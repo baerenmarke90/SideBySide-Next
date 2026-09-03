@@ -25,13 +25,10 @@
 
 .quick-create-polished .quick-create-trigger[aria-expanded="true"] {
   border-color: var(--color-brand);
-  background: linear-gradient(
-    135deg,
-    var(--color-brand-surface),
-    var(--color-surface-subtle)
-  );
+  background: var(--color-surface-raised);
+  color: var(--color-text);
   box-shadow:
-    0 0 0 2px var(--color-brand-glow),
+    0 0 0 1.5px var(--color-brand),
     var(--shadow-card);
 }
 
@@ -39,11 +36,14 @@
   position: static;
   display: grid;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   margin-top: var(--space-3);
-  border-color: var(--color-brand-glow);
+  border: 1px solid var(--color-brand-glow);
+  border-radius: var(--radius-card);
   padding: var(--space-3);
   background: var(--color-surface-overlay);
   box-shadow: var(--shadow-soft);
@@ -60,8 +60,29 @@
 
 .quick-create-tile-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.shell-primary-action .quick-create-tile-grid {
+  grid-template-columns: 1fr;
+  width: 100%;
+  min-width: 0;
+}
+
+.shell-primary-action .quick-create-tile {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.shell-primary-action .quick-create-tile span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .quick-create-polished .quick-create-tile {
@@ -152,7 +173,8 @@
 
 .mobile-quick-create .quick-create-trigger {
   width: auto;
-  min-height: 46px;
+  min-height: 48px;
+  min-width: 48px;
   border-radius: var(--radius-pill);
   padding: 0 var(--space-5);
   background: linear-gradient(

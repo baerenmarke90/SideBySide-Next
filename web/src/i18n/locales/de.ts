@@ -244,7 +244,7 @@ const de = {
     photos_other: '{{count}} Fotos',
   },
   memory: {
-    backToStory: '← Zurück zur Story',
+    backToStory: '← Zurück zu Momente',
     eyebrow: 'Moment festhalten',
     heading: 'Neue Erinnerung',
     intro:

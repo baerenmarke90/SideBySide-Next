@@ -92,12 +92,15 @@
 
 .drop-cap::first-letter {
   float: left;
-  padding-top: 0.1rem;
-  padding-right: 0.5rem;
-  color: var(--color-brand-strong);
   font-family: var(--font-display);
-  font-size: 5rem;
-  line-height: 0.8;
+  font-size: 3.35rem;
+  line-height: 0.82;
+  font-weight: 700;
+  margin-top: 0.12rem;
+  margin-right: 0.55rem;
+  margin-bottom: -0.1rem;
+  color: var(--color-brand);
+  text-transform: uppercase;
 }
 
 .memory-detail-body {

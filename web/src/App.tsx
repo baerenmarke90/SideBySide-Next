@@ -544,7 +544,13 @@ function AuthenticatedApp({
           />
           <Route
             path={appRoutePath('today')}
-            element={<TodayPage apis={m4Apis} spaceId={spaceId} />}
+            element={
+              <TodayPage
+                apis={m4Apis}
+                spaceId={spaceId}
+                loadMemoryImage={loadMemoryImage}
+              />
+            }
           />
           <Route
             path={ACTIVITY_ROUTE}
