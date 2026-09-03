@@ -32,17 +32,13 @@ import kotlinx.serialization.Contextual
  * 
  *
  * @param title 
- * @param icon 
  */
 @Serializable
 
 data class CollectionCreate (
 
     @SerialName(value = "title")
-    val title: kotlin.String,
-
-    @SerialName(value = "icon")
-    val icon: kotlin.String? = null
+    val title: kotlin.String
 
 ) {
 

@@ -47,7 +47,6 @@ describe('SharedPlanningOverviewPage', () => {
               createdAt: new Date('2026-08-01T10:00:00Z'),
               createdBy: 'account-1',
               creator: { id: 'account-1', displayName: 'Lea' },
-              icon: '🧳',
               id: 'collection-1',
               items: [],
               spaceId: 'space-1',
@@ -74,8 +73,9 @@ describe('SharedPlanningOverviewPage', () => {
       </QueryClientProvider>,
     );
 
-    // #606: the icon field existed on the API but was never exposed here.
-    expect(html).toContain('🧳 Packing list');
-    expect(html).toContain('collection-icon');
+    // #373: collection icon removed end-to-end
+    expect(html).toContain('Packing list');
+    expect(html).not.toContain('🧳');
+    expect(html).not.toContain('collection-icon');
   });
 });

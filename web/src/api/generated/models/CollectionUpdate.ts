@@ -24,12 +24,6 @@ export interface CollectionUpdate {
      * @type {string}
      * @memberof CollectionUpdate
      */
-    icon?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CollectionUpdate
-     */
     title?: string;
 }
 
@@ -50,7 +44,6 @@ export function CollectionUpdateFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
         
-        'icon': json['icon'] === undefined ? undefined : json['icon'] === null ? null : json['icon'],
         'title': json['title'] == null ? undefined : json['title'],
     };
 }
@@ -66,7 +59,6 @@ export function CollectionUpdateToJSONTyped(value?: CollectionUpdate | null, ign
 
     return {
         
-        'icon': value['icon'],
         'title': value['title'],
     };
 }

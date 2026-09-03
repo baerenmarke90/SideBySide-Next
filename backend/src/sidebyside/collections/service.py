@@ -152,13 +152,12 @@ def create_collection(
     context: AuthorizationContext,
     *,
     title: str,
-    icon: str | None,
 ) -> Collection:
     collection = Collection(
         space_id=context.space_id,
         owner_id=context.account_id,
         privacy_class=shared_privacy(),
-        payload=CollectionPayload(title=_normalize_title(title), icon=icon),
+        payload=CollectionPayload(title=_normalize_title(title)),
     )
     session.add(collection)
     _flush(session)
@@ -183,19 +182,15 @@ def update_collection(
     expected_version: int,
     changed_fields: frozenset[str],
     title: str | None,
-    icon: str | None,
 ) -> Collection:
     collection = require_writable_locked(session, Collection, context, collection_id)
     _ensure_expected_version(collection, expected_version)
 
     next_title = collection.payload.title
-    next_icon = collection.payload.icon
     if "title" in changed_fields:
         assert title is not None
         next_title = _normalize_title(title)
-    if "icon" in changed_fields:
-        next_icon = icon
-    collection.payload = CollectionPayload(title=next_title, icon=next_icon)
+    collection.payload = CollectionPayload(title=next_title)
 
     _flush(session)
     _record_collection(session, collection, context.account_id, EventType.COLLECTION_UPDATED)

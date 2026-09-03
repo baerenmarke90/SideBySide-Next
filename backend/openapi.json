@@ -852,17 +852,6 @@
       "CollectionCreate": {
         "additionalProperties": false,
         "properties": {
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -891,17 +880,6 @@
           },
           "creator": {
             "$ref": "#/components/schemas/AuthorSummary"
-          },
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
           },
           "id": {
             "format": "uuid",
@@ -939,7 +917,6 @@
           "spaceId",
           "createdBy",
           "title",
-          "icon",
           "version",
           "createdAt",
           "updatedAt",
@@ -1104,17 +1081,6 @@
       "CollectionUpdate": {
         "additionalProperties": false,
         "properties": {
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -3923,17 +3889,6 @@
       "PrivateCollectionCreate": {
         "additionalProperties": false,
         "properties": {
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -3954,17 +3909,6 @@
             "format": "date-time",
             "title": "Createdat",
             "type": "string"
-          },
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
           },
           "id": {
             "format": "uuid",
@@ -4007,7 +3951,6 @@
           "spaceId",
           "ownerId",
           "title",
-          "icon",
           "version",
           "createdAt",
           "updatedAt",
@@ -4161,17 +4104,6 @@
       "PrivateCollectionUpdate": {
         "additionalProperties": false,
         "properties": {
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
           "title": {
             "title": "Title",
             "type": "string"

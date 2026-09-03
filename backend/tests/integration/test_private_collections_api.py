@@ -16,7 +16,6 @@ from tests.conftest import auth, make_account, make_space, requires_database, si
 pytestmark = [pytest.mark.integration, requires_database]
 
 SECRET_COLLECTION_TITLE = "Private plans for December"
-SECRET_COLLECTION_ICON = "private-surprise-icon"
 SECRET_ITEM_TITLE = "Book the hidden surprise"
 
 
@@ -60,7 +59,7 @@ def create_collection(
 ):  # type: ignore[no-untyped-def]
     return client.post(
         collection_path(couple[space_key].id),
-        json={"title": title, "icon": SECRET_COLLECTION_ICON},
+        json={"title": title},
         headers=auth(couple[token_key]),
     )
 
@@ -77,7 +76,6 @@ class TestPrivateCollection:
         assert collection["ownerId"] == str(couple["anna"].id)
         assert collection["spaceId"] == str(couple["space"].id)
         assert collection["title"] == SECRET_COLLECTION_TITLE
-        assert collection["icon"] == SECRET_COLLECTION_ICON
         assert collection["items"] == []
         assert collection["version"] == 1
         assert created.headers["ETag"] == '"1"'
@@ -338,7 +336,6 @@ class TestPrivateCollectionEventRedaction:
         )
         for secret in (
             SECRET_COLLECTION_TITLE,
-            SECRET_COLLECTION_ICON,
             SECRET_ITEM_TITLE,
         ):
             assert secret not in serialized

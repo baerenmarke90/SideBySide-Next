@@ -566,7 +566,6 @@
     <string name="private_collections_empty">Noch keine privaten Listen.</string>
     <string name="private_collection_add">Liste hinzufügen</string>
     <string name="private_collection_title_hint">Titel</string>
-    <string name="private_collection_icon_hint">Symbol (optional)</string>
     <string name="private_collection_open">Öffnen</string>
     <string name="private_collection_edit">Bearbeiten</string>
     <string name="private_collection_edit_title">Liste bearbeiten</string>
@@ -642,7 +641,6 @@
     <string name="collections_empty">Noch keine gemeinsamen Listen.</string>
     <string name="collection_add">Liste hinzufügen</string>
     <string name="collection_title_hint">Titel</string>
-    <string name="collection_icon_hint">Symbol (optional)</string>
     <string name="collection_open">Öffnen</string>
     <string name="collection_edit">Bearbeiten</string>
     <string name="collection_edit_title">Liste bearbeiten</string>
