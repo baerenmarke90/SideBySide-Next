@@ -319,7 +319,7 @@ export function StoryProductPage({
                 ) : null}
                 <div className="momente-hero-body">
                   <span className="momente-hero-kicker">
-                    ✨ {t('story.nostalgiaKicker')}
+                    ✨ {t('story.featuredKicker')}
                   </span>
                   {featuredItem.kind === 'HEART_MOMENT' ? (
                     <blockquote className="momente-hero-quote">
@@ -376,11 +376,7 @@ export function StoryProductPage({
                 {t('story.streamAll')}
               </button>
             </div>
-            <div
-              className="momente-stream-track"
-              tabIndex={0}
-              aria-label={t('story.discoverHeading')}
-            >
+            <div className="momente-stream-track">
               {items.slice(0, 10).map((item) => {
                 const presentation = storyItemPresentation(item, t);
                 const firstAttachment =
@@ -467,7 +463,7 @@ export function StoryProductPage({
                   {t('story.milestonesTitle')}
                 </h4>
                 <p className="momente-sub-card-desc">
-                  {t('story.milestonesCount', { count: milestones.length })}
+                  {t('story.milestonesDesc')}
                 </p>
               </div>
             ) : null}

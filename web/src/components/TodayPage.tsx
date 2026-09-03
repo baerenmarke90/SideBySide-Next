@@ -195,6 +195,10 @@ export function TodayPage({
         ) : (
           <div className="today-content">
             <header className="today-hero sbs-motion-reveal">
+              <div className="today-hero-badge" aria-hidden="true">
+                <span className="today-hero-badge-dot" />
+                <span>{t('m5s5.dashboard.durationTitle')}</span>
+              </div>
               <h1 className="today-hero-greeting">
                 {dashboardQuery.data.space.partner
                   ? t('m5s5.dashboard.partner', {
@@ -202,15 +206,24 @@ export function TodayPage({
                     })
                   : t('m5s5.dashboard.durationTitle')}
               </h1>
-              <p className="today-hero-subtitle">
-                {dashboardQuery.data.relationshipDuration
-                  ? t('m5s5.dashboard.durationDays', {
-                      count:
-                        dashboardQuery.data.relationshipDuration.daysTogether,
-                    })
-                  : t('m5s5.dashboard.durationEmpty')}
-              </p>
-              <ThinkingOfYouHero apis={apis} spaceId={spaceId} />
+              <div className="today-hero-meta-row">
+                {dashboardQuery.data.relationshipDuration ? (
+                  <p className="today-hero-subtitle">
+                    <span className="today-hero-pill-icon" aria-hidden="true">
+                      ★
+                    </span>
+                    <span>
+                      {t('m5s5.dashboard.durationDays', {
+                        count:
+                          dashboardQuery.data.relationshipDuration.daysTogether,
+                      })}
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+              <div className="today-hero-action-container">
+                <ThinkingOfYouHero apis={apis} spaceId={spaceId} />
+              </div>
             </header>
 
             <section

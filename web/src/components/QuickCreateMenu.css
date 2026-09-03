@@ -25,14 +25,14 @@
 
 .quick-create-polished .quick-create-trigger[aria-expanded="true"] {
   border-color: var(--color-brand);
-  box-shadow: var(--shadow-card);
-}
-
-.quick-create-chevron {
-  margin-left: auto;
-  color: var(--color-text-secondary);
-  font-size: 1rem;
-  line-height: 1;
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-surface),
+    var(--color-surface-subtle)
+  );
+  box-shadow:
+    0 0 0 2px var(--color-brand-glow),
+    var(--shadow-card);
 }
 
 .quick-create-polished .quick-create-menu {
@@ -66,7 +66,7 @@
 
 .quick-create-polished .quick-create-tile {
   display: grid;
-  min-height: 68px;
+  min-height: 52px;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-2);
@@ -74,9 +74,10 @@
   border-radius: var(--radius-medium);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface-raised);
-  box-shadow: 0 2px 8px var(--color-shadow-soft);
-  font-size: 0.86rem;
-  line-height: 1.2;
+  box-shadow: 0 2px 6px var(--color-shadow-soft);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.25;
   transition:
     transform var(--motion-fast),
     border-color var(--motion-fast),
@@ -86,13 +87,13 @@
 .quick-create-polished .quick-create-tile:hover {
   transform: translateY(-1px);
   border-color: var(--color-brand-glow);
-  background: var(--color-surface-subtle);
+  background: var(--color-brand-surface);
 }
 
 .quick-create-tile-icon {
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: 1.85rem;
+  height: 1.85rem;
   place-items: center;
   border-radius: var(--radius-medium);
   background: var(--color-brand-surface);
@@ -172,10 +173,6 @@
   stroke: #fff;
 }
 
-.mobile-quick-create .quick-create-trigger .quick-create-chevron {
-  color: rgba(255, 255, 255, 0.85);
-}
-
 .mobile-quick-create .quick-create-polished .quick-create-menu {
   position: absolute;
   left: 50%;
@@ -193,6 +190,10 @@
   box-shadow: 0 16px 36px var(--color-shadow-soft);
   border: 1px solid var(--color-brand-glow);
   z-index: 100;
+}
+
+.mobile-quick-create .quick-create-tile {
+  min-height: 48px;
 }
 
 .mobile-quick-create .quick-create-tile-grid {

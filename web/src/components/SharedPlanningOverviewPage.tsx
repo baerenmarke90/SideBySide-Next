@@ -66,15 +66,13 @@ function PlanningCard({
   meta?: string | null;
   to: string;
 }) {
-  const { t } = useTranslation();
   return (
-    <li className="planning-card">
-      <div className="planning-card-copy">
-        <h3>{title}</h3>
-        {meta ? <p className="planning-meta">{meta}</p> : null}
-      </div>
-      <Link className="button-link secondary-link" to={to}>
-        {t('m5s3.common.open')}
+    <li className="planning-card-item">
+      <Link className="planning-card planning-card-link" to={to}>
+        <div className="planning-card-copy">
+          <h3>{title}</h3>
+          {meta ? <p className="planning-meta">{meta}</p> : null}
+        </div>
       </Link>
     </li>
   );

@@ -96,15 +96,24 @@
 .story-card-link .story-card-memory.has-image .story-media-placeholder {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
-  margin: 0 0 var(--space-4);
+  max-height: 460px;
+  aspect-ratio: 16 / 10;
+  margin: var(--space-2) 0 var(--space-4);
+  border-radius: var(--radius-large);
   background: var(--color-surface-subtle);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
 .story-card-link .story-card-memory.has-image .story-media-preview {
   height: auto;
   object-fit: cover;
-  object-position: center;
+  object-position: center 30%;
+  transition: transform var(--motion-fast);
+}
+
+.story-card-link:hover .story-card-memory.has-image .story-media-preview {
+  transform: scale(1.015);
 }
 
 .story-card-link .story-card-memory.has-image .story-media-skeleton,

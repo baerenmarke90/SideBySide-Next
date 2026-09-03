@@ -20,14 +20,30 @@
 .private-area-context {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-surface) 0%,
+    var(--color-surface-raised) 100%
+  );
+  border: 1px solid var(--color-brand-glow);
   border-left: 4px solid var(--color-brand);
 }
 
 body.theme-vault .private-area-context {
-  background: linear-gradient(135deg, #161a26 0%, #1e2436 100%);
-  border-color: #2e374f;
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-surface) 0%,
+    var(--color-surface-raised) 100%
+  );
+  border: 1px solid var(--color-brand-glow);
+  border-left: 4px solid var(--color-brand);
+}
+
+:root[data-theme="dark"] body.theme-vault .private-area-context {
+  background: linear-gradient(135deg, #291b24 0%, #1e131b 100%);
+  border-color: rgba(255, 101, 142, 0.25);
   border-left-color: var(--color-brand);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .private-area-title-row {
@@ -58,15 +74,21 @@ body.theme-vault .private-area-context {
   border-radius: 999px;
   background: var(--color-brand-surface);
   color: var(--color-brand-text);
-  border: 1px solid var(--color-brand);
+  border: 1px solid var(--color-brand-glow);
   font-size: 0.85rem;
   font-weight: 700;
 }
 
 body.theme-vault .private-area-badge {
-  background: rgba(255, 107, 107, 0.15);
-  color: #ff8585;
-  border-color: rgba(255, 107, 107, 0.4);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  border-color: var(--color-brand-glow);
+}
+
+:root[data-theme="dark"] body.theme-vault .private-area-badge {
+  background: rgba(255, 101, 142, 0.15);
+  color: #ff94b1;
+  border-color: rgba(255, 101, 142, 0.35);
 }
 
 .private-badge-dot {
@@ -75,7 +97,7 @@ body.theme-vault .private-area-badge {
   height: 7px;
   border-radius: 50%;
   background: var(--color-brand);
-  box-shadow: 0 0 8px var(--color-brand);
+  box-shadow: 0 0 8px var(--color-brand-glow);
 }
 
 .private-area-nav {
@@ -291,20 +313,32 @@ body.theme-vault .private-area-badge {
 
 /* M5: Vault Mode Contrast & Readability */
 body.theme-vault .private-area-nav a {
-  background: var(--color-surface);
+  background: var(--color-surface-raised);
   color: var(--color-text-secondary);
-  border-color: var(--color-border-subtle);
+  border: 1px solid var(--color-border-subtle);
+  transition: all var(--motion-fast);
 }
 
 body.theme-vault .private-area-nav a:hover:not([aria-current="page"]) {
   background: var(--color-surface-subtle);
   color: var(--color-text);
+  border-color: var(--color-border);
 }
 
 body.theme-vault .private-area-nav a[aria-current="page"] {
-  background: var(--color-surface-subtle);
-  color: #ffffff;
-  border-color: var(--color-border);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  border-color: var(--color-brand);
+  box-shadow: 0 2px 8px var(--color-shadow-soft);
+}
+
+:root[data-theme="dark"]
+  body.theme-vault
+  .private-area-nav
+  a[aria-current="page"] {
+  background: var(--color-brand-surface);
+  color: #fcf8fa;
+  border-color: var(--color-brand);
 }
 
 body.theme-vault .private-area-card,

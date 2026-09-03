@@ -271,33 +271,33 @@
   text-align: center;
 }
 
-/* Image-first memory. Keep these variants after the generic card rules so
- * their more specific composition never depends on source-order accidents. */
+/* Image-first memory. Photographic framing with generous breathing room. */
 .story-card-memory.has-image {
   display: flex;
   flex-direction: column;
-  padding: 0;
+  padding: var(--space-5);
 }
 
 .story-card-memory.has-image .memory-preview-container {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  max-height: 460px;
+  aspect-ratio: 16 / 10;
   object-fit: cover;
-}
-
-.story-card-memory.has-image .story-card-meta,
-.story-card-memory.has-image h4,
-.story-card-memory.has-image .story-preview,
-.story-card-memory.has-image .story-card-footer {
-  padding: 0 var(--space-5);
+  object-position: center 30%;
+  border-radius: var(--radius-large);
+  margin: var(--space-2) 0 var(--space-4);
 }
 
 .story-card-memory.has-image .story-card-meta {
-  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.story-card-memory.has-image h4 {
+  margin-top: 0;
 }
 
 .story-card-memory.has-image .story-card-footer {
-  margin-bottom: var(--space-5);
+  margin-top: var(--space-3);
 }
 
 /* Compact Filter Bar */

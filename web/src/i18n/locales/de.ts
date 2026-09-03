@@ -206,18 +206,17 @@ const de = {
     viewToggleAria: 'Ansicht wählen',
     streamAll: 'Alle in der Zeitleiste ansehen →',
     featuredHighlight: 'Besonderer Moment',
-    nostalgiaKicker: 'Weißt du noch?',
+    featuredKicker: 'Aus euren Momenten',
     milestonesKicker: 'Gemeinsam erreicht',
     milestonesTitle: 'Meilensteine & Erfolge',
+    milestonesDesc: 'Besondere Meilensteine auf eurem gemeinsamen Weg.',
     chaptersKicker: 'Unsere Reise',
     chaptersTitle: 'Kapitel unserer Geschichte',
     chaptersDesc:
       'Gemeinsame Erlebnisse und Reisen nach Lebensabschnitten bündeln.',
-    milestonesCount_one: '{{count}} besonderer Meilenstein erreicht.',
-    milestonesCount_other:
-      '{{count}} besondere Meilensteine gemeinsam erreicht.',
-    yearArchiveTitle: 'Jahresarchiv',
-    yearArchiveSubtitle: 'Reist zurück in vergangene Momente',
+    yearArchiveTitle: 'Jahre entdecken',
+    yearArchiveSubtitle:
+      'Direkt zu den Momenten eines bestimmten Jahres springen',
     loadingAria: 'Momente werden geladen',
     loadErrorTitle: 'Die Momente konnten nicht geladen werden.',
     loadErrorFallback: 'Bitte versuche es erneut.',

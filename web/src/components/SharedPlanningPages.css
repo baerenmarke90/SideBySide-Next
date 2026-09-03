@@ -34,9 +34,15 @@
   list-style: none;
 }
 
+.planning-card-item {
+  list-style: none;
+  width: 100%;
+}
+
 .planning-card {
   display: flex;
   min-width: 0;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
@@ -45,16 +51,21 @@
   padding: var(--space-4) var(--space-5);
   background: var(--color-surface);
   box-shadow: var(--shadow-soft);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
   transition:
     transform var(--motion-fast),
     border-color var(--motion-fast),
     box-shadow var(--motion-fast);
 }
 
-.planning-card:hover {
+.planning-card:hover,
+.planning-card:focus-visible {
   transform: translateY(-2px);
   border-color: var(--color-brand-glow);
   box-shadow: var(--shadow-card);
+  outline: none;
 }
 
 .planning-card-copy {
@@ -253,17 +264,20 @@
 
 /* Future Map / Zukunftslandkarte Redesign */
 .future-map {
+  --future-map-spine-x: 1.5rem;
+  --future-map-padding: 3.25rem;
   position: relative;
   max-width: 800px;
   margin: var(--space-8) auto;
-  padding-left: var(--space-8);
+  padding-left: var(--future-map-padding);
 }
 
 .future-map-path {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 23px;
+  left: var(--future-map-spine-x);
+  transform: translateX(-50%);
   width: 4px;
   border-radius: var(--radius-pill);
   background: linear-gradient(
@@ -283,7 +297,8 @@
   position: absolute;
   z-index: 2;
   top: var(--space-2);
-  left: -23px;
+  left: calc(var(--future-map-spine-x) - var(--future-map-padding));
+  transform: translateX(-50%);
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -384,7 +399,9 @@
   }
 
   .future-map {
-    padding-left: var(--space-6);
+    --future-map-spine-x: 1.25rem;
+    --future-map-padding: 2.75rem;
+    padding-left: var(--future-map-padding);
   }
 }
 
