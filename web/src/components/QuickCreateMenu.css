@@ -128,15 +128,20 @@
 
 .mobile-quick-create {
   position: fixed;
-  z-index: 65;
-  right: var(--space-4);
-  bottom: calc(5.75rem + env(safe-area-inset-bottom));
-  width: min(22rem, calc(100vw - 2rem));
+  z-index: 90;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  width: min(24rem, calc(100vw - 2rem));
+  display: flex;
+  justify-content: center;
   pointer-events: none;
 }
 
 .mobile-quick-create .quick-create {
+  position: relative;
   pointer-events: none;
+  width: auto;
 }
 
 .mobile-quick-create .quick-create-trigger,
@@ -146,26 +151,48 @@
 
 .mobile-quick-create .quick-create-trigger {
   width: auto;
-  min-height: 48px;
-  margin-left: auto;
+  min-height: 46px;
   border-radius: var(--radius-pill);
-  padding-inline: var(--space-4);
-  background: var(--color-surface-raised);
-  box-shadow: 0 10px 28px var(--color-shadow-brand);
+  padding: 0 var(--space-5);
+  background: linear-gradient(
+    135deg,
+    var(--color-brand),
+    var(--color-brand-strong)
+  );
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 20px var(--color-shadow-brand);
+  font-weight: 750;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mobile-quick-create .quick-create-trigger .shell-nav-icon svg {
+  stroke: #fff;
+}
+
+.mobile-quick-create .quick-create-trigger .quick-create-chevron {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .mobile-quick-create .quick-create-polished .quick-create-menu {
   position: absolute;
-  top: auto;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   bottom: calc(100% + var(--space-3));
-  left: auto;
-  width: min(22rem, calc(100vw - 2rem));
-  max-height: min(70vh, 32rem);
+  top: auto;
+  right: auto;
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: min(72vh, 32rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   margin-top: 0;
-  background: var(--color-surface-overlay);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: 0 16px 36px var(--color-shadow-soft);
+  border: 1px solid var(--color-brand-glow);
+  z-index: 100;
 }
 
 .mobile-quick-create .quick-create-tile-grid {

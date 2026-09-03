@@ -38,35 +38,55 @@ fun DestinationGlyph(
     }
 }
 
-/** A clock face: what is relevant now. */
+/** An affectionate heart: Wir / our place today. */
 private fun DrawScope.drawToday(tint: Color, stroke: Stroke) {
-    val radius = size.minDimension * 0.36f
-    drawCircle(color = tint, radius = radius, style = stroke)
-    drawLine(
-        color = tint,
-        start = Offset(size.width / 2f, size.height / 2f),
-        end = Offset(size.width / 2f, size.height * 0.28f),
-        strokeWidth = stroke.width,
-    )
-    drawLine(
-        color = tint,
-        start = Offset(size.width / 2f, size.height / 2f),
-        end = Offset(size.width * 0.68f, size.height * 0.58f),
-        strokeWidth = stroke.width,
-    )
-}
-
-/** A house: the shared history is where the couple lives. */
-private fun DrawScope.drawStory(tint: Color, stroke: Stroke) {
     val path = Path().apply {
-        moveTo(size.width * 0.2f, size.height * 0.48f)
-        lineTo(size.width * 0.5f, size.height * 0.2f)
-        lineTo(size.width * 0.8f, size.height * 0.48f)
-        lineTo(size.width * 0.8f, size.height * 0.8f)
-        lineTo(size.width * 0.2f, size.height * 0.8f)
+        moveTo(size.width * 0.5f, size.height * 0.78f)
+        cubicTo(
+            size.width * 0.15f, size.height * 0.52f,
+            size.width * 0.15f, size.height * 0.22f,
+            size.width * 0.35f, size.height * 0.22f,
+        )
+        cubicTo(
+            size.width * 0.45f, size.height * 0.22f,
+            size.width * 0.5f, size.height * 0.32f,
+            size.width * 0.5f, size.height * 0.32f,
+        )
+        cubicTo(
+            size.width * 0.5f, size.height * 0.32f,
+            size.width * 0.55f, size.height * 0.22f,
+            size.width * 0.65f, size.height * 0.22f,
+        )
+        cubicTo(
+            size.width * 0.85f, size.height * 0.22f,
+            size.width * 0.85f, size.height * 0.52f,
+            size.width * 0.5f, size.height * 0.78f,
+        )
         close()
     }
     drawPath(path = path, color = tint, style = stroke)
+}
+
+/** A camera frame: Momente / shared history. */
+private fun DrawScope.drawStory(tint: Color, stroke: Stroke) {
+    val path = Path().apply {
+        moveTo(size.width * 0.2f, size.height * 0.35f)
+        lineTo(size.width * 0.32f, size.height * 0.35f)
+        lineTo(size.width * 0.38f, size.height * 0.24f)
+        lineTo(size.width * 0.62f, size.height * 0.24f)
+        lineTo(size.width * 0.68f, size.height * 0.35f)
+        lineTo(size.width * 0.8f, size.height * 0.35f)
+        lineTo(size.width * 0.8f, size.height * 0.78f)
+        lineTo(size.width * 0.2f, size.height * 0.78f)
+        close()
+    }
+    drawPath(path = path, color = tint, style = stroke)
+    drawCircle(
+        color = tint,
+        radius = size.minDimension * 0.16f,
+        center = Offset(size.width * 0.5f, size.height * 0.56f),
+        style = stroke,
+    )
 }
 
 /** A checklist board. */

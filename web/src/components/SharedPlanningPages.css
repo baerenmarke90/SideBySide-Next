@@ -40,11 +40,21 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-large);
-  padding: var(--space-4);
-  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
   box-shadow: var(--shadow-soft);
+  transition:
+    transform var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.planning-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-brand-glow);
+  box-shadow: var(--shadow-card);
 }
 
 .planning-card-copy {
@@ -53,6 +63,10 @@
 
 .planning-card h3 {
   margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 750;
+  color: var(--color-text);
   overflow-wrap: anywhere;
 }
 
