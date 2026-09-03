@@ -112,7 +112,7 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
             {
               id: PLAN_ID,
               type: 'PLAN',
-              titleOrText: 'Späterer Herbsturlaub im Oktober',
+              titleOrText: 'Later October trip',
               scheduledAt: '2026-10-20T10:00:00Z',
               presentationRole: 'context',
             },
@@ -135,7 +135,7 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
             {
               id: PLAN_ID,
               type: 'PLAN',
-              titleOrText: 'Früherer Ausflug im September',
+              titleOrText: 'Earlier September outing',
               scheduledAt: '2026-09-05T10:00:00Z',
               presentationRole: 'context',
             },
@@ -153,9 +153,9 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
         id: PLAN_ID,
         spaceId: SPACE_ID,
         title: isRescheduled
-          ? 'Früherer Ausflug im September'
-          : 'Späterer Herbsturlaub im Oktober',
-        description: 'Gemeinsame Planung',
+          ? 'Earlier September outing'
+          : 'Later October trip',
+        description: 'Shared planning',
         status: 'PLANNED',
         plannedStart: isRescheduled
           ? '2026-09-05T10:00:00Z'
@@ -187,8 +187,8 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
       await fulfillJson({
         id: PLAN_ID,
         spaceId: SPACE_ID,
-        title: 'Früherer Ausflug im September',
-        description: 'Gemeinsame Planung',
+        title: 'Earlier September outing',
+        description: 'Shared planning',
         status: 'PLANNED',
         plannedStart: '2026-09-05T10:00:00Z',
         plannedEnd: null,
@@ -229,9 +229,7 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
       level: 1,
     }),
   ).toBeVisible();
-  await expect(
-    page.getByText('Späterer Herbsturlaub im Oktober'),
-  ).toBeVisible();
+  await expect(page.getByText('Later October trip')).toBeVisible();
   expect(dashboardRequestCount).toBe(1);
 
   // Step 2: Navigate to plan details via in-app UI click (NO page.reload())
@@ -239,7 +237,7 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
   await expect(page).toHaveURL(new RegExp(`/plan/plans/${PLAN_ID}$`));
   await expect(
     page.getByRole('heading', {
-      name: 'Späterer Herbsturlaub im Oktober',
+      name: 'Later October trip',
       level: 1,
     }),
   ).toBeVisible();
@@ -266,13 +264,11 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
   // Step 5: Verify earlier item is now visible in the primary context slot
   await expect(
     page.getByRole('heading', {
-      name: 'Früherer Ausflug im September',
+      name: 'Earlier September outing',
       level: 3,
     }),
   ).toBeVisible();
-  await expect(page.getByText('Späterer Herbsturlaub im Oktober')).toHaveCount(
-    0,
-  );
+  await expect(page.getByText('Later October trip')).toHaveCount(0);
 
   // Step 6: Verify no unexpected network requests occurred
   expect(unexpectedRequests).toEqual([]);

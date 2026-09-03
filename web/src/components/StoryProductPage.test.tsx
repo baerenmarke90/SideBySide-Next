@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReferenceApis } from '../client/referenceFlow';
+import de from '../i18n/locales/de';
 import { StoryProductPage } from './StoryProductPage';
 
 const loadMemoryImage = async () => 'blob:test-image';
@@ -135,10 +136,8 @@ describe('StoryProductPage', () => {
       nextCursor: null,
     });
 
-    expect(html).toContain('Meilensteine &amp; gemeinsame Schritte');
-    expect(html).toContain(
-      'Große und kleine Stationen eurer gemeinsamen Geschichte.',
-    );
+    expect(html).toContain(de.story.milestonesTitle.replace('&', '&amp;'));
+    expect(html).toContain(de.story.milestonesDesc);
     expect(html).not.toContain('Erfolge');
     expect(html).toContain('href="/story?tab=timeline&amp;type=MILESTONE"');
   });
