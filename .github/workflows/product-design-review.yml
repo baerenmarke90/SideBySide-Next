@@ -27,12 +27,21 @@ jobs:
           files="$(gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')"
           printf '%s\n' "$files"
 
-          if grep -Eq '^(web/src/|android/app/src/main/java/|android/app/src/main/res/)' <<< "$files"; then
+          # Generated OpenAPI clients are contract artifacts, not product UI.
+          # They may live below web/src but must not force a visual-design review
+          # when an API-only change regenerates them.
+          ui_files="$(
+            grep -E '^(web/src/|android/app/src/main/java/|android/app/src/main/res/)' <<< "$files" \
+              | grep -Ev '^web/src/api/generated/' \
+              || true
+          )"
+
+          if [ -n "$ui_files" ]; then
+            printf 'User-facing client paths changed:\n%s\n' "$ui_files"
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "User-facing client paths changed."
           else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No user-facing client path changed."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Verify explicit UI impact decision
