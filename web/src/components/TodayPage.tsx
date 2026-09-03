@@ -27,6 +27,17 @@ function formatDate(value: Date | null): string | null {
 
 type TodayCardVariant = 'upcoming' | 'recent' | 'retrospective';
 
+const KIND_ICONS: Record<string, string> = {
+  HEART_MOMENT: '❤️',
+  MILESTONE: '🏆',
+  MEMORY: '📸',
+  PLAN: '🗓️',
+  WISH: '✨',
+  PLACE: '📍',
+  CHAPTER: '📖',
+  COLLECTION: '📝',
+};
+
 function VisualMemoryCard({
   item,
   variant,
@@ -41,6 +52,7 @@ function VisualMemoryCard({
     formatDate(item.scheduledAt) ??
     formatDate(item.createdAt);
   const shellClass = `today-card-shell today-card-shell-${variant}${path ? ' today-card-link' : ''}`;
+  const kindIcon = KIND_ICONS[item.type] ?? '✨';
 
   const inner = (
     <div
@@ -51,7 +63,17 @@ function VisualMemoryCard({
         <span className="today-card-visual-line" />
       </div>
       <div className="today-card-content">
-        <span className="today-card-kind">{t(`m5s5.kind.${item.type}`)}</span>
+        <div className="today-card-badges">
+          <span className="today-card-kind">
+            <span className="today-card-kind-icon" aria-hidden="true">{kindIcon}</span>
+            {t(`m5s5.kind.${item.type}`)}
+          </span>
+          {variant === 'retrospective' ? (
+            <span className="today-card-retrospective-badge">
+              {t('m5s5.dashboard.retrospectiveTitle')}
+            </span>
+          ) : null}
+        </div>
         <h3 className="today-card-title">
           {item.titleOrText || t('m5s5.dashboard.itemFallback')}
         </h3>
@@ -157,6 +179,7 @@ export function TodayPage({
         dashboardQuery.data.recentShared.length === 0 &&
         !dashboardQuery.data.retrospective ? (
           <div className="new-space-experience sbs-motion-reveal">
+            <div className="new-space-mark" aria-hidden="true">❤️</div>
             <h1 className="new-space-title">
               {dashboardQuery.data.space.partner
                 ? t('m5s5.dashboard.newSpacePartner', {

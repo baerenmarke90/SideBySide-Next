@@ -9,7 +9,7 @@ const de = {
   navigation: {
     skipToContent: 'Zum Inhalt springen',
     primary: 'Hauptnavigation',
-    story: 'Story',
+    story: 'Momente',
     newMemory: 'Neue Erinnerung',
   },
   more: {
