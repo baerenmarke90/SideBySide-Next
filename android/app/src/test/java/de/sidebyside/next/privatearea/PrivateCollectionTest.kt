@@ -70,7 +70,7 @@ class PrivateCollectionTest {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
 
         signIn(model)
-        model.addPrivateCollection("   ", "")
+        model.addPrivateCollection("   ")
         advanceUntilIdle()
 
         assertTrue(api.createdCollections.isEmpty())
@@ -229,7 +229,6 @@ private fun collection(
 ) = PrivateCollectionDetail(
     capabilities = FULL_CAPABILITIES,
     createdAt = OffsetDateTime.now(),
-    icon = null,
     id = COLLECTION,
     items = items,
     ownerId = UUID.randomUUID(),

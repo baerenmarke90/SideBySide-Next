@@ -246,18 +246,26 @@ function ActivityCard({
   item,
   profilesApi,
   spaceId,
+  currentAccountId,
 }: {
   item: ActivityItem;
   profilesApi?: ProfilesApi | null;
   spaceId: string;
+  currentAccountId?: string;
 }) {
   const { t } = useTranslation();
   const path = engagementTargetPath(item.targetType, item.targetId);
 
-  const actorName = item.actor?.displayName;
-  const actionText = actorName
-    ? t(`m5s5.activityAction.${item.kind}`)
-    : t(`m5s5.activityKind.${item.kind}`);
+  const isOwn = Boolean(
+    currentAccountId && item.actor?.id === currentAccountId,
+  );
+  const actorName = isOwn ? t('m5s5.activity.you') : item.actor?.displayName;
+
+  const actionText = isOwn
+    ? t(`m5s5.activityActionOwn.${item.kind}`)
+    : item.actor
+      ? t(`m5s5.activityAction.${item.kind}`)
+      : t(`m5s5.activityKind.${item.kind}`);
 
   const inner = (
     <div
@@ -266,7 +274,11 @@ function ActivityCard({
       <div className="activity-card-header">
         {item.actor ? (
           <AuthorAvatar
-            author={item.actor}
+            author={
+              isOwn
+                ? { ...item.actor, displayName: t('m5s5.activity.you') }
+                : item.actor
+            }
             profilesApi={profilesApi}
             spaceId={spaceId}
             size="small"
@@ -317,10 +329,12 @@ export function ActivityProductPage({
   apis,
   spaceId,
   profilesApi,
+  currentAccountId,
 }: {
   apis: M4ProductApis;
   spaceId: string;
   profilesApi?: ProfilesApi | null;
+  currentAccountId?: string;
 }) {
   const { t } = useTranslation();
   const activityQuery = useInfiniteQuery({
@@ -383,6 +397,7 @@ export function ActivityProductPage({
                 item={item}
                 profilesApi={profilesApi}
                 spaceId={spaceId}
+                currentAccountId={currentAccountId}
               />
             ))}
           </ul>

@@ -857,7 +857,7 @@ describe('formatRelationshipDuration', () => {
           {
             id: 'plan-1',
             type: 'PLAN',
-            titleOrText: 'Wochenende am See',
+            titleOrText: 'Weekend by the lake',
             scheduledAt: new Date('2026-09-10T10:00:00Z'),
           },
         ],
@@ -866,7 +866,7 @@ describe('formatRelationshipDuration', () => {
       });
 
       expect(html).toContain('today-context-area');
-      expect(html).toContain('Wochenende am See');
+      expect(html).toContain('Weekend by the lake');
       expect(html).not.toContain('today-section-upcoming');
     });
 

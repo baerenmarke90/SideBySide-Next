@@ -269,8 +269,8 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
 ) -> None:  # type: ignore[no-untyped-def]
     _freeze(monkeypatch)
 
-    # 1. Gemeinsamer Plan + baldiger RelatedPerson-Geburtstag:
-    # Plan kann Primary Context sein, Geburtstag erscheint nicht in upcoming.
+    # 1. Shared plan + upcoming RelatedPerson birthday:
+    # Plan can be primary context; third-party birthday does not appear in upcoming.
     plan = Plan(
         **_resource(couple, couple["anna"].id),
         status=PlanStatus.PLANNED.value,
@@ -307,8 +307,8 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
     assert upcoming_items[0]["id"] == str(plan.id)
     assert upcoming_items[0]["type"] == "PLAN"
 
-    # 2. Nur Geburtstage Dritter vorhanden:
-    # upcoming ist leer -> kein erzwungener Primary Context.
+    # 2. Only third-party birthdays exist:
+    # upcoming is empty -> no forced primary context.
     session.delete(plan)
     session.flush()
 
@@ -316,7 +316,7 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
     assert res_empty.status_code == 200
     assert res_empty.json()["upcoming"] == []
 
-    # 3. Eigener Beziehungs-Jahrestag: weiterhin eligible
+    # 3. Own relationship anniversary: remains eligible
     profile = session.execute(
         select(SpaceProfile).where(SpaceProfile.space_id == couple["space"].id)
     ).scalar_one()
@@ -329,7 +329,7 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
     assert len(anniv_upcoming) == 1
     assert anniv_upcoming[0]["type"] == "ANNIVERSARY"
 
-    # 4. Paarbezogenes zulässiges ImportantDate (related_person_id is None): weiterhin eligible
+    # 4. Couple-specific ImportantDate (related_person_id is None): remains eligible
     couple_date = ImportantDate(
         **_resource(couple, couple["anna"].id),
         related_person_id=None,
@@ -348,7 +348,7 @@ def test_upcoming_excludes_third_party_dates_from_couple_context(
     assert types == ["IMPORTANT_DATE", "ANNIVERSARY"]
     assert res_couple_date.json()["upcoming"][0]["id"] == str(couple_date.id)
 
-    # 5. Private / fremde Personen- oder Termindaten: weiterhin keine Leaks
+    # 5. Private / foreign person or date data: no leaks
     foreign_person = RelatedPerson(
         space_id=couple["foreign_space"].id,
         owner_id=couple["outsider"].id,

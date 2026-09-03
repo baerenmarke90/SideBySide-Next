@@ -1,12 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, createMemoryRouter } from 'react-router-dom';
+import { StoryKind } from '../api/generated/models/StoryKind';
+import { StoryOrder } from '../api/generated/models/StoryOrder';
 import type { ReferenceApis } from '../client/referenceFlow';
 import {
   parseStoryFilters,
   storyCacheResourceId,
 } from '../client/storyProduct';
 import de from '../i18n/locales/de';
+import m5s5 from '../i18n/locales/m5s5';
+import storyProducts from '../i18n/locales/storyProducts';
 import { StoryProductPage } from './StoryProductPage';
 
 const loadMemoryImage = async () => 'blob:test-image';
@@ -166,7 +170,7 @@ describe('StoryProductPage', () => {
       expect(html).toContain('<option value="2021">2021</option>');
       expect(html).not.toContain('story-year-options');
       expect(html).not.toContain('type="number"');
-      expect(html).not.toContain('Filter anwenden');
+      expect(html).not.toContain(storyProducts.storyFilters.apply);
     });
 
     it('renders active filter chips with remove buttons and reset action', () => {
@@ -181,15 +185,14 @@ describe('StoryProductPage', () => {
       );
 
       expect(html).toContain('story-active-chips');
-      expect(html).toContain('Meilenstein');
+      expect(html).toContain(m5s5.kind.MILESTONE);
       expect(html).toContain('2026');
-      expect(html).toContain('Älteste zuerst');
+      expect(html).toContain(storyProducts.storyFilters.oldest);
       expect(html).toContain('chip-remove');
       expect(html).toContain('story-filter-reset-header-action');
     });
 
     it('keeps filter controls and reset visible on 0 hits with active filters (no dead-end)', () => {
-      // Deep link with year that has 0 results
       const html = renderStoryPage(
         '/story?tab=timeline&type=MILESTONE&year=1997',
         {
@@ -200,15 +203,96 @@ describe('StoryProductPage', () => {
         },
       );
 
-      // Must NOT show new-space-experience dead end
       expect(html).not.toContain('new-space-experience');
-      // Must show filter container and empty state with reset
       expect(html).toContain('story-filter-container');
       expect(html).toContain('story-filter-empty-state');
-      expect(html).toContain('Keine Momente für diese Auswahl');
-      expect(html).toContain('Filter zurücksetzen');
-      // Dropdown contains 2026 so user can easily pick a valid year
+      expect(html).toContain(storyProducts.storyFilters.noMatches);
+      expect(html).toContain(storyProducts.storyFilters.noMatchesAction);
       expect(html).toContain('<option value="2026">2026</option>');
+    });
+
+    it('excludes invalid URL year from dropdown options, renders only authoritative availableYears, and omits invalid year chip', () => {
+      const html = renderStoryPage(
+        '/story?tab=timeline&type=MILESTONE&year=1997',
+        {
+          items: [],
+          availableYears: [2026],
+          hasMore: false,
+          nextCursor: null,
+        },
+      );
+
+      // 1997 must NOT appear as selectable option or active chip
+      expect(html).toContain('<option value="2026">2026</option>');
+      expect(html).not.toContain('<option value="1997">');
+      expect(html).not.toContain('1997');
+    });
+
+    it('tracks filter updates as browser history push and restores states across back and forward navigation', async () => {
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/story',
+            element: (
+              <StoryProductPage
+                apis={{} as ReferenceApis}
+                accountId="account-1"
+                spaceId="space-1"
+                loadMemoryImage={loadMemoryImage}
+              />
+            ),
+          },
+        ],
+        { initialEntries: ['/story?tab=timeline'] },
+      );
+
+      expect(router.state.location.search).toBe('?tab=timeline');
+
+      // 1. User changes content filter to MILESTONE -> pushes history
+      const params1 = new URLSearchParams('tab=timeline');
+      params1.set('type', StoryKind.MILESTONE);
+      await router.navigate(`/story?${params1.toString()}`);
+      expect(router.state.location.search).toBe('?tab=timeline&type=MILESTONE');
+
+      // 2. User selects year 2026 -> pushes history
+      const params2 = new URLSearchParams(params1);
+      params2.set('year', '2026');
+      await router.navigate(`/story?${params2.toString()}`);
+      expect(router.state.location.search).toBe(
+        '?tab=timeline&type=MILESTONE&year=2026',
+      );
+
+      // 3. User changes order to ASC -> pushes history
+      const params3 = new URLSearchParams(params2);
+      params3.set('order', StoryOrder.ASC);
+      await router.navigate(`/story?${params3.toString()}`);
+      expect(router.state.location.search).toBe(
+        '?tab=timeline&type=MILESTONE&year=2026&order=ASC',
+      );
+
+      // 4. Browser Back -> restores order DESC
+      await router.navigate(-1);
+      expect(router.state.location.search).toBe(
+        '?tab=timeline&type=MILESTONE&year=2026',
+      );
+
+      // 5. Browser Back -> restores any year
+      await router.navigate(-1);
+      expect(router.state.location.search).toBe('?tab=timeline&type=MILESTONE');
+
+      // 6. Browser Back -> restores all types
+      await router.navigate(-1);
+      expect(router.state.location.search).toBe('?tab=timeline');
+
+      // 7. Browser Forward -> restores MILESTONE
+      await router.navigate(1);
+      expect(router.state.location.search).toBe('?tab=timeline&type=MILESTONE');
+
+      // 8. Browser Forward -> restores year 2026
+      await router.navigate(1);
+      expect(router.state.location.search).toBe(
+        '?tab=timeline&type=MILESTONE&year=2026',
+      );
     });
   });
 });

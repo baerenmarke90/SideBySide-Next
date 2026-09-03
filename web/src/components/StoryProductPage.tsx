@@ -164,7 +164,7 @@ export function StoryProductPage({
   function setView(view: 'discover' | 'timeline') {
     const next = new URLSearchParams(searchParams);
     next.set('tab', view);
-    setSearchParams(next, { replace: true });
+    setSearchParams(next);
   }
 
   function updateFilter<K extends keyof StoryFilters>(
@@ -174,29 +174,37 @@ export function StoryProductPage({
     const nextFilters: StoryFilters = {
       ...filters,
       [key]: value,
+      ...(key === 'kind' ? { year: null } : {}),
     };
     const nextSearch = storyFiltersToSearch(nextFilters);
     nextSearch.set('tab', 'timeline');
-    setSearchParams(nextSearch, { replace: true });
+    setSearchParams(nextSearch);
   }
 
   function resetAllFilters() {
     const nextSearch = new URLSearchParams();
     nextSearch.set('tab', 'timeline');
-    setSearchParams(nextSearch, { replace: true });
+    setSearchParams(nextSearch);
   }
 
   const availableYears = useMemo(
     () => combinedStory?.availableYears ?? [],
     [combinedStory],
   );
+  const dropdownYears = availableYears;
 
-  const dropdownYears = useMemo(() => {
+  useEffect(() => {
+    if (!combinedStory) return;
     if (filters.year && !availableYears.includes(filters.year)) {
-      return [filters.year, ...availableYears].sort((a, b) => b - a);
+      const nextFilters: StoryFilters = {
+        ...filters,
+        year: null,
+      };
+      const nextSearch = storyFiltersToSearch(nextFilters);
+      nextSearch.set('tab', 'timeline');
+      setSearchParams(nextSearch, { replace: true });
     }
-    return availableYears;
-  }, [availableYears, filters.year]);
+  }, [combinedStory, filters, availableYears, setSearchParams]);
 
   const items = useMemo(() => combinedStory?.items ?? [], [combinedStory]);
   const locale = resolvedLocale();
@@ -603,7 +611,11 @@ export function StoryProductPage({
                 <select
                   id="story-filter-year"
                   name="year"
-                  value={filters.year ?? ''}
+                  value={
+                    filters.year && availableYears.includes(filters.year)
+                      ? filters.year
+                      : ''
+                  }
                   onChange={(e) => {
                     const val = e.target.value;
                     updateFilter('year', val ? Number(val) : null);
@@ -672,7 +684,7 @@ export function StoryProductPage({
                     </span>
                   </button>
                 )}
-                {filters.year && (
+                {filters.year && availableYears.includes(filters.year) && (
                   <button
                     type="button"
                     className="active-chip"

@@ -587,6 +587,7 @@ function AuthenticatedApp({
                 apis={m4Apis}
                 spaceId={spaceId}
                 profilesApi={profilesApi}
+                currentAccountId={account.id}
               />
             }
           />

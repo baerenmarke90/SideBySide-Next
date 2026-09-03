@@ -612,6 +612,52 @@
     <string name="activity_kind_collection_created">Liste erstellt</string>
     <string name="activity_kind_comment_created">Kommentar geschrieben</string>
 
+    <string name="activity_you">Du</string>
+
+    <string name="activity_action_memory_created">%1$s hat die Erinnerung „%2$s“ festgehalten.</string>
+    <string name="activity_action_milestone_created">%1$s hat den Meilenstein „%2$s“ hinzugefügt.</string>
+    <string name="activity_action_heart_moment_created">%1$s hat einen Herzensmoment geteilt: „%2$s“.</string>
+    <string name="activity_action_wish_created">%1$s hat den Wunsch „%2$s“ aufgeschrieben.</string>
+    <string name="activity_action_plan_created">%1$s hat den Plan „%2$s“ geschmiedet.</string>
+    <string name="activity_action_plan_completed">%1$s hat den Plan „%2$s“ abgeschlossen.</string>
+    <string name="activity_action_place_created">%1$s hat den Ort „%2$s“ zu euch hinzugefügt.</string>
+    <string name="activity_action_chapter_created">%1$s hat das Kapitel „%2$s“ begonnen.</string>
+    <string name="activity_action_collection_created">%1$s hat die Liste „%2$s“ angelegt.</string>
+    <string name="activity_action_comment_created">%1$s hat „%2$s“ kommentiert.</string>
+
+    <string name="activity_action_memory_created_notarget">%1$s hat eine Erinnerung festgehalten.</string>
+    <string name="activity_action_milestone_created_notarget">%1$s hat einen Meilenstein hinzugefügt.</string>
+    <string name="activity_action_heart_moment_created_notarget">%1$s hat einen Herzensmoment geteilt.</string>
+    <string name="activity_action_wish_created_notarget">%1$s hat einen Wunsch aufgeschrieben.</string>
+    <string name="activity_action_plan_created_notarget">%1$s hat einen Plan geschmiedet.</string>
+    <string name="activity_action_plan_completed_notarget">%1$s hat einen Plan abgeschlossen.</string>
+    <string name="activity_action_place_created_notarget">%1$s hat einen Ort hinzugefügt.</string>
+    <string name="activity_action_chapter_created_notarget">%1$s hat ein Kapitel begonnen.</string>
+    <string name="activity_action_collection_created_notarget">%1$s hat eine Liste angelegt.</string>
+    <string name="activity_action_comment_created_notarget">%1$s hat einen Kommentar hinterlassen.</string>
+
+    <string name="activity_action_own_memory_created">Du hast die Erinnerung „%1$s“ festgehalten.</string>
+    <string name="activity_action_own_milestone_created">Du hast den Meilenstein „%1$s“ hinzugefügt.</string>
+    <string name="activity_action_own_heart_moment_created">Du hast einen Herzensmoment geteilt: „%1$s“.</string>
+    <string name="activity_action_own_wish_created">Du hast den Wunsch „%1$s“ aufgeschrieben.</string>
+    <string name="activity_action_own_plan_created">Du hast den Plan „%1$s“ angelegt.</string>
+    <string name="activity_action_own_plan_completed">Du hast den Plan „%1$s“ abgeschlossen.</string>
+    <string name="activity_action_own_place_created">Du hast den Ort „%1$s“ zu euch hinzugefügt.</string>
+    <string name="activity_action_own_chapter_created">Du hast das Kapitel „%1$s“ begonnen.</string>
+    <string name="activity_action_own_collection_created">Du hast die Liste „%1$s“ angelegt.</string>
+    <string name="activity_action_own_comment_created">Du hast „%1$s“ kommentiert.</string>
+
+    <string name="activity_action_own_memory_created_notarget">Du hast eine Erinnerung festgehalten.</string>
+    <string name="activity_action_own_milestone_created_notarget">Du hast einen Meilenstein hinzugefügt.</string>
+    <string name="activity_action_own_heart_moment_created_notarget">Du hast einen Herzensmoment geteilt.</string>
+    <string name="activity_action_own_wish_created_notarget">Du hast einen Wunsch aufgeschrieben.</string>
+    <string name="activity_action_own_plan_created_notarget">Du hast einen Plan angelegt.</string>
+    <string name="activity_action_own_plan_completed_notarget">Du hast einen Plan abgeschlossen.</string>
+    <string name="activity_action_own_place_created_notarget">Du hast einen Ort zu euch hinzugefügt.</string>
+    <string name="activity_action_own_chapter_created_notarget">Du hast ein Kapitel begonnen.</string>
+    <string name="activity_action_own_collection_created_notarget">Du hast eine Liste angelegt.</string>
+    <string name="activity_action_own_comment_created_notarget">Du hast einen Kommentar hinterlassen.</string>
+
     <string name="search_open">Suche</string>
     <string name="search_title">Suche</string>
     <string name="search_intro">Durchsucht eure gemeinsame Story und deine privaten Inhalte.</string>

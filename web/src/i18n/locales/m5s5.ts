@@ -93,6 +93,7 @@ const m5s5 = {
     emptyBody: 'Sobald etwas Gemeinsames passiert, erscheint es hier.',
     loadMore: 'Ältere Aktivitäten',
     loadingMore: 'Ältere Aktivitäten werden geladen …',
+    you: 'Du',
   },
   notifications: {
     eyebrow: 'Benachrichtigungen',
@@ -162,6 +163,18 @@ const m5s5 = {
     CHAPTER_CREATED: 'hat ein Kapitel begonnen',
     COLLECTION_CREATED: 'hat eine Liste angelegt',
     COMMENT_CREATED: 'hat einen Kommentar hinterlassen',
+  },
+  activityActionOwn: {
+    MEMORY_CREATED: 'hast eine Erinnerung festgehalten',
+    MILESTONE_CREATED: 'hast einen Meilenstein hinzugefügt',
+    HEART_MOMENT_CREATED: 'hast einen Herzensmoment geteilt',
+    WISH_CREATED: 'hast einen Wunsch aufgeschrieben',
+    PLAN_CREATED: 'hast einen Plan geschmiedet',
+    PLAN_COMPLETED: 'hast einen Plan abgeschlossen',
+    PLACE_CREATED: 'hast einen Ort hinzugefügt',
+    CHAPTER_CREATED: 'hast ein Kapitel begonnen',
+    COLLECTION_CREATED: 'hast eine Liste angelegt',
+    COMMENT_CREATED: 'hast einen Kommentar hinterlassen',
   },
   notificationKind: {
     COMMENT_CREATED: 'Neuer Kommentar',

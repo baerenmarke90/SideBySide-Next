@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from sidebyside.authorization import AuthorizationContext, ContentVisibility, PrivacyClass
+from sidebyside.collections.models import Collection, CollectionPayload
 from sidebyside.comments import service as comment_service
 from sidebyside.comments.models import CommentTarget
 from sidebyside.domain.events import DomainEvent, EventType, PublicEventPayload
@@ -19,7 +20,10 @@ from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMome
 from sidebyside.memories.models import Memory, MemoryPayload
 from sidebyside.outbox import service as outbox_service
 from sidebyside.outbox.models import OutboxEvent
+from sidebyside.places.models import Place, PlacePayload
+from sidebyside.plans.models import Plan, PlanPayload, PlanStatus
 from sidebyside.relationship import service as relationship_service
+from sidebyside.wishes.models import Wish, WishPayload
 from tests.conftest import auth, make_account, make_space, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -452,3 +456,203 @@ def test_activity_heart_moment_target_presentation(client, session: Session, cou
     items = res.json()["items"]
     assert len(items) == 1
     assert items[0]["target"]["title"] == "You made me smile today"
+
+
+def test_activity_noise_reduction_and_relationship_curation(
+    client, session: Session, couple
+) -> None:  # type: ignore[no-untyped-def]
+    # 1. Anna creates repetitive utility resources
+    plan_anna = Plan(
+        space_id=couple["space"].id,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        status=PlanStatus.PLANNED.value,
+        planned_start=NOW,
+        payload=PlanPayload(title="Anna's Plan"),
+    )
+    place_anna = Place(
+        space_id=couple["space"].id,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        payload=PlacePayload(name="Anna's Place"),
+    )
+    col_anna = Collection(
+        space_id=couple["space"].id,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        payload=CollectionPayload(title="Anna's Collection"),
+    )
+    wish_anna = Wish(
+        space_id=couple["space"].id,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        payload=WishPayload(title="Anna's Wish"),
+    )
+    # 2. Emotional, completion, and reaction resources
+    memory_anna = Memory(
+        space_id=couple["space"].id,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        payload=MemoryPayload(title="Anna's Memory", body="Sunset"),
+    )
+    completed_plan_anna = Plan(
+        space_id=couple["space"].id,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        status=PlanStatus.COMPLETED.value,
+        planned_start=NOW,
+        experienced_on=NOW.date(),
+        payload=PlanPayload(title="Anna's Completed Plan"),
+    )
+    # 3. Ben's plan (partner action from Anna's perspective)
+    plan_ben = Plan(
+        space_id=couple["space"].id,
+        owner_id=couple["ben"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        status=PlanStatus.PLANNED.value,
+        planned_start=NOW,
+        payload=PlanPayload(title="Ben's Plan"),
+    )
+    session.add_all(
+        [
+            plan_anna,
+            place_anna,
+            col_anna,
+            wish_anna,
+            memory_anna,
+            completed_plan_anna,
+            plan_ben,
+        ]
+    )
+    session.flush()
+
+    activities = [
+        Activity(
+            space_id=couple["space"].id,
+            source_event_id=uuid4(),
+            kind=ActivityKind.PLAN_CREATED.value,
+            actor_id=couple["anna"].id,
+            target_type="PLAN",
+            target_id=plan_anna.id,
+            occurred_at=NOW - timedelta(minutes=10),
+        ),
+        Activity(
+            space_id=couple["space"].id,
+            source_event_id=uuid4(),
+            kind=ActivityKind.PLACE_CREATED.value,
+            actor_id=couple["anna"].id,
+            target_type="PLACE",
+            target_id=place_anna.id,
+            occurred_at=NOW - timedelta(minutes=9),
+        ),
+        Activity(
+            space_id=couple["space"].id,
+            source_event_id=uuid4(),
+            kind=ActivityKind.COLLECTION_CREATED.value,
+            actor_id=couple["anna"].id,
+            target_type="COLLECTION",
+            target_id=col_anna.id,
+            occurred_at=NOW - timedelta(minutes=8),
+        ),
+        Activity(
+            space_id=couple["space"].id,
+            source_event_id=uuid4(),
+            kind=ActivityKind.WISH_CREATED.value,
+            actor_id=couple["anna"].id,
+            target_type="WISH",
+            target_id=wish_anna.id,
+            occurred_at=NOW - timedelta(minutes=7),
+        ),
+        Activity(
+            space_id=couple["space"].id,
+            source_event_id=uuid4(),
+            kind=ActivityKind.MEMORY_CREATED.value,
+            actor_id=couple["anna"].id,
+            target_type="MEMORY",
+            target_id=memory_anna.id,
+            occurred_at=NOW - timedelta(minutes=6),
+        ),
+        Activity(
+            space_id=couple["space"].id,
+            source_event_id=uuid4(),
+            kind=ActivityKind.PLAN_COMPLETED.value,
+            actor_id=couple["anna"].id,
+            target_type="PLAN",
+            target_id=completed_plan_anna.id,
+            occurred_at=NOW - timedelta(minutes=5),
+        ),
+        Activity(
+            space_id=couple["space"].id,
+            source_event_id=uuid4(),
+            kind=ActivityKind.COMMENT_CREATED.value,
+            actor_id=couple["anna"].id,
+            target_type="MEMORY",
+            target_id=memory_anna.id,
+            occurred_at=NOW - timedelta(minutes=4),
+        ),
+        Activity(
+            space_id=couple["space"].id,
+            source_event_id=uuid4(),
+            kind=ActivityKind.PLAN_CREATED.value,
+            actor_id=couple["ben"].id,
+            target_type="PLAN",
+            target_id=plan_ben.id,
+            occurred_at=NOW - timedelta(minutes=3),
+        ),
+    ]
+    session.add_all(activities)
+    session.flush()
+
+    # Anna views the feed:
+    # Own low-value CRUD noise (PLAN, PLACE, COLLECTION, WISH) must be suppressed.
+    # Partner's PLAN_CREATED must remain visible.
+    # Own MEMORY_CREATED, PLAN_COMPLETED, COMMENT_CREATED must remain visible.
+    res_anna = client.get(
+        f"/api/v1/spaces/{couple['space'].id}/activity",
+        headers=auth(couple["anna_token"]),
+    )
+    assert res_anna.status_code == 200
+    anna_items = res_anna.json()["items"]
+    anna_kinds = [item["kind"] for item in anna_items]
+
+    assert ActivityKind.PLAN_CREATED.value in anna_kinds
+    assert ActivityKind.MEMORY_CREATED.value in anna_kinds
+    assert ActivityKind.PLAN_COMPLETED.value in anna_kinds
+    assert ActivityKind.COMMENT_CREATED.value in anna_kinds
+    assert ActivityKind.PLACE_CREATED.value not in anna_kinds
+    assert ActivityKind.COLLECTION_CREATED.value not in anna_kinds
+    assert ActivityKind.WISH_CREATED.value not in anna_kinds
+    assert len(anna_items) == 4
+
+    # Verify that the single PLAN_CREATED visible to Anna belongs to Ben
+    plan_item_for_anna = next(
+        item for item in anna_items if item["kind"] == ActivityKind.PLAN_CREATED.value
+    )
+    assert plan_item_for_anna["actor"]["id"] == str(couple["ben"].id)
+
+    # Ben views the feed:
+    # Anna's utility creations ARE visible to Ben.
+    # Ben's own PLAN_CREATED is suppressed for Ben.
+    res_ben = client.get(
+        f"/api/v1/spaces/{couple['space'].id}/activity",
+        headers=auth(couple["ben_token"]),
+    )
+    assert res_ben.status_code == 200
+    ben_items = res_ben.json()["items"]
+    ben_kinds = [item["kind"] for item in ben_items]
+
+    assert ActivityKind.PLACE_CREATED.value in ben_kinds
+    assert ActivityKind.COLLECTION_CREATED.value in ben_kinds
+    assert ActivityKind.WISH_CREATED.value in ben_kinds
+    plan_items_for_ben = [
+        item for item in ben_items if item["kind"] == ActivityKind.PLAN_CREATED.value
+    ]
+    assert len(plan_items_for_ben) == 1
+    assert plan_items_for_ben[0]["actor"]["id"] == str(couple["anna"].id)
+
+    # Tenant isolation: outsider gets 403
+    res_outsider = client.get(
+        f"/api/v1/spaces/{couple['space'].id}/activity",
+        headers=auth(couple["outsider_token"]),
+    )
+    assert res_outsider.status_code in (403, 404)
