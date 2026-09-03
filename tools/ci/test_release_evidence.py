@@ -22,8 +22,8 @@ EXTERNAL_ACTION_PINS = {
 }
 
 REQUIRED_SUBJECTS = {
-    "release-evidence/backend-runtime.oci.tar",
-    "release-evidence/web-runtime.oci.tar",
+    "release-evidence/backend-runtime.image.tar",
+    "release-evidence/web-runtime.image.tar",
     "release-evidence/android/sidebyside-release-unsigned.apk",
     "release-evidence/android/sidebyside-release-unsigned.aab",
 }
@@ -100,6 +100,8 @@ class ReleaseEvidenceContractTest(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertIn(path, self.workflow)
         self.assertIn('["api", "worker", "migrate"]', self.workflow)
+        self.assertIn("docker image save", self.workflow)
+        self.assertIn("docker-archive:", self.workflow)
 
     def test_each_subject_has_spdx_23_json_evidence(self) -> None:
         for path in REQUIRED_SBOMS:
