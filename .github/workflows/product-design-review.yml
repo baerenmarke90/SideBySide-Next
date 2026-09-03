@@ -1,0 +1,118 @@
+name: Product Design Review
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  product-design-review:
+    name: Product Design Review
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_BODY: ${{ github.event.pull_request.body }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Detect client UI changes
+        id: ui
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          files="$(gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" --jq '.[].filename')"
+          printf '%s\n' "$files"
+
+          if grep -Eq '^(web/src/|android/app/src/main/java/|android/app/src/main/res/)' <<< "$files"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "User-facing client paths changed."
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No user-facing client path changed."
+          fi
+
+      - name: Verify explicit UI impact decision
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          body=${PR_BODY:-}
+          reviewed='- [x] User-facing UI / UX impact reviewed'
+          no_impact='- [x] No user-facing UI / UX impact'
+
+          reviewed_count=0
+          no_impact_count=0
+
+          if grep -Fqi -- "$reviewed" <<< "$body"; then
+            reviewed_count=1
+          fi
+
+          if grep -Fqi -- "$no_impact" <<< "$body"; then
+            no_impact_count=1
+          fi
+
+          if [ $((reviewed_count + no_impact_count)) -ne 1 ]; then
+            echo "The PR must select exactly one Product Design / UX impact decision."
+            echo "Expected one of these checked lines:"
+            echo "  - [x] User-facing UI / UX impact reviewed"
+            echo "  - [x] No user-facing UI / UX impact"
+            exit 1
+          fi
+
+          if [ "${{ steps.ui.outputs.changed }}" = "true" ] && [ "$reviewed_count" -ne 1 ]; then
+            echo "Client UI files changed, so 'User-facing UI / UX impact reviewed' is mandatory."
+            exit 1
+          fi
+
+          echo "Product Design / UX impact decision is consistent with changed paths."
+
+      - name: Verify mandatory partner-app design review
+        if: steps.ui.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          body=${PR_BODY:-}
+
+          grep -Fq '## Product Design / UX' <<< "$body" || {
+            echo "Section '## Product Design / UX' is missing."
+            exit 1
+          }
+
+          required=(
+            '- [x] Partner-app experience standard applied'
+            '- [x] Screen Template selected or a documented design-system gap explains why no existing template fits'
+            '- [x] Existing design-system components and semantic tokens reused or the gap is documented'
+            '- [x] Primary human/content focal point and dominant action are clear'
+            '- [x] Couple-facing UI does not default to spreadsheet/admin/CRUD composition'
+            '- [x] Result feels warm, modern, lively, beautiful, and not visually cold or sterile'
+            '- [x] Gentle playfulness / relationship personality deliberately applied or consciously not appropriate for this context'
+            '- [x] Love-message / relationship microcopy opportunity deliberately considered'
+            '- [x] Compact and Expanded behavior reviewed'
+            '- [x] Motion / feedback behavior reviewed, including reduced motion'
+            '- [x] Visual evidence attached or linked'
+          )
+
+          for item in "${required[@]}"; do
+            if ! grep -Fqi -- "$item" <<< "$body"; then
+              echo "Missing mandatory Product Design / UX review item:"
+              echo "  $item"
+              exit 1
+            fi
+          done
+
+          grep -Fq '**Design result / rationale**' <<< "$body" || {
+            echo "Product Design / UX review is missing its design rationale."
+            exit 1
+          }
+
+          grep -Fq '**Visual evidence**' <<< "$body" || {
+            echo "Product Design / UX review is missing its visual evidence section."
+            exit 1
+          }
+
+          echo "Mandatory partner-app design review is present."

@@ -15,6 +15,16 @@ Before relevant work, read at least these documents:
 7. `docs/EXTERNAL-PROVIDER-CANDIDATES.md` when providers, infrastructure, or platform components are affected
 8. `docs/ROADMAP.md` and the relevant milestone/project-control documentation
 
+For every user-facing Web or Android change, the following are additional mandatory sources before implementation starts:
+
+9. `docs/DESIGN-PRINCIPLES.md`
+10. `docs/PARTNER-APP-EXPERIENCE-STANDARD.md`
+11. `docs/UX-PATTERNS.md`
+12. `docs/SCREEN-TEMPLATES.md`
+13. `docs/COMPONENT-CONTRACTS.md`
+14. `docs/DESIGN-SYSTEM-DELIVERY.md`
+15. `design/tokens.json`
+
 ## Engineering language
 
 English is the mandatory engineering language for this repository. Follow `docs/ENGINEERING-LANGUAGE.md`.
@@ -87,17 +97,64 @@ If the product-tier contract changes, update `docs/FREEMIUM-FEATURE-MATRIX.md` b
 
 Business-model consistency does not replace security, privacy, architecture, accessibility, reuse, or cross-cutting-quality review. All applicable gates remain cumulative.
 
+## Product design and partner-app experience
+
+User-facing client work is product-design work, not a functional implementation followed by optional styling.
+
+SideBySide is a private partner app. Couple-facing screens must follow `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` and must not default to generic CRUD, admin-console, spreadsheet, or dashboard presentation.
+
+### Required before implementation starts
+
+For every new or materially changed user-facing Web or Android feature, identify in the issue or PR:
+
+- the owning Screen Template or the reason a new pattern is required;
+- the existing design-system components and tokens to reuse;
+- the primary human/content focal point;
+- the primary action and visual hierarchy;
+- Compact and Expanded behavior;
+- Loading, Empty, Error, Offline, and Success states where applicable;
+- motion and feedback behavior, including reduced-motion behavior;
+- privacy and relationship-state presentation where applicable.
+
+A new feature must use the shared product language in its first mergeable implementation. `Functionality first, design later` is not an acceptable UI delivery strategy.
+
+### Couple-facing anti-patterns
+
+Unless an explicit product decision justifies them, do not use these as the primary presentation of relationship content:
+
+- dense tables;
+- repeated metadata-heavy bordered rows;
+- equal dashboard tiles with no real hierarchy;
+- nested card landscapes;
+- raw form stacks without product composition;
+- technical IDs, enum values, or API terminology in normal-user surfaces;
+- layouts whose dominant visual structure is indistinguishable from inventory, invoicing, or server administration software.
+
+Administration and diagnostics may legitimately use denser information design, but that visual language must not leak into normal couple-facing surfaces.
+
+### Motion is required behavior
+
+Every material interaction must deliberately decide whether motion or feedback is needed. Reuse motion tokens and platform capabilities. State changes, reordering, sheets/panes, success feedback, and emotionally meaningful actions should not feel like abrupt DOM/data replacement.
+
+All motion must remain non-blocking, accessible, and understandable with reduced motion enabled.
+
+### Visual evidence before merge
+
+A PR that changes couple-facing UI must include visual evidence sufficient to review the product result, including representative Compact and Expanded states where applicable. Theme-sensitive changes must be checked in Light and Dark. A textual assertion that the UI looks correct is not sufficient evidence by itself.
+
+A user-facing PR is not merge-ready when it is functionally correct but visibly violates the partner-app experience standard.
+
 ## Semantic design tokens
 
 Reusable visual values must use semantic design tokens instead of repeated component-level literals.
 
 Rules:
 
-- define reusable colors, spacing, radii, typography, shadows, and similar visual constants through semantic tokens;
+- define reusable colors, spacing, radii, typography, shadows, motion, and similar visual constants through semantic tokens;
 - name tokens by interface meaning, not by their current literal value;
-- consume tokens through `var(...)` in components;
+- consume tokens through the platform design-system adapter instead of local visual constants;
 - keep literal values at the token-definition boundary unless a value is genuinely one-off and does not provide reusable meaning;
-- tokenize theme-, branding-, and accessibility-sensitive values so they can be adjusted centrally.
+- tokenize theme-, branding-, accessibility-, and motion-sensitive values so they can be adjusted centrally.
 
 Prefer:
 
@@ -114,7 +171,7 @@ color: rgb(255 255 255 / 90%);
 
 or implementation-only names such as `--purple-600` when the semantic role is known.
 
-This rule does not require meaningless token proliferation for isolated values without reuse or semantic value. See `docs/DESIGN-PRINCIPLES.md` for the design-system guidance.
+This rule does not require meaningless token proliferation for isolated values without reuse or semantic value. See `docs/DESIGN-PRINCIPLES.md` and `docs/DESIGN-TOKEN-POLICY.md` for the design-system guidance.
 
 ## Cross-cutting quality
 
@@ -144,13 +201,15 @@ Normal couples must not need to configure technical infrastructure. API keys, te
 
 ## Do not weaken existing gates
 
-Reuse, business-model, or cross-cutting decisions must never weaken Clean-Room, security, privacy, tenant-isolation, provenance, licensing, or engineering-language rules.
+Reuse, business-model, product-design, or cross-cutting decisions must never weaken Clean-Room, security, privacy, tenant-isolation, provenance, licensing, or engineering-language rules.
 
 ## Pull requests
 
 A relevant pull request without a traceable reuse review is not merge-ready. Pure domain changes may mark the review as `not relevant` with a short rationale.
 
 Every development pull request must contain a traceable Business/Freemium Model Consistency result. `No business/freemium impact` is acceptable only with a short rationale. A recognizable conflict with `docs/BUSINESS-MODEL.md`, `docs/FREEMIUM-FEATURE-MATRIX.md`, or the current working decisions for unclassified future features must be resolved before merge or routed through an explicit owning product decision.
+
+Every pull request must also record whether it has user-facing UI/UX impact. A PR with user-facing Web or Android changes must complete the Product Design / UX review from the pull-request template and satisfy the partner-app experience standard.
 
 Larger runtime slices, client features, and production user flows must document their relevant cross-cutting consequences in the pull request. The pull-request template is the minimum review surface; deeper decisions belong in the owning issue, decision document, or ADR.
 
