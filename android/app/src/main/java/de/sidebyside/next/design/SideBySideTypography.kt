@@ -39,9 +39,6 @@ val SideBySideUiFamily: FontFamily = FontFamily(
     Font(R.font.instrument_sans, FontWeight.Bold),
 )
 
-// Backward-compatibility alias
-val FrauncesFamily: FontFamily = SideBySideDisplayFamily
-
 private fun tokenTextStyle(
     fontSizeSp: Float,
     lineHeightRatio: Float,

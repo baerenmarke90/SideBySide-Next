@@ -79,6 +79,7 @@ Memories, wishes, plans, and shared moments are visually central.
 
 - Cards show the relevant content first and metadata afterward.
 - Real content replaces generic placeholders as early as possible.
+- `Wir` / Today is an orchestration surface, not a widget dashboard: only currently relevant signals, contextual actions, and shared content appear; irrelevant modules disappear (see `PARTNER-APP-EXPERIENCE-STANDARD.md`).
 - Images are cropped calmly and are never overloaded with text.
 - Empty states explain the value and the next step, not merely the absence of data.
 

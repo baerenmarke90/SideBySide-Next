@@ -1,8 +1,13 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
-import { type M4ProductApis, dashboardItemPath } from '../client/m4Product';
+import {
+  type M4ProductApis,
+  dashboardItemPath,
+  engagementTargetPath,
+} from '../client/m4Product';
 import { normalizeClientError } from '../client/problemDetails';
 import { postSnackbar } from '../client/snackbar';
 import { resolvedLocale, useTranslation } from '../i18n';
@@ -27,6 +32,18 @@ function formatDate(value: Date | null): string | null {
 }
 
 export type TodayCardVariant = 'upcoming' | 'recent' | 'retrospective';
+
+/**
+ * Presentation roles for modules composed on the Today orchestration surface.
+ * Rather than equal-sized dashboard widgets, each role fulfills an intentional
+ * relationship purpose.
+ */
+export type TodayPresentationRole =
+  | 'hero' // Stable couple presence & emotional anchor
+  | 'primary_context' // 0-1 current relevant action/item (e.g. today's plan or due reminder)
+  | 'relationship_signal' // 0-1 partner interaction signal (e.g. partner commented on memory)
+  | 'shared_content' // Recent shared relationship moments
+  | 'editorial_highlight'; // Retrospective discovery (e.g. "Weißt du noch?")
 
 export function TodayModuleSection({
   id,
@@ -53,13 +70,123 @@ export function TodayModuleSection({
     >
       <div className="today-section-header">
         <div>
-          {kicker ? <span className="today-section-kicker">{kicker}</span> : null}
+          {kicker ? (
+            <span className="today-section-kicker">{kicker}</span>
+          ) : null}
           <h2 className="today-section-title">{title}</h2>
         </div>
-        {headerAction ? <div className="today-section-action">{headerAction}</div> : null}
+        {headerAction ? (
+          <div className="today-section-action">{headerAction}</div>
+        ) : null}
       </div>
       <div className="today-section-body">{children}</div>
     </section>
+  );
+}
+
+function TodayContextualCard({ item }: { item: DashboardItem }) {
+  const { t } = useTranslation();
+  const path = dashboardItemPath(item.type, item.id);
+  const date =
+    formatDate(item.occurredOn) ??
+    formatDate(item.scheduledAt) ??
+    formatDate(item.createdAt);
+
+  const kicker =
+    item.type === 'PLAN'
+      ? t('m5s5.today.contextSlot.upcomingPlanKicker')
+      : item.type === 'IMPORTANT_DATE' ||
+          item.type === 'BIRTHDAY' ||
+          item.type === 'ANNIVERSARY'
+        ? t('m5s5.today.contextSlot.importantDateKicker')
+        : t('m5s5.today.contextSlot.kicker');
+
+  const content = (
+    <div className="today-context-card sbs-motion-lift">
+      <div className="today-context-header">
+        <span className="today-context-kicker">{kicker}</span>
+        <span className="today-card-kind">
+          {item.type === 'HEART_MOMENT'
+            ? '♥ '
+            : item.type === 'MILESTONE'
+              ? '★ '
+              : ''}
+          {t(`m5s5.kind.${item.type}`)}
+        </span>
+      </div>
+      <h3 className="today-context-title">
+        {item.titleOrText || t('m5s5.dashboard.itemFallback')}
+      </h3>
+      <div className="today-context-footer">
+        {date ? <span className="today-context-date">{date}</span> : null}
+        {path ? (
+          <span className="today-context-action">
+            {t('m5s5.today.contextSlot.viewDetails')} →
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+
+  if (path) {
+    return (
+      <Link to={path} className="today-context-link">
+        {content}
+      </Link>
+    );
+  }
+  return content;
+}
+
+function TodayRelationshipSignalCard({
+  partnerName,
+  activityItem,
+}: {
+  partnerName: string;
+  activityItem: ActivityItem;
+}) {
+  const { t } = useTranslation();
+  const path = engagementTargetPath(
+    activityItem.targetType,
+    activityItem.targetId,
+  );
+  const date = formatDate(activityItem.createdAt);
+
+  const message =
+    activityItem.targetType === 'MEMORY'
+      ? t('m5s5.today.relationshipSignal.partnerCommentedMemory', {
+          name: partnerName,
+        })
+      : t('m5s5.today.relationshipSignal.partnerCommentedGeneric', {
+          name: partnerName,
+        });
+
+  return (
+    <div className="today-signal-card sbs-motion-lift">
+      <div className="today-signal-header">
+        <span className="today-signal-kicker">
+          {t('m5s5.today.relationshipSignal.kicker')}
+        </span>
+        <span className="today-signal-badge" aria-hidden="true">
+          💬
+        </span>
+      </div>
+      <p className="today-signal-message">{message}</p>
+      <div className="today-signal-footer">
+        {date ? <span className="today-signal-date">{date}</span> : null}
+        {path ? (
+          <Link
+            to={path}
+            className="today-signal-action"
+            aria-label={t('m5s5.today.relationshipSignal.ariaLabel', {
+              name: partnerName,
+            })}
+          >
+            {t('m5s5.today.relationshipSignal.viewAction')} →
+          </Link>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -202,6 +329,40 @@ export function TodayPage({
     retry: false,
   });
 
+  const activityQuery = useQuery({
+    queryKey: ['m4', 'activity', spaceId],
+    queryFn: () =>
+      apiCall(() => apis.activity.getActivity({ spaceId, limit: 10 })),
+    enabled: Boolean(apis?.activity && spaceId),
+    retry: false,
+  });
+
+  const partner = dashboardQuery.data?.space.partner;
+  const partnerName =
+    partner?.displayName ?? t('m5s5.today.relationshipSignal.partnerFallback');
+
+  // 1. Primary Contextual Slot (0 or 1 item):
+  // Deterministically selects the earliest upcoming item. If empty, the slot disappears.
+  const upcoming = dashboardQuery.data?.upcoming ?? [];
+  const primaryContextItem = upcoming.length > 0 ? upcoming[0] : null;
+  const secondaryUpcoming = upcoming.length > 1 ? upcoming.slice(1) : [];
+
+  // 2. Relationship Signal Slot (0 or 1 item):
+  // Curated partner interaction (e.g. partner commented on a shared memory).
+  // Disappears completely if no partner interaction occurred.
+  const relationshipSignalItem = activityQuery.data?.items?.find(
+    (item) => item.kind === 'COMMENT_CREATED',
+  );
+
+  const hasContextModules = Boolean(
+    primaryContextItem || relationshipSignalItem,
+  );
+  const hasBothContextModules = Boolean(
+    primaryContextItem && relationshipSignalItem,
+  );
+  const recentShared = dashboardQuery.data?.recentShared ?? [];
+  const retrospective = dashboardQuery.data?.retrospective;
+
   return (
     <div className="page today-page">
       {dashboardQuery.isLoading && (
@@ -217,15 +378,16 @@ export function TodayPage({
       {dashboardQuery.data &&
         (dashboardQuery.data.upcoming.length === 0 &&
         dashboardQuery.data.recentShared.length === 0 &&
-        !dashboardQuery.data.retrospective ? (
+        !dashboardQuery.data.retrospective &&
+        !relationshipSignalItem ? (
           <div className="new-space-experience sbs-motion-reveal">
             <div className="new-space-mark" aria-hidden="true">
               ❤️
             </div>
             <h1 className="new-space-title">
-              {dashboardQuery.data.space.partner
+              {partner
                 ? t('m5s5.dashboard.newSpacePartner', {
-                    name: dashboardQuery.data.space.partner.displayName,
+                    name: partner.displayName,
                   })
                 : t('m5s5.dashboard.newSpaceEmpty')}
             </h1>
@@ -243,15 +405,16 @@ export function TodayPage({
           </div>
         ) : (
           <div className="today-content">
+            {/* ROLE: Hero / Couple Presence */}
             <header className="today-hero sbs-motion-reveal">
               <div className="today-hero-badge" aria-hidden="true">
                 <span className="today-hero-badge-dot" />
                 <span>{t('m5s5.dashboard.durationTitle')}</span>
               </div>
               <h1 className="today-hero-greeting">
-                {dashboardQuery.data.space.partner
+                {partner
                   ? t('m5s5.dashboard.partner', {
-                      name: dashboardQuery.data.space.partner.displayName,
+                      name: partner.displayName,
                     })
                   : t('m5s5.dashboard.durationTitle')}
               </h1>
@@ -275,63 +438,79 @@ export function TodayPage({
               </div>
             </header>
 
-            <TodayModuleSection
-              className="today-section-upcoming"
-              title={t('m5s5.dashboard.upcomingTitle')}
-              animationDelay="100ms"
-            >
-              <div className="today-stream today-stream-upcoming">
-                {dashboardQuery.data.upcoming.length > 0 ? (
-                  dashboardQuery.data.upcoming.map((item: DashboardItem) => (
+            {/* ROLE: Context Area (0-1 Primary Contextual Module + 0-1 Relationship Signal) */}
+            {hasContextModules ? (
+              <div
+                className={`today-context-area ${
+                  hasBothContextModules
+                    ? 'today-context-dual'
+                    : 'today-context-single'
+                } sbs-motion-reveal`}
+              >
+                {primaryContextItem ? (
+                  <TodayContextualCard item={primaryContextItem} />
+                ) : null}
+                {relationshipSignalItem ? (
+                  <TodayRelationshipSignalCard
+                    partnerName={partnerName}
+                    activityItem={relationshipSignalItem}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* ROLE: Secondary Upcoming (rendered only when > 1 upcoming items exist to avoid duplicating the primary contextual item) */}
+            {secondaryUpcoming.length > 0 ? (
+              <TodayModuleSection
+                className="today-section-upcoming"
+                title={t('m5s5.dashboard.upcomingMoreTitle')}
+                animationDelay="150ms"
+              >
+                <div className="today-stream today-stream-upcoming">
+                  {secondaryUpcoming.map((item: DashboardItem) => (
                     <VisualMemoryCard
                       key={item.id}
                       item={item}
                       variant="upcoming"
                       loadMemoryImage={loadMemoryImage}
                     />
-                  ))
-                ) : (
-                  <p className="today-empty">
-                    {t('m5s5.dashboard.upcomingEmpty')}
-                  </p>
-                )}
-              </div>
-            </TodayModuleSection>
+                  ))}
+                </div>
+              </TodayModuleSection>
+            ) : null}
 
-            <TodayModuleSection
-              className="today-section-recent"
-              title={t('m5s5.dashboard.recentTitle')}
-              animationDelay="200ms"
-            >
-              <div className="today-stream today-stream-recent">
-                {dashboardQuery.data.recentShared.length > 0 ? (
-                  dashboardQuery.data.recentShared.map(
-                    (item: DashboardItem) => (
-                      <VisualMemoryCard
-                        key={item.id}
-                        item={item}
-                        variant="recent"
-                        loadMemoryImage={loadMemoryImage}
-                      />
-                    ),
-                  )
-                ) : (
-                  <p className="today-empty">
-                    {t('m5s5.dashboard.recentEmpty')}
-                  </p>
-                )}
-              </div>
-            </TodayModuleSection>
+            {/* ROLE: Shared Story Content Area */}
+            {recentShared.length > 0 ? (
+              <TodayModuleSection
+                className="today-section-recent"
+                title={t('m5s5.dashboard.recentTitle')}
+                kicker={t('m5s5.today.roles.sharedContent')}
+                animationDelay="200ms"
+              >
+                <div className="today-stream today-stream-recent">
+                  {recentShared.map((item: DashboardItem) => (
+                    <VisualMemoryCard
+                      key={item.id}
+                      item={item}
+                      variant="recent"
+                      loadMemoryImage={loadMemoryImage}
+                    />
+                  ))}
+                </div>
+              </TodayModuleSection>
+            ) : null}
 
-            {dashboardQuery.data.retrospective ? (
+            {/* ROLE: Editorial Retrospective Highlight */}
+            {retrospective ? (
               <TodayModuleSection
                 className="today-section-retrospective"
                 title={t('m5s5.dashboard.retrospectiveTitle')}
+                kicker={t('m5s5.today.roles.editorial')}
                 animationDelay="300ms"
               >
                 <div className="today-retrospective-container">
                   <VisualMemoryCard
-                    item={dashboardQuery.data.retrospective}
+                    item={retrospective}
                     variant="retrospective"
                     loadMemoryImage={loadMemoryImage}
                   />

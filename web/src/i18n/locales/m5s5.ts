@@ -25,6 +25,35 @@ const m5s5 = {
     itemFallback: 'Gemeinsamer Eintrag',
     thinkingOfYouButton: 'Ich denke an dich',
     thinkingOfYouSent: 'Liebesgruß gesendet! ❤️',
+    upcomingMoreTitle: 'Weitere anstehende Momente',
+  },
+  today: {
+    roles: {
+      hero: 'Paar-Präsenz',
+      context: 'Aktueller Kontext',
+      relationshipSignal: 'Bei euch passiert',
+      sharedContent: 'Zuletzt bei euch',
+      editorial: 'Rückblick',
+    },
+    contextSlot: {
+      kicker: 'Heute im Blick',
+      dueTodayKicker: 'Heute fällig',
+      reminderKicker: 'Erinnerung',
+      upcomingPlanKicker: 'Als Nächstes geplant',
+      importantDateKicker: 'Wichtiger Tag',
+      viewDetails: 'Details ansehen',
+    },
+    relationshipSignal: {
+      kicker: 'Bei euch passiert',
+      title: 'Neues von euch',
+      partnerCommentedMemory:
+        '{{name}} hat etwas zu einer Erinnerung geschrieben.',
+      partnerCommentedGeneric:
+        '{{name}} hat einen neuen Kommentar hinterlassen.',
+      partnerFallback: 'Dein Partner',
+      viewAction: 'Ansehen',
+      ariaLabel: 'Aktivität von {{name}} ansehen',
+    },
   },
   search: {
     eyebrow: 'Suche',

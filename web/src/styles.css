@@ -932,8 +932,6 @@ code {
   }
 }
 
-
-
 @media (max-width: 599px) {
   .app-header {
     min-height: 64px;

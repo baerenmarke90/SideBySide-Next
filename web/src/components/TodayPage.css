@@ -157,6 +157,192 @@
   animation: heart-sparkle 0.6s ease-out;
 }
 
+/* Context Area: Primary Contextual Slot & Relationship Signal */
+.today-context-area {
+  margin-bottom: var(--space-8);
+}
+
+.today-context-dual {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 840px) {
+  .today-context-dual {
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: stretch;
+  }
+}
+
+.today-context-single {
+  display: block;
+}
+
+.today-context-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-card);
+}
+
+.today-context-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.today-context-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-subtle);
+  border-left: 4px solid var(--color-brand);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+  transition:
+    transform var(--motion-duration-medium) var(--motion-easing-lift),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-duration-medium) var(--motion-easing-lift);
+}
+
+.today-context-link:hover .today-context-card {
+  transform: translateY(-2px);
+  border-color: var(--color-brand-glow);
+}
+
+.today-context-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.today-context-kicker {
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-brand-text);
+}
+
+.today-context-title {
+  margin: var(--space-1) 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: 1.2rem;
+  font-weight: 750;
+  line-height: 1.35;
+  color: var(--color-text);
+}
+
+.today-context-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.today-context-date {
+  font-weight: 600;
+}
+
+.today-context-action {
+  font-weight: 700;
+  color: var(--color-brand);
+}
+
+.today-signal-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: var(--space-5);
+  border: 1px solid var(--color-brand-glow);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-card);
+}
+
+.today-signal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.today-signal-kicker {
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-brand-text);
+}
+
+.today-signal-badge {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.today-signal-message {
+  margin: var(--space-1) 0 var(--space-3);
+  font-family: var(--font-ui);
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.today-signal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.today-signal-date {
+  font-weight: 600;
+}
+
+.today-signal-action {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.84rem;
+  font-weight: 750;
+  color: var(--color-brand-text);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand-surface);
+  border: 1px solid var(--color-brand-glow);
+  text-decoration: none;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.today-signal-action:hover {
+  background: var(--color-brand);
+  color: var(--color-on-accent, #fff);
+  transform: translateX(2px);
+}
+
+.today-signal-action:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 .today-section {
   margin-bottom: var(--space-8);
 }

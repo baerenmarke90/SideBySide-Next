@@ -34,7 +34,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import de.sidebyside.next.design.FrauncesFamily
+import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
@@ -103,7 +103,7 @@ fun RelatedPersonsScreen(
                 Text(
                     text = stringResource(R.string.related_persons_title),
                     style = MaterialTheme.typography.headlineMedium
-                        .copy(fontFamily = FrauncesFamily),
+                        .copy(fontFamily = SideBySideDisplayFamily),
                     color = SideBySideTheme.colors.textPrimary,
                     modifier = Modifier.semantics { heading() },
                 )

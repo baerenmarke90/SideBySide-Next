@@ -43,14 +43,13 @@
 }
 
 .comment-icon-action {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  min-height: 36px;
-  padding: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-1);
   border-radius: var(--radius-medium);
   border: 1px solid transparent;
   background: transparent;
@@ -60,6 +59,13 @@
     background var(--motion-fast),
     border-color var(--motion-fast),
     color var(--motion-fast);
+}
+
+@media (pointer: coarse), (max-width: 768px) {
+  .comment-icon-action {
+    min-width: 48px;
+    min-height: 48px;
+  }
 }
 
 .comment-icon-action:hover {

@@ -80,9 +80,10 @@
 
 .shell-primary-action .quick-create-tile span:last-child {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  line-height: 1.25;
 }
 
 .quick-create-polished .quick-create-tile {

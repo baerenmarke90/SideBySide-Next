@@ -110,7 +110,9 @@ describe('TodayPage', () => {
           <TodayPage
             apis={{} as M4ProductApis}
             spaceId="space-1"
-            loadMemoryImage={() => Promise.resolve('blob:http://localhost/mock')}
+            loadMemoryImage={() =>
+              Promise.resolve('blob:http://localhost/mock')
+            }
           />
         </MemoryRouter>
       </QueryClientProvider>,
@@ -120,5 +122,301 @@ describe('TodayPage', () => {
     expect(html).toContain('today-card-typography-first');
     expect(html).toContain('Photo Memory');
     expect(html).toContain('Text Memory');
+  });
+
+  it('orchestrates primary contextual slot and relationship signal when partner activity exists', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: { daysTogether: 100 },
+      upcoming: [
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Candlelight Dinner',
+          scheduledAt: new Date('2026-09-10T19:00:00Z'),
+        },
+      ],
+      recentShared: [
+        {
+          id: 'mem-1',
+          type: 'MEMORY',
+          titleOrText: 'Lake Walk',
+          occurredOn: new Date('2026-09-02T16:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [
+        {
+          id: 'act-1',
+          kind: 'COMMENT_CREATED',
+          actorId: 'partner-1',
+          targetId: 'mem-1',
+          targetType: 'MEMORY',
+          createdAt: new Date('2026-09-03T12:00:00Z'),
+          occurredAt: new Date('2026-09-03T12:00:00Z'),
+          sourceEventId: 'ev-1',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Primary contextual card
+    expect(html).toContain('today-context-area');
+    expect(html).toContain('today-context-dual');
+    expect(html).toContain('Candlelight Dinner');
+    expect(html).toContain('today-context-kicker');
+
+    // Relationship signal card
+    expect(html).toContain('today-signal-card');
+    expect(html).toContain('today-signal-kicker');
+    expect(html).toContain('today-signal-message');
+    expect(html).toContain('href="/story/memories/mem-1"');
+    expect(html).toContain('today-signal-action');
+
+    // Zero duplication: single upcoming item is NOT duplicated in a separate upcoming section
+    expect(html).not.toContain('today-section-upcoming');
+  });
+
+  it('omits context area entirely when neither upcoming item nor relationship activity exists', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: { daysTogether: 50 },
+      upcoming: [],
+      recentShared: [
+        {
+          id: 'mem-1',
+          type: 'MEMORY',
+          titleOrText: 'Lake Walk',
+          occurredOn: new Date('2026-09-02T16:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Context area is completely omitted
+    expect(html).not.toContain('today-context-area');
+    expect(html).not.toContain('today-signal-card');
+
+    // Page flows directly into recent shared
+    expect(html).toContain('today-section-recent');
+    expect(html).toContain('Lake Walk');
+  });
+
+  it('renders single-column context area when only primary contextual item exists', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: { daysTogether: 50 },
+      upcoming: [
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Cooking Night',
+          scheduledAt: new Date('2026-09-05T18:00:00Z'),
+        },
+      ],
+      recentShared: [],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).toContain('today-context-area');
+    expect(html).toContain('today-context-single');
+    expect(html).toContain('Cooking Night');
+    expect(html).not.toContain('today-signal-card');
+  });
+
+  it('renders single-column context area when only relationship signal exists', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: { daysTogether: 50 },
+      upcoming: [],
+      recentShared: [],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [
+        {
+          id: 'act-1',
+          kind: 'COMMENT_CREATED',
+          actorId: 'partner-1',
+          targetId: 'mem-99',
+          targetType: 'MEMORY',
+          createdAt: new Date('2026-09-03T14:00:00Z'),
+          occurredAt: new Date('2026-09-03T14:00:00Z'),
+          sourceEventId: 'ev-99',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).toContain('today-context-area');
+    expect(html).toContain('today-context-single');
+    expect(html).toContain('today-signal-card');
+    expect(html).toContain('href="/story/memories/mem-99"');
+    expect(html).not.toContain('today-context-card');
+  });
+
+  it('renders secondary upcoming section when more than 1 upcoming item exists', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: { daysTogether: 50 },
+      upcoming: [
+        {
+          id: 'plan-primary',
+          type: 'PLAN',
+          titleOrText: 'First Next Plan',
+          scheduledAt: new Date('2026-09-05T18:00:00Z'),
+        },
+        {
+          id: 'plan-secondary',
+          type: 'PLAN',
+          titleOrText: 'Second Future Plan',
+          scheduledAt: new Date('2026-09-20T18:00:00Z'),
+        },
+      ],
+      recentShared: [],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // First plan is in primary context card
+    expect(html).toContain('today-context-card');
+    expect(html).toContain('First Next Plan');
+
+    // Second plan is in secondary upcoming section
+    expect(html).toContain('today-section-upcoming');
+    expect(html).toContain('Second Future Plan');
   });
 });
