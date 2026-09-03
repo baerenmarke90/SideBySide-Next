@@ -119,6 +119,7 @@ class StoryPage(ApiModel):
     items: list[StoryItem]
     next_cursor: str | None
     has_more: bool
+    available_years: list[int] = Field(default_factory=list)
 
 
 def _authors(session: DbSession, owner_ids: set[UUID]) -> dict[UUID, Account]:
@@ -167,19 +168,26 @@ def get_story_timeline(
 
     Private heart moments never appear here, including for their owner.
     """
+    kinds_tuple = tuple(type or ())
     page = service.read_timeline(
         session,
         authorization,
-        kinds=tuple(type or ()),
+        kinds=kinds_tuple,
         year=year,
         order=order,
         cursor=cursor,
         limit=limit,
     )
+    available_years = service.read_available_years(
+        session,
+        authorization,
+        kinds=kinds_tuple,
+    )
     return StoryPage(
         items=_project(session, authorization, page.items),
         next_cursor=page.next_cursor,
         has_more=page.has_more,
+        available_years=available_years,
     )
 
 

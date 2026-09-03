@@ -2,16 +2,24 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReferenceApis } from '../client/referenceFlow';
+import {
+  parseStoryFilters,
+  storyCacheResourceId,
+} from '../client/storyProduct';
 import de from '../i18n/locales/de';
 import { StoryProductPage } from './StoryProductPage';
 
 const loadMemoryImage = async () => 'blob:test-image';
 
 function renderStoryPage(route: string, cachedData: unknown): string {
+  const query = route.includes('?') ? route.slice(route.indexOf('?') + 1) : '';
+  const filters = parseStoryFilters(new URLSearchParams(query));
+  const cacheKey = storyCacheResourceId(filters);
+
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  queryClient.setQueryData(['story', 'space-1', 'timeline:ALL:ALL:DESC'], {
+  queryClient.setQueryData(['story', 'space-1', cacheKey], {
     pages: [
       {
         value: cachedData,
@@ -140,5 +148,67 @@ describe('StoryProductPage', () => {
     expect(html).toContain(de.story.milestonesDesc);
     expect(html).not.toContain('Erfolge');
     expect(html).toContain('href="/story?tab=timeline&amp;type=MILESTONE"');
+  });
+
+  describe('issue #618: data-aware and recoverable timeline filters', () => {
+    it('populates year select from authoritative availableYears, removing number input and datalist', () => {
+      const html = renderStoryPage('/story?tab=timeline', {
+        items: [],
+        availableYears: [2026, 2024, 2021],
+        hasMore: false,
+        nextCursor: null,
+      });
+
+      expect(html).toContain('story-filter-container');
+      expect(html).toContain('<select id="story-filter-year"');
+      expect(html).toContain('<option value="2026">2026</option>');
+      expect(html).toContain('<option value="2024">2024</option>');
+      expect(html).toContain('<option value="2021">2021</option>');
+      expect(html).not.toContain('story-year-options');
+      expect(html).not.toContain('type="number"');
+      expect(html).not.toContain('Filter anwenden');
+    });
+
+    it('renders active filter chips with remove buttons and reset action', () => {
+      const html = renderStoryPage(
+        '/story?tab=timeline&type=MILESTONE&year=2026&order=ASC',
+        {
+          items: [],
+          availableYears: [2026],
+          hasMore: false,
+          nextCursor: null,
+        },
+      );
+
+      expect(html).toContain('story-active-chips');
+      expect(html).toContain('Meilenstein');
+      expect(html).toContain('2026');
+      expect(html).toContain('Älteste zuerst');
+      expect(html).toContain('chip-remove');
+      expect(html).toContain('story-filter-reset-header-action');
+    });
+
+    it('keeps filter controls and reset visible on 0 hits with active filters (no dead-end)', () => {
+      // Deep link with year that has 0 results
+      const html = renderStoryPage(
+        '/story?tab=timeline&type=MILESTONE&year=1997',
+        {
+          items: [],
+          availableYears: [2026],
+          hasMore: false,
+          nextCursor: null,
+        },
+      );
+
+      // Must NOT show new-space-experience dead end
+      expect(html).not.toContain('new-space-experience');
+      // Must show filter container and empty state with reset
+      expect(html).toContain('story-filter-container');
+      expect(html).toContain('story-filter-empty-state');
+      expect(html).toContain('Keine Momente für diese Auswahl');
+      expect(html).toContain('Filter zurücksetzen');
+      // Dropdown contains 2026 so user can easily pick a valid year
+      expect(html).toContain('<option value="2026">2026</option>');
+    });
   });
 });

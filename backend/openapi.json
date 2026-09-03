@@ -6745,6 +6745,13 @@
       },
       "StoryPage": {
         "properties": {
+          "availableYears": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Availableyears",
+            "type": "array"
+          },
           "hasMore": {
             "title": "Hasmore",
             "type": "boolean"

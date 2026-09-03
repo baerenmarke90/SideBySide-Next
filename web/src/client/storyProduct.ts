@@ -79,5 +79,6 @@ export function aggregateStoryPages(pages: StoryPage[]): StoryPage {
     items: pages.flatMap((page) => page.items),
     hasMore: lastPage?.hasMore ?? false,
     nextCursor: lastPage?.nextCursor ?? null,
+    availableYears: pages[0]?.availableYears ?? [],
   };
 }
