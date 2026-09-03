@@ -11,7 +11,9 @@ import {
   MORE_PEOPLE_ROUTE,
   chapterDetailPath,
   collectionDetailPath,
+  heartMomentDetailPath,
   memoryDetailPath,
+  milestoneDetailPath,
   planDetailPath,
   placeDetailPath,
   wishDetailPath,
@@ -104,8 +106,19 @@ export function engagementTargetPath(
     case 'MEMORY':
       return memoryDetailPath(targetId);
     case 'HEART_MOMENT':
+      return heartMomentDetailPath(targetId);
     case 'MILESTONE':
-      return appRoutePath('story');
+      return milestoneDetailPath(targetId);
+    case 'WISH':
+      return wishDetailPath(targetId);
+    case 'PLAN':
+      return planDetailPath(targetId);
+    case 'PLACE':
+      return placeDetailPath(targetId);
+    case 'CHAPTER':
+      return chapterDetailPath(targetId);
+    case 'COLLECTION':
+      return collectionDetailPath(targetId);
     default:
       return null;
   }

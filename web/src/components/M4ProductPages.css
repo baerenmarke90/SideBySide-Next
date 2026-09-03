@@ -338,6 +338,29 @@
   border-radius: var(--radius-card);
 }
 
+.activity-card-interactive {
+  cursor: pointer;
+}
+
+.activity-card-static {
+  cursor: default;
+}
+
+.activity-card-chevron {
+  margin-left: auto;
+  align-self: center;
+  color: var(--color-text-secondary);
+  font-size: 1.35rem;
+  font-weight: 300;
+  line-height: 1;
+  transition: transform var(--motion-fast), color var(--motion-fast);
+}
+
+.activity-result-link:hover .activity-card-chevron {
+  color: var(--color-text);
+  transform: translateX(2px);
+}
+
 .activity-card-header {
   display: flex;
   align-items: flex-start;

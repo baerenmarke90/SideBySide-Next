@@ -28,15 +28,32 @@ describe('M5 S5/S3 product navigation', () => {
     expect(searchResultPath('PRIVATE_COLLECTION', 'collection-id')).toBeNull();
   });
 
-  it('does not invent direct engagement routes for unsupported target types', () => {
+  it('routes engagement targets to canonical detail routes and guards null targets', () => {
     expect(engagementTargetPath('MEMORY', 'memory-id')).toBe(
       '/story/memories/memory-id',
     );
-    expect(engagementTargetPath('HEART_MOMENT', 'heart-id')).toBe('/story');
-    expect(engagementTargetPath('MILESTONE', 'milestone-id')).toBe('/story');
+    expect(engagementTargetPath('HEART_MOMENT', 'heart-id')).toBe(
+      '/story/heart-moments/heart-id',
+    );
+    expect(engagementTargetPath('MILESTONE', 'milestone-id')).toBe(
+      '/story/milestones/milestone-id',
+    );
+    expect(engagementTargetPath('WISH', 'wish-id')).toBe(
+      '/plan/wishes/wish-id',
+    );
+    expect(engagementTargetPath('PLAN', 'plan-id')).toBe(
+      '/plan/plans/plan-id',
+    );
+    expect(engagementTargetPath('PLACE', 'place-id')).toBe(
+      '/plan/places/place-id',
+    );
+    expect(engagementTargetPath('CHAPTER', 'chapter-id')).toBe(
+      '/plan/chapters/chapter-id',
+    );
+    expect(engagementTargetPath('COLLECTION', 'collection-id')).toBe(
+      '/plan/collections/collection-id',
+    );
 
-    expect(engagementTargetPath('PLAN', 'plan-id')).toBeNull();
-    expect(engagementTargetPath('PLACE', 'place-id')).toBeNull();
     expect(engagementTargetPath(null, 'memory-id')).toBeNull();
     expect(engagementTargetPath('MEMORY', null)).toBeNull();
   });

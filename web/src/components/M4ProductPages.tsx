@@ -269,7 +269,7 @@ function ActivityCard({
 
   const inner = (
     <div
-      className={`activity-card sbs-motion-lift activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
+      className={`activity-card ${path ? 'activity-card-interactive sbs-motion-lift' : 'activity-card-static'} activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
     >
       <div className="activity-card-header">
         {item.actor ? (
@@ -301,6 +301,11 @@ function ActivityCard({
             {formatDateTime(item.occurredAt)}
           </time>
         </div>
+        {path ? (
+          <span className="activity-card-chevron" aria-hidden="true">
+            ›
+          </span>
+        ) : null}
       </div>
       {item.target?.title ? (
         <div className="activity-card-target">

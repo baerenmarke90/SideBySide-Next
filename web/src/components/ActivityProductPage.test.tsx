@@ -107,7 +107,7 @@ describe('issue #501: Activity relationship chronology presentation', () => {
     expect(html).toContain(m5s5.activityAction.HEART_MOMENT_CREATED);
     expect(html).not.toContain(m5s5.activity.you);
     expect(html).toContain('You make me smile every day');
-    expect(html).toContain('href="/story"');
+    expect(html).toContain('href="/story/heart-moments/heart-1"');
   });
 
   it('renders neutral system formulation when actor is null', () => {
@@ -136,6 +136,31 @@ describe('issue #501: Activity relationship chronology presentation', () => {
     expect(html).toContain(m5s5.activityKind.PLAN_CREATED);
     expect(html).not.toContain(m5s5.activity.you);
     expect(html).toContain('Weekend getaway');
+    expect(html).toContain('href="/plan/plans/plan-1"');
+    expect(html).toContain('activity-card-chevron');
+  });
+
+  it('renders static non-interactive card when target is null', () => {
+    const html = renderActivityPage(
+      [
+        {
+          id: 'act-4',
+          sourceEventId: 'evt-4',
+          kind: 'PLAN_CREATED',
+          actorId: null,
+          actor: null,
+          targetType: null,
+          targetId: null,
+          target: null,
+          occurredAt: new Date('2026-08-22T10:00:00Z'),
+          createdAt: new Date('2026-08-22T10:00:00Z'),
+        },
+      ],
+      'user-self',
+    );
+    expect(html).toContain('activity-card-static');
+    expect(html).not.toContain('activity-card-chevron');
+    expect(html).not.toContain('activity-result-link');
   });
 
   it('renders empty state when no activities exist', () => {
