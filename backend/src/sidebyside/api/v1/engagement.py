@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
@@ -9,10 +10,13 @@ from uuid import UUID
 from fastapi import APIRouter, Path, Query, Response
 from fastapi import status as http_status
 from pydantic import ConfigDict
+from sqlalchemy import select
 
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
-from sidebyside.api.schema import ApiModel
+from sidebyside.api.schema import ApiModel, AuthorSummary
+from sidebyside.attachments.binding import AccountProfileAttachment
+from sidebyside.authorization import PrivacyClass, readable
 from sidebyside.engagement import service, thinking
 from sidebyside.engagement.models import (
     Activity,
@@ -21,8 +25,15 @@ from sidebyside.engagement.models import (
     Notification,
     NotificationKind,
 )
+from sidebyside.identity.models import Account
 
 router = APIRouter()
+
+
+class ActivityTargetPresentation(ApiModel):
+    target_type: EngagementTarget
+    target_id: UUID
+    title: str | None = None
 
 
 class ActivityItem(ApiModel):
@@ -30,8 +41,10 @@ class ActivityItem(ApiModel):
     source_event_id: UUID
     kind: ActivityKind
     actor_id: UUID | None
+    actor: AuthorSummary | None = None
     target_type: EngagementTarget | None
     target_id: UUID | None
+    target: ActivityTargetPresentation | None = None
     occurred_at: datetime
     created_at: datetime
 
@@ -98,9 +111,19 @@ def get_activity(
         cursor=cursor,
         limit=limit,
     )
+    actor_ids = {item.actor_id for item in page.items if item.actor_id is not None}
+    actors = _resolve_actors(session, actor_ids)
+
+    targets: set[tuple[EngagementTarget, UUID]] = set()
+    for item in page.items:
+        if item.target_type is not None and item.target_id is not None:
+            with contextlib.suppress(ValueError):
+                targets.add((EngagementTarget(item.target_type), item.target_id))
+    target_titles = _resolve_target_titles(session, authorization, targets)
+
     response.headers["Cache-Control"] = "private, no-store"
     return ActivityPage(
-        items=[_activity_item(item) for item in page.items],
+        items=[_activity_item(item, actors, target_titles) for item in page.items],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )
@@ -215,14 +238,93 @@ def send_thinking_of_you(
     return ThinkingOfYouAccepted(client_request_id=request.client_request_id)
 
 
-def _activity_item(item: Activity) -> ActivityItem:
+def _resolve_actors(
+    session: DbSession,
+    actor_ids: set[UUID],
+) -> dict[UUID, AuthorSummary]:
+    if not actor_ids:
+        return {}
+    accounts = session.execute(select(Account).where(Account.id.in_(actor_ids))).scalars().all()
+    attachments = (
+        session.execute(
+            select(AccountProfileAttachment).where(
+                AccountProfileAttachment.account_id.in_(actor_ids)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    avatar_map = {att.account_id: att.attachment_id for att in attachments}
+    return {
+        acc.id: AuthorSummary(
+            id=acc.id,
+            display_name=acc.display_name,
+            profile_attachment_id=avatar_map.get(acc.id),
+        )
+        for acc in accounts
+    }
+
+
+def _resolve_target_titles(
+    session: DbSession,
+    authorization: Authorization,
+    targets: set[tuple[EngagementTarget, UUID]],
+) -> dict[tuple[EngagementTarget, UUID], str]:
+    if not targets:
+        return {}
+
+    by_type: dict[EngagementTarget, set[UUID]] = {}
+    for target_type, target_id in targets:
+        by_type.setdefault(target_type, set()).add(target_id)
+
+    titles: dict[tuple[EngagementTarget, UUID], str] = {}
+    for target_type, ids in by_type.items():
+        model = service._TARGET_MODELS.get(target_type)
+        if model is None:
+            continue
+        statement = readable(model, authorization).where(
+            model.id.in_(ids),
+            model.privacy_class == PrivacyClass.SPACE_SHARED.value,
+        )
+        rows = session.execute(statement).scalars().all()
+        for row in rows:
+            title: str | None = None
+            if hasattr(row, "payload") and row.payload is not None:
+                if target_type is EngagementTarget.HEART_MOMENT:
+                    title = getattr(row.payload, "text", None)
+                elif target_type is EngagementTarget.PLACE:
+                    title = getattr(row.payload, "name", None)
+                else:
+                    title = getattr(row.payload, "title", None)
+            if title:
+                titles[(target_type, row.id)] = title
+    return titles
+
+
+def _activity_item(
+    item: Activity,
+    actors: dict[UUID, AuthorSummary],
+    target_titles: dict[tuple[EngagementTarget, UUID], str],
+) -> ActivityItem:
+    target_presentation = None
+    if item.target_type is not None and item.target_id is not None:
+        with contextlib.suppress(ValueError):
+            target_type = EngagementTarget(item.target_type)
+            target_presentation = ActivityTargetPresentation(
+                target_type=target_type,
+                target_id=item.target_id,
+                title=target_titles.get((target_type, item.target_id)),
+            )
+
     return ActivityItem(
         id=item.id,
         source_event_id=item.source_event_id,
         kind=ActivityKind(item.kind),
         actor_id=item.actor_id,
+        actor=actors.get(item.actor_id) if item.actor_id is not None else None,
         target_type=EngagementTarget(item.target_type) if item.target_type is not None else None,
         target_id=item.target_id,
+        target=target_presentation,
         occurred_at=item.occurred_at,
         created_at=item.created_at,
     )

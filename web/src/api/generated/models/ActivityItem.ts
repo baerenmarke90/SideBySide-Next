@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { AuthorSummary } from './AuthorSummary';
+import {
+    AuthorSummaryFromJSON,
+    AuthorSummaryFromJSONTyped,
+    AuthorSummaryToJSON,
+    AuthorSummaryToJSONTyped,
+} from './AuthorSummary';
 import type { EngagementTarget } from './EngagementTarget';
 import {
     EngagementTargetFromJSON,
@@ -20,6 +27,13 @@ import {
     EngagementTargetToJSON,
     EngagementTargetToJSONTyped,
 } from './EngagementTarget';
+import type { ActivityTargetPresentation } from './ActivityTargetPresentation';
+import {
+    ActivityTargetPresentationFromJSON,
+    ActivityTargetPresentationFromJSONTyped,
+    ActivityTargetPresentationToJSON,
+    ActivityTargetPresentationToJSONTyped,
+} from './ActivityTargetPresentation';
 import type { ActivityKind } from './ActivityKind';
 import {
     ActivityKindFromJSON,
@@ -34,6 +48,12 @@ import {
  * @interface ActivityItem
  */
 export interface ActivityItem {
+    /**
+     * 
+     * @type {AuthorSummary}
+     * @memberof ActivityItem
+     */
+    actor?: AuthorSummary | null;
     /**
      * 
      * @type {string}
@@ -70,6 +90,12 @@ export interface ActivityItem {
      * @memberof ActivityItem
      */
     sourceEventId: string;
+    /**
+     * 
+     * @type {ActivityTargetPresentation}
+     * @memberof ActivityItem
+     */
+    target?: ActivityTargetPresentation | null;
     /**
      * 
      * @type {string}
@@ -111,12 +137,14 @@ export function ActivityItemFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
         
+        'actor': json['actor'] === undefined ? undefined : json['actor'] === null ? null : AuthorSummaryFromJSON(json['actor']),
         'actorId': json['actorId'],
         'createdAt': (new Date(json['createdAt'])),
         'id': json['id'],
         'kind': ActivityKindFromJSON(json['kind']),
         'occurredAt': (new Date(json['occurredAt'])),
         'sourceEventId': json['sourceEventId'],
+        'target': json['target'] === undefined ? undefined : json['target'] === null ? null : ActivityTargetPresentationFromJSON(json['target']),
         'targetId': json['targetId'],
         'targetType': EngagementTargetFromJSON(json['targetType']),
     };
@@ -133,12 +161,14 @@ export function ActivityItemToJSONTyped(value?: ActivityItem | null, ignoreDiscr
 
     return {
         
+        'actor': AuthorSummaryToJSON(value['actor']),
         'actorId': value['actorId'],
         'createdAt': value['createdAt'].toISOString(),
         'id': value['id'],
         'kind': ActivityKindToJSON(value['kind']),
         'occurredAt': value['occurredAt'].toISOString(),
         'sourceEventId': value['sourceEventId'],
+        'target': ActivityTargetPresentationToJSON(value['target']),
         'targetId': value['targetId'],
         'targetType': EngagementTargetToJSON(value['targetType']),
     };

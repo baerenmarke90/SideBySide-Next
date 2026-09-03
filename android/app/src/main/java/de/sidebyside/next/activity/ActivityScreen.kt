@@ -102,12 +102,29 @@ fun ActivityScreen(
                     .fillMaxWidth()
                     .then(if (opensSomewhere) Modifier.clickable { onOpen(entry) } else Modifier),
             ) {
-                Text(
-                    text = stringResource(entry.kind.labelRes()),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = SideBySideTheme.colors.textPrimary,
+                Column(
                     modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
-                )
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step1),
+                ) {
+                    val actorName = entry.actor?.displayName
+                    val headerText = if (actorName != null) {
+                        "$actorName • " + stringResource(entry.kind.labelRes())
+                    } else {
+                        stringResource(entry.kind.labelRes())
+                    }
+                    Text(
+                        text = headerText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = SideBySideTheme.colors.textPrimary,
+                    )
+                    entry.target?.title?.let { targetTitle ->
+                        Text(
+                            text = targetTitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = SideBySideTheme.colors.textSecondary,
+                        )
+                    }
+                }
             }
         }
 

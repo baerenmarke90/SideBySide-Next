@@ -151,6 +151,18 @@ const m5s5 = {
     COLLECTION_CREATED: 'Liste hinzugefügt',
     COMMENT_CREATED: 'Neuer Kommentar hinterlassen',
   },
+  activityAction: {
+    MEMORY_CREATED: 'hat eine Erinnerung festgehalten',
+    MILESTONE_CREATED: 'hat einen Meilenstein hinzugefügt',
+    HEART_MOMENT_CREATED: 'hat einen Herzensmoment geteilt',
+    WISH_CREATED: 'hat einen Wunsch aufgeschrieben',
+    PLAN_CREATED: 'hat einen Plan geschmiedet',
+    PLAN_COMPLETED: 'hat einen Plan abgeschlossen',
+    PLACE_CREATED: 'hat einen Ort hinzugefügt',
+    CHAPTER_CREATED: 'hat ein Kapitel begonnen',
+    COLLECTION_CREATED: 'hat eine Liste angelegt',
+    COMMENT_CREATED: 'hat einen Kommentar hinterlassen',
+  },
   notificationKind: {
     COMMENT_CREATED: 'Neuer Kommentar',
     generic: 'Neue Benachrichtigung',

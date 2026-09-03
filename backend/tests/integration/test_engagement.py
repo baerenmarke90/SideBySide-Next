@@ -385,3 +385,70 @@ def test_deleted_target_disappears_from_notification_list_and_count(
     )
     assert count.status_code == 200
     assert count.json()["unreadCount"] == 0
+
+
+def test_activity_actor_and_target_presentation(client, session: Session, couple) -> None:  # type: ignore[no-untyped-def]
+    memory = _shared_memory(session, couple, title="First shared memory")
+    activity = Activity(
+        space_id=couple["space"].id,
+        source_event_id=uuid4(),
+        kind=ActivityKind.MEMORY_CREATED.value,
+        actor_id=couple["anna"].id,
+        target_type="MEMORY",
+        target_id=memory.id,
+        occurred_at=NOW,
+    )
+    session.add(activity)
+    session.flush()
+
+    res = client.get(
+        f"/api/v1/spaces/{couple['space'].id}/activity",
+        headers=auth(couple["ben_token"]),
+    )
+    assert res.status_code == 200
+    items = res.json()["items"]
+    assert len(items) == 1
+    item = items[0]
+
+    # AuthorSummary contract
+    assert item["actor"] is not None
+    assert item["actor"]["id"] == str(couple["anna"].id)
+    assert item["actor"]["displayName"] == couple["anna"].display_name
+
+    # ActivityTargetPresentation contract
+    assert item["target"] is not None
+    assert item["target"]["targetType"] == "MEMORY"
+    assert item["target"]["targetId"] == str(memory.id)
+    assert item["target"]["title"] == "First shared memory"
+
+
+def test_activity_heart_moment_target_presentation(client, session: Session, couple) -> None:  # type: ignore[no-untyped-def]
+    heart = HeartMoment(
+        space_id=couple["space"].id,
+        owner_id=couple["anna"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        happened_on=NOW.date(),
+        payload=HeartMomentPayload(text="You made me smile today", emotion=HeartEmotion.HAPPY),
+    )
+    session.add(heart)
+    session.flush()
+    activity = Activity(
+        space_id=couple["space"].id,
+        source_event_id=uuid4(),
+        kind=ActivityKind.HEART_MOMENT_CREATED.value,
+        actor_id=couple["anna"].id,
+        target_type="HEART_MOMENT",
+        target_id=heart.id,
+        occurred_at=NOW,
+    )
+    session.add(activity)
+    session.flush()
+
+    res = client.get(
+        f"/api/v1/spaces/{couple['space'].id}/activity",
+        headers=auth(couple["ben_token"]),
+    )
+    assert res.status_code == 200
+    items = res.json()["items"]
+    assert len(items) == 1
+    assert items[0]["target"]["title"] == "You made me smile today"

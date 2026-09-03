@@ -298,36 +298,93 @@
   font-weight: 600;
 }
 
-/* Activity Cards */
+/* Activity Cards (Relationship Chronology) */
 .activity-result-wrapper {
   list-style: none;
 }
 
 .activity-result-link {
   display: block;
+  height: 100%;
   text-decoration: none;
+  color: inherit;
 }
 
 .activity-card {
   display: flex;
+  height: 100%;
   flex-direction: column;
+  gap: var(--space-3);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-large);
+  border-radius: var(--radius-card);
   padding: var(--space-4) var(--space-5);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-panel);
   box-shadow: var(--shadow-soft);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.activity-result-link:hover .activity-card {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.activity-result-link:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
+}
+
+.activity-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.activity-card-actor-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .activity-card-title {
-  margin-bottom: var(--space-1);
+  margin: 0;
   color: var(--color-text);
-  font-size: 1.15rem;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.activity-card-title strong {
   font-weight: 700;
 }
 
 .activity-card-date {
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+}
+
+.activity-card-target {
+  margin-top: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-raised);
+}
+
+.activity-card-target-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .activity-card-memory,

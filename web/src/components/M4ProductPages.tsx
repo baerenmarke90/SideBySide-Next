@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { SearchKind } from '../api/generated/models/SearchKind';
 import type { SearchResult } from '../api/generated/models/SearchResult';
 import {
@@ -18,6 +19,7 @@ import {
 } from '../client/m4Product';
 import { normalizeClientError } from '../client/problemDetails';
 import { resolvedLocale, useTranslation } from '../i18n';
+import { AuthorAvatar } from './PersonIdentity';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -240,25 +242,61 @@ export function SearchProductPage({
   );
 }
 
-function ActivityCard({ item }: { item: ActivityItem }) {
+function ActivityCard({
+  item,
+  profilesApi,
+  spaceId,
+}: {
+  item: ActivityItem;
+  profilesApi?: ProfilesApi | null;
+  spaceId: string;
+}) {
   const { t } = useTranslation();
   const path = engagementTargetPath(item.targetType, item.targetId);
+
+  const actorName = item.actor?.displayName;
+  const actionText = actorName
+    ? t(`m5s5.activityAction.${item.kind}`)
+    : t(`m5s5.activityKind.${item.kind}`);
 
   const inner = (
     <div
       className={`activity-card sbs-motion-lift activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
     >
-      <div className="activity-card-content">
-        <h3 className="activity-card-title">
-          {t(`m5s5.activityKind.${item.kind}`)}
-        </h3>
-        <time
-          className="activity-card-date"
-          dateTime={item.occurredAt.toISOString()}
-        >
-          {formatDateTime(item.occurredAt)}
-        </time>
+      <div className="activity-card-header">
+        {item.actor ? (
+          <AuthorAvatar
+            author={item.actor}
+            profilesApi={profilesApi}
+            spaceId={spaceId}
+            size="small"
+          />
+        ) : null}
+        <div className="activity-card-actor-copy">
+          <p className="activity-card-title">
+            {actorName ? (
+              <>
+                <strong>{actorName}</strong> {actionText}
+              </>
+            ) : (
+              actionText
+            )}
+          </p>
+          <time
+            className="activity-card-date"
+            dateTime={item.occurredAt.toISOString()}
+          >
+            {formatDateTime(item.occurredAt)}
+          </time>
+        </div>
       </div>
+      {item.target?.title ? (
+        <div className="activity-card-target">
+          <span className="activity-card-target-title">
+            {item.target.title}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -278,9 +316,11 @@ function ActivityCard({ item }: { item: ActivityItem }) {
 export function ActivityProductPage({
   apis,
   spaceId,
+  profilesApi,
 }: {
   apis: M4ProductApis;
   spaceId: string;
+  profilesApi?: ProfilesApi | null;
 }) {
   const { t } = useTranslation();
   const activityQuery = useInfiniteQuery({
@@ -338,7 +378,12 @@ export function ActivityProductPage({
         <section className="m4-results" aria-live="polite">
           <ul className="m4-list layout-columns layout-columns-dense">
             {items.map((item) => (
-              <ActivityCard key={item.id} item={item} />
+              <ActivityCard
+                key={item.id}
+                item={item}
+                profilesApi={profilesApi}
+                spaceId={spaceId}
+              />
             ))}
           </ul>
           {activityQuery.hasNextPage ? (

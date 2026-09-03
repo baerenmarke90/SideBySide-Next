@@ -74,6 +74,16 @@
       },
       "ActivityItem": {
         "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "actorId": {
             "anyOf": [
               {
@@ -108,6 +118,16 @@
             "format": "uuid",
             "title": "Sourceeventid",
             "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivityTargetPresentation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "targetId": {
             "anyOf": [
@@ -192,6 +212,35 @@
           "hasMore"
         ],
         "title": "ActivityPage",
+        "type": "object"
+      },
+      "ActivityTargetPresentation": {
+        "properties": {
+          "targetId": {
+            "format": "uuid",
+            "title": "Targetid",
+            "type": "string"
+          },
+          "targetType": {
+            "$ref": "#/components/schemas/EngagementTarget"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId"
+        ],
+        "title": "ActivityTargetPresentation",
         "type": "object"
       },
       "AnnualSchedule": {
