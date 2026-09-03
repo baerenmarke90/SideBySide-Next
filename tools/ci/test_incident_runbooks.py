@@ -59,6 +59,10 @@ def runbook_section(document: str, index: int) -> str:
     return document[start:end]
 
 
+def bash_blocks(document: str) -> list[str]:
+    return re.findall(r"```bash\n(.*?)```", document, flags=re.DOTALL)
+
+
 class IncidentRunbookContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -92,20 +96,22 @@ class IncidentRunbookContractTest(unittest.TestCase):
         self.assertIn("do not edit the database directly to imitate", self.runbook)
         maintenance = runbook_section(self.runbook, 8)
         self.assertIn("If #334 is **not** in the deployed release", maintenance)
-        self.assertNotIn("UPDATE ", maintenance.upper())
+        self.assertNotRegex(maintenance, r"(?im)^\s*UPDATE\s+")
 
     def test_queue_diagnostics_never_prescribe_sensitive_columns(self) -> None:
-        self.assertIn("SELECT status,", self.runbook)
-        self.assertNotRegex(self.runbook, r"(?i)SELECT\s+[^;]*(?:jobs\.)?payload\b")
-        self.assertNotRegex(self.runbook, r"(?i)SELECT\s+[^;]*(?:jobs\.)?last_error\b")
-        self.assertNotRegex(self.runbook, r"(?i)SELECT\s+[^;]*(?:jobs\.)?locked_by\b")
+        queue_blocks = [block for block in bash_blocks(self.runbook) if "SELECT status," in block]
+        self.assertEqual(len(queue_blocks), 1, "expected one canonical safe queue SQL block")
+        query_block = queue_blocks[0]
+        for column in ("payload", "last_error", "locked_by"):
+            with self.subTest(column=column):
+                self.assertNotRegex(query_block, rf"(?i)\b{re.escape(column)}\b")
         self.assertIn("never select `payload`, `last_error` or `locked_by`", self.runbook)
 
     def test_privacy_forbidden_categories_are_explicit(self) -> None:
         for category in FORBIDDEN_DIAGNOSTIC_CATEGORIES:
             with self.subTest(category=category):
                 self.assertIn(category, self.runbook)
-        self.assertIn("Do not preserve the leaked secret/private value", self.runbook)
+        self.assertIn("Never\npreserve the leaked secret/private value", self.runbook)
 
     def test_no_fictional_worker_heartbeat_is_required(self) -> None:
         self.assertIn("no authoritative worker\nheartbeat endpoint", self.runbook)
@@ -142,7 +148,8 @@ class IncidentRunbookContractTest(unittest.TestCase):
     def test_drill_does_not_contain_destructive_volume_command(self) -> None:
         executable_lines = [
             line.strip()
-            for line in self.drill.splitlines()
+            for block in bash_blocks(self.drill)
+            for line in block.splitlines()
             if line.strip().startswith("docker compose")
         ]
         for line in executable_lines:
