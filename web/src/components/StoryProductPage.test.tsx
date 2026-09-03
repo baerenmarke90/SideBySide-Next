@@ -136,7 +136,7 @@ describe('StoryProductPage', () => {
       nextCursor: null,
     });
 
-    expect(html).toContain(de.story.milestonesTitle.replace('&', '&amp;'));
+    expect(html).toContain(de.story.milestonesTitle.replace(/&/g, '&amp;'));
     expect(html).toContain(de.story.milestonesDesc);
     expect(html).not.toContain('Erfolge');
     expect(html).toContain('href="/story?tab=timeline&amp;type=MILESTONE"');
