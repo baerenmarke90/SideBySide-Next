@@ -91,21 +91,28 @@ describe('sessionPersistence', () => {
   it('correctly assesses access token validity', () => {
     const freshTokens: TokenView = {
       ...mockTokens,
-      accessExpiresAt: new Date(Date.now() + 60_000),
+      accessExpiresAt: new Date(Date.now() + 120_000),
     };
-    expect(isAccessTokenValid(freshTokens, 30_000)).toBe(true);
+    expect(isAccessTokenValid(freshTokens)).toBe(true);
+
+    // Token in 30-60s window (e.g. 45s remaining) is invalid by default (triggers proactive refresh)
+    const tokenInWindow: TokenView = {
+      ...mockTokens,
+      accessExpiresAt: new Date(Date.now() + 45_000),
+    };
+    expect(isAccessTokenValid(tokenInWindow)).toBe(false);
 
     const expiringSoonTokens: TokenView = {
       ...mockTokens,
       accessExpiresAt: new Date(Date.now() + 10_000),
     };
-    expect(isAccessTokenValid(expiringSoonTokens, 30_000)).toBe(false);
+    expect(isAccessTokenValid(expiringSoonTokens)).toBe(false);
 
     const expiredTokens: TokenView = {
       ...mockTokens,
       accessExpiresAt: new Date(Date.now() - 5_000),
     };
-    expect(isAccessTokenValid(expiredTokens, 30_000)).toBe(false);
+    expect(isAccessTokenValid(expiredTokens)).toBe(false);
   });
 
   it('correctly assesses refresh token validity', () => {

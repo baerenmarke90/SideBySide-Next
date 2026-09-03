@@ -722,7 +722,12 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
-  const [initialStoredSession] = useState(() => loadStoredSession());
+  const [entryToken, setEntryToken] = useState(() =>
+    readSensitiveEntryToken(window.location.pathname, window.location.search),
+  );
+  const [initialStoredSession] = useState(() =>
+    entryToken ? null : loadStoredSession(),
+  );
   const [tokens, setTokens] = useState<TokenView | null>(
     () => initialStoredSession?.tokens ?? null,
   );
@@ -735,9 +740,16 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
   const [spaceId, setSpaceId] = useState<string | null>(
     () => initialStoredSession?.spaceId ?? null,
   );
-  const [entryToken, setEntryToken] = useState(() =>
-    readSensitiveEntryToken(window.location.pathname, window.location.search),
-  );
+
+  const terminateSession = useCallback(() => {
+    clearStoredSession();
+    setEntryToken(null);
+    setSpaceId(null);
+    setAccount(null);
+    setTokens(null);
+    queryClient.clear();
+    void clearProductReadCache();
+  }, [queryClient]);
 
   useEffect(() => {
     if (!initialStoredSession) {
@@ -774,10 +786,7 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
         });
       } catch {
         if (cancelled) return;
-        clearStoredSession();
-        setTokens(null);
-        setAccount(null);
-        setSpaceId(null);
+        terminateSession();
         rememberCurrentAuthReturnTarget();
       } finally {
         if (!cancelled) {
@@ -791,27 +800,29 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [config.apiBaseUrl, initialStoredSession]);
+  }, [config.apiBaseUrl, initialStoredSession, terminateSession]);
 
   useEffect(() => {
     if (!tokens) return;
     const expiresAtMs = new Date(tokens.accessExpiresAt).getTime();
     const timeUntilExpiry = expiresAtMs - Date.now();
-    if (timeUntilExpiry <= 60_000) return;
+    const refreshDelayMs = Math.max(0, timeUntilExpiry - 60_000);
 
-    const refreshDelayMs = timeUntilExpiry - 60_000;
     const timer = setTimeout(() => {
       void refreshSessionTokens(config.apiBaseUrl, tokens.refreshToken)
         .then((newTokens) => {
           setTokens(newTokens);
         })
-        .catch(() => {
-          // Handled on subsequent request or reload
+        .catch((error: unknown) => {
+          const status = (error as { status?: number })?.status;
+          if (status === 401) {
+            terminateSession();
+          }
         });
     }, refreshDelayMs);
 
     return () => clearTimeout(timer);
-  }, [config.apiBaseUrl, tokens]);
+  }, [config.apiBaseUrl, terminateSession, tokens]);
 
   const serverAdminApis = useMemo(
     () => createServerAdminApis(config.apiBaseUrl, tokens?.accessToken),
@@ -892,13 +903,7 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
         // Best effort sign-out
       }
     }
-    clearStoredSession();
-    setEntryToken(null);
-    setSpaceId(null);
-    setAccount(null);
-    setTokens(null);
-    queryClient.clear();
-    void clearProductReadCache();
+    terminateSession();
   }
 
   function selectSpace(selectedSpaceId: string) {
@@ -921,10 +926,11 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
   }
 
   if (!tokens || !account) {
+    const showDemoEntry = Boolean(demoMode && !entryToken);
     return (
       <>
         <ThemeControl />
-        {demoMode ? (
+        {showDemoEntry ? (
           <DemoEntry />
         ) : (
           <IdentityEntry

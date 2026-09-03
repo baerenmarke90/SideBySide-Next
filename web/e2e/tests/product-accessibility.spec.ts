@@ -61,9 +61,9 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
           id: ACCOUNT_ID,
         },
         tokens: {
-          accessExpiresAt: '2026-09-01T11:00:00Z',
+          accessExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
           accessToken: 'browser-e2e-access-token',
-          refreshExpiresAt: '2026-09-08T10:00:00Z',
+          refreshExpiresAt: new Date(Date.now() + 86400_000).toISOString(),
           refreshToken: 'browser-e2e-refresh-token',
         },
       });

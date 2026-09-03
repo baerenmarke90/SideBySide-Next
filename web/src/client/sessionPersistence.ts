@@ -114,9 +114,11 @@ export function hasStoredSession(): boolean {
   return loadStoredSession() !== null;
 }
 
+export const DEFAULT_ACCESS_TOKEN_REFRESH_BUFFER_MS = 60_000;
+
 export function isAccessTokenValid(
   tokens: TokenView,
-  thresholdMs = 30_000,
+  thresholdMs = DEFAULT_ACCESS_TOKEN_REFRESH_BUFFER_MS,
 ): boolean {
   const expiresAt = new Date(tokens.accessExpiresAt).getTime();
   return expiresAt > Date.now() + thresholdMs;

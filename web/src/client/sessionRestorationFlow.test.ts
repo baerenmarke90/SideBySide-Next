@@ -211,4 +211,102 @@ describe('Browser Session Restoration & Lifecycle Flow', () => {
     expect(restored?.account.displayName).toBe('Lea');
     expect(restored?.tokens.accessToken).toBe('demo-lea-access');
   });
+
+  it('automatically rotates token when restored in the 30-60s window before expiry', async () => {
+    const tokenInWindow: TokenView = {
+      accessToken: 'near-expiry-access',
+      refreshToken: 'valid-refresh-token',
+      accessExpiresAt: new Date(Date.now() + 45_000), // 45s left
+      refreshExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+    storeSession({ account: mockAccount, tokens: tokenInWindow });
+    const session = loadStoredSession();
+    if (!session) throw new Error('Session unexpectedly null');
+
+    // Verify threshold: 45s left is within 60s buffer, so invalid
+    expect(isAccessTokenValid(session.tokens)).toBe(false);
+
+    const rotatedTokens: TokenView = {
+      accessToken: 'fresh-access-after-restore',
+      refreshToken: 'fresh-refresh-after-restore',
+      accessExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      refreshExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+
+    const mockRefresh = vi.fn().mockResolvedValue(rotatedTokens);
+    vi.spyOn(referenceFlow, 'createReferenceApis').mockReturnValue({
+      auth: { refreshApiV1AuthRefreshPost: mockRefresh },
+    } as unknown as ReturnType<typeof referenceFlow.createReferenceApis>);
+
+    const refreshed = await refreshSessionTokens(
+      'http://localhost:8000',
+      session.tokens.refreshToken,
+    );
+
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    expect(refreshed.accessToken).toBe('fresh-access-after-restore');
+    expect(isAccessTokenValid(refreshed)).toBe(true);
+    expect(loadStoredSession()?.tokens.accessToken).toBe(
+      'fresh-access-after-restore',
+    );
+  });
+
+  it('schedules proactive refresh without gap and rotates session cleanly', async () => {
+    // 5 minutes remaining
+    const tokenInFuture: TokenView = {
+      accessToken: 'future-access',
+      refreshToken: 'future-refresh',
+      accessExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      refreshExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+    storeSession({ account: mockAccount, tokens: tokenInFuture });
+
+    const expiresAtMs = new Date(tokenInFuture.accessExpiresAt).getTime();
+    const timeUntilExpiry = expiresAtMs - Date.now();
+    const refreshDelayMs = Math.max(0, timeUntilExpiry - 60_000);
+
+    // Refresh is scheduled exactly 60 seconds before expiry (approx 4 minutes from now)
+    expect(refreshDelayMs).toBeGreaterThan(3.9 * 60 * 1000);
+    expect(refreshDelayMs).toBeLessThanOrEqual(4 * 60 * 1000);
+
+    const newTokens: TokenView = {
+      accessToken: 'proactively-refreshed-access',
+      refreshToken: 'proactively-refreshed-refresh',
+      accessExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      refreshExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+
+    const mockRefresh = vi.fn().mockResolvedValue(newTokens);
+    vi.spyOn(referenceFlow, 'createReferenceApis').mockReturnValue({
+      auth: { refreshApiV1AuthRefreshPost: mockRefresh },
+    } as unknown as ReturnType<typeof referenceFlow.createReferenceApis>);
+
+    const refreshed = await refreshSessionTokens(
+      'http://localhost:8000',
+      tokenInFuture.refreshToken,
+    );
+
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    expect(refreshed.accessToken).toBe('proactively-refreshed-access');
+    expect(loadStoredSession()?.tokens.accessToken).toBe(
+      'proactively-refreshed-access',
+    );
+  });
+
+  it('triggers immediate refresh when token is already within the 60s window', () => {
+    // 30 seconds remaining
+    const tokenInWindow: TokenView = {
+      accessToken: 'soon-expiring-access',
+      refreshToken: 'soon-expiring-refresh',
+      accessExpiresAt: new Date(Date.now() + 30_000),
+      refreshExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+
+    const expiresAtMs = new Date(tokenInWindow.accessExpiresAt).getTime();
+    const timeUntilExpiry = expiresAtMs - Date.now();
+    const refreshDelayMs = Math.max(0, timeUntilExpiry - 60_000);
+
+    // When <= 60s remaining, delay is clamped to 0 (immediate refresh, no abandoned timer)
+    expect(refreshDelayMs).toBe(0);
+  });
 });

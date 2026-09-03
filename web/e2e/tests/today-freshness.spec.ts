@@ -40,9 +40,9 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
       await fulfillJson({
         account: { displayName: 'Anna', id: ACCOUNT_ID },
         tokens: {
-          accessExpiresAt: '2026-09-01T11:00:00Z',
+          accessExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
           accessToken: 'freshness-access-token',
-          refreshExpiresAt: '2026-09-08T10:00:00Z',
+          refreshExpiresAt: new Date(Date.now() + 86400_000).toISOString(),
           refreshToken: 'freshness-refresh-token',
         },
       });
