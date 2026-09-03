@@ -9,6 +9,7 @@ import {
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
 import { appRoutePath } from '../client/routes';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -101,6 +102,7 @@ export function WishProductPage({
           queryKey: ['m5-s3', 'plans', spaceId],
         }),
         queryClient.invalidateQueries({ queryKey: key }),
+        invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(appRoutePath('plan'), { replace: true });
     },

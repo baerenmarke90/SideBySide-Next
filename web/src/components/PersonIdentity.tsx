@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
+import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import './PersonIdentity.css';
 
 export type PersonIdentitySize = 'small' | 'medium' | 'large';
@@ -65,5 +67,39 @@ export function PersonIdentity({
         <span className="person-identity-name">{displayName}</span>
       ) : null}
     </span>
+  );
+}
+
+export function AuthorAvatar({
+  author,
+  profilesApi,
+  spaceId,
+  size = 'small',
+}: {
+  author: {
+    id: string;
+    displayName: string;
+    profileAttachmentId?: string | null;
+  };
+  profilesApi?: ProfilesApi | null;
+  spaceId?: string | null;
+  size?: PersonIdentitySize;
+}) {
+  const { avatarUrl } = useProfileAvatarUrl(
+    profilesApi,
+    spaceId ?? '',
+    author.id,
+    author.profileAttachmentId,
+  );
+
+  return (
+    <PersonIdentity
+      displayName={author.displayName}
+      imageUrl={avatarUrl}
+      size={size}
+      showName={false}
+      imageAlt={author.displayName}
+      fallbackAlt={author.displayName}
+    />
   );
 }

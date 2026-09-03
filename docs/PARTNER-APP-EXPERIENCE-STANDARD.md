@@ -42,7 +42,40 @@ The following are prohibited as the primary presentation of normal relationship 
 
 Tables remain valid for genuinely tabular administration surfaces such as ServerAdmin when comparison across columns is the task. They are not the default for couple-facing content.
 
-## 3. Required emotional focal point
+## 3. Today / Wir orchestration invariant
+
+> `Wir` / Today is an orchestration surface, not a widget dashboard.
+
+`Wir` composes a small number of currently relevant:
+- relationship signals;
+- contextual actions;
+- shared content;
+- retrospective/discovery content;
+
+from **existing** SideBySide domains. A feature does NOT receive a permanent Today card merely because the feature exists.
+
+### Orchestration rules:
+- **Irrelevant modules disappear:** Presence is strictly event- or state-driven.
+- **Differentiated visual weight:** Modules take shapes and weights that fit their role, not equal-sized boxes.
+- **Context decides visibility:** Relevance to the couple right now determines what surfaces.
+- **Privacy and consent override relevance:** Protected or unrevealed data is never exposed for visual decoration.
+- **No equal-weight widget grid:** Avoid SaaS-style dashboard layouts.
+- **No draggable dashboard builder or widget catalogue:** The screen is intentionally curated, not customized like an admin workspace.
+- **No speculative placeholder modules:** Never show empty widgets just to hold a grid coordinate.
+- **Deterministic product rules:** Orchestration relies on simple, predictable rules rather than black-box AI engagement ranking.
+- **Above the fold restraint:** At most roughly three dominant elements/interactions above the fold.
+
+### Future module contract:
+Any future feature seeking to present content on `Wir` MUST define:
+1. **TRIGGER:** When is this relevant to the couple?
+2. **PRIORITY:** What may it displace when screen attention is constrained?
+3. **ROLE:** Does it act as a *primary contextual action*, a *relationship signal*, *shared content*, or an *editorial highlight*?
+4. **EXIT:** When does it disappear from `Wir`?
+5. **PRIVACY:** What data may safely be presented without consent leaks?
+
+Features must never simply request to "add another widget to Today".
+
+## 4. Required emotional focal point
 
 Every primary couple-facing screen MUST have one recognizable focal point. Depending on the feature this can be:
 
@@ -57,7 +90,7 @@ A page title followed by a uniform grid of records is not a sufficient focal poi
 
 The first viewport SHOULD communicate the human value of the screen before secondary metadata.
 
-## 4. Warmth, beauty, and gentle playfulness
+## 5. Warmth, beauty, and gentle playfulness
 
 SideBySide SHOULD feel noticeably warmer and more alive than a neutral productivity application while remaining mature and usable.
 
@@ -80,7 +113,7 @@ SideBySide SHOULD feel noticeably warmer and more alive than a neutral productiv
 
 The target is **adult, affectionate, modern, warm, and lightly playful**.
 
-## 5. Surface hierarchy
+## 6. Surface hierarchy
 
 Use no more surface layers than needed. A typical screen should read as:
 
@@ -94,7 +127,7 @@ Prefer spacing, typography, grouping, image treatment, and subtle tonal surfaces
 
 Cards are reserved for meaningful content units. A section does not need a card merely because it has a heading.
 
-## 6. Typography and content presentation
+## 7. Typography and content presentation
 
 - Editorial/display typography is used selectively for emotionally meaningful moments, Story, memories, invitations, recaps, milestones, and other relationship-led surfaces.
 - Standard UI typography remains the default for forms, settings, navigation, and dense controls.
@@ -103,7 +136,7 @@ Cards are reserved for meaningful content units. A section does not need a card 
 - Empty states contain a human explanation and one meaningful action; they are not bare `No items` panels.
 - Copy may be affectionate, warm, and lightly playful where context allows, but it must never assume a specific relationship style, gender role, sexuality, mood, or level of intimacy.
 
-## 7. Love messages and relationship microcopy
+## 8. Love messages and relationship microcopy
 
 Small relationship-oriented messages are a first-class product device. They help SideBySide feel like a shared place instead of a record-management tool.
 
@@ -135,7 +168,7 @@ Rules:
 - Sensitive features must not expose private content through decorative previews or notifications.
 - User-created messages outrank generated/system relationship copy whenever both compete for attention.
 
-## 8. Motion is part of the feature
+## 9. Motion is part of the feature
 
 Motion is a product behavior, not optional polish added after implementation.
 
@@ -166,7 +199,7 @@ Appropriate examples include a subtle heart pulse, tiny particles, soft glow, sh
 
 Haptics may supplement visible feedback on supported mobile devices but never replace it.
 
-## 9. Feature composition requirements
+## 10. Feature composition requirements
 
 Before implementing a new user-facing feature, the issue or PR MUST identify:
 
@@ -183,7 +216,7 @@ Before implementing a new user-facing feature, the issue or PR MUST identify:
 
 `Functionality first, design later` is not an acceptable delivery strategy for product UI. The first mergeable implementation must already use the shared product language.
 
-## 10. Responsive composition
+## 11. Responsive composition
 
 Responsive behavior is composition, not shrinking.
 
@@ -202,7 +235,7 @@ Responsive behavior is composition, not shrinking.
 - reading text stays bounded;
 - side rails contain supporting information, not required form fields dumped out of the main flow.
 
-## 11. Visual evidence is required
+## 12. Visual evidence is required
 
 A PR that changes couple-facing Web or Android UI MUST include visual evidence for review.
 
@@ -215,7 +248,7 @@ Minimum evidence:
 
 Evidence may be screenshots, a short recording, or stable visual-test output. A textual statement that the UI was reviewed is not sufficient by itself.
 
-## 12. Review questions
+## 13. Review questions
 
 A couple-facing surface is not merge-ready if any answer below is `no`:
 
@@ -233,7 +266,7 @@ A couple-facing surface is not merge-ready if any answer below is `no`:
 - Are design-system tokens/components reused instead of local visual inventions?
 - Is visual evidence available for review?
 
-## 13. Exceptions
+## 14. Exceptions
 
 Administration, diagnostics, migration, and operational tools may legitimately use denser information design. An exception MUST be explicit in the PR and MUST not leak that visual language into couple-facing product surfaces.
 

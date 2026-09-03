@@ -20,6 +20,8 @@ import type { AccountView } from './api/generated/models/AccountView';
 import { AttachmentReadRequestParentTypeEnum } from './api/generated/models/AttachmentReadRequest';
 import type { SpaceView } from './api/generated/models/SpaceView';
 import type { TokenView } from './api/generated/models/TokenView';
+import { ProfilesApi } from './api/generated/apis/ProfilesApi';
+import { Configuration } from './api/generated/runtime';
 import { loadReferenceClientConfig } from './client/config';
 import {
   readSensitiveEntryToken,
@@ -29,8 +31,17 @@ import { createM4ProductApis } from './client/m4Product';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
 import { createPeopleApi } from './client/peopleApi';
 import { createPrivateAreaApi } from './client/privateArea';
+import { invalidateDashboard } from './client/dashboardQueries';
 import { normalizeClientError } from './client/problemDetails';
 import { clearProductReadCache } from './client/productReadCache';
+import { rememberCurrentAuthReturnTarget } from './client/deepLinks';
+import {
+  clearStoredSession,
+  isAccessTokenValid,
+  loadStoredSession,
+  refreshSessionTokens,
+  storeSession,
+} from './client/sessionPersistence';
 import {
   createReferenceApis,
   loadAuthorizedImage,
@@ -76,6 +87,7 @@ import { AttachmentDraftPicker } from './components/AttachmentDraftPicker';
 import { Brand } from './components/Brand';
 import { ChapterProductPage } from './components/ChapterProductPage';
 import { CollectionProductPage } from './components/CollectionProductPage';
+import { DemoEntry } from './components/DemoEntry';
 import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
 import { LegacyPathRedirect } from './components/LegacyPathRedirect';
@@ -401,6 +413,16 @@ function AuthenticatedApp({
     () => createPrivateAreaApi(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
   );
+  const profilesApi = useMemo(
+    () =>
+      new ProfilesApi(
+        new Configuration({
+          basePath: apiBaseUrl,
+          headers: { Authorization: `Bearer ${tokens.accessToken}` },
+        }),
+      ),
+    [apiBaseUrl, tokens.accessToken],
+  );
 
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
@@ -446,7 +468,10 @@ function AuthenticatedApp({
   );
 
   async function refreshStory() {
-    await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+      invalidateDashboard(queryClient, spaceId),
+    ]);
   }
 
   const memoryProductProps = {
@@ -515,6 +540,7 @@ function AuthenticatedApp({
                 accountId={account.id}
                 spaceId={spaceId}
                 loadMemoryImage={loadMemoryImage}
+                profilesApi={profilesApi}
               />
             }
           />
@@ -544,7 +570,15 @@ function AuthenticatedApp({
           />
           <Route
             path={appRoutePath('today')}
-            element={<TodayPage apis={m4Apis} spaceId={spaceId} />}
+            element={
+              <TodayPage
+                apis={m4Apis}
+                spaceId={spaceId}
+                loadMemoryImage={loadMemoryImage}
+                profilesApi={profilesApi}
+                account={account}
+              />
+            }
           />
           <Route
             path={ACTIVITY_ROUTE}
@@ -683,16 +717,113 @@ function AuthenticatedApp({
   );
 }
 
-export function App() {
+export function App({ demoMode = false }: { demoMode?: boolean }) {
   const config = useMemo(loadReferenceClientConfig, []);
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [tokens, setTokens] = useState<TokenView | null>(null);
-  const [account, setAccount] = useState<AccountView | null>(null);
-  const [spaceId, setSpaceId] = useState<string | null>(null);
+  const { t } = useTranslation();
   const [entryToken, setEntryToken] = useState(() =>
     readSensitiveEntryToken(window.location.pathname, window.location.search),
   );
+  const [initialStoredSession] = useState(() =>
+    entryToken ? null : loadStoredSession(),
+  );
+  const [tokens, setTokens] = useState<TokenView | null>(
+    () => initialStoredSession?.tokens ?? null,
+  );
+  const [account, setAccount] = useState<AccountView | null>(
+    () => initialStoredSession?.account ?? null,
+  );
+  const [isRestoring, setIsRestoring] = useState(() =>
+    Boolean(initialStoredSession),
+  );
+  const [spaceId, setSpaceId] = useState<string | null>(
+    () => initialStoredSession?.spaceId ?? null,
+  );
+
+  const terminateSession = useCallback(() => {
+    clearStoredSession();
+    setEntryToken(null);
+    setSpaceId(null);
+    setAccount(null);
+    setTokens(null);
+    queryClient.clear();
+    void clearProductReadCache();
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!initialStoredSession) {
+      setIsRestoring(false);
+      return;
+    }
+    const session = initialStoredSession;
+
+    let cancelled = false;
+
+    async function restore(activeSession: typeof session) {
+      try {
+        let currentTokens = activeSession.tokens;
+        if (!isAccessTokenValid(currentTokens)) {
+          currentTokens = await refreshSessionTokens(
+            config.apiBaseUrl,
+            currentTokens.refreshToken,
+          );
+        }
+
+        const apis = createReferenceApis(
+          config.apiBaseUrl,
+          currentTokens.accessToken,
+        );
+        const verifiedAccount = await apis.auth.meApiV1AuthMeGet();
+
+        if (cancelled) return;
+        setTokens(currentTokens);
+        setAccount(verifiedAccount);
+        storeSession({
+          account: verifiedAccount,
+          tokens: currentTokens,
+          spaceId: activeSession.spaceId ?? null,
+        });
+      } catch {
+        if (cancelled) return;
+        terminateSession();
+        rememberCurrentAuthReturnTarget();
+      } finally {
+        if (!cancelled) {
+          setIsRestoring(false);
+        }
+      }
+    }
+
+    void restore(session);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config.apiBaseUrl, initialStoredSession, terminateSession]);
+
+  useEffect(() => {
+    if (!tokens) return;
+    const expiresAtMs = new Date(tokens.accessExpiresAt).getTime();
+    const timeUntilExpiry = expiresAtMs - Date.now();
+    const refreshDelayMs = Math.max(0, timeUntilExpiry - 60_000);
+
+    const timer = setTimeout(() => {
+      void refreshSessionTokens(config.apiBaseUrl, tokens.refreshToken)
+        .then((newTokens) => {
+          setTokens(newTokens);
+        })
+        .catch((error: unknown) => {
+          const status = (error as { status?: number })?.status;
+          if (status === 401) {
+            terminateSession();
+          }
+        });
+    }, refreshDelayMs);
+
+    return () => clearTimeout(timer);
+  }, [config.apiBaseUrl, terminateSession, tokens]);
+
   const serverAdminApis = useMemo(
     () => createServerAdminApis(config.apiBaseUrl, tokens?.accessToken),
     [config.apiBaseUrl, tokens?.accessToken],
@@ -706,7 +837,7 @@ export function App() {
         throw await normalizeClientError(error);
       }
     },
-    enabled: tokens !== null && account !== null,
+    enabled: !isRestoring && tokens !== null && account !== null,
     retry: false,
   });
 
@@ -725,7 +856,7 @@ export function App() {
       if (!tokens) return [];
       return loadAuthorizedMemberships(config.apiBaseUrl, tokens.accessToken);
     },
-    enabled: tokens !== null,
+    enabled: !isRestoring && tokens !== null,
     retry: false,
   });
 
@@ -742,7 +873,10 @@ export function App() {
         membershipsQuery.data,
       );
     },
-    enabled: tokens !== null && (membershipsQuery.data?.length ?? 0) > 1,
+    enabled:
+      !isRestoring &&
+      tokens !== null &&
+      (membershipsQuery.data?.length ?? 0) > 1,
     retry: false,
   });
 
@@ -751,44 +885,69 @@ export function App() {
       setSpaceId(null);
       return;
     }
-    setSpaceId((current) =>
-      resolveActiveSpaceId(membershipsQuery.data, current),
-    );
-  }, [membershipsQuery.data, tokens]);
+    setSpaceId((current) => {
+      const resolved = resolveActiveSpaceId(membershipsQuery.data, current);
+      if (resolved && account && tokens) {
+        storeSession({ account, tokens, spaceId: resolved });
+      }
+      return resolved;
+    });
+  }, [account, membershipsQuery.data, tokens]);
 
   function logout() {
-    setEntryToken(null);
-    setSpaceId(null);
-    setAccount(null);
-    setTokens(null);
-    queryClient.clear();
-    void clearProductReadCache();
+    if (tokens?.accessToken) {
+      try {
+        const apis = createReferenceApis(config.apiBaseUrl, tokens.accessToken);
+        void apis.auth.signOutApiV1AuthSignOutPost().catch(() => {});
+      } catch {
+        // Best effort sign-out
+      }
+    }
+    terminateSession();
   }
 
   function selectSpace(selectedSpaceId: string) {
     queryClient.clear();
     void clearProductReadCache();
     setSpaceId(selectedSpaceId);
+    if (account && tokens) {
+      storeSession({ account, tokens, spaceId: selectedSpaceId });
+    }
     postSnackbar('snackbar.spaceSwitched');
   }
 
+  if (isRestoring) {
+    return (
+      <main className="setup-shell">
+        <ThemeControl />
+        <UiState kind="loading" title={t('spaceContext.loading')} />
+      </main>
+    );
+  }
+
   if (!tokens || !account) {
+    const showDemoEntry = Boolean(demoMode && !entryToken);
     return (
       <>
         <ThemeControl />
-        <IdentityEntry
-          apiBaseUrl={config.apiBaseUrl}
-          entryToken={entryToken}
-          onEntryTokenCleared={() => setEntryToken(null)}
-          onSession={(session) => {
-            setEntryToken(null);
-            setSpaceId(null);
-            setAccount(session.account);
-            setTokens(session.tokens);
-            queryClient.clear();
-            void clearProductReadCache();
-          }}
-        />
+        {showDemoEntry ? (
+          <DemoEntry />
+        ) : (
+          <IdentityEntry
+            apiBaseUrl={config.apiBaseUrl}
+            entryToken={entryToken}
+            onEntryTokenCleared={() => setEntryToken(null)}
+            onSession={(session) => {
+              storeSession(session);
+              setEntryToken(null);
+              setSpaceId(null);
+              setAccount(session.account);
+              setTokens(session.tokens);
+              queryClient.clear();
+              void clearProductReadCache();
+            }}
+          />
+        )}
       </>
     );
   }

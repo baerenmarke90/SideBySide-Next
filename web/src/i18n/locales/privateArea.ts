@@ -102,6 +102,7 @@ const privateArea = {
       'Eintrag verschieben. Ziehen oder mit den Pfeiltasten neu anordnen.',
     removeItem: 'Eintrag löschen',
     reordering: 'Reihenfolge wird gespeichert …',
+    completedSection: 'Erledigt',
   },
 } as const;
 

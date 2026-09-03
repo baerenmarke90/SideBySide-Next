@@ -19,6 +19,7 @@ import {
   wishDetailPath,
 } from '../client/routes';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -66,15 +67,13 @@ function PlanningCard({
   meta?: string | null;
   to: string;
 }) {
-  const { t } = useTranslation();
   return (
-    <li className="planning-card">
-      <div className="planning-card-copy">
-        <h3>{title}</h3>
-        {meta ? <p className="planning-meta">{meta}</p> : null}
-      </div>
-      <Link className="button-link secondary-link" to={to}>
-        {t('m5s3.common.open')}
+    <li className="planning-card-item">
+      <Link className="planning-card planning-card-link" to={to}>
+        <div className="planning-card-copy">
+          <h3>{title}</h3>
+          {meta ? <p className="planning-meta">{meta}</p> : null}
+        </div>
       </Link>
     </li>
   );
@@ -244,7 +243,10 @@ export function SharedPlanningOverviewPage({
       description?: string;
       placeId?: string;
     }) => apiCall(() => apis.plans.createPlan({ spaceId, planCreate: values })),
-    onSuccess: () => invalidate('plans'),
+    onSuccess: async () => {
+      invalidate('plans');
+      await invalidateDashboard(queryClient, spaceId);
+    },
   });
   const createPlace = useMutation({
     mutationFn: (values: {

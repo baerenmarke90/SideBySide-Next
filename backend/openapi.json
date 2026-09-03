@@ -1227,6 +1227,18 @@
             ],
             "title": "Occurredon"
           },
+          "previewAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previewattachmentid"
+          },
           "scheduledAt": {
             "anyOf": [
               {

@@ -92,12 +92,15 @@
 
 .drop-cap::first-letter {
   float: left;
-  padding-top: 0.1rem;
-  padding-right: 0.5rem;
-  color: var(--color-brand-strong);
   font-family: var(--font-display);
-  font-size: 5rem;
-  line-height: 0.8;
+  font-size: 3.35rem;
+  line-height: 0.82;
+  font-weight: 700;
+  margin-top: 0.12rem;
+  margin-right: 0.55rem;
+  margin-bottom: -0.1rem;
+  color: var(--color-brand);
+  text-transform: uppercase;
 }
 
 .memory-detail-body {
@@ -271,33 +274,33 @@
   text-align: center;
 }
 
-/* Image-first memory. Keep these variants after the generic card rules so
- * their more specific composition never depends on source-order accidents. */
+/* Image-first memory. Photographic framing with generous breathing room. */
 .story-card-memory.has-image {
   display: flex;
   flex-direction: column;
-  padding: 0;
+  padding: var(--space-5);
 }
 
 .story-card-memory.has-image .memory-preview-container {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  max-height: 460px;
+  aspect-ratio: 16 / 10;
   object-fit: cover;
-}
-
-.story-card-memory.has-image .story-card-meta,
-.story-card-memory.has-image h4,
-.story-card-memory.has-image .story-preview,
-.story-card-memory.has-image .story-card-footer {
-  padding: 0 var(--space-5);
+  object-position: center 30%;
+  border-radius: var(--radius-large);
+  margin: var(--space-2) 0 var(--space-4);
 }
 
 .story-card-memory.has-image .story-card-meta {
-  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.story-card-memory.has-image h4 {
+  margin-top: 0;
 }
 
 .story-card-memory.has-image .story-card-footer {
-  margin-bottom: var(--space-5);
+  margin-top: var(--space-3);
 }
 
 /* Compact Filter Bar */
@@ -413,4 +416,444 @@
   color: var(--color-brand-strong);
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+/* Momente View Switcher (Entdecken / Zeitleiste) */
+.momente-tabs-container {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-2) 0 var(--space-6);
+}
+
+.momente-tabs {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: 4px;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-soft);
+}
+
+.momente-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all var(--motion-duration-short) ease;
+}
+
+.momente-tab-btn:hover {
+  color: var(--color-text);
+}
+
+.momente-tab-btn.active {
+  background: var(--color-surface-raised);
+  color: var(--color-brand-text);
+  box-shadow: 0 2px 8px var(--color-shadow-soft);
+}
+
+.momente-tab-btn:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Momente Discover Surface */
+.momente-discover-page {
+  display: grid;
+  gap: var(--space-8);
+  max-width: 1000px;
+  margin-inline: auto;
+}
+
+/* Featured Editorial Highlight */
+.momente-hero-highlight {
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: linear-gradient(
+    145deg,
+    var(--color-brand-surface),
+    var(--color-surface-raised)
+  );
+  border: 1px solid var(--color-brand-glow);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--motion-duration-medium) ease;
+}
+
+.momente-hero-highlight:hover {
+  transform: translateY(-2px);
+}
+
+.momente-hero-link {
+  display: grid;
+  grid-template-columns: 1fr;
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (min-width: 768px) {
+  .momente-hero-link.has-media {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
+
+.momente-hero-media {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.momente-hero-media .story-media-preview,
+.momente-hero-media .story-media-skeleton,
+.momente-hero-media .story-media-placeholder {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: 0;
+  object-fit: cover;
+  display: block;
+}
+
+.momente-hero-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(var(--space-6), 4vw, var(--space-8));
+  gap: var(--space-3);
+}
+
+.momente-hero-kicker {
+  color: var(--color-brand-strong);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.momente-hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 750;
+  color: var(--color-text);
+  line-height: 1.25;
+}
+
+.momente-hero-quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.1rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.momente-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  margin-top: var(--space-2);
+}
+
+.momente-author-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.momente-author-meta .person-identity {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.momente-author-meta .person-identity-avatar-small {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.65rem;
+  border: 1.5px solid var(--color-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Horizontal Visual Stream (#492) */
+.momente-stream-section {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.momente-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.momente-section-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 750;
+  color: var(--color-text);
+}
+
+.momente-section-subhead {
+  margin: var(--space-1) 0 0;
+  font-size: 0.92rem;
+  color: var(--color-text-secondary);
+}
+
+.momente-stream-all-link {
+  color: var(--color-brand);
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.momente-stream-all-link:hover {
+  text-decoration: underline;
+}
+
+.momente-stream-track {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding: var(--space-2) var(--space-1) var(--space-4);
+  margin: 0 calc(-1 * var(--space-1));
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.momente-stream-card-link {
+  flex: 0 0 clamp(260px, 32vw, 320px);
+  border-radius: var(--radius-card);
+  color: inherit;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+
+.momente-stream-card-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.momente-stream-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 280px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  transition:
+    transform var(--motion-duration-medium) ease,
+    box-shadow var(--motion-duration-medium) ease;
+}
+
+.momente-stream-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card);
+}
+
+.momente-stream-card-media {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+  margin: 0;
+}
+
+.momente-stream-card-media .story-media-preview,
+.momente-stream-card-media .story-media-skeleton,
+.momente-stream-card-media .story-media-placeholder {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: 0;
+  object-fit: cover;
+  display: block;
+}
+
+.momente-stream-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: var(--space-4);
+  gap: var(--space-2);
+}
+
+.momente-stream-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.momente-stream-card-kind {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-brand-strong);
+}
+
+.momente-stream-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.momente-stream-card-quote {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  color: var(--color-text);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.momente-stream-card-meta {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  padding-top: var(--space-2);
+}
+
+/* Typography-first Card (no media) */
+.momente-stream-card.text-first {
+  background: linear-gradient(
+    150deg,
+    var(--color-surface-raised),
+    var(--color-surface-subtle)
+  );
+  border-color: var(--color-brand-glow);
+  padding: var(--space-5);
+}
+
+.momente-stream-card.text-first .momente-stream-card-body {
+  padding: 0;
+}
+
+.momente-stream-card.text-first .momente-stream-card-main {
+  flex: 1;
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+.momente-stream-card.text-first .momente-stream-card-title {
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.momente-stream-card.text-first .momente-stream-card-quote {
+  font-size: 1.15rem;
+  line-height: 1.45;
+}
+
+/* Milestones and Chapters grid */
+.momente-grid-two {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+
+@media (min-width: 768px) {
+  .momente-grid-two {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.momente-sub-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  text-decoration: none;
+  color: inherit;
+  transition: transform var(--motion-duration-short) ease;
+}
+
+.momente-sub-card:hover {
+  transform: translateY(-2px);
+}
+
+.momente-sub-card-kicker {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-brand-strong);
+  margin-bottom: var(--space-2);
+}
+
+.momente-sub-card-title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 750;
+}
+
+.momente-sub-card-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+/* Year Archive Pills */
+.momente-year-archive {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.momente-year-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.momente-year-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all var(--motion-duration-short) ease;
+}
+
+.momente-year-pill:hover {
+  border-color: var(--color-brand);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+  transform: translateY(-1px);
 }

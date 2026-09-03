@@ -11,9 +11,19 @@ const m5s5 = {
     partner: 'Gemeinsam mit {{name}}',
     durationTitle: 'Eure Zeit',
     durationDays: '{{count}} Tage zusammen',
+    durationDaysOne: '1 Tag zusammen',
+    durationYearsMonths:
+      '{{years}} {{yearsLabel}}, {{months}} {{monthsLabel}} zusammen',
+    durationYearsOnly: '{{years}} {{yearsLabel}} zusammen',
+    durationMonthsOnly: '{{months}} {{monthsLabel}} zusammen',
+    yearOne: 'Jahr',
+    yearMany: 'Jahre',
+    monthOne: 'Monat',
+    monthMany: 'Monate',
     durationSince: 'Seit {{date}}',
     durationEmpty:
       'Sobald ihr euer gemeinsames Startdatum hinterlegt habt, seht ihr eure Zeit hier.',
+    openRelationshipSettings: 'Beziehungseinstellungen öffnen',
     railAria: 'Weitere Übersicht',
     retrospectiveTitle: 'Weißt du noch?',
     retrospectiveEmpty:
@@ -23,8 +33,37 @@ const m5s5 = {
     recentTitle: 'Zuletzt bei euch',
     recentEmpty: 'Noch keine gemeinsamen Einträge vorhanden.',
     itemFallback: 'Gemeinsamer Eintrag',
-    thinkingOfYouButton: '❤️ Ich denke an dich',
+    thinkingOfYouButton: 'Ich denke an dich',
     thinkingOfYouSent: 'Liebesgruß gesendet! ❤️',
+    upcomingMoreTitle: 'Weitere anstehende Momente',
+  },
+  today: {
+    roles: {
+      hero: 'Paar-Präsenz',
+      context: 'Aktueller Kontext',
+      relationshipSignal: 'Bei euch passiert',
+      sharedContent: 'Zuletzt bei euch',
+      editorial: 'Rückblick',
+    },
+    contextSlot: {
+      kicker: 'Heute im Blick',
+      dueTodayKicker: 'Heute fällig',
+      reminderKicker: 'Erinnerung',
+      upcomingPlanKicker: 'Als Nächstes geplant',
+      importantDateKicker: 'Wichtiger Tag',
+      viewDetails: 'Details ansehen',
+    },
+    relationshipSignal: {
+      kicker: 'Bei euch passiert',
+      title: 'Neues von euch',
+      partnerCommentedMemory:
+        '{{name}} hat etwas zu einer Erinnerung geschrieben.',
+      partnerCommentedGeneric:
+        '{{name}} hat einen neuen Kommentar hinterlassen.',
+      partnerFallback: 'Dein Partner',
+      viewAction: 'Ansehen',
+      ariaLabel: 'Aktivität von {{name}} ansehen',
+    },
   },
   search: {
     eyebrow: 'Suche',

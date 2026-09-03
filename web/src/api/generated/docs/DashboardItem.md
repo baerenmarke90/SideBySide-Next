@@ -9,6 +9,7 @@ Name | Type
 `createdAt` | Date
 `id` | string
 `occurredOn` | Date
+`previewAttachmentId` | string
 `scheduledAt` | Date
 `titleOrText` | string
 `type` | [DashboardItemType](DashboardItemType.md)
@@ -23,6 +24,7 @@ const example = {
   "createdAt": null,
   "id": null,
   "occurredOn": null,
+  "previewAttachmentId": null,
   "scheduledAt": null,
   "titleOrText": null,
   "type": null,

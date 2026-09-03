@@ -3,6 +3,7 @@ import { i18n } from '../i18n';
 import {
   formatStoryDate,
   groupStoryItems,
+  resolveStoryKindLabel,
   storyItemPresentation,
 } from './storyPresentation';
 
@@ -92,7 +93,15 @@ describe('storyItemPresentation', () => {
       title: 'Danke für den schönen Abend.',
       preview: 'Dankbar',
       author: 'Ben',
-      sharedLabel: 'Geteilt',
     });
+  });
+
+  it('maps all story kind enums to human readable localized labels without raw translation keys', () => {
+    expect(resolveStoryKindLabel('MILESTONE', i18n.t)).toBe('Meilenstein');
+    expect(resolveStoryKindLabel('MEMORY', i18n.t)).toBe('Erinnerung');
+    expect(resolveStoryKindLabel('HEART_MOMENT', i18n.t)).toBe('Herzmoment');
+    expect(resolveStoryKindLabel('milestone', i18n.t)).toBe('Meilenstein');
+    expect(resolveStoryKindLabel('memory', i18n.t)).toBe('Erinnerung');
+    expect(resolveStoryKindLabel('heartMoment', i18n.t)).toBe('Herzmoment');
   });
 });

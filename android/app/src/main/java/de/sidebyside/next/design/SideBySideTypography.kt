@@ -15,34 +15,36 @@ import androidx.compose.ui.unit.sp
  * resolved against the token font size so a scale change in
  * `design/tokens.json` propagates without a second edit here.
  *
- * The token file names `Inter` and `Fraunces`. Only Fraunces is delivered, as
- * one variable file bundled with the app. The UI face stays the platform's own:
- * every platform already ships a neutral grotesque, so Inter would have cost
- * bytes for a difference nobody would name. See
- * `docs/decisions/0005-typography-delivery.md`.
+ * The token file specifies `Literata` for emotional/display storytelling and
+ * `Instrument Sans` for the primary UI. Both are delivered as self-hosted
+ * variable font resources bundled directly with the app. Nothing is fetched at runtime:
+ * a font host would put a third party in the path of a private partner app.
+ * See `docs/decisions/0005-typography-delivery.md`.
  */
 
 /**
- * The display face, from the app's own resources.
- *
- * One variable file rather than static cuts, so the token scale's weights are
- * all covered by a single 360 kB resource. Nothing is fetched at runtime: a
- * font host would put a third party in the path of a product whose premise is
- * that only two people are in it, and Self-Hosted installations have no
- * external access to rely on.
+ * The display face (Literata) and UI face (Instrument Sans), from the app's own resources.
  */
-val FrauncesFamily: FontFamily = FontFamily(
-    Font(R.font.fraunces, FontWeight.Normal),
-    Font(R.font.fraunces, FontWeight.Medium),
-    Font(R.font.fraunces, FontWeight.SemiBold),
-    Font(R.font.fraunces, FontWeight.Bold),
+val SideBySideDisplayFamily: FontFamily = FontFamily(
+    Font(R.font.literata, FontWeight.Normal),
+    Font(R.font.literata, FontWeight.Medium),
+    Font(R.font.literata, FontWeight.SemiBold),
+    Font(R.font.literata, FontWeight.Bold),
 )
+
+val SideBySideUiFamily: FontFamily = FontFamily(
+    Font(R.font.instrument_sans, FontWeight.Normal),
+    Font(R.font.instrument_sans, FontWeight.Medium),
+    Font(R.font.instrument_sans, FontWeight.SemiBold),
+    Font(R.font.instrument_sans, FontWeight.Bold),
+)
+
 private fun tokenTextStyle(
     fontSizeSp: Float,
     lineHeightRatio: Float,
     fontWeight: Int,
     letterSpacingEm: Float,
-    fontFamily: FontFamily = FontFamily.SansSerif,
+    fontFamily: FontFamily = SideBySideUiFamily,
 ): TextStyle = TextStyle(
     fontFamily = fontFamily,
     fontSize = fontSizeSp.sp,
@@ -57,9 +59,8 @@ internal val displayStyle = with(GeneratedTypographyTokens.Display) {
         LINE_HEIGHT_RATIO,
         FONT_WEIGHT,
         LETTER_SPACING_EM,
-        // Reserved for editorial and Story moments, and the only place the
-        // delivered face is used.
-        fontFamily = FrauncesFamily,
+        // Reserved for editorial, Story, and emotional relationship moments.
+        fontFamily = SideBySideDisplayFamily,
     )
 }
 

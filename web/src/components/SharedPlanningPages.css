@@ -34,17 +34,38 @@
   list-style: none;
 }
 
+.planning-card-item {
+  list-style: none;
+  width: 100%;
+}
+
 .planning-card {
   display: flex;
   min-width: 0;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-large);
-  padding: var(--space-4);
-  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
   box-shadow: var(--shadow-soft);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    transform var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.planning-card:hover,
+.planning-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--color-brand-glow);
+  box-shadow: var(--shadow-card);
+  outline: none;
 }
 
 .planning-card-copy {
@@ -53,6 +74,10 @@
 
 .planning-card h3 {
   margin: 0;
+  font-family: var(--font-ui);
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: var(--color-text);
   overflow-wrap: anywhere;
 }
 
@@ -66,17 +91,55 @@
 
 .planning-create {
   flex: 0 0 auto;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--color-border-subtle);
 }
 
 .planning-create summary {
-  border: 1px dashed var(--color-brand-glow);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  border: 1.5px dashed var(--color-brand);
   border-radius: var(--radius-pill);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface-raised);
-  color: var(--color-text);
-  font-weight: 700;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-strong);
+  font-weight: 750;
+  font-size: 0.92rem;
   cursor: pointer;
-  list-style-position: inside;
+  list-style: none;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.planning-create summary::-webkit-details-marker {
+  display: none;
+}
+
+.planning-create summary:hover {
+  background: var(--color-surface-raised);
+  border-color: var(--color-brand-strong);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+.planning-create summary::before {
+  content: "+";
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .planning-create[open] {
@@ -239,17 +302,20 @@
 
 /* Future Map / Zukunftslandkarte Redesign */
 .future-map {
+  --future-map-spine-x: 1.5rem;
+  --future-map-padding: 3.25rem;
   position: relative;
   max-width: 800px;
   margin: var(--space-8) auto;
-  padding-left: var(--space-8);
+  padding-left: var(--future-map-padding);
 }
 
 .future-map-path {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 23px;
+  left: var(--future-map-spine-x);
+  transform: translateX(-50%);
   width: 4px;
   border-radius: var(--radius-pill);
   background: linear-gradient(
@@ -269,7 +335,8 @@
   position: absolute;
   z-index: 2;
   top: var(--space-2);
-  left: -23px;
+  left: calc(var(--future-map-spine-x) - var(--future-map-padding));
+  transform: translateX(-50%);
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -370,7 +437,9 @@
   }
 
   .future-map {
-    padding-left: var(--space-6);
+    --future-map-spine-x: 1.25rem;
+    --future-map-padding: 2.75rem;
+    padding-left: var(--future-map-padding);
   }
 }
 

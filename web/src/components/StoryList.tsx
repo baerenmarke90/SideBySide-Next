@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
+import type { AuthorSummary } from '../api/generated/models/AuthorSummary';
 import type { StoryItem } from '../api/generated/models/StoryItem';
 import {
   heartMomentDetailPath,
@@ -7,6 +9,7 @@ import {
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { MemoryPreview } from './MemoryPreview';
+import { AuthorAvatar } from './PersonIdentity';
 import {
   formatStoryDate,
   groupStoryItems,
@@ -27,12 +30,27 @@ function storyProductPath(item: StoryItem): string {
   }
 }
 
+function storyItemAuthor(item: StoryItem): AuthorSummary {
+  switch (item.kind) {
+    case 'MEMORY':
+      return item.memory.author;
+    case 'HEART_MOMENT':
+      return item.heartMoment.author;
+    case 'MILESTONE':
+      return item.milestone.author;
+  }
+}
+
 export function StoryList({
   items,
   loadMemoryImage,
+  profilesApi,
+  spaceId,
 }: {
   items: StoryItem[];
   loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
+  profilesApi?: ProfilesApi;
+  spaceId?: string;
 }) {
   const { t } = useTranslation();
 
@@ -64,6 +82,7 @@ export function StoryList({
           <ol className="story-list">
             {group.items.map((item) => {
               const presentation = storyItemPresentation(item, t);
+              const author = storyItemAuthor(item);
               const firstMemoryAttachment =
                 item.kind === 'MEMORY' ? item.memory.attachments[0] : undefined;
               const productPath = storyProductPath(item);
@@ -112,9 +131,26 @@ export function StoryList({
                         <p className="story-preview">{presentation.preview}</p>
                       ) : null}
                       <div className="story-card-footer">
-                        <span>
-                          {t('story.byAuthor', { author: presentation.author })}
-                        </span>
+                        {author ? (
+                          <span className="momente-author-meta">
+                            <AuthorAvatar
+                              author={author}
+                              profilesApi={profilesApi}
+                              spaceId={spaceId}
+                            />
+                            <span>
+                              {t('story.byAuthor', {
+                                author: author.displayName,
+                              })}
+                            </span>
+                          </span>
+                        ) : (
+                          <span>
+                            {t('story.byAuthor', {
+                              author: presentation.author,
+                            })}
+                          </span>
+                        )}
                         {presentation.mediaLabel ? (
                           <span className="media-label">
                             ▧ {presentation.mediaLabel}

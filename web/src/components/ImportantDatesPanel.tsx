@@ -11,6 +11,7 @@ import {
   importantDateFieldsFromDraft,
 } from '../client/importantDateDraft';
 import { normalizeClientError } from '../client/problemDetails';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { useTranslation } from '../i18n';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -250,9 +251,12 @@ export function ImportantDatesPanel({
         editing ? t('importantDates.updated') : t('importantDates.created'),
       );
       setEditing(null);
-      await queryClient.invalidateQueries({
-        queryKey: ['important-dates', spaceId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['important-dates', spaceId],
+        }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
     },
   });
 
@@ -273,9 +277,12 @@ export function ImportantDatesPanel({
     onSuccess: async () => {
       setDeleteTarget(null);
       setSavedMessage(t('importantDates.deleted'));
-      await queryClient.invalidateQueries({
-        queryKey: ['important-dates', spaceId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['important-dates', spaceId],
+        }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
     },
   });
 

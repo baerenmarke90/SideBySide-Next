@@ -22,7 +22,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import de.sidebyside.next.design.FrauncesFamily
+import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
@@ -85,7 +85,7 @@ fun TodayScreen(
         item {
             Text(
                 text = stringResource(R.string.today_title),
-                style = MaterialTheme.typography.headlineMedium.copy(fontFamily = FrauncesFamily),
+                style = MaterialTheme.typography.headlineMedium.copy(fontFamily = SideBySideDisplayFamily),
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.semantics { heading() },
             )
@@ -102,14 +102,14 @@ fun TodayScreen(
             }
         }
 
-        // Absent when the couple has not set a start date or has turned the
-        // duration off. Nothing is shown rather than "0 Tage".
-        dashboard.relationshipDuration?.let { duration ->
-            item { TogetherFor(duration) }
-        }
-
+        // One hero card, matching the Web layout: the duration line and the
+        // gesture live together as one surface, not two. The duration line
+        // itself is absent when the couple has not set a start date or has
+        // turned it off — nothing is shown rather than "0 Tage" — but the
+        // gesture below it is unconditional either way.
         item {
-            ThinkingOfYou(
+            TodayHero(
+                duration = dashboard.relationshipDuration,
                 partnerName = partnerName,
                 busy = busy,
                 sent = gestureSent,
@@ -180,54 +180,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(
     }
 }
 
+/**
+ * The day's hero: how long the couple has been together, in the shape they
+ * chose, and the "thinking of you" gesture — one surface, matching the Web
+ * layout's single `today-hero` header rather than two stacked cards.
+ */
 @Composable
-private fun TogetherFor(duration: DashboardRelationshipDuration) {
-    Surface(
-        shape = RoundedCornerShape(SideBySideTheme.radii.card),
-        color = SideBySideTheme.colors.brandSurface,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        // The couple chose how they want to see this; the client does not pick
-        // for them.
-        val text = when (duration.displayMode) {
-            DurationDisplayMode.DAYS ->
-                stringResource(R.string.today_together_days, duration.daysTogether)
-
-            DurationDisplayMode.YEARS_MONTHS -> {
-                // Derived from the server's own day count rather than from the
-                // device clock, which may disagree and would make the same
-                // couple read differently on two phones.
-                val period = java.time.Period.between(
-                    duration.startedOn,
-                    duration.startedOn.plusDays(duration.daysTogether.toLong()),
-                )
-                when {
-                    period.years > 0 && period.months > 0 -> stringResource(
-                        R.string.today_together_years,
-                        period.years,
-                        period.months,
-                    )
-
-                    period.years > 0 ->
-                        stringResource(R.string.today_together_years_only, period.years)
-
-                    else -> stringResource(R.string.today_together_months, period.months)
-                }
-            }
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleMedium,
-            color = SideBySideTheme.colors.brandStrong,
-            modifier = Modifier
-                .padding(SideBySideTheme.spacing.cardPadding)
-                .widthIn(max = ReadingMeasure),
-        )
-    }
-}
-
-@Composable
-private fun ThinkingOfYou(
+private fun TodayHero(
+    duration: DashboardRelationshipDuration?,
     partnerName: String?,
     busy: Boolean,
     sent: Boolean,
@@ -236,13 +196,23 @@ private fun ThinkingOfYou(
 ) {
     Surface(
         shape = RoundedCornerShape(SideBySideTheme.radii.card),
-        color = SideBySideTheme.colors.surface,
+        color = SideBySideTheme.colors.brandSurface,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
             verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
         ) {
+            // Absent when the couple has not set a start date or has turned
+            // the duration off. Nothing is shown rather than "0 Tage".
+            duration?.let {
+                Text(
+                    text = togetherForText(it),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = SideBySideTheme.colors.brandStrong,
+                    modifier = Modifier.widthIn(max = ReadingMeasure),
+                )
+            }
             Text(
                 text = partnerName
                     ?.let { stringResource(R.string.today_thinking_hint, it) }
@@ -279,6 +249,35 @@ private fun ThinkingOfYou(
                         .semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
+        }
+    }
+}
+
+/** The couple chose how they want to see this; the client does not pick for them. */
+@Composable
+private fun togetherForText(duration: DashboardRelationshipDuration): String = when (duration.displayMode) {
+    DurationDisplayMode.DAYS ->
+        stringResource(R.string.today_together_days, duration.daysTogether)
+
+    DurationDisplayMode.YEARS_MONTHS -> {
+        // Derived from the server's own day count rather than from the
+        // device clock, which may disagree and would make the same couple
+        // read differently on two phones.
+        val period = java.time.Period.between(
+            duration.startedOn,
+            duration.startedOn.plusDays(duration.daysTogether.toLong()),
+        )
+        when {
+            period.years > 0 && period.months > 0 -> stringResource(
+                R.string.today_together_years,
+                period.years,
+                period.months,
+            )
+
+            period.years > 0 ->
+                stringResource(R.string.today_together_years_only, period.years)
+
+            else -> stringResource(R.string.today_together_months, period.months)
         }
     }
 }

@@ -60,7 +60,7 @@ const storyProducts = {
   },
   heartMomentProduct: {
     open: 'Herzmoment öffnen',
-    backToStory: '← Zurück zur Story',
+    backToStory: '← Zurück zu Momente',
     backToHeartMoment: '← Zurück zum Herzmoment',
     createEyebrow: 'Herzmoment festhalten',
     createHeading: 'Neuer Herzmoment',
@@ -111,7 +111,7 @@ const storyProducts = {
   },
   milestoneProduct: {
     open: 'Meilenstein öffnen',
-    backToStory: '← Zurück zur Story',
+    backToStory: '← Zurück zu Momente',
     backToMilestone: '← Zurück zum Meilenstein',
     createEyebrow: 'Meilenstein festhalten',
     createHeading: 'Neuer Meilenstein',

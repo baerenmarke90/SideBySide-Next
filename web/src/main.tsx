@@ -4,8 +4,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { DemoBanner } from './components/DemoBanner';
-import { DemoEntry } from './components/DemoEntry';
-import { ThemeControl } from './components/ThemeControl';
 import { i18n } from './i18n';
 import { initializeTheme } from './theme';
 import './styles.css';
@@ -30,7 +28,17 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, retry: false } },
 });
 
-const demoMode = import.meta.env.VITE_SBS_DEMO_MODE === 'true';
+const isDemoModeConfigured = () => {
+  if (typeof window === 'undefined') return false;
+  if (import.meta.env.VITE_SBS_DEMO_MODE === 'true') return true;
+  if (new URLSearchParams(window.location.search).get('demo') === 'true') {
+    window.sessionStorage?.setItem('sbs-demo-mode', 'true');
+    return true;
+  }
+  return window.sessionStorage?.getItem('sbs-demo-mode') === 'true';
+};
+
+const demoMode = isDemoModeConfigured();
 const demoResetTimerEnabled =
   import.meta.env.VITE_SBS_DEMO_RESET_TIMER === 'true';
 const demoResetInterval = String(
@@ -39,27 +47,8 @@ const demoResetInterval = String(
 const demoUrl = String(import.meta.env.VITE_SBS_DEMO_URL || '')
   .trim()
   .replace(/\/+$/, '');
-const demoAuthCallback =
-  window.location.pathname.replace(/\/$/, '') === '/auth/magic-link';
 
 function RootApp() {
-  const content =
-    demoMode && !demoAuthCallback ? (
-      <>
-        <ThemeControl />
-        <DemoEntry />
-      </>
-    ) : (
-      <>
-        <App />
-        {!demoMode && demoUrl ? (
-          <a className="demo-launch" href={demoUrl}>
-            {i18n.t('demo.launch')}
-          </a>
-        ) : null}
-      </>
-    );
-
   return (
     <>
       {demoMode ? (
@@ -68,7 +57,12 @@ function RootApp() {
           resetInterval={demoResetInterval}
         />
       ) : null}
-      {content}
+      <App demoMode={demoMode} />
+      {!demoMode && demoUrl ? (
+        <a className="demo-launch" href={demoUrl}>
+          {i18n.t('demo.launch')}
+        </a>
+      ) : null}
     </>
   );
 }

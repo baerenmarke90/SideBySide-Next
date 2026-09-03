@@ -9,7 +9,7 @@ const de = {
   navigation: {
     skipToContent: 'Zum Inhalt springen',
     primary: 'Hauptnavigation',
-    story: 'Story',
+    story: 'Momente',
     newMemory: 'Neue Erinnerung',
   },
   more: {
@@ -190,19 +190,39 @@ const de = {
   },
   story: {
     savedTitle: 'Erinnerung gespeichert.',
-    savedBody: 'Sie ist jetzt Teil eurer gemeinsamen Story.',
-    eyebrow: 'Gemeinsam erinnern',
-    title: 'Eure Story',
+    savedBody: 'Sie ist jetzt Teil eurer gemeinsamen Geschichte.',
+    eyebrow: 'Momente & Erinnerungen',
+    title: 'Unsere Momente',
     intro:
-      'Erinnerungen, Herzmomente und Meilensteine – chronologisch an einem Ort.',
+      'Erinnerungen, Herzensmomente und Meilensteine – euer ruhiges Zuhause für die Dinge, die bleiben.',
     addMemory: 'Erinnerung',
     timelineKicker: 'Zeitleiste',
     timelineHeading: 'Gemeinsame Geschichte',
-    loadingAria: 'Story wird geladen',
-    loadErrorTitle: 'Die Story konnte nicht geladen werden.',
+    discoverKicker: 'Entdecken',
+    discoverHeading: 'Momente zum Wiederentdecken',
+    discoverSubhead: 'Kleine Momente, die für immer geblieben sind.',
+    tabDiscover: 'Entdecken',
+    tabTimeline: 'Zeitleiste',
+    viewToggleAria: 'Ansicht wählen',
+    streamAll: 'Alle in der Zeitleiste ansehen →',
+    featuredHighlight: 'Besonderer Moment',
+    featuredKicker: 'Aus euren Momenten',
+    milestonesKicker: 'Gemeinsam erreicht',
+    milestonesTitle: 'Meilensteine & gemeinsame Schritte',
+    milestonesDesc: 'Große und kleine Stationen eurer gemeinsamen Geschichte.',
+    chaptersKicker: 'Unsere Reise',
+    chaptersTitle: 'Kapitel unserer Geschichte',
+    chaptersDesc:
+      'Gemeinsame Erlebnisse und Reisen nach Lebensabschnitten bündeln.',
+    yearArchiveTitle: 'Jahre entdecken',
+    yearArchiveSubtitle:
+      'Direkt zu den Momenten eines bestimmten Jahres springen',
+    loadingAria: 'Momente werden geladen',
+    loadErrorTitle: 'Die Momente konnten nicht geladen werden.',
     loadErrorFallback: 'Bitte versuche es erneut.',
     emptyTitle: 'Eure Story beginnt hier.',
     emptyBody: 'Haltet euren ersten gemeinsamen Moment fest.',
+    emptyAction: 'Ersten Moment festhalten',
     aria: 'Gemeinsame Story',
     byAuthor: 'von {{author}}',
     kind: {
@@ -224,7 +244,7 @@ const de = {
     photos_other: '{{count}} Fotos',
   },
   memory: {
-    backToStory: '← Zurück zur Story',
+    backToStory: '← Zurück zu Momente',
     eyebrow: 'Moment festhalten',
     heading: 'Neue Erinnerung',
     intro:

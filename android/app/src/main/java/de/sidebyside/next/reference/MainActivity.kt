@@ -50,7 +50,7 @@ import de.sidebyside.next.demo.DemoBanner
 import de.sidebyside.next.invitation.AwaitingSpaceScreen
 import de.sidebyside.next.invitation.InvitationsScreen
 import de.sidebyside.next.design.MinimumTouchTarget
-import de.sidebyside.next.design.FrauncesFamily
+import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.people.ImportantDatesScreen
 import de.sidebyside.next.people.RelatedPersonsScreen
@@ -1325,7 +1325,7 @@ private fun StoryDestination(
                 // is for. The size stays the token scale's; only the family
                 // changes.
                 style = MaterialTheme.typography.headlineMedium
-                    .copy(fontFamily = FrauncesFamily),
+                    .copy(fontFamily = SideBySideDisplayFamily),
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.semantics { heading() },
             )

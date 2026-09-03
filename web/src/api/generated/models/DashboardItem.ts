@@ -47,6 +47,12 @@ export interface DashboardItem {
     occurredOn: Date | null;
     /**
      * 
+     * @type {string}
+     * @memberof DashboardItem
+     */
+    previewAttachmentId?: string | null;
+    /**
+     * 
      * @type {Date}
      * @memberof DashboardItem
      */
@@ -93,6 +99,7 @@ export function DashboardItemFromJSONTyped(json: any, ignoreDiscriminator: boole
         'createdAt': (json['createdAt'] == null ? null : new Date(json['createdAt'])),
         'id': json['id'],
         'occurredOn': (json['occurredOn'] == null ? null : new Date(json['occurredOn'])),
+        'previewAttachmentId': json['previewAttachmentId'] === undefined ? undefined : json['previewAttachmentId'] === null ? null : json['previewAttachmentId'],
         'scheduledAt': (json['scheduledAt'] == null ? null : new Date(json['scheduledAt'])),
         'titleOrText': json['titleOrText'],
         'type': DashboardItemTypeFromJSON(json['type']),
@@ -113,6 +120,7 @@ export function DashboardItemToJSONTyped(value?: DashboardItem | null, ignoreDis
         'createdAt': value['createdAt'] == null ? value['createdAt'] : value['createdAt'].toISOString(),
         'id': value['id'],
         'occurredOn': value['occurredOn'] == null ? value['occurredOn'] : value['occurredOn'].toISOString().substring(0,10),
+        'previewAttachmentId': value['previewAttachmentId'],
         'scheduledAt': value['scheduledAt'] == null ? value['scheduledAt'] : value['scheduledAt'].toISOString(),
         'titleOrText': value['titleOrText'],
         'type': DashboardItemTypeToJSON(value['type']),

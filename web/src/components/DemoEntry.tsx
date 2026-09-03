@@ -54,7 +54,6 @@ export function DemoEntry() {
     <main className="login-shell">
       <section className="login-intro" aria-labelledby="demo-welcome-heading">
         <Brand
-          inverse
           suffix={<span className="brand-suffix">{t('brand.suffix')}</span>}
         />
         <div className="login-intro-content">

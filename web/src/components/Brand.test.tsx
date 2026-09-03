@@ -25,5 +25,13 @@ describe('Brand', () => {
     expect(html).not.toContain('<a');
     expect(html).toContain('SidebySide');
     expect(html).not.toContain('Next');
+    expect(html).not.toContain('brand-inverse');
+  });
+
+  it('renders standard high-contrast brand styling by default', () => {
+    const html = renderToStaticMarkup(<Brand />);
+
+    expect(html).toContain('class="brand brand-static"');
+    expect(html).not.toContain('brand-inverse');
   });
 });

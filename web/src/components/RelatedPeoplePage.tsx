@@ -28,6 +28,7 @@ import {
   relatedPersonDeleteReducer,
 } from '../client/relatedPersonDelete';
 import { normalizeClientError } from '../client/problemDetails';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { useTranslation } from '../i18n';
 import { ImportantDatesPanel } from './ImportantDatesPanel';
 import { PageHeader } from './PageHeader';
@@ -537,9 +538,12 @@ export function RelatedPeoplePage({
     onSuccess: async () => {
       setSavedMessage(editing ? t('people.updated') : t('people.created'));
       setEditing(null);
-      await queryClient.invalidateQueries({
-        queryKey: ['related-people', spaceId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['related-people', spaceId],
+        }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
     },
   });
 
@@ -569,6 +573,7 @@ export function RelatedPeoplePage({
         queryClient.invalidateQueries({
           queryKey: ['important-dates', spaceId],
         }),
+        invalidateDashboard(queryClient, spaceId),
       ]);
     },
   });

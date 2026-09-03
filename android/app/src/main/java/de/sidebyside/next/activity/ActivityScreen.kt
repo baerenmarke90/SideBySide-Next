@@ -20,7 +20,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import de.sidebyside.next.design.FrauncesFamily
+import de.sidebyside.next.design.SideBySideDisplayFamily
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
 import de.sidebyside.next.shell.UiProblem
@@ -64,7 +64,7 @@ fun ActivityScreen(
             Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2)) {
                 Text(
                     text = stringResource(R.string.activity_title),
-                    style = MaterialTheme.typography.headlineMedium.copy(fontFamily = FrauncesFamily),
+                    style = MaterialTheme.typography.headlineMedium.copy(fontFamily = SideBySideDisplayFamily),
                     color = SideBySideTheme.colors.textPrimary,
                     modifier = Modifier.semantics { heading() },
                 )

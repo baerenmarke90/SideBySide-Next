@@ -189,9 +189,6 @@ export function QuickCreateMenu() {
           <DestinationIcon icon="add" />
         </span>
         <span>{t('navigation.newContent')}</span>
-        <span className="quick-create-chevron" aria-hidden="true">
-          {open ? '−' : '⌄'}
-        </span>
       </button>
 
       {open ? (

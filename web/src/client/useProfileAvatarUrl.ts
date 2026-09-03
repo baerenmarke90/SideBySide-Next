@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 
 export function useProfileAvatarUrl(
-  profilesApi: ProfilesApi,
+  profilesApi: ProfilesApi | undefined | null,
   spaceId: string,
   accountId: string,
   profileAttachmentId: string | null | undefined,
@@ -17,7 +17,7 @@ export function useProfileAvatarUrl(
 
     setLoadFailed(false);
     setAvatarUrl(null);
-    if (!profileAttachmentId) {
+    if (!profilesApi || !profileAttachmentId) {
       return () => controller.abort();
     }
 

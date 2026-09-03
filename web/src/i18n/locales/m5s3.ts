@@ -25,8 +25,9 @@ const m5s3 = {
   overview: {
     soon: 'Bald & Geplant',
     soonIntro: 'Eure nächsten konkreten Schritte.',
-    someday: 'Irgendwann',
-    somedayIntro: 'Wünsche und Träume für die Zukunft.',
+    someday: 'Wünsche & Ideen',
+    somedayIntro:
+      'Dinge, die ihr gemeinsam einmal machen, erleben oder ausprobieren möchtet.',
     others: 'Weitere gemeinsame Dinge',
     eyebrow: 'Gemeinsam planen',
     title: 'Eure Wünsche und Pläne',
@@ -65,7 +66,9 @@ const m5s3 = {
     plannedEnd: 'Geplantes Ende',
     experiencedOn: 'Erlebt am',
     schedule: 'Termin festlegen',
+    reschedule: 'Termin ändern',
     unschedule: 'Termin wieder entfernen',
+    editAction: 'Plan bearbeiten',
     complete: 'Als erlebt abschließen',
     returnToWish: 'Zurück zum Wunsch',
     completedTitle: 'Gemeinsam geschafft',

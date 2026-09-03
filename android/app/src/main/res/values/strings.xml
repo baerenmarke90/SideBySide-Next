@@ -14,8 +14,8 @@
     <string name="entry_sign_in_pending">Anmeldung läuft …</string>
     <string name="entry_assurance">Euer gemeinsamer Bereich bleibt nur für euch bestimmt.</string>
 
-    <string name="destination_today">Heute</string>
-    <string name="destination_story">Story</string>
+    <string name="destination_today">Wir</string>
+    <string name="destination_story">Momente</string>
     <string name="destination_plan">Planen</string>
     <string name="destination_more">Mehr</string>
 
