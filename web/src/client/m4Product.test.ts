@@ -41,9 +41,7 @@ describe('M5 S5/S3 product navigation', () => {
     expect(engagementTargetPath('WISH', 'wish-id')).toBe(
       '/plan/wishes/wish-id',
     );
-    expect(engagementTargetPath('PLAN', 'plan-id')).toBe(
-      '/plan/plans/plan-id',
-    );
+    expect(engagementTargetPath('PLAN', 'plan-id')).toBe('/plan/plans/plan-id');
     expect(engagementTargetPath('PLACE', 'place-id')).toBe(
       '/plan/places/place-id',
     );

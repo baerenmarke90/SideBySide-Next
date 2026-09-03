@@ -6,6 +6,7 @@ const profileIdentity = {
   displayNameLabel: 'Anzeigename',
   displayNameHelp:
     'Der Anzeigename ändert nur deine sichtbare Darstellung. Anmeldung und Konto bleiben unverändert.',
+  editName: 'Name ändern',
   saveName: 'Anzeigenamen speichern',
   savingName: 'Wird gespeichert …',
   saved: 'Profil wurde gespeichert.',
@@ -13,6 +14,8 @@ const profileIdentity = {
   avatarHelp:
     'Wähle ein Bild aus. Ohne Profilbild verwendet SideBySide automatisch deine Initialen.',
   chooseAvatar: 'Profilbild auswählen',
+  changeAvatar: 'Bild ändern',
+  partnerVisibilityNote: 'Dies ist das Profil, das dein Partner sieht.',
   replacingAvatar: 'Profilbild wird aktualisiert …',
   removeAvatar: 'Profilbild entfernen',
   removingAvatar: 'Profilbild wird entfernt …',

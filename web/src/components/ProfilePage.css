@@ -1,6 +1,8 @@
 .profile-page {
   display: grid;
   gap: var(--space-6);
+  max-width: 56rem;
+  margin: 0 auto;
 }
 
 .profile-section > h2,
@@ -45,12 +47,197 @@
   color: var(--color-text-secondary);
 }
 
-.profile-preference-form {
+/* Preferences Header & Groups */
+.profile-preferences-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.profile-preferences-groups {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+}
+
+.profile-preference-category-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.profile-preference-category-heading {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-preference-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.profile-preference-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.profile-preference-chip:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.profile-preference-chip:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.profile-preference-chip-sentiment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: var(--color-brand);
+}
+
+.profile-preference-chip-topic {
+  font-weight: 650;
+}
+
+.profile-preference-chip-value {
+  color: var(--color-text-secondary);
+}
+
+/* Modal Dialog & Bottom Sheet */
+.preference-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
   padding: var(--space-4);
-  border: 1px solid transparent;
+}
+
+.preference-modal-dialog {
+  width: 100%;
+  max-width: 32rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-large);
-  background: var(--color-surface-overlay);
-  box-shadow: inset 0 2px 4px var(--color-shadow-soft);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-card);
+}
+
+@media (max-width: 599px) {
+  .preference-modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .preference-modal-dialog {
+    max-width: 100%;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+    padding: var(--space-5);
+  }
+}
+
+.preference-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.preference-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.preference-modal-close-btn {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-small);
+}
+
+.preference-modal-close-btn:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+.preference-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.preference-modal-submit-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.preference-delete-btn {
+  color: var(--color-error);
+}
+
+/* Settings Separator & Section */
+.profile-settings-separator {
+  border: none;
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: var(--space-4) 0;
+}
+
+.profile-settings-section {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.profile-settings-header-group {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.profile-settings-header-group h2 {
+  margin: 0;
+}
+
+.profile-partner-settings-block {
+  display: grid;
+  gap: var(--space-6);
 }
 
 .profile-preference-list {
