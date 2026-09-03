@@ -157,6 +157,10 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
         "Mit Partner teilen",
         "Geteilt",
     ),
+    Path("docs/PARTNER-APP-EXPERIENCE-STANDARD.md"): (
+        "Für euch",
+        "Ein kleiner Moment für euch",
+    ),
     Path("docs/SCREEN-TEMPLATES.md"): (
         "Noch nicht gespeichert",
     ),

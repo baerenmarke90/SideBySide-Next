@@ -6,6 +6,53 @@
 
 <!-- What is intentionally in scope, and what is not? -->
 
+## Product Design / UX
+
+Details: `docs/DESIGN-PRINCIPLES.md`, `docs/PARTNER-APP-EXPERIENCE-STANDARD.md`, `docs/UX-PATTERNS.md`, `docs/SCREEN-TEMPLATES.md`, and `docs/DESIGN-SYSTEM-DELIVERY.md`.
+
+Exactly one of the following options must be checked:
+
+- [ ] User-facing UI / UX impact reviewed
+- [ ] No user-facing UI / UX impact
+
+### If user-facing UI / UX is affected
+
+All applicable items are mandatory before merge:
+
+- [ ] Partner-app experience standard applied
+- [ ] Screen Template selected or a documented design-system gap explains why no existing template fits
+- [ ] Existing design-system components and semantic tokens reused or the gap is documented
+- [ ] Primary human/content focal point and dominant action are clear
+- [ ] Couple-facing UI does not default to spreadsheet/admin/CRUD composition
+- [ ] Result feels warm, modern, lively, beautiful, and not visually cold or sterile
+- [ ] Gentle playfulness / relationship personality deliberately applied or consciously not appropriate for this context
+- [ ] Love-message / relationship microcopy opportunity deliberately considered
+- [ ] Compact and Expanded behavior reviewed
+- [ ] Loading / Empty / Error / Offline / Success states reviewed where applicable
+- [ ] Motion / feedback behavior reviewed, including reduced motion
+- [ ] Privacy and relationship-state presentation reviewed where applicable
+- [ ] Visual evidence attached or linked
+
+**Design result / rationale**
+
+<!-- Name the selected template/pattern, focal point, key hierarchy decision, warmth/playfulness decision, relationship microcopy decision, motion behavior, and any intentional exception. -->
+
+-
+
+**Visual evidence**
+
+<!-- Link or attach representative screenshots/recordings. Include Compact and Expanded where applicable; include Light/Dark when theme-sensitive styling changed. -->
+
+-
+
+### If no user-facing UI / UX impact
+
+**Rationale**
+
+<!-- Explain briefly why no product UI is affected. A bare "not relevant" is insufficient. -->
+
+-
+
 ## Business / Freemium Model Consistency
 
 Details: `docs/BUSINESS-MODEL.md` and `docs/FREEMIUM-FEATURE-MATRIX.md`. The review itself is mandatory for every development PR.
@@ -98,6 +145,7 @@ For larger runtime slices, client features, and production user flows, document 
 
 - [ ] relevant tests executed
 - [ ] CI must be green before merge
+- [ ] Product Design / UX result is complete and traceable
 - [ ] business/freemium model consistency result is complete and traceable
 - [ ] no Clean-Room, security, privacy, tenant-isolation, provenance, licensing, or engineering-language rule weakened
 - [ ] no recognizable cross-cutting consequence deferred without justification
