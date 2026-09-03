@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""Fail-closed contract checks for the #193 release-evidence workflow."""
+
+from __future__ import annotations
+
+import re
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+WORKFLOW = ROOT / ".github/workflows/release-evidence.yml"
+ACTION = ROOT / ".github/actions/attest-release-artifact/action.yml"
+
+EXTERNAL_ACTION_PINS = {
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/setup-java": "dd06d9cba3e5552c54d9f8ea23572deb30010f7c",
+    "gradle/actions/setup-gradle": "9c971963bec38e04b3d30dcc455b5382be2fdbfb",
+    "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "actions/download-artifact": "634f93cb2916e3fdff6788551b99b062d0335ce0",
+    "actions/attest-build-provenance": "977bb373ede98d70efdf65b84cb5f73e068dcc2a",
+    "actions/attest-sbom": "4651f806c01d8637787e274ac3bdf724ef169f34",
+}
+
+REQUIRED_SUBJECTS = {
+    "release-evidence/backend-runtime.oci.tar",
+    "release-evidence/web-runtime.oci.tar",
+    "release-evidence/android/sidebyside-release-unsigned.apk",
+    "release-evidence/android/sidebyside-release-unsigned.aab",
+}
+
+REQUIRED_SBOMS = {
+    "release-evidence/sbom/backend-runtime.spdx.json",
+    "release-evidence/sbom/web-runtime.spdx.json",
+    "release-evidence/sbom/android-apk.spdx.json",
+    "release-evidence/sbom/android-aab.spdx.json",
+}
+
+
+def action_uses(text: str) -> list[str]:
+    return [match.group(1) for match in re.finditer(r"^\s*-?\s*uses:\s*([^\s#]+)", text, re.MULTILINE)]
+
+
+class ReleaseEvidenceContractTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.workflow = WORKFLOW.read_text(encoding="utf-8")
+        cls.action = ACTION.read_text(encoding="utf-8")
+        cls.all_text = cls.workflow + "\n" + cls.action
+
+    def test_no_privileged_pull_request_trigger(self) -> None:
+        self.assertNotIn("pull_request_target", self.workflow)
+        self.assertIn("if: github.event_name != 'pull_request'", self.workflow)
+
+    def test_build_job_is_read_only_and_attestation_job_is_least_privileged(self) -> None:
+        self.assertIn("permissions:\n  contents: read", self.workflow)
+        self.assertIn(
+            "permissions:\n      contents: read\n      id-token: write\n      attestations: write",
+            self.workflow,
+        )
+        self.assertNotIn("contents: write", self.workflow)
+        self.assertNotIn("packages: write", self.workflow)
+
+    def test_workflow_does_not_consume_signing_or_repository_secrets(self) -> None:
+        forbidden = (
+            "${{ secrets.",
+            "SBS_RELEASE_KEYSTORE",
+            "SBS_RELEASE_KEYSTORE_PASSWORD",
+            "SBS_RELEASE_KEY_ALIAS",
+            "SBS_RELEASE_KEY_PASSWORD",
+        )
+        for marker in forbidden:
+            with self.subTest(marker=marker):
+                self.assertNotIn(marker, self.workflow)
+
+    def test_all_external_actions_are_immutable_sha_pins(self) -> None:
+        seen: dict[str, set[str]] = {}
+        for use in action_uses(self.all_text):
+            if use.startswith("./"):
+                continue
+            self.assertIn("@", use, use)
+            name, ref = use.rsplit("@", 1)
+            self.assertRegex(ref, r"^[0-9a-f]{40}$", use)
+            seen.setdefault(name, set()).add(ref)
+
+        self.assertEqual(set(seen), set(EXTERNAL_ACTION_PINS))
+        for name, expected in EXTERNAL_ACTION_PINS.items():
+            self.assertEqual(seen[name], {expected})
+
+    def test_syft_binary_is_version_and_digest_pinned(self) -> None:
+        self.assertIn('SYFT_VERSION: "1.42.3"', self.workflow)
+        self.assertIn(
+            'SYFT_LINUX_AMD64_SHA256: "0d6be741479eddd2c8644a288990c04f3df0d609bbc1599a005532a9dff63509"',
+            self.workflow,
+        )
+        self.assertIn("sha256sum --check --strict", self.workflow)
+        self.assertNotIn("anchore/sbom-action@", self.workflow)
+
+    def test_exact_release_subject_set_is_indexed_and_attested(self) -> None:
+        for path in REQUIRED_SUBJECTS:
+            with self.subTest(path=path):
+                self.assertIn(path, self.workflow)
+        self.assertIn('["api", "worker", "migrate"]', self.workflow)
+
+    def test_each_subject_has_spdx_23_json_evidence(self) -> None:
+        for path in REQUIRED_SBOMS:
+            with self.subTest(path=path):
+                self.assertIn(path, self.workflow)
+        self.assertIn('"SPDX-2.3"', self.workflow)
+        self.assertIn("actions/attest-sbom@", self.action)
+        self.assertIn('https://spdx.dev/Document/v2.3', self.workflow)
+
+    def test_offline_verification_material_is_retained_and_exercised(self) -> None:
+        self.assertIn("gh attestation trusted-root", self.workflow)
+        self.assertIn("--bundle", self.workflow)
+        self.assertIn("--custom-trusted-root", self.workflow)
+        self.assertIn("--signer-workflow", self.workflow)
+        self.assertIn("release-attestations-${{ github.sha }}", self.workflow)
+
+    def test_evidence_transport_is_checksum_verified(self) -> None:
+        self.assertIn("SHA256SUMS", self.workflow)
+        self.assertGreaterEqual(self.workflow.count("sha256sum --check --strict"), 3)
+
+
+if __name__ == "__main__":
+    unittest.main()
