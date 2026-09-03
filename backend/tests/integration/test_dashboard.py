@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from sidebyside.authorization import PrivacyClass
+from sidebyside.core.ids import new_id
 from sidebyside.dashboard import service as dashboard_service
 from sidebyside.heart_moments.models import HeartEmotion, HeartMoment, HeartMomentPayload
 from sidebyside.memories.models import Memory, MemoryPayload
@@ -214,7 +215,9 @@ def test_upcoming_combines_existing_date_sources_in_deterministic_order(
         repeats=DateRepeat.ANNUALLY.value,
         payload=ImportantDatePayload(label="Tomorrow"),
     )
+    birthday_id = new_id()
     birthday = RelatedPerson(
+        id=birthday_id,
         **_resource(couple, couple["anna"].id),
         relationship=PersonRelationship.FRIEND.value,
         birthday=date(1904, 9, 1),
@@ -233,16 +236,147 @@ def test_upcoming_combines_existing_date_sources_in_deterministic_order(
     session.add_all([plan, important, birthday, private_date])
     session.flush()
 
+    person_date = ImportantDate(
+        **_resource(couple, couple["anna"].id),
+        related_person_id=birthday_id,
+        related_person_privacy_class=PrivacyClass.SPACE_SHARED.value,
+        type=ImportantDateType.CUSTOM.value,
+        date=date(2026, 8, 31),
+        repeats=DateRepeat.NONE.value,
+        payload=ImportantDatePayload(label="Person anniversary"),
+    )
+    session.add(person_date)
+    session.flush()
+
     response = _dashboard(client, couple)
     assert response.status_code == 200
     upcoming = response.json()["upcoming"]
+    # Only couple-level items appear: PLAN, IMPORTANT_DATE (related_person_id=None), ANNIVERSARY.
+    # Third-party birthdays and ImportantDates assigned to a RelatedPerson are
+    # excluded from Wir/Today (#617).
     assert [item["type"] for item in upcoming] == [
         "PLAN",
         "IMPORTANT_DATE",
-        "BIRTHDAY",
         "ANNIVERSARY",
     ]
+    assert str(birthday.id) not in {item["id"] for item in upcoming}
+    assert str(person_date.id) not in {item["id"] for item in upcoming}
     assert str(private_date.id) not in {item["id"] for item in upcoming}
+
+
+def test_upcoming_excludes_third_party_dates_from_couple_context(
+    client, session: Session, couple, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    _freeze(monkeypatch)
+
+    # 1. Gemeinsamer Plan + baldiger RelatedPerson-Geburtstag:
+    # Plan kann Primary Context sein, Geburtstag erscheint nicht in upcoming.
+    plan = Plan(
+        **_resource(couple, couple["anna"].id),
+        status=PlanStatus.PLANNED.value,
+        planned_start=datetime(2026, 9, 5, 19, 0, tzinfo=UTC),
+        payload=PlanPayload(title="Our anniversary dinner"),
+    )
+    birthday_id = new_id()
+    person = RelatedPerson(
+        id=birthday_id,
+        **_resource(couple, couple["anna"].id),
+        relationship=PersonRelationship.FRIEND.value,
+        birthday=date(1904, 9, 1),
+        birthday_year_known=False,
+        payload=RelatedPersonPayload(display_name="Birthday"),
+    )
+    person_date = ImportantDate(
+        **_resource(couple, couple["anna"].id),
+        related_person_id=birthday_id,
+        related_person_privacy_class=PrivacyClass.SPACE_SHARED.value,
+        type=ImportantDateType.CUSTOM.value,
+        date=date(2026, 8, 31),
+        repeats=DateRepeat.NONE.value,
+        payload=ImportantDatePayload(label="Person anniversary"),
+    )
+    session.add_all([plan, person])
+    session.flush()
+    session.add(person_date)
+    session.flush()
+
+    res = _dashboard(client, couple)
+    assert res.status_code == 200
+    upcoming_items = res.json()["upcoming"]
+    assert len(upcoming_items) == 1
+    assert upcoming_items[0]["id"] == str(plan.id)
+    assert upcoming_items[0]["type"] == "PLAN"
+
+    # 2. Nur Geburtstage Dritter vorhanden:
+    # upcoming ist leer -> kein erzwungener Primary Context.
+    session.delete(plan)
+    session.flush()
+
+    res_empty = _dashboard(client, couple)
+    assert res_empty.status_code == 200
+    assert res_empty.json()["upcoming"] == []
+
+    # 3. Eigener Beziehungs-Jahrestag: weiterhin eligible
+    profile = session.execute(
+        select(SpaceProfile).where(SpaceProfile.space_id == couple["space"].id)
+    ).scalar_one()
+    profile.relationship_started_on = date(2022, 9, 10)
+    session.flush()
+
+    res_anniversary = _dashboard(client, couple)
+    assert res_anniversary.status_code == 200
+    anniv_upcoming = res_anniversary.json()["upcoming"]
+    assert len(anniv_upcoming) == 1
+    assert anniv_upcoming[0]["type"] == "ANNIVERSARY"
+
+    # 4. Paarbezogenes zulässiges ImportantDate (related_person_id is None): weiterhin eligible
+    couple_date = ImportantDate(
+        **_resource(couple, couple["anna"].id),
+        related_person_id=None,
+        related_person_privacy_class=None,
+        type=ImportantDateType.ANNIVERSARY.value,
+        date=date(2026, 9, 8),
+        repeats=DateRepeat.NONE.value,
+        payload=ImportantDatePayload(label="First Apartment"),
+    )
+    session.add(couple_date)
+    session.flush()
+
+    res_couple_date = _dashboard(client, couple)
+    assert res_couple_date.status_code == 200
+    types = [item["type"] for item in res_couple_date.json()["upcoming"]]
+    assert types == ["IMPORTANT_DATE", "ANNIVERSARY"]
+    assert res_couple_date.json()["upcoming"][0]["id"] == str(couple_date.id)
+
+    # 5. Private / fremde Personen- oder Termindaten: weiterhin keine Leaks
+    foreign_person = RelatedPerson(
+        space_id=couple["foreign_space"].id,
+        owner_id=couple["outsider"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        relationship=PersonRelationship.FRIEND.value,
+        birthday=date(1904, 9, 5),
+        birthday_year_known=False,
+        payload=RelatedPersonPayload(display_name="Foreign Friend"),
+    )
+    foreign_date = ImportantDate(
+        space_id=couple["foreign_space"].id,
+        owner_id=couple["outsider"].id,
+        privacy_class=PrivacyClass.SPACE_SHARED.value,
+        related_person_id=None,
+        related_person_privacy_class=None,
+        type=ImportantDateType.ANNIVERSARY.value,
+        date=date(2026, 9, 7),
+        repeats=DateRepeat.NONE.value,
+        payload=ImportantDatePayload(label="Foreign Couple Date"),
+    )
+    session.add_all([foreign_person, foreign_date])
+    session.flush()
+
+    res_no_leaks = _dashboard(client, couple)
+    assert res_no_leaks.status_code == 200
+    ids = {item["id"] for item in res_no_leaks.json()["upcoming"]}
+    assert str(foreign_person.id) not in ids
+    assert str(foreign_date.id) not in ids
 
 
 def test_recognition_fields_are_bounded(client, session: Session, couple, monkeypatch) -> None:  # type: ignore[no-untyped-def]
