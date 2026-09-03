@@ -58,8 +58,10 @@ class NotificationItem(ApiModel):
     source_event_id: UUID
     kind: NotificationKind
     actor_id: UUID | None
+    actor: AuthorSummary | None = None
     target_type: EngagementTarget | None
     target_id: UUID | None
+    target: ActivityTargetPresentation | None = None
     created_at: datetime
     read_at: datetime | None
 
@@ -147,9 +149,17 @@ def get_notifications(
         cursor=cursor,
         limit=limit,
     )
+    actor_ids = {item.actor_id for item in page.items if item.actor_id is not None}
+    actors = _resolve_actors(session, actor_ids)
+    targets = {
+        (EngagementTarget(item.target_type), item.target_id)
+        for item in page.items
+        if item.target_type is not None and item.target_id is not None
+    }
+    target_titles = _resolve_target_titles(session, authorization, targets)
     response.headers["Cache-Control"] = "private, no-store"
     return NotificationPage(
-        items=[_notification_item(item) for item in page.items],
+        items=[_notification_item(item, actors, target_titles) for item in page.items],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )
@@ -189,8 +199,21 @@ def mark_notification_read(
         authorization,
         notification_id,
     )
+    actors = (
+        _resolve_actors(session, {notification.actor_id})
+        if notification.actor_id is not None
+        else {}
+    )
+    target_titles = {}
+    if notification.target_type is not None and notification.target_id is not None:
+        with contextlib.suppress(ValueError):
+            target_titles = _resolve_target_titles(
+                session,
+                authorization,
+                {(EngagementTarget(notification.target_type), notification.target_id)},
+            )
     response.headers["Cache-Control"] = "private, no-store"
-    return _notification_item(notification)
+    return _notification_item(notification, actors, target_titles)
 
 
 @router.post(
@@ -308,14 +331,29 @@ def _activity_item(
     )
 
 
-def _notification_item(item: Notification) -> NotificationItem:
+def _notification_item(
+    item: Notification,
+    actors: dict[UUID, AuthorSummary] | None = None,
+    target_titles: dict[tuple[EngagementTarget, UUID], str] | None = None,
+) -> NotificationItem:
+    target_presentation = None
+    if item.target_type is not None and item.target_id is not None:
+        with contextlib.suppress(ValueError):
+            target_type = EngagementTarget(item.target_type)
+            target_presentation = ActivityTargetPresentation(
+                target_type=target_type,
+                target_id=item.target_id,
+                title=target_titles.get((target_type, item.target_id)) if target_titles else None,
+            )
     return NotificationItem(
         id=item.id,
         source_event_id=item.source_event_id,
         kind=NotificationKind(item.kind),
         actor_id=item.actor_id,
+        actor=actors.get(item.actor_id) if actors and item.actor_id is not None else None,
         target_type=EngagementTarget(item.target_type) if item.target_type is not None else None,
         target_id=item.target_id,
+        target=target_presentation,
         created_at=item.created_at,
         read_at=item.read_at,
     )

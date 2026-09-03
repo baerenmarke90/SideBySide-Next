@@ -20,7 +20,11 @@ function navigationLinkFor(html: string, href: string): string {
   return tag;
 }
 
-function renderShell(route: string, serverAdmin = false): string {
+function renderShell(
+  route: string,
+  serverAdmin = false,
+  unreadCount = 0,
+): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -29,6 +33,9 @@ function renderShell(route: string, serverAdmin = false): string {
     displayName: 'Alex Example',
     profileAttachmentId: null,
     version: 1,
+  });
+  queryClient.setQueryData(['m5-s5', 'notification-unread-count', 'space-1'], {
+    unreadCount,
   });
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
@@ -189,5 +196,27 @@ describe('AppShell', () => {
 
     expect(inactive).not.toContain('aria-current="page"');
     expect(inactive).not.toContain('shell-nav-link-active');
+  });
+
+  it('renders standard bell label and no dot when unread count is zero', () => {
+    const html = renderShell('/story', false, 0);
+
+    expect(html).toContain(`aria-label="${navigation.notifications}"`);
+    expect(html).not.toContain('notification-dot');
+  });
+
+  it('renders unread count accessibility label and visual dot when unread count > 0', () => {
+    const html = renderShell('/story', false, 3);
+
+    expect(html).toContain('aria-label="Benachrichtigungen, 3 ungelesen"');
+    expect(html).toContain(
+      '<span class="notification-dot" aria-hidden="true"></span>',
+    );
+  });
+
+  it('renders "Unsere Aktivitäten" in header profile menu', () => {
+    const html = renderShell('/story');
+
+    expect(html).toContain('Unsere Aktivitäten');
   });
 });

@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, type ReactNode, useState } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -17,6 +17,10 @@ import {
   searchResultPath,
   type M4ProductApis,
 } from '../client/m4Product';
+import {
+  notificationsListQueryKey,
+  notificationUnreadCountQueryKey,
+} from '../client/notificationQueries';
 import { normalizeClientError } from '../client/problemDetails';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { AuthorAvatar } from './PersonIdentity';
@@ -424,24 +428,160 @@ export function ActivityProductPage({
   );
 }
 
-function notificationTitle(item: NotificationItem, t: (key: string) => string) {
+function NotificationCard({
+  item,
+  spaceId,
+  profilesApi,
+  currentAccountId,
+  onMarkRead,
+  isMarkingRead,
+}: {
+  item: NotificationItem;
+  spaceId: string;
+  profilesApi?: ProfilesApi | null;
+  currentAccountId?: string;
+  onMarkRead: (id: string) => void;
+  isMarkingRead: boolean;
+}) {
+  const { t } = useTranslation();
+  const path = engagementTargetPath(item.targetType, item.targetId);
+  const isOwn = Boolean(
+    currentAccountId && item.actor?.id === currentAccountId,
+  );
+  const actorName = isOwn ? t('m5s5.activity.you') : item.actor?.displayName;
+  const targetTitle = item.target?.title;
+
+  let titleContent: ReactNode;
   if (item.kind === 'COMMENT_CREATED') {
-    return t('m5s5.notificationKind.COMMENT_CREATED');
+    if (actorName && targetTitle) {
+      titleContent = (
+        <>
+          <strong>{actorName}</strong> hat „{targetTitle}“ kommentiert
+        </>
+      );
+    } else if (actorName) {
+      titleContent = (
+        <>
+          <strong>{actorName}</strong> hat einen Kommentar hinterlassen
+        </>
+      );
+    } else if (targetTitle) {
+      titleContent = `${t('m5s5.notificationKind.COMMENT_CREATED')}: „${targetTitle}“`;
+    } else {
+      titleContent = t('m5s5.notificationKind.COMMENT_CREATED');
+    }
+  } else if (item.kind === 'THINKING_OF_YOU') {
+    titleContent = actorName ? (
+      <>
+        <strong>{actorName}</strong> denkt an dich.
+      </>
+    ) : (
+      t('m5s5.notificationAction.THINKING_OF_YOU_ANON')
+    );
+  } else if (item.kind === 'REMINDER_DUE') {
+    titleContent = targetTitle
+      ? t('m5s5.notificationAction.REMINDER_DUE_WITH_TARGET', {
+          target: targetTitle,
+        })
+      : t('m5s5.notificationAction.REMINDER_DUE');
+  } else {
+    titleContent = t('m5s5.notificationKind.generic');
   }
-  return t('m5s5.notificationKind.generic');
+
+  const inner = (
+    <div
+      className={`m4-item sbs-motion-lift ${path ? 'm4-item-interactive' : 'm4-item-static'}${item.readAt ? '' : ' m4-item-unread'}`}
+    >
+      <div className="m4-notification-header">
+        {item.actor ? (
+          <AuthorAvatar
+            author={
+              isOwn
+                ? { ...item.actor, displayName: t('m5s5.activity.you') }
+                : item.actor
+            }
+            profilesApi={profilesApi}
+            spaceId={spaceId}
+            size="small"
+          />
+        ) : item.kind === 'THINKING_OF_YOU' ? (
+          <span className="notification-heart-icon" aria-hidden="true">
+            ♥
+          </span>
+        ) : null}
+        <div className="m4-notification-copy">
+          <p className="m4-notification-title">{titleContent}</p>
+          <time
+            className="m4-item-meta"
+            dateTime={item.createdAt.toISOString()}
+          >
+            {formatDateTime(item.createdAt)}
+          </time>
+        </div>
+        {path ? (
+          <span className="activity-card-chevron" aria-hidden="true">
+            ›
+          </span>
+        ) : !item.readAt ? (
+          <button
+            type="button"
+            className="secondary compact-action m4-mark-read-btn"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onMarkRead(item.id);
+            }}
+            disabled={isMarkingRead}
+          >
+            {isMarkingRead
+              ? t('m5s5.notifications.markingRead')
+              : t('m5s5.notifications.markRead')}
+          </button>
+        ) : (
+          <span className="m4-item-kind m4-read-status">
+            {t('m5s5.notifications.read')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <li className="m4-notification-wrapper sbs-motion-reveal">
+      {path ? (
+        <Link
+          className="m4-notification-link"
+          to={path}
+          onClick={() => {
+            if (!item.readAt) {
+              onMarkRead(item.id);
+            }
+          }}
+        >
+          {inner}
+        </Link>
+      ) : (
+        inner
+      )}
+    </li>
+  );
 }
 
 export function NotificationsProductPage({
   apis,
   spaceId,
+  profilesApi,
+  currentAccountId,
 }: {
   apis: M4ProductApis;
   spaceId: string;
+  profilesApi?: ProfilesApi | null;
+  currentAccountId?: string;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const listKey = ['m5-s5', 'notifications', spaceId] as const;
-  const unreadKey = ['m5-s5', 'notification-unread-count', spaceId] as const;
+  const listKey = notificationsListQueryKey(spaceId);
+  const unreadKey = notificationUnreadCountQueryKey(spaceId);
 
   const notificationsQuery = useInfiniteQuery({
     queryKey: listKey,
@@ -565,51 +705,19 @@ export function NotificationsProductPage({
       {items.length > 0 ? (
         <section className="layout-panel" aria-live="polite">
           <ul className="m4-list m4-list-rows">
-            {items.map((item) => {
-              const path = engagementTargetPath(item.targetType, item.targetId);
-              const markingThis =
-                markOne.isPending && markOne.variables === item.id;
-              return (
-                <li
-                  className={`m4-item${item.readAt ? '' : ' m4-item-unread'}`}
-                  key={item.id}
-                >
-                  <div className="m4-item-heading">
-                    <h3>{notificationTitle(item, t)}</h3>
-                    <span className="m4-item-kind">
-                      {item.readAt
-                        ? t('m5s5.notifications.read')
-                        : t('m5s5.notifications.unread')}
-                    </span>
-                  </div>
-                  <time
-                    className="m4-item-meta"
-                    dateTime={item.createdAt.toISOString()}
-                  >
-                    {formatDateTime(item.createdAt)}
-                  </time>
-                  <div className="m4-item-actions">
-                    {path ? (
-                      <Link className="button-link secondary-link" to={path}>
-                        {t('m5s5.common.open')}
-                      </Link>
-                    ) : null}
-                    {!item.readAt ? (
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => markOne.mutate(item.id)}
-                        disabled={markOne.isPending}
-                      >
-                        {markingThis
-                          ? t('m5s5.notifications.markingRead')
-                          : t('m5s5.notifications.markRead')}
-                      </button>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
+            {items.map((item) => (
+              <NotificationCard
+                key={item.id}
+                item={item}
+                spaceId={spaceId}
+                profilesApi={profilesApi}
+                currentAccountId={currentAccountId}
+                onMarkRead={(id) => markOne.mutate(id)}
+                isMarkingRead={
+                  markOne.isPending && markOne.variables === item.id
+                }
+              />
+            ))}
           </ul>
           {notificationsQuery.hasNextPage ? (
             <button

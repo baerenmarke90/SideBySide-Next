@@ -178,7 +178,17 @@ const m5s5 = {
   },
   notificationKind: {
     COMMENT_CREATED: 'Neuer Kommentar',
+    THINKING_OF_YOU: 'Denkt an dich',
+    REMINDER_DUE: 'Erinnerung fällig',
     generic: 'Neue Benachrichtigung',
+  },
+  notificationAction: {
+    COMMENT_CREATED_WITH_TARGET: '{{name}} hat „{{target}}“ kommentiert',
+    COMMENT_CREATED: '{{name}} hat einen Kommentar hinterlassen',
+    THINKING_OF_YOU: '{{name}} denkt an dich.',
+    THINKING_OF_YOU_ANON: 'Jemand denkt an dich.',
+    REMINDER_DUE_WITH_TARGET: 'Erinnerung: {{target}}',
+    REMINDER_DUE: 'Eine Erinnerung steht an',
   },
 };
 

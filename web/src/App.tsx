@@ -599,7 +599,12 @@ function AuthenticatedApp({
           <Route
             path={MORE_NOTIFICATIONS_ROUTE}
             element={
-              <NotificationsProductPage apis={m4Apis} spaceId={spaceId} />
+              <NotificationsProductPage
+                apis={m4Apis}
+                spaceId={spaceId}
+                profilesApi={profilesApi}
+                currentAccountId={account.id}
+              />
             }
           />
           <Route

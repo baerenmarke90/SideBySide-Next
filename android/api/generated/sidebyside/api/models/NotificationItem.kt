@@ -23,6 +23,8 @@
 
 package sidebyside.api.models
 
+import sidebyside.api.models.ActivityTargetPresentation
+import sidebyside.api.models.AuthorSummary
 import sidebyside.api.models.EngagementTarget
 import sidebyside.api.models.NotificationKind
 
@@ -31,16 +33,18 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
- * 
  *
- * @param actorId 
- * @param createdAt 
- * @param id 
- * @param kind 
- * @param readAt 
- * @param sourceEventId 
- * @param targetId 
- * @param targetType 
+ *
+ * @param actorId
+ * @param createdAt
+ * @param id
+ * @param kind
+ * @param readAt
+ * @param sourceEventId
+ * @param targetId
+ * @param targetType
+ * @param actor
+ * @param target
  */
 @Serializable
 
@@ -68,7 +72,13 @@ data class NotificationItem (
     val targetId: java.util.UUID?,
 
     @Contextual @SerialName(value = "targetType")
-    val targetType: EngagementTarget?
+    val targetType: EngagementTarget?,
+
+    @SerialName(value = "actor")
+    val actor: AuthorSummary? = null,
+
+    @SerialName(value = "target")
+    val target: ActivityTargetPresentation? = null
 
 ) {
 

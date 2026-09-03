@@ -2940,6 +2940,16 @@
       },
       "NotificationItem": {
         "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "actorId": {
             "anyOf": [
               {
@@ -2981,6 +2991,16 @@
             "format": "uuid",
             "title": "Sourceeventid",
             "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivityTargetPresentation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "targetId": {
             "anyOf": [

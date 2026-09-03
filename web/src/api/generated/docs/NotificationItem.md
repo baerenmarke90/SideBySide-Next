@@ -6,12 +6,14 @@
 
 Name | Type
 ------------ | -------------
+`actor` | [AuthorSummary](AuthorSummary.md)
 `actorId` | string
 `createdAt` | Date
 `id` | string
 `kind` | [NotificationKind](NotificationKind.md)
 `readAt` | Date
 `sourceEventId` | string
+`target` | [ActivityTargetPresentation](ActivityTargetPresentation.md)
 `targetId` | string
 `targetType` | [EngagementTarget](EngagementTarget.md)
 
@@ -22,12 +24,14 @@ import type { NotificationItem } from ''
 
 // TODO: Update the object below with actual values
 const example = {
+  "actor": null,
   "actorId": null,
   "createdAt": null,
   "id": null,
   "kind": null,
   "readAt": null,
   "sourceEventId": null,
+  "target": null,
   "targetId": null,
   "targetType": null,
 } satisfies NotificationItem

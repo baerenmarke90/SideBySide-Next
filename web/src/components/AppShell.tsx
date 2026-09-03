@@ -1,6 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { NotificationsApi } from '../api/generated/apis/NotificationsApi';
 import type { AccountView } from '../api/generated/models/AccountView';
+import { Configuration } from '../api/generated/runtime';
+import { notificationUnreadCountQueryKey } from '../client/notificationQueries';
 import {
   PRODUCT_CACHE_FALLBACK_EVENT,
   PRODUCT_CACHE_NETWORK_EVENT,
@@ -131,6 +135,31 @@ export function AppShell({
     [],
   );
 
+  const notificationsApi = useMemo(
+    () =>
+      new NotificationsApi(
+        new Configuration({
+          basePath: apiBaseUrl,
+          accessToken,
+        }),
+      ),
+    [apiBaseUrl, accessToken],
+  );
+
+  const unreadQuery = useQuery({
+    queryKey: notificationUnreadCountQueryKey(spaceId),
+    queryFn: () => notificationsApi.getNotificationUnreadCount({ spaceId }),
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    enabled: Boolean(spaceId && accessToken),
+  });
+  const unreadCount = unreadQuery.data?.unreadCount ?? 0;
+
+  const bellAriaLabel =
+    unreadCount > 0
+      ? t('navigation.notificationsWithUnread', { count: unreadCount })
+      : t('navigation.notifications');
+
   return (
     <div className="product-shell">
       <ThemeControl />
@@ -172,11 +201,14 @@ export function AppShell({
             className={({ isActive }) =>
               `shell-utility-link${isActive ? ' shell-utility-link-active' : ''}`
             }
-            aria-label={t('navigation.notifications')}
-            title={t('navigation.notifications')}
+            aria-label={bellAriaLabel}
+            title={bellAriaLabel}
           >
             <span className="shell-nav-icon" aria-hidden="true">
               <DestinationIcon icon="notifications" />
+              {unreadCount > 0 ? (
+                <span className="notification-dot" aria-hidden="true" />
+              ) : null}
             </span>
           </NavLink>
           <HeaderProfileMenu
