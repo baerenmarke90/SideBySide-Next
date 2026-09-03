@@ -419,4 +419,236 @@ describe('TodayPage', () => {
     expect(html).toContain('today-section-upcoming');
     expect(html).toContain('Second Future Plan');
   });
+
+  it('does not render relationship signal when comment is from the user or another actor', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: { daysTogether: 50 },
+      upcoming: [],
+      recentShared: [
+        {
+          id: 'mem-1',
+          type: 'MEMORY',
+          titleOrText: 'Lake Walk',
+          occurredOn: new Date('2026-09-02T16:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [
+        {
+          id: 'act-own',
+          kind: 'COMMENT_CREATED',
+          actorId: 'user-self',
+          targetId: 'mem-1',
+          targetType: 'MEMORY',
+          createdAt: new Date('2026-09-03T14:00:00Z'),
+          occurredAt: new Date('2026-09-03T14:00:00Z'),
+          sourceEventId: 'ev-own',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).not.toContain('today-signal-card');
+  });
+
+  it('does not render relationship signal when comment actorId is null', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: { daysTogether: 50 },
+      upcoming: [],
+      recentShared: [
+        {
+          id: 'mem-1',
+          type: 'MEMORY',
+          titleOrText: 'Lake Walk',
+          occurredOn: new Date('2026-09-02T16:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [
+        {
+          id: 'act-null',
+          kind: 'COMMENT_CREATED',
+          actorId: null,
+          targetId: 'mem-1',
+          targetType: 'MEMORY',
+          createdAt: new Date('2026-09-03T14:00:00Z'),
+          occurredAt: new Date('2026-09-03T14:00:00Z'),
+          sourceEventId: 'ev-null',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).not.toContain('today-signal-card');
+  });
+
+  it('does not render relationship signal when space has no partner', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: null,
+      },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [
+        {
+          id: 'mem-1',
+          type: 'MEMORY',
+          titleOrText: 'Solo Memory',
+          occurredOn: new Date('2026-09-02T16:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [
+        {
+          id: 'act-1',
+          kind: 'COMMENT_CREATED',
+          actorId: 'partner-1',
+          targetId: 'mem-1',
+          targetType: 'MEMORY',
+          createdAt: new Date('2026-09-03T14:00:00Z'),
+          occurredAt: new Date('2026-09-03T14:00:00Z'),
+          sourceEventId: 'ev-1',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).not.toContain('today-signal-card');
+  });
+
+  it('does not render relationship signal for non-comment activity', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: { daysTogether: 50 },
+      upcoming: [],
+      recentShared: [
+        {
+          id: 'mem-1',
+          type: 'MEMORY',
+          titleOrText: 'Lake Walk',
+          occurredOn: new Date('2026-09-02T16:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+    queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+      items: [
+        {
+          id: 'act-memory',
+          kind: 'MEMORY_CREATED',
+          actorId: 'partner-1',
+          targetId: 'mem-1',
+          targetType: 'MEMORY',
+          createdAt: new Date('2026-09-03T14:00:00Z'),
+          occurredAt: new Date('2026-09-03T14:00:00Z'),
+          sourceEventId: 'ev-mem',
+        },
+      ],
+      nextCursor: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage
+            apis={
+              {
+                activity: {
+                  getActivity: () =>
+                    Promise.resolve({ items: [], nextCursor: null }),
+                },
+              } as unknown as M4ProductApis
+            }
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).not.toContain('today-signal-card');
+  });
 });

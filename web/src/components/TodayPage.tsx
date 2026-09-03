@@ -349,10 +349,17 @@ export function TodayPage({
 
   // 2. Relationship Signal Slot (0 or 1 item):
   // Curated partner interaction (e.g. partner commented on a shared memory).
-  // Disappears completely if no partner interaction occurred.
-  const relationshipSignalItem = activityQuery.data?.items?.find(
-    (item) => item.kind === 'COMMENT_CREATED',
-  );
+  // Only attributes genuine partner comments: actorId must match partner.id.
+  // Disappears completely if no partner interaction occurred or there is no partner.
+  const relationshipSignalItem =
+    partner?.id != null
+      ? activityQuery.data?.items?.find(
+          (item) =>
+            item.kind === 'COMMENT_CREATED' &&
+            item.actorId != null &&
+            item.actorId === partner.id,
+        )
+      : undefined;
 
   const hasContextModules = Boolean(
     primaryContextItem || relationshipSignalItem,

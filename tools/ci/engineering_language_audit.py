@@ -93,6 +93,8 @@ EXCLUDED_PLATFORM_PREFIXES = (
     Path("android/gradle/wrapper"),
     Path("web/dist"),
     Path("web/node_modules"),
+    Path("web/e2e/node_modules"),
+    Path("web/e2e/test-results"),
     Path("web/src/api/generated"),
     Path("web/src/i18n/locales"),
 )
