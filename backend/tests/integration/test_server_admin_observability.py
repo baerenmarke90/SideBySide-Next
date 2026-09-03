@@ -167,7 +167,14 @@ def test_job_directory_is_filterable_paginated_and_payload_safe(
         "delayed",
         "pendingAgeSeconds",
     }
-    for forbidden in (secret_payload, secret_error, secret_worker, "lastError", "lockedBy", "payload"):
+    for forbidden in (
+        secret_payload,
+        secret_error,
+        secret_worker,
+        "lastError",
+        "lockedBy",
+        "payload",
+    ):
         assert forbidden not in exhausted.text
 
     pending = client.get(
