@@ -33,18 +33,18 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Contextual
 
 /**
+ * 
  *
- *
- * @param actorId
- * @param createdAt
- * @param id
- * @param kind
- * @param readAt
- * @param sourceEventId
- * @param targetId
- * @param targetType
- * @param actor
- * @param target
+ * @param actorId 
+ * @param createdAt 
+ * @param id 
+ * @param kind 
+ * @param readAt 
+ * @param sourceEventId 
+ * @param targetId 
+ * @param targetType 
+ * @param actor 
+ * @param target 
  */
 @Serializable
 
