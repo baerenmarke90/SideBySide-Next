@@ -1,14 +1,12 @@
 name: OpenAPI Generation Artifact
 
 on:
-  pull_request:
-    paths:
-      - "backend/src/sidebyside/api/v1/server_admin_observability.py"
-      - "backend/src/sidebyside/api/v1/__init__.py"
-      - ".github/workflows/openapi-generation-artifact.yml"
+  push:
+    branches:
+      - "feat/551-server-admin-jobs-storage-api"
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   PYTHON_VERSION: "3.13.7"
@@ -16,9 +14,12 @@ env:
 
 jobs:
   generate:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref_name }}
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -40,13 +41,17 @@ jobs:
       - name: Generate checked-in clients
         run: tools/openapi/generate.sh
 
-      - name: Upload generated contract and clients
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: generated-openapi-${{ github.sha }}
-          path: |
-            backend/openapi.json
-            web/src/api/generated/
-            android/api/generated/
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit generated contract and clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git add backend/openapi.json web/src/api/generated android/api/generated
+          if git diff --cached --quiet; then
+            echo "Generated contract and clients are already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(api): regenerate OpenAPI clients for server observability"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
