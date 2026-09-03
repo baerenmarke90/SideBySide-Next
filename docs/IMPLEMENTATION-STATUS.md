@@ -1,15 +1,15 @@
 # Implementation Status
 
-As of: September 1, 2026
+As of: September 3, 2026
 Current repository state: GitHub `main` is the canonical SHA source; this living status document deliberately stores no static current SHA.  
-Current gate status: **G3 passed; M4 complete; M5 is active; G4 not yet evaluated**
+Current gate status: **G3 passed; M4 complete; M5 complete; G4 passed; M6 is the next milestone, evaluated by G5**
 
 ## Document roles
 
 - **Binding source:** [Clean-Room Master Specification](../specification/CLEAN-ROOM-MASTER-SPEC.md)
 - **Compact product overview:** [PRODUCT-SPEC.md](../specification/PRODUCT-SPEC.md)
 - **Current forward roadmap decision:** [ADR 0006](decisions/0006-release-before-optional-expansion.md)
-- **Current gate decision:** [2026-08-30-g3-gate-review.md](reviews/2026-08-30-g3-gate-review.md)
+- **Current gate decision:** [2026-09-03-g4-gate-review.md](reviews/2026-09-03-g4-gate-review.md)
 - **Status sources and drift rules:** [STATUS-SOURCES.md](STATUS-SOURCES.md)
 - **Binding development rule:** [REUSE-BEFORE-BUILD.md](REUSE-BEFORE-BUILD.md) and [AGENTS.md](../AGENTS.md)
 - **Architecture/operations decisions:** dated ADRs under [docs/decisions](decisions)
@@ -166,7 +166,7 @@ The S3 adapter (#87) ran in parallel and is delivered. Video (#88) is not part o
 
 Demonstrated are M2 Domain/API, Story Privacy, Media/parent Authorization, Cross-Tenant/race/data integrity, OpenAPI, migrations, PostgreSQL integration, and a real critical Memory/Media/Story flow in Web and Android against the same SideBySide stack.
 
-Manual Accessibility acceptance was deliberately moved from G2 into final client/release QA. As of 2026-09-02, this manual acceptance step is deprioritized and is **not** required for G4; the per-slice automated accessibility semantics already delivered (contrast, TalkBack/screen-reader names, focus order, touch targets, dynamic type) stand as the accepted evidence instead. Dedicated Performance evidence is deprioritized the same way, for the same date: the existing per-PR [Cross-Cutting Quality](CROSS-CUTTING-QUALITY.md) review already covers query count, payload size, and resource impact, and a separate evidence artifact would not meaningfully add to that. Full client parity remains part of M5/G4, produced as a pragmatic Web/Android feature audit — closing or explicitly accepting real gaps — rather than a formal evidence document.
+Manual Accessibility acceptance was deliberately moved from G2 into final client/release QA. As of 2026-09-02, this manual acceptance step is deprioritized and is **not** required for G4; the per-slice automated accessibility semantics already delivered (contrast, TalkBack/screen-reader names, focus order, touch targets, dynamic type) stand as the accepted evidence instead. Dedicated Performance evidence is deprioritized the same way, for the same date: the existing per-PR [Cross-Cutting Quality](CROSS-CUTTING-QUALITY.md) review already covers query count, payload size, and resource impact, and a separate evidence artifact would not meaningfully add to that. Full client parity remained part of M5/G4 and was produced on 2026-09-02 as the pragmatic Web/Android feature audit recorded on #295; its six findings (#603-#608) were closed rather than accepted, and the [G4 Gate Review](reviews/2026-09-03-g4-gate-review.md) records the result.
 
 ## M3 — Planning & Private Area
 
@@ -209,10 +209,33 @@ No current open issue documents an actual G3-blocking Critical/High Security/Pri
 
 The final M4 migration order is `0028 -> 0029 -> 0030 -> 0031 -> 0032`. M4 remains Free/Core at the delivered baseline and reuses PostgreSQL FTS, the transactional Outbox and the existing PostgreSQL Job Queue rather than adding a parallel search, broker, scheduler, notification, or push stack.
 
+## M5 — Client Completion & Parity
+
+**Status: complete.** M5 productized the stable M0-M4 contracts across Web and Android: the Web slices tracked by #295 and the Android slices tracked by #350, plus the shared S6 runtime (#303 decisions, #345 Transfer Bundle, #346 Web Deep Links/cache/portability, #328 Android resilience) and the route-model decision #360.
+
+The gate's parity requirement was met by the pragmatic Web/Android feature audit recorded on #295 on 2026-09-02. It covered every M5 domain against actual code, found six real functional gaps and no others, and all six were closed rather than accepted:
+
+- #603 HeartMoment content editing (Android) — PR #609
+- #604 Comment editing (Web) — PR #613
+- #605 Wish/Plan editing, direct Plan creation, schedule/complete dates, Chapter place (Android) — PR #611
+- #606 Collection and PrivateCollection icon field (Web) — PR #614
+- #607 Collection and PrivateCollection item renaming (Android) — PR #612
+- #608 Search type filter and Search/Activity/Notifications pagination (Android) — PR #610
+
+## G4 — Core Release Candidate
+
+**Status: PASSED.** The binding decision source is the [G4 Gate Review](reviews/2026-09-03-g4-gate-review.md), which reviewed `main` `61ff4b05` / tree `87f430dc`.
+
+Demonstrated are Web/Android domain equivalence for the Core, bounded Read Cache/offline-read that does not pretend Offline Write exists, version-gated and privacy-scoped Transfer Bundle Export/Import, stable route identity and canonical Deep Link contract, verified Design System tokens with automated Accessibility semantics on both clients, and passing Privacy/Security gates including tenant and `OWNER_ONLY` isolation. No M7 domain was required to reach Core client-completeness.
+
+One boundary is declared rather than claimed: Android registers no OS-level App Link (`VIEW`/`BROWSABLE` intent filter), so the app cannot yet be opened from an external URL. `docs/m5/S6-CACHE-PORTABILITY-DECISIONS.md` already names Android App Links as future work, and Android implements the logical target tuple that document specifies; only the OS-level entry point remains open.
+
+No current open issue documents an actual G4-blocking Critical/High Security/Privacy/Tenant finding or known Tenant/`OWNER_ONLY` leak. Launch readiness, release engineering, retention/deletion lifecycle, push delivery, Post-G4 client polish and the M7-M9 product backlog remain open in their later milestone scope.
+
 ## Later milestones
 
 - [x] M4 — Search/Dashboard, Activity/Notifications, Reminders/Rules
-- [ ] **M5 — Client Completion & Parity:** complete Web/Android Core productization, Export/Import, Read Cache, Deep Links, final Accessibility evidence, and a Web/Android parity audit -> G4
+- [x] **M5 — Client Completion & Parity:** complete Web/Android Core productization, Export/Import, Read Cache, Deep Links, automated Accessibility semantics, and the Web/Android parity audit -> **G4 passed**
 - [ ] **M6 — Operate & Launch:** Managed/Self-Hosted operation, Backup/Restore/Upgrade, administration, observability, Entitlements/Billing adapters, hardening, release engineering and launch QA -> G5
   - [x] **#190 — Self-Hosted recovery evidence:** coordinated PostgreSQL and durable LocalMediaStore backup/restore, fresh-target integrity/privacy acceptance, reproducible `0032`-to-head upgrade validation, S3 responsibility boundary, operator runbook, and required CI gate delivered.
 - [ ] **M7 — Relationship Depth:** module readiness, Daily Check-in/Vibe/Energy, partner notes/support gestures, Questions, shared achievements, monthly/yearly recaps
@@ -225,8 +248,4 @@ The final M4 migration order is `0028 -> 0029 -> 0030 -> 0031 -> 0032`. M4 remai
 
 ## Active milestone
 
-**M5 — Client Completion & Parity** is active. M4's backend/API contracts are stable on `main`; M5 productizes them across Web and Android together with Export/Import, Read Cache, Deep Links, Accessibility, and systematic parity.
-
-M4 completion does **not** declare G4 passed. G4 requires the complete M5 client/parity/Core Release Candidate evidence defined by the Roadmap and binding specifications. New M7 Relationship Depth runtime is not part of that gate.
-
-After a passed G4, **M6 — Operate & Launch** is the next launch-critical milestone. G5 is evaluated after M6; M7-M9 are post-launch expansion and are not G5 prerequisites.
+**M6 — Operate & Launch** is the next launch-critical milestone, following G4 directly: Managed/Self-Hosted operation, Backup/Restore/Upgrade, administration, observability, Entitlements/Billing adapters, hardening, release engineering and launch QA. G5 (#525) is evaluated after M6; M7-M9 are post-launch expansion and are not G5 prerequisites.

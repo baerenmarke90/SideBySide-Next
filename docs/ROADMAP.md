@@ -13,7 +13,7 @@ The accepted sequencing decision is [ADR 0006 — Release the Core before option
 
 ![Roadmap from M0 Foundation through M6 launch readiness and post-launch M7-M9 expansion](./assets/roadmap/roadmap-overview.svg)
 
-**Current:** M0 through M4 are complete for their intended scope. **G1, G2, and G3 have passed.** **M5 — Client Completion & Parity** is active; G4 has not yet been evaluated or passed.
+**Current:** M0 through M5 are complete for their intended scope. **G1, G2, G3, and G4 have passed.** **M6 — Operate & Launch** is the next milestone; G5 has not yet been evaluated or passed.
 
 The intended forward path is now deliberately:
 
@@ -82,11 +82,11 @@ Wishes, Plans, Places, typed relations, Chapters, shared Collections and the own
 
 ### M4 — Engage: complete
 
-Search/Dashboard, Activity/Notifications, Thinking-of-you/PushDelivery, Reminders, Rules and occurrence planning are delivered. Full Web/Android productization remains M5.
+Search/Dashboard, Activity/Notifications, Thinking-of-you/PushDelivery, Reminders, Rules and occurrence planning are delivered. Full Web/Android productization of these contracts was M5's scope and is complete.
 
-### M5 — Client Completion & Parity: active
+### M5 — Client Completion & Parity: complete, G4 passed
 
-M5 turns the already delivered M0-M4 Core into a complete product on both clients. It owns:
+M5 turned the already delivered M0-M4 Core into a complete product on both clients. The binding decision source is the [G4 Gate Review](./reviews/2026-09-03-g4-gate-review.md). It owned:
 
 - complete Web productization;
 - complete Android productization;
@@ -99,7 +99,9 @@ M5 turns the already delivered M0-M4 Core into a complete product on both client
 
 **2026-09-02 gate scope decision:** dedicated Performance evidence and manual Accessibility acceptance are deprioritized for G4 (see `docs/IMPLEMENTATION-STATUS.md`); the existing per-PR Cross-Cutting Quality review and per-slice automated Accessibility semantics stand as the accepted evidence instead. Domain parity is produced as a pragmatic Web/Android feature audit — closing or explicitly accepting real gaps — rather than a formal evidence document.
 
-**Scope protection:** M5 does not absorb new Relationship Depth domains merely because it is active. New Vibe/Energy, Love Note, achievement, Question or Recap runtime belongs to M7 after G5. M5 may provide reusable navigation/settings/client primitives but does not invent those new Domain contracts.
+**Parity audit outcome:** the audit ran on 2026-09-02 and is recorded on #295. Its six findings (#603-#608) were all closed rather than accepted. Android registers no OS-level App Link yet; that boundary stays declared under the S6 decision rather than counted as satisfied.
+
+**Scope protection:** M5 did not absorb new Relationship Depth domains. New Vibe/Energy, Love Note, achievement, Question or Recap runtime belongs to M7 after G5. M5 provided reusable navigation/settings/client primitives without inventing those new Domain contracts.
 
 ## Forward milestones
 
@@ -247,7 +249,9 @@ M7 and M8 may evolve independently after G5 where their shared foundations permi
 
 ### G4 — Core Release Candidate
 
-G4 is evaluated after M5. At minimum:
+**Passed.** The [G4 Gate Review](./reviews/2026-09-03-g4-gate-review.md) remains the immutable decision.
+
+G4 was evaluated after M5 against the following minimum:
 
 - Web and Android are domain-equivalent for the Core, established through a
   pragmatic Web/Android parity audit rather than a formal evidence document;
