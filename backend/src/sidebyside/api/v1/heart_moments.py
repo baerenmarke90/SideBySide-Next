@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, field_validator, model_validator
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
@@ -18,7 +19,6 @@ from sidebyside.attachments.models import Attachment, MediaType
 from sidebyside.authorization import ContentVisibility, visibility_of
 from sidebyside.heart_moments import service
 from sidebyside.heart_moments.models import HeartEmotion, HeartMoment
-from sidebyside.identity.models import Account
 
 router = APIRouter(tags=["heart-moments"])
 
@@ -110,10 +110,12 @@ def _heart_moment_detail(
     session: DbSession,
     authorization: Authorization,
     heart_moment: HeartMoment,
+    author: AuthorSummary | None = None,
 ) -> HeartMomentDetail:
-    author = session.get(Account, heart_moment.owner_id)
     if author is None:
-        raise RuntimeError("Heart moment author disappeared despite foreign key protection.")
+        author = resolve_author_summary(
+            session, heart_moment.owner_id, resource="Heart moment author"
+        )
     is_author = heart_moment.owner_id == authorization.account_id
     visibility = visibility_of(heart_moment.privacy_class)
     attachment = (
@@ -132,7 +134,7 @@ def _heart_moment_detail(
         version=heart_moment.version,
         created_at=heart_moment.created_at,
         updated_at=heart_moment.updated_at,
-        author=AuthorSummary(id=author.id, display_name=author.display_name),
+        author=author,
         capabilities=ResourceCapabilities(
             can_edit=is_author,
             can_delete=is_author,
@@ -204,9 +206,12 @@ def list_heart_moments(
         limit=limit,
         visibility=visibility,
     )
+    authors = resolve_author_summaries(session, {moment.owner_id for moment in page.items})
     return HeartMomentPage(
         items=[
-            _heart_moment_detail(session, authorization, heart_moment)
+            _heart_moment_detail(
+                session, authorization, heart_moment, author=authors.get(heart_moment.owner_id)
+            )
             for heart_moment in page.items
         ],
         next_cursor=page.next_cursor,

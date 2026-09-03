@@ -10,12 +10,11 @@ from uuid import UUID
 from fastapi import APIRouter, Path, Query, Response
 from fastapi import status as http_status
 from pydantic import ConfigDict
-from sqlalchemy import select
 
+from sidebyside.api.authors import resolve_author_summaries
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary
-from sidebyside.attachments.binding import AccountProfileAttachment
 from sidebyside.authorization import PrivacyClass, readable
 from sidebyside.engagement import service, thinking
 from sidebyside.engagement.models import (
@@ -25,7 +24,6 @@ from sidebyside.engagement.models import (
     Notification,
     NotificationKind,
 )
-from sidebyside.identity.models import Account
 
 router = APIRouter()
 
@@ -242,27 +240,7 @@ def _resolve_actors(
     session: DbSession,
     actor_ids: set[UUID],
 ) -> dict[UUID, AuthorSummary]:
-    if not actor_ids:
-        return {}
-    accounts = session.execute(select(Account).where(Account.id.in_(actor_ids))).scalars().all()
-    attachments = (
-        session.execute(
-            select(AccountProfileAttachment).where(
-                AccountProfileAttachment.account_id.in_(actor_ids)
-            )
-        )
-        .scalars()
-        .all()
-    )
-    avatar_map = {att.account_id: att.attachment_id for att in attachments}
-    return {
-        acc.id: AuthorSummary(
-            id=acc.id,
-            display_name=acc.display_name,
-            profile_attachment_id=avatar_map.get(acc.id),
-        )
-        for acc in accounts
-    }
+    return resolve_author_summaries(session, actor_ids)
 
 
 def _resolve_target_titles(

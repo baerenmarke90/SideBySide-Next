@@ -10,13 +10,13 @@ from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
+from sidebyside.api.authors import resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.collections import service
 from sidebyside.collections.models import Collection, CollectionItem
-from sidebyside.identity.models import Account
 
 router = APIRouter(tags=["collections"])
 
@@ -132,10 +132,7 @@ class CollectionPage(ApiModel):
 
 
 def _creator(session: DbSession, account_id: UUID, *, resource: str) -> AuthorSummary:
-    creator = session.get(Account, account_id)
-    if creator is None:
-        raise RuntimeError(f"{resource} creator disappeared despite foreign key protection.")
-    return AuthorSummary(id=creator.id, display_name=creator.display_name)
+    return resolve_author_summary(session, account_id, resource=f"{resource} creator")
 
 
 def collection_item_detail(session: DbSession, item: CollectionItem) -> CollectionItemDetail:
