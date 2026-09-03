@@ -342,16 +342,108 @@ function CollectionItems({
     createMutation.mutate(title, { onSuccess: () => form.reset() });
   }
 
-  function submitRename(
-    event: FormEvent<HTMLFormElement>,
+  function commitRename(
     item: PrivateCollectionItemDetail,
+    rawTitle: string,
+    inputElement: HTMLInputElement,
   ) {
-    event.preventDefault();
-    const title = String(
-      new FormData(event.currentTarget).get('title') || '',
-    ).trim();
-    if (!title || title === item.title) return;
+    const title = rawTitle.trim();
+    if (!title) {
+      inputElement.value = item.title;
+      return;
+    }
+    if (title === item.title) return;
     updateMutation.mutate({ item, update: { title } });
+  }
+
+  const openItems = items.filter((item) => !item.completed);
+  const completedItems = items.filter((item) => item.completed);
+
+  function renderChecklistItem(item: PrivateCollectionItemDetail) {
+    return (
+      <li
+        key={item.id}
+        data-sortable-item-id={item.id}
+        className={[
+          'private-area-item',
+          'private-checklist-row',
+          item.completed ? 'is-completed' : null,
+          reorder.activeItemId === item.id ? 'list-entry-dragging' : null,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <div className="private-area-item-main">
+          <label
+            className="private-checklist-check-label"
+            htmlFor={`private-item-check-${item.id}`}
+          >
+            <input
+              id={`private-item-check-${item.id}`}
+              type="checkbox"
+              className="private-checklist-checkbox"
+              checked={item.completed}
+              onChange={() =>
+                updateMutation.mutate({
+                  item,
+                  update: { completed: !item.completed },
+                })
+              }
+              aria-label={
+                item.completed
+                  ? t('privateArea.collections.markOpen')
+                  : t('privateArea.collections.markComplete')
+              }
+              disabled={updateMutation.isPending}
+            />
+          </label>
+          <label className="sr-only" htmlFor={`private-item-${item.id}`}>
+            {t('privateArea.collections.rename')}
+          </label>
+          <input
+            id={`private-item-${item.id}`}
+            name="title"
+            defaultValue={item.title}
+            className={`private-checklist-title-input ${item.completed ? 'is-completed' : ''}`}
+            required
+            maxLength={200}
+            onBlur={(event) => {
+              commitRename(
+                item,
+                event.currentTarget.value,
+                event.currentTarget,
+              );
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                event.currentTarget.blur();
+              } else if (event.key === 'Escape') {
+                event.currentTarget.value = item.title;
+                event.currentTarget.blur();
+              }
+            }}
+          />
+        </div>
+        <div className="private-area-actions">
+          {collection.capabilities.canEdit ? (
+            <ListEntryIconButton
+              icon="reorder"
+              className="tertiary"
+              label={t('privateArea.collections.reorderItem')}
+              {...reorder.handleProps(item.id)}
+            />
+          ) : null}
+          <ListEntryIconButton
+            icon="delete"
+            className="tertiary"
+            label={t('privateArea.collections.removeItem')}
+            onClick={() => deleteMutation.mutate(item)}
+            disabled={deleteMutation.isPending}
+          />
+        </div>
+      </li>
+    );
   }
 
   return (
@@ -386,90 +478,24 @@ function CollectionItems({
       {items.length === 0 ? (
         <p>{t('privateArea.collections.noItems')}</p>
       ) : null}
-      {items.length > 0 ? (
-        <ol className="private-area-item-list">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              data-sortable-item-id={item.id}
-              className={[
-                'private-area-item',
-                reorder.activeItemId === item.id ? 'list-entry-dragging' : null,
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              <div className="private-area-item-main">
-                <span className="private-area-badge">
-                  {item.completed
-                    ? t('privateArea.collections.complete')
-                    : t('privateArea.collections.open')}
-                </span>
-                <form
-                  className="private-area-item-title-form"
-                  onSubmit={(event) => submitRename(event, item)}
-                >
-                  <label
-                    className="sr-only"
-                    htmlFor={`private-item-${item.id}`}
-                  >
-                    {t('privateArea.collections.rename')}
-                  </label>
-                  <input
-                    id={`private-item-${item.id}`}
-                    name="title"
-                    defaultValue={item.title}
-                    required
-                    maxLength={200}
-                  />
-                  <ListEntryIconButton
-                    type="submit"
-                    icon="save"
-                    className="secondary"
-                    label={
-                      updateMutation.isPending
-                        ? t('privateArea.saving')
-                        : t('privateArea.collections.saveItem')
-                    }
-                    disabled={updateMutation.isPending}
-                  />
-                </form>
-              </div>
-              <div className="private-area-actions">
-                <button
-                  type="button"
-                  className="secondary compact-action"
-                  onClick={() =>
-                    updateMutation.mutate({
-                      item,
-                      update: { completed: !item.completed },
-                    })
-                  }
-                  disabled={updateMutation.isPending}
-                >
-                  {item.completed
-                    ? t('privateArea.collections.markOpen')
-                    : t('privateArea.collections.markComplete')}
-                </button>
-                {collection.capabilities.canEdit ? (
-                  <ListEntryIconButton
-                    icon="reorder"
-                    className="tertiary"
-                    label={t('privateArea.collections.reorderItem')}
-                    {...reorder.handleProps(item.id)}
-                  />
-                ) : null}
-                <ListEntryIconButton
-                  icon="delete"
-                  className="tertiary"
-                  label={t('privateArea.collections.removeItem')}
-                  onClick={() => deleteMutation.mutate(item)}
-                  disabled={deleteMutation.isPending}
-                />
-              </div>
-            </li>
-          ))}
+      {openItems.length > 0 ? (
+        <ol className="private-area-item-list checklist-open">
+          {openItems.map(renderChecklistItem)}
         </ol>
+      ) : null}
+      {completedItems.length > 0 ? (
+        <section
+          className="private-checklist-completed-section"
+          aria-label={t('privateArea.collections.completedSection')}
+        >
+          <h3 className="private-checklist-completed-heading">
+            {t('privateArea.collections.completedSection')} (
+            {completedItems.length})
+          </h3>
+          <ol className="private-area-item-list checklist-completed">
+            {completedItems.map(renderChecklistItem)}
+          </ol>
+        </section>
       ) : null}
       {reorderMutation.isPending ? (
         <p role="status">{t('privateArea.collections.reordering')}</p>

@@ -32,6 +32,14 @@ import { createPrivateAreaApi } from './client/privateArea';
 import { invalidateDashboard } from './client/dashboardQueries';
 import { normalizeClientError } from './client/problemDetails';
 import { clearProductReadCache } from './client/productReadCache';
+import { rememberCurrentAuthReturnTarget } from './client/deepLinks';
+import {
+  clearStoredSession,
+  isAccessTokenValid,
+  loadStoredSession,
+  refreshSessionTokens,
+  storeSession,
+} from './client/sessionPersistence';
 import {
   createReferenceApis,
   loadAuthorizedImage,
@@ -697,12 +705,91 @@ export function App() {
   const config = useMemo(loadReferenceClientConfig, []);
   const location = useLocation();
   const queryClient = useQueryClient();
-  const [tokens, setTokens] = useState<TokenView | null>(null);
-  const [account, setAccount] = useState<AccountView | null>(null);
+  const { t } = useTranslation();
+  const [initialStoredSession] = useState(() => loadStoredSession());
+  const [tokens, setTokens] = useState<TokenView | null>(
+    () => initialStoredSession?.tokens ?? null,
+  );
+  const [account, setAccount] = useState<AccountView | null>(
+    () => initialStoredSession?.account ?? null,
+  );
+  const [isRestoring, setIsRestoring] = useState(() =>
+    Boolean(initialStoredSession),
+  );
   const [spaceId, setSpaceId] = useState<string | null>(null);
   const [entryToken, setEntryToken] = useState(() =>
     readSensitiveEntryToken(window.location.pathname, window.location.search),
   );
+
+  useEffect(() => {
+    if (!initialStoredSession) {
+      setIsRestoring(false);
+      return;
+    }
+    const session = initialStoredSession;
+
+    let cancelled = false;
+
+    async function restore(activeSession: typeof session) {
+      try {
+        let currentTokens = activeSession.tokens;
+        if (!isAccessTokenValid(currentTokens)) {
+          currentTokens = await refreshSessionTokens(
+            config.apiBaseUrl,
+            currentTokens.refreshToken,
+          );
+        }
+
+        const apis = createReferenceApis(
+          config.apiBaseUrl,
+          currentTokens.accessToken,
+        );
+        const verifiedAccount = await apis.auth.meApiV1AuthMeGet();
+
+        if (cancelled) return;
+        setTokens(currentTokens);
+        setAccount(verifiedAccount);
+        storeSession({ account: verifiedAccount, tokens: currentTokens });
+      } catch {
+        if (cancelled) return;
+        clearStoredSession();
+        setTokens(null);
+        setAccount(null);
+        rememberCurrentAuthReturnTarget();
+      } finally {
+        if (!cancelled) {
+          setIsRestoring(false);
+        }
+      }
+    }
+
+    void restore(session);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config.apiBaseUrl, initialStoredSession]);
+
+  useEffect(() => {
+    if (!tokens) return;
+    const expiresAtMs = new Date(tokens.accessExpiresAt).getTime();
+    const timeUntilExpiry = expiresAtMs - Date.now();
+    if (timeUntilExpiry <= 60_000) return;
+
+    const refreshDelayMs = timeUntilExpiry - 60_000;
+    const timer = setTimeout(() => {
+      void refreshSessionTokens(config.apiBaseUrl, tokens.refreshToken)
+        .then((newTokens) => {
+          setTokens(newTokens);
+        })
+        .catch(() => {
+          // Handled on subsequent request or reload
+        });
+    }, refreshDelayMs);
+
+    return () => clearTimeout(timer);
+  }, [config.apiBaseUrl, tokens]);
+
   const serverAdminApis = useMemo(
     () => createServerAdminApis(config.apiBaseUrl, tokens?.accessToken),
     [config.apiBaseUrl, tokens?.accessToken],
@@ -767,6 +854,15 @@ export function App() {
   }, [membershipsQuery.data, tokens]);
 
   function logout() {
+    if (tokens?.accessToken) {
+      try {
+        const apis = createReferenceApis(config.apiBaseUrl, tokens.accessToken);
+        void apis.auth.signOutApiV1AuthSignOutPost().catch(() => {});
+      } catch {
+        // Best effort sign-out
+      }
+    }
+    clearStoredSession();
     setEntryToken(null);
     setSpaceId(null);
     setAccount(null);
@@ -782,6 +878,15 @@ export function App() {
     postSnackbar('snackbar.spaceSwitched');
   }
 
+  if (isRestoring) {
+    return (
+      <main className="setup-shell">
+        <ThemeControl />
+        <UiState kind="loading" title={t('spaceContext.loading')} />
+      </main>
+    );
+  }
+
   if (!tokens || !account) {
     return (
       <>
@@ -791,6 +896,7 @@ export function App() {
           entryToken={entryToken}
           onEntryTokenCleared={() => setEntryToken(null)}
           onSession={(session) => {
+            storeSession(session);
             setEntryToken(null);
             setSpaceId(null);
             setAccount(session.account);

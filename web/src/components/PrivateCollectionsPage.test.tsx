@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { PrivateAreaApi } from '../api/generated/apis/PrivateAreaApi';
 import { privateAreaQueryKeys } from '../client/privateArea';
 import {
+  PrivateCollectionDetailPage,
   PrivateCollectionEditPage,
   PrivateCollectionsListPage,
 } from './PrivateCollectionsPage';
@@ -87,5 +88,63 @@ describe('PrivateCollectionsPage', () => {
     );
 
     expect(html).toContain('private-collection-icon');
+  });
+
+  it('renders checklist items with checkboxes, autosave inputs, and grouped sections', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(
+      privateAreaQueryKeys.collection(ACCOUNT_ID, SPACE_ID, COLLECTION_ID),
+      {
+        ...collection('📝'),
+        items: [
+          {
+            id: 'item-1',
+            title: 'Order photo album',
+            completed: false,
+            position: 0,
+            version: 1,
+          },
+          {
+            id: 'item-2',
+            title: 'Book train tickets',
+            completed: true,
+            position: 1,
+            version: 1,
+          },
+        ],
+      },
+    );
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/private/collections/${COLLECTION_ID}`]}>
+          <Routes>
+            <Route
+              path="/private/collections/:collectionId"
+              element={
+                <PrivateCollectionDetailPage
+                  api={{} as PrivateAreaApi}
+                  accountId={ACCOUNT_ID}
+                  spaceId={SPACE_ID}
+                />
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(html).toContain('checklist-open');
+    expect(html).toContain('checklist-completed');
+    expect(html).toContain('private-checklist-checkbox');
+    expect(html).toContain('private-checklist-check-label');
+    expect(html).toContain('private-checklist-title-input');
+    expect(html).toContain('Order photo album');
+    expect(html).toContain('Book train tickets');
+
+    // Old CRUD artifacts are removed
+    expect(html).not.toContain('private-area-badge');
   });
 });
