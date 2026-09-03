@@ -1,6 +1,12 @@
 name: Immutable Release Candidate
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-candidate.yml"
+      - "scripts/release_manifest.py"
+      - "tools/ci/test_release_manifest.py"
+      - "docs/m6/IMMUTABLE-RELEASES.md"
   workflow_dispatch:
     inputs:
       release_version:
@@ -25,12 +31,24 @@ permissions:
   contents: read
 
 concurrency:
-  group: immutable-release-${{ github.ref }}
+  group: immutable-release-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  contract:
+    name: Release manifest contract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run focused release-manifest tests
+        run: python3 tools/ci/test_release_manifest.py
+
   evidence:
     name: Build and attest one source revision
+    if: github.event_name != 'pull_request'
     permissions:
       contents: read
       id-token: write
@@ -41,6 +59,7 @@ jobs:
 
   manifest:
     name: Bind release identity and candidate bundle
+    if: github.event_name != 'pull_request'
     needs: evidence
     runs-on: ubuntu-latest
     permissions:
