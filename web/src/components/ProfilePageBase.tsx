@@ -16,6 +16,7 @@ import {
   profilePreferenceUpdateFromDraft,
 } from '../client/profilePreferenceDraft';
 import { normalizeClientError } from '../client/problemDetails';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -124,6 +125,7 @@ function RelationshipProfileSection({
           queryKey: ['space-profile', spaceId],
         });
       }
+      await invalidateDashboard(queryClient, spaceId);
     },
   });
 

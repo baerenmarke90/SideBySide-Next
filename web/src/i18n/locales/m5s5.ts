@@ -14,6 +14,7 @@ const m5s5 = {
     durationSince: 'Seit {{date}}',
     durationEmpty:
       'Sobald ihr euer gemeinsames Startdatum hinterlegt habt, seht ihr eure Zeit hier.',
+    openRelationshipSettings: 'Beziehungseinstellungen öffnen',
     railAria: 'Weitere Übersicht',
     retrospectiveTitle: 'Weißt du noch?',
     retrospectiveEmpty:

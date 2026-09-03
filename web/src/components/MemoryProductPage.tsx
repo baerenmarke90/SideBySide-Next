@@ -23,6 +23,7 @@ import {
   memoryDetailPath,
   memoryEditPath,
 } from '../client/routes';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { postSnackbar } from '../client/snackbar';
 import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { resolvedLocale, useTranslation } from '../i18n';
@@ -168,8 +169,11 @@ export function MemoryProductPage({
       attachments.clear();
       setRemovedAttachmentIds(new Set());
       queryClient.setQueryData(memoryKey, { value: memory, source: 'network' });
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
-      await queryClient.invalidateQueries({ queryKey: memoryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        queryClient.invalidateQueries({ queryKey: memoryKey }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(memoryDetailPath(memory.id), { replace: true });
     },
   });
@@ -194,7 +198,10 @@ export function MemoryProductPage({
     },
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: memoryKey });
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(appRoutePath('story'), { replace: true });
       postSnackbar('snackbar.memoryDeleted');
     },

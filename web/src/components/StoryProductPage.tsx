@@ -455,7 +455,10 @@ export function StoryProductPage({
           {/* 3. Milestones & Chapters */}
           <div className="momente-grid-two">
             {milestones.length > 0 ? (
-              <div className="momente-sub-card">
+              <Link
+                to="/story?tab=timeline&type=MILESTONE"
+                className="momente-sub-card"
+              >
                 <span className="momente-sub-card-kicker">
                   ★ {t('story.milestonesKicker')}
                 </span>
@@ -465,7 +468,7 @@ export function StoryProductPage({
                 <p className="momente-sub-card-desc">
                   {t('story.milestonesDesc')}
                 </p>
-              </div>
+              </Link>
             ) : null}
             <Link to="/plan#chapter-title" className="momente-sub-card">
               <span className="momente-sub-card-kicker">

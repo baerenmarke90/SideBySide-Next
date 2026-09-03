@@ -114,4 +114,32 @@ describe('StoryProductPage', () => {
     expect(html).toContain('new-space-experience');
     expect(html).toContain('/story/memories/new');
   });
+
+  it('renders clickable milestone card with updated non-achievement copy linking to timeline filter', () => {
+    const html = renderStoryPage('/story', {
+      items: [
+        {
+          kind: 'MILESTONE',
+          effectiveDate: new Date('2026-08-20T00:00:00Z'),
+          milestone: {
+            id: 'mile-1',
+            title: 'Moved in together',
+            happenedOn: new Date('2026-08-20T00:00:00Z'),
+            createdAt: new Date('2026-08-20T00:00:00Z'),
+            author: { id: 'author-1', displayName: 'Alex' },
+            creator: { id: 'author-1', displayName: 'Alex' },
+          },
+        },
+      ],
+      hasMore: false,
+      nextCursor: null,
+    });
+
+    expect(html).toContain('Meilensteine &amp; gemeinsame Schritte');
+    expect(html).toContain(
+      'Große und kleine Stationen eurer gemeinsamen Geschichte.',
+    );
+    expect(html).not.toContain('Erfolge');
+    expect(html).toContain('href="/story?tab=timeline&amp;type=MILESTONE"');
+  });
 });

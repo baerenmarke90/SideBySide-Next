@@ -8,6 +8,7 @@ import {
   dashboardItemPath,
   engagementTargetPath,
 } from '../client/m4Product';
+import { dashboardQueryKey } from '../client/dashboardQueries';
 import { normalizeClientError } from '../client/problemDetails';
 import { postSnackbar } from '../client/snackbar';
 import { resolvedLocale, useTranslation } from '../i18n';
@@ -324,7 +325,7 @@ export function TodayPage({
 }) {
   const { t } = useTranslation();
   const dashboardQuery = useQuery({
-    queryKey: ['m5-s5', 'dashboard', spaceId],
+    queryKey: dashboardQueryKey(spaceId),
     queryFn: () => apiCall(() => apis.dashboard.getDashboard({ spaceId })),
     retry: false,
   });
@@ -427,7 +428,11 @@ export function TodayPage({
               </h1>
               <div className="today-hero-meta-row">
                 {dashboardQuery.data.relationshipDuration ? (
-                  <p className="today-hero-subtitle">
+                  <Link
+                    to="/more/profile#relationship-profile-title"
+                    className="today-hero-subtitle today-hero-duration-link"
+                    title={t('m5s5.dashboard.openRelationshipSettings')}
+                  >
                     <span className="today-hero-pill-icon" aria-hidden="true">
                       ★
                     </span>
@@ -437,8 +442,17 @@ export function TodayPage({
                           dashboardQuery.data.relationshipDuration.daysTogether,
                       })}
                     </span>
-                  </p>
-                ) : null}
+                  </Link>
+                ) : (
+                  <Link
+                    to="/more/profile#relationship-profile-title"
+                    className="today-hero-settings-link"
+                  >
+                    <span>
+                      {t('m5s5.dashboard.openRelationshipSettings')} →
+                    </span>
+                  </Link>
+                )}
               </div>
               <div className="today-hero-action-container">
                 <ThinkingOfYouHero apis={apis} spaceId={spaceId} />

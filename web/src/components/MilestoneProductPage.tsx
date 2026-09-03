@@ -18,6 +18,7 @@ import {
   milestoneDetailPath,
   milestoneEditPath,
 } from '../client/routes';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { CommentsPanel } from './CommentsPanel';
 import { PageHeader } from './PageHeader';
@@ -96,7 +97,10 @@ export function MilestoneProductPage({
       }
     },
     onSuccess: async (milestone) => {
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(milestoneDetailPath(milestone.id), {
         replace: true,
         state: { saved: true },
@@ -147,8 +151,11 @@ export function MilestoneProductPage({
         value: milestone,
         source: 'network',
       });
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
-      await queryClient.invalidateQueries({ queryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        queryClient.invalidateQueries({ queryKey }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(milestoneDetailPath(milestone.id), { replace: true });
     },
   });
@@ -173,7 +180,10 @@ export function MilestoneProductPage({
     },
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey });
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(appRoutePath('story'), { replace: true });
     },
   });

@@ -29,6 +29,7 @@ import { createM4ProductApis } from './client/m4Product';
 import { createMemoryWithReadyAttachments } from './client/memoryAttachmentDraft';
 import { createPeopleApi } from './client/peopleApi';
 import { createPrivateAreaApi } from './client/privateArea';
+import { invalidateDashboard } from './client/dashboardQueries';
 import { normalizeClientError } from './client/problemDetails';
 import { clearProductReadCache } from './client/productReadCache';
 import {
@@ -446,7 +447,10 @@ function AuthenticatedApp({
   );
 
   async function refreshStory() {
-    await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+      invalidateDashboard(queryClient, spaceId),
+    ]);
   }
 
   const memoryProductProps = {

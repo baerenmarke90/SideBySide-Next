@@ -651,4 +651,57 @@ describe('TodayPage', () => {
 
     expect(html).not.toContain('today-signal-card');
   });
+
+  it('renders neutral settings CTA when relationshipDuration is null without assuming missing start date', () => {
+    const html = renderTodayPage({
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: null,
+      upcoming: [
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Picnic in the park',
+          scheduledAt: new Date('2026-09-15T10:00:00Z'),
+        },
+      ],
+      recentShared: [],
+      retrospective: null,
+    });
+
+    expect(html).toContain('today-hero-settings-link');
+    expect(html).toContain('Beziehungseinstellungen öffnen');
+    expect(html).toContain('href="/more/profile#relationship-profile-title"');
+    expect(html).not.toContain('Beziehungsstart festlegen');
+  });
+
+  it('links duration pill to relationship profile when relationshipDuration is present', () => {
+    const html = renderTodayPage({
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: {
+        daysTogether: 100,
+        startedOn: new Date('2026-01-01T00:00:00Z'),
+      },
+      upcoming: [
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Picnic in the park',
+          scheduledAt: new Date('2026-09-15T10:00:00Z'),
+        },
+      ],
+      recentShared: [],
+      retrospective: null,
+    });
+
+    expect(html).toContain('today-hero-duration-link');
+    expect(html).toContain('100 Tage zusammen');
+    expect(html).toContain('href="/more/profile#relationship-profile-title"');
+    expect(html).not.toContain('today-hero-settings-link');
+  });
 });

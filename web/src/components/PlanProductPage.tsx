@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import { normalizeClientError } from '../client/problemDetails';
 import { appRoutePath } from '../client/routes';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import {
   dateFromInput,
   dateOnlyInput,
@@ -70,6 +71,7 @@ export function PlanProductPage({
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['m5-s3', 'plans', spaceId] }),
       queryClient.invalidateQueries({ queryKey: key }),
+      invalidateDashboard(queryClient, spaceId),
     ]);
   };
 
@@ -164,6 +166,7 @@ export function PlanProductPage({
         queryClient.invalidateQueries({
           queryKey: ['m5-s3', 'wishes', spaceId],
         }),
+        invalidateDashboard(queryClient, spaceId),
       ]);
       navigate(appRoutePath('plan'), { replace: true });
     },
@@ -179,9 +182,12 @@ export function PlanProductPage({
       ),
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: key });
-      await queryClient.invalidateQueries({
-        queryKey: ['m5-s3', 'plans', spaceId],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['m5-s3', 'plans', spaceId],
+        }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(appRoutePath('plan'), { replace: true });
     },
   });
@@ -258,6 +264,13 @@ export function PlanProductPage({
         eyebrow={t('m5s3.plan.detailEyebrow')}
         title={plan.title}
         description={t(`m5s3.plan.status.${plan.status}`)}
+        action={
+          plan.capabilities.canEdit ? (
+            <a className="button-link secondary" href="#plan-edit-section">
+              {t('m5s3.plan.editAction')}
+            </a>
+          ) : null
+        }
       />
 
       <section
@@ -285,7 +298,7 @@ export function PlanProductPage({
       </section>
 
       <div className="planning-detail-grid">
-        <section className="planning-subsection">
+        <section id="plan-edit-section" className="planning-subsection">
           <h2>{t('m5s3.common.edit')}</h2>
           {plan.capabilities.canEdit ? (
             <form className="form-grid" onSubmit={submitEdit}>
@@ -367,41 +380,44 @@ export function PlanProductPage({
         {plan.capabilities.canEdit && plan.status !== 'COMPLETED' ? (
           <section className="planning-subsection">
             <h2>{t('m5s3.plan.lifecycleHeading')}</h2>
-            {plan.status === 'PLANNED' ? (
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => unscheduleMutation.mutate(plan)}
-                disabled={unscheduleMutation.isPending}
-              >
-                {t('m5s3.plan.unschedule')}
-              </button>
-            ) : (
-              <form className="form-grid" onSubmit={submitSchedule}>
-                <label htmlFor="plan-schedule-start">
-                  {t('m5s3.plan.plannedStart')}
-                </label>
-                <input
-                  id="plan-schedule-start"
-                  name="plannedStart"
-                  type="datetime-local"
-                  required
-                  defaultValue={localDateTimeInput(plan.plannedStart)}
-                />
-                <label htmlFor="plan-schedule-end">
-                  {t('m5s3.plan.plannedEnd')}
-                </label>
-                <input
-                  id="plan-schedule-end"
-                  name="plannedEnd"
-                  type="datetime-local"
-                  defaultValue={localDateTimeInput(plan.plannedEnd)}
-                />
+            <form className="form-grid" onSubmit={submitSchedule}>
+              <label htmlFor="plan-schedule-start">
+                {t('m5s3.plan.plannedStart')}
+              </label>
+              <input
+                id="plan-schedule-start"
+                name="plannedStart"
+                type="datetime-local"
+                required
+                defaultValue={localDateTimeInput(plan.plannedStart)}
+              />
+              <label htmlFor="plan-schedule-end">
+                {t('m5s3.plan.plannedEnd')}
+              </label>
+              <input
+                id="plan-schedule-end"
+                name="plannedEnd"
+                type="datetime-local"
+                defaultValue={localDateTimeInput(plan.plannedEnd)}
+              />
+              <div className="form-actions">
                 <button type="submit" disabled={scheduleMutation.isPending}>
-                  {t('m5s3.plan.schedule')}
+                  {plan.status === 'PLANNED'
+                    ? t('m5s3.plan.reschedule')
+                    : t('m5s3.plan.schedule')}
                 </button>
-              </form>
-            )}
+                {plan.status === 'PLANNED' ? (
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => unscheduleMutation.mutate(plan)}
+                    disabled={unscheduleMutation.isPending}
+                  >
+                    {t('m5s3.plan.unschedule')}
+                  </button>
+                ) : null}
+              </div>
+            </form>
 
             <form
               className="form-grid planning-action-form"

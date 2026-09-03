@@ -19,6 +19,7 @@ import {
   wishDetailPath,
 } from '../client/routes';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -242,7 +243,10 @@ export function SharedPlanningOverviewPage({
       description?: string;
       placeId?: string;
     }) => apiCall(() => apis.plans.createPlan({ spaceId, planCreate: values })),
-    onSuccess: () => invalidate('plans'),
+    onSuccess: async () => {
+      invalidate('plans');
+      await invalidateDashboard(queryClient, spaceId);
+    },
   });
   const createPlace = useMutation({
     mutationFn: (values: {

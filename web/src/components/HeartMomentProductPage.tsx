@@ -20,6 +20,7 @@ import {
   heartMomentDetailPath,
   heartMomentEditPath,
 } from '../client/routes';
+import { invalidateDashboard } from '../client/dashboardQueries';
 import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { AttachmentDraftPicker } from './AttachmentDraftPicker';
@@ -126,7 +127,10 @@ export function HeartMomentProductPage({
     },
     onSuccess: async (heartMoment) => {
       attachments.clear();
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(heartMomentDetailPath(heartMoment.id), {
         replace: true,
         state: { saved: true },
@@ -180,8 +184,11 @@ export function HeartMomentProductPage({
         value: heartMoment,
         source: 'network',
       });
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
-      await queryClient.invalidateQueries({ queryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        queryClient.invalidateQueries({ queryKey }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(heartMomentDetailPath(heartMoment.id), { replace: true });
     },
   });
@@ -218,11 +225,14 @@ export function HeartMomentProductPage({
         value: heartMoment,
         source: 'network',
       });
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
-      await queryClient.invalidateQueries({
-        queryKey: ['comments', spaceId, 'heartMoment', heartMoment.id],
-      });
-      await queryClient.invalidateQueries({ queryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['comments', spaceId, 'heartMoment', heartMoment.id],
+        }),
+        queryClient.invalidateQueries({ queryKey }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
     },
   });
 
@@ -246,7 +256,10 @@ export function HeartMomentProductPage({
     },
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey });
-      await queryClient.invalidateQueries({ queryKey: ['story', spaceId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['story', spaceId] }),
+        invalidateDashboard(queryClient, spaceId),
+      ]);
       navigate(appRoutePath('story'), { replace: true });
     },
   });
