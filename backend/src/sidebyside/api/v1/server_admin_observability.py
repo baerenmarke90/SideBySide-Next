@@ -133,9 +133,7 @@ def list_server_admin_jobs(
     if created_within is not None:
         filters.append(Job.created_at >= current_time - _JOB_WINDOWS[created_within])
 
-    total = session.execute(
-        select(func.count()).select_from(Job).where(*filters)
-    ).scalar_one()
+    total = session.execute(select(func.count()).select_from(Job).where(*filters)).scalar_one()
 
     # Do not select Job itself. Loading the ORM row would also load payload,
     # last_error and locked_by even if Pydantic later omitted them.
@@ -175,9 +173,7 @@ def list_server_admin_jobs(
                 created_at=created_at,
                 run_after=run_after,
                 finished_at=values["finished_at"],
-                exhausted=(
-                    job_status == JobStatus.FAILED.value and attempts >= max_attempts
-                ),
+                exhausted=(job_status == JobStatus.FAILED.value and attempts >= max_attempts),
                 delayed=(pending and run_after < current_time),
                 pending_age_seconds=(
                     max(0, int((current_time - created_at).total_seconds())) if pending else None
@@ -189,26 +185,8 @@ def list_server_admin_jobs(
 
 
 def _ready_storage_aggregate(session: Session):  # type: ignore[no-untyped-def]
-    return session.execute(
-        select(
-            func.count().label("ready_count"),
-            func.coalesce(
-                func.sum(case((Attachment.size.is_not(None), Attachment.size), else_=0)),
-                0,
-            ).label("ready_bytes"),
-            func.coalesce(
-                func.sum(case((Attachment.size.is_(None), 1), else_=0)),
-                0,
-            ).label("unknown_size_count"),
-        ).where(Attachment.status == AttachmentStatus.READY.value)
-    ).one()._mapping
-
-
-def _storage_growth(session: Session) -> list[ServerAdminStorageGrowth]:
-    current_time = now()
-    result: list[ServerAdminStorageGrowth] = []
-    for label, delta in _STORAGE_WINDOWS:
-        values = session.execute(
+    return (
+        session.execute(
             select(
                 func.count().label("ready_count"),
                 func.coalesce(
@@ -219,12 +197,38 @@ def _storage_growth(session: Session) -> list[ServerAdminStorageGrowth]:
                     func.sum(case((Attachment.size.is_(None), 1), else_=0)),
                     0,
                 ).label("unknown_size_count"),
-            ).where(
-                Attachment.status == AttachmentStatus.READY.value,
-                Attachment.ready_at.is_not(None),
-                Attachment.ready_at >= current_time - delta,
+            ).where(Attachment.status == AttachmentStatus.READY.value)
+        )
+        .one()
+        ._mapping
+    )
+
+
+def _storage_growth(session: Session) -> list[ServerAdminStorageGrowth]:
+    current_time = now()
+    result: list[ServerAdminStorageGrowth] = []
+    for label, delta in _STORAGE_WINDOWS:
+        values = (
+            session.execute(
+                select(
+                    func.count().label("ready_count"),
+                    func.coalesce(
+                        func.sum(case((Attachment.size.is_not(None), Attachment.size), else_=0)),
+                        0,
+                    ).label("ready_bytes"),
+                    func.coalesce(
+                        func.sum(case((Attachment.size.is_(None), 1), else_=0)),
+                        0,
+                    ).label("unknown_size_count"),
+                ).where(
+                    Attachment.status == AttachmentStatus.READY.value,
+                    Attachment.ready_at.is_not(None),
+                    Attachment.ready_at >= current_time - delta,
+                )
             )
-        ).one()._mapping
+            .one()
+            ._mapping
+        )
         result.append(
             ServerAdminStorageGrowth(
                 window=label,
