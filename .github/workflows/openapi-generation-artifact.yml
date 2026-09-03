@@ -1,0 +1,52 @@
+name: OpenAPI Generation Artifact
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/sidebyside/api/v1/server_admin_observability.py"
+      - "backend/src/sidebyside/api/v1/__init__.py"
+      - ".github/workflows/openapi-generation-artifact.yml"
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.13.7"
+  UV_VERSION: "0.12.5"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/uv.lock
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install "uv==$UV_VERSION"
+          uv lock --check
+          uv sync --frozen
+
+      - name: Generate canonical OpenAPI contract
+        working-directory: backend
+        run: uv run --frozen python scripts/openapi_contract.py write
+
+      - name: Generate checked-in clients
+        run: tools/openapi/generate.sh
+
+      - name: Upload generated contract and clients
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: generated-openapi-${{ github.sha }}
+          path: |
+            backend/openapi.json
+            web/src/api/generated/
+            android/api/generated/
+          if-no-files-found: error
+          retention-days: 1
