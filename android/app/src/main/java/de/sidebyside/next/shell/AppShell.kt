@@ -1,5 +1,6 @@
 package de.sidebyside.next.shell
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -44,12 +45,19 @@ fun windowWidthClassFor(width: Dp): WindowWidthClass = when {
 }
 
 /**
- * Applies the window insets to a surface that has no navigation.
+ * Applies the window insets and the token background to a surface that has no
+ * navigation.
  *
  * The entry screen is shown before there is anything to navigate between, but
  * it still draws edge to edge and still has a status bar and a display cutout
  * above it. Routing it around [AppShell] is what put the brand lockup
  * underneath the clock.
+ *
+ * Unlike [AppShell], which gets its background for free from [Scaffold]'s
+ * default `containerColor`, this surface is a plain [Box] and previously drew
+ * nothing behind its content — so the window's default background showed
+ * through instead of the token background, most visibly in Dark Mode where it
+ * left a neutral system grey instead of `SideBySideColors.background`.
  */
 @Composable
 fun ShellSurface(
@@ -59,6 +67,7 @@ fun ShellSurface(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .background(SideBySideTheme.colors.background)
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
         content()
