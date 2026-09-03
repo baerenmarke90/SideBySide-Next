@@ -5767,6 +5767,118 @@
         "title": "ServerAdminFailedJob",
         "type": "object"
       },
+      "ServerAdminJobItem": {
+        "description": "Queue metadata safe for ServerAdmin responses.\n\nDeliberately absent: payload, last_error, locked_by, and payload-derived IDs.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "delayed": {
+            "title": "Delayed",
+            "type": "boolean"
+          },
+          "exhausted": {
+            "title": "Exhausted",
+            "type": "boolean"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "maxAttempts": {
+            "title": "Maxattempts",
+            "type": "integer"
+          },
+          "pendingAgeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pendingageseconds"
+          },
+          "runAfter": {
+            "format": "date-time",
+            "title": "Runafter",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "attempts",
+          "maxAttempts",
+          "createdAt",
+          "runAfter",
+          "finishedAt",
+          "exhausted",
+          "delayed",
+          "pendingAgeSeconds"
+        ],
+        "title": "ServerAdminJobItem",
+        "type": "object"
+      },
+      "ServerAdminJobList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminJobItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ServerAdminJobList",
+        "type": "object"
+      },
       "ServerAdminOverview": {
         "description": "Privacy-safe operational projection for one SideBySide installation.",
         "properties": {
@@ -6295,6 +6407,153 @@
           "anomalyCodes"
         ],
         "title": "ServerAdminSpaceSummary",
+        "type": "object"
+      },
+      "ServerAdminStorageGrowth": {
+        "properties": {
+          "readyBytes": {
+            "title": "Readybytes",
+            "type": "integer"
+          },
+          "readyCount": {
+            "title": "Readycount",
+            "type": "integer"
+          },
+          "readySizeUnknownCount": {
+            "title": "Readysizeunknowncount",
+            "type": "integer"
+          },
+          "window": {
+            "enum": [
+              "24h",
+              "7d",
+              "30d"
+            ],
+            "title": "Window",
+            "type": "string"
+          }
+        },
+        "required": [
+          "window",
+          "readyCount",
+          "readyBytes",
+          "readySizeUnknownCount"
+        ],
+        "title": "ServerAdminStorageGrowth",
+        "type": "object"
+      },
+      "ServerAdminStorageMediaCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "mediaType": {
+            "title": "Mediatype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mediaType",
+          "count"
+        ],
+        "title": "ServerAdminStorageMediaCount",
+        "type": "object"
+      },
+      "ServerAdminStorageOverview": {
+        "description": "Aggregate-only storage projection with no content/ownership metadata.",
+        "properties": {
+          "deleteFailedCount": {
+            "title": "Deletefailedcount",
+            "type": "integer"
+          },
+          "deletingCount": {
+            "title": "Deletingcount",
+            "type": "integer"
+          },
+          "failedCount": {
+            "title": "Failedcount",
+            "type": "integer"
+          },
+          "growth": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminStorageGrowth"
+            },
+            "title": "Growth",
+            "type": "array"
+          },
+          "mediaTypeCounts": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminStorageMediaCount"
+            },
+            "title": "Mediatypecounts",
+            "type": "array"
+          },
+          "readyBytes": {
+            "title": "Readybytes",
+            "type": "integer"
+          },
+          "readyCount": {
+            "title": "Readycount",
+            "type": "integer"
+          },
+          "readySizeUnknownCount": {
+            "title": "Readysizeunknowncount",
+            "type": "integer"
+          },
+          "statusCounts": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminStorageStatusCount"
+            },
+            "title": "Statuscounts",
+            "type": "array"
+          },
+          "thumbnailReadyCount": {
+            "title": "Thumbnailreadycount",
+            "type": "integer"
+          },
+          "uploadingCount": {
+            "title": "Uploadingcount",
+            "type": "integer"
+          },
+          "validatingCount": {
+            "title": "Validatingcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "statusCounts",
+          "mediaTypeCounts",
+          "readyCount",
+          "readyBytes",
+          "readySizeUnknownCount",
+          "failedCount",
+          "deleteFailedCount",
+          "uploadingCount",
+          "validatingCount",
+          "deletingCount",
+          "thumbnailReadyCount",
+          "growth"
+        ],
+        "title": "ServerAdminStorageOverview",
+        "type": "object"
+      },
+      "ServerAdminStorageStatusCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ],
+        "title": "ServerAdminStorageStatusCount",
         "type": "object"
       },
       "SessionView": {
@@ -9123,6 +9382,160 @@
         ]
       }
     },
+    "/api/v1/server-admin/jobs": {
+      "get": {
+        "description": "List technical job state without selecting sensitive queue columns.",
+        "operationId": "list_server_admin_jobs_api_v1_server_admin_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PENDING",
+                    "RUNNING",
+                    "SUCCEEDED",
+                    "FAILED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exhausted",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exhausted"
+            }
+          },
+          {
+            "in": "query",
+            "name": "createdWithin",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "24h",
+                    "7d",
+                    "30d"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Createdwithin"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminJobList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "List Server Admin Jobs",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
     "/api/v1/server-admin/overview": {
       "get": {
         "description": "Return safe operational state for an authorized ServerAdmin.",
@@ -9498,6 +9911,48 @@
           }
         },
         "summary": "Get Server Admin Space",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/storage": {
+      "get": {
+        "description": "Return authoritative aggregate storage state, never an attachment directory.",
+        "operationId": "get_server_admin_storage_api_v1_server_admin_storage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminStorageOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          }
+        },
+        "summary": "Get Server Admin Storage",
         "tags": [
           "server-admin"
         ]
