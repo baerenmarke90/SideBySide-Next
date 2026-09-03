@@ -40,8 +40,8 @@ purposes and both remain required.
 
 | Evidence subject | Runtime meaning | SBOM |
 |---|---|---|
-| `backend-runtime.oci.tar` | one backend runtime used by API, worker and migrate | `sbom/backend-runtime.spdx.json` |
-| `web-runtime.oci.tar` | Web runtime | `sbom/web-runtime.spdx.json` |
+| `backend-runtime.image.tar` | one Docker-compatible backend image archive used by API, worker and migrate | `sbom/backend-runtime.spdx.json` |
+| `web-runtime.image.tar` | Docker-compatible Web image archive | `sbom/web-runtime.spdx.json` |
 | `android/sidebyside-release-unsigned.apk` | release-mode APK evidence candidate | `sbom/android-apk.spdx.json` |
 | `android/sidebyside-release-unsigned.aab` | release-mode AAB evidence candidate | `sbom/android-aab.spdx.json` |
 
@@ -49,6 +49,13 @@ API, worker and migrate are deliberately **not** represented as three invented
 container artifacts. `compose.yaml` already builds all three roles from the same
 backend context and image contract, so one backend runtime identity is the correct
 release subject.
+
+The container evidence path intentionally uses the repository's existing Docker build
+primitive followed by `docker image save`. This works on the stock GitHub Hosted
+Runner Docker driver and avoids introducing a second BuildKit driver solely for OCI
+file export. Syft inventories these archives through its `docker-archive` source.
+#519 can still choose immutable registry OCI digests as the final launch artifact;
+#193 does not pre-empt that publication decision.
 
 The evidence bundle additionally contains:
 
@@ -156,7 +163,7 @@ workflow logs.
 
 The build job fails unless all of the following hold:
 
-1. backend and Web OCI artifacts were produced successfully;
+1. backend and Web image archives were produced successfully;
 2. release-mode APK and AAB were produced successfully;
 3. every subject is non-empty;
 4. each expected SPDX document is non-empty JSON;
@@ -172,7 +179,7 @@ bundle verification before uploading the offline-verification material.
 `tools/ci/test_release_evidence.py` is a fail-closed policy test for the workflow. It
 checks the immutable action pins, the expected four-subject artifact set, SPDX 2.3,
 permission separation, absence of Android signing secrets, checksum verification and
-o `pull_request_target` privilege path.
+no `pull_request_target` privilege path.
 
 ## 8. Online verification
 
@@ -180,7 +187,7 @@ For a produced subject, GitHub CLI can verify build provenance directly against 
 repository attestation store:
 
 ```bash
-gh attestation verify backend-runtime.oci.tar \
+gh attestation verify backend-runtime.image.tar \
   -R baerenmarke90/SideBySide-Next \
   --signer-workflow baerenmarke90/SideBySide-Next/.github/workflows/release-evidence.yml
 ```
@@ -188,7 +195,7 @@ gh attestation verify backend-runtime.oci.tar \
 Verify the SPDX attestation by selecting the SPDX predicate:
 
 ```bash
-gh attestation verify backend-runtime.oci.tar \
+gh attestation verify backend-runtime.image.tar \
   -R baerenmarke90/SideBySide-Next \
   --signer-workflow baerenmarke90/SideBySide-Next/.github/workflows/release-evidence.yml \
   --predicate-type https://spdx.dev/Document/v2.3
@@ -208,7 +215,7 @@ Place the matching release subject next to the downloaded bundle material. Then
 verification requires no attestation lookup from the GitHub API:
 
 ```bash
-gh attestation verify backend-runtime.oci.tar \
+gh attestation verify backend-runtime.image.tar \
   -R baerenmarke90/SideBySide-Next \
   --bundle attestations/backend-runtime-provenance.json \
   --custom-trusted-root attestations/trusted_root.jsonl \
@@ -218,7 +225,7 @@ gh attestation verify backend-runtime.oci.tar \
 For the SBOM claim:
 
 ```bash
-gh attestation verify backend-runtime.oci.tar \
+gh attestation verify backend-runtime.image.tar \
   -R baerenmarke90/SideBySide-Next \
   --bundle attestations/backend-runtime-sbom.json \
   --custom-trusted-root attestations/trusted_root.jsonl \
