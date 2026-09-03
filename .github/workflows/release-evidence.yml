@@ -51,28 +51,29 @@ jobs:
       - name: Create evidence directories
         run: mkdir -p release-evidence/android release-evidence/sbom
 
-      - name: Build backend runtime OCI artifact
+      - name: Build backend runtime image archive
         run: |
           set -euo pipefail
-          docker buildx version
-          docker buildx build \
+          image="sidebyside-backend:evidence-$GITHUB_SHA"
+          docker build \
             --pull \
             --no-cache \
-            --provenance=false \
             --build-arg "SBS_BUILD_REVISION=$GITHUB_SHA" \
-            --output "type=oci,dest=release-evidence/backend-runtime.oci.tar" \
+            --tag "$image" \
             ./backend
+          docker image save --output release-evidence/backend-runtime.image.tar "$image"
 
-      - name: Build Web runtime OCI artifact
+      - name: Build Web runtime image archive
         run: |
           set -euo pipefail
-          docker buildx build \
+          image="sidebyside-web:evidence-$GITHUB_SHA"
+          docker build \
             --pull \
             --no-cache \
-            --provenance=false \
             --build-arg "SBS_BUILD_REVISION=$GITHUB_SHA" \
-            --output "type=oci,dest=release-evidence/web-runtime.oci.tar" \
+            --tag "$image" \
             ./web
+          docker image save --output release-evidence/web-runtime.image.tar "$image"
 
       - name: Set up JDK 17
         uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
@@ -135,9 +136,9 @@ jobs:
           SYFT_CHECK_FOR_APP_UPDATE: "false"
         run: |
           set -euo pipefail
-          syft scan "oci-archive:release-evidence/backend-runtime.oci.tar" \
+          syft scan "docker-archive:release-evidence/backend-runtime.image.tar" \
             -o "spdx-json=release-evidence/sbom/backend-runtime.spdx.json"
-          syft scan "oci-archive:release-evidence/web-runtime.oci.tar" \
+          syft scan "docker-archive:release-evidence/web-runtime.image.tar" \
             -o "spdx-json=release-evidence/sbom/web-runtime.spdx.json"
           syft scan "file:release-evidence/android/sidebyside-release-unsigned.apk" \
             -o "spdx-json=release-evidence/sbom/android-apk.spdx.json"
@@ -157,8 +158,8 @@ jobs:
 
           root = Path("release-evidence")
           subjects = [
-              ("backend-runtime", root / "backend-runtime.oci.tar", root / "sbom/backend-runtime.spdx.json", ["api", "worker", "migrate"]),
-              ("web-runtime", root / "web-runtime.oci.tar", root / "sbom/web-runtime.spdx.json", ["web"]),
+              ("backend-runtime", root / "backend-runtime.image.tar", root / "sbom/backend-runtime.spdx.json", ["api", "worker", "migrate"]),
+              ("web-runtime", root / "web-runtime.image.tar", root / "sbom/web-runtime.spdx.json", ["web"]),
               ("android-apk", root / "android/sidebyside-release-unsigned.apk", root / "sbom/android-apk.spdx.json", ["android-apk"]),
               ("android-aab", root / "android/sidebyside-release-unsigned.aab", root / "sbom/android-aab.spdx.json", ["android-aab"]),
           ]
@@ -222,8 +223,8 @@ jobs:
           (
             cd release-evidence
             sha256sum \
-              backend-runtime.oci.tar \
-              web-runtime.oci.tar \
+              backend-runtime.image.tar \
+              web-runtime.image.tar \
               android/sidebyside-release-unsigned.apk \
               android/sidebyside-release-unsigned.aab \
               sbom/backend-runtime.spdx.json \
@@ -270,7 +271,7 @@ jobs:
       - name: Attest backend runtime
         uses: ./.github/actions/attest-release-artifact
         with:
-          subject-path: release-evidence/backend-runtime.oci.tar
+          subject-path: release-evidence/backend-runtime.image.tar
           sbom-path: release-evidence/sbom/backend-runtime.spdx.json
           bundle-directory: release-evidence/attestations
           bundle-prefix: backend-runtime
@@ -278,7 +279,7 @@ jobs:
       - name: Attest Web runtime
         uses: ./.github/actions/attest-release-artifact
         with:
-          subject-path: release-evidence/web-runtime.oci.tar
+          subject-path: release-evidence/web-runtime.image.tar
           sbom-path: release-evidence/sbom/web-runtime.spdx.json
           bundle-directory: release-evidence/attestations
           bundle-prefix: web-runtime
@@ -324,8 +325,8 @@ jobs:
               --predicate-type "https://spdx.dev/Document/v2.3"
           }
 
-          verify_subject release-evidence/backend-runtime.oci.tar backend-runtime
-          verify_subject release-evidence/web-runtime.oci.tar web-runtime
+          verify_subject release-evidence/backend-runtime.image.tar backend-runtime
+          verify_subject release-evidence/web-runtime.image.tar web-runtime
           verify_subject release-evidence/android/sidebyside-release-unsigned.apk android-apk
           verify_subject release-evidence/android/sidebyside-release-unsigned.aab android-aab
 
