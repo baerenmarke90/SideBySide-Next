@@ -511,9 +511,14 @@
   overflow: hidden;
 }
 
-.momente-hero-media .story-media-preview {
+.momente-hero-media .story-media-preview,
+.momente-hero-media .story-media-skeleton,
+.momente-hero-media .story-media-placeholder {
   width: 100%;
   height: 100%;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: 0;
   object-fit: cover;
   display: block;
 }
@@ -554,11 +559,31 @@
 
 .momente-hero-meta {
   display: flex;
+  align-items: center;
   gap: var(--space-3);
   font-size: 0.88rem;
   color: var(--color-text-secondary);
   font-weight: 600;
   margin-top: var(--space-2);
+}
+
+.momente-author-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.momente-author-meta .person-identity {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.momente-author-meta .person-identity-avatar-small {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.65rem;
+  border: 1.5px solid var(--color-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* Horizontal Visual Stream (#492) */
@@ -654,11 +679,17 @@
   aspect-ratio: 4 / 3;
   overflow: hidden;
   background: var(--color-surface-subtle);
+  margin: 0;
 }
 
-.momente-stream-card-media .story-media-preview {
+.momente-stream-card-media .story-media-preview,
+.momente-stream-card-media .story-media-skeleton,
+.momente-stream-card-media .story-media-placeholder {
   width: 100%;
   height: 100%;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: 0;
   object-fit: cover;
   display: block;
 }

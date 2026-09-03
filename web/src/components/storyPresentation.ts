@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import type { StoryItem } from '../api/generated/models/StoryItem';
+import type { StoryKind } from '../api/generated/models/StoryKind';
 
 export interface StoryPresentation {
   kindLabel: string;
@@ -52,15 +53,36 @@ export function storyItemKey(item: StoryItem): string {
   }
 }
 
+export function resolveStoryKindLabel(
+  kind: StoryKind | string | null | undefined,
+  t: TFunction,
+): string {
+  if (!kind) return '';
+  switch (kind) {
+    case 'MEMORY':
+    case 'memory':
+      return t('story.kind.memory');
+    case 'HEART_MOMENT':
+    case 'heartMoment':
+      return t('story.kind.heartMoment');
+    case 'MILESTONE':
+    case 'milestone':
+      return t('story.kind.milestone');
+    default:
+      return String(kind);
+  }
+}
+
 export function storyItemPresentation(
   item: StoryItem,
   t: TFunction,
 ): StoryPresentation {
+  const kindLabel = resolveStoryKindLabel(item.kind, t);
   switch (item.kind) {
     case 'MEMORY': {
       const count = item.memory.attachments.length;
       return {
-        kindLabel: t('story.kind.memory'),
+        kindLabel,
         title: item.memory.title,
         author: item.memory.author.displayName,
         mediaLabel: count > 0 ? t('story.photos', { count }) : undefined,
@@ -68,7 +90,7 @@ export function storyItemPresentation(
     }
     case 'HEART_MOMENT':
       return {
-        kindLabel: t('story.kind.heartMoment'),
+        kindLabel,
         title: compactText(item.heartMoment.text),
         preview: emotionLabel(item.heartMoment.emotion, t),
         author: item.heartMoment.author.displayName,
@@ -79,7 +101,7 @@ export function storyItemPresentation(
       };
     case 'MILESTONE':
       return {
-        kindLabel: t('story.kind.milestone'),
+        kindLabel,
         title: item.milestone.title,
         author: item.milestone.author.displayName,
       };

@@ -63,13 +63,15 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
 
     if (
       method === 'GET' &&
-      pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${ACCOUNT_ID}`
+      (pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${ACCOUNT_ID}` ||
+        pathname === `/api/v1/spaces/${SPACE_ID}/profiles/${PARTNER_ID}`)
     ) {
+      const isPartner = pathname.endsWith(PARTNER_ID);
       await fulfillJson({
-        accountId: ACCOUNT_ID,
+        accountId: isPartner ? PARTNER_ID : ACCOUNT_ID,
         createdAt: TEST_NOW,
-        displayName: 'Anna',
-        id: PROFILE_ID,
+        displayName: isPartner ? 'Ben' : 'Anna',
+        id: isPartner ? '00000000-0000-0000-0000-000000000022' : PROFILE_ID,
         preferences: [],
         profileAttachmentId: null,
         updatedAt: TEST_NOW,

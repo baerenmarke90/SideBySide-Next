@@ -42,23 +42,26 @@ const demoUrl = String(import.meta.env.VITE_SBS_DEMO_URL || '')
 const demoAuthCallback =
   window.location.pathname.replace(/\/$/, '') === '/auth/magic-link';
 
+import { hasStoredSession } from './client/sessionPersistence';
+
 function RootApp() {
-  const content =
-    demoMode && !demoAuthCallback ? (
-      <>
-        <ThemeControl />
-        <DemoEntry />
-      </>
-    ) : (
-      <>
-        <App />
-        {!demoMode && demoUrl ? (
-          <a className="demo-launch" href={demoUrl}>
-            {i18n.t('demo.launch')}
-          </a>
-        ) : null}
-      </>
-    );
+  const isDemoEntry = demoMode && !demoAuthCallback && !hasStoredSession();
+
+  const content = isDemoEntry ? (
+    <>
+      <ThemeControl />
+      <DemoEntry />
+    </>
+  ) : (
+    <>
+      <App demoMode={demoMode} />
+      {!demoMode && demoUrl ? (
+        <a className="demo-launch" href={demoUrl}>
+          {i18n.t('demo.launch')}
+        </a>
+      ) : null}
+    </>
+  );
 
   return (
     <>

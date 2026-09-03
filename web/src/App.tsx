@@ -20,6 +20,8 @@ import type { AccountView } from './api/generated/models/AccountView';
 import { AttachmentReadRequestParentTypeEnum } from './api/generated/models/AttachmentReadRequest';
 import type { SpaceView } from './api/generated/models/SpaceView';
 import type { TokenView } from './api/generated/models/TokenView';
+import { ProfilesApi } from './api/generated/apis/ProfilesApi';
+import { Configuration } from './api/generated/runtime';
 import { loadReferenceClientConfig } from './client/config';
 import {
   readSensitiveEntryToken,
@@ -85,6 +87,7 @@ import { AttachmentDraftPicker } from './components/AttachmentDraftPicker';
 import { Brand } from './components/Brand';
 import { ChapterProductPage } from './components/ChapterProductPage';
 import { CollectionProductPage } from './components/CollectionProductPage';
+import { DemoEntry } from './components/DemoEntry';
 import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
 import { LegacyPathRedirect } from './components/LegacyPathRedirect';
@@ -410,6 +413,16 @@ function AuthenticatedApp({
     () => createPrivateAreaApi(apiBaseUrl, tokens.accessToken),
     [apiBaseUrl, tokens.accessToken],
   );
+  const profilesApi = useMemo(
+    () =>
+      new ProfilesApi(
+        new Configuration({
+          basePath: apiBaseUrl,
+          headers: { Authorization: `Bearer ${tokens.accessToken}` },
+        }),
+      ),
+    [apiBaseUrl, tokens.accessToken],
+  );
 
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
@@ -527,6 +540,7 @@ function AuthenticatedApp({
                 accountId={account.id}
                 spaceId={spaceId}
                 loadMemoryImage={loadMemoryImage}
+                profilesApi={profilesApi}
               />
             }
           />
@@ -561,6 +575,8 @@ function AuthenticatedApp({
                 apis={m4Apis}
                 spaceId={spaceId}
                 loadMemoryImage={loadMemoryImage}
+                profilesApi={profilesApi}
+                account={account}
               />
             }
           />
@@ -701,7 +717,7 @@ function AuthenticatedApp({
   );
 }
 
-export function App() {
+export function App({ demoMode = false }: { demoMode?: boolean }) {
   const config = useMemo(loadReferenceClientConfig, []);
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -716,7 +732,9 @@ export function App() {
   const [isRestoring, setIsRestoring] = useState(() =>
     Boolean(initialStoredSession),
   );
-  const [spaceId, setSpaceId] = useState<string | null>(null);
+  const [spaceId, setSpaceId] = useState<string | null>(
+    () => initialStoredSession?.spaceId ?? null,
+  );
   const [entryToken, setEntryToken] = useState(() =>
     readSensitiveEntryToken(window.location.pathname, window.location.search),
   );
@@ -749,12 +767,17 @@ export function App() {
         if (cancelled) return;
         setTokens(currentTokens);
         setAccount(verifiedAccount);
-        storeSession({ account: verifiedAccount, tokens: currentTokens });
+        storeSession({
+          account: verifiedAccount,
+          tokens: currentTokens,
+          spaceId: activeSession.spaceId ?? null,
+        });
       } catch {
         if (cancelled) return;
         clearStoredSession();
         setTokens(null);
         setAccount(null);
+        setSpaceId(null);
         rememberCurrentAuthReturnTarget();
       } finally {
         if (!cancelled) {
@@ -803,7 +826,7 @@ export function App() {
         throw await normalizeClientError(error);
       }
     },
-    enabled: tokens !== null && account !== null,
+    enabled: !isRestoring && tokens !== null && account !== null,
     retry: false,
   });
 
@@ -822,7 +845,7 @@ export function App() {
       if (!tokens) return [];
       return loadAuthorizedMemberships(config.apiBaseUrl, tokens.accessToken);
     },
-    enabled: tokens !== null,
+    enabled: !isRestoring && tokens !== null,
     retry: false,
   });
 
@@ -839,7 +862,10 @@ export function App() {
         membershipsQuery.data,
       );
     },
-    enabled: tokens !== null && (membershipsQuery.data?.length ?? 0) > 1,
+    enabled:
+      !isRestoring &&
+      tokens !== null &&
+      (membershipsQuery.data?.length ?? 0) > 1,
     retry: false,
   });
 
@@ -848,10 +874,14 @@ export function App() {
       setSpaceId(null);
       return;
     }
-    setSpaceId((current) =>
-      resolveActiveSpaceId(membershipsQuery.data, current),
-    );
-  }, [membershipsQuery.data, tokens]);
+    setSpaceId((current) => {
+      const resolved = resolveActiveSpaceId(membershipsQuery.data, current);
+      if (resolved && account && tokens) {
+        storeSession({ account, tokens, spaceId: resolved });
+      }
+      return resolved;
+    });
+  }, [account, membershipsQuery.data, tokens]);
 
   function logout() {
     if (tokens?.accessToken) {
@@ -875,6 +905,9 @@ export function App() {
     queryClient.clear();
     void clearProductReadCache();
     setSpaceId(selectedSpaceId);
+    if (account && tokens) {
+      storeSession({ account, tokens, spaceId: selectedSpaceId });
+    }
     postSnackbar('snackbar.spaceSwitched');
   }
 
@@ -891,20 +924,24 @@ export function App() {
     return (
       <>
         <ThemeControl />
-        <IdentityEntry
-          apiBaseUrl={config.apiBaseUrl}
-          entryToken={entryToken}
-          onEntryTokenCleared={() => setEntryToken(null)}
-          onSession={(session) => {
-            storeSession(session);
-            setEntryToken(null);
-            setSpaceId(null);
-            setAccount(session.account);
-            setTokens(session.tokens);
-            queryClient.clear();
-            void clearProductReadCache();
-          }}
-        />
+        {demoMode ? (
+          <DemoEntry />
+        ) : (
+          <IdentityEntry
+            apiBaseUrl={config.apiBaseUrl}
+            entryToken={entryToken}
+            onEntryTokenCleared={() => setEntryToken(null)}
+            onSession={(session) => {
+              storeSession(session);
+              setEntryToken(null);
+              setSpaceId(null);
+              setAccount(session.account);
+              setTokens(session.tokens);
+              queryClient.clear();
+              void clearProductReadCache();
+            }}
+          />
+        )}
       </>
     );
   }

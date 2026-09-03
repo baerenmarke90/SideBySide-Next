@@ -1,8 +1,12 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import type { AccountView } from '../api/generated/models/AccountView';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
+import type { DashboardRelationshipDuration } from '../api/generated/models/DashboardRelationshipDuration';
+import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import {
   type M4ProductApis,
   dashboardItemPath,
@@ -11,11 +15,92 @@ import {
 import { dashboardQueryKey } from '../client/dashboardQueries';
 import { normalizeClientError } from '../client/problemDetails';
 import { postSnackbar } from '../client/snackbar';
+import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { MemoryPreview } from './MemoryPreview';
+import { PersonIdentity } from './PersonIdentity';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './TodayPage.css';
+
+export function formatRelationshipDuration(
+  duration: DashboardRelationshipDuration,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  if (duration.displayMode !== DurationDisplayMode.YEARS_MONTHS) {
+    if (duration.daysTogether === 1) {
+      return t('m5s5.dashboard.durationDaysOne', {
+        defaultValue: '1 Tag zusammen',
+      });
+    }
+    return t('m5s5.dashboard.durationDays', {
+      count: duration.daysTogether,
+    });
+  }
+
+  // DurationDisplayMode.YEARS_MONTHS:
+  // Derived strictly from the server-authoritative daysTogether and startedOn.
+  const start = new Date(duration.startedOn);
+  const end = new Date(start.getTime() + duration.daysTogether * 86_400_000);
+
+  let years = end.getUTCFullYear() - start.getUTCFullYear();
+  let months = end.getUTCMonth() - start.getUTCMonth();
+  const days = end.getUTCDate() - start.getUTCDate();
+
+  if (days < 0) {
+    months -= 1;
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  years = Math.max(0, years);
+  months = Math.max(0, months);
+
+  const yearsLabel =
+    years === 1
+      ? t('m5s5.dashboard.yearOne', { defaultValue: 'Jahr' })
+      : t('m5s5.dashboard.yearMany', { defaultValue: 'Jahre' });
+  const monthsLabel =
+    months === 1
+      ? t('m5s5.dashboard.monthOne', { defaultValue: 'Monat' })
+      : t('m5s5.dashboard.monthMany', { defaultValue: 'Monate' });
+
+  if (years > 0 && months > 0) {
+    return t('m5s5.dashboard.durationYearsMonths', {
+      years,
+      yearsLabel,
+      months,
+      monthsLabel,
+      defaultValue: `${years} ${yearsLabel}, ${months} ${monthsLabel} zusammen`,
+    });
+  }
+
+  if (years > 0) {
+    return t('m5s5.dashboard.durationYearsOnly', {
+      years,
+      yearsLabel,
+      defaultValue: `${years} ${yearsLabel} zusammen`,
+    });
+  }
+
+  if (months > 0) {
+    return t('m5s5.dashboard.durationMonthsOnly', {
+      months,
+      monthsLabel,
+      defaultValue: `${months} ${monthsLabel} zusammen`,
+    });
+  }
+
+  if (duration.daysTogether === 1) {
+    return t('m5s5.dashboard.durationDaysOne', {
+      defaultValue: '1 Tag zusammen',
+    });
+  }
+  return t('m5s5.dashboard.durationDays', {
+    count: duration.daysTogether,
+  });
+}
 
 async function apiCall<T>(request: () => Promise<T>): Promise<T> {
   try {
@@ -142,9 +227,11 @@ function TodayContextualCard({ item }: { item: DashboardItem }) {
 function TodayRelationshipSignalCard({
   partnerName,
   activityItem,
+  partnerAvatarUrl,
 }: {
   partnerName: string;
   activityItem: ActivityItem;
+  partnerAvatarUrl?: string | null;
 }) {
   const { t } = useTranslation();
   const path = engagementTargetPath(
@@ -168,9 +255,16 @@ function TodayRelationshipSignalCard({
         <span className="today-signal-kicker">
           {t('m5s5.today.relationshipSignal.kicker')}
         </span>
-        <span className="today-signal-badge" aria-hidden="true">
-          💬
-        </span>
+        <div className="today-signal-avatar" aria-hidden="true">
+          <PersonIdentity
+            displayName={partnerName}
+            imageUrl={partnerAvatarUrl}
+            size="small"
+            showName={false}
+            imageAlt={partnerName}
+            fallbackAlt={partnerName}
+          />
+        </div>
       </div>
       <p className="today-signal-message">{message}</p>
       <div className="today-signal-footer">
@@ -257,7 +351,6 @@ function VisualMemoryCard({
   }
   return <div className={shellClass}>{inner}</div>;
 }
-
 function ThinkingOfYouHero({
   apis,
   spaceId,
@@ -318,10 +411,14 @@ export function TodayPage({
   apis,
   spaceId,
   loadMemoryImage,
+  profilesApi,
+  account,
 }: {
   apis: M4ProductApis;
   spaceId: string;
   loadMemoryImage?: (memoryId: string, attachmentId: string) => Promise<string>;
+  profilesApi?: ProfilesApi;
+  account?: AccountView | null;
 }) {
   const { t } = useTranslation();
   const dashboardQuery = useQuery({
@@ -341,6 +438,46 @@ export function TodayPage({
   const partner = dashboardQuery.data?.space.partner;
   const partnerName =
     partner?.displayName ?? t('m5s5.today.relationshipSignal.partnerFallback');
+
+  const userProfileQuery = useQuery({
+    queryKey: ['profile-identity', spaceId, account?.id],
+    queryFn: () =>
+      profilesApi && account
+        ? profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet({
+            accountId: account.id,
+            spaceId,
+          })
+        : null,
+    enabled: Boolean(profilesApi && account && spaceId),
+    retry: false,
+  });
+
+  const partnerProfileQuery = useQuery({
+    queryKey: ['profile-identity', spaceId, partner?.id],
+    queryFn: () =>
+      profilesApi && partner?.id
+        ? profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet({
+            accountId: partner.id,
+            spaceId,
+          })
+        : null,
+    enabled: Boolean(profilesApi && partner?.id && spaceId),
+    retry: false,
+  });
+
+  const userAvatar = useProfileAvatarUrl(
+    profilesApi,
+    spaceId,
+    account?.id ?? '',
+    userProfileQuery.data?.profileAttachmentId,
+  );
+
+  const partnerAvatar = useProfileAvatarUrl(
+    profilesApi,
+    spaceId,
+    partner?.id ?? '',
+    partnerProfileQuery.data?.profileAttachmentId,
+  );
 
   // 1. Primary Contextual Slot (0 or 1 item):
   // Deterministically selects the earliest upcoming item. If empty, the slot disappears.
@@ -415,9 +552,33 @@ export function TodayPage({
           <div className="today-content">
             {/* ROLE: Hero / Couple Presence */}
             <header className="today-hero sbs-motion-reveal">
-              <div className="today-hero-badge" aria-hidden="true">
-                <span className="today-hero-badge-dot" />
-                <span>{t('m5s5.dashboard.durationTitle')}</span>
+              <div className="today-hero-top-row">
+                <div className="today-hero-avatars" aria-hidden="true">
+                  {account ? (
+                    <PersonIdentity
+                      displayName={account.displayName}
+                      imageUrl={userAvatar.avatarUrl}
+                      size="small"
+                      showName={false}
+                      imageAlt={account.displayName}
+                      fallbackAlt={account.displayName}
+                    />
+                  ) : null}
+                  {partner ? (
+                    <PersonIdentity
+                      displayName={partner.displayName}
+                      imageUrl={partnerAvatar.avatarUrl}
+                      size="small"
+                      showName={false}
+                      imageAlt={partner.displayName}
+                      fallbackAlt={partner.displayName}
+                    />
+                  ) : null}
+                </div>
+                <div className="today-hero-badge" aria-hidden="true">
+                  <span className="today-hero-badge-dot" />
+                  <span>{t('m5s5.dashboard.durationTitle')}</span>
+                </div>
               </div>
               <h1 className="today-hero-greeting">
                 {partner
@@ -426,8 +587,8 @@ export function TodayPage({
                     })
                   : t('m5s5.dashboard.durationTitle')}
               </h1>
-              <div className="today-hero-meta-row">
-                {dashboardQuery.data.relationshipDuration ? (
+              {dashboardQuery.data.relationshipDuration ? (
+                <div className="today-hero-meta-row">
                   <Link
                     to="/more/profile#relationship-profile-title"
                     className="today-hero-subtitle today-hero-duration-link"
@@ -437,23 +598,14 @@ export function TodayPage({
                       ★
                     </span>
                     <span>
-                      {t('m5s5.dashboard.durationDays', {
-                        count:
-                          dashboardQuery.data.relationshipDuration.daysTogether,
-                      })}
+                      {formatRelationshipDuration(
+                        dashboardQuery.data.relationshipDuration,
+                        t,
+                      )}
                     </span>
                   </Link>
-                ) : (
-                  <Link
-                    to="/more/profile#relationship-profile-title"
-                    className="today-hero-settings-link"
-                  >
-                    <span>
-                      {t('m5s5.dashboard.openRelationshipSettings')} →
-                    </span>
-                  </Link>
-                )}
-              </div>
+                </div>
+              ) : null}
               <div className="today-hero-action-container">
                 <ThinkingOfYouHero apis={apis} spaceId={spaceId} />
               </div>
@@ -475,6 +627,7 @@ export function TodayPage({
                   <TodayRelationshipSignalCard
                     partnerName={partnerName}
                     activityItem={relationshipSignalItem}
+                    partnerAvatarUrl={partnerAvatar.avatarUrl}
                   />
                 ) : null}
               </div>

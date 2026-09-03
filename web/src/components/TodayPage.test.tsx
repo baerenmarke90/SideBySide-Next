@@ -2,7 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import type { M4ProductApis } from '../client/m4Product';
-import { TodayPage } from './TodayPage';
+import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
+import { i18n } from '../i18n';
+import { formatRelationshipDuration, TodayPage } from './TodayPage';
 
 function renderTodayPage(dashboardData: unknown): string {
   const queryClient = new QueryClient({
@@ -671,13 +673,13 @@ describe('TodayPage', () => {
       retrospective: null,
     });
 
-    expect(html).toContain('today-hero-settings-link');
-    expect(html).toContain('Beziehungseinstellungen öffnen');
-    expect(html).toContain('href="/more/profile#relationship-profile-title"');
+    expect(html).not.toContain('today-hero-settings-link');
+    expect(html).not.toContain('today-hero-duration-link');
+    expect(html).not.toContain('Beziehungseinstellungen öffnen');
     expect(html).not.toContain('Beziehungsstart festlegen');
   });
 
-  it('links duration pill to relationship profile when relationshipDuration is present', () => {
+  it('links duration pill to relationship profile when relationshipDuration is present in DAYS mode', () => {
     const html = renderTodayPage({
       space: {
         id: 'space-1',
@@ -685,6 +687,7 @@ describe('TodayPage', () => {
       },
       relationshipDuration: {
         daysTogether: 100,
+        displayMode: DurationDisplayMode.DAYS,
         startedOn: new Date('2026-01-01T00:00:00Z'),
       },
       upcoming: [
@@ -703,5 +706,142 @@ describe('TodayPage', () => {
     expect(html).toContain('100 Tage zusammen');
     expect(html).toContain('href="/more/profile#relationship-profile-title"');
     expect(html).not.toContain('today-hero-settings-link');
+  });
+
+  it('renders formatted duration in YEARS_MONTHS mode', () => {
+    const html = renderTodayPage({
+      space: {
+        id: 'space-1',
+        partner: { id: 'partner-1', displayName: 'Marie' },
+      },
+      relationshipDuration: {
+        daysTogether: 1156,
+        displayMode: DurationDisplayMode.YEARS_MONTHS,
+        startedOn: new Date('2023-01-01T00:00:00Z'),
+      },
+      upcoming: [
+        {
+          id: 'plan-1',
+          type: 'PLAN',
+          titleOrText: 'Picnic in the park',
+          scheduledAt: new Date('2026-09-15T10:00:00Z'),
+        },
+      ],
+      recentShared: [],
+      retrospective: null,
+    });
+
+    expect(html).toContain('today-hero-duration-link');
+    expect(html).toContain('3 Jahre, 2 Monate zusammen');
+    expect(html).not.toContain('today-hero-settings-link');
+  });
+});
+
+describe('formatRelationshipDuration', () => {
+  it('formats DAYS mode for singular and plural', () => {
+    expect(
+      formatRelationshipDuration(
+        {
+          daysTogether: 1,
+          displayMode: DurationDisplayMode.DAYS,
+          startedOn: new Date('2026-01-01T00:00:00Z'),
+        },
+        i18n.t,
+      ),
+    ).toBe('1 Tag zusammen');
+
+    expect(
+      formatRelationshipDuration(
+        {
+          daysTogether: 1178,
+          displayMode: DurationDisplayMode.DAYS,
+          startedOn: new Date('2023-01-01T00:00:00Z'),
+        },
+        i18n.t,
+      ),
+    ).toBe('1178 Tage zusammen');
+  });
+
+  it('formats YEARS_MONTHS mode with singular and plural units', () => {
+    // Exactly 3 years, 2 months:
+    // start 2023-01-01, + 1156 days -> 2026-03-02
+    expect(
+      formatRelationshipDuration(
+        {
+          daysTogether: 1156,
+          displayMode: DurationDisplayMode.YEARS_MONTHS,
+          startedOn: new Date('2023-01-01T00:00:00Z'),
+        },
+        i18n.t,
+      ),
+    ).toBe('3 Jahre, 2 Monate zusammen');
+
+    // 1 year, 1 month:
+    // start 2025-01-01, + 396 days -> 2026-02-01
+    expect(
+      formatRelationshipDuration(
+        {
+          daysTogether: 396,
+          displayMode: DurationDisplayMode.YEARS_MONTHS,
+          startedOn: new Date('2025-01-01T00:00:00Z'),
+        },
+        i18n.t,
+      ),
+    ).toBe('1 Jahr, 1 Monat zusammen');
+  });
+
+  it('formats YEARS_MONTHS mode when months == 0', () => {
+    // Exactly 3 years, 0 months:
+    // start 2023-01-01, + 1096 days -> 2026-01-01
+    expect(
+      formatRelationshipDuration(
+        {
+          daysTogether: 1096,
+          displayMode: DurationDisplayMode.YEARS_MONTHS,
+          startedOn: new Date('2023-01-01T00:00:00Z'),
+        },
+        i18n.t,
+      ),
+    ).toBe('3 Jahre zusammen');
+  });
+
+  it('formats YEARS_MONTHS mode when years == 0 and months > 0', () => {
+    // 0 years, 2 months:
+    // start 2026-01-01, + 62 days -> 2026-03-04
+    expect(
+      formatRelationshipDuration(
+        {
+          daysTogether: 62,
+          displayMode: DurationDisplayMode.YEARS_MONTHS,
+          startedOn: new Date('2026-01-01T00:00:00Z'),
+        },
+        i18n.t,
+      ),
+    ).toBe('2 Monate zusammen');
+
+    // 0 years, 1 month:
+    expect(
+      formatRelationshipDuration(
+        {
+          daysTogether: 32,
+          displayMode: DurationDisplayMode.YEARS_MONTHS,
+          startedOn: new Date('2026-01-01T00:00:00Z'),
+        },
+        i18n.t,
+      ),
+    ).toBe('1 Monat zusammen');
+  });
+
+  it('falls back to days when years == 0 and months == 0', () => {
+    expect(
+      formatRelationshipDuration(
+        {
+          daysTogether: 15,
+          displayMode: DurationDisplayMode.YEARS_MONTHS,
+          startedOn: new Date('2026-01-01T00:00:00Z'),
+        },
+        i18n.t,
+      ),
+    ).toBe('15 Tage zusammen');
   });
 });

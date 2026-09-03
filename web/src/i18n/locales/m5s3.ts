@@ -25,8 +25,9 @@ const m5s3 = {
   overview: {
     soon: 'Bald & Geplant',
     soonIntro: 'Eure nächsten konkreten Schritte.',
-    someday: 'Irgendwann',
-    somedayIntro: 'Wünsche und Träume für die Zukunft.',
+    someday: 'Wünsche & Ideen',
+    somedayIntro:
+      'Dinge, die ihr gemeinsam einmal machen, erleben oder ausprobieren möchtet.',
     others: 'Weitere gemeinsame Dinge',
     eyebrow: 'Gemeinsam planen',
     title: 'Eure Wünsche und Pläne',

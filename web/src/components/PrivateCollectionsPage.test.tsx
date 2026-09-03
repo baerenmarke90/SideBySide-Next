@@ -55,6 +55,10 @@ describe('PrivateCollectionsPage', () => {
 
     // #606: the icon field existed on the API but was never exposed here.
     expect(html).toContain('🧳 Packing list');
+    // #616: entire card is the primary navigation link without redundant edit button
+    expect(html).toContain('private-area-card-clickable');
+    expect(html).toContain(`/more/private/collections/${COLLECTION_ID}`);
+    expect(html).not.toContain('button-link secondary-link');
   });
 
   it('offers an icon field when editing', () => {
@@ -119,7 +123,9 @@ describe('PrivateCollectionsPage', () => {
 
     const html = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[`/private/collections/${COLLECTION_ID}`]}>
+        <MemoryRouter
+          initialEntries={[`/private/collections/${COLLECTION_ID}`]}
+        >
           <Routes>
             <Route
               path="/private/collections/:collectionId"

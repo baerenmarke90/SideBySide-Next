@@ -1,5 +1,4 @@
 import type { AccountView } from '../api/generated/models/AccountView';
-import type { SessionView } from '../api/generated/models/SessionView';
 import type { TokenView } from '../api/generated/models/TokenView';
 import { normalizeClientError } from './problemDetails';
 import { createReferenceApis } from './referenceFlow';
@@ -44,7 +43,13 @@ function parseStoredAccount(raw: unknown): AccountView | null {
   return { id: obj.id, displayName: obj.displayName };
 }
 
-export function storeSession(session: SessionView): void {
+export type StoredSession = {
+  account: AccountView;
+  tokens: TokenView;
+  spaceId?: string | null;
+};
+
+export function storeSession(session: StoredSession): void {
   if (typeof window === 'undefined' || !window.sessionStorage) return;
   try {
     const serialized = JSON.stringify({
@@ -61,6 +66,7 @@ export function storeSession(session: SessionView): void {
             ? session.tokens.refreshExpiresAt.toISOString()
             : new Date(session.tokens.refreshExpiresAt).toISOString(),
       },
+      spaceId: session.spaceId ?? null,
     });
     window.sessionStorage.setItem(SESSION_STORAGE_KEY, serialized);
   } catch {
@@ -68,19 +74,27 @@ export function storeSession(session: SessionView): void {
   }
 }
 
-export function loadStoredSession(): SessionView | null {
+export function loadStoredSession(): StoredSession | null {
   if (typeof window === 'undefined' || !window.sessionStorage) return null;
   try {
     const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { account?: unknown; tokens?: unknown };
+    const parsed = JSON.parse(raw) as {
+      account?: unknown;
+      tokens?: unknown;
+      spaceId?: unknown;
+    };
     const tokens = parseStoredTokens(parsed.tokens);
     const account = parseStoredAccount(parsed.account);
     if (!tokens || !account) {
       clearStoredSession();
       return null;
     }
-    return { account, tokens };
+    const spaceId =
+      typeof parsed.spaceId === 'string' && parsed.spaceId.trim()
+        ? parsed.spaceId.trim()
+        : null;
+    return { account, tokens, spaceId };
   } catch {
     clearStoredSession();
     return null;
@@ -137,6 +151,7 @@ export async function refreshSessionTokens(
         storeSession({
           account: currentSession.account,
           tokens: newTokens,
+          spaceId: currentSession.spaceId,
         });
       }
 

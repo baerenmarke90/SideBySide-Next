@@ -145,19 +145,21 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
         <section className="private-area-results" aria-live="polite">
           <ul className="private-area-list layout-columns layout-columns-dense">
             {collections.map((collection) => (
-              <li key={collection.id} className="private-area-card">
-                <div className="private-area-card-heading">
-                  <h2>
-                    {collection.icon
-                      ? `${collection.icon} ${collection.title}`
-                      : collection.title}
-                  </h2>
-                </div>
+              <li key={collection.id}>
                 <Link
-                  className="button-link secondary-link"
+                  className="private-area-card private-area-card-clickable"
                   to={privateCollectionPath(collection.id)}
                 >
-                  {t('privateArea.edit')}
+                  <div className="private-area-card-heading">
+                    <h2>
+                      {collection.icon
+                        ? `${collection.icon} ${collection.title}`
+                        : collection.title}
+                    </h2>
+                  </div>
+                  <span className="private-area-card-arrow" aria-hidden="true">
+                    →
+                  </span>
                 </Link>
               </li>
             ))}

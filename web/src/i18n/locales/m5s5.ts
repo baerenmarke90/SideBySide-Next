@@ -11,6 +11,15 @@ const m5s5 = {
     partner: 'Gemeinsam mit {{name}}',
     durationTitle: 'Eure Zeit',
     durationDays: '{{count}} Tage zusammen',
+    durationDaysOne: '1 Tag zusammen',
+    durationYearsMonths:
+      '{{years}} {{yearsLabel}}, {{months}} {{monthsLabel}} zusammen',
+    durationYearsOnly: '{{years}} {{yearsLabel}} zusammen',
+    durationMonthsOnly: '{{months}} {{monthsLabel}} zusammen',
+    yearOne: 'Jahr',
+    yearMany: 'Jahre',
+    monthOne: 'Monat',
+    monthMany: 'Monate',
     durationSince: 'Seit {{date}}',
     durationEmpty:
       'Sobald ihr euer gemeinsames Startdatum hinterlegt habt, seht ihr eure Zeit hier.',

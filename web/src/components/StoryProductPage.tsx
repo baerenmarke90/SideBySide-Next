@@ -35,16 +35,32 @@ import {
   milestoneDetailPath,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
+import type { AuthorSummary } from '../api/generated/models/AuthorSummary';
+import type { StoryItem } from '../api/generated/models/StoryItem';
+import { AuthorAvatar } from './PersonIdentity';
 import { MemoryPreview } from './MemoryPreview';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { StoryList } from './StoryList';
 import {
   formatStoryDate,
+  resolveStoryKindLabel,
   storyItemKey,
   storyItemPresentation,
 } from './storyPresentation';
 import { UiState } from './UiState';
+
+function storyItemAuthor(item: StoryItem): AuthorSummary {
+  switch (item.kind) {
+    case 'MEMORY':
+      return item.memory.author;
+    case 'HEART_MOMENT':
+      return item.heartMoment.author;
+    case 'MILESTONE':
+      return item.milestone.author;
+  }
+}
 
 function selectedKind(value: FormDataEntryValue | null): StoryKindValue | null {
   const text = String(value ?? '');
@@ -71,11 +87,13 @@ export function StoryProductPage({
   accountId,
   spaceId,
   loadMemoryImage,
+  profilesApi,
 }: {
   apis: ReferenceApis;
   accountId: string;
   spaceId: string;
   loadMemoryImage: (memoryId: string, attachmentId: string) => Promise<string>;
+  profilesApi?: ProfilesApi;
 }) {
   const { t } = useTranslation();
   const location = useLocation();
@@ -213,6 +231,7 @@ export function StoryProductPage({
   const featuredPresentation = featuredItem
     ? storyItemPresentation(featuredItem, t)
     : null;
+  const featuredAuthor = featuredItem ? storyItemAuthor(featuredItem) : null;
   const featuredPath = featuredItem
     ? featuredItem.kind === 'MEMORY'
       ? memoryDetailPath(featuredItem.memory.id)
@@ -338,11 +357,18 @@ export function StoryProductPage({
                     >
                       {formatStoryDate(featuredItem.effectiveDate, locale)}
                     </time>
-                    {featuredPresentation.author ? (
-                      <span>
-                        {t('story.byAuthor', {
-                          author: featuredPresentation.author,
-                        })}
+                    {featuredAuthor ? (
+                      <span className="momente-author-meta">
+                        <AuthorAvatar
+                          author={featuredAuthor}
+                          profilesApi={profilesApi}
+                          spaceId={spaceId}
+                        />
+                        <span>
+                          {t('story.byAuthor', {
+                            author: featuredAuthor.displayName,
+                          })}
+                        </span>
                       </span>
                     ) : null}
                   </div>
@@ -390,6 +416,7 @@ export function StoryProductPage({
                       ? heartMomentDetailPath(item.heartMoment.id)
                       : milestoneDetailPath(item.milestone.id);
                 const memoryId = item.kind === 'MEMORY' ? item.memory.id : '';
+                const author = storyItemAuthor(item);
 
                 return (
                   <Link
@@ -438,11 +465,18 @@ export function StoryProductPage({
                           >
                             {formatStoryDate(item.effectiveDate, locale)}
                           </time>
-                          {presentation.author ? (
-                            <span>
-                              {t('story.byAuthor', {
-                                author: presentation.author,
-                              })}
+                          {author ? (
+                            <span className="momente-author-meta">
+                              <AuthorAvatar
+                                author={author}
+                                profilesApi={profilesApi}
+                                spaceId={spaceId}
+                              />
+                              <span>
+                                {t('story.byAuthor', {
+                                  author: author.displayName,
+                                })}
+                              </span>
                             </span>
                           ) : null}
                         </div>
@@ -633,7 +667,7 @@ export function StoryProductPage({
               <div className="story-active-chips">
                 {filters.kind && (
                   <span className="active-chip">
-                    {t(`story.kind.${filters.kind}`)}
+                    {resolveStoryKindLabel(filters.kind, t)}
                   </span>
                 )}
                 {filters.year && (
@@ -673,6 +707,8 @@ export function StoryProductPage({
               <StoryList
                 items={combinedStory.items}
                 loadMemoryImage={loadMemoryImage}
+                profilesApi={profilesApi}
+                spaceId={spaceId}
               />
 
               {storyQuery.hasNextPage ? (
