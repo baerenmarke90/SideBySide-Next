@@ -67,7 +67,7 @@ function renderSettingsPageFixture(): string {
 }
 
 describe('SettingsPage', () => {
-  it('renders settings header, index, and four dedicated configuration sections', () => {
+  it('renders settings header, index, and five dedicated configuration sections', () => {
     const html = renderSettingsPageFixture();
 
     // Page header
@@ -76,6 +76,7 @@ describe('SettingsPage', () => {
 
     // Quick Index
     expect(html).toContain('settings-index');
+    expect(html).toContain('href="#settings-account"');
 
     // Section 1: Appearance
     expect(html).toContain('id="settings-appearance"');
@@ -87,26 +88,32 @@ describe('SettingsPage', () => {
     expect(html).toContain('name="anniversaryReminderEnabled"');
     expect(html).toContain('href="/more/notifications"');
 
-    // Section 3: Connection & Relationship configuration form
+    // Section 3: Account hub with a distinct Danger Zone
+    expect(html).toContain('id="settings-account"');
+    expect(html).toContain('account-settings-panel');
+    expect(html).toContain('account-danger-zone');
+    expect(html).toContain('Konto löschen');
+
+    // Section 4: Relationship configuration remains distinct from Account deletion
     expect(html).toContain('id="settings-connection"');
     expect(html).toContain('relationship-settings-title');
     expect(html).toContain('name="relationshipStartedOn"');
     expect(html).toContain('name="showRelationshipDuration"');
 
-    // Section 4: Data & Portability
+    // Section 5: Data & Portability
     expect(html).toContain('id="settings-data"');
     expect(html).toContain('id="data-transfer"');
   });
 
-  it('verifies strict settings information architecture: no private area and partner identity only in profile', () => {
+  it('keeps private area and partner identity out of Settings while Account deletion stays separate from relationship actions', () => {
     const html = renderSettingsPageFixture();
 
-    // No Private Area in Settings
     expect(html).not.toContain('id="settings-privacy"');
     expect(html).not.toContain('/more/private');
     expect(html).not.toContain('Mein Bereich');
-
-    // Partner identity belongs strictly in Profile, not Settings
     expect(html).not.toContain('partner-identity-title');
+
+    expect(html).toContain('id="settings-account"');
+    expect(html).toContain('id="settings-connection"');
   });
 });
