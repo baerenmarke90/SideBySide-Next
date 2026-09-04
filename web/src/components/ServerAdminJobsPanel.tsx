@@ -82,8 +82,7 @@ export function ServerAdminJobsPanel({ api }: { api: ServerAdminApi }) {
     () => ({
       status: status === 'all' ? undefined : status,
       kind: kind.trim() || undefined,
-      exhausted:
-        exhausted === 'all' ? undefined : exhausted === 'exhausted',
+      exhausted: exhausted === 'all' ? undefined : exhausted === 'exhausted',
       createdWithin: createdWithin === 'all' ? undefined : createdWithin,
       limit: PAGE_SIZE,
       offset,
@@ -92,8 +91,7 @@ export function ServerAdminJobsPanel({ api }: { api: ServerAdminApi }) {
   );
   const jobsQuery = useQuery({
     queryKey: ['server-admin', 'jobs', jobRequest],
-    queryFn: () =>
-      api.listServerAdminJobsApiV1ServerAdminJobsGet(jobRequest),
+    queryFn: () => api.listServerAdminJobsApiV1ServerAdminJobsGet(jobRequest),
     retry: false,
   });
 
@@ -170,9 +168,7 @@ export function ServerAdminJobsPanel({ api }: { api: ServerAdminApi }) {
               setExhausted(event.target.value as ExhaustedFilter);
             }}
           >
-            <option value="all">
-              {t('serverAdmin.jobs.retryState.all')}
-            </option>
+            <option value="all">{t('serverAdmin.jobs.retryState.all')}</option>
             <option value="exhausted">
               {t('serverAdmin.jobs.retryState.exhausted')}
             </option>
