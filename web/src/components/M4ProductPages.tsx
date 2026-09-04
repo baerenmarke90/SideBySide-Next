@@ -454,30 +454,23 @@ function NotificationCard({
   let titleContent: ReactNode;
   if (item.kind === 'COMMENT_CREATED') {
     if (actorName && targetTitle) {
-      titleContent = (
-        <>
-          <strong>{actorName}</strong> hat „{targetTitle}“ kommentiert
-        </>
-      );
+      titleContent = t('m5s5.notificationAction.COMMENT_CREATED_WITH_TARGET', {
+        name: actorName,
+        target: targetTitle,
+      });
     } else if (actorName) {
-      titleContent = (
-        <>
-          <strong>{actorName}</strong> hat einen Kommentar hinterlassen
-        </>
-      );
+      titleContent = t('m5s5.notificationAction.COMMENT_CREATED', {
+        name: actorName,
+      });
     } else if (targetTitle) {
       titleContent = `${t('m5s5.notificationKind.COMMENT_CREATED')}: „${targetTitle}“`;
     } else {
       titleContent = t('m5s5.notificationKind.COMMENT_CREATED');
     }
   } else if (item.kind === 'THINKING_OF_YOU') {
-    titleContent = actorName ? (
-      <>
-        <strong>{actorName}</strong> denkt an dich.
-      </>
-    ) : (
-      t('m5s5.notificationAction.THINKING_OF_YOU_ANON')
-    );
+    titleContent = actorName
+      ? t('m5s5.notificationAction.THINKING_OF_YOU', { name: actorName })
+      : t('m5s5.notificationAction.THINKING_OF_YOU_ANON');
   } else if (item.kind === 'REMINDER_DUE') {
     titleContent = targetTitle
       ? t('m5s5.notificationAction.REMINDER_DUE_WITH_TARGET', {
@@ -616,7 +609,44 @@ export function NotificationsProductPage({
       apiCall(() =>
         apis.notifications.markNotificationRead({ notificationId, spaceId }),
       ),
-    onSuccess: refreshNotifications,
+    onMutate: async (notificationId: string) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: listKey }),
+        queryClient.cancelQueries({ queryKey: unreadKey }),
+      ]);
+      const previousList = queryClient.getQueryData(listKey);
+      const previousUnread = queryClient.getQueryData(unreadKey);
+
+      queryClient.setQueryData<{ unreadCount: number }>(unreadKey, (old) => {
+        if (!old) return old;
+        return { unreadCount: Math.max(0, old.unreadCount - 1) };
+      });
+
+      queryClient.setQueryData<{
+        pages: Array<{ items: NotificationItem[]; nextCursor: string | null }>;
+        pageParams: unknown[];
+      }>(listKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.map((it) =>
+              it.id === notificationId ? { ...it, readAt: new Date() } : it,
+            ),
+          })),
+        };
+      });
+
+      return { previousList, previousUnread };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousList)
+        queryClient.setQueryData(listKey, context.previousList);
+      if (context?.previousUnread)
+        queryClient.setQueryData(unreadKey, context.previousUnread);
+    },
+    onSettled: refreshNotifications,
   });
   const markAll = useMutation({
     mutationFn: () =>

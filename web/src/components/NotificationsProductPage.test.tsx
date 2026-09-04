@@ -1,6 +1,9 @@
+// @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import { describe, expect, it, vi } from 'vitest';
 import type { NotificationsApi } from '../api/generated/apis/NotificationsApi';
 import type { M4ProductApis } from '../client/m4Product';
 import { NotificationsProductPage } from './M4ProductPages';
@@ -123,5 +126,90 @@ describe('Notifications Product Experience', () => {
 
     expect(html).toContain('Zahnarzttermin');
     expect(html).toContain('href="/plan/plans/plan-456"');
+  });
+
+  it('optimistically updates unread count and read state on card click without waiting for API', async () => {
+    const markNotificationRead = vi.fn().mockReturnValue(new Promise(() => {})); // pending promise
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'notifications', SPACE_ID], {
+      pages: [
+        {
+          items: [
+            {
+              id: 'notif-opt-1',
+              sourceEventId: 'evt-1',
+              kind: 'COMMENT_CREATED',
+              actorId: 'user-partner',
+              actor: {
+                id: 'user-partner',
+                displayName: 'Alex',
+                profileAttachmentId: null,
+              },
+              targetType: 'PLAN',
+              targetId: 'plan-123',
+              target: {
+                targetType: 'PLAN',
+                targetId: 'plan-123',
+                title: 'Konzertkarte',
+              },
+              createdAt: new Date('2026-09-03T18:03:00Z'),
+              readAt: null,
+            },
+          ],
+          nextCursor: null,
+        },
+      ],
+      pageParams: [null],
+    });
+    queryClient.setQueryData(['m5-s5', 'notification-unread-count', SPACE_ID], {
+      unreadCount: 3,
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <NotificationsProductPage
+            apis={
+              {
+                notifications: {
+                  markNotificationRead,
+                } as unknown as NotificationsApi,
+              } as M4ProductApis
+            }
+            spaceId={SPACE_ID}
+            currentAccountId="user-self"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const link = screen.getByRole('link', { name: /Konzertkarte/i });
+    fireEvent.click(link);
+
+    // Unread count decremented immediately in cache without waiting for API resolution
+    await waitFor(() => {
+      const unreadData = queryClient.getQueryData<{ unreadCount: number }>([
+        'm5-s5',
+        'notification-unread-count',
+        SPACE_ID,
+      ]);
+      expect(unreadData?.unreadCount).toBe(2);
+    });
+
+    // Item marked as read in cache immediately
+    await waitFor(() => {
+      const listData = queryClient.getQueryData<{
+        pages: Array<{ items: Array<{ id: string; readAt: Date | null }> }>;
+      }>(['m5-s5', 'notifications', SPACE_ID]);
+      expect(listData?.pages[0].items[0].readAt).not.toBeNull();
+    });
+
+    // API was called in background
+    expect(markNotificationRead).toHaveBeenCalledWith({
+      notificationId: 'notif-opt-1',
+      spaceId: SPACE_ID,
+    });
   });
 });
