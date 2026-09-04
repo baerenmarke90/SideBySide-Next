@@ -61,9 +61,12 @@ jobs:
             scripts/self_hosted_recovery_acceptance.py \
             scripts/account_deletion_recovery_acceptance.py \
             scripts/test_self_hosted_recovery.py \
+            scripts/test_self_hosted_deletion_reconcile.py \
             backend/scripts/recovery_fixture.py \
             backend/scripts/reconcile_account_deletions.py
-          python3 -m unittest scripts.test_self_hosted_recovery
+          python3 -m unittest \
+            scripts.test_self_hosted_recovery \
+            scripts.test_self_hosted_deletion_reconcile
 
       - name: Fresh restore and prior-schema upgrade acceptance
         run: python3 scripts/self_hosted_recovery_acceptance.py
