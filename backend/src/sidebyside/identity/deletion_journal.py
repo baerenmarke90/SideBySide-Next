@@ -8,6 +8,7 @@ import json
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from io import StringIO
 from pathlib import Path
 from typing import Any, TextIO
 from uuid import UUID
@@ -122,6 +123,17 @@ def _read_records(handle: TextIO) -> tuple[DeletionTombstone, ...]:
     return tuple(records)
 
 
+def _validate_instance(
+    records: tuple[DeletionTombstone, ...],
+    expected_instance_id: UUID | None,
+) -> tuple[DeletionTombstone, ...]:
+    if expected_instance_id is not None and any(
+        record.instance_id != expected_instance_id for record in records
+    ):
+        raise DeletionJournalError("Deletion journal belongs to a different instance.")
+    return records
+
+
 def _fsync_directory(directory: Path) -> None:
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     try:
@@ -134,6 +146,30 @@ def _fsync_directory(directory: Path) -> None:
         raise DeletionJournalError("Deletion journal directory could not be synchronized.") from exc
     finally:
         os.close(descriptor)
+
+
+def load_tombstones_text(
+    content: str,
+    *,
+    expected_instance_id: UUID | None = None,
+) -> tuple[DeletionTombstone, ...]:
+    """Validate a journal snapshot already read through a protected transport."""
+    with StringIO(content) as handle:
+        records = _read_records(handle)
+    return _validate_instance(records, expected_instance_id)
+
+
+def load_tombstones_bytes(
+    content: bytes,
+    *,
+    expected_instance_id: UUID | None = None,
+) -> tuple[DeletionTombstone, ...]:
+    """Validate UTF-8 journal bytes, for example when recovery passes them on stdin."""
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise DeletionJournalError("Deletion journal is not valid UTF-8.") from exc
+    return load_tombstones_text(text, expected_instance_id=expected_instance_id)
 
 
 def load_tombstones(
@@ -149,11 +185,7 @@ def load_tombstones(
             records = _read_records(handle)
     except OSError as exc:
         raise DeletionJournalError("Deletion journal could not be opened.") from exc
-    if expected_instance_id is not None and any(
-        record.instance_id != expected_instance_id for record in records
-    ):
-        raise DeletionJournalError("Deletion journal belongs to a different instance.")
-    return records
+    return _validate_instance(records, expected_instance_id)
 
 
 def append_tombstone(
@@ -182,27 +214,30 @@ def append_tombstone(
     except OSError as exc:
         raise DeletionJournalError("Deletion journal could not be opened for append.") from exc
     try:
-        os.fchmod(descriptor, 0o600)
-        with os.fdopen(descriptor, "r+", encoding="utf-8", closefd=False) as handle:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-            records = _read_records(handle)
-            if any(record.instance_id != instance_id for record in records):
-                raise DeletionJournalError("Deletion journal belongs to a different instance.")
-            existing = next(
-                (record for record in records if record.account_id == account_id),
-                None,
-            )
-            if existing is not None:
-                if existing.accepted_at != candidate.accepted_at:
-                    raise DeletionJournalError(
-                        "Account tombstone already exists with a different acceptance timestamp."
-                    )
-                return existing
-            handle.seek(0, os.SEEK_END)
-            handle.write(line)
-            handle.flush()
-            os.fsync(handle.fileno())
-        _fsync_directory(journal.parent)
+        try:
+            os.fchmod(descriptor, 0o600)
+            with os.fdopen(descriptor, "r+", encoding="utf-8", closefd=False) as handle:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+                records = _read_records(handle)
+                if any(record.instance_id != instance_id for record in records):
+                    raise DeletionJournalError("Deletion journal belongs to a different instance.")
+                existing = next(
+                    (record for record in records if record.account_id == account_id),
+                    None,
+                )
+                if existing is not None:
+                    if existing.accepted_at != candidate.accepted_at:
+                        raise DeletionJournalError(
+                            "Account tombstone already exists with a different acceptance timestamp."
+                        )
+                    return existing
+                handle.seek(0, os.SEEK_END)
+                handle.write(line)
+                handle.flush()
+                os.fsync(handle.fileno())
+            _fsync_directory(journal.parent)
+        except OSError as exc:
+            raise DeletionJournalError("Deletion journal append could not be synchronized.") from exc
         return candidate
     finally:
         os.close(descriptor)
