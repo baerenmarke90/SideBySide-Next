@@ -41,6 +41,7 @@ def _register_privacy_models() -> None:
     from sidebyside.comments import models as _comments  # noqa: F401
     from sidebyside.gift_ideas import models as _gift_ideas  # noqa: F401
     from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
+    from sidebyside.identity import models as _identity  # noqa: F401
     from sidebyside.memories import models as _memories  # noqa: F401
     from sidebyside.milestones import models as _milestones  # noqa: F401
     from sidebyside.people import models as _people  # noqa: F401
