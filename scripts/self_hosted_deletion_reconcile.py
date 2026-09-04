@@ -16,8 +16,6 @@ from scripts.self_hosted_recovery import (
     _run,
 )
 
-CONTAINER_JOURNAL_PATH = "/sidebyside-recovery/deletion-journal.jsonl"
-
 
 def reconcile_restored_target(
     target: ComposeTarget,
@@ -40,26 +38,29 @@ def reconcile_restored_target(
         raise RecoveryError("The protected deletion journal does not exist.") from exc
     if not journal.is_file():
         raise RecoveryError("The protected deletion journal is not a regular file.")
+    try:
+        journal_bytes = journal.read_bytes()
+    except OSError as exc:
+        raise RecoveryError("The protected deletion journal could not be read.") from exc
 
     # Required restore ordering: old backup -> current schema -> current forward
     # journal -> fail-closed replay. Normal API/worker traffic remains stopped.
-    _run(target.compose_command("run", "--rm", "--no-deps", "migrate"))
+    _run(target.compose_command("run", "--rm", "--no-deps", "-T", "migrate"))
     _run(
         target.compose_command(
             "run",
             "--rm",
             "--no-deps",
-            "--volume",
-            f"{journal}:{CONTAINER_JOURNAL_PATH}:ro",
+            "-T",
             "api",
             "python",
             "-m",
             "sidebyside.identity.deletion_reconcile",
-            "--journal",
-            CONTAINER_JOURNAL_PATH,
+            "--journal-stdin",
             "--confirm-instance-id",
             str(instance_id),
-        )
+        ),
+        input_bytes=journal_bytes,
     )
 
 
