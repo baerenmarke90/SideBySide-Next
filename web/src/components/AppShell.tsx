@@ -14,7 +14,6 @@ import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import {
   APP_ROUTES,
   DEFAULT_APP_ROUTE,
-  MORE_NOTIFICATIONS_ROUTE,
   SEARCH_ROUTE,
   type AppRouteDefinition,
 } from '../client/routes';
@@ -155,11 +154,6 @@ export function AppShell({
     enabled: Boolean(spaceId && accessToken),
   });
   const unreadCount = unreadQuery.data?.unreadCount ?? 0;
-
-  const bellAriaLabel =
-    unreadCount > 0
-      ? t('navigation.notificationsWithUnread', { count: unreadCount })
-      : t('navigation.notifications');
 
   return (
     <div className="product-shell">

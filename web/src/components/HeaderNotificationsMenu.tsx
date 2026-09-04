@@ -130,15 +130,14 @@ export function HeaderNotificationsMenu({
   }
 
   return (
-    <details
-      ref={panelRef as React.RefObject<HTMLDetailsElement>}
+    <div
+      ref={panelRef as React.RefObject<HTMLDivElement>}
       className="header-notifications-menu"
-      open={isOpen}
     >
-      <summary
-        ref={triggerRef as React.RefObject<HTMLElement>}
+      <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
+        type="button"
         className="shell-utility-link header-notifications-trigger"
-        role="button"
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label={bellAriaLabel}
@@ -154,7 +153,7 @@ export function HeaderNotificationsMenu({
             <span className="notification-dot" aria-hidden="true" />
           ) : null}
         </span>
-      </summary>
+      </button>
 
       {isOpen ? (
         <div
@@ -164,10 +163,10 @@ export function HeaderNotificationsMenu({
         />
       ) : null}
 
-      <div
+      <section
         className="header-notifications-popover"
-        role="region"
         aria-label={t('m5s5.notifications.previewTitle')}
+        hidden={!isOpen}
       >
         <div className="header-notifications-head">
           <h2 className="header-notifications-title">
@@ -189,7 +188,7 @@ export function HeaderNotificationsMenu({
               {t('m5s5.notifications.emptyPreview')}
             </div>
           ) : (
-            <ul className="header-notifications-list" role="list">
+            <ul className="header-notifications-list">
               {previewItems.map((item) => {
                 const isUnread = !item.readAt;
                 const isOwn = Boolean(
@@ -277,7 +276,7 @@ export function HeaderNotificationsMenu({
             {t('m5s5.notifications.showAll')}
           </Link>
         </div>
-      </div>
-    </details>
+      </section>
+    </div>
   );
 }

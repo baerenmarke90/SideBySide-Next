@@ -1,5 +1,5 @@
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
-import type { TFunction } from '../i18n';
+import type { TFunction } from 'i18next';
 
 export function getNotificationItemTitle(
   item: NotificationItem,

@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -449,9 +449,6 @@ function NotificationCard({
   const isOwn = Boolean(
     currentAccountId && item.actor?.id === currentAccountId,
   );
-  const actorName = isOwn ? t('m5s5.activity.you') : item.actor?.displayName;
-  const targetTitle = item.target?.title;
-
   const titleContent = getNotificationItemTitle(item, t, currentAccountId);
 
   const inner = (

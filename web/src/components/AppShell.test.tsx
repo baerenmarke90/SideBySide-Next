@@ -239,7 +239,7 @@ describe('AppShell', () => {
         dispatchEvent: vi.fn(),
       }));
 
-    vi.spyOn(global, 'fetch').mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ unreadCount: 0 }), { status: 200 })));
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ unreadCount: 0 }), { status: 200 })));
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });

@@ -21,7 +21,7 @@ function renderMenu(onLogout = vi.fn()) {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <div>
-          <button data-testid="outside-button">Outside</button>
+          <button type="button" data-testid="outside-button">Outside</button>
           <HeaderProfileMenu
             apiBaseUrl="http://api.example.test"
             accessToken="test-token"
@@ -70,9 +70,10 @@ describe('HeaderProfileMenu', () => {
 
     const panel = trigger.parentElement?.querySelector('.header-profile-popover');
     expect(panel).not.toBeNull();
+    if (!panel) throw new Error('panel not found');
 
     act(() => {
-      fireEvent.pointerDown(panel!);
+      fireEvent.pointerDown(panel);
     });
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
   });

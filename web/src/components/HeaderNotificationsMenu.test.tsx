@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
 import { notificationUnreadCountQueryKey, notificationsListQueryKey } from '../client/notificationQueries';
 import m5s5 from '../i18n/locales/m5s5';
@@ -18,12 +18,13 @@ function LocationTracker({ onLocation }: { onLocation: (loc: string) => void }) 
 function createSampleNotification(overrides: Partial<NotificationItem> = {}): NotificationItem {
   return {
     id: 'notif-1',
-    spaceId: 'space-1',
+    actorId: 'account-partner',
     actor: { id: 'account-partner', displayName: 'Alex Partner' },
     kind: 'COMMENT_CREATED',
     targetType: 'PLAN',
     targetId: 'plan-123',
-    target: { id: 'plan-123', title: 'Summer Trip' },
+    target: { targetId: 'plan-123', targetType: 'PLAN', title: 'Summer Trip' },
+    sourceEventId: 'event-1',
     readAt: null,
     createdAt: new Date('2026-09-04T09:00:00Z'),
     ...overrides,
@@ -55,7 +56,7 @@ function renderNotificationMenu({
       <MemoryRouter initialEntries={['/today']}>
         <div>
           <LocationTracker onLocation={(loc) => { currentLocation = loc; }} />
-          <button data-testid="outside-target">Outside Element</button>
+          <button type="button" data-testid="outside-target">Outside Element</button>
           <HeaderNotificationsMenu
             apiBaseUrl="http://api.example.test"
             accessToken="test-token"
@@ -137,14 +138,14 @@ describe('HeaderNotificationsMenu', () => {
     expect(unreadData?.unreadCount).toBe(0);
 
     // Optimistic item readAt set
-    const listData = queryClient.getQueryData<any>(
-      notificationsListQueryKey('space-1'),
-    );
+    const listData = queryClient.getQueryData<{
+      pages: Array<{ items: NotificationItem[] }>;
+    }>(notificationsListQueryKey('space-1'));
     expect(listData?.pages[0]?.items[0]?.readAt).not.toBeNull();
   });
 
   it('clicking "Alle Benachrichtigungen anzeigen" navigates to /more/notifications and closes', () => {
-    const { getLocation } = renderNotificationMenu({ unreadCount: 0 });
+    renderNotificationMenu({ unreadCount: 0 });
     const trigger = screen.getByRole('button', { name: navigation.notifications });
 
     act(() => {

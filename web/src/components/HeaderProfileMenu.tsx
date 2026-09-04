@@ -73,15 +73,14 @@ export function HeaderProfileMenu({
   );
 
   return (
-    <details
-      ref={panelRef as React.RefObject<HTMLDetailsElement>}
+    <div
+      ref={panelRef as React.RefObject<HTMLDivElement>}
       className="header-profile-menu"
-      open={isOpen}
     >
-      <summary
-        ref={triggerRef as React.RefObject<HTMLElement>}
+      <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
+        type="button"
         className="header-profile-trigger"
-        role="button"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={t('navigation.profileMenu')}
@@ -99,10 +98,11 @@ export function HeaderProfileMenu({
           imageAlt={t('profileIdentity.imageAlt', { name: displayName })}
           fallbackAlt={t('profileIdentity.fallbackAlt', { name: displayName })}
         />
-      </summary>
+      </button>
       <nav
         className="header-profile-popover"
         aria-label={t('navigation.profileMenu')}
+        hidden={!isOpen}
       >
         <Link
           className="header-profile-menu-item"
@@ -157,7 +157,7 @@ export function HeaderProfileMenu({
           <span>{t('header.logout')}</span>
         </button>
       </nav>
-    </details>
+    </div>
   );
 }
 
