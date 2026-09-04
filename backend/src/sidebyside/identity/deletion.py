@@ -36,7 +36,7 @@ from sidebyside.identity.models import (
 )
 from sidebyside.profiles.models import PartnerProfile
 from sidebyside.relationship.models import Invitation, Membership, MembershipStatus
-from sidebyside.relationship.service import end_membership
+from sidebyside.relationship.service import end_membership, lock_space
 
 DELETED_ACCOUNT_DISPLAY_NAME = "Deleted account"
 DELETED_ACCOUNT_LOCALE = "de-DE"
@@ -88,6 +88,15 @@ def _enforce_fail_closed(
         .scalars()
         .all()
     )
+    space_ids = sorted({membership.space_id for membership in memberships}, key=str)
+
+    # Account deletion is another authoritative Membership-ending lifecycle.
+    # Participate in the same Membership -> Space lock order as #518 self-exit
+    # so Invitation acceptance / add_member cannot pass the relationship-history
+    # check and then commit after this transition has become durable.
+    for space_id in space_ids:
+        lock_space(session, space_id)
+
     for membership in memberships:
         end_membership(membership)
         # Restore reconciliation can happen long after the original deletion.
@@ -95,13 +104,18 @@ def _enforce_fail_closed(
         # end rather than recording the later restore/replay time.
         membership.ended_at = deletion.accepted_at
 
-    # An invitation created before deletion must not remain a usable bearer
-    # path into a Space after the creator has lost all active Memberships.
+    # Every Space whose Membership just ended is history-locked. Revoke all of
+    # its still-open Invitations, not just tokens created by the deleted Account.
+    # The creator predicate is retained for retry/reconciliation cases where the
+    # Account no longer has an active Membership row to contribute to space_ids.
+    invitation_scope = Invitation.created_by == account.id
+    if space_ids:
+        invitation_scope = or_(invitation_scope, Invitation.space_id.in_(space_ids))
     invitations = (
         session.execute(
             select(Invitation)
             .where(
-                Invitation.created_by == account.id,
+                invitation_scope,
                 Invitation.accepted_at.is_(None),
                 Invitation.revoked_at.is_(None),
             )
