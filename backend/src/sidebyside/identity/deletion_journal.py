@@ -127,7 +127,9 @@ def _parse_header(raw: str, *, line_number: int) -> UUID:
     try:
         instance_id = UUID(str(record["instanceId"]))
     except (ValueError, TypeError) as exc:
-        raise DeletionJournalError("Deletion journal header contains an invalid instance id.") from exc
+        raise DeletionJournalError(
+            "Deletion journal header contains an invalid instance id."
+        ) from exc
     if not _record_digest_is_valid(record, _header_payload(instance_id)):
         raise DeletionJournalError("Deletion journal header failed its integrity check.")
     return instance_id
@@ -285,12 +287,16 @@ def initialize_journal(path: str | Path, *, instance_id: UUID) -> None:
                 else:
                     journal_instance_id, _ = _read_records(handle)
                     if journal_instance_id != instance_id:
-                        raise DeletionJournalError("Deletion journal belongs to a different instance.")
+                        raise DeletionJournalError(
+                            "Deletion journal belongs to a different instance."
+                        )
                 handle.flush()
                 os.fsync(handle.fileno())
             _fsync_directory(journal.parent)
         except OSError as exc:
-            raise DeletionJournalError("Deletion journal initialization could not be synchronized.") from exc
+            raise DeletionJournalError(
+                "Deletion journal initialization could not be synchronized."
+            ) from exc
     finally:
         os.close(descriptor)
 
@@ -334,7 +340,9 @@ def append_tombstone(
                 else:
                     journal_instance_id, records = _read_records(handle)
                     if journal_instance_id != instance_id:
-                        raise DeletionJournalError("Deletion journal belongs to a different instance.")
+                        raise DeletionJournalError(
+                            "Deletion journal belongs to a different instance."
+                        )
                 existing = next(
                     (record for record in records if record.account_id == account_id),
                     None,
@@ -342,7 +350,8 @@ def append_tombstone(
                 if existing is not None:
                     if existing.accepted_at != candidate.accepted_at:
                         raise DeletionJournalError(
-                            "Account tombstone already exists with a different acceptance timestamp."
+                            "Account tombstone already exists with a different "
+                            "acceptance timestamp."
                         )
                     result = existing
                 else:
@@ -352,7 +361,9 @@ def append_tombstone(
                 os.fsync(handle.fileno())
             _fsync_directory(journal.parent)
         except OSError as exc:
-            raise DeletionJournalError("Deletion journal append could not be synchronized.") from exc
+            raise DeletionJournalError(
+                "Deletion journal append could not be synchronized."
+            ) from exc
         return result
     finally:
         os.close(descriptor)
