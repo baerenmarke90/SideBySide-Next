@@ -1,26 +1,33 @@
 """Space endpoints.
 
-Every access passes through the tenant context. Routes do not repeat the
-authorization check; they receive a context that has already been verified.
+Every ordinary content access passes through the tenant context. The #518
+self-exit command is the deliberate exception: it must resolve the caller's
+historical Membership itself so a repeated request can remain idempotent after
+the active tenant context has already disappeared.
 """
 
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Path, Response
 from sqlalchemy import select
 
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
-from sidebyside.api.deps import DbSession, Tenant, TenantContext
+from sidebyside.api.deps import CurrentAccount, DbSession, Tenant, TenantContext
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
 from sidebyside.core.clock import today_in
+from sidebyside.core.errors import NotFoundError
+from sidebyside.core.ids import parse_id
 from sidebyside.db.mixins import INITIAL_VERSION
 from sidebyside.identity.models import Account
 from sidebyside.relationship import duration as duration_calc
+from sidebyside.relationship import offboarding
 from sidebyside.relationship import profile as profile_service
+from sidebyside.relationship import service as relationship_service
 from sidebyside.relationship.models import (
     DurationDisplayMode,
     Membership,
@@ -94,6 +101,14 @@ class SpaceProfileUpdate(ApiModel):
     relationship_started_on: date | None
     show_relationship_duration: bool
     duration_display_mode: DurationDisplayMode
+
+
+class SpaceMembershipExitView(ApiModel):
+    """Safe lifecycle state after self-exit from one Space."""
+
+    space_id: UUID
+    status: MembershipStatus
+    ended_at: datetime | None
 
 
 def _add_duration(
@@ -189,6 +204,37 @@ def get_space(tenant: Tenant, session: DbSession) -> SpaceView:
 
     _add_duration(view, profile, _today_for(tenant))
     return view
+
+
+@router.post(
+    "/spaces/{spaceId}/membership/leave",
+    response_model=SpaceMembershipExitView,
+    responses=problem_responses(401, 403, 404),
+    summary="Leave the authenticated Account's Membership in this Space",
+)
+def leave_space(
+    account: CurrentAccount,
+    session: DbSession,
+    space_id_raw: Annotated[str, Path(alias="spaceId")],
+) -> SpaceMembershipExitView:
+    """End only the caller's own Membership, never the partner's.
+
+    This route intentionally does not depend on ``Tenant``. Once the first
+    request commits, the normal tenant dependency correctly stops authorizing
+    this Space; resolving the caller's historical Membership directly is what
+    lets a retry return the same safe ended state instead of creating another
+    lifecycle.
+    """
+    space_id = parse_id(space_id_raw)
+    if space_id is None:
+        raise NotFoundError("Space not found.", relationship_service.SpaceErrorCode.NOT_FOUND)
+
+    result = offboarding.leave_space(session, account, space_id)
+    return SpaceMembershipExitView(
+        space_id=space_id,
+        status=MembershipStatus(result.membership.status),
+        ended_at=result.membership.ended_at,
+    )
 
 
 @router.get(
