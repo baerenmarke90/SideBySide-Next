@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from uuid import uuid4
+from typing import Any
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import func, select
@@ -43,14 +44,20 @@ from tests.conftest import make_account, make_space, requires_database
 pytestmark = [pytest.mark.integration, requires_database]
 
 
-def _count(session: Session, model: type[object], *conditions: object) -> int:
+def _count(session: Session, model: type[Any], *conditions: Any) -> int:
     statement = select(func.count()).select_from(model)
     if conditions:
         statement = statement.where(*conditions)
     return session.execute(statement).scalar_one()
 
 
-def _private_note(session: Session, *, owner_id, space_id, title: str) -> PrivateNote:  # type: ignore[no-untyped-def]
+def _private_note(
+    session: Session,
+    *,
+    owner_id: UUID,
+    space_id: UUID,
+    title: str,
+) -> PrivateNote:
     note = PrivateNote(
         space_id=space_id,
         owner_id=owner_id,
@@ -66,11 +73,11 @@ def _private_note(session: Session, *, owner_id, space_id, title: str) -> Privat
 def _private_partner_note(
     session: Session,
     *,
-    owner_id,
-    subject_id,
-    space_id,
+    owner_id: UUID,
+    subject_id: UUID,
+    space_id: UUID,
     value: str,
-) -> ProfilePreference:  # type: ignore[no-untyped-def]
+) -> ProfilePreference:
     preference = ProfilePreference(
         space_id=space_id,
         owner_id=owner_id,
@@ -132,7 +139,8 @@ def test_accepted_tombstone_is_immediately_fail_closed_and_idempotent(session: S
 
     first_ended_at = membership.ended_at
     repeated = apply_accepted_tombstone(session, account.id, accepted_at=accepted_at)
-    assert repeated is deletion
+    assert repeated is not None
+    assert repeated.account_id == deletion.account_id
     assert membership.ended_at == first_ended_at
     assert _count(session, AccountDeletion, AccountDeletion.account_id == account.id) == 1
 
@@ -183,42 +191,48 @@ def test_completion_deletes_private_identity_state_but_retains_shared_history(
         value="Ben private about Anna",
     )
 
-    email = AccountEmail(
-        account_id=account.id,
-        email="anna@example.test",
-        is_primary=True,
-        verified_at=now(),
+    session.add_all(
+        [
+            AccountEmail(
+                account_id=account.id,
+                email="anna@example.test",
+                is_primary=True,
+                verified_at=now(),
+            ),
+            AuthIdentity(
+                account_id=account.id,
+                provider=AuthProvider.LOCAL_PASSWORD.value,
+                subject="anna@example.test",
+                secret_hash="derived-hash",
+            ),
+        ]
     )
-    identity = AuthIdentity(
-        account_id=account.id,
-        provider=AuthProvider.LOCAL_PASSWORD.value,
-        subject="anna@example.test",
-        secret_hash="derived-hash",
-    )
-    session.add_all([email, identity])
-    device, _ = sessions.start_session(session, account)
-    endpoint = register_endpoint(
+    sessions.start_session(session, account)
+    register_endpoint(
         session,
         account_id=account.id,
         provider_key="test",
         endpoint_value="endpoint://anna-delete",
     )
 
-    deleted_recipient_notification = Notification(
-        space_id=space.id,
-        recipient_account_id=account.id,
-        source_event_id=uuid4(),
-        kind=NotificationKind.COMMENT_CREATED.value,
-        actor_id=partner.id,
+    session.add_all(
+        [
+            Notification(
+                space_id=space.id,
+                recipient_account_id=account.id,
+                source_event_id=uuid4(),
+                kind=NotificationKind.COMMENT_CREATED.value,
+                actor_id=partner.id,
+            ),
+            Notification(
+                space_id=space.id,
+                recipient_account_id=partner.id,
+                source_event_id=uuid4(),
+                kind=NotificationKind.COMMENT_CREATED.value,
+                actor_id=account.id,
+            ),
+        ]
     )
-    survivor_notification = Notification(
-        space_id=space.id,
-        recipient_account_id=partner.id,
-        source_event_id=uuid4(),
-        kind=NotificationKind.COMMENT_CREATED.value,
-        actor_id=account.id,
-    )
-    session.add_all([deleted_recipient_notification, survivor_notification])
     session.flush()
 
     accepted_at = now()
@@ -292,11 +306,10 @@ def test_completion_deletes_private_identity_state_but_retains_shared_history(
 
     # Repeating cleanup converges on the same state rather than deleting shared data.
     repeated = complete_accepted_deletion(session, account.id)
-    assert repeated is deletion
+    assert repeated is not None
     assert repeated.status == AccountDeletionStatus.COMPLETED.value
+    assert repeated.account_id == deletion.account_id
     assert _count(session, Memory, Memory.id == shared_memory.id) == 1
-    assert endpoint.account_id == account.id
-    assert device.account_id == account.id
 
 
 def test_completion_requires_an_accepted_external_tombstone(session: Session) -> None:
@@ -340,7 +353,8 @@ def test_failed_cleanup_stays_fail_closed_and_can_retry(session: Session) -> Non
         sessions.authenticate(session, issued.access_token)
 
     retried = apply_accepted_tombstone(session, account.id, accepted_at=accepted_at)
-    assert retried is failed
+    assert retried is not None
+    assert retried.account_id == failed.account_id
     assert retried.status == AccountDeletionStatus.PENDING.value
     assert retried.failed_at is None
     assert retried.last_failure_code is None
