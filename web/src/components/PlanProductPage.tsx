@@ -5,6 +5,7 @@ import type { PlanDetail } from '../api/generated/models/PlanDetail';
 import { normalizeClientError } from '../client/problemDetails';
 import { appRoutePath } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import {
   dateFromInput,
   dateOnlyInput,
@@ -48,7 +49,7 @@ export function PlanProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const key = ['m5-s3', 'plan', spaceId, planId] as const;
+  const key = authorSummaryQueryKeys.planDetail(spaceId, planId);
 
   const planQuery = useQuery({
     queryKey: key,

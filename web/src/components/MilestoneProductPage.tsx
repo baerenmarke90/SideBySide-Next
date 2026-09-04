@@ -19,6 +19,7 @@ import {
   milestoneEditPath,
 } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { CommentsPanel } from './CommentsPanel';
 import { PageHeader } from './PageHeader';
@@ -60,7 +61,7 @@ export function MilestoneProductPage({
   const params = useParams();
   const queryClient = useQueryClient();
   const milestoneId = params.milestoneId;
-  const queryKey = ['milestone', spaceId, milestoneId] as const;
+  const queryKey = authorSummaryQueryKeys.milestone(spaceId, milestoneId);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const milestoneQuery = useQuery({

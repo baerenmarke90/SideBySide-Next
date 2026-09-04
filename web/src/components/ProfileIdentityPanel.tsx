@@ -4,7 +4,10 @@ import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import type { ProfileIdentityUpdate } from '../api/generated/models/ProfileIdentityUpdate';
 import { Configuration } from '../api/generated/runtime';
-import { invalidateAuthorSummaryConsumers } from '../client/authorSummaryConsumers';
+import {
+  authorSummaryQueryKeys,
+  invalidateAuthorSummaryConsumers,
+} from '../client/authorSummaryConsumers';
 import {
   type DraftUploadPhase,
   uploadMemoryDraftAttachment,
@@ -62,7 +65,7 @@ export function ProfileIdentityPanel({
   );
 
   const profileQuery = useQuery({
-    queryKey: ['profile-identity', spaceId, account.id],
+    queryKey: authorSummaryQueryKeys.profileIdentity(spaceId, account.id),
     queryFn: async () => {
       try {
         return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet(

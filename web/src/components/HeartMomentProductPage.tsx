@@ -21,6 +21,7 @@ import {
   heartMomentEditPath,
 } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { AttachmentDraftPicker } from './AttachmentDraftPicker';
@@ -78,7 +79,7 @@ export function HeartMomentProductPage({
   const params = useParams();
   const queryClient = useQueryClient();
   const heartMomentId = params.heartMomentId;
-  const queryKey = ['heartMoment', spaceId, heartMomentId] as const;
+  const queryKey = authorSummaryQueryKeys.heartMoment(spaceId, heartMomentId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removeExistingPhoto, setRemoveExistingPhoto] = useState(false);
   const attachments = useAttachmentDrafts({

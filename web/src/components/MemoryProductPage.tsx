@@ -24,6 +24,7 @@ import {
   memoryEditPath,
 } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { postSnackbar } from '../client/snackbar';
 import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { resolvedLocale, useTranslation } from '../i18n';
@@ -72,7 +73,7 @@ export function MemoryProductPage({
   const params = useParams();
   const queryClient = useQueryClient();
   const memoryId = params.memoryId;
-  const memoryKey = ['memory', spaceId, memoryId] as const;
+  const memoryKey = authorSummaryQueryKeys.memory(spaceId, memoryId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<Set<string>>(
     () => new Set(),

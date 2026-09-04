@@ -11,6 +11,7 @@ import {
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
 import { appRoutePath } from '../client/routes';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { PlanningRelationManager } from './PlanningRelationManager';
@@ -38,7 +39,7 @@ export function ChapterProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const key = ['m5-s3', 'chapter', spaceId, chapterId] as const;
+  const key = authorSummaryQueryKeys.chapterDetail(spaceId, chapterId);
 
   const chapterQuery = useQuery({
     queryKey: key,

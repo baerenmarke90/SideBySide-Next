@@ -9,6 +9,7 @@ import {
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
 import { appRoutePath } from '../client/routes';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
@@ -36,7 +37,7 @@ export function CollectionProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const key = ['m5-s3', 'collection', spaceId, collectionId] as const;
+  const key = authorSummaryQueryKeys.collectionDetail(spaceId, collectionId);
 
   const collectionQuery = useQuery({
     queryKey: key,

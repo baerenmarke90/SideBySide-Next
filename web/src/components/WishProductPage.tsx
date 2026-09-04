@@ -10,6 +10,7 @@ import {
 } from '../client/sharedPlanning';
 import { appRoutePath } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -36,7 +37,7 @@ export function WishProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const key = ['m5-s3', 'wish', spaceId, wishId] as const;
+  const key = authorSummaryQueryKeys.wishDetail(spaceId, wishId);
 
   const wishQuery = useQuery({
     queryKey: key,
