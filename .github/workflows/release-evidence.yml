@@ -1,0 +1,339 @@
+name: Release Evidence
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-evidence.yml"
+      - ".github/actions/attest-release-artifact/**"
+      - "tools/ci/test_release_evidence.py"
+      - "docs/m6/SBOM-ATTESTATIONS.md"
+  workflow_dispatch:
+    inputs:
+      android_version_code:
+        description: Monotonic Android versionCode for this evidence build.
+        required: false
+        default: 1
+        type: number
+  workflow_call:
+    inputs:
+      android_version_code:
+        description: Monotonic Android versionCode for this evidence build.
+        required: false
+        default: 1
+        type: number
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-evidence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  SYFT_VERSION: "1.42.3"
+  SYFT_LINUX_AMD64_SHA256: "0d6be741479eddd2c8644a288990c04f3df0d609bbc1599a005532a9dff63509"
+  ANDROID_VERSION_CODE: ${{ inputs.android_version_code || 1 }}
+
+jobs:
+  build-evidence:
+    name: Build artifacts and SPDX SBOMs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout exact source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate release-evidence contract
+        run: python3 tools/ci/test_release_evidence.py
+
+      - name: Create evidence directories
+        run: mkdir -p release-evidence/android release-evidence/sbom
+
+      - name: Build backend runtime image archive
+        run: |
+          set -euo pipefail
+          image="sidebyside-backend:evidence-$GITHUB_SHA"
+          docker build \
+            --pull \
+            --no-cache \
+            --build-arg "SBS_BUILD_REVISION=$GITHUB_SHA" \
+            --tag "$image" \
+            ./backend
+          docker image save --output release-evidence/backend-runtime.image.tar "$image"
+
+      - name: Build Web runtime image archive
+        run: |
+          set -euo pipefail
+          image="sidebyside-web:evidence-$GITHUB_SHA"
+          docker build \
+            --pull \
+            --no-cache \
+            --build-arg "SBS_BUILD_REVISION=$GITHUB_SHA" \
+            --tag "$image" \
+            ./web
+          docker image save --output release-evidence/web-runtime.image.tar "$image"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle cache and validate wrapper
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Verify pinned Gradle wrapper JAR
+        working-directory: android
+        shell: bash
+        run: |
+          printf '%s  %s\n' \
+            '497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7' \
+            'gradle/wrapper/gradle-wrapper.jar' \
+            | sha256sum --check --strict -
+
+      - name: Install Android SDK 37.1
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-37.1" "build-tools;36.0.0"
+
+      - name: Build unsigned Android release artifacts
+        working-directory: android
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --stacktrace --dependency-verification strict \
+            -PsbsVersionCode="$ANDROID_VERSION_CODE" \
+            :app:assembleRelease :app:bundleRelease
+
+          apk=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)
+          aab=$(find app/build/outputs/bundle/release -maxdepth 1 -type f -name '*.aab' -print -quit)
+          test -n "$apk"
+          test -n "$aab"
+          test -s "$apk"
+          test -s "$aab"
+          cp -- "$apk" ../release-evidence/android/sidebyside-release-unsigned.apk
+          cp -- "$aab" ../release-evidence/android/sidebyside-release-unsigned.aab
+
+      - name: Install verified Syft release
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          install_dir="$RUNNER_TEMP/syft"
+          mkdir -p "$install_dir"
+          curl --fail --location --silent --show-error \
+            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz" \
+            --output "$archive"
+          printf '%s  %s\n' "$SYFT_LINUX_AMD64_SHA256" "$archive" \
+            | sha256sum --check --strict -
+          tar -xzf "$archive" -C "$install_dir" syft
+          "$install_dir/syft" version
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Generate SPDX 2.3 JSON SBOMs
+        env:
+          SYFT_CHECK_FOR_APP_UPDATE: "false"
+        run: |
+          set -euo pipefail
+          syft scan "docker-archive:release-evidence/backend-runtime.image.tar" \
+            -o "spdx-json=release-evidence/sbom/backend-runtime.spdx.json"
+          syft scan "docker-archive:release-evidence/web-runtime.image.tar" \
+            -o "spdx-json=release-evidence/sbom/web-runtime.spdx.json"
+          syft scan "file:release-evidence/android/sidebyside-release-unsigned.apk" \
+            -o "spdx-json=release-evidence/sbom/android-apk.spdx.json"
+          syft scan "file:release-evidence/android/sidebyside-release-unsigned.aab" \
+            -o "spdx-json=release-evidence/sbom/android-aab.spdx.json"
+
+      - name: Validate and index release evidence
+        env:
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+
+          root = Path("release-evidence")
+          subjects = [
+              ("backend-runtime", root / "backend-runtime.image.tar", root / "sbom/backend-runtime.spdx.json", ["api", "worker", "migrate"]),
+              ("web-runtime", root / "web-runtime.image.tar", root / "sbom/web-runtime.spdx.json", ["web"]),
+              ("android-apk", root / "android/sidebyside-release-unsigned.apk", root / "sbom/android-apk.spdx.json", ["android-apk"]),
+              ("android-aab", root / "android/sidebyside-release-unsigned.aab", root / "sbom/android-aab.spdx.json", ["android-aab"]),
+          ]
+
+          def sha256(path: Path) -> str:
+              digest = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for block in iter(lambda: handle.read(1024 * 1024), b""):
+                      digest.update(block)
+              return digest.hexdigest()
+
+          artifacts = []
+          for artifact_id, artifact, sbom, roles in subjects:
+              if not artifact.is_file() or artifact.stat().st_size == 0:
+                  raise SystemExit(f"Missing or empty release subject: {artifact}")
+              if not sbom.is_file() or sbom.stat().st_size == 0:
+                  raise SystemExit(f"Missing or empty SBOM: {sbom}")
+              document = json.loads(sbom.read_text(encoding="utf-8"))
+              if document.get("spdxVersion") != "SPDX-2.3":
+                  raise SystemExit(f"{sbom} is not SPDX 2.3")
+              if document.get("SPDXID") != "SPDXRef-DOCUMENT":
+                  raise SystemExit(f"{sbom} has no SPDX document identity")
+              if not isinstance(document.get("packages"), list):
+                  raise SystemExit(f"{sbom} has no SPDX package list")
+              artifacts.append(
+                  {
+                      "id": artifact_id,
+                      "roles": roles,
+                      "path": artifact.relative_to(root).as_posix(),
+                      "sha256": sha256(artifact),
+                      "sbom": sbom.relative_to(root).as_posix(),
+                      "sbomSha256": sha256(sbom),
+                  }
+              )
+
+          gradle = Path("android/app/build.gradle.kts").read_text(encoding="utf-8")
+          version_match = re.search(r'val sbsVersionName = "([^"]+)"', gradle)
+          app_id_match = re.search(r'applicationId = "([^"]+)"', gradle)
+          if not version_match or not app_id_match:
+              raise SystemExit("Could not resolve frozen Android release identity")
+
+          index = {
+              "schemaVersion": 1,
+              "sourceRevision": os.environ["SOURCE_REVISION"],
+              "sbomFormat": "SPDX-2.3 JSON",
+              "artifacts": artifacts,
+              "android": {
+                  "applicationId": app_id_match.group(1),
+                  "versionName": version_match.group(1),
+                  "versionCode": int(os.environ["ANDROID_VERSION_CODE"]),
+                  "signing": "unsigned-evidence-only",
+                  "finalSignedArtifactRequiresFreshAttestation": True,
+              },
+          }
+          (root / "evidence-index.json").write_text(
+              json.dumps(index, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          (
+            cd release-evidence
+            sha256sum \
+              backend-runtime.image.tar \
+              web-runtime.image.tar \
+              android/sidebyside-release-unsigned.apk \
+              android/sidebyside-release-unsigned.aab \
+              sbom/backend-runtime.spdx.json \
+              sbom/web-runtime.spdx.json \
+              sbom/android-apk.spdx.json \
+              sbom/android-aab.spdx.json \
+              evidence-index.json \
+              > SHA256SUMS
+            sha256sum --check --strict SHA256SUMS
+          )
+
+      - name: Upload release-evidence set
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: release-evidence/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  attest:
+    name: Attest exact artifact bytes
+    if: github.event_name != 'pull_request'
+    needs: build-evidence
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Checkout attestation primitive
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download exact evidence set
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: release-evidence
+
+      - name: Verify transported checksums
+        run: (cd release-evidence && sha256sum --check --strict SHA256SUMS)
+
+      - name: Attest backend runtime
+        uses: ./.github/actions/attest-release-artifact
+        with:
+          subject-path: release-evidence/backend-runtime.image.tar
+          sbom-path: release-evidence/sbom/backend-runtime.spdx.json
+          bundle-directory: release-evidence/attestations
+          bundle-prefix: backend-runtime
+
+      - name: Attest Web runtime
+        uses: ./.github/actions/attest-release-artifact
+        with:
+          subject-path: release-evidence/web-runtime.image.tar
+          sbom-path: release-evidence/sbom/web-runtime.spdx.json
+          bundle-directory: release-evidence/attestations
+          bundle-prefix: web-runtime
+
+      - name: Attest Android APK
+        uses: ./.github/actions/attest-release-artifact
+        with:
+          subject-path: release-evidence/android/sidebyside-release-unsigned.apk
+          sbom-path: release-evidence/sbom/android-apk.spdx.json
+          bundle-directory: release-evidence/attestations
+          bundle-prefix: android-apk
+
+      - name: Attest Android AAB
+        uses: ./.github/actions/attest-release-artifact
+        with:
+          subject-path: release-evidence/android/sidebyside-release-unsigned.aab
+          sbom-path: release-evidence/sbom/android-aab.spdx.json
+          bundle-directory: release-evidence/attestations
+          bundle-prefix: android-aab
+
+      - name: Capture current trusted roots
+        run: gh attestation trusted-root > release-evidence/attestations/trusted_root.jsonl
+
+      - name: Verify retained attestations offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          signer="$GITHUB_REPOSITORY/.github/workflows/release-evidence.yml"
+          root="release-evidence/attestations/trusted_root.jsonl"
+
+          verify_subject() {
+            local subject="$1"
+            local prefix="$2"
+            gh attestation verify "$subject" -R "$repo" \
+              --bundle "release-evidence/attestations/${prefix}-provenance.json" \
+              --custom-trusted-root "$root" \
+              --signer-workflow "$signer"
+            gh attestation verify "$subject" -R "$repo" \
+              --bundle "release-evidence/attestations/${prefix}-sbom.json" \
+              --custom-trusted-root "$root" \
+              --signer-workflow "$signer" \
+              --predicate-type "https://spdx.dev/Document/v2.3"
+          }
+
+          verify_subject release-evidence/backend-runtime.image.tar backend-runtime
+          verify_subject release-evidence/web-runtime.image.tar web-runtime
+          verify_subject release-evidence/android/sidebyside-release-unsigned.apk android-apk
+          verify_subject release-evidence/android/sidebyside-release-unsigned.aab android-aab
+
+      - name: Upload offline-verification bundles
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-attestations-${{ github.sha }}
+          path: release-evidence/attestations/
+          if-no-files-found: error
+          retention-days: 30
