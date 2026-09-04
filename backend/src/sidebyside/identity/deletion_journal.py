@@ -237,9 +237,7 @@ class DeletionJournal:
                 or header.get("type") != _HEADER_TYPE
             ):
                 raise DeletionJournalError("Deletion journal header format is unsupported.")
-            header_instance = _parse_uuid(
-                header.get("instanceId"), field="instance identifier"
-            )
+            header_instance = _parse_uuid(header.get("instanceId"), field="instance identifier")
             if header_instance != self.instance_id:
                 raise DeletionJournalError("Deletion journal belongs to a different instance.")
 
@@ -256,16 +254,10 @@ class DeletionJournal:
                     payload.get("formatVersion") != JOURNAL_VERSION
                     or payload.get("type") != _TOMBSTONE_TYPE
                 ):
-                    raise DeletionJournalError(
-                        "Deletion journal tombstone format is unsupported."
-                    )
+                    raise DeletionJournalError("Deletion journal tombstone format is unsupported.")
 
-                instance_id = _parse_uuid(
-                    payload.get("instanceId"), field="instance identifier"
-                )
-                account_id = _parse_uuid(
-                    payload.get("accountId"), field="Account identifier"
-                )
+                instance_id = _parse_uuid(payload.get("instanceId"), field="instance identifier")
+                account_id = _parse_uuid(payload.get("accountId"), field="Account identifier")
                 accepted_at = _parse_timestamp(payload.get("acceptedAt"))
                 previous_digest = payload.get("previousDigest")
                 stored_digest = payload.get("digest")
@@ -288,9 +280,7 @@ class DeletionJournal:
                 del unsigned["digest"]
                 calculated = _digest(unsigned)
                 if not hmac.compare_digest(stored_digest, calculated):
-                    raise DeletionJournalError(
-                        "Deletion journal integrity validation failed."
-                    )
+                    raise DeletionJournalError("Deletion journal integrity validation failed.")
 
                 records.append(
                     DeletionTombstone(
