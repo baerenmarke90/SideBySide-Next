@@ -6,7 +6,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 from uuid import UUID, uuid4
@@ -33,7 +33,6 @@ JOURNAL_MODULE = ROOT / "backend" / "src" / "sidebyside" / "identity" / "deletio
 
 INSTANCE_ID = "01990000-0000-7000-8000-000000000901"
 OWNER_ID = "01990000-0000-7000-8000-000000000001"
-ACCEPTED_AT = "2026-09-04T17:30:00Z"
 
 
 def _load_journal_module() -> ModuleType:
@@ -51,7 +50,7 @@ def _load_journal_module() -> ModuleType:
     return module
 
 
-def _append_synthetic_tombstone(journal: Path) -> None:
+def _append_synthetic_tombstone(journal: Path, *, accepted_at: datetime) -> None:
     module = _load_journal_module()
     append_tombstone = getattr(module, "append_tombstone", None)
     if not callable(append_tombstone):
@@ -61,7 +60,7 @@ def _append_synthetic_tombstone(journal: Path) -> None:
             journal,
             instance_id=UUID(INSTANCE_ID),
             account_id=UUID(OWNER_ID),
-            accepted_at=datetime.fromisoformat(ACCEPTED_AT.replace("Z", "+00:00")),
+            accepted_at=accepted_at,
         )
     except Exception as exc:
         raise AcceptanceError("Synthetic deletion tombstone could not be recorded.") from exc
@@ -239,7 +238,7 @@ def run_acceptance() -> None:
 
             # The irreversible deletion happens after this recovery point.
             # Only the forward journal therefore knows about it.
-            _append_synthetic_tombstone(journal)
+            _append_synthetic_tombstone(journal, accepted_at=datetime.now(UTC))
 
             scenario.cleanup()
             scenario.start_postgres()
