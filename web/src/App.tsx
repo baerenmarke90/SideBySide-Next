@@ -612,7 +612,13 @@ function AuthenticatedApp({
           <Route
             path={MORE_PEOPLE_ROUTE}
             element={
-              <RelatedPeoplePage peopleApi={peopleApi} spaceId={spaceId} />
+              <RelatedPeoplePage
+                peopleApi={peopleApi}
+                spaceId={spaceId}
+                apiBaseUrl={apiBaseUrl}
+                accessToken={tokens.accessToken}
+                attachmentsApi={apis.attachments}
+              />
             }
           />
           <Route

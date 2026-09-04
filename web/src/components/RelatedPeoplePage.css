@@ -154,3 +154,188 @@ button.danger:hover:not(:disabled) {
     max-height: calc(100vh - var(--space-4));
   }
 }
+
+.people-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.people-card-item {
+  display: flex;
+  list-style: none;
+}
+
+.people-card {
+  font: inherit;
+  color: inherit;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.people-card:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-soft);
+}
+
+.people-card:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.people-avatar-circle {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--color-border-subtle);
+  user-select: none;
+}
+
+.people-avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.people-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.people-card-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 650;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.people-card-relationship {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.people-card-birthday {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.people-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-small);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  width: fit-content;
+}
+
+.people-card-badge-private {
+  background: var(--color-surface-subtle);
+  color: var(--color-text-muted);
+}
+
+.people-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.people-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: var(--space-2);
+  line-height: 1;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-small);
+}
+
+.people-modal-close:hover {
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+}
+
+.people-modal-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.people-modal-avatar-preview {
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--color-surface-subtle);
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 1.25rem;
+  border: 1px solid var(--color-border-subtle);
+}
+
+.people-modal-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.people-modal-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.people-modal-danger-zone {
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: var(--space-4);
+  margin-top: var(--space-2);
+  display: flex;
+  justify-content: flex-start;
+}
+
