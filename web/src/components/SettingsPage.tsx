@@ -1,12 +1,14 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { SpacesApi } from '../api/generated/apis/SpacesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
-import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
+import { Configuration } from '../api/generated/runtime';
 import { MORE_NOTIFICATIONS_ROUTE } from '../client/routes';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
 import { PartnerConnectionPanel } from './PartnerConnectionPanel';
-import { PartnerIdentityPanel } from './PartnerIdentityPanel';
 import { ProfileAppearancePanel } from './ProfileAppearancePanel';
+import { RelationshipSettingsSection } from './ProfilePageBase';
 import { SettingsIndex } from './SettingsIndex';
 import { TransferPanel } from './TransferPanel';
 import './SettingsPage.css';
@@ -21,6 +23,19 @@ export interface SettingsPageProps {
 export function SettingsPage(props: SettingsPageProps) {
   const { t } = useTranslation();
 
+  const configuration = useMemo(
+    () =>
+      new Configuration({
+        basePath: props.apiBaseUrl,
+        headers: { Authorization: `Bearer ${props.accessToken}` },
+      }),
+    [props.accessToken, props.apiBaseUrl],
+  );
+  const spacesApi = useMemo(
+    () => new SpacesApi(configuration),
+    [configuration],
+  );
+
   return (
     <div className="page settings-page">
       <PageHeader
@@ -32,12 +47,12 @@ export function SettingsPage(props: SettingsPageProps) {
       <SettingsIndex />
 
       <div className="settings-sections">
-        {/* 1. DARSTELLUNG */}
+        {/* 1. Appearance */}
         <div id="settings-appearance" className="settings-section">
           <ProfileAppearancePanel id="settings-appearance-panel" />
         </div>
 
-        {/* 2. BENACHRICHTIGUNGEN */}
+        {/* 2. Notifications */}
         <section
           id="settings-notifications"
           className="form-card settings-section"
@@ -61,40 +76,19 @@ export function SettingsPage(props: SettingsPageProps) {
           </div>
         </section>
 
-        {/* 3. VERBINDUNG / GEMEINSAMER BEREICH */}
+        {/* 3. Connection & Relationship Configuration */}
         <div
           id="settings-connection"
           className="settings-section settings-connection-block"
         >
-          <PartnerIdentityPanel {...props} />
+          <RelationshipSettingsSection
+            spacesApi={spacesApi}
+            spaceId={props.spaceId}
+          />
           <PartnerConnectionPanel {...props} />
         </div>
 
-        {/* 4. PRIVATSPHÄRE / MEIN BEREICH */}
-        <section
-          id="settings-privacy"
-          className="form-card settings-section"
-          aria-labelledby="settings-privacy-heading"
-        >
-          <div className="settings-section-head">
-            <p className="eyebrow">{t('privateArea.privacyLabel')}</p>
-            <h2 id="settings-privacy-heading">
-              {t('privateArea.entry.title')}
-            </h2>
-            <p>{t('privateArea.entry.body')}</p>
-            <p className="field-help">{t('privateArea.entry.privacy')}</p>
-          </div>
-          <div className="form-actions">
-            <Link
-              className="button-link secondary-link"
-              to={PRIVATE_AREA_ROOT_PATH}
-            >
-              {t('privateArea.entry.action')}
-            </Link>
-          </div>
-        </section>
-
-        {/* 5. DATEN & PORTABILITÄT */}
+        {/* 4. Data & Portability */}
         <div id="settings-data" className="settings-section">
           <TransferPanel
             apiBaseUrl={props.apiBaseUrl}

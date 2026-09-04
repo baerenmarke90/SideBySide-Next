@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
@@ -10,27 +10,35 @@ import type { ProfilePreferenceView } from '../api/generated/models/ProfilePrefe
 import { ProfileVisibility } from '../api/generated/models/ProfileVisibility';
 import type { SpaceProfileView } from '../api/generated/models/SpaceProfileView';
 import { Configuration } from '../api/generated/runtime';
+import { invalidateDashboard } from '../client/dashboardQueries';
+import { normalizeClientError } from '../client/problemDetails';
 import {
+  CATEGORIES,
   type ProfilePreferenceDraft,
+  SENTIMENTS,
   profilePreferenceCreateFromDraft,
   profilePreferenceUpdateFromDraft,
 } from '../client/profilePreferenceDraft';
-import { normalizeClientError } from '../client/problemDetails';
-import { invalidateDashboard } from '../client/dashboardQueries';
 import { useTranslation } from '../i18n';
+import { PartnerIdentityPanel } from './PartnerIdentityPanel';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
-
-const CATEGORIES = Object.values(PreferenceCategory);
-const SENTIMENTS = Object.values(PreferenceSentiment);
 
 type PreferenceVisibility =
   | typeof ProfileVisibility.SELF_PROFILE
   | typeof ProfileVisibility.PRIVATE_PARTNER_NOTE;
 
-function relationshipDateInput(value: Date | null | undefined): string {
+function relationshipDateInput(
+  value: Date | string | null | undefined,
+): string {
   if (!value) return '';
-  return value.toISOString().slice(0, 10);
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+  return '';
 }
 
 function relationshipDuration(
@@ -64,7 +72,62 @@ function relationshipDuration(
   return t('profiles.relationshipNotAvailable');
 }
 
-export function RelationshipProfileSection({
+/** Strictly read-only relationship summary for personal profile view. */
+export function RelationshipSummarySection({
+  spacesApi,
+  spaceId,
+}: {
+  spacesApi: SpacesApi;
+  spaceId: string;
+}) {
+  const { t } = useTranslation();
+
+  const profileQuery = useQuery({
+    queryKey: ['space-profile', spaceId],
+    queryFn: async () => {
+      try {
+        return await spacesApi.getSpaceProfileApiV1SpacesSpaceIdProfileGet({
+          spaceId,
+        });
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
+    retry: false,
+  });
+
+  return (
+    <section
+      className="layout-panel profile-section relationship-summary-section"
+      aria-labelledby="relationship-summary-title"
+    >
+      <h2 id="relationship-summary-title">{t('profiles.relationshipTitle')}</h2>
+
+      {profileQuery.isLoading ? (
+        <UiState kind="loading" title={t('profiles.loading')} />
+      ) : null}
+      {profileQuery.error ? (
+        <ProblemState
+          error={profileQuery.error}
+          onRetry={() => void profileQuery.refetch()}
+        />
+      ) : null}
+      {profileQuery.data ? (
+        <p className="profile-duration" role="status">
+          {profileQuery.data.relationshipStartedOn &&
+          profileQuery.data.showRelationshipDuration
+            ? t('profiles.relationshipCurrent', {
+                duration: relationshipDuration(profileQuery.data, t),
+              })
+            : t('profiles.relationshipNotAvailable')}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+/** Editable relationship configuration section housed in Settings. */
+export function RelationshipSettingsSection({
   spacesApi,
   spaceId,
 }: {
@@ -144,10 +207,17 @@ export function RelationshipProfileSection({
 
   return (
     <section
-      className="layout-panel profile-section"
-      aria-labelledby="relationship-profile-title"
+      className="form-card relationship-settings-section"
+      aria-labelledby="relationship-settings-title"
     >
-      <h2 id="relationship-profile-title">{t('profiles.relationshipTitle')}</h2>
+      <div className="settings-section-head">
+        <h2 id="relationship-settings-title">
+          {t('profiles.relationshipTitle')}
+        </h2>
+        <p className="settings-section-intro">
+          {t('profiles.relationshipDurationHelp')}
+        </p>
+      </div>
 
       {profileQuery.isLoading ? (
         <UiState kind="loading" title={t('profiles.loading')} />
@@ -238,7 +308,11 @@ export function RelationshipProfileSection({
   );
 }
 
-function PreferenceDialog({
+/** Backward-compatibility alias for previous imports. */
+export const RelationshipProfileSection = RelationshipSettingsSection;
+
+/** Viewport-safe and accessible modal dialog for creating and editing preferences or private notes. */
+export function PreferenceDialog({
   isOpen,
   preference,
   privateNote,
@@ -262,14 +336,82 @@ function PreferenceDialog({
   deleteError?: unknown;
 }) {
   const { t } = useTranslation();
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const firstInputRef = useRef<HTMLSelectElement>(null);
 
+  // Preserve and restore body scroll position and overflow.
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
+  // Initial focus on the first real focusable form control.
+  useEffect(() => {
+    if (isOpen) {
+      // Small timeout ensures element is mounted and accessible in DOM.
+      const timer = setTimeout(() => {
+        firstInputRef.current?.focus();
+      }, 20);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Keyboard navigation: Escape key closes, Tab/Shift+Tab trap inside dialog.
   useEffect(() => {
     if (!isOpen) return;
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onCancel();
+      if (e.key === 'Escape') {
+        onCancel();
+        return;
+      }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (
+            document.activeElement === first ||
+            !dialogRef.current.contains(document.activeElement)
+          ) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (
+            document.activeElement === last ||
+            !dialogRef.current.contains(document.activeElement)
+          ) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onCancel]);
+
+  // Dismiss on backdrop click outside dialog content.
+  useEffect(() => {
+    if (!isOpen) return;
+    const backdropEl = backdropRef.current;
+    if (!backdropEl) return;
+    function handleBackdropClick(e: MouseEvent) {
+      if (e.target === backdropEl) {
+        onCancel();
+      }
+    }
+    backdropEl.addEventListener('click', handleBackdropClick);
+    return () => backdropEl.removeEventListener('click', handleBackdropClick);
   }, [isOpen, onCancel]);
 
   if (!isOpen) return null;
@@ -290,15 +432,20 @@ function PreferenceDialog({
   }
 
   return (
-    <div className="preference-modal-backdrop" role="presentation">
+    <div
+      ref={backdropRef}
+      className="preference-modal-backdrop"
+      role="presentation"
+    >
       <div
+        ref={dialogRef}
         className="preference-modal-dialog sbs-motion-reveal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="pref-dialog-heading"
       >
         <div className="preference-modal-header">
-          <h3 id="pref-dialog-heading">
+          <h3 id="pref-dialog-heading" tabIndex={-1}>
             {preference
               ? privateNote
                 ? t('profiles.noteEditTitle')
@@ -329,6 +476,7 @@ function PreferenceDialog({
               {t('profiles.categoryLabel')}
             </label>
             <select
+              ref={firstInputRef}
               id={`preference-category-${privateNote ? 'private' : 'self'}`}
               name="category"
               defaultValue={preference?.category ?? PreferenceCategory.OTHER}
@@ -466,7 +614,23 @@ export function PreferenceManager({
   const [editing, setEditing] = useState<ProfilePreferenceView | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const triggerElementRef = useRef<HTMLElement | null>(null);
+
   const privateNote = visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE;
+  const triggerButtonLabel = privateNote
+    ? t('profiles.addNoteShort')
+    : t('profiles.addPreferenceShort');
+
+  function closeDialog() {
+    setDialogOpen(false);
+    setEditing(null);
+    saveMutation.reset();
+    deleteMutation.reset();
+    // Dynamically restore focus to the exact button or chip that triggered opening.
+    setTimeout(() => {
+      triggerElementRef.current?.focus();
+    }, 0);
+  }
 
   const saveMutation = useMutation({
     mutationFn: async (draft: ProfilePreferenceDraft) => {
@@ -497,8 +661,7 @@ export function PreferenceManager({
     },
     onSuccess: async () => {
       setSavedMessage(editing ? t('profiles.updated') : t('profiles.created'));
-      setEditing(null);
-      setDialogOpen(false);
+      closeDialog();
       await queryClient.invalidateQueries({
         queryKey: ['profile-preferences', spaceId],
       });
@@ -521,8 +684,7 @@ export function PreferenceManager({
     },
     onSuccess: async () => {
       setSavedMessage(t('profiles.deleted'));
-      setEditing(null);
-      setDialogOpen(false);
+      closeDialog();
       await queryClient.invalidateQueries({
         queryKey: ['profile-preferences', spaceId],
       });
@@ -543,7 +705,7 @@ export function PreferenceManager({
 
   return (
     <section
-      className="layout-panel profile-section profile-preferences-panel"
+      className={`layout-panel profile-section profile-preferences-panel ${privateNote ? 'private-partner-notes-panel' : ''}`}
       aria-labelledby={`profile-manager-${visibility}`}
     >
       <div className="profile-preferences-header">
@@ -554,14 +716,15 @@ export function PreferenceManager({
         <button
           type="button"
           className="secondary compact-action"
-          onClick={() => {
+          onClick={(e) => {
+            triggerElementRef.current = e.currentTarget;
             setEditing(null);
             setDialogOpen(true);
             saveMutation.reset();
             deleteMutation.reset();
           }}
         >
-          {t('profiles.addPreferenceShort')}
+          {triggerButtonLabel}
         </button>
       </div>
 
@@ -597,7 +760,8 @@ export function PreferenceManager({
                       key={pref.id}
                       type="button"
                       className="profile-preference-chip sbs-motion-lift"
-                      onClick={() => {
+                      onClick={(e) => {
+                        triggerElementRef.current = e.currentTarget;
                         setEditing(pref);
                         setDialogOpen(true);
                         saveMutation.reset();
@@ -632,12 +796,7 @@ export function PreferenceManager({
         privateNote={privateNote}
         pending={saveMutation.isPending}
         deletePending={deleteMutation.isPending}
-        onCancel={() => {
-          setDialogOpen(false);
-          setEditing(null);
-          saveMutation.reset();
-          deleteMutation.reset();
-        }}
+        onCancel={closeDialog}
         onSubmit={(draft) => {
           setSavedMessage(null);
           saveMutation.mutate(draft);
@@ -657,7 +816,36 @@ export function PreferenceManager({
   );
 }
 
-function PartnerProfileSection({
+/** Own profile preferences section (+ Vorliebe). */
+export function SelfPreferencesSection({
+  profilesApi,
+  spaceId,
+  accountId,
+  items,
+}: {
+  profilesApi: ProfilesApi;
+  spaceId: string;
+  accountId: string;
+  items: ProfilePreferenceView[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <PreferenceManager
+      profilesApi={profilesApi}
+      spaceId={spaceId}
+      accountId={accountId}
+      visibility={ProfileVisibility.SELF_PROFILE}
+      items={items}
+      title={t('profiles.selfTitle')}
+      intro={t('profiles.selfIntro')}
+      emptyTitle={t('profiles.emptySelfTitle')}
+      emptyBody={t('profiles.emptySelfBody')}
+    />
+  );
+}
+
+/** Partner's shared preferences section (read-only). */
+export function PartnerProfileSection({
   profilesApi,
   spaceId,
   partnerId,
@@ -669,12 +857,16 @@ function PartnerProfileSection({
   partnerName: string;
 }) {
   const { t } = useTranslation();
+
   const partnerQuery = useQuery({
     queryKey: ['partner-profile', spaceId, partnerId],
     queryFn: async () => {
       try {
         return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet(
-          { accountId: partnerId, spaceId },
+          {
+            accountId: partnerId,
+            spaceId,
+          },
         );
       } catch (error) {
         throw await normalizeClientError(error);
@@ -726,6 +918,43 @@ function PartnerProfileSection({
   );
 }
 
+/** Private partner notes section with visually explicit privacy indicator (+ Notiz). */
+export function PrivatePartnerNotesSection({
+  profilesApi,
+  spaceId,
+  partnerId,
+  partnerName,
+  items,
+}: {
+  profilesApi: ProfilesApi;
+  spaceId: string;
+  partnerId: string;
+  partnerName: string;
+  items: ProfilePreferenceView[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="private-partner-notes-wrapper">
+      <div className="private-partner-notes-badge" role="note">
+        <span aria-hidden="true">🔒</span>
+        <span>{t('privateArea.entry.privacy')}</span>
+      </div>
+      <PreferenceManager
+        profilesApi={profilesApi}
+        spaceId={spaceId}
+        accountId={partnerId}
+        visibility={ProfileVisibility.PRIVATE_PARTNER_NOTE}
+        items={items}
+        title={t('profiles.privateTitle', { name: partnerName })}
+        intro={t('profiles.privateIntro')}
+        emptyTitle={t('profiles.emptyPrivateTitle')}
+        emptyBody={t('profiles.emptyPrivateBody')}
+      />
+    </div>
+  );
+}
+
+/** Composite preference section for backward compatibility. */
 export function ProfilePreferencesSection({
   apiBaseUrl,
   accessToken,
@@ -785,18 +1014,17 @@ export function ProfilePreferencesSection({
     spaceQuery.data?.partners.find(
       (candidate) => candidate.id !== account.id,
     ) ?? null;
-  const selfPreferences =
-    preferencesQuery.data?.filter(
-      (preference) =>
-        preference.accountId === account.id &&
-        preference.visibility === ProfileVisibility.SELF_PROFILE,
-    ) ?? [];
-  const privatePartnerNotes = partner
-    ? (preferencesQuery.data?.filter(
-        (preference) =>
-          preference.accountId === partner.id &&
-          preference.visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE,
-      ) ?? [])
+
+  const selfPreferences = preferencesQuery.data
+    ? preferencesQuery.data.filter(
+        (pref) => pref.visibility === ProfileVisibility.SELF_PROFILE,
+      )
+    : [];
+
+  const privatePartnerNotes = preferencesQuery.data
+    ? preferencesQuery.data.filter(
+        (pref) => pref.visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE,
+      )
     : [];
 
   return (
@@ -811,21 +1039,22 @@ export function ProfilePreferencesSection({
         />
       ) : null}
       {preferencesQuery.data ? (
-        <PreferenceManager
+        <SelfPreferencesSection
           profilesApi={profilesApi}
           spaceId={spaceId}
           accountId={account.id}
-          visibility={ProfileVisibility.SELF_PROFILE}
           items={selfPreferences}
-          title={t('profiles.selfTitle')}
-          intro={t('profiles.selfIntro')}
-          emptyTitle={t('profiles.emptySelfTitle')}
-          emptyBody={t('profiles.emptySelfBody')}
         />
       ) : null}
 
       {partner ? (
-        <>
+        <div className="profile-partner-block">
+          <PartnerIdentityPanel
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            account={account}
+            spaceId={spaceId}
+          />
           <PartnerProfileSection
             profilesApi={profilesApi}
             spaceId={spaceId}
@@ -833,21 +1062,15 @@ export function ProfilePreferencesSection({
             partnerName={partner.displayName}
           />
           {preferencesQuery.data ? (
-            <PreferenceManager
+            <PrivatePartnerNotesSection
               profilesApi={profilesApi}
               spaceId={spaceId}
-              accountId={partner.id}
-              visibility={ProfileVisibility.PRIVATE_PARTNER_NOTE}
+              partnerId={partner.id}
+              partnerName={partner.displayName}
               items={privatePartnerNotes}
-              title={t('profiles.privateTitle', {
-                name: partner.displayName,
-              })}
-              intro={t('profiles.privateIntro')}
-              emptyTitle={t('profiles.emptyPrivateTitle')}
-              emptyBody={t('profiles.emptyPrivateBody')}
             />
           ) : null}
-        </>
+        </div>
       ) : null}
     </div>
   );

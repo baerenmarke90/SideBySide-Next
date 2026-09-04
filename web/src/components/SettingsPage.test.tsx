@@ -31,6 +31,15 @@ function renderSettingsPageFixture(): string {
     invitationsOpen: false,
   });
 
+  queryClient.setQueryData(['space-profile', SPACE_ID], {
+    relationshipStartedOn: '2022-02-14',
+    showRelationshipDuration: true,
+    durationDisplayMode: 'YEARS_MONTHS',
+    relationshipYears: 3,
+    relationshipMonths: 0,
+    relationshipDays: null,
+  });
+
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -46,7 +55,7 @@ function renderSettingsPageFixture(): string {
 }
 
 describe('SettingsPage', () => {
-  it('renders settings header and all five dedicated configuration sections', () => {
+  it('renders settings header, index, and four dedicated configuration sections', () => {
     const html = renderSettingsPageFixture();
 
     // Page header
@@ -60,20 +69,30 @@ describe('SettingsPage', () => {
     expect(html).toContain('id="settings-appearance"');
     expect(html).toContain('theme-control');
 
-    // Section 2: Notifications
+    // Section 2: Notifications (retained with inbox link and clear distinction)
     expect(html).toContain('id="settings-notifications"');
     expect(html).toContain('href="/more/notifications"');
 
-    // Section 3: Connection
+    // Section 3: Connection & Relationship configuration form
     expect(html).toContain('id="settings-connection"');
-    expect(html).toContain('partner-identity-title');
+    expect(html).toContain('relationship-settings-title');
+    expect(html).toContain('name="relationshipStartedOn"');
+    expect(html).toContain('name="showRelationshipDuration"');
 
-    // Section 4: Privacy / Mein Bereich
-    expect(html).toContain('id="settings-privacy"');
-    expect(html).toContain('href="/more/private/notes"');
-
-    // Section 5: Data & Portability
+    // Section 4: Data & Portability
     expect(html).toContain('id="settings-data"');
     expect(html).toContain('id="data-transfer"');
+  });
+
+  it('verifies strict settings information architecture: no private area and partner identity only in profile', () => {
+    const html = renderSettingsPageFixture();
+
+    // No Private Area in Settings
+    expect(html).not.toContain('id="settings-privacy"');
+    expect(html).not.toContain('/more/private');
+    expect(html).not.toContain('Mein Bereich');
+
+    // Partner identity belongs strictly in Profile, not Settings
+    expect(html).not.toContain('partner-identity-title');
   });
 });

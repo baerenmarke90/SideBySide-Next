@@ -4,7 +4,7 @@ import profileIdentity from '../i18n/locales/profileIdentity';
 import { SettingsIndex } from './SettingsIndex';
 
 describe('SettingsIndex', () => {
-  it('exposes navigation links to all five settings sections', () => {
+  it('exposes navigation links to all four settings sections and excludes privacy', () => {
     const html = renderToStaticMarkup(<SettingsIndex />);
 
     expect(html).toContain('href="#settings-appearance"');
@@ -16,10 +16,9 @@ describe('SettingsIndex', () => {
     expect(html).toContain('href="#settings-connection"');
     expect(html).toContain(`>${profileIdentity.settingsRelationship}<`);
 
-    expect(html).toContain('href="#settings-privacy"');
-    expect(html).toContain(`>${profileIdentity.settingsPrivacy}<`);
-
     expect(html).toContain('href="#settings-data"');
     expect(html).toContain(`>${profileIdentity.settingsData}<`);
+
+    expect(html).not.toContain('href="#settings-privacy"');
   });
 });

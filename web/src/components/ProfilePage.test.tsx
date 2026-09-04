@@ -104,12 +104,17 @@ describe('Profile page reorganization', () => {
     expect(html).not.toContain('preference-modal-dialog');
   });
 
-  it('focuses strictly on personal identity and relationship, without technical settings or private area sections', () => {
+  it('focuses strictly on personal identity, partner identity, and read-only relationship summary', () => {
     const html = renderProfilePageFixture();
 
-    // Contains personal identity & relationship
+    // Contains personal identity, partner identity, and read-only relationship summary
     expect(html).toContain('profile-identity-hero-card');
-    expect(html).toContain('relationship-profile-title');
+    expect(html).toContain('partner-identity-title');
+    expect(html).toContain('relationship-summary-title');
+
+    // Does NOT contain editable relationship settings form in Profile
+    expect(html).not.toContain('relationship-profile-title');
+    expect(html).not.toContain('name="relationshipStartedOn"');
 
     // Does not contain any settings elements or private area entry
     expect(html).not.toContain('profile-settings-separator');
@@ -122,6 +127,41 @@ describe('Profile page reorganization', () => {
     expect(html).not.toContain('id="profile-private-settings"');
     expect(html).not.toContain('id="profile-data-settings"');
     expect(html).not.toContain('id="data-transfer"');
-    expect(html).not.toContain('href="/more/private/notes"');
+    expect(html).not.toContain('href="/more/private');
+    expect(html).not.toContain('/more/private/notes');
+  });
+
+  it('differentiates + Vorliebe for own profile vs + Notiz with privacy badge for private partner notes', () => {
+    const html = renderProfilePageFixture([
+      {
+        id: 'pref-self',
+        accountId: ACCOUNT_ID,
+        category: PreferenceCategory.FOOD,
+        sentiment: PreferenceSentiment.LOVE,
+        topic: 'Pasta',
+        value: 'Al dente mit Salbei',
+        visibility: ProfileVisibility.SELF_PROFILE,
+        version: 1,
+      },
+      {
+        id: 'pref-note',
+        accountId: 'account-2',
+        category: PreferenceCategory.FLOWERS,
+        sentiment: PreferenceSentiment.LOVE,
+        topic: 'Lieblingsblumen',
+        value: 'Pfingstrosen im Juni',
+        visibility: ProfileVisibility.PRIVATE_PARTNER_NOTE,
+        version: 1,
+      },
+    ]);
+
+    // Self preferences use + Vorliebe
+    expect(html).toContain('+ Vorliebe');
+    expect(html).toContain('Pasta');
+
+    // Private partner notes use + Notiz and carry privacy indicator
+    expect(html).toContain('+ Notiz');
+    expect(html).toContain('Lieblingsblumen');
+    expect(html).toContain('private-partner-notes-badge');
   });
 });

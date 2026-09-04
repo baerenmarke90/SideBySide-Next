@@ -7,7 +7,7 @@ import { PageHeader } from './PageHeader';
 import { ProfileIdentityPanel } from './ProfileIdentityPanel';
 import {
   ProfilePreferencesSection,
-  RelationshipProfileSection,
+  RelationshipSummarySection,
 } from './ProfilePageBase';
 import './ProfilePage.css';
 
@@ -21,8 +21,14 @@ export interface ProfilePageProps {
 export function ProfilePage(props: ProfilePageProps) {
   const { t } = useTranslation();
   const [displayName, setDisplayName] = useState(props.account.displayName);
-  const currentAccount = { ...props.account, displayName };
-  const currentProps = { ...props, account: currentAccount };
+  const currentAccount = useMemo(
+    () => ({ ...props.account, displayName }),
+    [props.account, displayName],
+  );
+  const currentProps = useMemo(
+    () => ({ ...props, account: currentAccount }),
+    [props, currentAccount],
+  );
 
   const configuration = useMemo(
     () =>
@@ -45,20 +51,19 @@ export function ProfilePage(props: ProfilePageProps) {
         description={t('profiles.intro')}
       />
 
-      {/* 1. PROFIL = DIE PERSON */}
+      {/* 1. Identity panel for current user */}
       <ProfileIdentityPanel
         {...currentProps}
         onDisplayNameChanged={(nextDisplayName) => {
-          props.account.displayName = nextDisplayName;
           setDisplayName(nextDisplayName);
         }}
       />
 
-      {/* 2. MEINE VORLIEBEN (Categorized Chips, [+ Vorliebe] Modal Dialog) */}
+      {/* 2. Preferences & partner block */}
       <ProfilePreferencesSection {...currentProps} />
 
-      {/* 3. BEZIEHUNG & GEMEINSAME ZEIT */}
-      <RelationshipProfileSection
+      {/* 3. Read-only relationship summary */}
+      <RelationshipSummarySection
         spacesApi={spacesApi}
         spaceId={props.spaceId}
       />

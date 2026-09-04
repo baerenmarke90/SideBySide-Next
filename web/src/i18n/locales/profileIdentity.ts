@@ -38,8 +38,8 @@ const profileIdentity = {
   settingsRelationship: 'Partner und Verbindung',
   settingsNotifications: 'Benachrichtigungen',
   settingsNotificationsIntro:
-    'Hier findest du Neuigkeiten, Aktivitäts-Updates und Mitteilungen aus eurem gemeinsamen Raum.',
-  settingsNotificationsAction: 'Benachrichtigungen ansehen',
+    'Hier legst du fest, wie SideBySide dich über Neuigkeiten informiert. Deine aktuellen Mitteilungen findest du im Posteingang.',
+  settingsNotificationsAction: 'Zum Benachrichtigungs-Posteingang',
   settingsPrivacy: 'Privater Bereich',
   settingsData: 'Daten und Portabilität',
   appearanceIntro:

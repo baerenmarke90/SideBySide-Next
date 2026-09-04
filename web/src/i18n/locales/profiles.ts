@@ -1,8 +1,8 @@
 const profiles = {
   eyebrow: 'Profil',
-  title: 'Eure Profile und Vorlieben',
+  title: 'Dein Profil und Partner',
   intro:
-    'Verwaltet eure Beziehungsanzeige, eigene Vorlieben und private Notizen über euren Partner an einem Ort.',
+    'Dein persönliches Profil, deine freigegebenen Vorlieben und das Profil deines Partners.',
   settingsRailAria: 'Konto und Beziehung',
   accountTitle: 'Mein Konto',
   accountName: 'Anzeigename',
@@ -38,6 +38,7 @@ const profiles = {
   preferenceEditTitle: 'Vorliebe bearbeiten',
   addPreference: 'Vorliebe hinzufügen',
   addPreferenceShort: '+ Vorliebe',
+  addNoteShort: '+ Notiz',
   editName: 'Name bearbeiten',
   noteCreateTitle: 'Private Notiz hinzufügen',
   noteEditTitle: 'Private Notiz bearbeiten',

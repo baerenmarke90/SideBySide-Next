@@ -24,9 +24,6 @@ export function SettingsIndex() {
           </a>
         </li>
         <li>
-          <a href="#settings-privacy">{t('profileIdentity.settingsPrivacy')}</a>
-        </li>
-        <li>
           <a href="#settings-data">{t('profileIdentity.settingsData')}</a>
         </li>
       </ul>
