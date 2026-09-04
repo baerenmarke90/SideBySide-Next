@@ -56,6 +56,12 @@ class TestSelfLeaveHttp:
     def test_leave_is_idempotent_and_account_session_survives(self, production_client) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         setup = _setup_relationship(maker)
+        with maker() as session:
+            anna = session.get(Account, setup["anna_id"])
+            assert anna is not None
+            other_space = make_space(session, anna)
+            other_space_id = other_space.id
+            session.commit()
 
         first = client.post(
             f"/api/v1/spaces/{setup['space_id']}/membership/leave",
@@ -73,6 +79,7 @@ class TestSelfLeaveHttp:
         )
         assert memberships.status_code == 200
         assert all(item["spaceId"] != str(setup["space_id"]) for item in memberships.json())
+        assert any(item["spaceId"] == str(other_space_id) for item in memberships.json())
 
         assert (
             client.get(
@@ -80,6 +87,13 @@ class TestSelfLeaveHttp:
                 headers=auth(setup["anna_token"]),
             ).status_code
             == 404
+        )
+        assert (
+            client.get(
+                f"/api/v1/spaces/{other_space_id}",
+                headers=auth(setup["anna_token"]),
+            ).status_code
+            == 200
         )
         assert (
             client.get(
@@ -212,7 +226,10 @@ class TestOffboardingPrivacy:
             assert session.get(PrivateNote, ids["own_exited"]) is None
             assert session.get(PrivateNote, ids["partner_private"]) is not None
             assert session.get(PrivateNote, ids["own_other_space"]) is not None
-            assert session.get(Memory, ids["shared"]) is not None
+            shared_after = session.get(Memory, ids["shared"])
+            assert shared_after is not None
+            assert shared_after.owner_id == setup["anna_id"]
+            assert shared_after.privacy_class == PrivacyClass.SPACE_SHARED.value
 
 
 class TestRelationshipHistoryLock:
