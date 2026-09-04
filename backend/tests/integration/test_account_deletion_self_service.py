@@ -142,7 +142,9 @@ class TestSelfServiceAccountDeletion:
             assert device_session is not None and device_session.revoked_at is None
             assert session.get(AccountDeletion, account_id) is None
             assert session.execute(
-                select(func.count()).select_from(Job).where(Job.kind == deletion_jobs.CONVERGENCE_JOB)
+                select(func.count()).select_from(Job).where(
+                    Job.kind == deletion_jobs.CONVERGENCE_JOB
+                )
             ).scalar_one() == 0
 
     def test_confirmation_literal_is_required_before_authority_access(

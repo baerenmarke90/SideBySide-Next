@@ -30,13 +30,8 @@ from sidebyside.identity.deletion_models import (
     DeletionConfirmationMailStatus,
 )
 from sidebyside.identity.models import Account, AccountEmail
-from sidebyside.mail import (
-    MailMessage,
-    MailSender,
-    MailTransportError,
-    MailUnavailableError,
-    sender as configured_mail_sender,
-)
+from sidebyside.mail import MailMessage, MailSender, MailTransportError, MailUnavailableError
+from sidebyside.mail import sender as configured_mail_sender
 
 log = logging.getLogger(__name__)
 
