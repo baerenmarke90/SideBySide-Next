@@ -21,6 +21,7 @@ import {
   notificationsListQueryKey,
   notificationUnreadCountQueryKey,
 } from '../client/notificationQueries';
+import { getNotificationItemTitle } from '../client/notificationTitle';
 import { normalizeClientError } from '../client/problemDetails';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { AuthorAvatar } from './PersonIdentity';
@@ -451,35 +452,7 @@ function NotificationCard({
   const actorName = isOwn ? t('m5s5.activity.you') : item.actor?.displayName;
   const targetTitle = item.target?.title;
 
-  let titleContent: ReactNode;
-  if (item.kind === 'COMMENT_CREATED') {
-    if (actorName && targetTitle) {
-      titleContent = t('m5s5.notificationAction.COMMENT_CREATED_WITH_TARGET', {
-        name: actorName,
-        target: targetTitle,
-      });
-    } else if (actorName) {
-      titleContent = t('m5s5.notificationAction.COMMENT_CREATED', {
-        name: actorName,
-      });
-    } else if (targetTitle) {
-      titleContent = `${t('m5s5.notificationKind.COMMENT_CREATED')}: „${targetTitle}“`;
-    } else {
-      titleContent = t('m5s5.notificationKind.COMMENT_CREATED');
-    }
-  } else if (item.kind === 'THINKING_OF_YOU') {
-    titleContent = actorName
-      ? t('m5s5.notificationAction.THINKING_OF_YOU', { name: actorName })
-      : t('m5s5.notificationAction.THINKING_OF_YOU_ANON');
-  } else if (item.kind === 'REMINDER_DUE') {
-    titleContent = targetTitle
-      ? t('m5s5.notificationAction.REMINDER_DUE_WITH_TARGET', {
-          target: targetTitle,
-        })
-      : t('m5s5.notificationAction.REMINDER_DUE');
-  } else {
-    titleContent = t('m5s5.notificationKind.generic');
-  }
+  const titleContent = getNotificationItemTitle(item, t, currentAccountId);
 
   const inner = (
     <div

@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import navigation from '../i18n/locales/navigation';
@@ -221,5 +223,87 @@ describe('AppShell', () => {
     const html = renderShell('/story');
 
     expect(html).toContain('Unsere Aktivitäten');
+  });
+
+  it('updates unread bell dot and label dynamically on /today without visiting notifications or clicking bell', async () => {
+    window.matchMedia =
+      window.matchMedia ||
+      vi.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+
+    vi.spyOn(global, 'fetch').mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ unreadCount: 0 }), { status: 200 })));
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    queryClient.setQueryData(['profile-identity', 'space-1', 'account-1'], {
+      accountId: 'account-1',
+      displayName: 'Alex Example',
+      profileAttachmentId: null,
+      version: 1,
+    });
+    queryClient.setQueryData(
+      ['m5-s5', 'notification-unread-count', 'space-1'],
+      { unreadCount: 0 },
+    );
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/today']}>
+          <AppShell
+            onLogout={() => undefined}
+            apiBaseUrl="http://api.example.test"
+            accessToken="test-token"
+            account={{ id: 'account-1', displayName: 'Alex Example' }}
+            spaceId="space-1"
+          >
+            <h1>Today Content</h1>
+          </AppShell>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Initial state on /today: unread count is 0, no notification dot
+    await waitFor(() => {
+      expect(container.querySelector('.notification-dot')).toBeNull();
+    });
+    let trigger = container.querySelector('.header-notifications-trigger');
+    expect(trigger?.getAttribute('aria-label')).toBe(navigation.notifications);
+
+    // Server receives unread notification while user stays on /today
+    act(() => {
+      queryClient.setQueryData(
+        ['m5-s5', 'notification-unread-count', 'space-1'],
+        { unreadCount: 1 },
+      );
+    });
+
+    // Dot appears without visiting notifications or clicking bell
+    await waitFor(() => {
+      expect(container.querySelector('.notification-dot')).not.toBeNull();
+    });
+    trigger = container.querySelector('.header-notifications-trigger');
+    expect(trigger?.getAttribute('aria-label')).toContain('1 ungelesen');
+
+    // Unread count returns to 0 -> dot disappears
+    act(() => {
+      queryClient.setQueryData(
+        ['m5-s5', 'notification-unread-count', 'space-1'],
+        { unreadCount: 0 },
+      );
+    });
+
+    await waitFor(() => {
+      expect(container.querySelector('.notification-dot')).toBeNull();
+    });
+    trigger = container.querySelector('.header-notifications-trigger');
+    expect(trigger?.getAttribute('aria-label')).toBe(navigation.notifications);
   });
 });

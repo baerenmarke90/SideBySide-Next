@@ -136,6 +136,195 @@
   color: var(--color-text-secondary);
 }
 
+.header-notifications-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.header-notifications-trigger {
+  list-style: none;
+  cursor: pointer;
+}
+
+.header-notifications-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.header-notifications-popover {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(22rem, calc(100vw - 2rem));
+  max-height: min(28rem, calc(100vh - 6rem));
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-raised);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.header-notifications-head {
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.header-notifications-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.header-notifications-body {
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.header-notifications-loading,
+.header-notifications-empty {
+  padding: var(--space-4) var(--space-3);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.header-notifications-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.header-notifications-item-wrapper {
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.header-notifications-item-wrapper:last-child {
+  border-bottom: none;
+}
+
+.header-notifications-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: background-color 0.15s ease;
+}
+
+.header-notifications-item:hover {
+  background: var(--color-surface-subtle);
+}
+
+.header-notifications-item:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.header-notifications-item-unread {
+  background: color-mix(in srgb, var(--color-brand-surface) 35%, transparent);
+}
+
+.header-notifications-item-avatar {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.header-notifications-fallback-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
+}
+
+.header-notifications-item-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header-notifications-item-title {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.header-notifications-item-unread .header-notifications-item-title {
+  font-weight: 700;
+}
+
+.header-notifications-item-time {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.header-notification-unread-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-brand);
+}
+
+.header-notifications-footer {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-subtle);
+  text-align: center;
+}
+
+.header-notifications-all-link {
+  display: inline-block;
+  padding: var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-brand);
+  text-decoration: none;
+}
+
+.header-notifications-all-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .header-notifications-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  .header-notifications-popover {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 80vh;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    border-bottom: none;
+    z-index: 91;
+    padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
+  }
+}
+
 /*
  * Creating content is the primary desktop action and belongs in the sidebar
  * rather than in the destination list. On compact viewports the same route

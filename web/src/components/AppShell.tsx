@@ -21,6 +21,7 @@ import {
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
+import { HeaderNotificationsMenu } from './HeaderNotificationsMenu';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
 import { Snackbar } from './Snackbar';
@@ -140,7 +141,7 @@ export function AppShell({
       new NotificationsApi(
         new Configuration({
           basePath: apiBaseUrl,
-          accessToken,
+          headers: { Authorization: `Bearer ${accessToken}` },
         }),
       ),
     [apiBaseUrl, accessToken],
@@ -196,21 +197,13 @@ export function AppShell({
               <DestinationIcon icon="search" />
             </span>
           </NavLink>
-          <NavLink
-            to={MORE_NOTIFICATIONS_ROUTE}
-            className={({ isActive }) =>
-              `shell-utility-link${isActive ? ' shell-utility-link-active' : ''}`
-            }
-            aria-label={bellAriaLabel}
-            title={bellAriaLabel}
-          >
-            <span className="shell-nav-icon" aria-hidden="true">
-              <DestinationIcon icon="notifications" />
-              {unreadCount > 0 ? (
-                <span className="notification-dot" aria-hidden="true" />
-              ) : null}
-            </span>
-          </NavLink>
+          <HeaderNotificationsMenu
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            spaceId={spaceId}
+            unreadCount={unreadCount}
+            currentAccountId={account.id}
+          />
           <HeaderProfileMenu
             apiBaseUrl={apiBaseUrl}
             accessToken={accessToken}
