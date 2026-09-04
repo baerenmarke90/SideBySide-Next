@@ -63,7 +63,7 @@ jobs:
             scripts/test_self_hosted_recovery.py \
             scripts/test_self_hosted_deletion_reconcile.py \
             backend/scripts/recovery_fixture.py \
-            backend/scripts/reconcile_account_deletions.py
+            backend/src/sidebyside/identity/deletion_reconcile.py
           python3 -m unittest \
             scripts.test_self_hosted_recovery \
             scripts.test_self_hosted_deletion_reconcile
