@@ -60,6 +60,17 @@ def test_accept_is_append_only_hash_chained_and_idempotent(tmp_path: Path) -> No
     )
 
 
+def test_read_all_supports_read_only_recovery_mount(tmp_path: Path) -> None:
+    journal, instance_id, path = _initialize(tmp_path)
+    account_id = uuid4()
+    journal.accept(account_id, accepted_at=datetime.now(UTC))
+    path.chmod(0o400)
+
+    recovered = DeletionJournal(path, instance_id=instance_id).read_all()
+
+    assert tuple(record.account_id for record in recovered) == (account_id,)
+
+
 def test_open_rejects_foreign_instance_identity(tmp_path: Path) -> None:
     journal, _, path = _initialize(tmp_path)
     journal.accept(uuid4(), accepted_at=datetime.now(UTC))
@@ -92,6 +103,15 @@ def test_truncated_final_record_fails_closed(tmp_path: Path) -> None:
     path.write_bytes(path.read_bytes().rstrip(b"\n"))
 
     with pytest.raises(DeletionJournalError, match="truncated final record"):
+        journal.read_all()
+
+
+def test_oversized_record_fails_closed_without_unbounded_line_read(tmp_path: Path) -> None:
+    journal, _, path = _initialize(tmp_path)
+    with path.open("ab") as target:
+        target.write(b"{" + (b"x" * 5000) + b"}\n")
+
+    with pytest.raises(DeletionJournalError, match="maximum safe size"):
         journal.read_all()
 
 
