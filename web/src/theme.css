@@ -8,7 +8,7 @@
   --color-brand-ocean-light: #3d3446;
   --color-surface-raised: #fff;
   --color-surface-overlay: #ffffffea;
-  --color-header-surface: #faf7f5e8;
+  --color-header-surface: #faf7f5;
   --color-header-border: #ede6dfcc;
   --color-brand-text: #be2340;
   --color-brand-glow: #d93d5926;
@@ -46,7 +46,7 @@
   --color-surface-subtle: #2c2333;
   --color-surface-raised: #32283a;
   --color-surface-overlay: #231c29f2;
-  --color-header-surface: #18131de8;
+  --color-header-surface: #18131d;
   --color-header-border: #382e42dd;
   --color-text: #fcf8fa;
   --color-text-secondary: #d6cbe0;
@@ -103,7 +103,7 @@
     --color-surface-subtle: #2c2333;
     --color-surface-raised: #32283a;
     --color-surface-overlay: #231c29f2;
-    --color-header-surface: #18131de8;
+    --color-header-surface: #18131d;
     --color-header-border: #382e42dd;
     --color-text: #fcf8fa;
     --color-text-secondary: #d6cbe0;
@@ -186,7 +186,7 @@ body.theme-vault {
   --color-surface-overlay: #fffffffa;
   --color-surface-panel: #ffffff;
   --color-surface-panel-tint: #fcf6f8;
-  --color-header-surface: #faf5f6f0;
+  --color-header-surface: #faf5f6;
   --color-header-border: #f0dfe4;
   --color-text: #281920;
   --color-text-secondary: #634d57;
@@ -217,7 +217,7 @@ body.theme-vault {
   --color-surface-overlay: #241920fa;
   --color-surface-panel: #241920;
   --color-surface-panel-tint: #1e141a;
-  --color-header-surface: #191216f0;
+  --color-header-surface: #191216;
   --color-header-border: #3d2834;
   --color-text: #fcf8fa;
   --color-text-secondary: #ded1d8;
@@ -249,7 +249,7 @@ body.theme-vault {
     --color-surface-overlay: #241920fa;
     --color-surface-panel: #241920;
     --color-surface-panel-tint: #1e141a;
-    --color-header-surface: #191216f0;
+    --color-header-surface: #191216;
     --color-header-border: #3d2834;
     --color-text: #fcf8fa;
     --color-text-secondary: #ded1d8;

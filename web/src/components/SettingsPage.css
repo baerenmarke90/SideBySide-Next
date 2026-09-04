@@ -11,7 +11,7 @@
 }
 
 .settings-section {
-  scroll-margin-top: 5rem;
+  scroll-margin-top: calc(var(--topbar-height, 72px) + var(--space-4));
 }
 
 .settings-section-head {

@@ -90,6 +90,10 @@
   box-sizing: border-box;
 }
 
+:target {
+  scroll-margin-top: calc(var(--topbar-height, 72px) + var(--space-4));
+}
+
 html {
   min-width: 320px;
   background: var(--color-background);
