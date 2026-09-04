@@ -22,6 +22,7 @@ from sidebyside.db.session import unit_of_work
 from sidebyside.demo import reset as demo_reset
 from sidebyside.engagement import push as push_delivery
 from sidebyside.engagement import service as engagement_service
+from sidebyside.identity import deletion_jobs as account_deletion_jobs
 from sidebyside.jobs import maintenance
 from sidebyside.jobs.worker import run_once
 from sidebyside.observability import configure_logging
@@ -87,6 +88,7 @@ def main() -> None:
     reminder_runtime.register_handlers()
     demo_reset.register_handlers()
     transfer_jobs.register_handlers()
+    account_deletion_jobs.register_handlers()
     _ensure_maintenance()
     last_checked = time.monotonic()
 
