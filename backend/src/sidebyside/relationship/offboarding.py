@@ -50,6 +50,7 @@ def _membership_for_update(
     account_id: UUID,
     space_id: UUID,
 ) -> Membership:
+    """Take the exclusive side of the central Membership lifecycle barrier."""
     membership = session.execute(
         select(Membership)
         .where(
@@ -64,11 +65,11 @@ def _membership_for_update(
 
 
 def _revoke_open_invitations(session: Session, space_id: UUID) -> int:
-    """Revoke invitations while holding the Space lifecycle lock.
+    """Revoke invitations after the Space lifecycle row is locked.
 
-    Invitation acceptance follows the same lock order: Space first, invitation
-    second. That keeps a stale token from slipping through the transition and
-    avoids a Space/invitation lock inversion.
+    Invitation acceptance also locks Space before Invitation. Once self-exit
+    owns the Space row, no stale token can cross the transition while these
+    invitation rows are being revoked.
     """
     current_time = now()
     invitations = (
@@ -92,10 +93,15 @@ def _revoke_open_invitations(session: Session, space_id: UUID) -> int:
 def leave_space(session: Session, account: Account, space_id: UUID) -> LeaveSpaceResult:
     """End only the caller's Membership in one Space.
 
-    The Space row is the serialization boundary shared with joining. A caller
-    who already left receives the same safe historical result without creating
-    another lifecycle. A caller that never belonged to the Space receives the
-    same privacy-safe 404 used by normal tenant access.
+    The caller's Membership is locked first because ordinary tenant requests
+    hold a shared lock on that same row for their transaction. This guarantees
+    that an already-authorized write finishes before `LEFT` becomes durable and
+    that a later request cannot pass authorization. The Space row is then
+    locked to serialize joining/invitations with the history transition.
+
+    A caller who already left receives the same safe historical result without
+    creating another lifecycle. A caller that never belonged to the Space
+    receives the same privacy-safe 404 used by normal tenant access.
 
     Space-scoped OWNER_ONLY database rows are removed in the acceptance
     transaction so a successful response cannot strand readable private state.
@@ -103,7 +109,6 @@ def leave_space(session: Session, account: Account, space_id: UUID) -> LeaveSpac
     slice; attachments are deliberately excluded by the shared retention helper.
     """
     _ensure_self_exit_allowed()
-    service.lock_space(session, space_id)
     membership = _membership_for_update(
         session,
         account_id=account.id,
@@ -118,6 +123,7 @@ def leave_space(session: Session, account: Account, space_id: UUID) -> LeaveSpac
             owner_only_cleanup=OwnerOnlyCleanupResult(total=0, by_table={}),
         )
 
+    service.lock_space(session, space_id)
     service.end_membership(membership)
     revoked = _revoke_open_invitations(session, space_id)
     cleanup = hard_delete_owner_only_in_space(session, account.id, space_id)
