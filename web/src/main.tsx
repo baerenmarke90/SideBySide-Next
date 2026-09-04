@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
+import { isDemoModeConfigured } from './client/demoMode';
 import { DemoBanner } from './components/DemoBanner';
 import { i18n } from './i18n';
 import { initializeTheme } from './theme';
@@ -27,16 +28,6 @@ initializeTheme();
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, retry: false } },
 });
-
-const isDemoModeConfigured = () => {
-  if (typeof window === 'undefined') return false;
-  if (import.meta.env.VITE_SBS_DEMO_MODE === 'true') return true;
-  if (new URLSearchParams(window.location.search).get('demo') === 'true') {
-    window.sessionStorage?.setItem('sbs-demo-mode', 'true');
-    return true;
-  }
-  return window.sessionStorage?.getItem('sbs-demo-mode') === 'true';
-};
 
 const demoMode = isDemoModeConfigured();
 const demoResetTimerEnabled =
