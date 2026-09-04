@@ -86,6 +86,10 @@ def _enforce_fail_closed(
     )
     for membership in memberships:
         end_membership(membership)
+        # Restore reconciliation can happen long after the original deletion.
+        # Preserve the accepted deletion instant as the historical membership
+        # end rather than recording the later restore/replay time.
+        membership.ended_at = deletion.accepted_at
 
     # An invitation created before deletion must not remain a usable bearer
     # path into a Space after the creator has lost all active Memberships.
