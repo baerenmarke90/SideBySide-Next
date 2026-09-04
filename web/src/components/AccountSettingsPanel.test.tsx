@@ -41,10 +41,9 @@ function advanceToFinalConfirmation() {
   );
   expect(screen.getByRole('dialog')).toBeDefined();
   expect(screen.getByText(accountSettings.consequencesTitle)).toBeDefined();
-  const exportLink = screen.getByRole('link', {
-    name: accountSettings.exportBefore,
-  }) as HTMLAnchorElement;
-  expect(exportLink.getAttribute('href')).toBe('#settings-data');
+  expect(
+    screen.getByRole('button', { name: accountSettings.exportBefore }),
+  ).toBeDefined();
 
   fireEvent.click(
     screen.getByRole('button', { name: accountSettings.continueAction }),

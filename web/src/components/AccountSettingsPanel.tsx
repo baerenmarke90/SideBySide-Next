@@ -109,6 +109,12 @@ export function AccountSettingsPanel({
     mutation.reset();
   }
 
+  function goToDataExport() {
+    if (mutation.isPending) return;
+    closeDialog();
+    window.location.hash = 'settings-data';
+  }
+
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Escape' && !mutation.isPending) {
       event.preventDefault();
@@ -190,13 +196,7 @@ export function AccountSettingsPanel({
       </section>
 
       {step ? (
-        <div
-          className="account-deletion-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeDialog();
-          }}
-        >
+        <div className="account-deletion-backdrop" role="presentation">
           <section
             ref={dialogRef}
             className="modal-card account-deletion-dialog"
@@ -228,13 +228,13 @@ export function AccountSettingsPanel({
                   <li>{t('accountSettings.consequenceIrreversible')}</li>
                 </ul>
                 <div className="form-actions account-deletion-actions">
-                  <a
-                    className="button-link secondary-link"
-                    href="#settings-data"
-                    onClick={closeDialog}
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={goToDataExport}
                   >
                     {t('accountSettings.exportBefore')}
-                  </a>
+                  </button>
                   <button
                     ref={cancelButtonRef}
                     type="button"
