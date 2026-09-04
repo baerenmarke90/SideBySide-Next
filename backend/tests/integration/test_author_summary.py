@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 
 from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.attachments.binding import AccountProfileAttachment
-from sidebyside.attachments.models import Attachment, AttachmentStatus
+from sidebyside.attachments.models import Attachment, AttachmentPayload, AttachmentStatus, MediaType
+from sidebyside.authorization import PrivacyClass
+from sidebyside.core.clock import now
 from tests.conftest import make_account, make_space, requires_database
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -28,10 +30,13 @@ def test_resolve_author_summaries_without_and_with_avatars(session: Session) -> 
         id=uuid4(),
         space_id=space.id,
         owner_id=user_with_avatar.id,
-        filename="profile.png",
-        content_type="image/png",
-        byte_size=2048,
+        privacy_class=PrivacyClass.OWNER_ONLY.value,
         status=AttachmentStatus.READY.value,
+        media_type=MediaType.IMAGE.value,
+        declared_mime_type="image/png",
+        declared_size=2048,
+        ready_at=now(),
+        payload=AttachmentPayload(original_name="profile.png"),
     )
     session.add(avatar_attachment)
     session.flush()
@@ -73,10 +78,13 @@ def test_resolve_author_summary_single(session: Session) -> None:
         id=uuid4(),
         space_id=space.id,
         owner_id=user.id,
-        filename="avatar.jpg",
-        content_type="image/jpeg",
-        byte_size=1024,
+        privacy_class=PrivacyClass.OWNER_ONLY.value,
         status=AttachmentStatus.READY.value,
+        media_type=MediaType.IMAGE.value,
+        declared_mime_type="image/jpeg",
+        declared_size=1024,
+        ready_at=now(),
+        payload=AttachmentPayload(original_name="avatar.jpg"),
     )
     session.add(avatar)
     session.flush()
