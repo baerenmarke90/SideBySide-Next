@@ -104,15 +104,24 @@ describe('Profile page reorganization', () => {
     expect(html).not.toContain('preference-modal-dialog');
   });
 
-  it('clearly separates secondary settings below with hr separator and section heading', () => {
+  it('focuses strictly on personal identity and relationship, without technical settings or private area sections', () => {
     const html = renderProfilePageFixture();
 
-    expect(html).toContain('profile-settings-separator');
-    expect(html).toContain('profile-settings-section');
-    expect(html).toContain('profile-settings-index');
-    expect(html).toContain('id="profile-appearance-settings"');
-    expect(html).toContain('id="profile-partner-settings"');
-    expect(html).toContain('id="profile-private-settings"');
-    expect(html).toContain('id="profile-data-settings"');
+    // Contains personal identity & relationship
+    expect(html).toContain('profile-identity-hero-card');
+    expect(html).toContain('relationship-profile-title');
+
+    // Does not contain any settings elements or private area entry
+    expect(html).not.toContain('profile-settings-separator');
+    expect(html).not.toContain('profile-settings-section');
+    expect(html).not.toContain('profile-settings-index');
+    expect(html).not.toContain('settings-index');
+    expect(html).not.toContain('id="profile-appearance-settings"');
+    expect(html).not.toContain('id="settings-appearance"');
+    expect(html).not.toContain('id="profile-partner-settings"');
+    expect(html).not.toContain('id="profile-private-settings"');
+    expect(html).not.toContain('id="profile-data-settings"');
+    expect(html).not.toContain('id="data-transfer"');
+    expect(html).not.toContain('href="/more/private/notes"');
   });
 });

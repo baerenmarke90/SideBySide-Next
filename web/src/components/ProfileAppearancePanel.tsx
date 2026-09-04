@@ -2,12 +2,16 @@ import { useTranslation } from '../i18n';
 import { ThemeControl } from './ThemeControl';
 
 /** Appearance belongs to the centralized personal settings hierarchy. */
-export function ProfileAppearancePanel() {
+export function ProfileAppearancePanel({
+  id = 'settings-appearance',
+}: {
+  id?: string;
+} = {}) {
   const { t } = useTranslation();
 
   return (
     <section
-      id="profile-appearance-settings"
+      id={id}
       className="form-card"
       aria-labelledby="profile-appearance-title"
     >

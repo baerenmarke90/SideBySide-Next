@@ -33,7 +33,11 @@ const de = {
     },
     profile: {
       title: 'Profil',
-      description: 'Eure Beziehungsanzeige, Vorlieben und Darstellung.',
+      description: 'Dein Profilbild, Anzeigename und persönliche Vorlieben.',
+    },
+    settings: {
+      title: 'Einstellungen',
+      description: 'Darstellung, Verbindung, Privatsphäre und Datenexport.',
     },
   },
   states: {

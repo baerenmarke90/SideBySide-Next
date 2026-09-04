@@ -21,6 +21,7 @@ export type AppRouteIcon =
   | 'people'
   | 'private'
   | 'profile'
+  | 'settings'
   | 'add';
 
 export interface AppRouteDefinition {
@@ -105,6 +106,7 @@ export const MORE_PEOPLE_ROUTE = '/more/people';
 export const MORE_NOTIFICATIONS_ROUTE = '/more/notifications';
 /** Existing surface; the Web shell exposes it through the avatar/account tree. */
 export const MORE_PROFILE_ROUTE = '/more/profile';
+export const MORE_SETTINGS_ROUTE = '/more/settings';
 export const MORE_PRIVATE_ROUTE = '/more/private';
 
 /**
@@ -152,6 +154,7 @@ export const LEGACY_ROUTE_REWRITES = [
   { from: '/people', to: MORE_PEOPLE_ROUTE },
   { from: '/notifications', to: MORE_NOTIFICATIONS_ROUTE },
   { from: '/profile', to: MORE_PROFILE_ROUTE },
+  { from: '/settings', to: MORE_SETTINGS_ROUTE },
   { from: '/private', to: MORE_PRIVATE_ROUTE },
   { from: '/memory', to: '/story/memories' },
   { from: '/heart-moment', to: '/story/heart-moments' },

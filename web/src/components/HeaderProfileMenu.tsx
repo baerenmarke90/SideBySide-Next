@@ -7,6 +7,7 @@ import { Configuration } from '../api/generated/runtime';
 import {
   ACTIVITY_ROUTE,
   MORE_PROFILE_ROUTE,
+  MORE_SETTINGS_ROUTE,
   SERVER_ADMIN_ROUTE,
 } from '../client/routes';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
@@ -110,6 +111,16 @@ export function HeaderProfileMenu({
             <DestinationIcon icon="profile" />
           </span>
           <span>{t('navigation.profile')}</span>
+        </Link>
+        <Link
+          className="header-profile-menu-item"
+          to={MORE_SETTINGS_ROUTE}
+          onClick={closeMenu}
+        >
+          <span className="shell-nav-icon" aria-hidden="true">
+            <DestinationIcon icon="settings" />
+          </span>
+          <span>{t('navigation.settings')}</span>
         </Link>
         <Link
           className="header-profile-menu-item"

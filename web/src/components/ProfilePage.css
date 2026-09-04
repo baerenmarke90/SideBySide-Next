@@ -213,33 +213,6 @@
   color: var(--color-error);
 }
 
-/* Settings Separator & Section */
-.profile-settings-separator {
-  border: none;
-  height: 1px;
-  background: var(--color-border-subtle);
-  margin: var(--space-4) 0;
-}
-
-.profile-settings-section {
-  display: grid;
-  gap: var(--space-6);
-}
-
-.profile-settings-header-group {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.profile-settings-header-group h2 {
-  margin: 0;
-}
-
-.profile-partner-settings-block {
-  display: grid;
-  gap: var(--space-6);
-}
-
 .profile-preference-list {
   display: grid;
   gap: var(--space-3);

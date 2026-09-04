@@ -17,6 +17,7 @@ const navigation = {
   notificationsWithUnread: 'Benachrichtigungen, {{count}} ungelesen',
   profileMenu: 'Profil und Konto',
   profile: 'Profil',
+  settings: 'Einstellungen',
   activity: 'Unsere Aktivitäten',
   newContent: 'Neu festhalten',
   quickCreateShared: 'Gemeinsam',

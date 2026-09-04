@@ -114,7 +114,7 @@ describe('AppShell', () => {
     expect(sidebar).not.toContain('href="/more/notifications"');
   });
 
-  it('keeps Profile and Activity in the account tree rather than primary navigation', () => {
+  it('keeps Profile, Settings and Activity in the account tree rather than primary navigation', () => {
     const html = renderShell('/story');
     const header = html.slice(
       html.indexOf('<header'),
@@ -127,9 +127,11 @@ describe('AppShell', () => {
 
     expect(header).toContain(`aria-label="${navigation.profileMenu}"`);
     expect(header).toContain('href="/more/profile"');
+    expect(header).toContain('href="/more/settings"');
     expect(header).toContain('href="/today/activity"');
     expect(header).toContain('header-profile-menu-logout');
     expect(sidebar).not.toContain('href="/more/profile"');
+    expect(sidebar).not.toContain('href="/more/settings"');
     expect(sidebar).not.toContain('href="/today/activity"');
   });
 
@@ -176,6 +178,7 @@ describe('AppShell', () => {
     ['/more', '/more'],
     ['/more/people', '/more'],
     ['/more/profile', '/more'],
+    ['/more/settings', '/more'],
     ['/more/private/notes', '/more'],
   ])('marks %s as inside the %s destination', (route, destination) => {
     const html = renderShell(route);

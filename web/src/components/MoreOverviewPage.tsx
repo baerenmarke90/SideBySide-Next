@@ -4,6 +4,7 @@ import {
   MORE_NOTIFICATIONS_ROUTE,
   MORE_PEOPLE_ROUTE,
   MORE_PROFILE_ROUTE,
+  MORE_SETTINGS_ROUTE,
   type AppRouteIcon,
 } from '../client/routes';
 import { useTranslation } from '../i18n';
@@ -48,6 +49,12 @@ const MORE_DESTINATIONS: readonly MoreDestination[] = [
     icon: 'profile',
     titleKey: 'more.profile.title',
     descriptionKey: 'more.profile.description',
+  },
+  {
+    path: MORE_SETTINGS_ROUTE,
+    icon: 'settings',
+    titleKey: 'more.settings.title',
+    descriptionKey: 'more.settings.description',
   },
 ];
 

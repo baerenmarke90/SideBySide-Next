@@ -67,6 +67,7 @@ import {
   MORE_NOTIFICATIONS_ROUTE,
   MORE_PEOPLE_ROUTE,
   MORE_PROFILE_ROUTE,
+  MORE_SETTINGS_ROUTE,
   PLAN_DETAIL_ROUTE_PATTERN,
   PLACE_DETAIL_ROUTE_PATTERN,
   SEARCH_ROUTE,
@@ -110,6 +111,7 @@ import {
   ServerAdminAccessGate,
   ServerAdminPage,
 } from './components/ServerAdminPage';
+import { SettingsPage } from './components/SettingsPage';
 import { SharedPlanningOverviewPage } from './components/SharedPlanningOverviewPage';
 import { StoryProductPage } from './components/StoryProductPage';
 import { ThemeControl } from './components/ThemeControl';
@@ -617,6 +619,17 @@ function AuthenticatedApp({
             path={MORE_PROFILE_ROUTE}
             element={
               <ProfilePage
+                apiBaseUrl={apiBaseUrl}
+                accessToken={tokens.accessToken}
+                account={account}
+                spaceId={spaceId}
+              />
+            }
+          />
+          <Route
+            path={MORE_SETTINGS_ROUTE}
+            element={
+              <SettingsPage
                 apiBaseUrl={apiBaseUrl}
                 accessToken={tokens.accessToken}
                 account={account}
