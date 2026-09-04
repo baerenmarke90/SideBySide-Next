@@ -48,6 +48,7 @@
         "type": "object"
       },
       "AccountDeletionRequest": {
+        "additionalProperties": false,
         "description": "Explicit destructive confirmation; the target is always the caller.",
         "properties": {
           "confirmation": {
