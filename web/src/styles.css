@@ -57,6 +57,7 @@
   --color-shared: #207266;
   --color-shared-accent: #2e8b7e;
   --color-shared-surface: #edf7f5;
+  --color-success: var(--color-shared);
   --color-private: #d13b65;
   --color-error: #b81434;
   --color-error-surface: #fff0f2;

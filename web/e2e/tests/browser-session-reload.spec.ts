@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import de from '../../src/i18n/locales/de';
 import demoDe from '../../src/i18n/locales/demo';
+import navigation from '../../src/i18n/locales/navigation';
 
 const ACCOUNT_ID = '00000000-0000-0000-0000-000000000001';
 const PARTNER_ID = '00000000-0000-0000-0000-000000000002';
@@ -163,6 +164,14 @@ test.describe('Browser Session Reload and Deep Route Restoration', () => {
         return;
       }
 
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+      ) {
+        await fulfillJson({ unreadCount: 0 });
+        return;
+      }
+
       await route.fallback();
     });
 
@@ -306,6 +315,14 @@ test.describe('Browser Session Reload and Deep Route Restoration', () => {
         return;
       }
 
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+      ) {
+        await fulfillJson({ unreadCount: 0 });
+        return;
+      }
+
       await route.fallback();
     });
 
@@ -314,7 +331,9 @@ test.describe('Browser Session Reload and Deep Route Restoration', () => {
     await signIn(page);
 
     // 2. Open header profile menu and click logout
-    const menuButton = page.locator('summary.header-profile-trigger');
+    const menuButton = page.getByRole('button', {
+      name: navigation.profileMenu,
+    });
     await menuButton.click();
     const logoutButton = page.getByRole('button', { name: de.header.logout });
     await logoutButton.click();
@@ -484,6 +503,14 @@ test.describe('Browser Session Reload and Deep Route Restoration', () => {
             },
           ],
         });
+        return;
+      }
+
+      if (
+        method === 'GET' &&
+        pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+      ) {
+        await fulfillJson({ unreadCount: 0 });
         return;
       }
 

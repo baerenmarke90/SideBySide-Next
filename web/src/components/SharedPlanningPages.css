@@ -270,7 +270,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  color: var(--color-success, #2e7d32);
+  color: var(--color-shared);
   padding: 0 var(--space-2);
 }
 

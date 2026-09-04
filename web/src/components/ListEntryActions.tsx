@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { AddIcon } from './DestinationIcon';
 import './ListEntryActions.css';
 
 export function moveSortableItem(
@@ -198,6 +199,10 @@ export function ListEntryIconButton({
 }
 
 function ListEntryIcon({ kind }: { kind: IconButtonProps['icon'] }) {
+  if (kind === 'add') {
+    return <AddIcon className="list-entry-icon" />;
+  }
+
   return (
     <svg
       aria-hidden="true"
@@ -228,7 +233,6 @@ function ListEntryIcon({ kind }: { kind: IconButtonProps['icon'] }) {
           <path d="M5 17h14" />
         </>
       ) : null}
-      {kind === 'add' ? <path d="M12 5v14M5 12h14" /> : null}
     </svg>
   );
 }
