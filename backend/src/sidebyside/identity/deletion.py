@@ -9,6 +9,7 @@ retry-safe fail-closed and cleanup phases.
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
@@ -126,7 +127,7 @@ def apply_accepted_tombstone(
     session: Session,
     account_id: UUID,
     *,
-    accepted_at,
+    accepted_at: datetime,
 ) -> AccountDeletion | None:
     """Persist the DB-side fail-closed phase for an already durable tombstone.
 
