@@ -4,6 +4,7 @@ import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import type { ProfileIdentityUpdate } from '../api/generated/models/ProfileIdentityUpdate';
 import { Configuration } from '../api/generated/runtime';
+import { invalidateAuthorSummaryConsumers } from '../client/authorSummaryConsumers';
 import {
   type DraftUploadPhase,
   uploadMemoryDraftAttachment,
@@ -103,20 +104,7 @@ export function ProfileIdentityPanel({
   ) {
     setSaved(true);
     onDisplayNameChanged(profile.displayName);
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: ['profile-identity', spaceId, account.id],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ['partner-identity', spaceId, account.id],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ['space-profile', spaceId],
-      }),
-      queryClient.invalidateQueries({
-        queryKey: ['space', spaceId],
-      }),
-    ]);
+    await invalidateAuthorSummaryConsumers(queryClient, spaceId, account.id);
   }
 
   const displayNameMutation = useMutation({
