@@ -67,13 +67,19 @@ def owner_only_cleanup_table_names() -> tuple[str, ...]:
     )
 
 
-def hard_delete_owner_only(session: Session, owner_id: UUID) -> OwnerOnlyCleanupResult:
-    """Hard-delete every OWNER_ONLY row belonging to one Account.
+def _hard_delete_owner_only(
+    session: Session,
+    owner_id: UUID,
+    *,
+    space_id: UUID | None,
+) -> OwnerOnlyCleanupResult:
+    """Delete OWNER_ONLY rows, optionally constrained to one Space.
 
-    The privacy class is the authoritative predicate. Shared rows owned or
-    authored by the same Account are deliberately untouched. Foreign-key-safe
-    reverse metadata order removes child privacy-aware rows before parents;
-    non-privacy children continue to use their existing database cascades.
+    Account deletion passes ``space_id=None`` and therefore keeps its existing
+    Account-wide semantics. Space offboarding supplies a Space ID; privacy-aware
+    tables without a Space key are then deliberately left alone because the
+    lifecycle has no authority to classify account-global state as belonging to
+    the exited relationship.
     """
     _register_privacy_models()
     counts: dict[str, int] = {}
@@ -83,18 +89,47 @@ def hard_delete_owner_only(session: Session, owner_id: UUID) -> OwnerOnlyCleanup
             continue
         if "owner_id" not in table.c or "privacy_class" not in table.c:
             continue
+        if space_id is not None and "space_id" not in table.c:
+            continue
+
+        predicates = [
+            table.c.owner_id == owner_id,
+            table.c.privacy_class == PrivacyClass.OWNER_ONLY.value,
+        ]
+        if space_id is not None:
+            predicates.append(table.c.space_id == space_id)
 
         result = cast(
             "CursorResult[Any]",
-            session.execute(
-                delete(table).where(
-                    table.c.owner_id == owner_id,
-                    table.c.privacy_class == PrivacyClass.OWNER_ONLY.value,
-                )
-            ),
+            session.execute(delete(table).where(*predicates)),
         )
         affected = int(result.rowcount or 0)
         if affected:
             counts[table.name] = affected
 
     return OwnerOnlyCleanupResult(total=sum(counts.values()), by_table=counts)
+
+
+def hard_delete_owner_only(session: Session, owner_id: UUID) -> OwnerOnlyCleanupResult:
+    """Hard-delete every OWNER_ONLY row belonging to one Account.
+
+    The privacy class is the authoritative predicate. Shared rows owned or
+    authored by the same Account are deliberately untouched. Foreign-key-safe
+    reverse metadata order removes child privacy-aware rows before parents;
+    non-privacy children continue to use their existing database cascades.
+    """
+    return _hard_delete_owner_only(session, owner_id, space_id=None)
+
+
+def hard_delete_owner_only_in_space(
+    session: Session,
+    owner_id: UUID,
+    space_id: UUID,
+) -> OwnerOnlyCleanupResult:
+    """Hard-delete one Account's OWNER_ONLY rows scoped to one exited Space.
+
+    This is the #518 counterpart to Account-wide cleanup. It cannot touch the
+    partner's private rows or the same Account's private rows in another Space,
+    and it never reclassifies private data as shared.
+    """
+    return _hard_delete_owner_only(session, owner_id, space_id=space_id)
