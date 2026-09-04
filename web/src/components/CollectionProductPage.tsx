@@ -390,7 +390,7 @@ export function CollectionProductPage({
       <PageHeader
         before={
           <Link className="back-link" to={MORE_COLLECTIONS_ROUTE}>
-            {t('m5s3.common.back')}
+            {t('m5s3.common.backToCollections')}
           </Link>
         }
         eyebrow={t('m5s3.collection.detailEyebrow')}

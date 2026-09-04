@@ -26,7 +26,7 @@ import {
   formatRelationshipDuration,
 } from '../client/relationshipPreview';
 import { resolvedLocale, useTranslation } from '../i18n';
-import { DestinationIcon } from './DestinationIcon';
+import { AddIcon, DestinationIcon } from './DestinationIcon';
 import { PartnerIdentityPanel } from './PartnerIdentityPanel';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -48,37 +48,6 @@ function relationshipDateInput(
   return '';
 }
 
-function relationshipDuration(
-  profile: SpaceProfileView,
-  t: (key: string, values?: Record<string, unknown>) => string,
-): string {
-  if (!profile.showRelationshipDuration || !profile.relationshipStartedOn) {
-    return t('profiles.relationshipNotAvailable');
-  }
-
-  if (
-    profile.durationDisplayMode === DurationDisplayMode.DAYS &&
-    profile.relationshipDays !== null &&
-    profile.relationshipDays !== undefined
-  ) {
-    return t('profiles.relationshipDays', { days: profile.relationshipDays });
-  }
-
-  if (
-    profile.relationshipYears !== null &&
-    profile.relationshipYears !== undefined &&
-    profile.relationshipMonths !== null &&
-    profile.relationshipMonths !== undefined
-  ) {
-    return t('profiles.relationshipYearsMonths', {
-      years: profile.relationshipYears,
-      months: profile.relationshipMonths,
-    });
-  }
-
-  return t('profiles.relationshipNotAvailable');
-}
-
 function formatDateOnly(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
   return new Intl.DateTimeFormat(resolvedLocale(), {
@@ -97,6 +66,18 @@ export function RelationshipSummarySection({
 }) {
   const { t } = useTranslation();
 
+  const spaceQuery = useQuery({
+    queryKey: ['space', spaceId],
+    queryFn: async () => {
+      try {
+        return await spacesApi.getSpaceApiV1SpacesSpaceIdGet({ spaceId });
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
+    retry: false,
+  });
+
   const profileQuery = useQuery({
     queryKey: ['space-profile', spaceId],
     queryFn: async () => {
@@ -111,51 +92,35 @@ export function RelationshipSummarySection({
     retry: false,
   });
 
-  return (
-    <section
-      className="layout-panel profile-section relationship-summary-section"
-      aria-labelledby="relationship-summary-title"
-    >
-      <h2 id="relationship-summary-title">{t('profiles.relationshipTitle')}</h2>
+  const partnerNames = useMemo(() => {
+    const partners = spaceQuery.data?.partners;
+    if (!partners || partners.length === 0) return null;
+    return partners.map((p) => p.displayName).join(' & ');
+  }, [spaceQuery.data?.partners]);
 
-      {profileQuery.isLoading ? (
-        <UiState kind="loading" title={t('profiles.loading')} />
+  if (!profileQuery.data?.relationshipStartedOn) {
+    return null;
+  }
+
+  return (
+    <div className="profile-relationship-compact" role="status">
+      {partnerNames ? (
+        <>
+          <span className="profile-couple-names">{partnerNames}</span>
+          <span className="profile-couple-separator" aria-hidden="true">
+            ·
+          </span>
+        </>
       ) : null}
-      {profileQuery.error ? (
-        <ProblemState
-          error={profileQuery.error}
-          onRetry={() => void profileQuery.refetch()}
-        />
-      ) : null}
-      {profileQuery.data ? (
-        profileQuery.data.relationshipStartedOn ? (
-          <div className="profile-relationship-summary" role="status">
-            <p className="profile-relationship-start">
-              <span className="profile-relationship-label">
-                {t('profiles.relationshipStartLabel')}:{' '}
-              </span>
-              <span className="profile-relationship-value">
-                {formatDateOnly(profileQuery.data.relationshipStartedOn)}
-              </span>
-            </p>
-            {profileQuery.data.showRelationshipDuration ? (
-              <p className="profile-duration">
-                <span className="profile-relationship-label">
-                  {t('profiles.relationshipDurationTitle')}:{' '}
-                </span>
-                <span className="profile-relationship-value">
-                  {relationshipDuration(profileQuery.data, t)}
-                </span>
-              </p>
-            ) : null}
-          </div>
-        ) : (
-          <p className="profile-duration" role="status">
-            {t('profiles.relationshipNotAvailable')}
-          </p>
-        )
-      ) : null}
-    </section>
+      <span className="profile-relationship-start">
+        <span className="profile-relationship-label">
+          {t('profiles.relationshipStartLabel')}:{' '}
+        </span>
+        <span className="profile-relationship-value">
+          {formatDateOnly(profileQuery.data.relationshipStartedOn)}
+        </span>
+      </span>
+    </div>
   );
 }
 
@@ -852,7 +817,8 @@ export function PreferenceManager({
             deleteMutation.reset();
           }}
         >
-          {triggerButtonLabel}
+          <AddIcon />
+          <span>{triggerButtonLabel}</span>
         </button>
       </div>
 

@@ -153,7 +153,7 @@ export function ChapterProductPage({
       <PageHeader
         before={
           <Link className="back-link" to={STORY_CHAPTERS_ROUTE}>
-            {t('m5s3.common.back')}
+            {t('m5s3.common.backToChapters')}
           </Link>
         }
         eyebrow={t('m5s3.chapter.detailEyebrow')}

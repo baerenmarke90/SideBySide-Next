@@ -51,6 +51,12 @@ export function ProfilePage(props: ProfilePageProps) {
         description={t('profiles.intro')}
       />
 
+      {/* Relationship compact badge/row (if anniversary date is configured) */}
+      <RelationshipSummarySection
+        spacesApi={spacesApi}
+        spaceId={props.spaceId}
+      />
+
       {/* 1. Identity panel for current user */}
       <ProfileIdentityPanel
         {...currentProps}
@@ -61,12 +67,6 @@ export function ProfilePage(props: ProfilePageProps) {
 
       {/* 2. Preferences & partner block */}
       <ProfilePreferencesSection {...currentProps} />
-
-      {/* 3. Read-only relationship summary */}
-      <RelationshipSummarySection
-        spacesApi={spacesApi}
-        spaceId={props.spaceId}
-      />
     </div>
   );
 }

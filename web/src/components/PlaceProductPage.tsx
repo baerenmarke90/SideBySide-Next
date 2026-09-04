@@ -150,7 +150,7 @@ export function PlaceProductPage({
       <PageHeader
         before={
           <Link className="back-link" to={MORE_PLACES_ROUTE}>
-            {t('m5s3.common.back')}
+            {t('m5s3.common.backToPlaces')}
           </Link>
         }
         eyebrow={t('m5s3.place.detailEyebrow')}

@@ -83,7 +83,7 @@ describe('Profile page reorganization', () => {
     expect(html).toContain('Bild ändern');
   });
 
-  it('renders categorized preference chips and [+ Vorliebe] without a permanent empty form', () => {
+  it('renders categorized preference chips and [Vorliebe] without a permanent empty form', () => {
     const html = renderProfilePageFixture([
       {
         id: 'pref-1',
@@ -107,7 +107,7 @@ describe('Profile page reorganization', () => {
       },
     ]);
 
-    expect(html).toContain('+ Vorliebe');
+    expect(html).toContain('Vorliebe');
     expect(html).toContain('profile-preference-chip');
     expect(html).toContain('Pasta');
     expect(html).toContain('Al dente mit Salbei');
@@ -117,13 +117,12 @@ describe('Profile page reorganization', () => {
     expect(html).not.toContain('preference-modal-dialog');
   });
 
-  it('focuses strictly on personal identity, partner identity, and read-only relationship summary', () => {
+  it('focuses strictly on personal identity, partner identity, and does not render settings forms', () => {
     const html = renderProfilePageFixture();
 
-    // Contains personal identity, partner identity, and read-only relationship summary
+    // Contains personal identity and partner identity
     expect(html).toContain('profile-identity-hero-card');
     expect(html).toContain('partner-identity-title');
-    expect(html).toContain('relationship-summary-title');
 
     // Does NOT contain editable relationship settings form in Profile
     expect(html).not.toContain('relationship-profile-title');
@@ -144,7 +143,7 @@ describe('Profile page reorganization', () => {
     expect(html).not.toContain('/more/private/notes');
   });
 
-  it('differentiates + Vorliebe for own profile vs + Notiz with privacy badge for private partner notes', () => {
+  it('differentiates Vorliebe for own profile vs Notiz with privacy badge for private partner notes', () => {
     const html = renderProfilePageFixture([
       {
         id: 'pref-self',
@@ -168,12 +167,12 @@ describe('Profile page reorganization', () => {
       },
     ]);
 
-    // Self preferences use + Vorliebe
-    expect(html).toContain('+ Vorliebe');
+    // Self preferences use Vorliebe
+    expect(html).toContain('Vorliebe');
     expect(html).toContain('Pasta');
 
-    // Private partner notes use + Notiz and carry privacy indicator
-    expect(html).toContain('+ Notiz');
+    // Private partner notes use Notiz and carry privacy indicator
+    expect(html).toContain('Notiz');
     expect(html).toContain('Lieblingsblumen');
     expect(html).toContain('private-partner-notes-badge');
   });
@@ -232,7 +231,7 @@ describe('Profile page reorganization', () => {
     expect(html).toContain('Zeremoniell');
   });
 
-  it('renders both anniversary date and duration in read-only relationship summary when configured', () => {
+  it('renders compact anniversary date in relationship summary without large card or duration display', () => {
     const html = renderProfilePageFixture([], [], {
       relationshipStartedOn: new Date('2022-02-14T00:00:00.000Z'),
       showRelationshipDuration: true,
@@ -241,11 +240,16 @@ describe('Profile page reorganization', () => {
       relationshipMonths: 6,
     });
 
-    expect(html).toContain('relationship-summary-section');
+    expect(html).toContain('profile-relationship-compact');
     expect(html).toContain('profile-relationship-start');
     expect(html).toContain('Zusammen seit');
-    expect(html).toContain('profile-duration');
-    expect(html).toContain('Eure Zeit');
-    expect(html).toContain('4 Jahre, 6 Monate');
+    expect(html).toContain('14. Februar 2022');
+    expect(html).toContain('Alex &amp; Sam');
+    // Standalone relationship card and duration are completely removed from profile
+    expect(html).not.toContain('relationship-summary-section');
+    expect(html).not.toContain('relationship-summary-title');
+    expect(html).not.toContain('profile-duration');
+    expect(html).not.toContain('Eure Zeit');
+    expect(html).not.toContain('4 Jahre, 6 Monate');
   });
 });
