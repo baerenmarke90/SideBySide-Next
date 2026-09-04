@@ -24,13 +24,11 @@ const de = {
     },
     places: {
       title: 'Orte',
-      description:
-        'Eure liebsten Orte, Cafés und Reiseziele auf einen Blick.',
+      description: 'Eure liebsten Orte, Cafés und Reiseziele auf einen Blick.',
     },
     collections: {
       title: 'Gemeinsame Listen',
-      description:
-        'Packlisten, Ideen und Sammlungen für euch beide.',
+      description: 'Packlisten, Ideen und Sammlungen für euch beide.',
     },
     private: {
       title: 'Für mich',

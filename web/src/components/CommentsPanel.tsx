@@ -309,7 +309,9 @@ export function CommentsPanel({
                             type="button"
                             className="comment-menu-item comment-edit"
                             onClick={(e) => {
-                              const details = (e.target as HTMLElement).closest('details');
+                              const details = (e.target as HTMLElement).closest(
+                                'details',
+                              );
                               if (details) details.open = false;
                               setEditingId(comment.id);
                             }}
@@ -320,7 +322,9 @@ export function CommentsPanel({
                             type="button"
                             className="comment-menu-item comment-delete comment-menu-item-danger"
                             onClick={(e) => {
-                              const details = (e.target as HTMLElement).closest('details');
+                              const details = (e.target as HTMLElement).closest(
+                                'details',
+                              );
                               if (details) details.open = false;
                               deleteMutation.mutate(comment);
                             }}

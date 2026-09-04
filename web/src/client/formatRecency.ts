@@ -132,4 +132,3 @@ export function formatUpcomingRelative(
     month: 'long',
   }).format(date);
 }
-

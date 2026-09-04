@@ -127,9 +127,7 @@ export function selectFeaturedStoryItem(
       86_400_000,
   );
 
-
   const index =
     ((dayOrdinal % sortedPool.length) + sortedPool.length) % sortedPool.length;
   return sortedPool[index];
 }
-

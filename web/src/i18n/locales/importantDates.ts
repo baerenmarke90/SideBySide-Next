@@ -55,4 +55,3 @@ const importantDates = {
 } as const;
 
 export default importantDates;
-

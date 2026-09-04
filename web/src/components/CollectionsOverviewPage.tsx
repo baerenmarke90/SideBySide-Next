@@ -1,5 +1,9 @@
 import type { FormEvent } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { CollectionDetail } from '../api/generated/models/CollectionDetail';
 import { normalizeClientError } from '../client/problemDetails';
@@ -138,9 +142,7 @@ export function CollectionsOverviewPage({
         ) : null}
 
         <details className="planning-create" id="collection-create-details">
-          <summary id="collection-title">
-            {t('m5s3.collection.create')}
-          </summary>
+          <summary id="collection-title">{t('m5s3.collection.create')}</summary>
           <form
             onSubmit={submitCollection}
             className="form-grid planning-create-form"

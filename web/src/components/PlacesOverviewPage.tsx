@@ -1,5 +1,9 @@
 import { type FormEvent, useState } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
 import { normalizeClientError } from '../client/problemDetails';

@@ -44,7 +44,6 @@ function emotionLabel(emotion: string, t: TFunction): string {
 
 export { storyItemKey } from '../client/storyProduct';
 
-
 export function resolveStoryKindLabel(
   kind: StoryKind | string | null | undefined,
   t: TFunction,

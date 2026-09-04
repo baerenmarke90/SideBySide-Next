@@ -225,13 +225,26 @@ export function SharedPlanningOverviewPage({
                 onSubmit={submitPlan}
                 className="form-grid planning-create-form"
               >
-                <label htmlFor="create-plan-title">{t('m5s3.common.title')}</label>
-                <input id="create-plan-title" name="title" required maxLength={200} />
+                <label htmlFor="create-plan-title">
+                  {t('m5s3.common.title')}
+                </label>
+                <input
+                  id="create-plan-title"
+                  name="title"
+                  required
+                  maxLength={200}
+                />
                 <label htmlFor="create-plan-description">
                   {t('m5s3.common.description')}
                 </label>
-                <textarea id="create-plan-description" name="description" rows={3} />
-                <label htmlFor="create-plan-place">{t('m5s3.common.place')}</label>
+                <textarea
+                  id="create-plan-description"
+                  name="description"
+                  rows={3}
+                />
+                <label htmlFor="create-plan-place">
+                  {t('m5s3.common.place')}
+                </label>
                 <select id="create-plan-place" name="placeId" defaultValue="">
                   <option value="">{t('m5s3.common.noPlace')}</option>
                   {placeChoices}
@@ -258,7 +271,9 @@ export function SharedPlanningOverviewPage({
           </div>
           <div className="future-map-content">
             <h2 className="future-map-heading">{t('m5s3.overview.someday')}</h2>
-            <p className="future-map-intro">{t('m5s3.overview.somedayIntro')}</p>
+            <p className="future-map-intro">
+              {t('m5s3.overview.somedayIntro')}
+            </p>
 
             {wishes.isLoading ? (
               <UiState kind="loading" title={t('states.loading.title')} />
@@ -302,8 +317,15 @@ export function SharedPlanningOverviewPage({
                 onSubmit={submitWish}
                 className="form-grid planning-create-form"
               >
-                <label htmlFor="create-wish-title">{t('m5s3.common.title')}</label>
-                <input id="create-wish-title" name="title" required maxLength={200} />
+                <label htmlFor="create-wish-title">
+                  {t('m5s3.common.title')}
+                </label>
+                <input
+                  id="create-wish-title"
+                  name="title"
+                  required
+                  maxLength={200}
+                />
                 <button type="submit" disabled={createWish.isPending}>
                   {createWish.isPending
                     ? t('m5s3.common.saving')

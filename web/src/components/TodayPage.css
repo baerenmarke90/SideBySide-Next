@@ -604,7 +604,6 @@
   line-height: 1.4;
 }
 
-
 .today-card-link:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 3px;

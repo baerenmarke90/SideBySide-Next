@@ -309,7 +309,8 @@
 }
 
 .quick-create-sheet-scrollable {
-  padding: var(--space-3) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
+  padding: var(--space-3) var(--space-4)
+    calc(var(--space-6) + env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
   display: grid;

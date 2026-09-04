@@ -355,13 +355,15 @@
 
 /* Connecting spine segment from current marker center to next stop marker center */
 .future-map-stop:not(:last-child)::before {
-  content: '';
+  content: "";
   position: absolute;
   z-index: 1;
   top: calc(var(--future-map-marker-top) + (var(--future-map-marker-size) / 2));
   bottom: calc(
-    -1 * var(--future-map-stop-gap) + var(--future-map-marker-top) +
-      (var(--future-map-marker-size) / 2)
+    -1 *
+    var(--future-map-stop-gap) +
+    var(--future-map-marker-top) +
+    (var(--future-map-marker-size) / 2)
   );
   left: calc(var(--future-map-spine-x) - var(--future-map-padding));
   transform: translateX(-50%);

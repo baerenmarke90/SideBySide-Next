@@ -216,10 +216,7 @@ export function StoryProductPage({
     () => items.filter((item) => item.kind === 'MILESTONE'),
     [items],
   );
-  const featuredItem = useMemo(
-    () => selectFeaturedStoryItem(items),
-    [items],
-  );
+  const featuredItem = useMemo(() => selectFeaturedStoryItem(items), [items]);
 
   const uniqueYears = useMemo(() => {
     const years = new Set<number>();

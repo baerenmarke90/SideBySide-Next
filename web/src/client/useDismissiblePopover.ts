@@ -47,7 +47,10 @@ export function useDismissiblePopover(
 
   // Route change auto-dismiss
   useEffect(() => {
-    if (closeOnRouteChange && (location.pathname || location.search || location.hash)) {
+    if (
+      closeOnRouteChange &&
+      (location.pathname || location.search || location.hash)
+    ) {
       setIsOpen(false);
     }
   }, [location.pathname, location.search, location.hash, closeOnRouteChange]);

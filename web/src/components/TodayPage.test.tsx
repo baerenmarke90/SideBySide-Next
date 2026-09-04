@@ -7,7 +7,6 @@ import { i18n } from '../i18n';
 import m5s5 from '../i18n/locales/m5s5';
 import { formatRelationshipDuration, TodayPage } from './TodayPage';
 
-
 function renderTodayPage(dashboardData: unknown): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -114,7 +113,6 @@ describe('TodayPage', () => {
       retrospective: null,
     });
 
-
     const html = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
@@ -205,8 +203,6 @@ describe('TodayPage', () => {
     expect(html).toContain('href="/today/activity"');
     expect(html).toContain(m5s5.dashboard.allActivityAction);
   });
-
-
 
   it('orchestrates primary contextual slot and relationship signal when partner activity exists', () => {
     const queryClient = new QueryClient({

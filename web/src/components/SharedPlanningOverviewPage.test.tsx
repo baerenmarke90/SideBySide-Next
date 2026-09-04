@@ -93,7 +93,9 @@ describe('SharedPlanningOverviewPage', () => {
       </QueryClientProvider>,
     );
 
-    const stopMatches = html.match(/<section\b[^>]*class="[^"]*future-map-stop/g);
+    const stopMatches = html.match(
+      /<section\b[^>]*class="[^"]*future-map-stop/g,
+    );
     expect(stopMatches).toHaveLength(2);
 
     const markerMatches = html.match(/class="future-map-marker"/g);

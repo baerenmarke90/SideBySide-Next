@@ -11,7 +11,6 @@ import {
   storyRequest,
 } from './storyProduct';
 
-
 describe('SBS-M5-Web-S2-SCOPE Story product query', () => {
   it('parses only supported Story filters and preserves a stable cache identity', () => {
     const filters = parseStoryFilters(
@@ -120,7 +119,6 @@ describe('selectFeaturedStoryItem', () => {
     } as unknown as StoryItem;
   }
 
-
   it('returns null for empty items', () => {
     expect(selectFeaturedStoryItem([])).toBeNull();
   });
@@ -222,4 +220,3 @@ describe('selectFeaturedStoryItem', () => {
     expect(remaining).toContain(afterRemoval);
   });
 });
-
