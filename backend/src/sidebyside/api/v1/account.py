@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Literal
 
 from fastapi import APIRouter, status
+from pydantic import ConfigDict
 
 from sidebyside.api.deps import CurrentAccount
 from sidebyside.api.errors import problem_responses
@@ -18,6 +19,8 @@ router = APIRouter(prefix="/account", tags=["account"])
 
 class AccountDeletionRequest(ApiModel):
     """Explicit destructive confirmation; the target is always the caller."""
+
+    model_config = ConfigDict(extra="forbid")
 
     confirmation: Literal["DELETE_ACCOUNT"]
 
