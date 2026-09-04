@@ -245,12 +245,15 @@ def test_completion_deletes_private_identity_state_but_retains_shared_history(
 
     # Shared history survives even though its original author deleted their Account.
     assert _count(session, Memory, Memory.id == shared_memory.id) == 1
-    assert _count(
-        session,
-        Memory,
-        Memory.owner_id == account.id,
-        Memory.privacy_class == PrivacyClass.SPACE_SHARED.value,
-    ) == 1
+    assert (
+        _count(
+            session,
+            Memory,
+            Memory.owner_id == account.id,
+            Memory.privacy_class == PrivacyClass.SPACE_SHARED.value,
+        )
+        == 1
+    )
 
     # Only the deleted owner's OWNER_ONLY data is removed.
     assert _count(session, PrivateNote, PrivateNote.id == own_private.id) == 0
