@@ -172,11 +172,7 @@ export function AccountSettingsPanel({
             <div className="account-demo-delete-note" role="note">
               <strong>{t('accountSettings.demoTitle')}</strong>
               <span>{t('accountSettings.demoBody')}</span>
-              <button
-                type="button"
-                className="account-delete-button"
-                disabled
-              >
+              <button type="button" className="account-delete-button" disabled>
                 {t('accountSettings.deleteAction')}
               </button>
             </div>
@@ -286,7 +282,9 @@ export function AccountSettingsPanel({
                   <input
                     id="account-deletion-confirmation"
                     value={confirmation}
-                    onChange={(event) => setConfirmation(event.currentTarget.value)}
+                    onChange={(event) =>
+                      setConfirmation(event.currentTarget.value)
+                    }
                     autoComplete="off"
                     spellCheck={false}
                     disabled={mutation.isPending}
@@ -300,7 +298,9 @@ export function AccountSettingsPanel({
                   </p>
                 </div>
 
-                {mutation.error ? <ProblemState error={mutation.error} /> : null}
+                {mutation.error ? (
+                  <ProblemState error={mutation.error} />
+                ) : null}
                 {mutation.isPending ? (
                   <p className="status" role="status" aria-live="polite">
                     {t('accountSettings.submitting')}

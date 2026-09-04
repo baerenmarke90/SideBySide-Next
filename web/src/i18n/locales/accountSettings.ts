@@ -31,7 +31,8 @@ export default {
     'Gib {{phrase}} ein, um dein Konto endgültig zur Löschung freizugeben.',
   confirmLabel: 'Bestätigung',
   confirmPhrase: 'KONTO LÖSCHEN',
-  confirmHelp: 'Die Eingabe muss genau mit dem angezeigten Text übereinstimmen.',
+  confirmHelp:
+    'Die Eingabe muss genau mit dem angezeigten Text übereinstimmen.',
   backAction: 'Zurück',
   submitAction: 'Konto endgültig löschen',
   submitting: 'Kontolöschung wird gestartet …',
