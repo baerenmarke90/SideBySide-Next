@@ -310,6 +310,9 @@
 .future-map {
   --future-map-spine-x: 1.5rem;
   --future-map-padding: 3.25rem;
+  --future-map-marker-size: 14px;
+  --future-map-marker-top: var(--space-2);
+  --future-map-stop-gap: var(--space-8);
   position: relative;
   max-width: 800px;
   margin: var(--space-8) auto;
@@ -317,34 +320,51 @@
 }
 
 .future-map-path {
+  display: none;
+}
+
+.future-map-stop {
+  position: relative;
+  margin-bottom: var(--future-map-stop-gap);
+}
+
+/* Connecting spine segment from current marker center to next stop marker center */
+.future-map-stop:not(:last-child)::before {
+  content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--future-map-spine-x);
+  z-index: 1;
+  top: calc(var(--future-map-marker-top) + (var(--future-map-marker-size) / 2));
+  bottom: calc(
+    -1 * var(--future-map-stop-gap) + var(--future-map-marker-top) +
+      (var(--future-map-marker-size) / 2)
+  );
+  left: calc(var(--future-map-spine-x) - var(--future-map-padding));
   transform: translateX(-50%);
   width: 4px;
   border-radius: var(--radius-pill);
   background: linear-gradient(
     to bottom,
     var(--color-brand),
+    var(--color-discovery-surface-soft)
+  );
+}
+
+.future-map-stop-someday::before {
+  background: linear-gradient(
+    to bottom,
     var(--color-discovery-surface-soft),
     var(--color-surface-raised)
   );
 }
 
-.future-map-stop {
-  position: relative;
-  margin-bottom: var(--space-8);
-}
-
 .future-map-marker {
   position: absolute;
   z-index: 2;
-  top: var(--space-2);
+  top: var(--future-map-marker-top);
   left: calc(var(--future-map-spine-x) - var(--future-map-padding));
   transform: translateX(-50%);
-  width: 14px;
-  height: 14px;
+  width: var(--future-map-marker-size);
+  height: var(--future-map-marker-size);
   border-radius: 50%;
   background: var(--color-brand);
   box-shadow: 0 0 0 6px var(--color-background);

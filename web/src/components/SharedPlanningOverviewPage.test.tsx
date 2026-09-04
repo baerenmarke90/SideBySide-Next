@@ -78,4 +78,26 @@ describe('SharedPlanningOverviewPage', () => {
     expect(html).not.toContain('🧳');
     expect(html).not.toContain('collection-icon');
   });
+
+  it('renders all three timeline stops with markers and semantic sections', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <SharedPlanningOverviewPage
+            apis={{} as SharedPlanningApis}
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const stopMatches = html.match(/<section\b[^>]*class="[^"]*future-map-stop/g);
+    expect(stopMatches).toHaveLength(3);
+
+    const markerMatches = html.match(/class="future-map-marker"/g);
+    expect(markerMatches).toHaveLength(3);
+  });
 });

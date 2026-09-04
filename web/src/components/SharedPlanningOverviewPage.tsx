@@ -535,7 +535,7 @@ export function SharedPlanningOverviewPage({
           </div>
         </section>
 
-        <div
+        <section
           className="future-map-stop future-map-stop-others sbs-motion-reveal"
           style={{ animationDelay: '200ms' }}
         >
@@ -803,7 +803,7 @@ export function SharedPlanningOverviewPage({
               ) : null}
             </PlanningSection>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
