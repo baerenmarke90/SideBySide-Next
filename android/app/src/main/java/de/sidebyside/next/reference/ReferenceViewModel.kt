@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import sidebyside.api.models.AccountDeletionRequest
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.ActivityItem
 import sidebyside.api.models.AttachmentReadRequest
@@ -202,6 +203,8 @@ data class ReferenceUiState(
     val spacePartnerNames: Map<java.util.UUID, String> = emptyMap(),
     val activeSpaceId: java.util.UUID? = null,
     val profile: ProfileUiState = ProfileUiState(),
+    val accountDeletionBusy: Boolean = false,
+    val accountDeletionProblem: UiProblem? = null,
     val busy: Boolean = false,
     val status: UiMessage? = null,
     /**
@@ -5119,6 +5122,47 @@ class ReferenceViewModel(
     private fun clearProductReadCache() {
         val cache = productReadCache ?: return
         viewModelScope.launch { cache.clearAll() }
+    }
+
+    fun deleteOwnAccount() {
+        if (_uiState.value.demoMode) return
+        val api = contract ?: return configurationError()
+        val currentSession = session ?: return
+        val operationEpoch = sessionEpoch
+
+        mutate {
+            it.copy(
+                accountDeletionBusy = true,
+                accountDeletionProblem = null,
+            )
+        }
+        viewModelScope.launch {
+            if (!isCurrentSession(operationEpoch, currentSession)) return@launch
+            runCatching {
+                api.deleteOwnAccount(
+                    currentSession.tokens.accessToken,
+                    AccountDeletionRequest(
+                        confirmation = AccountDeletionRequest.Confirmation.DELETE_ACCOUNT,
+                    ),
+                )
+            }
+                .onSuccess {
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onSuccess
+                    // The server has crossed the irreversible tombstone boundary and
+                    // revoked this session. Reuse the existing logout transition to
+                    // invalidate in-flight work, drafts, Room/protected caches and UI state.
+                    logout()
+                }
+                .onFailure { throwable ->
+                    if (!isCurrentSession(operationEpoch, currentSession)) return@onFailure
+                    mutate {
+                        it.copy(
+                            accountDeletionBusy = false,
+                            accountDeletionProblem = problemFor(throwable),
+                        )
+                    }
+                }
+        }
     }
 
     fun logout() {
