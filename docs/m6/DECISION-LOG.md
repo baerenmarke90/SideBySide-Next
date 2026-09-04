@@ -92,25 +92,6 @@ The frozen V1 contract requires:
 - membership-sensitive jobs/provider effects must revalidate current authorization at the side-effect boundary;
 - exit, privacy cleanup and essential portability remain non-paywallable.
 
-### M6-B06 — Cloud/Managed launch topology
-
-**Status:** `BLOCKING` for managed launch support, owner #521.
-
-The initial managed deployment must freeze API/Web/worker/migrate/database/media,
-secret ownership, ingress, backup responsibility, capacity assumptions and one
-versioned supported deployment representation. It must reuse #375/#190 rather than
-creating Cloud-only Domain semantics.
-
-### M6-B07 — Launch entitlement-source adapters
-
-**Status:** `BLOCKING` after #262/#523 for every commercial source actually used at
-launch.
-
-One focused issue/PR is required per selected source. Examples may include Google
-Play, a hosted subscription provider or a Self-Hosted commercial license, but M6-S0
-does not assume that all examples are required. Each adapter maps provider evidence
-into #523; no provider SDK/state may leak into feature code.
-
 ## Before-release decisions
 
 ### M6-R01 — Release artifact publication model
