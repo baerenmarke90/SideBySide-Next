@@ -9,6 +9,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
@@ -82,7 +83,7 @@ class AccountSettingsContentTest {
         composeRule.onNode(hasSetTextAction()).performTextInput(
             context.getString(R.string.account_delete_confirmation_phrase),
         )
-        finalAction.assertIsEnabled().performClick()
+        finalAction.performScrollTo().assertIsEnabled().performClick()
 
         assertEquals(1, deletes)
     }
