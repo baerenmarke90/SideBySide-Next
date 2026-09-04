@@ -170,6 +170,7 @@ M6/G5 does not add:
 - `DECISION-LOG.md` — frozen, blocking, before-release and later decisions.
 - `DELIVERY-PLAN.md` — ordered small slices and dependencies.
 - `OPERATIONS-RECOVERY.md` — #190 reuse and remaining G5 gaps.
+- `ACCOUNT-DELETION-RETENTION.md` — #520 Account deletion/retention matrix and restore-reconciliation contract.
 - `DEPLOYMENT-RELEASE.md` — release artifacts, environments, promotion and rollback.
 - `ADMIN-OBSERVABILITY.md` — privileged administration and diagnostic boundaries.
 - `ENTITLEMENT-BOUNDARY.md` — provider-neutral runtime boundary feeding #523.
