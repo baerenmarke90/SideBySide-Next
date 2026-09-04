@@ -39,7 +39,6 @@ Collection
 - id
 - spaceId
 - title
-- icon?
 - createdBy
 - createdAt
 - updatedAt
@@ -60,7 +59,7 @@ CollectionItem
 Rules:
 
 - `createdBy` is set server-side on both root and Item and remains immutable;
-- both active Space members may change Collection title/icon;
+- both active Space members may change Collection title;
 - both may create, rename, complete, and delete Items;
 - both may delete the entire Collection;
 - `createdBy` is Attribution/Audit, not an ACL;
@@ -190,7 +189,6 @@ Structural fields also must never be disclosed to partners, Shared counts, logs,
 Protected content:
 
 - root `title`
-- root `icon` when user-defined/Domain content
 - Item `title`
 
 Structural owner-only metadata:
@@ -247,7 +245,6 @@ PrivateCollection
 - spaceId
 - ownerId
 - title
-- icon?
 - createdAt
 - updatedAt
 - version

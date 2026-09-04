@@ -1,4 +1,9 @@
-import { type FormEvent, useState } from 'react';
+import {
+  type ButtonHTMLAttributes,
+  type FormEvent,
+  useEffect,
+  useState,
+} from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { CollectionDetail } from '../api/generated/models/CollectionDetail';
@@ -8,7 +13,8 @@ import {
   planningIfMatch,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { appRoutePath } from '../client/routes';
+import { MORE_COLLECTIONS_ROUTE } from '../client/routes';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
@@ -24,6 +30,114 @@ async function apiCall<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
+function CollectionItemRow({
+  item,
+  collection,
+  activeItemId,
+  handleProps,
+  onUpdateTitle,
+  onToggleComplete,
+  onDelete,
+  isUpdating,
+  isDeleting,
+}: {
+  item: CollectionItemDetail;
+  collection: CollectionDetail;
+  activeItemId: string | null;
+  handleProps: (id: string) => ButtonHTMLAttributes<HTMLButtonElement>;
+  onUpdateTitle: (item: CollectionItemDetail, title: string) => void;
+  onToggleComplete: (item: CollectionItemDetail) => void;
+  onDelete: (item: CollectionItemDetail) => void;
+  isUpdating: boolean;
+  isDeleting: boolean;
+}) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(item.title);
+
+  useEffect(() => {
+    setDraft(item.title);
+  }, [item.title]);
+
+  function commit() {
+    const trimmed = draft.trim();
+    if (trimmed.length > 0 && trimmed !== item.title) {
+      onUpdateTitle(item, trimmed);
+    } else if (trimmed.length === 0) {
+      setDraft(item.title);
+    }
+  }
+
+  return (
+    <li
+      data-sortable-item-id={item.id}
+      className={[
+        item.completed ? 'planning-item-completed' : null,
+        activeItemId === item.id ? 'list-entry-dragging' : null,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <button
+        type="button"
+        className="planning-check"
+        aria-pressed={item.completed}
+        aria-label={
+          item.completed
+            ? t('m5s3.collection.markOpen', { title: item.title })
+            : t('m5s3.collection.markDone', { title: item.title })
+        }
+        onClick={() => onToggleComplete(item)}
+        disabled={!item.capabilities.canEdit || isUpdating}
+      >
+        {item.completed ? '✓' : ''}
+      </button>
+      <div className="planning-item-title-form">
+        <label className="sr-only" htmlFor={`collection-item-${item.id}`}>
+          {t('m5s3.collection.itemTitle')}
+        </label>
+        <input
+          id={`collection-item-${item.id}`}
+          name="title"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commit();
+              e.currentTarget.blur();
+            }
+          }}
+          required
+          maxLength={200}
+          disabled={!item.capabilities.canEdit}
+        />
+      </div>
+      {collection.capabilities.canEdit ? (
+        <ListEntryIconButton
+          icon="reorder"
+          className="tertiary"
+          label={t('m5s3.collection.reorderItem', {
+            title: item.title,
+          })}
+          {...handleProps(item.id)}
+        />
+      ) : null}
+      {item.capabilities.canDelete ? (
+        <ListEntryIconButton
+          icon="delete"
+          className="tertiary"
+          label={t('m5s3.collection.deleteItem', {
+            title: item.title,
+          })}
+          onClick={() => onDelete(item)}
+          disabled={isDeleting}
+        />
+      ) : null}
+    </li>
+  );
+}
+
 export function CollectionProductPage({
   apis,
   spaceId,
@@ -36,7 +150,10 @@ export function CollectionProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const key = ['m5-s3', 'collection', spaceId, collectionId] as const;
+  const [isEditing, setIsEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [showTitleSaved, setShowTitleSaved] = useState(false);
+  const key = authorSummaryQueryKeys.collectionDetail(spaceId, collectionId);
 
   const collectionQuery = useQuery({
     queryKey: key,
@@ -49,6 +166,17 @@ export function CollectionProductPage({
     enabled: Boolean(collectionId),
     retry: false,
   });
+
+  useEffect(() => {
+    if (collectionQuery.data?.title) {
+      setTitleDraft(collectionQuery.data.title);
+    }
+  }, [collectionQuery.data?.title]);
+
+  const isTitleDirty =
+    Boolean(collectionQuery.data?.title) &&
+    titleDraft.trim().length > 0 &&
+    titleDraft.trim() !== collectionQuery.data?.title;
 
   const commitCollection = async (collection: CollectionDetail) => {
     queryClient.setQueryData(key, collection);
@@ -64,21 +192,25 @@ export function CollectionProductPage({
     mutationFn: ({
       collection,
       title,
-      icon,
     }: {
       collection: CollectionDetail;
       title: string;
-      icon: string;
     }) =>
       apiCall(() =>
         apis.collections.updateCollection({
           spaceId,
           collectionId: collection.id,
           ifMatch: planningIfMatch(collection),
-          collectionUpdate: { title, icon: icon || null },
+          collectionUpdate: { title },
         }),
       ),
-    onSuccess: commitCollection,
+    onSuccess: async (data) => {
+      await commitCollection(data);
+      setIsEditing(false);
+      setConfirmDelete(false);
+      setShowTitleSaved(true);
+      setTimeout(() => setShowTitleSaved(false), 2500);
+    },
   });
 
   const createItem = useMutation({
@@ -187,7 +319,7 @@ export function CollectionProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'collections', spaceId],
       });
-      navigate(appRoutePath('plan'), { replace: true });
+      navigate(MORE_COLLECTIONS_ROUTE, { replace: true });
     },
   });
 
@@ -236,7 +368,6 @@ export function CollectionProductPage({
     updateCollection.mutate({
       collection,
       title: String(data.get('title')).trim(),
-      icon: String(data.get('icon') || '').trim(),
     });
   }
 
@@ -251,20 +382,6 @@ export function CollectionProductPage({
     );
   }
 
-  function submitItemTitle(
-    event: FormEvent<HTMLFormElement>,
-    item: CollectionItemDetail,
-  ) {
-    event.preventDefault();
-    if (!collection) return;
-    const data = new FormData(event.currentTarget);
-    updateItem.mutate({
-      collection,
-      item,
-      title: String(data.get('title')).trim(),
-    });
-  }
-
   const itemMutationError =
     createItem.error ||
     updateItem.error ||
@@ -274,70 +391,109 @@ export function CollectionProductPage({
   return (
     <div className="page planning-page">
       <PageHeader
+        className="page-heading-collection"
         before={
-          <Link className="back-link" to={appRoutePath('plan')}>
-            {t('m5s3.common.back')}
+          <Link className="back-link" to={MORE_COLLECTIONS_ROUTE}>
+            {t('m5s3.common.backToCollections')}
           </Link>
         }
         eyebrow={t('m5s3.collection.detailEyebrow')}
         title={
-          collection.icon
-            ? `${collection.icon} ${collection.title}`
-            : collection.title
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+            }}
+          >
+            {collection.title}
+            {showTitleSaved ? (
+              <span
+                className="planning-title-saved-hint"
+                role="status"
+                aria-live="polite"
+              >
+                ✓
+              </span>
+            ) : null}
+          </span>
+        }
+        titleAction={
+          collection.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
+        }
+        titleEditor={
+          isEditing ? (
+            <form
+              className="planning-collection-title-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitCollection(e);
+              }}
+            >
+              <label htmlFor="collection-edit-title" className="sr-only">
+                {t('m5s3.common.title')}
+              </label>
+              <div className="planning-collection-title-row">
+                <input
+                  id="collection-edit-title"
+                  name="title"
+                  required
+                  maxLength={200}
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  placeholder={t('m5s3.common.title')}
+                  aria-label={t('m5s3.common.title')}
+                />
+                <ListEntryIconButton
+                  type="submit"
+                  icon="save"
+                  className="tertiary"
+                  label={
+                    updateCollection.isPending
+                      ? t('m5s3.common.saving')
+                      : t('m5s3.common.saveChanges')
+                  }
+                  disabled={!isTitleDirty || updateCollection.isPending}
+                />
+                <button
+                  type="button"
+                  className="button-link secondary-link"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setConfirmDelete(false);
+                    setTitleDraft(collection.title);
+                  }}
+                  disabled={updateCollection.isPending}
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+              {updateCollection.error ? (
+                <ProblemState
+                  error={updateCollection.error}
+                  onRetry={() => void collectionQuery.refetch()}
+                />
+              ) : null}
+            </form>
+          ) : undefined
         }
         description={t('m5s3.collection.itemCount', { count: items.length })}
       />
-
-      {collection.capabilities.canEdit ? (
-        <section className="planning-subsection">
-          <h2>{t('m5s3.common.edit')}</h2>
-          <form className="form-grid" onSubmit={submitCollection}>
-            <label htmlFor="collection-edit-title">
-              {t('m5s3.common.title')}
-            </label>
-            <input
-              id="collection-edit-title"
-              name="title"
-              required
-              maxLength={200}
-              defaultValue={collection.title}
-            />
-            <label htmlFor="collection-edit-icon">
-              {t('m5s3.collection.icon')}
-            </label>
-            <input
-              id="collection-edit-icon"
-              name="icon"
-              maxLength={8}
-              defaultValue={collection.icon ?? ''}
-            />
-            <button type="submit" disabled={updateCollection.isPending}>
-              {updateCollection.isPending
-                ? t('m5s3.common.saving')
-                : t('m5s3.common.saveChanges')}
-            </button>
-            {updateCollection.error ? (
-              <ProblemState
-                error={updateCollection.error}
-                onRetry={() => void collectionQuery.refetch()}
-              />
-            ) : null}
-          </form>
-        </section>
-      ) : null}
 
       <section
         className="planning-subsection"
         aria-labelledby="collection-items-heading"
       >
-        <div className="layout-section-head">
-          <div>
-            <h2 id="collection-items-heading">
-              {t('m5s3.collection.itemsHeading')}
-            </h2>
-            <p>{t('m5s3.collection.itemsIntro')}</p>
-          </div>
-        </div>
+        <h2 id="collection-items-heading" className="sr-only">
+          {t('m5s3.collection.itemsHeading')}
+        </h2>
 
         {collection.capabilities.canEdit ? (
           <form className="planning-inline-create" onSubmit={submitItem}>
@@ -351,105 +507,45 @@ export function CollectionProductPage({
               maxLength={200}
               placeholder={t('m5s3.collection.newItemPlaceholder')}
             />
-            <button type="submit" disabled={createItem.isPending}>
-              {createItem.isPending
-                ? t('m5s3.common.saving')
-                : t('m5s3.collection.addItem')}
-            </button>
+            <ListEntryIconButton
+              type="submit"
+              icon="add"
+              className="list-entry-add-button"
+              label={
+                createItem.isPending
+                  ? t('m5s3.common.saving')
+                  : t('m5s3.collection.addItem')
+              }
+              disabled={createItem.isPending}
+            />
           </form>
         ) : null}
 
         {items.length > 0 ? (
           <ol className="planning-collection-items">
             {items.map((item) => (
-              <li
+              <CollectionItemRow
                 key={item.id}
-                data-sortable-item-id={item.id}
-                className={[
-                  item.completed ? 'planning-item-completed' : null,
-                  reorder.activeItemId === item.id
-                    ? 'list-entry-dragging'
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                <button
-                  type="button"
-                  className="planning-check"
-                  aria-pressed={item.completed}
-                  aria-label={
-                    item.completed
-                      ? t('m5s3.collection.markOpen', { title: item.title })
-                      : t('m5s3.collection.markDone', { title: item.title })
-                  }
-                  onClick={() =>
-                    updateItem.mutate({
-                      collection,
-                      item,
-                      completed: !item.completed,
-                    })
-                  }
-                  disabled={!item.capabilities.canEdit || updateItem.isPending}
-                >
-                  {item.completed ? '✓' : ''}
-                </button>
-                <form
-                  className="planning-item-title-form"
-                  onSubmit={(event) => submitItemTitle(event, item)}
-                >
-                  <label
-                    className="sr-only"
-                    htmlFor={`collection-item-${item.id}`}
-                  >
-                    {t('m5s3.collection.itemTitle')}
-                  </label>
-                  <input
-                    id={`collection-item-${item.id}`}
-                    name="title"
-                    defaultValue={item.title}
-                    required
-                    maxLength={200}
-                    disabled={!item.capabilities.canEdit}
-                  />
-                  {item.capabilities.canEdit ? (
-                    <ListEntryIconButton
-                      type="submit"
-                      icon="save"
-                      className="tertiary"
-                      label={
-                        updateItem.isPending
-                          ? t('m5s3.common.saving')
-                          : t('m5s3.collection.saveItem', {
-                              title: item.title,
-                            })
-                      }
-                      disabled={updateItem.isPending}
-                    />
-                  ) : null}
-                </form>
-                {collection.capabilities.canEdit ? (
-                  <ListEntryIconButton
-                    icon="reorder"
-                    className="tertiary"
-                    label={t('m5s3.collection.reorderItem', {
-                      title: item.title,
-                    })}
-                    {...reorder.handleProps(item.id)}
-                  />
-                ) : null}
-                {item.capabilities.canDelete ? (
-                  <ListEntryIconButton
-                    icon="delete"
-                    className="tertiary"
-                    label={t('m5s3.collection.deleteItem', {
-                      title: item.title,
-                    })}
-                    onClick={() => deleteItem.mutate({ collection, item })}
-                    disabled={deleteItem.isPending}
-                  />
-                ) : null}
-              </li>
+                item={item}
+                collection={collection}
+                activeItemId={reorder.activeItemId}
+                handleProps={reorder.handleProps}
+                onUpdateTitle={(targetItem, title) =>
+                  updateItem.mutate({ collection, item: targetItem, title })
+                }
+                onToggleComplete={(targetItem) =>
+                  updateItem.mutate({
+                    collection,
+                    item: targetItem,
+                    completed: !targetItem.completed,
+                  })
+                }
+                onDelete={(targetItem) =>
+                  deleteItem.mutate({ collection, item: targetItem })
+                }
+                isUpdating={updateItem.isPending}
+                isDeleting={deleteItem.isPending}
+              />
             ))}
           </ol>
         ) : (
@@ -466,7 +562,7 @@ export function CollectionProductPage({
         ) : null}
       </section>
 
-      {collection.capabilities.canDelete ? (
+      {isEditing && collection.capabilities.canDelete ? (
         <section
           className="planning-danger-zone"
           aria-labelledby="collection-delete-heading"

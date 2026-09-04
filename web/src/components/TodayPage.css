@@ -470,17 +470,138 @@
     width: auto;
   }
 
-  .today-stream-recent {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
-    gap: var(--space-5);
-    overflow: visible;
+  .today-stream.today-stream-recent {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
   }
+}
 
-  .today-stream-recent .today-card-shell {
-    flex: none;
-    width: auto;
+.today-stream.today-stream-recent {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  overflow: visible;
+  scroll-snap-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .today-stream.today-stream-recent {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
   }
+}
+
+.recent-shared-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  border-radius: var(--radius-card);
+}
+
+.recent-shared-card-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.recent-shared-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-soft);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.recent-shared-card-link:hover .recent-shared-card {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.recent-shared-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: var(--radius-medium);
+  background: var(--color-brand-surface);
+  color: var(--color-brand-text);
+}
+
+.recent-type-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.recent-shared-copy {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.recent-shared-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 650;
+  color: var(--color-text);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-shared-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.recent-shared-meta-sep {
+  opacity: 0.6;
+}
+
+.today-recent-footer {
+  margin-top: var(--space-4);
+  display: flex;
+  justify-content: flex-start;
+}
+
+.today-recent-activity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-brand-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: var(--space-2) 0;
+}
+
+.today-recent-activity-link:hover {
+  text-decoration: underline;
+}
+
+.today-section-subline {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.4;
 }
 
 .today-card-link:focus-visible {
@@ -574,15 +695,19 @@
 }
 
 .today-card-upcoming {
-  min-height: 200px;
-  padding: var(--space-6);
+  min-height: 140px;
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .today-card-upcoming .today-card-title {
-  max-width: 20ch;
+  max-width: 24ch;
   font-family: var(--font-ui);
-  font-size: clamp(1.2rem, 2.5vw, 1.45rem);
-  font-weight: 750;
+  font-size: clamp(1.1rem, 2vw, 1.28rem);
+  font-weight: 700;
+  margin: var(--space-2) 0;
 }
 
 .today-card-link:hover .today-card {
@@ -644,12 +769,125 @@
   font-weight: 600;
   letter-spacing: normal;
   text-transform: none;
+  line-height: 1.3;
 }
 
-.today-card-kind-icon {
-  font-size: 0.8rem;
-  line-height: 1;
-  opacity: 0.85;
+.today-type-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.today-type-icon .recent-type-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+/* Semantic type badges */
+.today-kind-birthday {
+  background: #fef3c722;
+  border-color: #f59e0b44;
+  color: #b45309;
+}
+:root[data-theme="dark"] .today-kind-birthday {
+  background: #78350f25;
+  border-color: #f59e0b55;
+  color: #fcd34d;
+}
+
+.today-kind-anniversary,
+.today-kind-heart_moment {
+  background: #ffe4e628;
+  border-color: #f43f5e44;
+  color: #be123c;
+}
+:root[data-theme="dark"] .today-kind-anniversary,
+:root[data-theme="dark"] .today-kind-heart_moment {
+  background: #88133728;
+  border-color: #f43f5e55;
+  color: #fda4af;
+}
+
+.today-kind-milestone {
+  background: #fef9c328;
+  border-color: #eab30844;
+  color: #a16207;
+}
+:root[data-theme="dark"] .today-kind-milestone {
+  background: #713f1228;
+  border-color: #eab30855;
+  color: #fde047;
+}
+
+.today-kind-plan,
+.today-kind-important_date {
+  background: #e0e7ff28;
+  border-color: #6366f144;
+  color: #4338ca;
+}
+:root[data-theme="dark"] .today-kind-plan,
+:root[data-theme="dark"] .today-kind-important_date {
+  background: #312e8128;
+  border-color: #6366f155;
+  color: #a5b4fc;
+}
+
+.today-kind-chapter {
+  background: #ede9fe28;
+  border-color: #8b5cf644;
+  color: #6d28d9;
+}
+:root[data-theme="dark"] .today-kind-chapter {
+  background: #4c1d9528;
+  border-color: #8b5cf655;
+  color: #c4b5fd;
+}
+
+.today-kind-collection,
+.today-kind-collection_item {
+  background: #ccfbf128;
+  border-color: #14b8a644;
+  color: #0f766e;
+}
+:root[data-theme="dark"] .today-kind-collection,
+:root[data-theme="dark"] .today-kind-collection_item {
+  background: #134e4a28;
+  border-color: #14b8a655;
+  color: #5eead4;
+}
+
+.today-kind-wish {
+  background: #fce7f328;
+  border-color: #ec489944;
+  color: #be185d;
+}
+:root[data-theme="dark"] .today-kind-wish {
+  background: #83184328;
+  border-color: #ec489955;
+  color: #f472b6;
+}
+
+.today-kind-memory {
+  background: #e0f2fe28;
+  border-color: #0ea5e944;
+  color: #0369a1;
+}
+:root[data-theme="dark"] .today-kind-memory {
+  background: #0c4a6e28;
+  border-color: #0ea5e955;
+  color: #7dd3fc;
+}
+
+.today-kind-place {
+  background: #d1fae528;
+  border-color: #10b98144;
+  color: #047857;
+}
+:root[data-theme="dark"] .today-kind-place {
+  background: #064e3b28;
+  border-color: #10b98155;
+  color: #6ee7b7;
 }
 
 .today-card-retrospective-badge {

@@ -69,7 +69,6 @@ class PrivateCollectionDetailScreenTest {
         val collection = PrivateCollectionDetail(
             capabilities = capabilities,
             createdAt = OffsetDateTime.now(),
-            icon = null,
             id = UUID.randomUUID(),
             items = listOf(
                 PrivateCollectionItemDetail(

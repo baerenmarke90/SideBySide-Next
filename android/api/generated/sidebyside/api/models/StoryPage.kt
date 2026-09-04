@@ -35,6 +35,7 @@ import kotlinx.serialization.Contextual
  * @param hasMore 
  * @param items 
  * @param nextCursor 
+ * @param availableYears 
  */
 @Serializable
 
@@ -47,7 +48,10 @@ data class StoryPage (
     val items: kotlin.collections.List<StoryItem>,
 
     @SerialName(value = "nextCursor")
-    val nextCursor: kotlin.String?
+    val nextCursor: kotlin.String?,
+
+    @SerialName(value = "availableYears")
+    val availableYears: kotlin.collections.List<kotlin.Int>? = null
 
 ) {
 

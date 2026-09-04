@@ -287,13 +287,21 @@ ALLOWED_LEGACY_INPUT = "Aktueller `main`"
 # domain-content fixtures. Keeping the exception value-based rather than
 # excluding whole test files still audits their engineering prose.
 ALLOWED_LOCALIZED_TEXTS = (
+    "Al dente mit Salbei",
     "Am See",
     "Anmeldung fehlgeschlagen.",
     "Bild auswählen",
     "Danke für den schönen Abend.",
+    "Dies ist das Profil, das dein Partner sieht.",
     "Erinnerung mit Bild speichern",
     "Eure Story beginnt hier.",
+    "Keine Einträge",
+    "Konzert im Herbst",
     "Noch keine Einträge in eurer Story.",
+    "Pfingstrosen im Juni",
+    "Scharf mit Koriander",
+    "von Alex",
+    "von Sam",
 )
 
 DIAGNOSTIC_CALLS = {"print", "fail", "skip", "xfail"}

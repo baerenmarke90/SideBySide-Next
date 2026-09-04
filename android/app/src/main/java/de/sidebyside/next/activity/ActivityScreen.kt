@@ -48,6 +48,7 @@ fun ActivityScreen(
     onBack: () -> Unit,
     onOpen: (ActivityItem) -> Unit,
     modifier: Modifier = Modifier,
+    currentAccountId: java.util.UUID? = null,
     onLoadMore: (() -> Unit)? = null,
     loadingMore: Boolean = false,
 ) {
@@ -102,12 +103,17 @@ fun ActivityScreen(
                     .fillMaxWidth()
                     .then(if (opensSomewhere) Modifier.clickable { onOpen(entry) } else Modifier),
             ) {
-                Text(
-                    text = stringResource(entry.kind.labelRes()),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = SideBySideTheme.colors.textPrimary,
+                Column(
                     modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
-                )
+                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step1),
+                ) {
+                    val sentence = activitySentence(entry, currentAccountId)
+                    Text(
+                        text = sentence,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = SideBySideTheme.colors.textPrimary,
+                    )
+                }
             }
         }
 
@@ -138,4 +144,80 @@ private fun ActivityKind.labelRes(): Int = when (this) {
     ActivityKind.CHAPTER_CREATED -> R.string.activity_kind_chapter_created
     ActivityKind.COLLECTION_CREATED -> R.string.activity_kind_collection_created
     ActivityKind.COMMENT_CREATED -> R.string.activity_kind_comment_created
+}
+
+@Composable
+fun activitySentence(
+    entry: ActivityItem,
+    currentAccountId: java.util.UUID?,
+): String {
+    val isOwn = currentAccountId != null && entry.actor?.id == currentAccountId
+    val actorName = if (isOwn) stringResource(R.string.activity_you) else entry.actor?.displayName
+    val targetTitle = entry.target?.title?.takeIf { it.isNotBlank() }
+
+    return when {
+        isOwn && targetTitle != null -> {
+            val resId = when (entry.kind) {
+                ActivityKind.MEMORY_CREATED -> R.string.activity_action_own_memory_created
+                ActivityKind.MILESTONE_CREATED -> R.string.activity_action_own_milestone_created
+                ActivityKind.HEART_MOMENT_CREATED -> R.string.activity_action_own_heart_moment_created
+                ActivityKind.WISH_CREATED -> R.string.activity_action_own_wish_created
+                ActivityKind.PLAN_CREATED -> R.string.activity_action_own_plan_created
+                ActivityKind.PLAN_COMPLETED -> R.string.activity_action_own_plan_completed
+                ActivityKind.PLACE_CREATED -> R.string.activity_action_own_place_created
+                ActivityKind.CHAPTER_CREATED -> R.string.activity_action_own_chapter_created
+                ActivityKind.COLLECTION_CREATED -> R.string.activity_action_own_collection_created
+                ActivityKind.COMMENT_CREATED -> R.string.activity_action_own_comment_created
+            }
+            stringResource(resId, targetTitle)
+        }
+        isOwn && targetTitle == null -> {
+            val resId = when (entry.kind) {
+                ActivityKind.MEMORY_CREATED -> R.string.activity_action_own_memory_created_notarget
+                ActivityKind.MILESTONE_CREATED -> R.string.activity_action_own_milestone_created_notarget
+                ActivityKind.HEART_MOMENT_CREATED -> R.string.activity_action_own_heart_moment_created_notarget
+                ActivityKind.WISH_CREATED -> R.string.activity_action_own_wish_created_notarget
+                ActivityKind.PLAN_CREATED -> R.string.activity_action_own_plan_created_notarget
+                ActivityKind.PLAN_COMPLETED -> R.string.activity_action_own_plan_completed_notarget
+                ActivityKind.PLACE_CREATED -> R.string.activity_action_own_place_created_notarget
+                ActivityKind.CHAPTER_CREATED -> R.string.activity_action_own_chapter_created_notarget
+                ActivityKind.COLLECTION_CREATED -> R.string.activity_action_own_collection_created_notarget
+                ActivityKind.COMMENT_CREATED -> R.string.activity_action_own_comment_created_notarget
+            }
+            stringResource(resId)
+        }
+        actorName != null && targetTitle != null -> {
+            val resId = when (entry.kind) {
+                ActivityKind.MEMORY_CREATED -> R.string.activity_action_memory_created
+                ActivityKind.MILESTONE_CREATED -> R.string.activity_action_milestone_created
+                ActivityKind.HEART_MOMENT_CREATED -> R.string.activity_action_heart_moment_created
+                ActivityKind.WISH_CREATED -> R.string.activity_action_wish_created
+                ActivityKind.PLAN_CREATED -> R.string.activity_action_plan_created
+                ActivityKind.PLAN_COMPLETED -> R.string.activity_action_plan_completed
+                ActivityKind.PLACE_CREATED -> R.string.activity_action_place_created
+                ActivityKind.CHAPTER_CREATED -> R.string.activity_action_chapter_created
+                ActivityKind.COLLECTION_CREATED -> R.string.activity_action_collection_created
+                ActivityKind.COMMENT_CREATED -> R.string.activity_action_comment_created
+            }
+            stringResource(resId, actorName, targetTitle)
+        }
+        actorName != null && targetTitle == null -> {
+            val resId = when (entry.kind) {
+                ActivityKind.MEMORY_CREATED -> R.string.activity_action_memory_created_notarget
+                ActivityKind.MILESTONE_CREATED -> R.string.activity_action_milestone_created_notarget
+                ActivityKind.HEART_MOMENT_CREATED -> R.string.activity_action_heart_moment_created_notarget
+                ActivityKind.WISH_CREATED -> R.string.activity_action_wish_created_notarget
+                ActivityKind.PLAN_CREATED -> R.string.activity_action_plan_created_notarget
+                ActivityKind.PLAN_COMPLETED -> R.string.activity_action_plan_completed_notarget
+                ActivityKind.PLACE_CREATED -> R.string.activity_action_place_created_notarget
+                ActivityKind.CHAPTER_CREATED -> R.string.activity_action_chapter_created_notarget
+                ActivityKind.COLLECTION_CREATED -> R.string.activity_action_collection_created_notarget
+                ActivityKind.COMMENT_CREATED -> R.string.activity_action_comment_created_notarget
+            }
+            stringResource(resId, actorName)
+        }
+        else -> {
+            stringResource(entry.kind.labelRes())
+        }
+    }
 }

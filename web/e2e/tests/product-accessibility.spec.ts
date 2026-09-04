@@ -132,6 +132,14 @@ async function installAuthorizedApiMocks(page: Page): Promise<string[]> {
       return;
     }
 
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+    ) {
+      await fulfillJson({ unreadCount: 0 });
+      return;
+    }
+
     unexpectedRequests.push(`${method} ${pathname}`);
     await fulfillJson(
       {
@@ -203,16 +211,27 @@ test('compact authenticated shell keeps global quick create reachable and access
   await quickCreate.focus();
   await page.keyboard.press('ArrowDown');
 
-  const memoryTarget = page.getByRole('menuitem', {
+  const sheetDialog = page.getByRole('dialog', {
+    name: navigation.newContent,
+  });
+  await expect(sheetDialog).toBeVisible();
+
+  const closeButton = page.getByRole('button', {
+    name: navigation.closeMenu,
+  });
+  await expect(closeButton).toBeFocused();
+
+  const memoryTarget = page.getByRole('link', {
     name: navigation.quickCreateMemory,
   });
   await expect(memoryTarget).toBeVisible();
+  await page.keyboard.press('Tab');
   await expect(memoryTarget).toBeFocused();
   await expect(
-    page.getByRole('menuitem', { name: navigation.quickCreateCollection }),
+    page.getByRole('link', { name: navigation.quickCreateCollection }),
   ).toBeVisible();
   await expect(
-    page.getByRole('menuitem', { name: navigation.quickCreatePrivateNote }),
+    page.getByRole('link', { name: navigation.quickCreatePrivateNote }),
   ).toBeVisible();
 
   await expectNoHorizontalOverflow(page);
@@ -220,9 +239,7 @@ test('compact authenticated shell keeps global quick create reachable and access
 
   await page.keyboard.press('Escape');
   await expect(quickCreate).toBeFocused();
-  await expect(
-    page.getByRole('menu', { name: navigation.newContent }),
-  ).toHaveCount(0);
+  await expect(sheetDialog).toHaveCount(0);
   expect(unexpectedRequests).toEqual([]);
 });
 

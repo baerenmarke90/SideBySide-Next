@@ -257,12 +257,12 @@
     <string name="plan_edit_title">Plan bearbeiten</string>
     <string name="plan_save_changes">Änderungen speichern</string>
     <string name="plan_status_idea">Idee</string>
-    <string name="plan_status_planned">Geplant</string>
-    <string name="plan_status_completed">Erlebt</string>
-    <string name="plan_schedule">Termin setzen</string>
+    <string name="plan_status_planned">Das haben wir vor</string>
+    <string name="plan_status_completed">Gemeinsam erlebt</string>
+    <string name="plan_schedule">Zeitpunkt festlegen</string>
     <string name="plan_schedule_date_hint">Datum (JJJJ-MM-TT)</string>
-    <string name="plan_schedule_confirm">Termin bestätigen</string>
-    <string name="plan_unschedule">Termin entfernen</string>
+    <string name="plan_schedule_confirm">Zeitpunkt bestätigen</string>
+    <string name="plan_unschedule">Zeitpunkt entfernen</string>
     <string name="plan_complete">Haben wir erlebt</string>
     <string name="plan_complete_date_hint">Datum (JJJJ-MM-TT)</string>
     <string name="plan_complete_confirm">Als erlebt bestätigen</string>
@@ -355,20 +355,21 @@
     <string name="related_person_birthday_year_unknown">Jahr unbekannt</string>
     <string name="related_person_keep_private">Nur für mich sichtbar</string>
     <string name="related_person_save">Speichern</string>
-    <string name="related_person_open">Wichtige Tage öffnen</string>
+    <string name="related_person_open">Besondere Tage ansehen</string>
     <string name="related_person_edit">Bearbeiten</string>
     <string name="related_person_edit_title">%1$s bearbeiten</string>
+    <string name="related_person_more_actions">Weitere Aktionen für %1$s</string>
     <string name="related_person_delete">Löschen</string>
     <string name="related_person_cancel">Abbrechen</string>
     <string name="related_person_delete_title">%1$s löschen?</string>
-    <string name="related_person_delete_warning">Mit dieser Person verknüpfte Termine können auch Einträge deines Partners enthalten.</string>
-    <string name="related_person_delete_preserve_title">Termine erhalten</string>
-    <string name="related_person_delete_preserve_body">Die Person wird entfernt. Verknüpfte Termine bleiben bestehen, ohne die Verbindung zu ihr.</string>
-    <string name="related_person_delete_cascade_title">Termine mit löschen</string>
-    <string name="related_person_delete_cascade_body">Die Person und alle mit ihr verknüpften Termine werden endgültig gelöscht.</string>
-    <string name="important_dates_title">Wichtige Tage</string>
-    <string name="important_dates_empty">Noch kein Termin für diese Person.</string>
-    <string name="important_date_add">Termin hinzufügen</string>
+    <string name="related_person_delete_warning">Mit dieser Person verknüpfte Tage können auch Einträge deines Partners enthalten.</string>
+    <string name="related_person_delete_preserve_title">Besondere Tage behalten</string>
+    <string name="related_person_delete_preserve_body">Die Person wird entfernt. Verknüpfte Tage bleiben bestehen, ohne die Verbindung zu ihr.</string>
+    <string name="related_person_delete_cascade_title">Besondere Tage mit löschen</string>
+    <string name="related_person_delete_cascade_body">Die Person und alle mit ihr verknüpften Tage werden endgültig gelöscht.</string>
+    <string name="important_dates_title">Besondere Tage</string>
+    <string name="important_dates_empty">Noch keine besonderen Tage für diese Person.</string>
+    <string name="important_date_add">Besonderen Tag festhalten</string>
     <string name="important_date_label_hint">Anlass</string>
     <string name="important_date_type">Art</string>
     <string name="important_date_type_birthday">Geburtstag</string>
@@ -566,7 +567,6 @@
     <string name="private_collections_empty">Noch keine privaten Listen.</string>
     <string name="private_collection_add">Liste hinzufügen</string>
     <string name="private_collection_title_hint">Titel</string>
-    <string name="private_collection_icon_hint">Symbol (optional)</string>
     <string name="private_collection_open">Öffnen</string>
     <string name="private_collection_edit">Bearbeiten</string>
     <string name="private_collection_edit_title">Liste bearbeiten</string>
@@ -613,6 +613,52 @@
     <string name="activity_kind_collection_created">Liste erstellt</string>
     <string name="activity_kind_comment_created">Kommentar geschrieben</string>
 
+    <string name="activity_you">Du</string>
+
+    <string name="activity_action_memory_created">%1$s hat die Erinnerung „%2$s“ festgehalten.</string>
+    <string name="activity_action_milestone_created">%1$s hat den Meilenstein „%2$s“ hinzugefügt.</string>
+    <string name="activity_action_heart_moment_created">%1$s hat einen Herzensmoment geteilt: „%2$s“.</string>
+    <string name="activity_action_wish_created">%1$s hat den Wunsch „%2$s“ aufgeschrieben.</string>
+    <string name="activity_action_plan_created">%1$s hat den Plan „%2$s“ geschmiedet.</string>
+    <string name="activity_action_plan_completed">%1$s hat den Plan „%2$s“ abgeschlossen.</string>
+    <string name="activity_action_place_created">%1$s hat den Ort „%2$s“ zu euch hinzugefügt.</string>
+    <string name="activity_action_chapter_created">%1$s hat das Kapitel „%2$s“ begonnen.</string>
+    <string name="activity_action_collection_created">%1$s hat die Liste „%2$s“ angelegt.</string>
+    <string name="activity_action_comment_created">%1$s hat „%2$s“ kommentiert.</string>
+
+    <string name="activity_action_memory_created_notarget">%1$s hat eine Erinnerung festgehalten.</string>
+    <string name="activity_action_milestone_created_notarget">%1$s hat einen Meilenstein hinzugefügt.</string>
+    <string name="activity_action_heart_moment_created_notarget">%1$s hat einen Herzensmoment geteilt.</string>
+    <string name="activity_action_wish_created_notarget">%1$s hat einen Wunsch aufgeschrieben.</string>
+    <string name="activity_action_plan_created_notarget">%1$s hat einen Plan geschmiedet.</string>
+    <string name="activity_action_plan_completed_notarget">%1$s hat einen Plan abgeschlossen.</string>
+    <string name="activity_action_place_created_notarget">%1$s hat einen Ort hinzugefügt.</string>
+    <string name="activity_action_chapter_created_notarget">%1$s hat ein Kapitel begonnen.</string>
+    <string name="activity_action_collection_created_notarget">%1$s hat eine Liste angelegt.</string>
+    <string name="activity_action_comment_created_notarget">%1$s hat einen Kommentar hinterlassen.</string>
+
+    <string name="activity_action_own_memory_created">Du hast die Erinnerung „%1$s“ festgehalten.</string>
+    <string name="activity_action_own_milestone_created">Du hast den Meilenstein „%1$s“ hinzugefügt.</string>
+    <string name="activity_action_own_heart_moment_created">Du hast einen Herzensmoment geteilt: „%1$s“.</string>
+    <string name="activity_action_own_wish_created">Du hast den Wunsch „%1$s“ aufgeschrieben.</string>
+    <string name="activity_action_own_plan_created">Du hast den Plan „%1$s“ angelegt.</string>
+    <string name="activity_action_own_plan_completed">Du hast den Plan „%1$s“ abgeschlossen.</string>
+    <string name="activity_action_own_place_created">Du hast den Ort „%1$s“ zu euch hinzugefügt.</string>
+    <string name="activity_action_own_chapter_created">Du hast das Kapitel „%1$s“ begonnen.</string>
+    <string name="activity_action_own_collection_created">Du hast die Liste „%1$s“ angelegt.</string>
+    <string name="activity_action_own_comment_created">Du hast „%1$s“ kommentiert.</string>
+
+    <string name="activity_action_own_memory_created_notarget">Du hast eine Erinnerung festgehalten.</string>
+    <string name="activity_action_own_milestone_created_notarget">Du hast einen Meilenstein hinzugefügt.</string>
+    <string name="activity_action_own_heart_moment_created_notarget">Du hast einen Herzensmoment geteilt.</string>
+    <string name="activity_action_own_wish_created_notarget">Du hast einen Wunsch aufgeschrieben.</string>
+    <string name="activity_action_own_plan_created_notarget">Du hast einen Plan angelegt.</string>
+    <string name="activity_action_own_plan_completed_notarget">Du hast einen Plan abgeschlossen.</string>
+    <string name="activity_action_own_place_created_notarget">Du hast einen Ort zu euch hinzugefügt.</string>
+    <string name="activity_action_own_chapter_created_notarget">Du hast ein Kapitel begonnen.</string>
+    <string name="activity_action_own_collection_created_notarget">Du hast eine Liste angelegt.</string>
+    <string name="activity_action_own_comment_created_notarget">Du hast einen Kommentar hinterlassen.</string>
+
     <string name="search_open">Suche</string>
     <string name="search_title">Suche</string>
     <string name="search_intro">Durchsucht eure gemeinsame Story und deine privaten Inhalte.</string>
@@ -642,7 +688,6 @@
     <string name="collections_empty">Noch keine gemeinsamen Listen.</string>
     <string name="collection_add">Liste hinzufügen</string>
     <string name="collection_title_hint">Titel</string>
-    <string name="collection_icon_hint">Symbol (optional)</string>
     <string name="collection_open">Öffnen</string>
     <string name="collection_edit">Bearbeiten</string>
     <string name="collection_edit_title">Liste bearbeiten</string>

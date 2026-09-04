@@ -18,6 +18,9 @@ const storyProducts = {
     oldest: 'Älteste zuerst',
     apply: 'Filter anwenden',
     reset: 'Zurücksetzen',
+    removeFilter: 'Filter entfernen',
+    noMatches: 'Keine Momente für diese Auswahl',
+    noMatchesAction: 'Filter zurücksetzen',
     loadMore: 'Weitere Einträge laden',
     loadingMore: 'Weitere Einträge werden geladen …',
   },
@@ -80,7 +83,7 @@ const storyProducts = {
     authorLabel: 'Festgehalten von',
     createdAtLabel: 'Erstellt',
     visibilityLabel: 'Sichtbarkeit',
-    visibilityShared: 'Geteilt',
+    visibilityShared: 'Für uns beide',
     visibilityPrivate: 'Nur für mich',
     sharedHelp: 'Dieser Herzmoment ist für beide Personen im Space sichtbar.',
     privateHelp:

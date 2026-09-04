@@ -9,13 +9,13 @@ from uuid import UUID
 from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, field_validator
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary
 from sidebyside.comments import service
 from sidebyside.comments.models import Comment, CommentTarget
-from sidebyside.identity.models import Account
 
 router = APIRouter(tags=["comments"])
 
@@ -62,10 +62,13 @@ class CommentPage(ApiModel):
     has_more: bool
 
 
-def _detail(session: DbSession, comment: Comment) -> CommentDetail:
-    author = session.get(Account, comment.owner_id)
+def _detail(
+    session: DbSession,
+    comment: Comment,
+    author: AuthorSummary | None = None,
+) -> CommentDetail:
     if author is None:
-        raise RuntimeError("Comment author disappeared despite foreign key protection.")
+        author = resolve_author_summary(session, comment.owner_id, resource="Comment author")
     return CommentDetail(
         id=comment.id,
         space_id=comment.space_id,
@@ -74,7 +77,7 @@ def _detail(session: DbSession, comment: Comment) -> CommentDetail:
         version=comment.version,
         created_at=comment.created_at,
         updated_at=comment.updated_at,
-        author=AuthorSummary(id=author.id, display_name=author.display_name),
+        author=author,
     )
 
 
@@ -113,8 +116,12 @@ def _list(
         cursor=cursor,
         limit=limit,
     )
+    authors = resolve_author_summaries(session, {comment.owner_id for comment in page.items})
     return CommentPage(
-        items=[_detail(session, comment) for comment in page.items],
+        items=[
+            _detail(session, comment, author=authors.get(comment.owner_id))
+            for comment in page.items
+        ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )

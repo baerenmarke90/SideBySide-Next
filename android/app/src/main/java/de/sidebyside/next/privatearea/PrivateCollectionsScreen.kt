@@ -49,8 +49,8 @@ fun PrivateCollectionsScreen(
     problem: UiProblem?,
     onBack: () -> Unit,
     onOpen: (PrivateCollectionDetail) -> Unit,
-    onAdd: (title: String, icon: String) -> Unit,
-    onEdit: (collection: PrivateCollectionDetail, title: String, icon: String) -> Unit,
+    onAdd: (title: String) -> Unit,
+    onEdit: (collection: PrivateCollectionDetail, title: String) -> Unit,
     onDelete: (PrivateCollectionDetail) -> Unit,
     modifier: Modifier = Modifier,
     /** Non-null only while [collections] is a stale M2-D18 cache fallback. */
@@ -127,8 +127,7 @@ fun PrivateCollectionsScreen(
                     verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2),
                 ) {
                     Text(
-                        text = collection.icon?.takeIf { it.isNotBlank() }?.let { "$it ${collection.title}" }
-                            ?: collection.title,
+                        text = collection.title,
                         style = MaterialTheme.typography.titleMedium,
                         color = SideBySideTheme.colors.textPrimary,
                     )
@@ -179,10 +178,9 @@ fun PrivateCollectionsScreen(
                     submitLabel = stringResource(R.string.private_collection_save_changes),
                     busy = busy,
                     initialTitle = target.title,
-                    initialIcon = target.icon.orEmpty(),
-                    onSubmit = { title, icon ->
+                    onSubmit = { title ->
                         editing = null
-                        onEdit(target, title, icon)
+                        onEdit(target, title)
                     },
                 )
             },
@@ -225,11 +223,9 @@ private fun PrivateCollectionForm(
     submitLabel: String,
     busy: Boolean,
     initialTitle: String = "",
-    initialIcon: String = "",
-    onSubmit: (title: String, icon: String) -> Unit,
+    onSubmit: (title: String) -> Unit,
 ) {
     var title by rememberSaveable { mutableStateOf(initialTitle) }
-    var icon by rememberSaveable { mutableStateOf(initialIcon) }
 
     Column(verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
         OutlinedTextField(
@@ -239,19 +235,10 @@ private fun PrivateCollectionForm(
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
         )
-        OutlinedTextField(
-            value = icon,
-            onValueChange = { icon = it.take(8) },
-            label = { Text(stringResource(R.string.private_collection_icon_hint)) },
-            singleLine = true,
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth(),
-        )
         Button(
             onClick = {
-                onSubmit(title, icon)
+                onSubmit(title)
                 title = ""
-                icon = ""
             },
             enabled = !busy && title.isNotBlank(),
             modifier = Modifier.heightIn(min = MinimumTouchTarget),

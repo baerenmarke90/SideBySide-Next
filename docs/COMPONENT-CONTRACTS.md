@@ -182,7 +182,7 @@ action.
 **MVP values, when supported by the domain:** `OWNER_ONLY`, `SPACE_SHARED`.
 
 - Shows icon and text. Intentional de-DE product labels are **„Nur für mich“**
-  and **„Geteilt“**.
+  and **„Für uns beide“**.
 - Display state uses a chip/status; forms use a real selection control.
 - Changing visibility explains recipients and effect.
 - Pink denotes private/protected context and green denotes shared context;

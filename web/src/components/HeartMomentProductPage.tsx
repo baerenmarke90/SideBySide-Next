@@ -21,6 +21,7 @@ import {
   heartMomentEditPath,
 } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { AttachmentDraftPicker } from './AttachmentDraftPicker';
@@ -78,7 +79,7 @@ export function HeartMomentProductPage({
   const params = useParams();
   const queryClient = useQueryClient();
   const heartMomentId = params.heartMomentId;
-  const queryKey = ['heartMoment', spaceId, heartMomentId] as const;
+  const queryKey = authorSummaryQueryKeys.heartMoment(spaceId, heartMomentId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removeExistingPhoto, setRemoveExistingPhoto] = useState(false);
   const attachments = useAttachmentDrafts({
@@ -481,6 +482,7 @@ export function HeartMomentProductPage({
               <Link
                 className="button-link secondary-link"
                 to={heartMomentDetailPath(heartMoment.id)}
+                onClick={() => setConfirmDelete(false)}
               >
                 {t('common.cancel')}
               </Link>
@@ -496,6 +498,54 @@ export function HeartMomentProductPage({
           </form>
           {updateMutation.error ? (
             <ProblemState error={updateMutation.error} />
+          ) : null}
+
+          {heartMoment.capabilities.canDelete && !offline ? (
+            <div style={{ marginTop: 'var(--space-8)' }}>
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  className="button-link danger-link"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  {t('heartMomentProduct.delete')}
+                </button>
+              ) : (
+                <section
+                  className="memory-danger-zone memory-delete-confirmation"
+                  aria-label={t('heartMomentProduct.delete')}
+                  role="alert"
+                >
+                  <div>
+                    <h2>{t('heartMomentProduct.deleteConfirmTitle')}</h2>
+                    <p>{t('heartMomentProduct.deleteConfirmBody')}</p>
+                  </div>
+                  <div className="memory-actions">
+                    <button
+                      type="button"
+                      className="tertiary"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {t('heartMomentProduct.deleteCancel')}
+                    </button>
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => deleteMutation.mutate(heartMoment)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending
+                        ? t('heartMomentProduct.deleting')
+                        : t('heartMomentProduct.deleteConfirm')}
+                    </button>
+                  </div>
+                </section>
+              )}
+              {deleteMutation.error ? (
+                <ProblemState error={deleteMutation.error} />
+              ) : null}
+            </div>
           ) : null}
         </section>
       </div>
@@ -643,52 +693,6 @@ export function HeartMomentProductPage({
             ) : (
               <p className="muted">{t('heartMomentProduct.commentsPrivate')}</p>
             )}
-
-            {heartMoment.capabilities.canDelete && !offline ? (
-              <section
-                className="memory-danger-zone"
-                aria-label={t('heartMomentProduct.delete')}
-              >
-                {!confirmDelete ? (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    {t('heartMomentProduct.delete')}
-                  </button>
-                ) : (
-                  <div className="memory-delete-confirmation" role="alert">
-                    <div>
-                      <h2>{t('heartMomentProduct.deleteConfirmTitle')}</h2>
-                      <p>{t('heartMomentProduct.deleteConfirmBody')}</p>
-                    </div>
-                    <div className="memory-actions">
-                      <button
-                        type="button"
-                        className="tertiary"
-                        onClick={() => setConfirmDelete(false)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        {t('heartMomentProduct.deleteCancel')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteMutation.mutate(heartMoment)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        {deleteMutation.isPending
-                          ? t('heartMomentProduct.deleting')
-                          : t('heartMomentProduct.deleteConfirm')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {deleteMutation.error ? (
-                  <ProblemState error={deleteMutation.error} />
-                ) : null}
-              </section>
-            ) : null}
           </article>
         </div>
       </div>

@@ -34,7 +34,6 @@ class CollectionPayload(ProtectedPayload):
     """Protected user content of a shared Collection root."""
 
     title: str
-    icon: str | None = None
 
 
 class CollectionItemPayload(ProtectedPayload):

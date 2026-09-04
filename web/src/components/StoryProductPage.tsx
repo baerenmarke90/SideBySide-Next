@@ -1,4 +1,3 @@
-import type { FormEvent } from 'react';
 import { useEffect, useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
@@ -6,10 +5,7 @@ import {
   StoryKind,
   type StoryKind as StoryKindValue,
 } from '../api/generated/models/StoryKind';
-import {
-  StoryOrder,
-  type StoryOrder as StoryOrderValue,
-} from '../api/generated/models/StoryOrder';
+import { StoryOrder } from '../api/generated/models/StoryOrder';
 import {
   StoryPageFromJSON,
   StoryPageToJSON,
@@ -24,15 +20,18 @@ import type { ReferenceApis } from '../client/referenceFlow';
 import {
   aggregateStoryPages,
   parseStoryFilters,
+  selectFeaturedStoryItem,
   storyCacheResourceId,
   storyFiltersToSearch,
   storyRequest,
   type StoryFilters,
 } from '../client/storyProduct';
+
 import {
   heartMomentDetailPath,
   memoryDetailPath,
   milestoneDetailPath,
+  STORY_CHAPTERS_ROUTE,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
@@ -62,24 +61,10 @@ function storyItemAuthor(item: StoryItem): AuthorSummary {
   }
 }
 
-function selectedKind(value: FormDataEntryValue | null): StoryKindValue | null {
-  const text = String(value ?? '');
-  return Object.values(StoryKind).includes(text as StoryKindValue)
-    ? (text as StoryKindValue)
-    : null;
-}
-
-function selectedOrder(value: FormDataEntryValue | null): StoryOrderValue {
-  return String(value ?? '') === StoryOrder.ASC
-    ? StoryOrder.ASC
-    : StoryOrder.DESC;
-}
-
-function selectedYear(value: FormDataEntryValue | null): number | null {
-  const text = String(value ?? '').trim();
-  if (!text) return null;
-  const year = Number(text);
-  return Number.isInteger(year) && year > 0 ? year : null;
+function isStoryKind(value: string | null): value is StoryKindValue {
+  return (
+    value !== null && Object.values(StoryKind).includes(value as StoryKindValue)
+  );
 }
 
 export function StoryProductPage({
@@ -165,57 +150,74 @@ export function StoryProductPage({
     });
   }, [accountId, allPagesFromNetwork, cacheResourceId, combinedStory, spaceId]);
 
+  const hasActiveFilters = Boolean(
+    filters.kind || filters.year || filters.order !== StoryOrder.DESC,
+  );
+
   const activeView = useMemo(() => {
     const tab = searchParams.get('tab');
     if (tab === 'timeline') return 'timeline';
     if (tab === 'discover') return 'discover';
-    if (filters.kind || filters.year || filters.order !== StoryOrder.DESC) {
+    if (hasActiveFilters) {
       return 'timeline';
     }
     return 'discover';
-  }, [searchParams, filters]);
+  }, [searchParams, hasActiveFilters]);
 
   function setView(view: 'discover' | 'timeline') {
     const next = new URLSearchParams(searchParams);
     next.set('tab', view);
-    setSearchParams(next, { replace: true });
+    setSearchParams(next);
   }
 
-  function applyFilters(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
+  function updateFilter<K extends keyof StoryFilters>(
+    key: K,
+    value: StoryFilters[K],
+  ) {
     const nextFilters: StoryFilters = {
-      kind: selectedKind(data.get('type')),
-      year: selectedYear(data.get('year')),
-      order: selectedOrder(data.get('order')),
+      ...filters,
+      [key]: value,
+      ...(key === 'kind' ? { year: null } : {}),
     };
     const nextSearch = storyFiltersToSearch(nextFilters);
     nextSearch.set('tab', 'timeline');
-    setSearchParams(nextSearch, { replace: true });
+    setSearchParams(nextSearch);
   }
+
+  function resetAllFilters() {
+    const nextSearch = new URLSearchParams();
+    nextSearch.set('tab', 'timeline');
+    setSearchParams(nextSearch);
+  }
+
+  const availableYears = useMemo(
+    () => combinedStory?.availableYears ?? [],
+    [combinedStory],
+  );
+  const dropdownYears = availableYears;
+
+  useEffect(() => {
+    if (!combinedStory) return;
+    if (filters.year && !availableYears.includes(filters.year)) {
+      const nextFilters: StoryFilters = {
+        ...filters,
+        year: null,
+      };
+      const nextSearch = storyFiltersToSearch(nextFilters);
+      nextSearch.set('tab', 'timeline');
+      setSearchParams(nextSearch, { replace: true });
+    }
+  }, [combinedStory, filters, availableYears, setSearchParams]);
 
   const items = useMemo(() => combinedStory?.items ?? [], [combinedStory]);
   const locale = resolvedLocale();
 
-  const memoriesWithMedia = useMemo(
-    () =>
-      items.filter(
-        (item) => item.kind === 'MEMORY' && item.memory.attachments.length > 0,
-      ),
-    [items],
-  );
-  const heartMoments = useMemo(
-    () => items.filter((item) => item.kind === 'HEART_MOMENT'),
-    [items],
-  );
   const milestones = useMemo(
     () => items.filter((item) => item.kind === 'MILESTONE'),
     [items],
   );
-  const featuredItem = useMemo(
-    () => memoriesWithMedia[0] ?? heartMoments[0] ?? items[0],
-    [memoriesWithMedia, heartMoments, items],
-  );
+  const featuredItem = useMemo(() => selectFeaturedStoryItem(items), [items]);
+
   const uniqueYears = useMemo(() => {
     const years = new Set<number>();
     for (const item of items) {
@@ -297,7 +299,10 @@ export function StoryProductPage({
         />
       ) : null}
 
-      {combinedStory && items.length === 0 ? (
+      {combinedStory &&
+      items.length === 0 &&
+      availableYears.length === 0 &&
+      !hasActiveFilters ? (
         <div className="new-space-experience sbs-motion-reveal">
           <div className="new-space-mark" aria-hidden="true">
             ❤️
@@ -313,7 +318,7 @@ export function StoryProductPage({
             </Link>
           </div>
         </div>
-      ) : combinedStory && activeView === 'discover' ? (
+      ) : combinedStory && activeView === 'discover' && items.length > 0 ? (
         <div className="momente-discover-page sbs-motion-reveal">
           {/* 1. Featured Editorial Highlight */}
           {featuredItem && featuredPresentation ? (
@@ -506,7 +511,7 @@ export function StoryProductPage({
                 </p>
               </Link>
             ) : null}
-            <Link to="/plan#chapter-title" className="momente-sub-card">
+            <Link to={STORY_CHAPTERS_ROUTE} className="momente-sub-card">
               <span className="momente-sub-card-kicker">
                 📖 {t('story.chaptersKicker')}
               </span>
@@ -555,128 +560,145 @@ export function StoryProductPage({
             </section>
           ) : null}
         </div>
-      ) : combinedStory && activeView === 'timeline' ? (
+      ) : combinedStory && (activeView === 'timeline' || hasActiveFilters) ? (
         <div className="layout-single-column sbs-motion-reveal">
           <div className="story-filter-container">
-            <details className="story-filter-details">
-              <summary className="story-filter-summary">
-                {t('storyFilters.title')}
-                {(filters.kind ||
-                  filters.year ||
-                  filters.order !== StoryOrder.DESC) && (
-                  <span
-                    className="story-filter-active-dot"
-                    aria-hidden="true"
-                  ></span>
-                )}
-              </summary>
-              <div className="story-filter-dropdown">
-                <form
-                  className="story-filter-compact"
-                  onSubmit={applyFilters}
-                  key={cacheResourceId}
-                  aria-label={t('storyFilters.aria')}
+            <section
+              className="story-filter-bar"
+              aria-label={t('storyFilters.aria')}
+            >
+              <div className="story-filter-group">
+                <label htmlFor="story-filter-type">
+                  {t('storyFilters.type')}
+                </label>
+                <select
+                  id="story-filter-type"
+                  name="type"
+                  value={filters.kind ?? ''}
+                  onChange={(e) =>
+                    updateFilter(
+                      'kind',
+                      isStoryKind(e.target.value) ? e.target.value : null,
+                    )
+                  }
                 >
-                  <div className="field-group">
-                    <label htmlFor="story-filter-type">
-                      {t('storyFilters.type')}
-                    </label>
-                    <select
-                      id="story-filter-type"
-                      name="type"
-                      defaultValue={filters.kind ?? ''}
-                    >
-                      <option value="">{t('storyFilters.allTypes')}</option>
-                      <option value={StoryKind.MEMORY}>
-                        {t('story.kind.memory')}
-                      </option>
-                      <option value={StoryKind.HEART_MOMENT}>
-                        {t('story.kind.heartMoment')}
-                      </option>
-                      <option value={StoryKind.MILESTONE}>
-                        {t('story.kind.milestone')}
-                      </option>
-                    </select>
-                  </div>
-                  <div className="field-group">
-                    <label htmlFor="story-filter-year">
-                      {t('storyFilters.year')}
-                    </label>
-                    <input
-                      id="story-filter-year"
-                      name="year"
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      list="story-year-options"
-                      defaultValue={filters.year ?? ''}
-                      placeholder={t('storyFilters.anyYear')}
-                    />
-                    <datalist id="story-year-options">
-                      {[...Array(10)].map((_, i) => {
-                        const year = new Date().getFullYear() - i;
-                        return <option key={year} value={year} />;
-                      })}
-                    </datalist>
-                  </div>
-                  <div className="field-group">
-                    <label htmlFor="story-filter-order">
-                      {t('storyFilters.order')}
-                    </label>
-                    <select
-                      id="story-filter-order"
-                      name="order"
-                      defaultValue={filters.order}
-                    >
-                      <option value={StoryOrder.DESC}>
-                        {t('storyFilters.newest')}
-                      </option>
-                      <option value={StoryOrder.ASC}>
-                        {t('storyFilters.oldest')}
-                      </option>
-                    </select>
-                  </div>
-                  <div className="story-filter-actions">
-                    <button type="submit" className="primary compact-action">
-                      {t('storyFilters.apply')}
-                    </button>
-                    {(filters.kind ||
-                      filters.year ||
-                      filters.order !== StoryOrder.DESC) && (
-                      <button
-                        type="button"
-                        className="tertiary compact-action"
-                        onClick={() =>
-                          setSearchParams(
-                            { tab: 'timeline' },
-                            { replace: true },
-                          )
-                        }
-                      >
-                        {t('storyFilters.reset')}
-                      </button>
-                    )}
-                  </div>
-                </form>
+                  <option value="">{t('storyFilters.allTypes')}</option>
+                  <option value={StoryKind.MEMORY}>
+                    {t('story.kind.memory')}
+                  </option>
+                  <option value={StoryKind.HEART_MOMENT}>
+                    {t('story.kind.heartMoment')}
+                  </option>
+                  <option value={StoryKind.MILESTONE}>
+                    {t('story.kind.milestone')}
+                  </option>
+                </select>
               </div>
-            </details>
+              <div className="story-filter-group">
+                <label htmlFor="story-filter-year">
+                  {t('storyFilters.year')}
+                </label>
+                <select
+                  id="story-filter-year"
+                  name="year"
+                  value={
+                    filters.year && availableYears.includes(filters.year)
+                      ? filters.year
+                      : ''
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateFilter('year', val ? Number(val) : null);
+                  }}
+                >
+                  <option value="">{t('storyFilters.anyYear')}</option>
+                  {dropdownYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="story-filter-group">
+                <label htmlFor="story-filter-order">
+                  {t('storyFilters.order')}
+                </label>
+                <select
+                  id="story-filter-order"
+                  name="order"
+                  value={filters.order}
+                  onChange={(e) =>
+                    updateFilter(
+                      'order',
+                      e.target.value === StoryOrder.ASC
+                        ? StoryOrder.ASC
+                        : StoryOrder.DESC,
+                    )
+                  }
+                >
+                  <option value={StoryOrder.DESC}>
+                    {t('storyFilters.newest')}
+                  </option>
+                  <option value={StoryOrder.ASC}>
+                    {t('storyFilters.oldest')}
+                  </option>
+                </select>
+              </div>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  className="story-filter-reset-header-action"
+                  onClick={resetAllFilters}
+                >
+                  {t('storyFilters.reset')}
+                </button>
+              )}
+            </section>
 
-            {(filters.kind ||
-              filters.year ||
-              filters.order !== StoryOrder.DESC) && (
-              <div className="story-active-chips">
+            {hasActiveFilters && (
+              <div
+                className="story-active-chips"
+                role="status"
+                aria-live="polite"
+              >
                 {filters.kind && (
-                  <span className="active-chip">
-                    {resolveStoryKindLabel(filters.kind, t)}
-                  </span>
+                  <button
+                    type="button"
+                    className="active-chip"
+                    onClick={() => updateFilter('kind', null)}
+                    aria-label={`${t('storyFilters.removeFilter')}: ${resolveStoryKindLabel(filters.kind, t)}`}
+                  >
+                    <span>{resolveStoryKindLabel(filters.kind, t)}</span>
+                    <span className="chip-remove" aria-hidden="true">
+                      ✕
+                    </span>
+                  </button>
                 )}
-                {filters.year && (
-                  <span className="active-chip">{filters.year}</span>
+                {filters.year && availableYears.includes(filters.year) && (
+                  <button
+                    type="button"
+                    className="active-chip"
+                    onClick={() => updateFilter('year', null)}
+                    aria-label={`${t('storyFilters.removeFilter')}: ${filters.year}`}
+                  >
+                    <span>{filters.year}</span>
+                    <span className="chip-remove" aria-hidden="true">
+                      ✕
+                    </span>
+                  </button>
                 )}
                 {filters.order === StoryOrder.ASC && (
-                  <span className="active-chip">
-                    {t('storyFilters.oldest')}
-                  </span>
+                  <button
+                    type="button"
+                    className="active-chip"
+                    onClick={() => updateFilter('order', StoryOrder.DESC)}
+                    aria-label={`${t('storyFilters.removeFilter')}: ${t('storyFilters.oldest')}`}
+                  >
+                    <span>{t('storyFilters.oldest')}</span>
+                    <span className="chip-remove" aria-hidden="true">
+                      ✕
+                    </span>
+                  </button>
                 )}
               </div>
             )}
@@ -704,27 +726,44 @@ export function StoryProductPage({
                 </button>
               </div>
 
-              <StoryList
-                items={combinedStory.items}
-                loadMemoryImage={loadMemoryImage}
-                profilesApi={profilesApi}
-                spaceId={spaceId}
-              />
-
-              {storyQuery.hasNextPage ? (
-                <div className="story-pagination">
+              {items.length === 0 ? (
+                <div className="story-filter-empty-state sbs-motion-reveal">
+                  <p className="story-filter-empty-text">
+                    {t('storyFilters.noMatches')}
+                  </p>
                   <button
                     type="button"
-                    className="secondary"
-                    onClick={() => void storyQuery.fetchNextPage()}
-                    disabled={storyQuery.isFetchingNextPage}
+                    className="button secondary compact-action"
+                    onClick={resetAllFilters}
                   >
-                    {storyQuery.isFetchingNextPage
-                      ? t('storyFilters.loadingMore')
-                      : t('storyFilters.loadMore')}
+                    {t('storyFilters.noMatchesAction')}
                   </button>
                 </div>
-              ) : null}
+              ) : (
+                <>
+                  <StoryList
+                    items={combinedStory.items}
+                    loadMemoryImage={loadMemoryImage}
+                    profilesApi={profilesApi}
+                    spaceId={spaceId}
+                  />
+
+                  {storyQuery.hasNextPage ? (
+                    <div className="story-pagination">
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => void storyQuery.fetchNextPage()}
+                        disabled={storyQuery.isFetchingNextPage}
+                      >
+                        {storyQuery.isFetchingNextPage
+                          ? t('storyFilters.loadingMore')
+                          : t('storyFilters.loadMore')}
+                      </button>
+                    </div>
+                  ) : null}
+                </>
+              )}
             </section>
           </div>
         </div>

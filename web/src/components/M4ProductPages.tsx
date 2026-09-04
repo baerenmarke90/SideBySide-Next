@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
+import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { SearchKind } from '../api/generated/models/SearchKind';
 import type { SearchResult } from '../api/generated/models/SearchResult';
 import {
@@ -16,8 +17,14 @@ import {
   searchResultPath,
   type M4ProductApis,
 } from '../client/m4Product';
+import {
+  notificationsListQueryKey,
+  notificationUnreadCountQueryKey,
+} from '../client/notificationQueries';
+import { getNotificationItemTitle } from '../client/notificationTitle';
 import { normalizeClientError } from '../client/problemDetails';
 import { resolvedLocale, useTranslation } from '../i18n';
+import { AuthorAvatar } from './PersonIdentity';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -240,25 +247,78 @@ export function SearchProductPage({
   );
 }
 
-function ActivityCard({ item }: { item: ActivityItem }) {
+function ActivityCard({
+  item,
+  profilesApi,
+  spaceId,
+  currentAccountId,
+}: {
+  item: ActivityItem;
+  profilesApi?: ProfilesApi | null;
+  spaceId: string;
+  currentAccountId?: string;
+}) {
   const { t } = useTranslation();
   const path = engagementTargetPath(item.targetType, item.targetId);
 
+  const isOwn = Boolean(
+    currentAccountId && item.actor?.id === currentAccountId,
+  );
+  const actorName = isOwn ? t('m5s5.activity.you') : item.actor?.displayName;
+
+  const actionText = isOwn
+    ? t(`m5s5.activityActionOwn.${item.kind}`)
+    : item.actor
+      ? t(`m5s5.activityAction.${item.kind}`)
+      : t(`m5s5.activityKind.${item.kind}`);
+
   const inner = (
     <div
-      className={`activity-card sbs-motion-lift activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
+      className={`activity-card ${path ? 'activity-card-interactive sbs-motion-lift' : 'activity-card-static'} activity-card-${item.targetType?.toLowerCase() ?? 'unknown'}`}
     >
-      <div className="activity-card-content">
-        <h3 className="activity-card-title">
-          {t(`m5s5.activityKind.${item.kind}`)}
-        </h3>
-        <time
-          className="activity-card-date"
-          dateTime={item.occurredAt.toISOString()}
-        >
-          {formatDateTime(item.occurredAt)}
-        </time>
+      <div className="activity-card-header">
+        {item.actor ? (
+          <AuthorAvatar
+            author={
+              isOwn
+                ? { ...item.actor, displayName: t('m5s5.activity.you') }
+                : item.actor
+            }
+            profilesApi={profilesApi}
+            spaceId={spaceId}
+            size="small"
+          />
+        ) : null}
+        <div className="activity-card-actor-copy">
+          <p className="activity-card-title">
+            {actorName ? (
+              <>
+                <strong>{actorName}</strong> {actionText}
+              </>
+            ) : (
+              actionText
+            )}
+          </p>
+          <time
+            className="activity-card-date"
+            dateTime={item.occurredAt.toISOString()}
+          >
+            {formatDateTime(item.occurredAt)}
+          </time>
+        </div>
+        {path ? (
+          <span className="activity-card-chevron" aria-hidden="true">
+            ›
+          </span>
+        ) : null}
       </div>
+      {item.target?.title ? (
+        <div className="activity-card-target">
+          <span className="activity-card-target-title">
+            {item.target.title}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -278,9 +338,13 @@ function ActivityCard({ item }: { item: ActivityItem }) {
 export function ActivityProductPage({
   apis,
   spaceId,
+  profilesApi,
+  currentAccountId,
 }: {
   apis: M4ProductApis;
   spaceId: string;
+  profilesApi?: ProfilesApi | null;
+  currentAccountId?: string;
 }) {
   const { t } = useTranslation();
   const activityQuery = useInfiniteQuery({
@@ -338,7 +402,13 @@ export function ActivityProductPage({
         <section className="m4-results" aria-live="polite">
           <ul className="m4-list layout-columns layout-columns-dense">
             {items.map((item) => (
-              <ActivityCard key={item.id} item={item} />
+              <ActivityCard
+                key={item.id}
+                item={item}
+                profilesApi={profilesApi}
+                spaceId={spaceId}
+                currentAccountId={currentAccountId}
+              />
             ))}
           </ul>
           {activityQuery.hasNextPage ? (
@@ -359,24 +429,122 @@ export function ActivityProductPage({
   );
 }
 
-function notificationTitle(item: NotificationItem, t: (key: string) => string) {
-  if (item.kind === 'COMMENT_CREATED') {
-    return t('m5s5.notificationKind.COMMENT_CREATED');
-  }
-  return t('m5s5.notificationKind.generic');
+function NotificationCard({
+  item,
+  spaceId,
+  profilesApi,
+  currentAccountId,
+  onMarkRead,
+  isMarkingRead,
+}: {
+  item: NotificationItem;
+  spaceId: string;
+  profilesApi?: ProfilesApi | null;
+  currentAccountId?: string;
+  onMarkRead: (id: string) => void;
+  isMarkingRead: boolean;
+}) {
+  const { t } = useTranslation();
+  const path = engagementTargetPath(item.targetType, item.targetId);
+  const isOwn = Boolean(
+    currentAccountId && item.actor?.id === currentAccountId,
+  );
+  const titleContent = getNotificationItemTitle(item, t, currentAccountId);
+
+  const inner = (
+    <div
+      className={`m4-item sbs-motion-lift ${path ? 'm4-item-interactive' : 'm4-item-static'}${item.readAt ? '' : ' m4-item-unread'}`}
+    >
+      <div className="m4-notification-header">
+        {item.actor ? (
+          <AuthorAvatar
+            author={
+              isOwn
+                ? { ...item.actor, displayName: t('m5s5.activity.you') }
+                : item.actor
+            }
+            profilesApi={profilesApi}
+            spaceId={spaceId}
+            size="small"
+          />
+        ) : item.kind === 'THINKING_OF_YOU' ? (
+          <span className="notification-heart-icon" aria-hidden="true">
+            ♥
+          </span>
+        ) : null}
+        <div className="m4-notification-copy">
+          <p className="m4-notification-title">{titleContent}</p>
+          <time
+            className="m4-item-meta"
+            dateTime={item.createdAt.toISOString()}
+          >
+            {formatDateTime(item.createdAt)}
+          </time>
+        </div>
+        {path ? (
+          <span className="activity-card-chevron" aria-hidden="true">
+            ›
+          </span>
+        ) : !item.readAt ? (
+          <button
+            type="button"
+            className="secondary compact-action m4-mark-read-btn"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onMarkRead(item.id);
+            }}
+            disabled={isMarkingRead}
+          >
+            {isMarkingRead
+              ? t('m5s5.notifications.markingRead')
+              : t('m5s5.notifications.markRead')}
+          </button>
+        ) : (
+          <span className="m4-item-kind m4-read-status">
+            {t('m5s5.notifications.read')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <li className="m4-notification-wrapper sbs-motion-reveal">
+      {path ? (
+        <Link
+          className="m4-notification-link"
+          to={path}
+          onClick={() => {
+            if (!item.readAt) {
+              onMarkRead(item.id);
+            }
+          }}
+        >
+          {inner}
+        </Link>
+      ) : (
+        inner
+      )}
+    </li>
+  );
 }
 
 export function NotificationsProductPage({
   apis,
   spaceId,
+  profilesApi,
+  currentAccountId,
 }: {
   apis: M4ProductApis;
   spaceId: string;
+  profilesApi?: ProfilesApi | null;
+  currentAccountId?: string;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const listKey = ['m5-s5', 'notifications', spaceId] as const;
-  const unreadKey = ['m5-s5', 'notification-unread-count', spaceId] as const;
+  const listKey = notificationsListQueryKey(spaceId);
+  const unreadKey = notificationUnreadCountQueryKey(spaceId);
 
   const notificationsQuery = useInfiniteQuery({
     queryKey: listKey,
@@ -411,7 +579,44 @@ export function NotificationsProductPage({
       apiCall(() =>
         apis.notifications.markNotificationRead({ notificationId, spaceId }),
       ),
-    onSuccess: refreshNotifications,
+    onMutate: async (notificationId: string) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: listKey }),
+        queryClient.cancelQueries({ queryKey: unreadKey }),
+      ]);
+      const previousList = queryClient.getQueryData(listKey);
+      const previousUnread = queryClient.getQueryData(unreadKey);
+
+      queryClient.setQueryData<{ unreadCount: number }>(unreadKey, (old) => {
+        if (!old) return old;
+        return { unreadCount: Math.max(0, old.unreadCount - 1) };
+      });
+
+      queryClient.setQueryData<{
+        pages: Array<{ items: NotificationItem[]; nextCursor: string | null }>;
+        pageParams: unknown[];
+      }>(listKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.map((it) =>
+              it.id === notificationId ? { ...it, readAt: new Date() } : it,
+            ),
+          })),
+        };
+      });
+
+      return { previousList, previousUnread };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousList)
+        queryClient.setQueryData(listKey, context.previousList);
+      if (context?.previousUnread)
+        queryClient.setQueryData(unreadKey, context.previousUnread);
+    },
+    onSettled: refreshNotifications,
   });
   const markAll = useMutation({
     mutationFn: () =>
@@ -500,51 +705,19 @@ export function NotificationsProductPage({
       {items.length > 0 ? (
         <section className="layout-panel" aria-live="polite">
           <ul className="m4-list m4-list-rows">
-            {items.map((item) => {
-              const path = engagementTargetPath(item.targetType, item.targetId);
-              const markingThis =
-                markOne.isPending && markOne.variables === item.id;
-              return (
-                <li
-                  className={`m4-item${item.readAt ? '' : ' m4-item-unread'}`}
-                  key={item.id}
-                >
-                  <div className="m4-item-heading">
-                    <h3>{notificationTitle(item, t)}</h3>
-                    <span className="m4-item-kind">
-                      {item.readAt
-                        ? t('m5s5.notifications.read')
-                        : t('m5s5.notifications.unread')}
-                    </span>
-                  </div>
-                  <time
-                    className="m4-item-meta"
-                    dateTime={item.createdAt.toISOString()}
-                  >
-                    {formatDateTime(item.createdAt)}
-                  </time>
-                  <div className="m4-item-actions">
-                    {path ? (
-                      <Link className="button-link secondary-link" to={path}>
-                        {t('m5s5.common.open')}
-                      </Link>
-                    ) : null}
-                    {!item.readAt ? (
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => markOne.mutate(item.id)}
-                        disabled={markOne.isPending}
-                      >
-                        {markingThis
-                          ? t('m5s5.notifications.markingRead')
-                          : t('m5s5.notifications.markRead')}
-                      </button>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
+            {items.map((item) => (
+              <NotificationCard
+                key={item.id}
+                item={item}
+                spaceId={spaceId}
+                profilesApi={profilesApi}
+                currentAccountId={currentAccountId}
+                onMarkRead={(id) => markOne.mutate(id)}
+                isMarkingRead={
+                  markOne.isPending && markOne.variables === item.id
+                }
+              />
+            ))}
           </ul>
           {notificationsQuery.hasNextPage ? (
             <button

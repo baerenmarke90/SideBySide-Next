@@ -4,6 +4,7 @@ import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { Configuration } from '../api/generated/runtime';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { normalizeClientError } from '../client/problemDetails';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import { useTranslation } from '../i18n';
@@ -40,7 +41,7 @@ export function PartnerIdentityPanel({
   );
 
   const spaceQuery = useQuery({
-    queryKey: ['space', spaceId],
+    queryKey: authorSummaryQueryKeys.space(spaceId),
     queryFn: async () => {
       try {
         return await spacesApi.getSpaceApiV1SpacesSpaceIdGet({ spaceId });
@@ -57,7 +58,7 @@ export function PartnerIdentityPanel({
     ) ?? null;
   const partnerId = partner?.id ?? '';
   const profileQuery = useQuery({
-    queryKey: ['partner-profile', spaceId, partnerId],
+    queryKey: authorSummaryQueryKeys.partnerProfile(spaceId, partnerId),
     queryFn: async () => {
       try {
         return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet(

@@ -71,7 +71,7 @@ class CollectionTest {
         val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
 
         signIn(model)
-        model.addCollection("   ", "")
+        model.addCollection("   ")
         advanceUntilIdle()
 
         assertTrue(api.createdCollections.isEmpty())
@@ -230,7 +230,6 @@ private fun collection(
 ) = CollectionDetail(
     capabilities = FULL_CAPABILITIES,
     createdAt = OffsetDateTime.now(),
-    icon = null,
     id = COLLECTION,
     items = items,
     createdBy = UUID.randomUUID(),

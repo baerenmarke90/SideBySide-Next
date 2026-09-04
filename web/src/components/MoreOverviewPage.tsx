@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
 import {
-  MORE_NOTIFICATIONS_ROUTE,
+  MORE_COLLECTIONS_ROUTE,
   MORE_PEOPLE_ROUTE,
-  MORE_PROFILE_ROUTE,
+  MORE_PLACES_ROUTE,
   type AppRouteIcon,
 } from '../client/routes';
 import { useTranslation } from '../i18n';
@@ -19,10 +19,8 @@ interface MoreDestination {
 }
 
 /**
- * Everything that is not a primary task lives here, per
- * `docs/INFORMATION-ARCHITECTURE.md` section 5. Each entry says what it is for,
- * because an area overview that only lists names makes the user open pages to
- * find out what they contain.
+ * Secondary destinations that do not have persistent header actions.
+ * Notifications, Profile, and Settings are accessed directly from the header.
  */
 const MORE_DESTINATIONS: readonly MoreDestination[] = [
   {
@@ -32,22 +30,22 @@ const MORE_DESTINATIONS: readonly MoreDestination[] = [
     descriptionKey: 'more.people.description',
   },
   {
+    path: MORE_PLACES_ROUTE,
+    icon: 'places',
+    titleKey: 'more.places.title',
+    descriptionKey: 'more.places.description',
+  },
+  {
+    path: MORE_COLLECTIONS_ROUTE,
+    icon: 'collections',
+    titleKey: 'more.collections.title',
+    descriptionKey: 'more.collections.description',
+  },
+  {
     path: PRIVATE_AREA_ROOT_PATH,
     icon: 'private',
     titleKey: 'more.private.title',
     descriptionKey: 'more.private.description',
-  },
-  {
-    path: MORE_NOTIFICATIONS_ROUTE,
-    icon: 'notifications',
-    titleKey: 'more.notifications.title',
-    descriptionKey: 'more.notifications.description',
-  },
-  {
-    path: MORE_PROFILE_ROUTE,
-    icon: 'profile',
-    titleKey: 'more.profile.title',
-    descriptionKey: 'more.profile.description',
   },
 ];
 
@@ -62,7 +60,7 @@ export function MoreOverviewPage() {
         description={t('more.intro')}
       />
 
-      <ul className="more-destinations layout-columns layout-columns-dense">
+      <ul className="more-destinations layout-columns">
         {MORE_DESTINATIONS.map((destination) => (
           <li key={destination.path}>
             <Link className="more-destination" to={destination.path}>

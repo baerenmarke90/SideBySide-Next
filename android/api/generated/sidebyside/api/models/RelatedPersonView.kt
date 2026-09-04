@@ -42,6 +42,7 @@ import kotlinx.serialization.Contextual
  * @param updatedAt 
  * @param version 
  * @param visibility 
+ * @param avatarAttachmentId 
  */
 @Serializable
 
@@ -72,7 +73,10 @@ data class RelatedPersonView (
     val version: kotlin.Int,
 
     @Contextual @SerialName(value = "visibility")
-    val visibility: ContentVisibility
+    val visibility: ContentVisibility,
+
+    @Contextual @SerialName(value = "avatarAttachmentId")
+    val avatarAttachmentId: java.util.UUID? = null
 
 ) {
 

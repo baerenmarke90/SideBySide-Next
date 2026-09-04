@@ -20,6 +20,13 @@ import {
     NotificationKindToJSON,
     NotificationKindToJSONTyped,
 } from './NotificationKind';
+import type { AuthorSummary } from './AuthorSummary';
+import {
+    AuthorSummaryFromJSON,
+    AuthorSummaryFromJSONTyped,
+    AuthorSummaryToJSON,
+    AuthorSummaryToJSONTyped,
+} from './AuthorSummary';
 import type { EngagementTarget } from './EngagementTarget';
 import {
     EngagementTargetFromJSON,
@@ -27,6 +34,13 @@ import {
     EngagementTargetToJSON,
     EngagementTargetToJSONTyped,
 } from './EngagementTarget';
+import type { ActivityTargetPresentation } from './ActivityTargetPresentation';
+import {
+    ActivityTargetPresentationFromJSON,
+    ActivityTargetPresentationFromJSONTyped,
+    ActivityTargetPresentationToJSON,
+    ActivityTargetPresentationToJSONTyped,
+} from './ActivityTargetPresentation';
 
 /**
  * 
@@ -34,6 +48,12 @@ import {
  * @interface NotificationItem
  */
 export interface NotificationItem {
+    /**
+     * 
+     * @type {AuthorSummary}
+     * @memberof NotificationItem
+     */
+    actor?: AuthorSummary | null;
     /**
      * 
      * @type {string}
@@ -70,6 +90,12 @@ export interface NotificationItem {
      * @memberof NotificationItem
      */
     sourceEventId: string;
+    /**
+     * 
+     * @type {ActivityTargetPresentation}
+     * @memberof NotificationItem
+     */
+    target?: ActivityTargetPresentation | null;
     /**
      * 
      * @type {string}
@@ -111,12 +137,14 @@ export function NotificationItemFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
         
+        'actor': json['actor'] === undefined ? undefined : json['actor'] === null ? null : AuthorSummaryFromJSON(json['actor']),
         'actorId': json['actorId'],
         'createdAt': (new Date(json['createdAt'])),
         'id': json['id'],
         'kind': NotificationKindFromJSON(json['kind']),
         'readAt': (json['readAt'] == null ? null : new Date(json['readAt'])),
         'sourceEventId': json['sourceEventId'],
+        'target': json['target'] === undefined ? undefined : json['target'] === null ? null : ActivityTargetPresentationFromJSON(json['target']),
         'targetId': json['targetId'],
         'targetType': EngagementTargetFromJSON(json['targetType']),
     };
@@ -133,12 +161,14 @@ export function NotificationItemToJSONTyped(value?: NotificationItem | null, ign
 
     return {
         
+        'actor': AuthorSummaryToJSON(value['actor']),
         'actorId': value['actorId'],
         'createdAt': value['createdAt'].toISOString(),
         'id': value['id'],
         'kind': NotificationKindToJSON(value['kind']),
         'readAt': value['readAt'] == null ? value['readAt'] : value['readAt'].toISOString(),
         'sourceEventId': value['sourceEventId'],
+        'target': ActivityTargetPresentationToJSON(value['target']),
         'targetId': value['targetId'],
         'targetType': EngagementTargetToJSON(value['targetType']),
     };

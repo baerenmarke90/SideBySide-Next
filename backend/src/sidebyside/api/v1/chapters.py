@@ -10,13 +10,13 @@ from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.chapters import service
 from sidebyside.chapters.models import Chapter
-from sidebyside.identity.models import Account
 
 router = APIRouter(tags=["chapters"])
 
@@ -97,10 +97,13 @@ class ChapterPage(ApiModel):
     has_more: bool
 
 
-def chapter_detail(session: DbSession, chapter: Chapter) -> ChapterDetail:
-    creator = session.get(Account, chapter.owner_id)
+def chapter_detail(
+    session: DbSession,
+    chapter: Chapter,
+    creator: AuthorSummary | None = None,
+) -> ChapterDetail:
     if creator is None:
-        raise RuntimeError("Chapter creator disappeared despite foreign key protection.")
+        creator = resolve_author_summary(session, chapter.owner_id, resource="Chapter creator")
     return ChapterDetail(
         id=chapter.id,
         space_id=chapter.space_id,
@@ -113,7 +116,7 @@ def chapter_detail(session: DbSession, chapter: Chapter) -> ChapterDetail:
         version=chapter.version,
         created_at=chapter.created_at,
         updated_at=chapter.updated_at,
-        creator=AuthorSummary(id=creator.id, display_name=creator.display_name),
+        creator=creator,
         capabilities=ResourceCapabilities(
             can_edit=True,
             can_delete=True,
@@ -161,8 +164,12 @@ def list_chapters(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> ChapterPage:
     page = service.list_chapters(session, authorization, cursor=cursor, limit=limit)
+    creators = resolve_author_summaries(session, {chapter.owner_id for chapter in page.items})
     return ChapterPage(
-        items=[chapter_detail(session, chapter) for chapter in page.items],
+        items=[
+            chapter_detail(session, chapter, creator=creators.get(chapter.owner_id))
+            for chapter in page.items
+        ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )

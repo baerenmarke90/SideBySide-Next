@@ -17,6 +17,7 @@ from fastapi import APIRouter, Query
 from pydantic import Field, RootModel
 from sqlalchemy import select
 
+from sidebyside.api.authors import resolve_author_summaries
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
@@ -26,7 +27,6 @@ from sidebyside.attachments import binding
 from sidebyside.attachments.models import Attachment, MediaType
 from sidebyside.authorization import readable
 from sidebyside.heart_moments.models import HeartEmotion, HeartMoment
-from sidebyside.identity.models import Account
 from sidebyside.memories.models import Memory
 from sidebyside.milestones.models import Milestone
 from sidebyside.story import service
@@ -119,13 +119,11 @@ class StoryPage(ApiModel):
     items: list[StoryItem]
     next_cursor: str | None
     has_more: bool
+    available_years: list[int] = Field(default_factory=list)
 
 
-def _authors(session: DbSession, owner_ids: set[UUID]) -> dict[UUID, Account]:
-    if not owner_ids:
-        return {}
-    rows = session.execute(select(Account).where(Account.id.in_(owner_ids))).scalars().all()
-    return {account.id: account for account in rows}
+def _authors(session: DbSession, owner_ids: set[UUID]) -> dict[UUID, AuthorSummary]:
+    return resolve_author_summaries(session, owner_ids)
 
 
 def _capabilities(
@@ -167,19 +165,26 @@ def get_story_timeline(
 
     Private heart moments never appear here, including for their owner.
     """
+    kinds_tuple = tuple(type or ())
     page = service.read_timeline(
         session,
         authorization,
-        kinds=tuple(type or ()),
+        kinds=kinds_tuple,
         year=year,
         order=order,
         cursor=cursor,
         limit=limit,
     )
+    available_years = service.read_available_years(
+        session,
+        authorization,
+        kinds=kinds_tuple,
+    )
     return StoryPage(
         items=_project(session, authorization, page.items),
         next_cursor=page.next_cursor,
         has_more=page.has_more,
+        available_years=available_years,
     )
 
 
@@ -318,8 +323,8 @@ def _heart_attachments(
     return {attachment.id: attachment for attachment in rows}
 
 
-def _author(authors: dict[UUID, Account], owner_id: UUID) -> AuthorSummary:
-    account = authors.get(owner_id)
-    if account is None:
+def _author(authors: dict[UUID, AuthorSummary], owner_id: UUID) -> AuthorSummary:
+    author = authors.get(owner_id)
+    if author is None:
         raise RuntimeError("Story author disappeared despite foreign key protection.")
-    return AuthorSummary(id=account.id, display_name=account.display_name)
+    return author

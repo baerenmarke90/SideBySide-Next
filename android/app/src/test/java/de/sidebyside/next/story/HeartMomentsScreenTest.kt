@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -44,7 +45,7 @@ class HeartMomentsScreenTest {
     private val momentId: UUID = UUID.randomUUID()
 
     @Test
-    fun editingReplacesTheCardWithAPrefilledFormAndSavesTheChanges() {
+    fun editingOpensDialogWithPrefilledFormAndSavesTheChanges() {
         var edited: List<String>? = null
         render(onEdit = { id, text, emotion, happenedOn -> edited = listOf(id.toString(), text, emotion.name, happenedOn) })
 
@@ -53,13 +54,11 @@ class HeartMomentsScreenTest {
             .performScrollTo()
             .performClick()
 
-        // Found by its current value, not a label — proof the form opened
-        // pre-filled from the moment rather than blank.
-        composeRule.onNodeWithText("A moment worth keeping").assertIsDisplayed()
+        // Found by its current value in the dialog
+        composeRule.onAllNodes(hasText("A moment worth keeping"))[1].assertIsDisplayed()
 
         composeRule
             .onNodeWithText(context.getString(R.string.heart_moment_save_changes))
-            .performScrollTo()
             .performClick()
 
         assertEquals(
@@ -79,7 +78,6 @@ class HeartMomentsScreenTest {
             .performClick()
         composeRule
             .onNodeWithText(context.getString(R.string.heart_moment_cancel))
-            .performScrollTo()
             .performClick()
 
         assertEquals(0, editCalls)
@@ -97,13 +95,11 @@ class HeartMomentsScreenTest {
             .performClick()
         composeRule
             .onNodeWithText(context.getString(R.string.heart_moment_save_changes))
-            .performScrollTo()
             .assertIsEnabled()
 
-        composeRule.onNodeWithText("A moment worth keeping").performTextClearance()
+        composeRule.onAllNodes(hasText("A moment worth keeping"))[1].performTextClearance()
         composeRule
             .onNodeWithText(context.getString(R.string.heart_moment_save_changes))
-            .performScrollTo()
             .assertIsNotEnabled()
     }
 

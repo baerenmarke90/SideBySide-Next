@@ -70,7 +70,6 @@ class CollectionDetailScreenTest {
         val collection = CollectionDetail(
             capabilities = capabilities,
             createdAt = OffsetDateTime.now(),
-            icon = null,
             id = UUID.randomUUID(),
             items = listOf(
                 CollectionItemDetail(

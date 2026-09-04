@@ -7,6 +7,7 @@ export * from './AccountView';
 export * from './ActivityItem';
 export * from './ActivityKind';
 export * from './ActivityPage';
+export * from './ActivityTargetPresentation';
 export * from './AnnualSchedule';
 export * from './AttachmentDetail';
 export * from './AttachmentReadRequest';

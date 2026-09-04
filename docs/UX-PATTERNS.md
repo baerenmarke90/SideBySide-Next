@@ -32,13 +32,15 @@ width, and input method.
 | Medium, 600–839 px | Navigation Rail | Tabs or list | new page or second pane |
 | Expanded, from 840 px | persistent Sidebar/Rail | local navigation in content area | second or third pane |
 
-- Primary destinations are the intentional de-DE product labels **Heute, Story,
+- Primary destinations are the intentional de-DE product labels **Wir, Momente,
   Planen, Entdecken, Mehr**. `Entdecken` depends on the M7 Discover domain: its
   position is reserved and it is not rendered before that domain exists, so the
   primary navigation carries four destinations until then. See
-  `decisions/0003-primary-navigation-and-route-model.md`.
+  `decisions/0003-primary-navigation-and-route-model.md` and
+  `decisions/0008-product-ia-harmonization-and-domain-alignment.md`.
 - Search and Activity are not primary destinations. Search is a global utility
-  in the app bar; Activity lives underneath `Heute`.
+  in the header/app bar; Activity lives underneath the personal account
+  navigation (`/today/activity`).
 - The active destination is identifiable through shape, color, and text state,
   never through color alone.
 - Badge counts are used only for current, actionable information.
@@ -138,7 +140,7 @@ Every data-driven component and screen supports these states:
 
 - Every object has a domain privacy class. The UI maps `OWNER_ONLY` to the
   intentional de-DE label **„Nur für mich“** and `SPACE_SHARED` to
-  **„Geteilt“**.
+  **„Für uns beide“**.
 - A privacy choice appears only in domains supporting multiple classes; Memory,
   Wish, and Plan remain `SPACE_SHARED` in the current Core.
 - Visibility state appears near the title, form completion area, or primary
