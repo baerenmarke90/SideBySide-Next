@@ -47,7 +47,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.recovery == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -57,10 +57,19 @@ jobs:
           set -euo pipefail
           python3 -m py_compile \
             scripts/self_hosted_recovery.py \
+            scripts/self_hosted_deletion_reconcile.py \
             scripts/self_hosted_recovery_acceptance.py \
+            scripts/account_deletion_recovery_acceptance.py \
             scripts/test_self_hosted_recovery.py \
-            backend/scripts/recovery_fixture.py
-          python3 -m unittest scripts.test_self_hosted_recovery
+            scripts/test_self_hosted_deletion_reconcile.py \
+            backend/scripts/recovery_fixture.py \
+            backend/src/sidebyside/identity/deletion_reconcile.py
+          python3 -m unittest \
+            scripts.test_self_hosted_recovery \
+            scripts.test_self_hosted_deletion_reconcile
 
       - name: Fresh restore and prior-schema upgrade acceptance
         run: python3 scripts/self_hosted_recovery_acceptance.py
+
+      - name: Account deletion survives older restore
+        run: python3 scripts/account_deletion_recovery_acceptance.py
