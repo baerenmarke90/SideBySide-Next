@@ -84,9 +84,7 @@ export function ServerAdminStoragePanel({ api }: { api: ServerAdminApi }) {
   if (storageQuery.isPending) {
     return (
       <section className="server-admin-panel server-admin-panel-wide">
-        <p className="server-admin-muted">
-          {t('serverAdmin.storage.loading')}
-        </p>
+        <p className="server-admin-muted">{t('serverAdmin.storage.loading')}</p>
       </section>
     );
   }
