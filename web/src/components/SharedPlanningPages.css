@@ -243,10 +243,35 @@
   font-weight: 700;
 }
 
-.planning-relation-form select,
-.planning-inline-create input {
+.planning-collection-meta-edit {
+  padding-top: var(--space-2);
+}
+
+.planning-collection-title-form {
+  margin: 0;
+}
+
+.planning-collection-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.planning-collection-title-row input {
+  flex: 1 1 auto;
   min-width: 0;
-  flex: 1 1 16rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.planning-title-saved-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--color-success, #2e7d32);
+  padding: 0 var(--space-2);
 }
 
 .planning-item-title-form {
@@ -438,17 +463,20 @@
 
 @media (max-width: 599px) {
   .planning-card,
-  .planning-relation-list li,
-  .planning-collection-items li {
+  .planning-relation-list li {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .planning-collection-items li {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .planning-create,
   .planning-create[open],
   .planning-card .button-link,
-  .planning-inline-create input,
-  .planning-inline-create button,
   .planning-relation-form select,
   .planning-relation-form button {
     width: 100%;
