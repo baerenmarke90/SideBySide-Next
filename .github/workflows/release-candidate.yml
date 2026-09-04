@@ -1,0 +1,167 @@
+name: Immutable Release Candidate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-candidate.yml"
+      - "scripts/release_manifest.py"
+      - "tools/ci/test_release_manifest.py"
+      - "docs/m6/IMMUTABLE-RELEASES.md"
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: SemVer product version without the v prefix; must equal Android versionName.
+        required: true
+        type: string
+      android_version_code:
+        description: Monotonically increasing Play versionCode.
+        required: true
+        type: number
+      initial_release:
+        description: Select only for the first product release with no previous known-good release.
+        required: true
+        default: false
+        type: boolean
+      previous_known_good_version:
+        description: Previous released SemVer without v; required unless this is the initial release.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: immutable-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    name: Release manifest contract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run focused release-manifest tests
+        run: python3 tools/ci/test_release_manifest.py
+
+  evidence:
+    name: Build and attest one source revision
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/release-evidence.yml
+    with:
+      android_version_code: ${{ inputs.android_version_code }}
+
+  manifest:
+    name: Bind release identity and candidate bundle
+    if: github.event_name != 'pull_request'
+    needs: evidence
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout exact release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download exact #193 evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: release-evidence
+
+      - name: Verify #193 transport checksums
+        run: (cd release-evidence && sha256sum --check --strict SHA256SUMS)
+
+      - name: Resolve previous-known-good manifest
+        id: previous
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INITIAL_RELEASE: ${{ inputs.initial_release }}
+          PREVIOUS_VERSION: ${{ inputs.previous_known_good_version }}
+        run: |
+          set -euo pipefail
+          if [ "$INITIAL_RELEASE" = "true" ]; then
+            if [ -n "$PREVIOUS_VERSION" ]; then
+              echo "The initial release cannot declare a previous-known-good version." >&2
+              exit 1
+            fi
+            echo "argument=--initial-release" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "$PREVIOUS_VERSION" ]; then
+            echo "A non-initial release requires previous_known_good_version." >&2
+            exit 1
+          fi
+          mkdir -p previous-known-good
+          gh release download "v${PREVIOUS_VERSION}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern sidebyside-release-manifest.json \
+            --dir previous-known-good
+          test -s previous-known-good/sidebyside-release-manifest.json
+          echo "argument=--previous-manifest previous-known-good/sidebyside-release-manifest.json" >> "$GITHUB_OUTPUT"
+
+      - name: Build immutable release manifest
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          PREVIOUS_ARGUMENT: ${{ steps.previous.outputs.argument }}
+        run: |
+          set -euo pipefail
+          # PREVIOUS_ARGUMENT is produced only by the closed choices above.
+          # shellcheck disable=SC2086
+          python3 scripts/release_manifest.py build \
+            --evidence-index release-evidence/evidence-index.json \
+            --version "$RELEASE_VERSION" \
+            $PREVIOUS_ARGUMENT \
+            --output release-evidence/sidebyside-release-manifest.json
+
+      - name: Verify artifact and SBOM digests against manifest
+        run: |
+          python3 scripts/release_manifest.py verify \
+            --manifest release-evidence/sidebyside-release-manifest.json \
+            --artifact-root release-evidence
+
+      - name: Write candidate release notes
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          cat > release-evidence/RELEASE-NOTES.md <<EOF
+          # SideBySide v${RELEASE_VERSION} release candidate
+
+          Source revision: \`${SOURCE_REVISION}\`
+
+          This candidate is a build-once immutable artifact set. Its machine-readable
+          identity is \`sidebyside-release-manifest.json\`; \`SHA256SUMS\` and #193
+          attestations provide artifact/SBOM evidence.
+
+          This workflow does not publish a store release. Final Android publication is
+          blocked until the Play App Signing/upload-key custody decision in #519 is
+          explicitly recorded and the protected publishing environment is configured.
+          EOF
+
+      - name: Extend candidate checksums
+        run: |
+          (
+            cd release-evidence
+            sha256sum sidebyside-release-manifest.json RELEASE-NOTES.md > RELEASE-SHA256SUMS
+            sha256sum --check --strict RELEASE-SHA256SUMS
+          )
+
+      - name: Upload immutable candidate bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sidebyside-release-candidate-v${{ inputs.release_version }}-${{ github.sha }}
+          path: release-evidence/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
