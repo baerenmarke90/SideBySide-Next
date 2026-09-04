@@ -83,7 +83,7 @@ const storyProducts = {
     authorLabel: 'Festgehalten von',
     createdAtLabel: 'Erstellt',
     visibilityLabel: 'Sichtbarkeit',
-    visibilityShared: 'Geteilt',
+    visibilityShared: 'Für uns beide',
     visibilityPrivate: 'Nur für mich',
     sharedHelp: 'Dieser Herzmoment ist für beide Personen im Space sichtbar.',
     privateHelp:

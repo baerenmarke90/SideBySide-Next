@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { M4ProductApis } from '../client/m4Product';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
 import { i18n } from '../i18n';
+import m5s5 from '../i18n/locales/m5s5';
 import { formatRelationshipDuration, TodayPage } from './TodayPage';
 
 function renderTodayPage(dashboardData: unknown): string {
@@ -87,8 +88,13 @@ describe('TodayPage', () => {
     queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
       space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
       relationshipDuration: null,
-      upcoming: [],
-      recentShared: [
+      upcoming: [
+        {
+          id: 'plan-primary',
+          type: 'PLAN',
+          titleOrText: 'Primary Plan',
+          scheduledAt: new Date('2026-09-02T10:00:00Z'),
+        },
         {
           id: 'mem-photo',
           type: 'MEMORY',
@@ -103,6 +109,7 @@ describe('TodayPage', () => {
           occurredOn: new Date('2026-08-30T12:00:00Z'),
         },
       ],
+      recentShared: [],
       retrospective: null,
     });
 
@@ -124,6 +131,77 @@ describe('TodayPage', () => {
     expect(html).toContain('today-card-typography-first');
     expect(html).toContain('Photo Memory');
     expect(html).toContain('Text Memory');
+  });
+
+  it('renders compact recent activity cards and secondary all-activity action', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+      space: { id: 'space-1', partner: { id: 'p-1', displayName: 'Sam' } },
+      relationshipDuration: null,
+      upcoming: [],
+      recentShared: [
+        {
+          id: 'item-1',
+          type: 'CHAPTER',
+          titleOrText: 'Summer Chapter',
+          occurredOn: new Date('2026-09-04T10:00:00Z'),
+        },
+        {
+          id: 'item-2',
+          type: 'COLLECTION',
+          titleOrText: 'Rainy Day Movies',
+          createdAt: new Date('2026-09-03T10:00:00Z'),
+        },
+        {
+          id: 'item-3',
+          type: 'HEART_MOMENT',
+          titleOrText: 'Love Note',
+          occurredOn: new Date('2026-09-01T10:00:00Z'),
+        },
+        {
+          id: 'item-4',
+          type: 'MILESTONE',
+          titleOrText: 'First Shared Home',
+          occurredOn: new Date('2026-08-01T10:00:00Z'),
+        },
+        {
+          id: 'item-5',
+          type: 'MEMORY',
+          titleOrText: 'Should be sliced out',
+          occurredOn: new Date('2026-07-01T10:00:00Z'),
+        },
+      ],
+      retrospective: null,
+    });
+
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <TodayPage apis={{} as M4ProductApis} spaceId="space-1" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Renders section with distinct kicker and heading (no duplicate wording)
+    expect(html).toContain(m5s5.dashboard.recentKicker);
+    expect(html).toContain(m5s5.dashboard.recentTitle);
+    expect(html).toContain(m5s5.dashboard.recentSubline);
+
+    // Renders compact items
+    expect(html).toContain('recent-shared-card');
+    expect(html).toContain('Summer Chapter');
+    expect(html).toContain(m5s5.kind.CHAPTER);
+    expect(html).toContain('Rainy Day Movies');
+    expect(html).toContain(m5s5.kind.COLLECTION);
+
+    // Slices to max 4 items
+    expect(html).not.toContain('Should be sliced out');
+
+    // Offers secondary action to full activity page
+    expect(html).toContain('href="/today/activity"');
+    expect(html).toContain(m5s5.dashboard.allActivityAction);
   });
 
   it('orchestrates primary contextual slot and relationship signal when partner activity exists', () => {

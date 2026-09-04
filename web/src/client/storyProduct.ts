@@ -7,6 +7,7 @@ import {
   StoryOrder,
   type StoryOrder as StoryOrderValue,
 } from '../api/generated/models/StoryOrder';
+import type { StoryItem } from '../api/generated/models/StoryItem';
 import type { StoryPage } from '../api/generated/models/StoryPage';
 
 export interface StoryFilters {
@@ -81,4 +82,52 @@ export function aggregateStoryPages(pages: StoryPage[]): StoryPage {
     nextCursor: lastPage?.nextCursor ?? null,
     availableYears: pages[0]?.availableYears ?? [],
   };
+}
+
+export function storyItemKey(item: StoryItem): string {
+  switch (item.kind) {
+    case 'MEMORY':
+      return `memory-${item.memory.id}`;
+    case 'HEART_MOMENT':
+      return `heart-${item.heartMoment.id}`;
+    case 'MILESTONE':
+      return `milestone-${item.milestone.id}`;
+  }
+}
+
+export function selectFeaturedStoryItem(
+  items: StoryItem[],
+  date: Date = new Date(),
+): StoryItem | null {
+  if (!items || items.length === 0) return null;
+
+  const memoriesWithMedia = items.filter(
+    (item) => item.kind === 'MEMORY' && item.memory.attachments.length > 0,
+  );
+  const heartMoments = items.filter((item) => item.kind === 'HEART_MOMENT');
+
+  let pool: StoryItem[];
+  if (memoriesWithMedia.length > 0) {
+    pool = memoriesWithMedia;
+  } else if (heartMoments.length > 0) {
+    pool = heartMoments;
+  } else {
+    pool = items;
+  }
+
+  if (pool.length === 0) return null;
+  if (pool.length === 1) return pool[0];
+
+  const sortedPool = [...pool].sort((a, b) =>
+    storyItemKey(a).localeCompare(storyItemKey(b)),
+  );
+
+  const dayOrdinal = Math.floor(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) /
+      86_400_000,
+  );
+
+  const index =
+    ((dayOrdinal % sortedPool.length) + sortedPool.length) % sortedPool.length;
+  return sortedPool[index];
 }

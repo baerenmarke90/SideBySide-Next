@@ -163,7 +163,13 @@
 
 .planning-detail-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
-  align-items: start;
+  align-items: stretch;
+}
+
+.planning-detail-grid > .planning-subsection,
+.planning-detail-grid > section {
+  height: 100%;
+  align-content: start;
 }
 
 .planning-subsection {
@@ -193,12 +199,29 @@
 
 .planning-confirm-row,
 .planning-order-actions,
-.planning-inline-create,
 .planning-relation-form {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+}
+
+.planning-inline-create {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.planning-inline-create input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .planning-inline-create {
+    flex-wrap: wrap;
+  }
 }
 
 .planning-order-actions {
@@ -237,10 +260,35 @@
   font-weight: 700;
 }
 
-.planning-relation-form select,
-.planning-inline-create input {
+.planning-collection-meta-edit {
+  padding-top: var(--space-2);
+}
+
+.planning-collection-title-form {
+  margin: 0;
+}
+
+.planning-collection-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.planning-collection-title-row input {
+  flex: 1 1 auto;
   min-width: 0;
-  flex: 1 1 16rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.planning-title-saved-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--color-shared);
+  padding: 0 var(--space-2);
 }
 
 .planning-item-title-form {
@@ -264,6 +312,49 @@
   place-items: center;
   border-radius: 50%;
   padding: 0;
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  color: transparent;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.planning-check:hover:not(:disabled) {
+  border-color: var(--color-brand);
+  background: var(--color-brand-surface);
+  color: var(--color-brand);
+}
+
+.planning-check[aria-pressed="true"],
+.planning-item-completed .planning-check {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: var(--color-surface, #ffffff);
+}
+
+.planning-check[aria-pressed="true"]:hover:not(:disabled),
+.planning-item-completed .planning-check:hover:not(:disabled) {
+  background: var(--color-brand-strong);
+  border-color: var(--color-brand-strong);
+  color: var(--color-surface, #ffffff);
+}
+
+.planning-check:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.planning-check:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .planning-item-completed .planning-item-title-form input {
@@ -304,6 +395,9 @@
 .future-map {
   --future-map-spine-x: 1.5rem;
   --future-map-padding: 3.25rem;
+  --future-map-marker-size: 14px;
+  --future-map-marker-top: var(--space-2);
+  --future-map-stop-gap: var(--space-8);
   position: relative;
   max-width: 800px;
   margin: var(--space-8) auto;
@@ -311,34 +405,53 @@
 }
 
 .future-map-path {
+  display: none;
+}
+
+.future-map-stop {
+  position: relative;
+  margin-bottom: var(--future-map-stop-gap);
+}
+
+/* Connecting spine segment from current marker center to next stop marker center */
+.future-map-stop:not(:last-child)::before {
+  content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--future-map-spine-x);
+  z-index: 1;
+  top: calc(var(--future-map-marker-top) + (var(--future-map-marker-size) / 2));
+  bottom: calc(
+    -1 *
+    var(--future-map-stop-gap) +
+    var(--future-map-marker-top) +
+    (var(--future-map-marker-size) / 2)
+  );
+  left: calc(var(--future-map-spine-x) - var(--future-map-padding));
   transform: translateX(-50%);
   width: 4px;
   border-radius: var(--radius-pill);
   background: linear-gradient(
     to bottom,
     var(--color-brand),
+    var(--color-discovery-surface-soft)
+  );
+}
+
+.future-map-stop-someday::before {
+  background: linear-gradient(
+    to bottom,
     var(--color-discovery-surface-soft),
     var(--color-surface-raised)
   );
 }
 
-.future-map-stop {
-  position: relative;
-  margin-bottom: var(--space-8);
-}
-
 .future-map-marker {
   position: absolute;
   z-index: 2;
-  top: var(--space-2);
+  top: var(--future-map-marker-top);
   left: calc(var(--future-map-spine-x) - var(--future-map-padding));
   transform: translateX(-50%);
-  width: 14px;
-  height: 14px;
+  width: var(--future-map-marker-size);
+  height: var(--future-map-marker-size);
   border-radius: 50%;
   background: var(--color-brand);
   box-shadow: 0 0 0 6px var(--color-background);
@@ -412,17 +525,20 @@
 
 @media (max-width: 599px) {
   .planning-card,
-  .planning-relation-list li,
-  .planning-collection-items li {
+  .planning-relation-list li {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .planning-collection-items li {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .planning-create,
   .planning-create[open],
   .planning-card .button-link,
-  .planning-inline-create input,
-  .planning-inline-create button,
   .planning-relation-form select,
   .planning-relation-form button {
     width: 100%;

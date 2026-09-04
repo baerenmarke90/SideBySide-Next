@@ -207,6 +207,14 @@ test('Today dashboard reflects updated primary context after plan rescheduling w
       return;
     }
 
+    if (
+      method === 'GET' &&
+      pathname === `/api/v1/spaces/${SPACE_ID}/notifications/unread-count`
+    ) {
+      await fulfillJson({ unreadCount: 0 });
+      return;
+    }
+
     unexpectedRequests.push(`${method} ${pathname}`);
     await fulfillJson(
       {

@@ -139,6 +139,35 @@ class TestCollectionCrud:
         assert foreign.json()["code"] == "INVALID_CURSOR"
         assert first["id"] != second["id"]
 
+    def test_list_collections_batch_resolves_authors_and_items(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+        c1 = create_collection(client, couple, token_key="token_a", title="List 1").json()
+        c2 = create_collection(client, couple, token_key="token_b", title="List 2").json()
+        item1 = create_item(client, couple, c1["id"], "Item A by Anna", token_key="token_a").json()
+        item2 = create_item(client, couple, c1["id"], "Item B by Ben", token_key="token_b").json()
+        item3 = create_item(client, couple, c2["id"], "Item C by Ben", token_key="token_b").json()
+
+        page = client.get(
+            f"{path(couple['space'].id)}",
+            headers=auth(couple["token_a"]),
+        ).json()
+
+        items_by_id = {c["id"]: c for c in page["items"]}
+        assert c1["id"] in items_by_id
+        assert c2["id"] in items_by_id
+
+        col1 = items_by_id[c1["id"]]
+        assert col1["creator"]["displayName"] == "Anna"
+        assert len(col1["items"]) == 2
+        col1_item_creators = {item["id"]: item["creator"]["displayName"] for item in col1["items"]}
+        assert col1_item_creators[item1["id"]] == "Anna"
+        assert col1_item_creators[item2["id"]] == "Ben"
+
+        col2 = items_by_id[c2["id"]]
+        assert col2["creator"]["displayName"] == "Ben"
+        assert len(col2["items"]) == 1
+        assert col2["items"][0]["creator"]["displayName"] == "Ben"
+        assert col2["items"][0]["id"] == item3["id"]
+
     def test_cross_space_collection_id_fails_closed(self, client, couple) -> None:  # type: ignore[no-untyped-def]
         foreign_collection = client.post(
             path(couple["foreign_space"].id),

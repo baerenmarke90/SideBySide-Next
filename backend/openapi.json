@@ -399,6 +399,7 @@
             "enum": [
               "MEMORY",
               "HEART_MOMENT",
+              "RELATED_PERSON",
               "NONE"
             ],
             "title": "Parenttype",
@@ -2940,6 +2941,16 @@
       },
       "NotificationItem": {
         "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "actorId": {
             "anyOf": [
               {
@@ -2981,6 +2992,16 @@
             "format": "uuid",
             "title": "Sourceeventid",
             "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivityTargetPresentation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "targetId": {
             "anyOf": [
@@ -4609,6 +4630,18 @@
       },
       "RelatedPersonFields": {
         "properties": {
+          "avatarAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarattachmentid"
+          },
           "birthday": {
             "anyOf": [
               {
@@ -4649,6 +4682,18 @@
       },
       "RelatedPersonView": {
         "properties": {
+          "avatarAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarattachmentid"
+          },
           "birthday": {
             "anyOf": [
               {

@@ -1,6 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { NotificationsApi } from '../api/generated/apis/NotificationsApi';
 import type { AccountView } from '../api/generated/models/AccountView';
+import { Configuration } from '../api/generated/runtime';
+import { notificationUnreadCountQueryKey } from '../client/notificationQueries';
 import {
   PRODUCT_CACHE_FALLBACK_EVENT,
   PRODUCT_CACHE_NETWORK_EVENT,
@@ -10,13 +14,14 @@ import { PUBLIC_START_ROUTE } from '../client/publicStart';
 import {
   APP_ROUTES,
   DEFAULT_APP_ROUTE,
-  MORE_NOTIFICATIONS_ROUTE,
   SEARCH_ROUTE,
+  activeNavigationArea,
   type AppRouteDefinition,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { DestinationIcon } from './DestinationIcon';
+import { HeaderNotificationsMenu } from './HeaderNotificationsMenu';
 import { HeaderProfileMenu } from './HeaderProfileMenu';
 import { QuickCreateMenu } from './QuickCreateMenu';
 import { Snackbar } from './Snackbar';
@@ -24,14 +29,14 @@ import { ThemeControl } from './ThemeControl';
 
 function NavigationLink({ route }: { route: AppRouteDefinition }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const activeArea = activeNavigationArea(location.pathname);
+  const isActive = activeArea === route.id;
 
   return (
     <NavLink
       to={route.path}
-      end={route.end}
-      className={({ isActive }) =>
-        `shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`
-      }
+      className={`shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`}
     >
       <span className="shell-nav-icon">
         <DestinationIcon icon={route.icon} />
@@ -131,6 +136,27 @@ export function AppShell({
     [],
   );
 
+  const notificationsApi = useMemo(
+    () =>
+      new NotificationsApi(
+        new Configuration({
+          basePath: apiBaseUrl,
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ),
+    [apiBaseUrl, accessToken],
+  );
+
+  const unreadQuery = useQuery({
+    queryKey: notificationUnreadCountQueryKey(spaceId),
+    queryFn: () => notificationsApi.getNotificationUnreadCount({ spaceId }),
+    staleTime: 0,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: 'always',
+    enabled: Boolean(spaceId && accessToken),
+  });
+  const unreadCount = unreadQuery.data?.unreadCount ?? 0;
+
   return (
     <div className="product-shell">
       <ThemeControl />
@@ -167,18 +193,13 @@ export function AppShell({
               <DestinationIcon icon="search" />
             </span>
           </NavLink>
-          <NavLink
-            to={MORE_NOTIFICATIONS_ROUTE}
-            className={({ isActive }) =>
-              `shell-utility-link${isActive ? ' shell-utility-link-active' : ''}`
-            }
-            aria-label={t('navigation.notifications')}
-            title={t('navigation.notifications')}
-          >
-            <span className="shell-nav-icon" aria-hidden="true">
-              <DestinationIcon icon="notifications" />
-            </span>
-          </NavLink>
+          <HeaderNotificationsMenu
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            spaceId={spaceId}
+            unreadCount={unreadCount}
+            currentAccountId={account.id}
+          />
           <HeaderProfileMenu
             apiBaseUrl={apiBaseUrl}
             accessToken={accessToken}
@@ -208,7 +229,7 @@ export function AppShell({
         <aside className="shell-sidebar">
           <div className="shell-sidebar-inner">
             <div className="shell-primary-action">
-              <QuickCreateMenu />
+              <QuickCreateMenu variant="desktop" />
             </div>
             <nav className="shell-nav" aria-label={t('navigation.primary')}>
               <PrimaryNavigationLinks />
@@ -227,7 +248,7 @@ export function AppShell({
       </div>
 
       <div className="mobile-quick-create">
-        <QuickCreateMenu />
+        <QuickCreateMenu variant="mobile" />
       </div>
 
       <nav className="mobile-bottom-nav" aria-label={t('navigation.primary')}>

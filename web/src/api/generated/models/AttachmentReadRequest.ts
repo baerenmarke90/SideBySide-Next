@@ -40,6 +40,7 @@ export interface AttachmentReadRequest {
 export const AttachmentReadRequestParentTypeEnum = {
     MEMORY: 'MEMORY',
     HEART_MOMENT: 'HEART_MOMENT',
+    RELATED_PERSON: 'RELATED_PERSON',
     NONE: 'NONE'
 } as const;
 export type AttachmentReadRequestParentTypeEnum = typeof AttachmentReadRequestParentTypeEnum[keyof typeof AttachmentReadRequestParentTypeEnum];

@@ -57,6 +57,7 @@
   --color-shared: #207266;
   --color-shared-accent: #2e8b7e;
   --color-shared-surface: #edf7f5;
+  --color-success: var(--color-shared);
   --color-private: #d13b65;
   --color-error: #b81434;
   --color-error-surface: #fff0f2;
@@ -88,6 +89,10 @@
 
 * {
   box-sizing: border-box;
+}
+
+:target {
+  scroll-margin-top: calc(var(--topbar-height, 72px) + var(--space-4));
 }
 
 html {
@@ -503,7 +508,6 @@ code {
   border-bottom: 1px solid var(--color-header-border);
   padding: 0.75rem max(1.25rem, calc((100vw - var(--content-max)) / 2));
   background: var(--color-header-surface);
-  backdrop-filter: blur(18px);
 }
 
 .header-actions {
@@ -567,6 +571,22 @@ code {
 
 .compact-action {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.button-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .inline-message {
@@ -1028,8 +1048,9 @@ code {
   }
 
   .story-card-footer {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
   }
 
   .form-actions {
@@ -1072,7 +1093,7 @@ code {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -1236,6 +1257,7 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .sbs-motion-reveal,
   .sbs-motion-lift,
+  .sbs-motion-lift:hover,
   .sbs-motion-success,
   .sbs-motion-pulse,
   .sbs-motion-context-change {

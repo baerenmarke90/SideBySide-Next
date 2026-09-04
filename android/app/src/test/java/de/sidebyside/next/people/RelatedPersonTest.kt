@@ -102,6 +102,36 @@ class RelatedPersonTest {
     }
 
     @Test
+    fun updatingAPersonPreservesExistingAvatarAttachmentId() = runTest(dispatcher) {
+        val avatarId = UUID.randomUUID()
+        val target = person("Mira", avatarAttachmentId = avatarId)
+        val api = PeopleApi(people = listOf(target))
+        val model = ReferenceViewModel(config = ReferenceConfig(BASE_URL), api = api)
+
+        signIn(model)
+        model.loadRelatedPersons()
+        advanceUntilIdle()
+
+        model.updateRelatedPerson(
+            personId = target.id,
+            displayName = "Mira Neu",
+            relationship = PersonRelationship.SIBLING,
+            birthday = LocalDate.of(1992, 8, 15),
+            birthdayYearKnown = true,
+            visibility = ContentVisibility.PRIVATE,
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, api.updated.size)
+        val (personId, ifMatch, updatedFields) = api.updated.first()
+        assertEquals(target.id, personId)
+        assertEquals(target.version, ifMatch)
+        assertEquals("Mira Neu", updatedFields.displayName)
+        assertEquals(PersonRelationship.SIBLING, updatedFields.relationship)
+        assertEquals(avatarId, updatedFields.avatarAttachmentId)
+    }
+
+    @Test
     fun deletingAPersonNeverReadsTheirImportantDatesFirst() = runTest(dispatcher) {
         // The whole point of #65: the confirmation must already carry the
         // policy the user picked, so nothing here may ask the server what a
@@ -217,7 +247,7 @@ class RelatedPersonTest {
 
 private const val BASE_URL = "https://sidebyside.example"
 
-private fun person(name: String) = RelatedPersonView(
+private fun person(name: String, avatarAttachmentId: UUID? = null) = RelatedPersonView(
     birthday = null,
     birthdayYearKnown = true,
     createdAt = OffsetDateTime.now(),
@@ -227,6 +257,7 @@ private fun person(name: String) = RelatedPersonView(
     updatedAt = OffsetDateTime.now(),
     version = 1,
     visibility = ContentVisibility.SHARED,
+    avatarAttachmentId = avatarAttachmentId,
 )
 
 private fun importantDate(relatedPersonId: UUID) = ImportantDateView(
@@ -247,6 +278,7 @@ private class PeopleApi(
     private val dates: List<ImportantDateView> = emptyList(),
 ) : FakeReferenceContract() {
     val created = mutableListOf<RelatedPersonFields>()
+    val updated = mutableListOf<Triple<UUID, Int, RelatedPersonFields>>()
     val deleted = mutableListOf<Pair<UUID, RelatedPersonDeletePolicy>>()
     val createdDates = mutableListOf<ImportantDateFields>()
     var listImportantDatesCalls = 0
@@ -280,6 +312,24 @@ private class PeopleApi(
     ): RelatedPersonView {
         created += fields
         return person(fields.displayName)
+    }
+
+    override suspend fun updateRelatedPerson(
+        spaceId: UUID,
+        accessToken: String,
+        personId: UUID,
+        ifMatch: Int,
+        fields: RelatedPersonFields,
+    ): RelatedPersonView {
+        updated += Triple(personId, ifMatch, fields)
+        return person(fields.displayName, fields.avatarAttachmentId).copy(
+            id = personId,
+            version = ifMatch + 1,
+            relationship = fields.relationship,
+            birthday = fields.birthday,
+            birthdayYearKnown = fields.birthdayYearKnown ?: true,
+            visibility = fields.visibility,
+        )
     }
 
     override suspend fun deleteRelatedPerson(

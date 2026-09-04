@@ -16,16 +16,24 @@ const de = {
     eyebrow: 'Mehr',
     title: 'Alles Weitere',
     intro:
-      'Menschen, euer privater Bereich, Benachrichtigungen und euer Profil.',
+      'Wichtige Menschen, Orte, gemeinsame Listen und dein Bereich für persönliche Gedanken.',
     people: {
       title: 'Menschen',
       description:
         'Personen, die euch wichtig sind, mit Geburtstagen und Jahrestagen.',
     },
+    places: {
+      title: 'Orte',
+      description: 'Eure liebsten Orte, Cafés und Reiseziele auf einen Blick.',
+    },
+    collections: {
+      title: 'Gemeinsame Listen',
+      description: 'Packlisten, Ideen und Sammlungen für euch beide.',
+    },
     private: {
-      title: 'Mein Bereich',
+      title: 'Für mich',
       description:
-        'Notizen, Geschenkideen und Listen, die nur für dich sichtbar sind.',
+        'Notizen, Geschenkideen und Gedanken, die erst einmal nur für dich bestimmt sind.',
     },
     notifications: {
       title: 'Benachrichtigungen',
@@ -33,7 +41,11 @@ const de = {
     },
     profile: {
       title: 'Profil',
-      description: 'Eure Beziehungsanzeige, Vorlieben und Darstellung.',
+      description: 'Dein Profilbild, Anzeigename und persönliche Vorlieben.',
+    },
+    settings: {
+      title: 'Einstellungen',
+      description: 'Darstellung, Verbindung, Privatsphäre und Datenexport.',
     },
   },
   states: {
@@ -239,7 +251,7 @@ const de = {
       happy: 'Glücklich',
       fallback: 'Herzmoment',
     },
-    shared: 'Geteilt',
+    shared: 'Für uns beide',
     photos_one: '{{count}} Foto',
     photos_other: '{{count}} Fotos',
   },

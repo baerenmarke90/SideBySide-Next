@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { AddIcon } from './DestinationIcon';
 import './ListEntryActions.css';
 
 export function moveSortableItem(
@@ -166,18 +167,21 @@ type IconButtonProps = Omit<
   'aria-label' | 'title' | 'children'
 > & {
   label: string;
-  icon: 'save' | 'delete' | 'reorder';
+  icon: 'save' | 'delete' | 'reorder' | 'add' | 'edit';
+  variant?: 'tertiary' | 'add';
 };
 
 export function ListEntryIconButton({
   label,
   icon,
+  variant = icon === 'add' ? 'add' : 'tertiary',
   className,
   type = 'button',
   ...props
 }: IconButtonProps) {
   const classes = [
     'list-entry-icon-button',
+    variant === 'add' ? 'list-entry-add-button' : null,
     icon === 'reorder' ? 'list-entry-drag-handle' : null,
     className,
   ]
@@ -198,6 +202,10 @@ export function ListEntryIconButton({
 }
 
 function ListEntryIcon({ kind }: { kind: IconButtonProps['icon'] }) {
+  if (kind === 'add') {
+    return <AddIcon className="list-entry-icon" />;
+  }
+
   return (
     <svg
       aria-hidden="true"
@@ -227,6 +235,9 @@ function ListEntryIcon({ kind }: { kind: IconButtonProps['icon'] }) {
           <path d="M5 12h14" />
           <path d="M5 17h14" />
         </>
+      ) : null}
+      {kind === 'edit' ? (
+        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
       ) : null}
     </svg>
   );

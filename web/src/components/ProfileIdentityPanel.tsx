@@ -1,9 +1,13 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import type { ProfileIdentityUpdate } from '../api/generated/models/ProfileIdentityUpdate';
 import { Configuration } from '../api/generated/runtime';
+import {
+  authorSummaryQueryKeys,
+  invalidateAuthorSummaryConsumers,
+} from '../client/authorSummaryConsumers';
 import {
   type DraftUploadPhase,
   uploadMemoryDraftAttachment,
@@ -38,7 +42,9 @@ export function ProfileIdentityPanel({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState(false);
+  const [editingName, setEditingName] = useState(false);
   const [uploadPhase, setUploadPhase] = useState<DraftUploadPhase | null>(null);
 
   const configuration = useMemo(
@@ -59,7 +65,7 @@ export function ProfileIdentityPanel({
   );
 
   const profileQuery = useQuery({
-    queryKey: ['profile-identity', spaceId, account.id],
+    queryKey: authorSummaryQueryKeys.profileIdentity(spaceId, account.id),
     queryFn: async () => {
       try {
         return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet(
@@ -99,16 +105,9 @@ export function ProfileIdentityPanel({
   async function acceptUpdatedProfile(
     profile: Awaited<ReturnType<typeof updateIdentity>>,
   ) {
-    queryClient.setQueryData(
-      ['profile-identity', spaceId, account.id],
-      profile,
-    );
-    onDisplayNameChanged(profile.displayName);
-    // Presentation identity appears across Story/detail/dashboard projections.
-    // Identity edits are rare, so invalidate all in-memory React Query data
-    // rather than maintaining a fragile list of author-bearing query keys.
-    await queryClient.invalidateQueries();
     setSaved(true);
+    onDisplayNameChanged(profile.displayName);
+    await invalidateAuthorSummaryConsumers(queryClient, spaceId, account.id);
   }
 
   const displayNameMutation = useMutation({
@@ -118,7 +117,6 @@ export function ProfileIdentityPanel({
 
   const avatarMutation = useMutation({
     mutationFn: async (file: File) => {
-      setUploadPhase('uploading');
       let readyAttachmentId: string | null = null;
       try {
         const ready = await uploadMemoryDraftAttachment(
@@ -186,13 +184,12 @@ export function ProfileIdentityPanel({
 
   return (
     <section
-      className="form-card profile-identity-panel"
+      className="form-card profile-identity-panel profile-identity-hero-card"
+      id="profile-identity-settings"
       aria-labelledby="profile-identity-title"
     >
-      <div>
-        <p className="eyebrow">{t('profiles.eyebrow')}</p>
+      <div className="visually-hidden">
         <h2 id="profile-identity-title">{t('profileIdentity.title')}</h2>
-        <p>{t('profileIdentity.intro')}</p>
       </div>
 
       {profileQuery.isLoading ? (
@@ -206,13 +203,13 @@ export function ProfileIdentityPanel({
       ) : null}
 
       {profile ? (
-        <>
-          <div className="profile-identity-preview">
-            <small>{t('profileIdentity.previewLabel')}</small>
+        <div className="profile-identity-hero">
+          <div className="profile-identity-avatar-col">
             <PersonIdentity
               displayName={visibleName}
               imageUrl={avatarUrl}
               size="large"
+              showName={false}
               imageAlt={t('profileIdentity.imageAlt', { name: visibleName })}
               fallbackAlt={t('profileIdentity.fallbackAlt', {
                 name: visibleName,
@@ -220,72 +217,41 @@ export function ProfileIdentityPanel({
             />
           </div>
 
-          {avatarLoadFailed ? (
-            <p className="field-help profile-identity-status" role="status">
-              {t('profileIdentity.loadAvatarFailed')}
-            </p>
-          ) : null}
+          <div className="profile-identity-details">
+            <div className="profile-identity-name-row">
+              <h2 className="profile-identity-display-name">{visibleName}</h2>
+              <span className="profile-identity-visibility-badge">
+                ♥ {t('profileIdentity.partnerVisibilityNote')}
+              </span>
+            </div>
 
-          <form
-            key={`name-${profile.displayName}`}
-            className="form-grid"
-            onSubmit={submitDisplayName}
-          >
-            <div className="field-group">
-              <label htmlFor="profile-display-name">
-                {t('profileIdentity.displayNameLabel')}
-              </label>
-              <input
-                id="profile-display-name"
-                name="displayName"
-                type="text"
-                defaultValue={profile.displayName}
-                maxLength={120}
-                autoComplete="name"
+            <div className="profile-identity-actions-row">
+              <button
+                type="button"
+                className="secondary compact-action"
+                onClick={() => setEditingName((prev) => !prev)}
                 disabled={pending}
-              />
-              <small>{t('profileIdentity.displayNameHelp')}</small>
-            </div>
-            <div className="form-actions">
-              <button type="submit" disabled={pending}>
-                {displayNameMutation.isPending
-                  ? t('profileIdentity.savingName')
-                  : t('profileIdentity.saveName')}
+              >
+                {editingName
+                  ? t('common.cancel')
+                  : t('profileIdentity.editName')}
               </button>
-            </div>
-          </form>
 
-          <div className="field-group">
-            <label htmlFor="profile-avatar-file">
-              {t('profileIdentity.avatarLabel')}
-            </label>
-            <small>{t('profileIdentity.avatarHelp')}</small>
-            <input
-              id="profile-avatar-file"
-              className="profile-identity-file-input"
-              type="file"
-              accept="image/*"
-              disabled={pending}
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                event.currentTarget.value = '';
-                if (!file) return;
-                resetActionState();
-                avatarMutation.mutate(file);
-              }}
-            />
-            <div className="profile-identity-actions">
-              {phaseKey ? (
-                <span role="status">{t(phaseKey)}</span>
-              ) : avatarMutation.isPending ? (
-                <span role="status">
-                  {t('profileIdentity.replacingAvatar')}
-                </span>
-              ) : null}
+              <button
+                type="button"
+                className="secondary compact-action"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={pending}
+              >
+                {avatarMutation.isPending
+                  ? t('profileIdentity.replacingAvatar')
+                  : t('profileIdentity.changeAvatar')}
+              </button>
+
               {profile.profileAttachmentId ? (
                 <button
                   type="button"
-                  className="secondary"
+                  className="tertiary compact-action"
                   disabled={pending}
                   onClick={() => {
                     resetActionState();
@@ -297,9 +263,70 @@ export function ProfileIdentityPanel({
                     : t('profileIdentity.removeAvatar')}
                 </button>
               ) : null}
+
+              <input
+                ref={fileInputRef}
+                id="profile-avatar-file"
+                className="profile-identity-file-input visually-hidden"
+                type="file"
+                accept="image/*"
+                disabled={pending}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  event.currentTarget.value = '';
+                  if (!file) return;
+                  resetActionState();
+                  avatarMutation.mutate(file);
+                }}
+              />
             </div>
+
+            {phaseKey ? (
+              <span className="profile-identity-status" role="status">
+                {t(phaseKey)}
+              </span>
+            ) : null}
+            {avatarLoadFailed ? (
+              <p className="field-help profile-identity-status" role="status">
+                {t('profileIdentity.loadAvatarFailed')}
+              </p>
+            ) : null}
           </div>
-        </>
+        </div>
+      ) : null}
+
+      {editingName && profile ? (
+        <form
+          key={`name-${profile.displayName}`}
+          className="profile-name-inline-form form-grid sbs-motion-reveal"
+          onSubmit={(e) => {
+            submitDisplayName(e);
+            setEditingName(false);
+          }}
+        >
+          <div className="field-group">
+            <label htmlFor="profile-display-name">
+              {t('profileIdentity.displayNameLabel')}
+            </label>
+            <div className="profile-name-input-group">
+              <input
+                id="profile-display-name"
+                name="displayName"
+                type="text"
+                defaultValue={profile.displayName}
+                maxLength={120}
+                autoComplete="name"
+                disabled={pending}
+              />
+              <button type="submit" disabled={pending}>
+                {displayNameMutation.isPending
+                  ? t('profileIdentity.savingName')
+                  : t('profileIdentity.saveName')}
+              </button>
+            </div>
+            <small>{t('profileIdentity.displayNameHelp')}</small>
+          </div>
+        </form>
       ) : null}
 
       {saved ? (

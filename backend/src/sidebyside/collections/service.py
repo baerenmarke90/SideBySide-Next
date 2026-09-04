@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -291,6 +292,26 @@ def list_items(session: Session, collection: Collection) -> list[CollectionItem]
             .order_by(CollectionItem.position, CollectionItem.id)
         ).scalars()
     )
+
+
+def list_items_for_collections(
+    session: Session,
+    collection_ids: Iterable[UUID],
+) -> dict[UUID, list[CollectionItem]]:
+    ids = list(collection_ids)
+    if not ids:
+        return {}
+    items = list(
+        session.execute(
+            select(CollectionItem)
+            .where(CollectionItem.collection_id.in_(ids))
+            .order_by(CollectionItem.position, CollectionItem.id)
+        ).scalars()
+    )
+    result: dict[UUID, list[CollectionItem]] = {cid: [] for cid in ids}
+    for item in items:
+        result[item.collection_id].append(item)
+    return result
 
 
 def _item_identifier(value: UUID | str) -> UUID:

@@ -240,30 +240,7 @@ export function PrivateNoteCreatePage({ api, accountId, spaceId }: Props) {
 
 export function PrivateNoteDetailPage({ api, accountId, spaceId }: Props) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { noteId, query } = usePrivateNote(api, accountId, spaceId);
-  const deleteMutation = useMutation({
-    mutationFn: (note: PrivateNoteDetail) =>
-      privateApiCall(() =>
-        api.deletePrivateNote({
-          spaceId,
-          noteId: note.id,
-          ifMatch: String(note.version),
-        }),
-      ),
-    onSuccess: async () => {
-      if (noteId) {
-        queryClient.removeQueries({
-          queryKey: privateAreaQueryKeys.note(accountId, spaceId, noteId),
-        });
-      }
-      await queryClient.invalidateQueries({
-        queryKey: privateAreaQueryKeys.notes(accountId, spaceId),
-      });
-      navigate(PRIVATE_NOTES_PATH, { replace: true });
-    },
-  });
+  const { query } = usePrivateNote(api, accountId, spaceId);
 
   if (query.isLoading)
     return <UiState kind="loading" title={t('privateArea.notes.loading')} />;
@@ -304,13 +281,6 @@ export function PrivateNoteDetailPage({ api, accountId, spaceId }: Props) {
         <p className="private-area-detail-body">
           {note.body || t('privateArea.notes.noBody')}
         </p>
-        {note.capabilities.canDelete ? (
-          <DeleteConfirmation
-            onDelete={() => deleteMutation.mutate(note)}
-            pending={deleteMutation.isPending}
-            error={deleteMutation.error}
-          />
-        ) : null}
       </article>
     </>
   );
@@ -320,7 +290,30 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { query } = usePrivateNote(api, accountId, spaceId);
+  const { noteId, query } = usePrivateNote(api, accountId, spaceId);
+
+  const deleteMutation = useMutation({
+    mutationFn: (targetNote: PrivateNoteDetail) =>
+      privateApiCall(() =>
+        api.deletePrivateNote({
+          spaceId,
+          noteId: targetNote.id,
+          ifMatch: String(targetNote.version),
+        }),
+      ),
+    onSuccess: async () => {
+      if (noteId) {
+        queryClient.removeQueries({
+          queryKey: privateAreaQueryKeys.note(accountId, spaceId, noteId),
+        });
+      }
+      await queryClient.invalidateQueries({
+        queryKey: privateAreaQueryKeys.notes(accountId, spaceId),
+      });
+      navigate(PRIVATE_NOTES_PATH, { replace: true });
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: ({
       note,
@@ -411,6 +404,19 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
         </form>
         {mutation.error ? <ProblemState error={mutation.error} /> : null}
       </section>
+
+      {note.capabilities.canDelete ? (
+        <article
+          className="private-area-detail-card"
+          style={{ marginTop: 'var(--space-8)' }}
+        >
+          <DeleteConfirmation
+            onDelete={() => deleteMutation.mutate(note)}
+            pending={deleteMutation.isPending}
+            error={deleteMutation.error}
+          />
+        </article>
+      ) : null}
     </>
   );
 }

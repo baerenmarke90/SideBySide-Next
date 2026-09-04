@@ -66,11 +66,15 @@ import {
   MILESTONE_EDIT_ROUTE_PATTERN,
   MORE_NOTIFICATIONS_ROUTE,
   MORE_PEOPLE_ROUTE,
+  MORE_PLACES_ROUTE,
+  MORE_COLLECTIONS_ROUTE,
   MORE_PROFILE_ROUTE,
+  MORE_SETTINGS_ROUTE,
   PLAN_DETAIL_ROUTE_PATTERN,
   PLACE_DETAIL_ROUTE_PATTERN,
   SEARCH_ROUTE,
   SERVER_ADMIN_ROUTE,
+  STORY_CHAPTERS_ROUTE,
   WISH_DETAIL_ROUTE_PATTERN,
 } from './client/routes';
 import { createSharedPlanningApis } from './client/sharedPlanning';
@@ -86,7 +90,9 @@ import { AppShell } from './components/AppShell';
 import { AttachmentDraftPicker } from './components/AttachmentDraftPicker';
 import { Brand } from './components/Brand';
 import { ChapterProductPage } from './components/ChapterProductPage';
+import { ChaptersOverviewPage } from './components/ChaptersOverviewPage';
 import { CollectionProductPage } from './components/CollectionProductPage';
+import { CollectionsOverviewPage } from './components/CollectionsOverviewPage';
 import { DemoEntry } from './components/DemoEntry';
 import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
@@ -101,6 +107,7 @@ import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { MoreOverviewPage } from './components/MoreOverviewPage';
 import { PageHeader } from './components/PageHeader';
 import { PlaceProductPage } from './components/PlaceProductPage';
+import { PlacesOverviewPage } from './components/PlacesOverviewPage';
 import { PlanProductPage } from './components/PlanProductPage';
 import { PrivateAreaProductPage } from './components/PrivateAreaProductPage';
 import { ProblemState } from './components/ProblemState';
@@ -110,6 +117,7 @@ import {
   ServerAdminAccessGate,
   ServerAdminPage,
 } from './components/ServerAdminPage';
+import { SettingsPage } from './components/SettingsPage';
 import { SharedPlanningOverviewPage } from './components/SharedPlanningOverviewPage';
 import { StoryProductPage } from './components/StoryProductPage';
 import { ThemeControl } from './components/ThemeControl';
@@ -557,12 +565,36 @@ function AuthenticatedApp({
             element={<PlanProductPage {...planningProductProps} />}
           />
           <Route
-            path={PLACE_DETAIL_ROUTE_PATTERN}
-            element={<PlaceProductPage {...planningProductProps} />}
+            path={STORY_CHAPTERS_ROUTE}
+            element={<ChaptersOverviewPage {...planningProductProps} />}
+          />
+          <Route
+            path="/plan/chapters"
+            element={<Navigate replace to={STORY_CHAPTERS_ROUTE} />}
           />
           <Route
             path={CHAPTER_DETAIL_ROUTE_PATTERN}
             element={<ChapterProductPage {...planningProductProps} />}
+          />
+          <Route
+            path={MORE_PLACES_ROUTE}
+            element={<PlacesOverviewPage {...planningProductProps} />}
+          />
+          <Route
+            path="/plan/places"
+            element={<Navigate replace to={MORE_PLACES_ROUTE} />}
+          />
+          <Route
+            path={PLACE_DETAIL_ROUTE_PATTERN}
+            element={<PlaceProductPage {...planningProductProps} />}
+          />
+          <Route
+            path={MORE_COLLECTIONS_ROUTE}
+            element={<CollectionsOverviewPage {...planningProductProps} />}
+          />
+          <Route
+            path="/plan/collections"
+            element={<Navigate replace to={MORE_COLLECTIONS_ROUTE} />}
           />
           <Route
             path={COLLECTION_DETAIL_ROUTE_PATTERN}
@@ -599,19 +631,41 @@ function AuthenticatedApp({
           <Route
             path={MORE_NOTIFICATIONS_ROUTE}
             element={
-              <NotificationsProductPage apis={m4Apis} spaceId={spaceId} />
+              <NotificationsProductPage
+                apis={m4Apis}
+                spaceId={spaceId}
+                profilesApi={profilesApi}
+                currentAccountId={account.id}
+              />
             }
           />
           <Route
             path={MORE_PEOPLE_ROUTE}
             element={
-              <RelatedPeoplePage peopleApi={peopleApi} spaceId={spaceId} />
+              <RelatedPeoplePage
+                peopleApi={peopleApi}
+                spaceId={spaceId}
+                apiBaseUrl={apiBaseUrl}
+                accessToken={tokens.accessToken}
+                attachmentsApi={apis.attachments}
+              />
             }
           />
           <Route
             path={MORE_PROFILE_ROUTE}
             element={
               <ProfilePage
+                apiBaseUrl={apiBaseUrl}
+                accessToken={tokens.accessToken}
+                account={account}
+                spaceId={spaceId}
+              />
+            }
+          />
+          <Route
+            path={MORE_SETTINGS_ROUTE}
+            element={
+              <SettingsPage
                 apiBaseUrl={apiBaseUrl}
                 accessToken={tokens.accessToken}
                 account={account}

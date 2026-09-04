@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
@@ -10,62 +10,122 @@ import type { ProfilePreferenceView } from '../api/generated/models/ProfilePrefe
 import { ProfileVisibility } from '../api/generated/models/ProfileVisibility';
 import type { SpaceProfileView } from '../api/generated/models/SpaceProfileView';
 import { Configuration } from '../api/generated/runtime';
+import { invalidateDashboard } from '../client/dashboardQueries';
+import { normalizeClientError } from '../client/problemDetails';
 import {
+  CATEGORIES,
   type ProfilePreferenceDraft,
+  SENTIMENTS,
   profilePreferenceCreateFromDraft,
   profilePreferenceUpdateFromDraft,
 } from '../client/profilePreferenceDraft';
-import { normalizeClientError } from '../client/problemDetails';
-import { invalidateDashboard } from '../client/dashboardQueries';
-import { useTranslation } from '../i18n';
-import { PageHeader } from './PageHeader';
+import {
+  calculateNextAnniversary,
+  calculateRelationshipDuration,
+  formatAnniversaryDetail,
+  formatRelationshipDuration,
+} from '../client/relationshipPreview';
+import { resolvedLocale, useTranslation } from '../i18n';
+import { AddIcon, DestinationIcon } from './DestinationIcon';
+import { PartnerIdentityPanel } from './PartnerIdentityPanel';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
-
-const CATEGORIES = Object.values(PreferenceCategory);
-const SENTIMENTS = Object.values(PreferenceSentiment);
 
 type PreferenceVisibility =
   | typeof ProfileVisibility.SELF_PROFILE
   | typeof ProfileVisibility.PRIVATE_PARTNER_NOTE;
 
-function relationshipDateInput(value: Date | null | undefined): string {
-  if (!value) return '';
-  return value.toISOString().slice(0, 10);
-}
-
-function relationshipDuration(
-  profile: SpaceProfileView,
-  t: (key: string, values?: Record<string, unknown>) => string,
+function relationshipDateInput(
+  value: Date | string | null | undefined,
 ): string {
-  if (!profile.showRelationshipDuration || !profile.relationshipStartedOn) {
-    return t('profiles.relationshipNotAvailable');
+  if (!value) return '';
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
   }
-
-  if (
-    profile.durationDisplayMode === DurationDisplayMode.DAYS &&
-    profile.relationshipDays !== null &&
-    profile.relationshipDays !== undefined
-  ) {
-    return t('profiles.relationshipDays', { days: profile.relationshipDays });
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
   }
-
-  if (
-    profile.relationshipYears !== null &&
-    profile.relationshipYears !== undefined &&
-    profile.relationshipMonths !== null &&
-    profile.relationshipMonths !== undefined
-  ) {
-    return t('profiles.relationshipYearsMonths', {
-      years: profile.relationshipYears,
-      months: profile.relationshipMonths,
-    });
-  }
-
-  return t('profiles.relationshipNotAvailable');
+  return '';
 }
 
-function RelationshipProfileSection({
+function formatDateOnly(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat(resolvedLocale(), {
+    dateStyle: 'long',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
+/** Strictly read-only relationship summary for personal profile view. */
+export function RelationshipSummarySection({
+  spacesApi,
+  spaceId,
+}: {
+  spacesApi: SpacesApi;
+  spaceId: string;
+}) {
+  const { t } = useTranslation();
+
+  const spaceQuery = useQuery({
+    queryKey: ['space', spaceId],
+    queryFn: async () => {
+      try {
+        return await spacesApi.getSpaceApiV1SpacesSpaceIdGet({ spaceId });
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
+    retry: false,
+  });
+
+  const profileQuery = useQuery({
+    queryKey: ['space-profile', spaceId],
+    queryFn: async () => {
+      try {
+        return await spacesApi.getSpaceProfileApiV1SpacesSpaceIdProfileGet({
+          spaceId,
+        });
+      } catch (error) {
+        throw await normalizeClientError(error);
+      }
+    },
+    retry: false,
+  });
+
+  const partnerNames = useMemo(() => {
+    const partners = spaceQuery.data?.partners;
+    if (!partners || partners.length === 0) return null;
+    return partners.map((p) => p.displayName).join(' & ');
+  }, [spaceQuery.data?.partners]);
+
+  if (!profileQuery.data?.relationshipStartedOn) {
+    return null;
+  }
+
+  return (
+    <div className="profile-relationship-compact" role="status">
+      {partnerNames ? (
+        <>
+          <span className="profile-couple-names">{partnerNames}</span>
+          <span className="profile-couple-separator" aria-hidden="true">
+            ·
+          </span>
+        </>
+      ) : null}
+      <span className="profile-relationship-start">
+        <span className="profile-relationship-label">
+          {t('profiles.relationshipStartLabel')}:{' '}
+        </span>
+        <span className="profile-relationship-value">
+          {formatDateOnly(profileQuery.data.relationshipStartedOn)}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/** Editable relationship configuration section housed in Settings. */
+export function RelationshipSettingsSection({
   spacesApi,
   spaceId,
 }: {
@@ -89,6 +149,65 @@ function RelationshipProfileSection({
     },
     retry: false,
   });
+
+  const serverStartedOn = relationshipDateInput(
+    profileQuery.data?.relationshipStartedOn,
+  );
+  const serverShowDuration =
+    profileQuery.data?.showRelationshipDuration ?? false;
+  const serverDurationMode =
+    profileQuery.data?.durationDisplayMode ?? DurationDisplayMode.YEARS_MONTHS;
+
+  const [startedOn, setStartedOn] = useState(serverStartedOn);
+  const [showDuration, setShowDuration] = useState(serverShowDuration);
+  const [durationMode, setDurationMode] =
+    useState<SpaceProfileView['durationDisplayMode']>(serverDurationMode);
+
+  useEffect(() => {
+    if (profileQuery.data) {
+      setStartedOn(
+        relationshipDateInput(profileQuery.data.relationshipStartedOn),
+      );
+      setShowDuration(profileQuery.data.showRelationshipDuration ?? false);
+      setDurationMode(
+        profileQuery.data.durationDisplayMode ??
+          DurationDisplayMode.YEARS_MONTHS,
+      );
+    }
+  }, [profileQuery.data]);
+
+  const isDirty = useMemo(() => {
+    if (!profileQuery.data) return false;
+    return (
+      startedOn !== serverStartedOn ||
+      showDuration !== serverShowDuration ||
+      durationMode !== serverDurationMode
+    );
+  }, [
+    profileQuery.data,
+    startedOn,
+    showDuration,
+    durationMode,
+    serverStartedOn,
+    serverShowDuration,
+    serverDurationMode,
+  ]);
+
+  const calculatedDuration = useMemo(() => {
+    return calculateRelationshipDuration(startedOn);
+  }, [startedOn]);
+
+  const nextAnniversary = useMemo(() => {
+    return calculateNextAnniversary(startedOn);
+  }, [startedOn]);
+
+  const currentDurationText = useMemo(() => {
+    return formatRelationshipDuration(calculatedDuration, durationMode, t);
+  }, [calculatedDuration, durationMode, t]);
+
+  const nextAnniversaryText = useMemo(() => {
+    return formatAnniversaryDetail(nextAnniversary, t, formatDateOnly);
+  }, [nextAnniversary, t]);
 
   const mutation = useMutation({
     mutationFn: async ({
@@ -131,24 +250,30 @@ function RelationshipProfileSection({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isDirty || mutation.isPending) return;
     setSaved(false);
-    const form = new FormData(event.currentTarget);
-    const start = String(form.get('relationshipStartedOn') || '');
     mutation.mutate({
-      relationshipStartedOn: start ? new Date(`${start}T00:00:00.000Z`) : null,
-      showRelationshipDuration: form.get('showRelationshipDuration') === 'on',
-      durationDisplayMode: String(
-        form.get('durationDisplayMode'),
-      ) as SpaceProfileView['durationDisplayMode'],
+      relationshipStartedOn: startedOn
+        ? new Date(`${startedOn}T00:00:00.000Z`)
+        : null,
+      showRelationshipDuration: showDuration,
+      durationDisplayMode: durationMode,
     });
   }
 
   return (
     <section
-      className="layout-panel profile-section"
-      aria-labelledby="relationship-profile-title"
+      className="form-card relationship-settings-section"
+      aria-labelledby="relationship-settings-title"
     >
-      <h2 id="relationship-profile-title">{t('profiles.relationshipTitle')}</h2>
+      <div className="settings-section-head">
+        <h2 id="relationship-settings-title">
+          {t('profiles.relationshipTitle')}
+        </h2>
+        <p className="settings-section-intro">
+          {t('profiles.relationshipIntro')}
+        </p>
+      </div>
 
       {profileQuery.isLoading ? (
         <UiState kind="loading" title={t('profiles.loading')} />
@@ -173,9 +298,11 @@ function RelationshipProfileSection({
               id="relationship-started-on"
               name="relationshipStartedOn"
               type="date"
-              defaultValue={relationshipDateInput(
-                profileQuery.data.relationshipStartedOn,
-              )}
+              value={startedOn}
+              onChange={(e) => {
+                setStartedOn(e.target.value);
+                setSaved(false);
+              }}
             />
           </div>
 
@@ -184,7 +311,11 @@ function RelationshipProfileSection({
               id="show-relationship-duration"
               name="showRelationshipDuration"
               type="checkbox"
-              defaultChecked={profileQuery.data.showRelationshipDuration}
+              checked={showDuration}
+              onChange={(e) => {
+                setShowDuration(e.target.checked);
+                setSaved(false);
+              }}
             />
             <span>
               <strong>{t('profiles.relationshipDurationLabel')}</strong>
@@ -199,10 +330,13 @@ function RelationshipProfileSection({
             <select
               id="relationship-duration-mode"
               name="durationDisplayMode"
-              defaultValue={
-                profileQuery.data.durationDisplayMode ??
-                DurationDisplayMode.YEARS_MONTHS
-              }
+              value={durationMode}
+              onChange={(e) => {
+                setDurationMode(
+                  e.target.value as SpaceProfileView['durationDisplayMode'],
+                );
+                setSaved(false);
+              }}
             >
               <option value={DurationDisplayMode.YEARS_MONTHS}>
                 {t('profiles.relationshipModeYearsMonths')}
@@ -213,46 +347,167 @@ function RelationshipProfileSection({
             </select>
           </div>
 
-          <p className="profile-duration" role="status">
-            {t('profiles.relationshipCurrent', {
-              duration: relationshipDuration(profileQuery.data, t),
-            })}
-          </p>
+          {/* Relationship Preview Card */}
+          <div className="relationship-preview-card">
+            <h3 className="relationship-preview-heading">
+              {t('profiles.relationshipPreviewTitle')}
+            </h3>
+            <div className="relationship-preview-items">
+              <div className="relationship-preview-item">
+                <span className="relationship-preview-label">
+                  {t('profiles.relationshipCurrentLabel')}
+                </span>
+                <span className="relationship-preview-value">
+                  {currentDurationText}
+                </span>
+              </div>
+              <div className="relationship-preview-item">
+                <span className="relationship-preview-label">
+                  {t('profiles.nextAnniversaryLabel')}
+                </span>
+                <span className="relationship-preview-value">
+                  {nextAnniversaryText}
+                </span>
+              </div>
+            </div>
+          </div>
 
-          <div className="form-actions">
-            <button type="submit" disabled={mutation.isPending}>
+          <div className="form-actions relationship-form-actions">
+            <button type="submit" disabled={!isDirty || mutation.isPending}>
               {mutation.isPending
-                ? t('profiles.relationshipSaving')
-                : t('profiles.relationshipSave')}
+                ? t('profiles.saving')
+                : t('profiles.saveChanges')}
             </button>
+            {saved && !isDirty ? (
+              <span className="relationship-saved-feedback" role="status">
+                {t('profiles.relationshipSavedSubtle')}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="relationship-notification-hint-row">
+            <a
+              href="#settings-notifications"
+              className="relationship-notification-hint-link"
+            >
+              {t('profiles.relationshipNotificationHint')}
+            </a>
           </div>
         </form>
       ) : null}
 
-      {saved ? (
-        <div className="inline-message inline-message-success" role="status">
-          <span>{t('profiles.relationshipSaved')}</span>
-        </div>
-      ) : null}
       {mutation.error ? <ProblemState error={mutation.error} /> : null}
     </section>
   );
 }
 
-function PreferenceForm({
+/** Backward-compatibility alias for previous imports. */
+export const RelationshipProfileSection = RelationshipSettingsSection;
+
+/** Viewport-safe and accessible modal dialog for creating and editing preferences or private notes. */
+export function PreferenceDialog({
+  isOpen,
   preference,
   privateNote,
   pending,
+  deletePending,
   onCancel,
   onSubmit,
+  onDelete,
+  error,
+  deleteError,
 }: {
+  isOpen: boolean;
   preference: ProfilePreferenceView | null;
   privateNote: boolean;
   pending: boolean;
+  deletePending: boolean;
   onCancel: () => void;
   onSubmit: (draft: ProfilePreferenceDraft) => void;
+  onDelete?: () => void;
+  error?: unknown;
+  deleteError?: unknown;
 }) {
   const { t } = useTranslation();
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const firstInputRef = useRef<HTMLSelectElement>(null);
+
+  // Preserve and restore body scroll position and overflow.
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen]);
+
+  // Initial focus on the first real focusable form control.
+  useEffect(() => {
+    if (isOpen) {
+      // Small timeout ensures element is mounted and accessible in DOM.
+      const timer = setTimeout(() => {
+        firstInputRef.current?.focus();
+      }, 20);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Keyboard navigation: Escape key closes, Tab/Shift+Tab trap inside dialog.
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        onCancel();
+        return;
+      }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (
+            document.activeElement === first ||
+            !dialogRef.current.contains(document.activeElement)
+          ) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (
+            document.activeElement === last ||
+            !dialogRef.current.contains(document.activeElement)
+          ) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onCancel]);
+
+  // Dismiss on backdrop click outside dialog content.
+  useEffect(() => {
+    if (!isOpen) return;
+    const backdropEl = backdropRef.current;
+    if (!backdropEl) return;
+    function handleBackdropClick(e: MouseEvent) {
+      if (e.target === backdropEl) {
+        onCancel();
+      }
+    }
+    backdropEl.addEventListener('click', handleBackdropClick);
+    return () => backdropEl.removeEventListener('click', handleBackdropClick);
+  }, [isOpen, onCancel]);
+
+  if (!isOpen) return null;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -270,115 +525,163 @@ function PreferenceForm({
   }
 
   return (
-    <form
-      key={preference?.id ?? 'new'}
-      className="profile-preference-form form-grid"
-      onSubmit={submit}
+    <div
+      ref={backdropRef}
+      className="preference-modal-backdrop"
+      role="presentation"
     >
-      <h3>
-        {preference
-          ? privateNote
-            ? t('profiles.noteEditTitle')
-            : t('profiles.preferenceEditTitle')
-          : privateNote
-            ? t('profiles.noteCreateTitle')
-            : t('profiles.preferenceCreateTitle')}
-      </h3>
-
-      <div className="field-group">
-        <label
-          htmlFor={`preference-category-${privateNote ? 'private' : 'self'}`}
-        >
-          {t('profiles.categoryLabel')}
-        </label>
-        <select
-          id={`preference-category-${privateNote ? 'private' : 'self'}`}
-          name="category"
-          defaultValue={preference?.category ?? PreferenceCategory.OTHER}
-        >
-          {CATEGORIES.map((category) => (
-            <option key={category} value={category}>
-              {t(`profiles.category.${category}`)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="field-group">
-        <label
-          htmlFor={`preference-sentiment-${privateNote ? 'private' : 'self'}`}
-        >
-          {t('profiles.sentimentLabel')}
-        </label>
-        <select
-          id={`preference-sentiment-${privateNote ? 'private' : 'self'}`}
-          name="sentiment"
-          defaultValue={preference?.sentiment ?? PreferenceSentiment.LIKE}
-        >
-          {SENTIMENTS.map((sentiment) => (
-            <option key={sentiment} value={sentiment}>
-              {t(`profiles.sentiment.${sentiment}`)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="field-group">
-        <label htmlFor={`preference-topic-${privateNote ? 'private' : 'self'}`}>
-          {t('profiles.topicLabel')}
-        </label>
-        <input
-          id={`preference-topic-${privateNote ? 'private' : 'self'}`}
-          name="topic"
-          required
-          maxLength={120}
-          defaultValue={preference?.topic ?? ''}
-          placeholder={
-            privateNote
-              ? t('profiles.noteTopicPlaceholder')
-              : t('profiles.topicPlaceholder')
-          }
-        />
-      </div>
-
-      <div className="field-group">
-        <label htmlFor={`preference-value-${privateNote ? 'private' : 'self'}`}>
-          {t('profiles.valueLabel')}
-        </label>
-        <textarea
-          id={`preference-value-${privateNote ? 'private' : 'self'}`}
-          name="value"
-          required
-          rows={3}
-          maxLength={500}
-          defaultValue={preference?.value ?? ''}
-          placeholder={
-            privateNote
-              ? t('profiles.noteValuePlaceholder')
-              : t('profiles.valuePlaceholder')
-          }
-        />
-      </div>
-
-      <div className="form-actions">
-        {preference ? (
-          <button type="button" className="secondary" onClick={onCancel}>
-            {t('common.cancel')}
+      <div
+        ref={dialogRef}
+        className="preference-modal-dialog sbs-motion-reveal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pref-dialog-heading"
+      >
+        <div className="preference-modal-header">
+          <h3 id="pref-dialog-heading" tabIndex={-1}>
+            {preference
+              ? privateNote
+                ? t('profiles.noteEditTitle')
+                : t('profiles.preferenceEditTitle')
+              : privateNote
+                ? t('profiles.noteCreateTitle')
+                : t('profiles.preferenceCreateTitle')}
+          </h3>
+          <button
+            type="button"
+            className="preference-modal-close-btn"
+            onClick={onCancel}
+            aria-label={t('common.cancel')}
+          >
+            ✕
           </button>
-        ) : null}
-        <button type="submit" disabled={pending}>
-          {pending
-            ? t('profiles.saving')
-            : preference
-              ? t('profiles.saveChanges')
-              : t('profiles.create')}
-        </button>
+        </div>
+
+        <form
+          key={preference?.id ?? 'new'}
+          className="form-grid"
+          onSubmit={submit}
+        >
+          <div className="field-group">
+            <label
+              htmlFor={`preference-category-${privateNote ? 'private' : 'self'}`}
+            >
+              {t('profiles.categoryLabel')}
+            </label>
+            <select
+              ref={firstInputRef}
+              id={`preference-category-${privateNote ? 'private' : 'self'}`}
+              name="category"
+              defaultValue={preference?.category ?? PreferenceCategory.OTHER}
+            >
+              {CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {t(`profiles.category.${category}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <label
+              htmlFor={`preference-sentiment-${privateNote ? 'private' : 'self'}`}
+            >
+              {t('profiles.sentimentLabel')}
+            </label>
+            <select
+              id={`preference-sentiment-${privateNote ? 'private' : 'self'}`}
+              name="sentiment"
+              defaultValue={preference?.sentiment ?? PreferenceSentiment.LIKE}
+            >
+              {SENTIMENTS.map((sentiment) => (
+                <option key={sentiment} value={sentiment}>
+                  {t(`profiles.sentiment.${sentiment}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <label
+              htmlFor={`preference-topic-${privateNote ? 'private' : 'self'}`}
+            >
+              {t('profiles.topicLabel')}
+            </label>
+            <input
+              id={`preference-topic-${privateNote ? 'private' : 'self'}`}
+              name="topic"
+              required
+              maxLength={120}
+              defaultValue={preference?.topic ?? ''}
+              placeholder={
+                privateNote
+                  ? t('profiles.noteTopicPlaceholder')
+                  : t('profiles.topicPlaceholder')
+              }
+            />
+          </div>
+
+          <div className="field-group">
+            <label
+              htmlFor={`preference-value-${privateNote ? 'private' : 'self'}`}
+            >
+              {t('profiles.valueLabel')}
+            </label>
+            <textarea
+              id={`preference-value-${privateNote ? 'private' : 'self'}`}
+              name="value"
+              required
+              rows={3}
+              maxLength={500}
+              defaultValue={preference?.value ?? ''}
+              placeholder={
+                privateNote
+                  ? t('profiles.noteValuePlaceholder')
+                  : t('profiles.valuePlaceholder')
+              }
+            />
+          </div>
+
+          {error ? <ProblemState error={error} /> : null}
+          {deleteError ? <ProblemState error={deleteError} /> : null}
+
+          <div className="preference-modal-actions">
+            {preference && onDelete ? (
+              <button
+                type="button"
+                className="tertiary compact-action preference-delete-btn"
+                onClick={onDelete}
+                disabled={pending || deletePending}
+              >
+                {deletePending ? t('profiles.deleting') : t('profiles.delete')}
+              </button>
+            ) : null}
+
+            <div className="preference-modal-submit-row">
+              <button
+                type="button"
+                className="secondary"
+                onClick={onCancel}
+                disabled={pending || deletePending}
+              >
+                {t('common.cancel')}
+              </button>
+              <button type="submit" disabled={pending || deletePending}>
+                {pending
+                  ? t('profiles.saving')
+                  : preference
+                    ? t('profiles.saveChanges')
+                    : t('profiles.create')}
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }
 
-function PreferenceManager({
+export function PreferenceManager({
   profilesApi,
   spaceId,
   accountId,
@@ -402,10 +705,25 @@ function PreferenceManager({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<ProfilePreferenceView | null>(null);
-  const [deleteTarget, setDeleteTarget] =
-    useState<ProfilePreferenceView | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const triggerElementRef = useRef<HTMLElement | null>(null);
+
   const privateNote = visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE;
+  const triggerButtonLabel = privateNote
+    ? t('profiles.addNoteShort')
+    : t('profiles.addPreferenceShort');
+
+  function closeDialog() {
+    setDialogOpen(false);
+    setEditing(null);
+    saveMutation.reset();
+    deleteMutation.reset();
+    // Dynamically restore focus to the exact button or chip that triggered opening.
+    setTimeout(() => {
+      triggerElementRef.current?.focus();
+    }, 0);
+  }
 
   const saveMutation = useMutation({
     mutationFn: async (draft: ProfilePreferenceDraft) => {
@@ -436,7 +754,7 @@ function PreferenceManager({
     },
     onSuccess: async () => {
       setSavedMessage(editing ? t('profiles.updated') : t('profiles.created'));
-      setEditing(null);
+      closeDialog();
       await queryClient.invalidateQueries({
         queryKey: ['profile-preferences', spaceId],
       });
@@ -458,24 +776,50 @@ function PreferenceManager({
       }
     },
     onSuccess: async () => {
-      setDeleteTarget(null);
       setSavedMessage(t('profiles.deleted'));
+      closeDialog();
       await queryClient.invalidateQueries({
         queryKey: ['profile-preferences', spaceId],
       });
     },
   });
 
+  const groupedCategories = useMemo(() => {
+    const map = new Map<PreferenceCategory, ProfilePreferenceView[]>();
+    for (const item of items) {
+      const existing = map.get(item.category) ?? [];
+      existing.push(item);
+      map.set(item.category, existing);
+    }
+    return CATEGORIES.map((cat) => [cat, map.get(cat) ?? []] as const).filter(
+      ([, catItems]) => catItems.length > 0,
+    );
+  }, [items]);
+
   return (
     <section
-      className="layout-panel profile-section"
+      className={`layout-panel profile-section profile-preferences-panel ${privateNote ? 'private-partner-notes-panel' : ''}`}
       aria-labelledby={`profile-manager-${visibility}`}
     >
-      <div className="section-head">
+      <div className="profile-preferences-header">
         <div>
           <h2 id={`profile-manager-${visibility}`}>{title}</h2>
           <p className="profile-section-intro">{intro}</p>
         </div>
+        <button
+          type="button"
+          className="secondary compact-action"
+          onClick={(e) => {
+            triggerElementRef.current = e.currentTarget;
+            setEditing(null);
+            setDialogOpen(true);
+            saveMutation.reset();
+            deleteMutation.reset();
+          }}
+        >
+          <AddIcon />
+          <span>{triggerButtonLabel}</span>
+        </button>
       </div>
 
       {savedMessage ? (
@@ -484,106 +828,118 @@ function PreferenceManager({
         </div>
       ) : null}
 
-      <PreferenceForm
+      {items.length === 0 ? (
+        <UiState kind="empty" title={emptyTitle} body={emptyBody} />
+      ) : (
+        <div className="profile-preferences-groups">
+          {groupedCategories.map(([category, catItems]) => (
+            <div key={category} className="profile-preference-category-group">
+              <h3 className="profile-preference-category-heading">
+                {t(`profiles.category.${category}`)}
+              </h3>
+              <div className="profile-preference-chips">
+                {catItems.map((pref) => {
+                  const sentimentIcon =
+                    pref.sentiment === PreferenceSentiment.LOVE
+                      ? '♥'
+                      : pref.sentiment === PreferenceSentiment.LIKE
+                        ? '👍'
+                        : pref.sentiment === PreferenceSentiment.DISLIKE
+                          ? '👎'
+                          : pref.sentiment === PreferenceSentiment.AVOID
+                            ? '✕'
+                            : '•';
+                  return (
+                    <button
+                      key={pref.id}
+                      type="button"
+                      className="profile-preference-chip sbs-motion-lift"
+                      onClick={(e) => {
+                        triggerElementRef.current = e.currentTarget;
+                        setEditing(pref);
+                        setDialogOpen(true);
+                        saveMutation.reset();
+                        deleteMutation.reset();
+                      }}
+                    >
+                      <span
+                        className="profile-preference-chip-sentiment"
+                        data-sentiment={pref.sentiment}
+                        aria-hidden="true"
+                      >
+                        {sentimentIcon}
+                      </span>
+                      <span className="profile-preference-chip-topic">
+                        {pref.topic}
+                      </span>
+                      <span className="profile-preference-chip-value">
+                        {pref.value}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <PreferenceDialog
+        isOpen={dialogOpen}
         preference={editing}
         privateNote={privateNote}
         pending={saveMutation.isPending}
-        onCancel={() => {
-          setEditing(null);
-          saveMutation.reset();
-        }}
+        deletePending={deleteMutation.isPending}
+        onCancel={closeDialog}
         onSubmit={(draft) => {
           setSavedMessage(null);
           saveMutation.mutate(draft);
         }}
+        onDelete={
+          editing
+            ? () => {
+                setSavedMessage(null);
+                deleteMutation.mutate(editing);
+              }
+            : undefined
+        }
+        error={saveMutation.error}
+        deleteError={deleteMutation.error}
       />
-      {saveMutation.error ? <ProblemState error={saveMutation.error} /> : null}
-
-      {items.length === 0 ? (
-        <UiState kind="empty" title={emptyTitle} body={emptyBody} />
-      ) : (
-        <ul className="profile-preference-list">
-          {items.map((preference) => {
-            const confirmingDelete = deleteTarget?.id === preference.id;
-            return (
-              <li key={preference.id} className="profile-preference-card">
-                <div>
-                  <div className="profile-preference-meta">
-                    <span>{t(`profiles.category.${preference.category}`)}</span>
-                    <span>
-                      {t(`profiles.sentiment.${preference.sentiment}`)}
-                    </span>
-                  </div>
-                  <h3>{preference.topic}</h3>
-                  <p>{preference.value}</p>
-                </div>
-
-                {!confirmingDelete ? (
-                  <div className="form-actions">
-                    <button
-                      type="button"
-                      className="secondary compact-action"
-                      onClick={() => {
-                        setEditing(preference);
-                        setDeleteTarget(null);
-                        saveMutation.reset();
-                      }}
-                    >
-                      {t('profiles.edit')}
-                    </button>
-                    <button
-                      type="button"
-                      className="tertiary compact-action"
-                      onClick={() => {
-                        setDeleteTarget(preference);
-                        deleteMutation.reset();
-                      }}
-                    >
-                      {t('profiles.delete')}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="inline-delete-confirmation" role="alert">
-                    <strong>{t('profiles.deleteQuestion')}</strong>
-                    <span>{t('profiles.deleteBody')}</span>
-                    {deleteMutation.error ? (
-                      <ProblemState error={deleteMutation.error} />
-                    ) : null}
-                    <div className="form-actions">
-                      <button
-                        type="button"
-                        className="secondary compact-action"
-                        disabled={deleteMutation.isPending}
-                        onClick={() => {
-                          setDeleteTarget(null);
-                          deleteMutation.reset();
-                        }}
-                      >
-                        {t('common.cancel')}
-                      </button>
-                      <button
-                        type="button"
-                        className="danger compact-action"
-                        disabled={deleteMutation.isPending}
-                        onClick={() => deleteMutation.mutate(preference)}
-                      >
-                        {deleteMutation.isPending
-                          ? t('profiles.deleting')
-                          : t('profiles.deleteConfirm')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </section>
   );
 }
 
-function PartnerProfileSection({
+/** Own profile preferences section (+ Vorliebe). */
+export function SelfPreferencesSection({
+  profilesApi,
+  spaceId,
+  accountId,
+  items,
+}: {
+  profilesApi: ProfilesApi;
+  spaceId: string;
+  accountId: string;
+  items: ProfilePreferenceView[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <PreferenceManager
+      profilesApi={profilesApi}
+      spaceId={spaceId}
+      accountId={accountId}
+      visibility={ProfileVisibility.SELF_PROFILE}
+      items={items}
+      title={t('profiles.selfTitle')}
+      intro={t('profiles.selfIntro')}
+      emptyTitle={t('profiles.emptySelfTitle')}
+      emptyBody={t('profiles.emptySelfBody')}
+    />
+  );
+}
+
+/** Partner's shared preferences section (read-only). */
+export function PartnerProfileSection({
   profilesApi,
   spaceId,
   partnerId,
@@ -595,12 +951,16 @@ function PartnerProfileSection({
   partnerName: string;
 }) {
   const { t } = useTranslation();
+
   const partnerQuery = useQuery({
     queryKey: ['partner-profile', spaceId, partnerId],
     queryFn: async () => {
       try {
         return await profilesApi.getPartnerProfileApiV1SpacesSpaceIdProfilesAccountIdGet(
-          { accountId: partnerId, spaceId },
+          {
+            accountId: partnerId,
+            spaceId,
+          },
         );
       } catch (error) {
         throw await normalizeClientError(error);
@@ -652,7 +1012,46 @@ function PartnerProfileSection({
   );
 }
 
-export function ProfilePage({
+/** Private partner notes section with visually explicit privacy indicator (+ Notiz). */
+export function PrivatePartnerNotesSection({
+  profilesApi,
+  spaceId,
+  partnerId,
+  partnerName,
+  items,
+}: {
+  profilesApi: ProfilesApi;
+  spaceId: string;
+  partnerId: string;
+  partnerName: string;
+  items: ProfilePreferenceView[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="private-partner-notes-wrapper">
+      <div className="private-partner-notes-badge" role="note">
+        <span className="private-partner-notes-icon" aria-hidden="true">
+          <DestinationIcon icon="private" />
+        </span>
+        <span>{t('privateArea.entry.privacy')}</span>
+      </div>
+      <PreferenceManager
+        profilesApi={profilesApi}
+        spaceId={spaceId}
+        accountId={partnerId}
+        visibility={ProfileVisibility.PRIVATE_PARTNER_NOTE}
+        items={items}
+        title={t('profiles.privateTitle', { name: partnerName })}
+        intro={t('profiles.privateIntro')}
+        emptyTitle={t('profiles.emptyPrivateTitle')}
+        emptyBody={t('profiles.emptyPrivateBody')}
+      />
+    </div>
+  );
+}
+
+/** Composite preference section for backward compatibility. */
+export function ProfilePreferencesSection({
   apiBaseUrl,
   accessToken,
   account,
@@ -672,12 +1071,12 @@ export function ProfilePage({
       }),
     [accessToken, apiBaseUrl],
   );
-  const spacesApi = useMemo(
-    () => new SpacesApi(configuration),
-    [configuration],
-  );
   const profilesApi = useMemo(
     () => new ProfilesApi(configuration),
+    [configuration],
+  );
+  const spacesApi = useMemo(
+    () => new SpacesApi(configuration),
     [configuration],
   );
 
@@ -711,116 +1110,71 @@ export function ProfilePage({
     spaceQuery.data?.partners.find(
       (candidate) => candidate.id !== account.id,
     ) ?? null;
-  const selfPreferences =
-    preferencesQuery.data?.filter(
-      (preference) =>
-        preference.accountId === account.id &&
-        preference.visibility === ProfileVisibility.SELF_PROFILE,
-    ) ?? [];
-  const privatePartnerNotes = partner
-    ? (preferencesQuery.data?.filter(
-        (preference) =>
-          preference.accountId === partner.id &&
-          preference.visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE,
-      ) ?? [])
+
+  const selfPreferences = preferencesQuery.data
+    ? preferencesQuery.data.filter(
+        (pref) =>
+          pref.accountId === account.id &&
+          pref.visibility === ProfileVisibility.SELF_PROFILE,
+      )
     : [];
 
+  const privatePartnerNotes =
+    preferencesQuery.data && partner
+      ? preferencesQuery.data.filter(
+          (pref) =>
+            pref.accountId === partner.id &&
+            pref.visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE,
+        )
+      : [];
+
   return (
-    <div className="page profile-page">
-      <PageHeader
-        eyebrow={t('profiles.eyebrow')}
-        title={t('profiles.title')}
-        description={t('profiles.intro')}
-      />
+    <div className="profile-preferences-section">
+      {preferencesQuery.isLoading ? (
+        <UiState kind="loading" title={t('profiles.preferencesLoading')} />
+      ) : null}
+      {preferencesQuery.error ? (
+        <ProblemState
+          error={preferencesQuery.error}
+          onRetry={() => void preferencesQuery.refetch()}
+        />
+      ) : null}
+      {preferencesQuery.data ? (
+        <SelfPreferencesSection
+          profilesApi={profilesApi}
+          spaceId={spaceId}
+          accountId={account.id}
+          items={selfPreferences}
+        />
+      ) : null}
 
-      <div className="layout-split layout-split-lead-rail">
-        <aside
-          className="layout-rail layout-rail-sticky"
-          aria-label={t('profiles.settingsRailAria')}
-        >
-          <section
-            className="layout-panel profile-section"
-            aria-labelledby="account-profile-title"
-          >
-            <h2 id="account-profile-title">{t('profiles.accountTitle')}</h2>
-            <dl className="profile-account-list">
-              <div>
-                <dt>{t('profiles.accountName')}</dt>
-                <dd>{account.displayName}</dd>
-              </div>
-            </dl>
-          </section>
-
-          <RelationshipProfileSection spacesApi={spacesApi} spaceId={spaceId} />
-        </aside>
-
-        <div className="layout-main">
-          {preferencesQuery.isLoading ? (
-            <UiState kind="loading" title={t('profiles.preferencesLoading')} />
-          ) : null}
-          {preferencesQuery.error ? (
-            <ProblemState
-              error={preferencesQuery.error}
-              onRetry={() => void preferencesQuery.refetch()}
-            />
-          ) : null}
+      {partner ? (
+        <div className="profile-partner-block">
+          <PartnerIdentityPanel
+            apiBaseUrl={apiBaseUrl}
+            accessToken={accessToken}
+            account={account}
+            spaceId={spaceId}
+          />
+          <PartnerProfileSection
+            profilesApi={profilesApi}
+            spaceId={spaceId}
+            partnerId={partner.id}
+            partnerName={partner.displayName}
+          />
           {preferencesQuery.data ? (
-            <PreferenceManager
+            <PrivatePartnerNotesSection
               profilesApi={profilesApi}
               spaceId={spaceId}
-              accountId={account.id}
-              visibility={ProfileVisibility.SELF_PROFILE}
-              items={selfPreferences}
-              title={t('profiles.selfTitle')}
-              intro={t('profiles.selfIntro')}
-              emptyTitle={t('profiles.emptySelfTitle')}
-              emptyBody={t('profiles.emptySelfBody')}
+              partnerId={partner.id}
+              partnerName={partner.displayName}
+              items={privatePartnerNotes}
             />
-          ) : null}
-
-          {spaceQuery.isLoading ? (
-            <UiState kind="loading" title={t('profiles.loading')} />
-          ) : null}
-          {spaceQuery.error ? (
-            <ProblemState
-              error={spaceQuery.error}
-              onRetry={() => void spaceQuery.refetch()}
-            />
-          ) : null}
-          {spaceQuery.data && !partner ? (
-            <UiState
-              kind="empty"
-              title={t('profiles.noPartnerTitle')}
-              body={t('profiles.noPartnerBody')}
-            />
-          ) : null}
-          {partner ? (
-            <>
-              <PartnerProfileSection
-                profilesApi={profilesApi}
-                spaceId={spaceId}
-                partnerId={partner.id}
-                partnerName={partner.displayName}
-              />
-              {preferencesQuery.data ? (
-                <PreferenceManager
-                  profilesApi={profilesApi}
-                  spaceId={spaceId}
-                  accountId={partner.id}
-                  visibility={ProfileVisibility.PRIVATE_PARTNER_NOTE}
-                  items={privatePartnerNotes}
-                  title={t('profiles.privateTitle', {
-                    name: partner.displayName,
-                  })}
-                  intro={t('profiles.privateIntro')}
-                  emptyTitle={t('profiles.emptyPrivateTitle')}
-                  emptyBody={t('profiles.emptyPrivateBody')}
-                />
-              ) : null}
-            </>
           ) : null}
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
+
+export const ProfilePage = ProfilePreferencesSection;

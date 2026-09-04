@@ -401,8 +401,16 @@ def _require_readable_parent(
     """
     from sidebyside.heart_moments.models import HeartMoment
     from sidebyside.memories.models import Memory
+    from sidebyside.people.models import RelatedPerson
 
-    model = Memory if parent_type == "MEMORY" else HeartMoment
+    if parent_type == "MEMORY":
+        model: type[Memory] | type[HeartMoment] | type[RelatedPerson] = Memory
+    elif parent_type == "HEART_MOMENT":
+        model = HeartMoment
+    elif parent_type == "RELATED_PERSON":
+        model = RelatedPerson
+    else:
+        raise Attachment.privacy_absence.error()
     try:
         require_readable(session, model, context, parent_id)
     except NotFoundError as error:

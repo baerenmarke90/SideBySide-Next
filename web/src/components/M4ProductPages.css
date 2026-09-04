@@ -338,6 +338,31 @@
   border-radius: var(--radius-card);
 }
 
+.activity-card-interactive {
+  cursor: pointer;
+}
+
+.activity-card-static {
+  cursor: default;
+}
+
+.activity-card-chevron {
+  margin-left: auto;
+  align-self: center;
+  color: var(--color-text-secondary);
+  font-size: 1.35rem;
+  font-weight: 300;
+  line-height: 1;
+  transition:
+    transform var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.activity-result-link:hover .activity-card-chevron {
+  color: var(--color-text);
+  transform: translateX(2px);
+}
+
 .activity-card-header {
   display: flex;
   align-items: flex-start;
@@ -395,4 +420,86 @@
     var(--color-surface-raised) 0%,
     var(--color-private-surface-soft) 100%
   );
+}
+
+/* Notification Cards */
+.m4-notification-wrapper {
+  list-style: none;
+}
+
+.m4-notification-link {
+  display: block;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.m4-notification-link:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: var(--radius-large);
+}
+
+.m4-item-interactive {
+  cursor: pointer;
+}
+
+.m4-item-static {
+  cursor: default;
+}
+
+.m4-notification-link:hover .m4-item-interactive {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.m4-notification-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.m4-notification-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.m4-notification-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.m4-notification-title strong {
+  font-weight: 700;
+}
+
+.notification-heart-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: var(--color-private-surface-soft);
+  color: var(--color-brand);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.m4-mark-read-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.m4-read-status {
+  margin-left: auto;
+  flex-shrink: 0;
 }

@@ -11,11 +11,11 @@ from fastapi import status as http_status
 from pydantic import ConfigDict, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
-from sidebyside.identity.models import Account
 from sidebyside.wishes import service
 from sidebyside.wishes.models import Wish, WishStatus
 
@@ -96,10 +96,10 @@ def wish_detail(
     session: DbSession,
     authorization: Authorization,
     wish: Wish,
+    creator: AuthorSummary | None = None,
 ) -> WishDetail:
-    creator = session.get(Account, wish.owner_id)
     if creator is None:
-        raise RuntimeError("Wish creator disappeared despite foreign key protection.")
+        creator = resolve_author_summary(session, wish.owner_id, resource="Wish creator")
     return WishDetail(
         id=wish.id,
         space_id=wish.space_id,
@@ -109,7 +109,7 @@ def wish_detail(
         version=wish.version,
         created_at=wish.created_at,
         updated_at=wish.updated_at,
-        creator=AuthorSummary(id=creator.id, display_name=creator.display_name),
+        creator=creator,
         capabilities=ResourceCapabilities(
             # M3-D01: a wish belongs to the couple. ``createdBy`` is
             # attribution, not an ACL; both partners may edit it.
@@ -161,8 +161,12 @@ def list_wishes(
         limit=limit,
         status=status,
     )
+    creators = resolve_author_summaries(session, {wish.owner_id for wish in page.items})
     return WishPage(
-        items=[wish_detail(session, authorization, wish) for wish in page.items],
+        items=[
+            wish_detail(session, authorization, wish, creator=creators.get(wish.owner_id))
+            for wish in page.items
+        ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )

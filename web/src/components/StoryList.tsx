@@ -95,7 +95,7 @@ export function StoryList({
                 .join(' ');
 
               return (
-                <li key={storyItemKey(item)} className="sbs-motion-reveal">
+                <li key={storyItemKey(item)}>
                   <Link
                     className="story-card-link"
                     to={productPath}
@@ -111,13 +111,6 @@ export function StoryList({
                             {presentation.sharedLabel}
                           </span>
                         ) : null}
-                        <time
-                          dateTime={item.effectiveDate
-                            .toISOString()
-                            .slice(0, 10)}
-                        >
-                          {formatStoryDate(item.effectiveDate, locale)}
-                        </time>
                       </div>
                       {item.kind === 'MEMORY' && firstMemoryAttachment ? (
                         <MemoryPreview
@@ -131,31 +124,40 @@ export function StoryList({
                         <p className="story-preview">{presentation.preview}</p>
                       ) : null}
                       <div className="story-card-footer">
-                        {author ? (
-                          <span className="momente-author-meta">
-                            <AuthorAvatar
-                              author={author}
-                              profilesApi={profilesApi}
-                              spaceId={spaceId}
-                            />
+                        <time
+                          dateTime={item.effectiveDate
+                            .toISOString()
+                            .slice(0, 10)}
+                        >
+                          {formatStoryDate(item.effectiveDate, locale)}
+                        </time>
+                        <div className="story-card-footer-author">
+                          {author ? (
+                            <span className="momente-author-meta">
+                              <AuthorAvatar
+                                author={author}
+                                profilesApi={profilesApi}
+                                spaceId={spaceId}
+                              />
+                              <span>
+                                {t('story.byAuthor', {
+                                  author: author.displayName,
+                                })}
+                              </span>
+                            </span>
+                          ) : (
                             <span>
                               {t('story.byAuthor', {
-                                author: author.displayName,
+                                author: presentation.author,
                               })}
                             </span>
-                          </span>
-                        ) : (
-                          <span>
-                            {t('story.byAuthor', {
-                              author: presentation.author,
-                            })}
-                          </span>
-                        )}
-                        {presentation.mediaLabel ? (
-                          <span className="media-label">
-                            ▧ {presentation.mediaLabel}
-                          </span>
-                        ) : null}
+                          )}
+                          {presentation.mediaLabel ? (
+                            <span className="media-label">
+                              ▧ {presentation.mediaLabel}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                     </article>
                   </Link>

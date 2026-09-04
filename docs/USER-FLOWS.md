@@ -11,7 +11,7 @@ This document describes the critical end-to-end flows for the WebApp and Android
 - Web and Android produce the same domain outcome; presentation and platform mechanics may differ.
 - Every access runs in the current `spaceId` and with an active Membership.
 - `OWNER_ONLY` is enforced exclusively server-side and never appears in Story, partner search, Dashboard, partner notifications, or partner export.
-- `SPACE_SHARED` means the intentional de-DE product label **„Geteilt“** in the regular couple UI.
+- `SPACE_SHARED` means the intentional de-DE product label **„Für uns beide“** in the regular couple UI.
 - Android may show the most recently loaded data offline in the MVP, but must **not write offline**.
 - Mutable objects carry a `version`; conflicts surface as HTTP 409 and are never silently overwritten.
 - Sensitive content appears neither in Analytics nor in logs.
@@ -42,7 +42,7 @@ After an error, the last safe input is preserved. The screen explains whether th
 2. The UI explains the next step without revealing whether another person's email address is registered.
 3. Magic Link or Passkey is confirmed.
 4. The client receives a secure session; tokens are not copied into URLs, Analytics, or logs.
-5. If an active Membership exists, the originally requested Deep Link or the intentional de-DE destination `Heute` opens.
+5. If an active Membership exists, the originally requested Deep Link or the intentional de-DE destination `Wir` opens.
 6. If no Space exists yet, Flow B starts.
 
 ### Self-Hosted variants
@@ -82,7 +82,7 @@ After an error, the last safe input is preserved. The screen explains whether th
 3. The inviting person's name and the effect of the connection are confirmed.
 4. The one-time token is redeemed atomically.
 5. Both clients update Space and Membership state.
-6. The new person enters a short shared onboarding and then lands on the intentional de-DE destination `Heute`.
+6. The new person enters a short shared onboarding and then lands on the intentional de-DE destination `Wir`.
 
 ### Required branches
 

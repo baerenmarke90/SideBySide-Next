@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { ChapterDetail } from '../api/generated/models/ChapterDetail';
@@ -10,9 +10,11 @@ import {
   planningIfMatch,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { appRoutePath } from '../client/routes';
+import { STORY_CHAPTERS_ROUTE } from '../client/routes';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
+import { ListEntryIconButton } from './ListEntryActions';
 import { PlanningRelationManager } from './PlanningRelationManager';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -38,7 +40,8 @@ export function ChapterProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const key = ['m5-s3', 'chapter', spaceId, chapterId] as const;
+  const [isEditing, setIsEditing] = useState(false);
+  const key = authorSummaryQueryKeys.chapterDetail(spaceId, chapterId);
 
   const chapterQuery = useQuery({
     queryKey: key,
@@ -88,6 +91,8 @@ export function ChapterProductPage({
         }),
         queryClient.invalidateQueries({ queryKey: key }),
       ]);
+      setIsEditing(false);
+      setConfirmDelete(false);
     },
   });
 
@@ -105,7 +110,7 @@ export function ChapterProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'chapters', spaceId],
       });
-      navigate(appRoutePath('plan'), { replace: true });
+      navigate(STORY_CHAPTERS_ROUTE, { replace: true });
     },
   });
 
@@ -149,33 +154,57 @@ export function ChapterProductPage({
 
   return (
     <div className="page planning-page">
+      {isEditing ? (
+        <form
+          id="chapter-edit-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitEdit(e);
+          }}
+        />
+      ) : null}
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('plan')}>
-            {t('m5s3.common.back')}
+          <Link className="back-link" to={STORY_CHAPTERS_ROUTE}>
+            {t('m5s3.common.backToChapters')}
           </Link>
         }
         eyebrow={t('m5s3.chapter.detailEyebrow')}
         title={chapter.title}
-        description={chapter.description || t('m5s3.chapter.noDescription')}
-      />
-
-      <section className="planning-subsection">
-        <h2>{t('m5s3.common.edit')}</h2>
-        {chapter.capabilities.canEdit ? (
-          <form className="form-grid" onSubmit={submitEdit}>
-            <label htmlFor="chapter-edit-title">{t('m5s3.common.title')}</label>
+        titleEditor={
+          isEditing ? (
             <input
-              id="chapter-edit-title"
+              form="chapter-edit-form"
               name="title"
               required
               maxLength={200}
               defaultValue={chapter.title}
+              aria-label={t('m5s3.common.title')}
             />
+          ) : undefined
+        }
+        description={chapter.description || t('m5s3.chapter.noDescription')}
+        titleAction={
+          chapter.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
+        }
+      />
+
+      {isEditing ? (
+        <section className="planning-subsection">
+          <h2>{t('m5s3.common.edit')}</h2>
+          <div className="form-grid">
             <label htmlFor="chapter-edit-description">
               {t('m5s3.common.description')}
             </label>
             <textarea
+              form="chapter-edit-form"
               id="chapter-edit-description"
               name="description"
               rows={4}
@@ -187,6 +216,7 @@ export function ChapterProductPage({
                   {t('m5s3.chapter.startOn')}
                 </label>
                 <input
+                  form="chapter-edit-form"
                   id="chapter-edit-start"
                   name="startOn"
                   type="date"
@@ -198,6 +228,7 @@ export function ChapterProductPage({
                   {t('m5s3.chapter.endOn')}
                 </label>
                 <input
+                  form="chapter-edit-form"
                   id="chapter-edit-end"
                   name="endOn"
                   type="date"
@@ -207,6 +238,7 @@ export function ChapterProductPage({
             </div>
             <label htmlFor="chapter-edit-place">{t('m5s3.common.place')}</label>
             <select
+              form="chapter-edit-form"
               id="chapter-edit-place"
               name="placeId"
               defaultValue={chapter.placeId ?? ''}
@@ -218,22 +250,85 @@ export function ChapterProductPage({
                 </option>
               ))}
             </select>
-            <button type="submit" disabled={updateMutation.isPending}>
-              {updateMutation.isPending
-                ? t('m5s3.common.saving')
-                : t('m5s3.common.saveChanges')}
-            </button>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <button
+                form="chapter-edit-form"
+                type="submit"
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending
+                  ? t('m5s3.common.saving')
+                  : t('m5s3.common.saveChanges')}
+              </button>
+              <button
+                type="button"
+                className="tertiary"
+                onClick={() => {
+                  setIsEditing(false);
+                  setConfirmDelete(false);
+                }}
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
             {updateMutation.error ? (
               <ProblemState
                 error={updateMutation.error}
                 onRetry={() => void chapterQuery.refetch()}
               />
             ) : null}
-          </form>
-        ) : (
-          <p className="planning-meta">{t('m5s3.common.readOnly')}</p>
-        )}
-      </section>
+          </div>
+
+          {chapter.capabilities.canDelete ? (
+            <div style={{ marginTop: 'var(--space-8)' }}>
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  className="button-link danger-link"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  {t('m5s3.common.delete')}
+                </button>
+              ) : (
+                <section
+                  className="planning-danger-zone"
+                  aria-labelledby="chapter-delete-heading"
+                >
+                  <h2 id="chapter-delete-heading">
+                    {t('m5s3.common.deleteHeading')}
+                  </h2>
+                  <p>{t('m5s3.chapter.deleteConsequence')}</p>
+                  <div className="planning-confirm-row">
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => deleteMutation.mutate(chapter)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending
+                        ? t('m5s3.common.deleting')
+                        : t('m5s3.common.confirmDelete')}
+                    </button>
+                    <button
+                      type="button"
+                      className="tertiary"
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                  {deleteMutation.error ? (
+                    <ProblemState
+                      error={deleteMutation.error}
+                      onRetry={() => void chapterQuery.refetch()}
+                    />
+                  ) : null}
+                </section>
+              )}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <PlanningRelationManager
         apis={apis}
@@ -241,51 +336,6 @@ export function ChapterProductPage({
         ownerKind="chapter"
         ownerId={chapter.id}
       />
-
-      {chapter.capabilities.canDelete ? (
-        <section
-          className="planning-danger-zone"
-          aria-labelledby="chapter-delete-heading"
-        >
-          <h2 id="chapter-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
-          <p>{t('m5s3.chapter.deleteConsequence')}</p>
-          {!confirmDelete ? (
-            <button
-              type="button"
-              className="danger"
-              onClick={() => setConfirmDelete(true)}
-            >
-              {t('m5s3.common.delete')}
-            </button>
-          ) : (
-            <div className="planning-confirm-row">
-              <button
-                type="button"
-                className="danger"
-                onClick={() => deleteMutation.mutate(chapter)}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending
-                  ? t('m5s3.common.deleting')
-                  : t('m5s3.common.confirmDelete')}
-              </button>
-              <button
-                type="button"
-                className="tertiary"
-                onClick={() => setConfirmDelete(false)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          )}
-          {deleteMutation.error ? (
-            <ProblemState
-              error={deleteMutation.error}
-              onRetry={() => void chapterQuery.refetch()}
-            />
-          ) : null}
-        </section>
-      ) : null}
     </div>
   );
 }

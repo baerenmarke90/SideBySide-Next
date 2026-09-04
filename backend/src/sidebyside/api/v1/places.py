@@ -16,11 +16,11 @@ from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
-from sidebyside.identity.models import Account
 from sidebyside.places import service
 from sidebyside.places.models import Place
 
@@ -121,10 +121,10 @@ def place_detail(
     session: DbSession,
     authorization: Authorization,
     place: Place,
+    creator: AuthorSummary | None = None,
 ) -> PlaceDetail:
-    creator = session.get(Account, place.owner_id)
     if creator is None:
-        raise RuntimeError("Place creator disappeared despite foreign key protection.")
+        creator = resolve_author_summary(session, place.owner_id, resource="Place creator")
     return PlaceDetail(
         id=place.id,
         space_id=place.space_id,
@@ -137,7 +137,7 @@ def place_detail(
         version=place.version,
         created_at=place.created_at,
         updated_at=place.updated_at,
-        creator=AuthorSummary(id=creator.id, display_name=creator.display_name),
+        creator=creator,
         capabilities=ResourceCapabilities(
             # M3-D01: a place belongs to the couple.
             can_edit=True,
@@ -188,8 +188,12 @@ def list_places(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> PlacePage:
     page = service.list_places(session, authorization, cursor=cursor, limit=limit)
+    creators = resolve_author_summaries(session, {place.owner_id for place in page.items})
     return PlacePage(
-        items=[place_detail(session, authorization, place) for place in page.items],
+        items=[
+            place_detail(session, authorization, place, creator=creators.get(place.owner_id))
+            for place in page.items
+        ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )

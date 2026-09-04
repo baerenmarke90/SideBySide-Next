@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import type { AccountView } from '../api/generated/models/AccountView';
 import type { ActivityItem } from '../api/generated/models/ActivityItem';
 import type { DashboardItem } from '../api/generated/models/DashboardItem';
+import type { DashboardItemType } from '../api/generated/models/DashboardItemType';
 import type { DashboardRelationshipDuration } from '../api/generated/models/DashboardRelationshipDuration';
 import { DurationDisplayMode } from '../api/generated/models/DurationDisplayMode';
 import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
@@ -13,7 +14,9 @@ import {
   engagementTargetPath,
 } from '../client/m4Product';
 import { dashboardQueryKey } from '../client/dashboardQueries';
+import { formatRecency, formatUpcomingRelative } from '../client/formatRecency';
 import { normalizeClientError } from '../client/problemDetails';
+import { ACTIVITY_ROUTE } from '../client/routes';
 import { postSnackbar } from '../client/snackbar';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import { resolvedLocale, useTranslation } from '../i18n';
@@ -136,6 +139,7 @@ export function TodayModuleSection({
   className,
   title,
   kicker,
+  subline,
   headerAction,
   children,
   animationDelay,
@@ -144,6 +148,7 @@ export function TodayModuleSection({
   className?: string;
   title: string;
   kicker?: string;
+  subline?: string;
   headerAction?: React.ReactNode;
   children: React.ReactNode;
   animationDelay?: string;
@@ -160,6 +165,7 @@ export function TodayModuleSection({
             <span className="today-section-kicker">{kicker}</span>
           ) : null}
           <h2 className="today-section-title">{title}</h2>
+          {subline ? <p className="today-section-subline">{subline}</p> : null}
         </div>
         {headerAction ? (
           <div className="today-section-action">{headerAction}</div>
@@ -173,10 +179,8 @@ export function TodayModuleSection({
 function TodayContextualCard({ item }: { item: DashboardItem }) {
   const { t } = useTranslation();
   const path = dashboardItemPath(item.type, item.id);
-  const date =
-    formatDate(item.occurredOn) ??
-    formatDate(item.scheduledAt) ??
-    formatDate(item.createdAt);
+  const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
+  const date = rawDate ? formatUpcomingRelative(rawDate, t) : null;
 
   const kicker =
     item.type === 'PLAN'
@@ -191,13 +195,13 @@ function TodayContextualCard({ item }: { item: DashboardItem }) {
     <div className="today-context-card sbs-motion-lift">
       <div className="today-context-header">
         <span className="today-context-kicker">{kicker}</span>
-        <span className="today-card-kind">
-          {item.type === 'HEART_MOMENT'
-            ? '♥ '
-            : item.type === 'MILESTONE'
-              ? '★ '
-              : ''}
-          {t(`m5s5.kind.${item.type}`)}
+        <span
+          className={`today-card-kind today-kind-${item.type.toLowerCase()}`}
+        >
+          <span className="today-type-icon" aria-hidden="true">
+            <RecentItemTypeIcon type={item.type} />
+          </span>
+          <span>{t(`m5s5.kind.${item.type}`)}</span>
         </span>
       </div>
       <h3 className="today-context-title">
@@ -285,6 +289,158 @@ function TodayRelationshipSignalCard({
   );
 }
 
+function RecentItemTypeIcon({ type }: { type: DashboardItemType }) {
+  switch (type) {
+    case 'HEART_MOMENT':
+    case 'ANNIVERSARY':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+        </svg>
+      );
+    case 'BIRTHDAY':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" />
+          <path d="M4 16s2-1 4-1 4 1 4 1 2-1 4-1 4 1 4 1" />
+          <path d="M2 21h20" />
+          <line x1="12" y1="8" x2="12" y2="5" />
+          <circle cx="12" cy="3.5" r="1" />
+        </svg>
+      );
+    case 'MILESTONE':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+          <line x1="4" y1="22" x2="4" y2="15" />
+        </svg>
+      );
+    case 'CHAPTER':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z" />
+        </svg>
+      );
+    case 'COLLECTION':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      );
+    case 'PLAN':
+    case 'IMPORTANT_DATE':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <rect x="3" y="4" width="18" height="18" rx="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+      );
+    case 'WISH':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z" />
+        </svg>
+      );
+    case 'PLACE':
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z" />
+        </svg>
+      );
+    default:
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          className="recent-type-icon"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="4" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <path d="m21 15-5-5L5 21" />
+        </svg>
+      );
+  }
+}
+
+function RecentSharedItemCard({ item }: { item: DashboardItem }) {
+  const { t } = useTranslation();
+  const path = dashboardItemPath(item.type, item.id);
+  const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
+  const recency = rawDate ? formatRecency(rawDate, t) : null;
+  const typeLabel = t(`m5s5.kind.${item.type}`);
+  const title = item.titleOrText || t('m5s5.dashboard.itemFallback');
+
+  const cardInner = (
+    <div className="recent-shared-card sbs-motion-lift">
+      <div className="recent-shared-icon" aria-hidden="true">
+        <RecentItemTypeIcon type={item.type} />
+      </div>
+      <div className="recent-shared-copy">
+        <h3 className="recent-shared-title">{title}</h3>
+        <div className="recent-shared-meta">
+          <span className="recent-shared-kind">{typeLabel}</span>
+          {recency ? (
+            <>
+              <span className="recent-shared-meta-sep" aria-hidden="true">
+                ·
+              </span>
+              <time
+                className="recent-shared-date"
+                dateTime={rawDate?.toISOString()}
+              >
+                {recency}
+              </time>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (path) {
+    return (
+      <Link to={path} className="recent-shared-card-link">
+        {cardInner}
+      </Link>
+    );
+  }
+  return <div className="recent-shared-card-wrapper">{cardInner}</div>;
+}
+
 function VisualMemoryCard({
   item,
   variant,
@@ -296,10 +452,12 @@ function VisualMemoryCard({
 }) {
   const { t } = useTranslation();
   const path = dashboardItemPath(item.type, item.id);
-  const date =
-    formatDate(item.occurredOn) ??
-    formatDate(item.scheduledAt) ??
-    formatDate(item.createdAt);
+  const rawDate = item.occurredOn ?? item.scheduledAt ?? item.createdAt;
+  const date = rawDate
+    ? variant === 'upcoming'
+      ? formatUpcomingRelative(rawDate, t)
+      : formatDate(rawDate)
+    : null;
 
   const previewAttachmentId = item.previewAttachmentId;
   const hasMedia = Boolean(previewAttachmentId && loadMemoryImage);
@@ -320,13 +478,13 @@ function VisualMemoryCard({
       ) : null}
       <div className="today-card-content">
         <div className="today-card-badges">
-          <span className="today-card-kind">
-            {item.type === 'HEART_MOMENT'
-              ? '♥ '
-              : item.type === 'MILESTONE'
-                ? '★ '
-                : ''}
-            {t(`m5s5.kind.${item.type}`)}
+          <span
+            className={`today-card-kind today-kind-${item.type.toLowerCase()}`}
+          >
+            <span className="today-type-icon" aria-hidden="true">
+              <RecentItemTypeIcon type={item.type} />
+            </span>
+            <span>{t(`m5s5.kind.${item.type}`)}</span>
           </span>
           {variant === 'retrospective' ? (
             <span className="today-card-retrospective-badge">
@@ -658,18 +816,22 @@ export function TodayPage({
               <TodayModuleSection
                 className="today-section-recent"
                 title={t('m5s5.dashboard.recentTitle')}
-                kicker={t('m5s5.today.roles.sharedContent')}
+                kicker={t('m5s5.dashboard.recentKicker')}
+                subline={t('m5s5.dashboard.recentSubline')}
                 animationDelay="200ms"
               >
                 <div className="today-stream today-stream-recent">
-                  {recentShared.map((item: DashboardItem) => (
-                    <VisualMemoryCard
-                      key={item.id}
-                      item={item}
-                      variant="recent"
-                      loadMemoryImage={loadMemoryImage}
-                    />
+                  {recentShared.slice(0, 4).map((item: DashboardItem) => (
+                    <RecentSharedItemCard key={item.id} item={item} />
                   ))}
+                </div>
+                <div className="today-recent-footer">
+                  <Link
+                    to={ACTIVITY_ROUTE}
+                    className="today-recent-activity-link"
+                  >
+                    {t('m5s5.dashboard.allActivityAction')}
+                  </Link>
                 </div>
               </TodayModuleSection>
             ) : null}

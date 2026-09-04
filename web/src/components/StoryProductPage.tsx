@@ -20,15 +20,18 @@ import type { ReferenceApis } from '../client/referenceFlow';
 import {
   aggregateStoryPages,
   parseStoryFilters,
+  selectFeaturedStoryItem,
   storyCacheResourceId,
   storyFiltersToSearch,
   storyRequest,
   type StoryFilters,
 } from '../client/storyProduct';
+
 import {
   heartMomentDetailPath,
   memoryDetailPath,
   milestoneDetailPath,
+  STORY_CHAPTERS_ROUTE,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
@@ -209,25 +212,12 @@ export function StoryProductPage({
   const items = useMemo(() => combinedStory?.items ?? [], [combinedStory]);
   const locale = resolvedLocale();
 
-  const memoriesWithMedia = useMemo(
-    () =>
-      items.filter(
-        (item) => item.kind === 'MEMORY' && item.memory.attachments.length > 0,
-      ),
-    [items],
-  );
-  const heartMoments = useMemo(
-    () => items.filter((item) => item.kind === 'HEART_MOMENT'),
-    [items],
-  );
   const milestones = useMemo(
     () => items.filter((item) => item.kind === 'MILESTONE'),
     [items],
   );
-  const featuredItem = useMemo(
-    () => memoriesWithMedia[0] ?? heartMoments[0] ?? items[0],
-    [memoriesWithMedia, heartMoments, items],
-  );
+  const featuredItem = useMemo(() => selectFeaturedStoryItem(items), [items]);
+
   const uniqueYears = useMemo(() => {
     const years = new Set<number>();
     for (const item of items) {
@@ -521,7 +511,7 @@ export function StoryProductPage({
                 </p>
               </Link>
             ) : null}
-            <Link to="/plan#chapter-title" className="momente-sub-card">
+            <Link to={STORY_CHAPTERS_ROUTE} className="momente-sub-card">
               <span className="momente-sub-card-kicker">
                 📖 {t('story.chaptersKicker')}
               </span>

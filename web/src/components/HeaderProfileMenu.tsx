@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
@@ -7,8 +7,10 @@ import { Configuration } from '../api/generated/runtime';
 import {
   ACTIVITY_ROUTE,
   MORE_PROFILE_ROUTE,
+  MORE_SETTINGS_ROUTE,
   SERVER_ADMIN_ROUTE,
 } from '../client/routes';
+import { useDismissiblePopover } from '../client/useDismissiblePopover';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import { useTranslation } from '../i18n';
 import { DestinationIcon } from './DestinationIcon';
@@ -37,7 +39,9 @@ export function HeaderProfileMenu({
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
-  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const { isOpen, close, toggle, triggerRef, panelRef } =
+    useDismissiblePopover();
+
   const configuration = useMemo(
     () =>
       new Configuration({
@@ -68,25 +72,23 @@ export function HeaderProfileMenu({
     profile?.profileAttachmentId,
   );
 
-  function closeMenu() {
-    detailsRef.current?.removeAttribute('open');
-  }
-
   return (
-    <details
-      ref={detailsRef}
+    <div
+      ref={panelRef as React.RefObject<HTMLDivElement>}
       className="header-profile-menu"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          closeMenu();
-          detailsRef.current?.querySelector<HTMLElement>('summary')?.focus();
-        }
-      }}
     >
-      <summary
-        className="header-profile-trigger"
+      <button
+        ref={triggerRef as React.RefObject<HTMLButtonElement>}
+        type="button"
+        className="shell-utility-link header-profile-trigger"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
         aria-label={t('navigation.profileMenu')}
         title={t('navigation.profileMenu')}
+        onClick={(e) => {
+          e.preventDefault();
+          toggle();
+        }}
       >
         <PersonIdentity
           displayName={displayName}
@@ -96,15 +98,16 @@ export function HeaderProfileMenu({
           imageAlt={t('profileIdentity.imageAlt', { name: displayName })}
           fallbackAlt={t('profileIdentity.fallbackAlt', { name: displayName })}
         />
-      </summary>
+      </button>
       <nav
         className="header-profile-popover"
         aria-label={t('navigation.profileMenu')}
+        hidden={!isOpen}
       >
         <Link
           className="header-profile-menu-item"
           to={MORE_PROFILE_ROUTE}
-          onClick={closeMenu}
+          onClick={() => close()}
         >
           <span className="shell-nav-icon" aria-hidden="true">
             <DestinationIcon icon="profile" />
@@ -113,8 +116,18 @@ export function HeaderProfileMenu({
         </Link>
         <Link
           className="header-profile-menu-item"
+          to={MORE_SETTINGS_ROUTE}
+          onClick={() => close()}
+        >
+          <span className="shell-nav-icon" aria-hidden="true">
+            <DestinationIcon icon="settings" />
+          </span>
+          <span>{t('navigation.settings')}</span>
+        </Link>
+        <Link
+          className="header-profile-menu-item"
           to={ACTIVITY_ROUTE}
-          onClick={closeMenu}
+          onClick={() => close()}
         >
           <span className="shell-nav-icon" aria-hidden="true">
             <DestinationIcon icon="activity" />
@@ -125,7 +138,7 @@ export function HeaderProfileMenu({
           <Link
             className="header-profile-menu-item"
             to={SERVER_ADMIN_ROUTE}
-            onClick={closeMenu}
+            onClick={() => close()}
           >
             <span className="shell-nav-icon" aria-hidden="true">
               <DestinationIcon icon="more" />
@@ -137,13 +150,13 @@ export function HeaderProfileMenu({
           type="button"
           className="header-profile-menu-item header-profile-menu-logout"
           onClick={() => {
-            closeMenu();
+            close();
             onLogout();
           }}
         >
           <span>{t('header.logout')}</span>
         </button>
       </nav>
-    </details>
+    </div>
   );
 }

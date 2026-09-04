@@ -31,7 +31,7 @@ SideBySide is not:
 - **„Partner“** is the neutral German product term; names may replace it in a concrete context.
 - **„Space“** may appear in the product as an established proper term but is explained on first use as **„euer privater gemeinsamer Raum“**.
 - `OWNER_ONLY` is labeled **„Nur für mich“** in de-DE product copy.
-- `SPACE_SHARED` is labeled **„Geteilt“** or **„Mit Partner teilen“** depending on context.
+- `SPACE_SHARED` is labeled **„Für uns beide“** or **„Mit Partner teilen“** depending on context.
 - **„Öffentlich“** is not used because there is no public privacy class.
 - Technical terms such as tenant, payload, entity, 409, or UUID stay out of normal end-user copy.
 
@@ -77,7 +77,7 @@ Real E2EE is not implemented in the MVP. `cryptoVersion = 0` or technical E2EE r
 | Privacy class | de-DE label | de-DE explanation when needed |
 |---|---|---|
 | `OWNER_ONLY` | Nur für mich | Dein Partner sieht diesen Inhalt nicht. |
-| `SPACE_SHARED` | Geteilt | Für euch beide im gemeinsamen Space sichtbar. |
+| `SPACE_SHARED` | Für uns beide | Für euch beide im gemeinsamen Space sichtbar. |
 | `TEMPORARY_SHARED` | Zeitlich geteilt | Erst verwenden, wenn Ablauf und Empfänger fachlich implementiert sind. |
 
 ### HeartMoment selection state
