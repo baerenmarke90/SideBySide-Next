@@ -51,9 +51,7 @@ class DeletionNotAcceptedError(RuntimeError):
 
 def _deletion_for_update(session: Session, account_id: UUID) -> AccountDeletion | None:
     return session.execute(
-        select(AccountDeletion)
-        .where(AccountDeletion.account_id == account_id)
-        .with_for_update()
+        select(AccountDeletion).where(AccountDeletion.account_id == account_id).with_for_update()
     ).scalar_one_or_none()
 
 
