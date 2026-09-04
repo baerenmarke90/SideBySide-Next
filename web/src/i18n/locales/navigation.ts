@@ -35,6 +35,7 @@ const navigation = {
   quickCreatePrivateNote: 'Private Notiz',
   // Reserved for the M7 Discover area; declared so the label is not reused.
   discover: 'Entdecken',
+  logout: 'Abmelden',
 };
 
 export default navigation;

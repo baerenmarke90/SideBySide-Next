@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { ProfilesApi } from '../api/generated/apis/ProfilesApi';
@@ -10,6 +10,7 @@ import {
   MORE_SETTINGS_ROUTE,
   SERVER_ADMIN_ROUTE,
 } from '../client/routes';
+import { useDismissiblePopover } from '../client/useDismissiblePopover';
 import { useProfileAvatarUrl } from '../client/useProfileAvatarUrl';
 import { useTranslation } from '../i18n';
 import { DestinationIcon } from './DestinationIcon';
@@ -38,7 +39,9 @@ export function HeaderProfileMenu({
   onLogout: () => void;
 }) {
   const { t } = useTranslation();
-  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const { isOpen, close, toggle, triggerRef, panelRef } =
+    useDismissiblePopover();
+
   const configuration = useMemo(
     () =>
       new Configuration({
@@ -69,25 +72,24 @@ export function HeaderProfileMenu({
     profile?.profileAttachmentId,
   );
 
-  function closeMenu() {
-    detailsRef.current?.removeAttribute('open');
-  }
-
   return (
     <details
-      ref={detailsRef}
+      ref={panelRef as React.RefObject<HTMLDetailsElement>}
       className="header-profile-menu"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          closeMenu();
-          detailsRef.current?.querySelector<HTMLElement>('summary')?.focus();
-        }
-      }}
+      open={isOpen}
     >
       <summary
+        ref={triggerRef as React.RefObject<HTMLElement>}
         className="header-profile-trigger"
+        role="button"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
         aria-label={t('navigation.profileMenu')}
         title={t('navigation.profileMenu')}
+        onClick={(e) => {
+          e.preventDefault();
+          toggle();
+        }}
       >
         <PersonIdentity
           displayName={displayName}
@@ -105,7 +107,7 @@ export function HeaderProfileMenu({
         <Link
           className="header-profile-menu-item"
           to={MORE_PROFILE_ROUTE}
-          onClick={closeMenu}
+          onClick={() => close()}
         >
           <span className="shell-nav-icon" aria-hidden="true">
             <DestinationIcon icon="profile" />
@@ -115,7 +117,7 @@ export function HeaderProfileMenu({
         <Link
           className="header-profile-menu-item"
           to={MORE_SETTINGS_ROUTE}
-          onClick={closeMenu}
+          onClick={() => close()}
         >
           <span className="shell-nav-icon" aria-hidden="true">
             <DestinationIcon icon="settings" />
@@ -125,7 +127,7 @@ export function HeaderProfileMenu({
         <Link
           className="header-profile-menu-item"
           to={ACTIVITY_ROUTE}
-          onClick={closeMenu}
+          onClick={() => close()}
         >
           <span className="shell-nav-icon" aria-hidden="true">
             <DestinationIcon icon="activity" />
@@ -136,7 +138,7 @@ export function HeaderProfileMenu({
           <Link
             className="header-profile-menu-item"
             to={SERVER_ADMIN_ROUTE}
-            onClick={closeMenu}
+            onClick={() => close()}
           >
             <span className="shell-nav-icon" aria-hidden="true">
               <DestinationIcon icon="more" />
@@ -148,7 +150,7 @@ export function HeaderProfileMenu({
           type="button"
           className="header-profile-menu-item header-profile-menu-logout"
           onClick={() => {
-            closeMenu();
+            close();
             onLogout();
           }}
         >
@@ -158,3 +160,4 @@ export function HeaderProfileMenu({
     </details>
   );
 }
+
