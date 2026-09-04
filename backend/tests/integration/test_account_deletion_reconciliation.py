@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import timedelta
 from pathlib import Path
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -16,7 +17,10 @@ from sidebyside.authorization import PrivacyClass
 from sidebyside.core.clock import now
 from sidebyside.core.errors import UnauthenticatedError
 from sidebyside.identity import deletion_reconciliation as reconciliation
-from sidebyside.identity.deletion import DELETED_ACCOUNT_DISPLAY_NAME
+from sidebyside.identity.deletion import (
+    DELETED_ACCOUNT_DISPLAY_NAME,
+    apply_accepted_tombstone,
+)
 from sidebyside.identity.deletion_journal import DeletionJournal, DeletionJournalError
 from sidebyside.identity.deletion_models import AccountDeletion, AccountDeletionStatus
 from sidebyside.identity.models import Account, AccountEmail
@@ -55,13 +59,13 @@ def _private_note(
     return note
 
 
-def _maker(production_client: object) -> sessionmaker[Session]:
-    _, maker = production_client  # type: ignore[misc]
+def _maker(production_client: Any) -> sessionmaker[Session]:
+    _, maker = production_client
     return maker
 
 
 def test_reconciliation_replays_restored_account_and_converges(
-    production_client: object,
+    production_client: Any,
     tmp_path: Path,
 ) -> None:
     maker = _maker(production_client)
@@ -158,8 +162,42 @@ def test_reconciliation_replays_restored_account_and_converges(
     assert repeated == result
 
 
+def test_journal_acceptance_timestamp_overrides_restored_partial_state(
+    production_client: Any,
+    tmp_path: Path,
+) -> None:
+    maker = _maker(production_client)
+    journal_accepted_at = now()
+    restored_accepted_at = journal_accepted_at + timedelta(hours=1)
+
+    with maker() as session:
+        account = make_account(session, "Anna")
+        make_space(session, account)
+        account_id = account.id
+        deletion = apply_accepted_tombstone(
+            session,
+            account_id,
+            accepted_at=restored_accepted_at,
+        )
+        assert deletion is not None
+        session.commit()
+
+    journal = _journal(tmp_path)
+    journal.accept(account_id, accepted_at=journal_accepted_at)
+
+    reconciliation.reconcile_journal(journal)
+
+    with maker() as session:
+        account = session.get(Account, account_id)
+        deletion = session.get(AccountDeletion, account_id)
+        assert account is not None
+        assert deletion is not None
+        assert deletion.accepted_at == journal_accepted_at
+        assert account.disabled_at == journal_accepted_at
+
+
 def test_cleanup_failure_cannot_reactivate_or_block_later_tombstones(
-    production_client: object,
+    production_client: Any,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -185,7 +223,7 @@ def test_cleanup_failure_cannot_reactivate_or_block_later_tombstones(
 
     original_cleanup = reconciliation.apply_core_cleanup
 
-    def fail_first_cleanup(session: Session, account_id: UUID):  # type: ignore[no-untyped-def]
+    def fail_first_cleanup(session: Session, account_id: UUID) -> AccountDeletion | None:
         if account_id == first_id:
             raise RuntimeError("synthetic cleanup detail that must not reach persisted state")
         return original_cleanup(session, account_id)
@@ -227,7 +265,7 @@ def test_cleanup_failure_cannot_reactivate_or_block_later_tombstones(
 
 
 def test_invalid_journal_is_rejected_before_database_replay(
-    production_client: object,
+    production_client: Any,
     tmp_path: Path,
 ) -> None:
     maker = _maker(production_client)
@@ -259,7 +297,7 @@ def test_invalid_journal_is_rejected_before_database_replay(
 
 
 def test_missing_account_tombstone_is_an_idempotent_noop(
-    production_client: object,
+    production_client: Any,
     tmp_path: Path,
 ) -> None:
     _maker(production_client)
