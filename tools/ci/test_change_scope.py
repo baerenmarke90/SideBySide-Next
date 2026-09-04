@@ -109,12 +109,26 @@ class ChangeScopeTest(unittest.TestCase):
     def test_recovery_tooling_only_enables_recovery_gate(self) -> None:
         for path in (
             "scripts/self_hosted_recovery.py",
+            "scripts/self_hosted_deletion_reconcile.py",
             "scripts/self_hosted_recovery_acceptance.py",
+            "scripts/account_deletion_recovery_acceptance.py",
             "scripts/test_self_hosted_recovery.py",
             "docs/SELF-HOSTED-RECOVERY.md",
         ):
             with self.subTest(path=path):
                 self.assert_scope([path], enabled={"recovery"})
+
+    def test_deletion_journal_runtime_also_enables_recovery(self) -> None:
+        self.assert_scope(
+            ["backend/src/sidebyside/identity/deletion_journal.py"],
+            enabled={"backend", "backend_integration", "recovery"},
+        )
+
+    def test_deletion_replay_command_enables_backend_and_recovery(self) -> None:
+        self.assert_scope(
+            ["backend/scripts/reconcile_account_deletions.py"],
+            enabled={"backend", "recovery"},
+        )
 
     def test_filter_changes_fail_closed(self) -> None:
         self.assertTrue(all(classify_paths(["tools/ci/change_scope.py"]).values()))
