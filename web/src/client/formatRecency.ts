@@ -90,3 +90,46 @@ export function formatRelativeTime(
   }).format(date);
 }
 
+/**
+ * Formats relative date for upcoming events/plans:
+ * - "Heute · 16. Feb." for today
+ * - "Morgen · 17. Feb." for tomorrow
+ * - "in X Tagen · 25. Feb." for 2 to 30 days in advance
+ * - localized long date for dates beyond 30 days
+ */
+export function formatUpcomingRelative(
+  date: Date,
+  t: TFunction,
+  now: Date = new Date(),
+  locale = resolvedLocale(),
+): string {
+  const nowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const targetDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+  );
+  const diffDays = Math.round(
+    (targetDate.getTime() - nowDate.getTime()) / (24 * 60 * 60 * 1000),
+  );
+
+  const formattedShort = new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+  }).format(date);
+
+  if (diffDays <= 0) {
+    return `${t('m5s5.common.today')} · ${formattedShort}`;
+  }
+  if (diffDays === 1) {
+    return `${t('m5s5.common.tomorrow')} · ${formattedShort}`;
+  }
+  if (diffDays >= 2 && diffDays <= 30) {
+    return `${t('m5s5.common.inDays', { count: diffDays })} · ${formattedShort}`;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'long',
+  }).format(date);
+}
+
