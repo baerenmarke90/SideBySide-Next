@@ -8,7 +8,6 @@ Name | Type
 ------------ | -------------
 `capabilities` | [ResourceCapabilities](ResourceCapabilities.md)
 `createdAt` | Date
-`icon` | string
 `id` | string
 `items` | [Array&lt;PrivateCollectionItemDetail&gt;](PrivateCollectionItemDetail.md)
 `ownerId` | string
@@ -26,7 +25,6 @@ import type { PrivateCollectionDetail } from ''
 const example = {
   "capabilities": null,
   "createdAt": null,
-  "icon": null,
   "id": null,
   "items": null,
   "ownerId": null,

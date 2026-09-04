@@ -576,7 +576,6 @@ def _seed_planning(
         session,
         lea_context,
         title="Filme für einen Regentag",
-        icon="film",
     )
     collection_service.create_item(
         session,
@@ -596,7 +595,6 @@ def _seed_planning(
         session,
         alex_context,
         title="Rezepte für lange Abende",
-        icon="utensils",
     )
     collection_service.create_item(
         session,
@@ -703,7 +701,6 @@ def _seed_private_area(
         session,
         lea_context,
         title=f"{PRIVATE_CANARY_LEA} Überraschungen",
-        icon="lock",
     )
     private_collection_service.create_item(
         session,
@@ -723,7 +720,6 @@ def _seed_private_area(
         session,
         alex_context,
         title=f"{PRIVATE_CANARY_ALEX} Überraschungen",
-        icon="lock",
     )
     private_collection_service.create_item(
         session,

@@ -53,6 +53,15 @@ const people = {
     'Ich möchte die Person und die verknüpften Termine wirklich löschen.',
   deleteConfirm: 'Person löschen',
   deleting: 'Wird gelöscht …',
+  avatarLabel: 'Profilbild',
+  avatarUpload: 'Foto auswählen',
+  avatarChange: 'Foto ändern',
+  avatarRemove: 'Foto entfernen',
+  avatarAlt: 'Foto von {{name}}',
+  avatarUploading: 'Foto wird hochgeladen …',
+  avatarValidating: 'Foto wird geprüft …',
+  addPersonAction: 'Person hinzufügen',
+  closeDialogAria: 'Schließen',
   relationship: {
     CHILD: 'Kind',
     PARENT: 'Elternteil',
@@ -61,7 +70,7 @@ const people = {
     OTHER: 'Andere Beziehung',
   },
   visibility: {
-    SHARED: 'Mit Partner geteilt',
+    SHARED: 'Für uns beide',
     PRIVATE: 'Nur für mich',
   },
 } as const;

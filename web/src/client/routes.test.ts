@@ -22,6 +22,7 @@ import {
   RESERVED_DISCOVER_ROUTE,
   SEARCH_ROUTE,
   WISH_DETAIL_ROUTE_PATTERN,
+  activeNavigationArea,
   appRoutePath,
   chapterDetailPath,
   collectionDetailPath,
@@ -60,7 +61,7 @@ describe('primary navigation', () => {
     const withSubRoutes = APP_ROUTES.filter((route) => !route.end).map(
       (route) => route.id,
     );
-    expect(withSubRoutes).toEqual(['today', 'plan', 'more']);
+    expect(withSubRoutes).toEqual(['today', 'story', 'plan', 'more']);
   });
 
   it('reserves Discover without routing it before its domain exists', () => {
@@ -145,6 +146,24 @@ describe('content deep links', () => {
     expect(collectionDetailPath('collection-1')).toBe(
       '/plan/collections/collection-1',
     );
+  });
+
+  it('resolves active navigation area with corrected domain semantics', () => {
+    expect(activeNavigationArea('/today')).toBe('today');
+    expect(activeNavigationArea('/today/activity')).toBe('today');
+    expect(activeNavigationArea('/story')).toBe('story');
+    expect(activeNavigationArea('/story/chapters')).toBe('story');
+    expect(activeNavigationArea('/plan/chapters/c1')).toBe('story');
+    expect(activeNavigationArea('/more')).toBe('more');
+    expect(activeNavigationArea('/more/places')).toBe('more');
+    expect(activeNavigationArea('/plan/places/p1')).toBe('more');
+    expect(activeNavigationArea('/more/collections')).toBe('more');
+    expect(activeNavigationArea('/plan/collections/k1')).toBe('more');
+    expect(activeNavigationArea('/more/people')).toBe('more');
+    expect(activeNavigationArea('/more/private/notes')).toBe('more');
+    expect(activeNavigationArea('/plan')).toBe('plan');
+    expect(activeNavigationArea('/plan/plans/p1')).toBe('plan');
+    expect(activeNavigationArea('/plan/wishes/w1')).toBe('plan');
   });
 });
 

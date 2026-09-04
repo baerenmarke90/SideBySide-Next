@@ -31,7 +31,6 @@ def _setup(production_client):  # type: ignore[no-untyped-def]
             session,
             owner,
             title="Private race list",
-            icon=None,
         )
         first = service.create_item(
             session,

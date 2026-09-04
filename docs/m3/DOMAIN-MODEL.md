@@ -299,7 +299,6 @@ Collection
 - id
 - spaceId
 - title
-- icon
 - createdAt/updatedAt
 
 CollectionItem
@@ -389,7 +388,6 @@ PrivateCollection
 - spaceId
 - ownerId
 - title
-- icon
 
 PrivateCollectionItem
 - title

@@ -13,6 +13,9 @@ export interface ProfilePreferenceDraft {
   value: string;
 }
 
+export const CATEGORIES = Object.values(PreferenceCategoryValues);
+export const SENTIMENTS = Object.values(PreferenceSentimentValues);
+
 export const EMPTY_PROFILE_PREFERENCE_DRAFT: ProfilePreferenceDraft = {
   category: PreferenceCategoryValues.OTHER,
   sentiment: PreferenceSentimentValues.LIKE,

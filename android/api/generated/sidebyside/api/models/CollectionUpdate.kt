@@ -31,15 +31,11 @@ import kotlinx.serialization.Contextual
 /**
  * 
  *
- * @param icon 
  * @param title 
  */
 @Serializable
 
 data class CollectionUpdate (
-
-    @SerialName(value = "icon")
-    val icon: kotlin.String? = null,
 
     @SerialName(value = "title")
     val title: kotlin.String? = null

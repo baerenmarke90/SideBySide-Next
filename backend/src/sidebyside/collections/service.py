@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -152,13 +153,12 @@ def create_collection(
     context: AuthorizationContext,
     *,
     title: str,
-    icon: str | None,
 ) -> Collection:
     collection = Collection(
         space_id=context.space_id,
         owner_id=context.account_id,
         privacy_class=shared_privacy(),
-        payload=CollectionPayload(title=_normalize_title(title), icon=icon),
+        payload=CollectionPayload(title=_normalize_title(title)),
     )
     session.add(collection)
     _flush(session)
@@ -183,19 +183,15 @@ def update_collection(
     expected_version: int,
     changed_fields: frozenset[str],
     title: str | None,
-    icon: str | None,
 ) -> Collection:
     collection = require_writable_locked(session, Collection, context, collection_id)
     _ensure_expected_version(collection, expected_version)
 
     next_title = collection.payload.title
-    next_icon = collection.payload.icon
     if "title" in changed_fields:
         assert title is not None
         next_title = _normalize_title(title)
-    if "icon" in changed_fields:
-        next_icon = icon
-    collection.payload = CollectionPayload(title=next_title, icon=next_icon)
+    collection.payload = CollectionPayload(title=next_title)
 
     _flush(session)
     _record_collection(session, collection, context.account_id, EventType.COLLECTION_UPDATED)
@@ -296,6 +292,26 @@ def list_items(session: Session, collection: Collection) -> list[CollectionItem]
             .order_by(CollectionItem.position, CollectionItem.id)
         ).scalars()
     )
+
+
+def list_items_for_collections(
+    session: Session,
+    collection_ids: Iterable[UUID],
+) -> dict[UUID, list[CollectionItem]]:
+    ids = list(collection_ids)
+    if not ids:
+        return {}
+    items = list(
+        session.execute(
+            select(CollectionItem)
+            .where(CollectionItem.collection_id.in_(ids))
+            .order_by(CollectionItem.position, CollectionItem.id)
+        ).scalars()
+    )
+    result: dict[UUID, list[CollectionItem]] = {cid: [] for cid in ids}
+    for item in items:
+        result[item.collection_id].append(item)
+    return result
 
 
 def _item_identifier(value: UUID | str) -> UUID:

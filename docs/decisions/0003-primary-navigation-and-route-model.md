@@ -1,11 +1,19 @@
 # ADR 0003 – Primary Navigation and Route Model
 
-**Status:** Accepted, amended by #374  
-**Date:** August 31, 2026  
-**Amended:** September 1, 2026  
-**Owning issue:** #360  
-**Navigation amendment:** #374  
-**Affects:** #295 (Web), #350 (Android), #328 and #346 (Deep Links), #344, #352, #368, #374
+**Status:** Accepted, amended by #374, amended by ADR 0008
+**Date:** August 31, 2026
+**Amended:** September 1, 2026 (#374), September 4, 2026 (ADR 0008)
+**Owning issue:** #360
+**Navigation amendment:** #374, ADR 0008
+**Affects:** #295 (Web), #350 (Android), #328 and #346 (Deep Links), #344, #352, #368, #374, #620
+
+> [!NOTE]
+> **Subsequent Amendment (September 4, 2026 – ADR 0008):**
+> ADR 0008 harmonizes visible product navigation labels and domain grouping across
+> platforms to **Wir · Momente · Planen · Mehr** (with `Entdecken` reserved for M7).
+> Stable route IDs (`today`, `story`, `plan`, `more`) and detail deep links
+> (`/plan/chapters/:id`, `/plan/places/:id`, `/plan/collections/:id`) remain strictly
+> unchanged. See `0008-product-ia-harmonization-and-domain-alignment.md`.
 
 ## Context
 

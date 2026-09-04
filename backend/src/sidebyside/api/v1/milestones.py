@@ -10,11 +10,11 @@ from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
-from sidebyside.identity.models import Account
 from sidebyside.milestones import service
 from sidebyside.milestones.models import Milestone
 
@@ -95,10 +95,10 @@ def _milestone_detail(
     session: DbSession,
     authorization: Authorization,
     milestone: Milestone,
+    author: AuthorSummary | None = None,
 ) -> MilestoneDetail:
-    author = session.get(Account, milestone.owner_id)
     if author is None:
-        raise RuntimeError("Milestone author disappeared despite foreign key protection.")
+        author = resolve_author_summary(session, milestone.owner_id, resource="Milestone author")
     is_author = milestone.owner_id == authorization.account_id
     return MilestoneDetail(
         id=milestone.id,
@@ -110,7 +110,7 @@ def _milestone_detail(
         version=milestone.version,
         created_at=milestone.created_at,
         updated_at=milestone.updated_at,
-        author=AuthorSummary(id=author.id, display_name=author.display_name),
+        author=author,
         capabilities=ResourceCapabilities(
             # M2-D25: shared readability does not grant write authority.
             can_edit=is_author,
@@ -164,8 +164,14 @@ def list_milestones(
         limit=limit,
         year=year,
     )
+    authors = resolve_author_summaries(session, {milestone.owner_id for milestone in page.items})
     return MilestonePage(
-        items=[_milestone_detail(session, authorization, milestone) for milestone in page.items],
+        items=[
+            _milestone_detail(
+                session, authorization, milestone, author=authors.get(milestone.owner_id)
+            )
+            for milestone in page.items
+        ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )

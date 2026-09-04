@@ -91,7 +91,7 @@ The UI labels below are intentional de-DE product copy.
 
 | API value | Domain meaning | Regular de-DE UI label | Client behavior |
 |---|---|---|---|
-| `SPACE_SHARED` | both active partners in the Space | Geteilt | visible in the shared area |
+| `SPACE_SHARED` | both active partners in the Space | Für uns beide | visible in the shared area |
 | `OWNER_ONLY` | owner exclusively | Nur für mich | never request, cache, or indirectly display for the partner |
 | `TEMPORARY_SHARED` | time-limited sharing | Zeitlich geteilt | display only after domain behavior and expiry are specified |
 | `EPHEMERAL_CONTEXT` | short-lived context with expiry | context-dependent | do not represent as persistent content |

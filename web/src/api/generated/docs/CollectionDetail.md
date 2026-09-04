@@ -10,7 +10,6 @@ Name | Type
 `createdAt` | Date
 `createdBy` | string
 `creator` | [AuthorSummary](AuthorSummary.md)
-`icon` | string
 `id` | string
 `items` | [Array&lt;CollectionItemDetail&gt;](CollectionItemDetail.md)
 `spaceId` | string
@@ -29,7 +28,6 @@ const example = {
   "createdAt": null,
   "createdBy": null,
   "creator": null,
-  "icon": null,
   "id": null,
   "items": null,
   "spaceId": null,

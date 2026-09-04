@@ -36,6 +36,12 @@ import {
 export interface RelatedPersonView {
     /**
      * 
+     * @type {string}
+     * @memberof RelatedPersonView
+     */
+    avatarAttachmentId?: string | null;
+    /**
+     * 
      * @type {Date}
      * @memberof RelatedPersonView
      */
@@ -118,6 +124,7 @@ export function RelatedPersonViewFromJSONTyped(json: any, ignoreDiscriminator: b
     }
     return {
         
+        'avatarAttachmentId': json['avatarAttachmentId'] === undefined ? undefined : json['avatarAttachmentId'] === null ? null : json['avatarAttachmentId'],
         'birthday': (json['birthday'] == null ? null : new Date(json['birthday'])),
         'birthdayYearKnown': json['birthdayYearKnown'],
         'createdAt': (new Date(json['createdAt'])),
@@ -141,6 +148,7 @@ export function RelatedPersonViewToJSONTyped(value?: RelatedPersonView | null, i
 
     return {
         
+        'avatarAttachmentId': value['avatarAttachmentId'],
         'birthday': value['birthday'] == null ? value['birthday'] : value['birthday'].toISOString().substring(0,10),
         'birthdayYearKnown': value['birthdayYearKnown'],
         'createdAt': value['createdAt'].toISOString(),

@@ -24,12 +24,6 @@ export interface PrivateCollectionUpdate {
      * @type {string}
      * @memberof PrivateCollectionUpdate
      */
-    icon?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof PrivateCollectionUpdate
-     */
     title?: string;
 }
 
@@ -50,7 +44,6 @@ export function PrivateCollectionUpdateFromJSONTyped(json: any, ignoreDiscrimina
     }
     return {
         
-        'icon': json['icon'] === undefined ? undefined : json['icon'] === null ? null : json['icon'],
         'title': json['title'] == null ? undefined : json['title'],
     };
 }
@@ -66,7 +59,6 @@ export function PrivateCollectionUpdateToJSONTyped(value?: PrivateCollectionUpda
 
     return {
         
-        'icon': value['icon'],
         'title': value['title'],
     };
 }

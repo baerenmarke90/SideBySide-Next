@@ -185,7 +185,7 @@ def test_g3_private_area_owner_partner_owner_session_switch_is_isolated(client, 
 
     collection_response = client.post(
         collection_path,
-        json={"title": "G3 private collection", "icon": "lock"},
+        json={"title": "G3 private collection"},
         headers=auth(couple["token_a"]),
     )
     assert collection_response.status_code == 201

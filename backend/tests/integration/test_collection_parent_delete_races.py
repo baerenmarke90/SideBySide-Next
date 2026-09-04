@@ -49,7 +49,6 @@ def _shared_world(production_client):  # type: ignore[no-untyped-def]
             session,
             anna_context,
             title="Shared delete race",
-            icon=None,
         )
         first = collection_service.create_item(
             session,
@@ -87,7 +86,6 @@ def _private_world(production_client):  # type: ignore[no-untyped-def]
             session,
             owner,
             title="Private delete race",
-            icon=None,
         )
         first = private_collection_service.create_item(
             session,

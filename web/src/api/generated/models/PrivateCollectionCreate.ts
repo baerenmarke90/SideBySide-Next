@@ -24,12 +24,6 @@ export interface PrivateCollectionCreate {
      * @type {string}
      * @memberof PrivateCollectionCreate
      */
-    icon?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof PrivateCollectionCreate
-     */
     title: string;
 }
 
@@ -51,7 +45,6 @@ export function PrivateCollectionCreateFromJSONTyped(json: any, ignoreDiscrimina
     }
     return {
         
-        'icon': json['icon'] === undefined ? undefined : json['icon'] === null ? null : json['icon'],
         'title': json['title'],
     };
 }
@@ -67,7 +60,6 @@ export function PrivateCollectionCreateToJSONTyped(value?: PrivateCollectionCrea
 
     return {
         
-        'icon': value['icon'],
         'title': value['title'],
     };
 }

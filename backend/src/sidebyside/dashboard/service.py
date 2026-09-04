@@ -25,7 +25,7 @@ from sidebyside.heart_moments.models import HeartMoment
 from sidebyside.identity.models import Account
 from sidebyside.memories.models import Memory
 from sidebyside.milestones.models import Milestone
-from sidebyside.people.models import DateRepeat, ImportantDate, RelatedPerson
+from sidebyside.people.models import DateRepeat, ImportantDate
 from sidebyside.places.models import Place
 from sidebyside.plans.models import Plan, PlanStatus
 from sidebyside.relationship.models import (
@@ -266,7 +266,8 @@ def _upcoming(
 
     important_dates = session.execute(
         readable(ImportantDate, authorization).where(
-            ImportantDate.privacy_class == PrivacyClass.SPACE_SHARED.value
+            ImportantDate.privacy_class == PrivacyClass.SPACE_SHARED.value,
+            ImportantDate.related_person_id.is_(None),
         )
     ).scalars()
     for important_date in important_dates:
@@ -278,25 +279,6 @@ def _upcoming(
                 type=DashboardItemType.IMPORTANT_DATE,
                 id=important_date.id,
                 title_or_text=_bounded(important_date.payload.label),
-                occurred_on=next_on,
-            )
-        )
-
-    people = session.execute(
-        readable(RelatedPerson, authorization).where(
-            RelatedPerson.privacy_class == PrivacyClass.SPACE_SHARED.value,
-            RelatedPerson.birthday.is_not(None),
-        )
-    ).scalars()
-    for person in people:
-        if person.birthday is None:
-            continue
-        next_on = _next_annual(person.birthday, today)
-        candidates.append(
-            DashboardItem(
-                type=DashboardItemType.BIRTHDAY,
-                id=person.id,
-                title_or_text=_bounded(person.payload.display_name),
                 occurred_on=next_on,
             )
         )

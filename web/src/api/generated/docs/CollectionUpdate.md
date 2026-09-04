@@ -6,7 +6,6 @@
 
 Name | Type
 ------------ | -------------
-`icon` | string
 `title` | string
 
 ## Example
@@ -16,7 +15,6 @@ import type { CollectionUpdate } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "icon": null,
   "title": null,
 } satisfies CollectionUpdate
 

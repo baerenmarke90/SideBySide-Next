@@ -10,13 +10,13 @@ from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.collections import service
 from sidebyside.collections.models import Collection, CollectionItem
-from sidebyside.identity.models import Account
 
 router = APIRouter(tags=["collections"])
 
@@ -32,7 +32,6 @@ class CollectionCreate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str
-    icon: str | None = None
 
     @field_validator("title")
     @classmethod
@@ -47,7 +46,6 @@ class CollectionUpdate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | SkipJsonSchema[None] = None
-    icon: str | None = None
 
     @model_validator(mode="after")
     def _validate_patch(self) -> Self:
@@ -119,7 +117,6 @@ class CollectionDetail(ApiModel):
     space_id: UUID
     created_by: UUID
     title: str
-    icon: str | None
     version: int
     created_at: datetime
     updated_at: datetime
@@ -135,13 +132,21 @@ class CollectionPage(ApiModel):
 
 
 def _creator(session: DbSession, account_id: UUID, *, resource: str) -> AuthorSummary:
-    creator = session.get(Account, account_id)
+    return resolve_author_summary(session, account_id, resource=f"{resource} creator")
+
+
+def collection_item_detail(
+    session: DbSession,
+    item: CollectionItem,
+    *,
+    creator: AuthorSummary | None = None,
+    authors: dict[UUID, AuthorSummary] | None = None,
+) -> CollectionItemDetail:
     if creator is None:
-        raise RuntimeError(f"{resource} creator disappeared despite foreign key protection.")
-    return AuthorSummary(id=creator.id, display_name=creator.display_name)
-
-
-def collection_item_detail(session: DbSession, item: CollectionItem) -> CollectionItemDetail:
+        if authors is not None and item.created_by in authors:
+            creator = authors[item.created_by]
+        else:
+            creator = _creator(session, item.created_by, resource="Collection Item")
     return CollectionItemDetail(
         id=item.id,
         collection_id=item.collection_id,
@@ -152,7 +157,7 @@ def collection_item_detail(session: DbSession, item: CollectionItem) -> Collecti
         version=item.version,
         created_at=item.created_at,
         updated_at=item.updated_at,
-        creator=_creator(session, item.created_by, resource="Collection Item"),
+        creator=creator,
         capabilities=ResourceCapabilities(
             can_edit=True,
             can_delete=True,
@@ -161,26 +166,36 @@ def collection_item_detail(session: DbSession, item: CollectionItem) -> Collecti
     )
 
 
-def collection_detail(session: DbSession, collection: Collection) -> CollectionDetail:
+def collection_detail(
+    session: DbSession,
+    collection: Collection,
+    *,
+    items: list[CollectionItem] | None = None,
+    creator: AuthorSummary | None = None,
+    authors: dict[UUID, AuthorSummary] | None = None,
+) -> CollectionDetail:
+    if creator is None:
+        if authors is not None and collection.owner_id in authors:
+            creator = authors[collection.owner_id]
+        else:
+            creator = _creator(session, collection.owner_id, resource="Collection")
+    if items is None:
+        items = service.list_items(session, collection)
     return CollectionDetail(
         id=collection.id,
         space_id=collection.space_id,
         created_by=collection.owner_id,
         title=collection.payload.title,
-        icon=collection.payload.icon,
         version=collection.version,
         created_at=collection.created_at,
         updated_at=collection.updated_at,
-        creator=_creator(session, collection.owner_id, resource="Collection"),
+        creator=creator,
         capabilities=ResourceCapabilities(
             can_edit=True,
             can_delete=True,
             can_comment=False,
         ),
-        items=[
-            collection_item_detail(session, item)
-            for item in service.list_items(session, collection)
-        ],
+        items=[collection_item_detail(session, item, authors=authors) for item in items],
     )
 
 
@@ -201,7 +216,6 @@ def create_collection(
         session,
         authorization,
         title=body.title,
-        icon=body.icon,
     )
     response.headers["ETag"] = etag_for(collection.version)
     return collection_detail(session, collection)
@@ -220,8 +234,25 @@ def list_collections(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> CollectionPage:
     page = service.list_collections(session, authorization, cursor=cursor, limit=limit)
+    collection_ids = [collection.id for collection in page.items]
+    items_by_collection = service.list_items_for_collections(session, collection_ids)
+
+    account_ids: set[UUID] = {collection.owner_id for collection in page.items}
+    for items in items_by_collection.values():
+        account_ids.update(item.created_by for item in items)
+
+    authors = resolve_author_summaries(session, account_ids)
+
     return CollectionPage(
-        items=[collection_detail(session, collection) for collection in page.items],
+        items=[
+            collection_detail(
+                session,
+                collection,
+                items=items_by_collection.get(collection.id, []),
+                authors=authors,
+            )
+            for collection in page.items
+        ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )
@@ -265,7 +296,6 @@ def update_collection(
         expected_version=expected_version,
         changed_fields=frozenset(body.model_fields_set),
         title=body.title,
-        icon=body.icon,
     )
     response.headers["ETag"] = etag_for(collection.version)
     return collection_detail(session, collection)

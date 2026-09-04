@@ -1,4 +1,10 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+// @vitest-environment jsdom
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
+import { act, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import navigation from '../i18n/locales/navigation';
@@ -20,7 +26,11 @@ function navigationLinkFor(html: string, href: string): string {
   return tag;
 }
 
-function renderShell(route: string, serverAdmin = false): string {
+function renderShell(
+  route: string,
+  serverAdmin = false,
+  unreadCount = 0,
+): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -29,6 +39,9 @@ function renderShell(route: string, serverAdmin = false): string {
     displayName: 'Alex Example',
     profileAttachmentId: null,
     version: 1,
+  });
+  queryClient.setQueryData(['m5-s5', 'notification-unread-count', 'space-1'], {
+    unreadCount,
   });
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
@@ -107,7 +120,7 @@ describe('AppShell', () => {
     expect(sidebar).not.toContain('href="/more/notifications"');
   });
 
-  it('keeps Profile and Activity in the account tree rather than primary navigation', () => {
+  it('keeps Profile, Settings and Activity in the account tree rather than primary navigation', () => {
     const html = renderShell('/story');
     const header = html.slice(
       html.indexOf('<header'),
@@ -120,9 +133,11 @@ describe('AppShell', () => {
 
     expect(header).toContain(`aria-label="${navigation.profileMenu}"`);
     expect(header).toContain('href="/more/profile"');
+    expect(header).toContain('href="/more/settings"');
     expect(header).toContain('href="/today/activity"');
     expect(header).toContain('header-profile-menu-logout');
     expect(sidebar).not.toContain('href="/more/profile"');
+    expect(sidebar).not.toContain('href="/more/settings"');
     expect(sidebar).not.toContain('href="/today/activity"');
   });
 
@@ -169,6 +184,7 @@ describe('AppShell', () => {
     ['/more', '/more'],
     ['/more/people', '/more'],
     ['/more/profile', '/more'],
+    ['/more/settings', '/more'],
     ['/more/private/notes', '/more'],
   ])('marks %s as inside the %s destination', (route, destination) => {
     const html = renderShell(route);
@@ -189,5 +205,131 @@ describe('AppShell', () => {
 
     expect(inactive).not.toContain('aria-current="page"');
     expect(inactive).not.toContain('shell-nav-link-active');
+  });
+
+  it('renders standard bell label and no dot when unread count is zero', () => {
+    const html = renderShell('/story', false, 0);
+
+    expect(html).toContain(`aria-label="${navigation.notifications}"`);
+    expect(html).not.toContain('notification-dot');
+  });
+
+  it('renders unread count accessibility label and visual dot when unread count > 0', () => {
+    const html = renderShell('/story', false, 3);
+
+    expect(html).toContain('aria-label="Benachrichtigungen, 3 ungelesen"');
+    expect(html).toContain(
+      '<span class="notification-dot" aria-hidden="true"></span>',
+    );
+  });
+
+  it('renders "Unsere Aktivitäten" in header profile menu', () => {
+    const html = renderShell('/story');
+
+    expect(html).toContain('Unsere Aktivitäten');
+  });
+
+  it('updates unread bell dot and label dynamically on /today without visiting notifications or clicking bell', async () => {
+    window.matchMedia =
+      window.matchMedia ||
+      vi.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+
+    let unreadCountResponse = 0;
+    let unreadCountCalls = 0;
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.includes('/api/v1/spaces/space-1/notifications/unread-count')) {
+        unreadCountCalls += 1;
+        return Promise.resolve(
+          new Response(JSON.stringify({ unreadCount: unreadCountResponse }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      }
+      return Promise.resolve(new Response('{}', { status: 200 }));
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 15_000 } },
+    });
+    queryClient.setQueryData(['profile-identity', 'space-1', 'account-1'], {
+      accountId: 'account-1',
+      displayName: 'Alex Example',
+      profileAttachmentId: null,
+      version: 1,
+    });
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/today']}>
+          <AppShell
+            onLogout={() => undefined}
+            apiBaseUrl="http://api.example.test"
+            accessToken="test-token"
+            account={{ id: 'account-1', displayName: 'Alex Example' }}
+            spaceId="space-1"
+          >
+            <h1>Today Content</h1>
+          </AppShell>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Initial state on /today: API returns 0, no notification dot
+    await waitFor(() => {
+      expect(unreadCountCalls).toBeGreaterThanOrEqual(1);
+    });
+    expect(container.querySelector('.notification-dot')).toBeNull();
+    let trigger = container.querySelector('.header-notifications-trigger');
+    expect(trigger?.getAttribute('aria-label')).toBe(navigation.notifications);
+
+    const initialCalls = unreadCountCalls;
+
+    // Server receives unread notification while user stays on /today.
+    // On next poll/refocus (simulating window focus / tab switch back to app):
+    unreadCountResponse = 1;
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    // API is queried again and dot appears dynamically
+    await waitFor(() => {
+      expect(unreadCountCalls).toBeGreaterThan(initialCalls);
+    });
+    await waitFor(() => {
+      expect(container.querySelector('.notification-dot')).not.toBeNull();
+    });
+    trigger = container.querySelector('.header-notifications-trigger');
+    expect(trigger?.getAttribute('aria-label')).toContain('1 ungelesen');
+
+    const secondCalls = unreadCountCalls;
+
+    // Server unread count returns to 0 on next refocus/poll
+    unreadCountResponse = 0;
+    act(() => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+
+    await waitFor(() => {
+      expect(unreadCountCalls).toBeGreaterThan(secondCalls);
+    });
+    await waitFor(() => {
+      expect(container.querySelector('.notification-dot')).toBeNull();
+    });
+    trigger = container.querySelector('.header-notifications-trigger');
+    expect(trigger?.getAttribute('aria-label')).toBe(navigation.notifications);
   });
 });

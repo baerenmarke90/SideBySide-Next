@@ -24,12 +24,6 @@ export interface CollectionCreate {
      * @type {string}
      * @memberof CollectionCreate
      */
-    icon?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CollectionCreate
-     */
     title: string;
 }
 
@@ -51,7 +45,6 @@ export function CollectionCreateFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
         
-        'icon': json['icon'] === undefined ? undefined : json['icon'] === null ? null : json['icon'],
         'title': json['title'],
     };
 }
@@ -67,7 +60,6 @@ export function CollectionCreateToJSONTyped(value?: CollectionCreate | null, ign
 
     return {
         
-        'icon': value['icon'],
         'title': value['title'],
     };
 }

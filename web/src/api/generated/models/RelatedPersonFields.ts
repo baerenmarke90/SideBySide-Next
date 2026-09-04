@@ -36,6 +36,12 @@ import {
 export interface RelatedPersonFields {
     /**
      * 
+     * @type {string}
+     * @memberof RelatedPersonFields
+     */
+    avatarAttachmentId?: string | null;
+    /**
+     * 
      * @type {Date}
      * @memberof RelatedPersonFields
      */
@@ -88,6 +94,7 @@ export function RelatedPersonFieldsFromJSONTyped(json: any, ignoreDiscriminator:
     }
     return {
         
+        'avatarAttachmentId': json['avatarAttachmentId'] === undefined ? undefined : json['avatarAttachmentId'] === null ? null : json['avatarAttachmentId'],
         'birthday': json['birthday'] === undefined ? undefined : json['birthday'] === null ? null : (new Date(json['birthday'])),
         'birthdayYearKnown': json['birthdayYearKnown'] == null ? undefined : json['birthdayYearKnown'],
         'displayName': json['displayName'],
@@ -107,6 +114,7 @@ export function RelatedPersonFieldsToJSONTyped(value?: RelatedPersonFields | nul
 
     return {
         
+        'avatarAttachmentId': value['avatarAttachmentId'],
         'birthday': value['birthday'] == null ? value['birthday'] : value['birthday'].toISOString().substring(0,10),
         'birthdayYearKnown': value['birthdayYearKnown'],
         'displayName': value['displayName'],

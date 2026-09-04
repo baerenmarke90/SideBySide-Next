@@ -19,7 +19,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Date, Select, cast, func, literal, select, tuple_, union_all
+from sqlalchemy import Date, Integer, Select, cast, func, literal, select, tuple_, union_all
 from sqlalchemy.orm import Session
 
 from sidebyside.authorization import AuthorizationContext, PrivacyClass, readable
@@ -278,3 +278,38 @@ def _kind_of_rank(rank: int) -> StoryKind:
         if value == rank:
             return kind
     raise RuntimeError(f"Unknown story kind rank: {rank}")
+
+
+def read_available_years(
+    session: Session,
+    context: AuthorizationContext,
+    *,
+    kinds: tuple[StoryKind, ...] = (),
+) -> list[int]:
+    """Return distinct authorized calendar years for the selected kinds in descending order.
+
+    The active `year` filter is deliberately ignored: users need the full set of
+    available years to change their selection, even when viewing a single year or
+    when arriving from a deep link with 0 results (#618).
+    """
+    selected = kinds or tuple(StoryKind)
+    legs = []
+    for kind in selected:
+        model = _MODELS[kind]
+        effective_date = _effective_date(model)
+        statement = readable(model, context).with_only_columns(
+            cast(func.extract("year", effective_date), Integer).label("year")
+        )
+        if kind is StoryKind.HEART_MOMENT:
+            statement = statement.where(model.privacy_class == PrivacyClass.SPACE_SHARED.value)
+        legs.append(statement)
+
+    combined = union_all(*legs).subquery("story_years")
+    statement = (
+        select(combined.c.year)
+        .distinct()
+        .where(combined.c.year.is_not(None))
+        .order_by(combined.c.year.desc())
+    )
+    rows = session.execute(statement).scalars().all()
+    return [int(year) for year in rows]

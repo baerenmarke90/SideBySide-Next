@@ -6,6 +6,7 @@ const profileIdentity = {
   displayNameLabel: 'Anzeigename',
   displayNameHelp:
     'Der Anzeigename ändert nur deine sichtbare Darstellung. Anmeldung und Konto bleiben unverändert.',
+  editName: 'Name ändern',
   saveName: 'Anzeigenamen speichern',
   savingName: 'Wird gespeichert …',
   saved: 'Profil wurde gespeichert.',
@@ -13,6 +14,8 @@ const profileIdentity = {
   avatarHelp:
     'Wähle ein Bild aus. Ohne Profilbild verwendet SideBySide automatisch deine Initialen.',
   chooseAvatar: 'Profilbild auswählen',
+  changeAvatar: 'Bild ändern',
+  partnerVisibilityNote: 'Dies ist das Profil, das dein Partner sieht.',
   replacingAvatar: 'Profilbild wird aktualisiert …',
   removeAvatar: 'Profilbild entfernen',
   removingAvatar: 'Profilbild wird entfernt …',
@@ -28,10 +31,30 @@ const profileIdentity = {
     'So wird dein Partner aktuell in SideBySide dargestellt. Änderungen am eigenen Profil erscheinen hier automatisch.',
   settingsTitle: 'Einstellungen',
   settingsIntro:
-    'Profil ist der zentrale Einstieg für persönliche Einstellungen. Bestehende Bereiche bleiben an ihrer fachlich passenden Stelle verlinkt.',
+    'Hier verwaltest du deine persönlichen App-Einstellungen, Verbindungen und Daten.',
+  settingsPageIntro:
+    'Verwalte Darstellung, Benachrichtigungen, gemeinsame Bereiche und Datenexport.',
   settingsIdentity: 'Profilbild und Anzeigename',
   settingsRelationship: 'Partner und Verbindung',
   settingsNotifications: 'Benachrichtigungen',
+  settingsNotificationsIntro:
+    'Hier legst du fest, wie SideBySide dich über Neuigkeiten informiert. Deine aktuellen Mitteilungen findest du im Posteingang.',
+  settingsNotificationsAction: 'Zum Benachrichtigungs-Posteingang',
+  anniversaryReminderTitle: 'Jahrestag-Erinnerung',
+  anniversaryReminderIntro:
+    'Hier kannst du einstellen, ob und wann du an euren nächsten Jahrestag erinnert werden möchtest.',
+  anniversaryReminderToggle: 'An unseren Jahrestag erinnern',
+  anniversaryReminderToggleHelp:
+    'Sendet dir rechtzeitig persönliche Benachrichtigungen vor eurem Jahrestag.',
+  anniversaryReminderDaysHeading: 'Erinnerungszeitpunkte vor dem Jahrestag',
+  anniversaryReminderDay30: '30 Tage vorher',
+  anniversaryReminderDay7: '7 Tage vorher',
+  anniversaryReminderDay1: '1 Tag vorher',
+  anniversaryReminderTimeLabel: 'Uhrzeit der Benachrichtigung',
+  anniversaryReminderSave: 'Änderungen speichern',
+  anniversaryReminderSaving: 'Wird gespeichert …',
+  anniversaryReminderSaved: '✓ Gespeichert',
+  anniversaryReminderLoading: 'Einstellungen werden geladen …',
   settingsPrivacy: 'Privater Bereich',
   settingsData: 'Daten und Portabilität',
   appearanceIntro:

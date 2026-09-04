@@ -152,26 +152,31 @@ fun HeartMomentsScreen(
 
         items(count = moments.size, key = { index -> moments[index].id.toString() }) { index ->
             val moment = moments[index]
-            if (editTarget == moment.id.toString()) {
-                EditHeartMoment(
-                    moment = moment,
-                    busy = busy,
-                    onCancel = { editTarget = null },
-                    onSave = { editedText, editedEmotion, editedHappenedOn ->
-                        onEdit(moment.id, editedText, editedEmotion, editedHappenedOn)
-                        editTarget = null
-                    },
-                )
-            } else {
-                HeartMomentCard(
-                    moment = moment,
-                    busy = busy,
-                    onEdit = { editTarget = moment.id.toString() },
-                    onChangeVisibility = { visibilityTarget = moment.id.toString() },
-                    onDelete = { deleteTarget = moment.id.toString() },
-                )
-            }
+            HeartMomentCard(
+                moment = moment,
+                busy = busy,
+                onEdit = { editTarget = moment.id.toString() },
+                onChangeVisibility = { visibilityTarget = moment.id.toString() },
+                onDelete = { deleteTarget = moment.id.toString() },
+            )
         }
+    }
+
+    editTarget?.let { id ->
+        val moment = moments.firstOrNull { it.id.toString() == id }
+        if (moment == null) {
+            editTarget = null
+            return@let
+        }
+        EditHeartMomentDialog(
+            moment = moment,
+            busy = busy,
+            onCancel = { editTarget = null },
+            onSave = { editedText, editedEmotion, editedHappenedOn ->
+                onEdit(moment.id, editedText, editedEmotion, editedHappenedOn)
+                editTarget = null
+            },
+        )
     }
 
     visibilityTarget?.let { id ->
@@ -365,7 +370,7 @@ private fun NewHeartMoment(
  * own separate, destructive operation, never a side effect of this save.
  */
 @Composable
-private fun EditHeartMoment(
+private fun EditHeartMomentDialog(
     moment: HeartMomentDetail,
     busy: Boolean,
     onCancel: () -> Unit,
@@ -375,82 +380,91 @@ private fun EditHeartMoment(
     var emotion by rememberSaveable(moment.id) { mutableStateOf(moment.emotion) }
     var happenedOn by rememberSaveable(moment.id) { mutableStateOf(moment.happenedOn.toString()) }
 
-    Surface(
-        shape = RoundedCornerShape(SideBySideTheme.radii.card),
-        color = SideBySideTheme.colors.surface,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
-            verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
-        ) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = {
             Text(
                 text = stringResource(R.string.heart_moment_edit),
                 style = MaterialTheme.typography.titleMedium,
                 color = SideBySideTheme.colors.textPrimary,
                 modifier = Modifier.semantics { heading() },
             )
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it.take(500) },
-                label = { Text(stringResource(R.string.heart_moment_text)) },
-                minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                text = stringResource(R.string.heart_moment_emotion),
-                style = MaterialTheme.typography.labelLarge,
-                color = SideBySideTheme.colors.textSecondary,
-            )
-            Column(Modifier.selectableGroup()) {
-                for (option in HeartEmotion.entries) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = MinimumTouchTarget)
-                            .selectable(
-                                selected = option == emotion,
-                                enabled = !busy,
-                                role = Role.RadioButton,
-                                onClick = { emotion = option },
-                            ),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = option == emotion, onClick = null)
-                        Text(
-                            text = stringResource(option.labelRes()),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = SideBySideTheme.colors.textPrimary,
-                            modifier = Modifier.padding(start = SideBySideTheme.spacing.step3),
-                        )
+        },
+        text = {
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 480.dp),
+                verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3),
+            ) {
+                item {
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it.take(500) },
+                        label = { Text(stringResource(R.string.heart_moment_text)) },
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    Text(
+                        text = stringResource(R.string.heart_moment_emotion),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = SideBySideTheme.colors.textSecondary,
+                    )
+                    Column(Modifier.selectableGroup()) {
+                        for (option in HeartEmotion.entries) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = MinimumTouchTarget)
+                                    .selectable(
+                                        selected = option == emotion,
+                                        enabled = !busy,
+                                        role = Role.RadioButton,
+                                        onClick = { emotion = option },
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(selected = option == emotion, onClick = null)
+                                Text(
+                                    text = stringResource(option.labelRes()),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = SideBySideTheme.colors.textPrimary,
+                                    modifier = Modifier.padding(start = SideBySideTheme.spacing.step3),
+                                )
+                            }
+                        }
                     }
                 }
-            }
-            OutlinedTextField(
-                value = happenedOn,
-                onValueChange = { happenedOn = it },
-                label = { Text(stringResource(R.string.heart_moment_happened_on)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
-                Button(
-                    onClick = { onSave(text, emotion, happenedOn) },
-                    enabled = !busy && text.isNotBlank() && happenedOn.isNotBlank(),
-                    modifier = Modifier.heightIn(min = MinimumTouchTarget),
-                ) {
-                    Text(stringResource(R.string.heart_moment_save_changes))
-                }
-                TextButton(
-                    onClick = onCancel,
-                    enabled = !busy,
-                    modifier = Modifier.heightIn(min = MinimumTouchTarget),
-                ) {
-                    Text(stringResource(R.string.heart_moment_cancel))
+                item {
+                    OutlinedTextField(
+                        value = happenedOn,
+                        onValueChange = { happenedOn = it },
+                        label = { Text(stringResource(R.string.heart_moment_happened_on)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
-        }
-    }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(text, emotion, happenedOn) },
+                enabled = !busy && text.isNotBlank() && happenedOn.isNotBlank(),
+                modifier = Modifier.heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.heart_moment_save_changes))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onCancel,
+                enabled = !busy,
+                modifier = Modifier.heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.heart_moment_cancel))
+            }
+        },
+    )
 }
 
 @Composable

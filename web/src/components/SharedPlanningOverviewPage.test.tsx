@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { SharedPlanningOverviewPage } from './SharedPlanningOverviewPage';
 
+import { CollectionsOverviewPage } from './CollectionsOverviewPage';
+
 describe('SharedPlanningOverviewPage', () => {
   it('renders only the shared M3 planning product areas', () => {
     const queryClient = new QueryClient({
@@ -22,15 +24,12 @@ describe('SharedPlanningOverviewPage', () => {
 
     expect(html).toContain('Wünsche');
     expect(html).toContain('Pläne');
-    expect(html).toContain('Orte');
-    expect(html).toContain('Kapitel');
-    expect(html).toContain('Gemeinsame Listen');
     expect(html).not.toContain('PrivateNote');
     expect(html).not.toContain('GiftIdea');
     expect(html).not.toContain('PrivateCollection');
   });
 
-  it('shows a Collection icon as a prefix, and offers an icon field when creating one', () => {
+  it('shows a Collection title cleanly without legacy emoji icon (#373)', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -47,7 +46,6 @@ describe('SharedPlanningOverviewPage', () => {
               createdAt: new Date('2026-08-01T10:00:00Z'),
               createdBy: 'account-1',
               creator: { id: 'account-1', displayName: 'Lea' },
-              icon: '🧳',
               id: 'collection-1',
               items: [],
               spaceId: 'space-1',
@@ -66,6 +64,27 @@ describe('SharedPlanningOverviewPage', () => {
     const html = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
+          <CollectionsOverviewPage
+            apis={{} as SharedPlanningApis}
+            spaceId="space-1"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // #373: collection icon removed end-to-end
+    expect(html).toContain('Packing list');
+    expect(html).not.toContain('🧳');
+    expect(html).not.toContain('collection-icon');
+  });
+
+  it('renders both timeline stops with markers and semantic sections', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
           <SharedPlanningOverviewPage
             apis={{} as SharedPlanningApis}
             spaceId="space-1"
@@ -74,8 +93,12 @@ describe('SharedPlanningOverviewPage', () => {
       </QueryClientProvider>,
     );
 
-    // #606: the icon field existed on the API but was never exposed here.
-    expect(html).toContain('🧳 Packing list');
-    expect(html).toContain('collection-icon');
+    const stopMatches = html.match(
+      /<section\b[^>]*class="[^"]*future-map-stop/g,
+    );
+    expect(stopMatches).toHaveLength(2);
+
+    const markerMatches = html.match(/class="future-map-marker"/g);
+    expect(markerMatches).toHaveLength(2);
   });
 });

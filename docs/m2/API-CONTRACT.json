@@ -464,6 +464,10 @@
       "parentType": "NONE",
       "requiresParentId": false,
       "note": "owner's still-unbound upload within the binding window (M2-D24)"
+    },
+    {
+      "parentType": "RELATED_PERSON",
+      "requiresParentId": true
     }
   ]
 }

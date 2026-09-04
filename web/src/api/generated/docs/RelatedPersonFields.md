@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`avatarAttachmentId` | string
 `birthday` | Date
 `birthdayYearKnown` | boolean
 `displayName` | string
@@ -19,6 +20,7 @@ import type { RelatedPersonFields } from ''
 
 // TODO: Update the object below with actual values
 const example = {
+  "avatarAttachmentId": null,
   "birthday": null,
   "birthdayYearKnown": null,
   "displayName": null,

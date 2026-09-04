@@ -34,3 +34,21 @@
 .list-entry-dragging {
   opacity: 0.72;
 }
+
+button.list-entry-icon-button.list-entry-add-button {
+  color: var(--color-brand);
+  background: var(--color-brand-surface);
+  border: 1px solid var(--color-brand);
+  border-radius: var(--radius-medium);
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    border-color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+button.list-entry-icon-button.list-entry-add-button:hover:not(:disabled) {
+  background: var(--color-brand);
+  color: var(--color-surface, #ffffff);
+  border-color: var(--color-brand);
+}

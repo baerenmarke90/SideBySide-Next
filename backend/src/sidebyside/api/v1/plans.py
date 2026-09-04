@@ -18,12 +18,12 @@ from fastapi import status as http_status
 from pydantic import ConfigDict, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.api.v1.wishes import ETAG_HEADERS, WishDetail, wish_detail
-from sidebyside.identity.models import Account
 from sidebyside.plans import service
 from sidebyside.plans.models import Plan, PlanStatus
 
@@ -187,10 +187,10 @@ def _plan_detail(
     session: DbSession,
     authorization: Authorization,
     plan: Plan,
+    creator: AuthorSummary | None = None,
 ) -> PlanDetail:
-    creator = session.get(Account, plan.owner_id)
     if creator is None:
-        raise RuntimeError("Plan creator disappeared despite foreign key protection.")
+        creator = resolve_author_summary(session, plan.owner_id, resource="Plan creator")
     is_completed = plan.status == PlanStatus.COMPLETED.value
     return PlanDetail(
         id=plan.id,
@@ -207,7 +207,7 @@ def _plan_detail(
         version=plan.version,
         created_at=plan.created_at,
         updated_at=plan.updated_at,
-        creator=AuthorSummary(id=creator.id, display_name=creator.display_name),
+        creator=creator,
         capabilities=ResourceCapabilities(
             # M3-D01: both partners, independent of ``createdBy``.
             can_edit=True,
@@ -263,8 +263,12 @@ def list_plans(
         limit=limit,
         status=status,
     )
+    creators = resolve_author_summaries(session, {plan.owner_id for plan in page.items})
     return PlanPage(
-        items=[_plan_detail(session, authorization, plan) for plan in page.items],
+        items=[
+            _plan_detail(session, authorization, plan, creator=creators.get(plan.owner_id))
+            for plan in page.items
+        ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )

@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
@@ -7,9 +7,11 @@ import {
   planningIfMatch,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { appRoutePath } from '../client/routes';
+import { MORE_PLACES_ROUTE } from '../client/routes';
+import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
+import { ListEntryIconButton } from './ListEntryActions';
 import { PlanningRelationManager } from './PlanningRelationManager';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -35,8 +37,9 @@ export function PlaceProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [coordinateError, setCoordinateError] = useState(false);
-  const key = ['m5-s3', 'place', spaceId, placeId] as const;
+  const key = authorSummaryQueryKeys.placeDetail(spaceId, placeId);
 
   const placeQuery = useQuery({
     queryKey: key,
@@ -80,6 +83,8 @@ export function PlaceProductPage({
         }),
         queryClient.invalidateQueries({ queryKey: key }),
       ]);
+      setIsEditing(false);
+      setConfirmDelete(false);
     },
   });
 
@@ -97,7 +102,7 @@ export function PlaceProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'places', spaceId],
       });
-      navigate(appRoutePath('plan'), { replace: true });
+      navigate(MORE_PLACES_ROUTE, { replace: true });
     },
   });
 
@@ -146,34 +151,58 @@ export function PlaceProductPage({
 
   return (
     <div className="page planning-page">
+      {isEditing ? (
+        <form
+          id="place-edit-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitEdit(e);
+          }}
+        />
+      ) : null}
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('plan')}>
-            {t('m5s3.common.back')}
+          <Link className="back-link" to={MORE_PLACES_ROUTE}>
+            {t('m5s3.common.backToPlaces')}
           </Link>
         }
         eyebrow={t('m5s3.place.detailEyebrow')}
         title={place.name}
+        titleEditor={
+          isEditing ? (
+            <input
+              form="place-edit-form"
+              name="name"
+              required
+              maxLength={200}
+              defaultValue={place.name}
+              aria-label={t('m5s3.place.name')}
+            />
+          ) : undefined
+        }
         description={place.address || t('m5s3.place.noAddress')}
+        titleAction={
+          place.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
+        }
       />
 
       <div className="planning-detail-grid">
-        <section className="planning-subsection">
-          <h2>{t('m5s3.common.edit')}</h2>
-          {place.capabilities.canEdit ? (
-            <form className="form-grid" onSubmit={submitEdit}>
-              <label htmlFor="place-edit-name">{t('m5s3.place.name')}</label>
-              <input
-                id="place-edit-name"
-                name="name"
-                required
-                maxLength={200}
-                defaultValue={place.name}
-              />
+        {isEditing ? (
+          <section className="planning-subsection">
+            <h2>{t('m5s3.common.edit')}</h2>
+            <div className="form-grid">
               <label htmlFor="place-edit-description">
                 {t('m5s3.common.description')}
               </label>
               <textarea
+                form="place-edit-form"
                 id="place-edit-description"
                 name="description"
                 rows={4}
@@ -183,6 +212,7 @@ export function PlaceProductPage({
                 {t('m5s3.place.address')}
               </label>
               <input
+                form="place-edit-form"
                 id="place-edit-address"
                 name="address"
                 defaultValue={place.address ?? ''}
@@ -193,6 +223,7 @@ export function PlaceProductPage({
                     {t('m5s3.place.latitude')}
                   </label>
                   <input
+                    form="place-edit-form"
                     id="place-edit-latitude"
                     name="latitude"
                     type="number"
@@ -207,6 +238,7 @@ export function PlaceProductPage({
                     {t('m5s3.place.longitude')}
                   </label>
                   <input
+                    form="place-edit-form"
                     id="place-edit-longitude"
                     name="longitude"
                     type="number"
@@ -223,22 +255,85 @@ export function PlaceProductPage({
                   {t('m5s3.place.coordinatePairError')}
                 </p>
               ) : null}
-              <button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending
-                  ? t('m5s3.common.saving')
-                  : t('m5s3.common.saveChanges')}
-              </button>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button
+                  form="place-edit-form"
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                >
+                  {updateMutation.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.saveChanges')}
+                </button>
+                <button
+                  type="button"
+                  className="tertiary"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setConfirmDelete(false);
+                  }}
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
               {updateMutation.error ? (
                 <ProblemState
                   error={updateMutation.error}
                   onRetry={() => void placeQuery.refetch()}
                 />
               ) : null}
-            </form>
-          ) : (
-            <p className="planning-meta">{t('m5s3.common.readOnly')}</p>
-          )}
-        </section>
+            </div>
+
+            {place.capabilities.canDelete ? (
+              <div style={{ marginTop: 'var(--space-8)' }}>
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    className="button-link danger-link"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    {t('m5s3.common.delete')}
+                  </button>
+                ) : (
+                  <section
+                    className="planning-danger-zone"
+                    aria-labelledby="place-delete-heading"
+                  >
+                    <h2 id="place-delete-heading">
+                      {t('m5s3.common.deleteHeading')}
+                    </h2>
+                    <p>{t('m5s3.place.deleteConsequence')}</p>
+                    <div className="planning-confirm-row">
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => deleteMutation.mutate(place)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending
+                          ? t('m5s3.common.deleting')
+                          : t('m5s3.common.confirmDelete')}
+                      </button>
+                      <button
+                        type="button"
+                        className="tertiary"
+                        onClick={() => setConfirmDelete(false)}
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                    {deleteMutation.error ? (
+                      <ProblemState
+                        error={deleteMutation.error}
+                        onRetry={() => void placeQuery.refetch()}
+                      />
+                    ) : null}
+                  </section>
+                )}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         <section className="planning-subsection">
           <h2>{t('m5s3.place.locationHeading')}</h2>
@@ -262,51 +357,6 @@ export function PlaceProductPage({
         ownerKind="place"
         ownerId={place.id}
       />
-
-      {place.capabilities.canDelete ? (
-        <section
-          className="planning-danger-zone"
-          aria-labelledby="place-delete-heading"
-        >
-          <h2 id="place-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
-          <p>{t('m5s3.place.deleteConsequence')}</p>
-          {!confirmDelete ? (
-            <button
-              type="button"
-              className="danger"
-              onClick={() => setConfirmDelete(true)}
-            >
-              {t('m5s3.common.delete')}
-            </button>
-          ) : (
-            <div className="planning-confirm-row">
-              <button
-                type="button"
-                className="danger"
-                onClick={() => deleteMutation.mutate(place)}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending
-                  ? t('m5s3.common.deleting')
-                  : t('m5s3.common.confirmDelete')}
-              </button>
-              <button
-                type="button"
-                className="tertiary"
-                onClick={() => setConfirmDelete(false)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          )}
-          {deleteMutation.error ? (
-            <ProblemState
-              error={deleteMutation.error}
-              onRetry={() => void placeQuery.refetch()}
-            />
-          ) : null}
-        </section>
-      ) : null}
     </div>
   );
 }

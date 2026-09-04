@@ -49,12 +49,13 @@ data class AttachmentReadRequest (
     /**
      * 
      *
-     * Values: MEMORY,HEART_MOMENT,NONE
+     * Values: MEMORY,HEART_MOMENT,RELATED_PERSON,NONE
      */
     @Serializable
     enum class ParentType(val value: kotlin.String) {
         @SerialName(value = "MEMORY") MEMORY("MEMORY"),
         @SerialName(value = "HEART_MOMENT") HEART_MOMENT("HEART_MOMENT"),
+        @SerialName(value = "RELATED_PERSON") RELATED_PERSON("RELATED_PERSON"),
         @SerialName(value = "NONE") NONE("NONE");
     }
 

@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Path, Query, Response, status
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
@@ -16,7 +17,6 @@ from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
 from sidebyside.api.v1.attachments import AttachmentSummary
 from sidebyside.attachments import binding
 from sidebyside.attachments.models import MediaType
-from sidebyside.identity.models import Account
 from sidebyside.memories import service
 from sidebyside.memories.models import Memory
 
@@ -110,10 +110,10 @@ def _memory_detail(
     session: DbSession,
     authorization: Authorization,
     memory: Memory,
+    author: AuthorSummary | None = None,
 ) -> MemoryDetail:
-    author = session.get(Account, memory.owner_id)
     if author is None:
-        raise RuntimeError("Memory author disappeared despite foreign key protection.")
+        author = resolve_author_summary(session, memory.owner_id, resource="Memory author")
     is_author = memory.owner_id == authorization.account_id
     bound_attachments = binding.attachments_of_memory(session, memory.id)
     return MemoryDetail(
@@ -126,7 +126,7 @@ def _memory_detail(
         version=memory.version,
         created_at=memory.created_at,
         updated_at=memory.updated_at,
-        author=AuthorSummary(id=author.id, display_name=author.display_name),
+        author=author,
         capabilities=ResourceCapabilities(
             can_edit=is_author,
             can_delete=is_author,
@@ -193,8 +193,12 @@ def list_memories(
         limit=limit,
         year=year,
     )
+    authors = resolve_author_summaries(session, {memory.owner_id for memory in page.items})
     return MemoryPage(
-        items=[_memory_detail(session, authorization, memory) for memory in page.items],
+        items=[
+            _memory_detail(session, authorization, memory, author=authors.get(memory.owner_id))
+            for memory in page.items
+        ],
         next_cursor=page.next_cursor,
         has_more=page.has_more,
     )

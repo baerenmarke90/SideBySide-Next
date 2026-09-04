@@ -2276,6 +2276,7 @@ class ReferenceViewModel(
                         displayName = displayName,
                         relationship = relationship,
                         visibility = visibility,
+                        avatarAttachmentId = person.avatarAttachmentId,
                     ),
                 )
             }
@@ -3823,7 +3824,7 @@ class ReferenceViewModel(
         }
     }
 
-    fun addPrivateCollection(title: String, icon: String) {
+    fun addPrivateCollection(title: String) {
         if (title.isBlank()) return
         val api = contract ?: return
         val currentSession = session ?: return
@@ -3837,7 +3838,7 @@ class ReferenceViewModel(
                 api.createPrivateCollection(
                     spaceId,
                     currentSession.tokens.accessToken,
-                    PrivateCollectionCreate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                    PrivateCollectionCreate(title = title),
                 )
             }
                 .onSuccess {
@@ -3854,7 +3855,7 @@ class ReferenceViewModel(
         }
     }
 
-    fun updatePrivateCollection(collection: PrivateCollectionDetail, title: String, icon: String) {
+    fun updatePrivateCollection(collection: PrivateCollectionDetail, title: String) {
         if (title.isBlank()) return
         val api = contract ?: return
         val currentSession = session ?: return
@@ -3870,7 +3871,7 @@ class ReferenceViewModel(
                     currentSession.tokens.accessToken,
                     collection.id,
                     collection.version,
-                    PrivateCollectionUpdate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                    PrivateCollectionUpdate(title = title),
                 )
             }
                 .onSuccess {
@@ -4591,7 +4592,7 @@ class ReferenceViewModel(
         }
     }
 
-    fun addCollection(title: String, icon: String) {
+    fun addCollection(title: String) {
         if (title.isBlank()) return
         val api = contract ?: return
         val currentSession = session ?: return
@@ -4605,7 +4606,7 @@ class ReferenceViewModel(
                 api.createCollection(
                     spaceId,
                     currentSession.tokens.accessToken,
-                    CollectionCreate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                    CollectionCreate(title = title),
                 )
             }
                 .onSuccess {
@@ -4620,7 +4621,7 @@ class ReferenceViewModel(
         }
     }
 
-    fun updateCollection(collection: CollectionDetail, title: String, icon: String) {
+    fun updateCollection(collection: CollectionDetail, title: String) {
         if (title.isBlank()) return
         val api = contract ?: return
         val currentSession = session ?: return
@@ -4636,7 +4637,7 @@ class ReferenceViewModel(
                     currentSession.tokens.accessToken,
                     collection.id,
                     collection.version,
-                    CollectionUpdate(title = title, icon = icon.trim().takeIf { it.isNotBlank() }),
+                    CollectionUpdate(title = title),
                 )
             }
                 .onSuccess {

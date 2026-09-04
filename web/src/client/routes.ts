@@ -19,8 +19,13 @@ export type AppRouteIcon =
   | 'activity'
   | 'notifications'
   | 'people'
+  | 'places'
+  | 'collections'
+  | 'chapter'
+  | 'birthday'
   | 'private'
   | 'profile'
+  | 'settings'
   | 'add';
 
 export interface AppRouteDefinition {
@@ -52,7 +57,7 @@ export const APP_ROUTES = [
     path: '/story',
     labelKey: 'navigation.story',
     icon: 'story',
-    end: true,
+    end: false,
   },
   {
     id: 'plan',
@@ -101,10 +106,13 @@ export const SEARCH_ROUTE = '/search';
 export const ACTIVITY_ROUTE = '/today/activity';
 
 export const MORE_PEOPLE_ROUTE = '/more/people';
+export const MORE_PLACES_ROUTE = '/more/places';
+export const MORE_COLLECTIONS_ROUTE = '/more/collections';
 /** Existing surface; the Web shell exposes it as the header bell utility. */
 export const MORE_NOTIFICATIONS_ROUTE = '/more/notifications';
 /** Existing surface; the Web shell exposes it through the avatar/account tree. */
 export const MORE_PROFILE_ROUTE = '/more/profile';
+export const MORE_SETTINGS_ROUTE = '/more/settings';
 export const MORE_PRIVATE_ROUTE = '/more/private';
 
 /**
@@ -115,6 +123,7 @@ export const SERVER_ADMIN_ROUTE = '/server-admin';
 
 /* Story content ---------------------------------------------------------- */
 
+export const STORY_CHAPTERS_ROUTE = '/story/chapters';
 export const MEMORY_CREATE_ROUTE = '/story/memories/new';
 export const MEMORY_DETAIL_ROUTE_PATTERN = '/story/memories/:memoryId';
 export const MEMORY_EDIT_ROUTE_PATTERN = '/story/memories/:memoryId/edit';
@@ -127,13 +136,16 @@ export const MILESTONE_CREATE_ROUTE = '/story/milestones/new';
 export const MILESTONE_DETAIL_ROUTE_PATTERN = '/story/milestones/:milestoneId';
 export const MILESTONE_EDIT_ROUTE_PATTERN =
   '/story/milestones/:milestoneId/edit';
+export const CHAPTER_DETAIL_ROUTE_PATTERN = '/plan/chapters/:chapterId';
 
 /* Planning content -------------------------------------------------------- */
 
 export const WISH_DETAIL_ROUTE_PATTERN = '/plan/wishes/:wishId';
 export const PLAN_DETAIL_ROUTE_PATTERN = '/plan/plans/:planId';
+
+/* More / Organisieren content --------------------------------------------- */
+
 export const PLACE_DETAIL_ROUTE_PATTERN = '/plan/places/:placeId';
-export const CHAPTER_DETAIL_ROUTE_PATTERN = '/plan/chapters/:chapterId';
 export const COLLECTION_DETAIL_ROUTE_PATTERN =
   '/plan/collections/:collectionId';
 
@@ -152,6 +164,7 @@ export const LEGACY_ROUTE_REWRITES = [
   { from: '/people', to: MORE_PEOPLE_ROUTE },
   { from: '/notifications', to: MORE_NOTIFICATIONS_ROUTE },
   { from: '/profile', to: MORE_PROFILE_ROUTE },
+  { from: '/settings', to: MORE_SETTINGS_ROUTE },
   { from: '/private', to: MORE_PRIVATE_ROUTE },
   { from: '/memory', to: '/story/memories' },
   { from: '/heart-moment', to: '/story/heart-moments' },
@@ -169,6 +182,35 @@ export function rewriteLegacyPath(pathname: string): string | null {
     if (pathname.startsWith(`${from}/`)) {
       return to + pathname.slice(from.length);
     }
+  }
+  return null;
+}
+
+/**
+ * Resolves which primary navigation area is active for a given pathname.
+ * Corrects active state for domains that belong to an area conceptually (e.g.
+ * chapters belong to Story/Momente, places & collections belong to Mehr)
+ * while keeping existing deep links stable without URL migrations.
+ */
+export function activeNavigationArea(pathname: string): AppRouteId | null {
+  if (pathname === '/today' || pathname.startsWith('/today/')) return 'today';
+  if (
+    pathname === '/story' ||
+    pathname.startsWith('/story/') ||
+    pathname.startsWith('/plan/chapters')
+  ) {
+    return 'story';
+  }
+  if (
+    pathname === '/more' ||
+    pathname.startsWith('/more/') ||
+    pathname.startsWith('/plan/places') ||
+    pathname.startsWith('/plan/collections')
+  ) {
+    return 'more';
+  }
+  if (pathname === '/plan' || pathname.startsWith('/plan/')) {
+    return 'plan';
   }
   return null;
 }

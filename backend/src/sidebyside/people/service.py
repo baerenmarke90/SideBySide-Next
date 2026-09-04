@@ -20,6 +20,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
+from sidebyside.attachments import binding as attachment_binding
+from sidebyside.attachments import service as attachment_service
+from sidebyside.attachments.models import Attachment, MediaType
 from sidebyside.authorization import (
     AuthorizationContext,
     ContentVisibility,
@@ -48,6 +51,7 @@ class PeopleErrorCode:
     DISPLAY_NAME_REQUIRED = "RELATED_PERSON_DISPLAY_NAME_REQUIRED"
     BIRTHDAY_REQUIRED = "RELATED_PERSON_BIRTHDAY_REQUIRED"
     HAS_SHARED_DATES = "RELATED_PERSON_HAS_SHARED_DATES"
+    AVATAR_IMAGE_REQUIRED = "RELATED_PERSON_AVATAR_IMAGE_REQUIRED"
     LABEL_REQUIRED = "IMPORTANT_DATE_LABEL_REQUIRED"
     MORE_OPEN_THAN_PERSON = "IMPORTANT_DATE_MORE_OPEN_THAN_PERSON"
 
@@ -104,6 +108,52 @@ def get_person(
     return require_readable(session, RelatedPerson, context, person_id)
 
 
+def _bind_avatar(
+    session: Session,
+    context: AuthorizationContext,
+    person: RelatedPerson,
+    attachment_id: UUID,
+) -> None:
+    locked = attachment_binding.lock_for_binding(session, [attachment_id])
+    candidate = attachment_binding.ensure_bindable(
+        locked.get(attachment_id),
+        space_id=context.space_id,
+        account_id=context.account_id,
+    )
+    if candidate.media_type != MediaType.IMAGE.value:
+        raise ValidationError(
+            "A person avatar must be an image.",
+            PeopleErrorCode.AVATAR_IMAGE_REQUIRED,
+        )
+    attachment_binding.ensure_unlinked(
+        session,
+        attachment_id,
+        allow=("RELATED_PERSON", person.id),
+    )
+    person.avatar_attachment_id = attachment_id
+
+
+def _rebind_avatar(
+    session: Session,
+    context: AuthorizationContext,
+    person: RelatedPerson,
+    attachment_id: UUID | None,
+) -> None:
+    previous_id = person.avatar_attachment_id
+    if previous_id == attachment_id:
+        return
+
+    if attachment_id is None:
+        person.avatar_attachment_id = None
+    else:
+        _bind_avatar(session, context, person, attachment_id)
+
+    if previous_id is not None:
+        detached = session.get(Attachment, previous_id)
+        if detached is not None:
+            attachment_service.mark_for_deletion(session, detached)
+
+
 def create_person(
     session: Session,
     context: AuthorizationContext,
@@ -113,6 +163,7 @@ def create_person(
     birthday: date | None,
     birthday_year_known: bool,
     visibility: ContentVisibility,
+    avatar_attachment_id: UUID | None = None,
 ) -> RelatedPerson:
     person = RelatedPerson(
         space_id=context.space_id,
@@ -125,6 +176,8 @@ def create_person(
             display_name=_clean_text(display_name, PeopleErrorCode.DISPLAY_NAME_REQUIRED)
         ),
     )
+    if avatar_attachment_id is not None:
+        _bind_avatar(session, context, person, avatar_attachment_id)
     session.add(person)
     session.flush()
     reminder_runtime.reconcile_space(session, context.space_id)
@@ -162,6 +215,7 @@ def update_person(
     birthday: date | None,
     birthday_year_known: bool,
     visibility: ContentVisibility,
+    avatar_attachment_id: UUID | None = None,
 ) -> RelatedPerson:
     person = require_writable(session, RelatedPerson, context, person_id)
     _ensure_expected_version(person.version, expected_version, "related person")
@@ -180,6 +234,7 @@ def update_person(
             PeopleErrorCode.HAS_SHARED_DATES,
         )
 
+    _rebind_avatar(session, context, person, avatar_attachment_id)
     person.privacy_class = privacy.value
     person.relationship = relationship.value
     person.birthday = normalize_birthday(birthday, year_known=birthday_year_known)
@@ -236,8 +291,14 @@ def delete_person(
             important_date.related_person_privacy_class = None
         _flush(session)
 
+    avatar_id = person.avatar_attachment_id
     session.delete(person)
     _flush(session)
+    if avatar_id is not None:
+        detached = session.get(Attachment, avatar_id)
+        if detached is not None:
+            attachment_service.mark_for_deletion(session, detached)
+            _flush(session)
     reminder_runtime.reconcile_space(session, context.space_id)
 
 

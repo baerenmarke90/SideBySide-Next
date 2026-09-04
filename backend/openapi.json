@@ -74,6 +74,16 @@
       },
       "ActivityItem": {
         "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "actorId": {
             "anyOf": [
               {
@@ -108,6 +118,16 @@
             "format": "uuid",
             "title": "Sourceeventid",
             "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivityTargetPresentation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "targetId": {
             "anyOf": [
@@ -192,6 +212,35 @@
           "hasMore"
         ],
         "title": "ActivityPage",
+        "type": "object"
+      },
+      "ActivityTargetPresentation": {
+        "properties": {
+          "targetId": {
+            "format": "uuid",
+            "title": "Targetid",
+            "type": "string"
+          },
+          "targetType": {
+            "$ref": "#/components/schemas/EngagementTarget"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId"
+        ],
+        "title": "ActivityTargetPresentation",
         "type": "object"
       },
       "AnnualSchedule": {
@@ -350,6 +399,7 @@
             "enum": [
               "MEMORY",
               "HEART_MOMENT",
+              "RELATED_PERSON",
               "NONE"
             ],
             "title": "Parenttype",
@@ -803,17 +853,6 @@
       "CollectionCreate": {
         "additionalProperties": false,
         "properties": {
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -842,17 +881,6 @@
           },
           "creator": {
             "$ref": "#/components/schemas/AuthorSummary"
-          },
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
           },
           "id": {
             "format": "uuid",
@@ -890,7 +918,6 @@
           "spaceId",
           "createdBy",
           "title",
-          "icon",
           "version",
           "createdAt",
           "updatedAt",
@@ -1055,17 +1082,6 @@
       "CollectionUpdate": {
         "additionalProperties": false,
         "properties": {
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -2925,6 +2941,16 @@
       },
       "NotificationItem": {
         "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "actorId": {
             "anyOf": [
               {
@@ -2966,6 +2992,16 @@
             "format": "uuid",
             "title": "Sourceeventid",
             "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivityTargetPresentation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "targetId": {
             "anyOf": [
@@ -3874,17 +3910,6 @@
       "PrivateCollectionCreate": {
         "additionalProperties": false,
         "properties": {
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -3905,17 +3930,6 @@
             "format": "date-time",
             "title": "Createdat",
             "type": "string"
-          },
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
           },
           "id": {
             "format": "uuid",
@@ -3958,7 +3972,6 @@
           "spaceId",
           "ownerId",
           "title",
-          "icon",
           "version",
           "createdAt",
           "updatedAt",
@@ -4112,17 +4125,6 @@
       "PrivateCollectionUpdate": {
         "additionalProperties": false,
         "properties": {
-          "icon": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icon"
-          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -4628,6 +4630,18 @@
       },
       "RelatedPersonFields": {
         "properties": {
+          "avatarAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarattachmentid"
+          },
           "birthday": {
             "anyOf": [
               {
@@ -4668,6 +4682,18 @@
       },
       "RelatedPersonView": {
         "properties": {
+          "avatarAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarattachmentid"
+          },
           "birthday": {
             "anyOf": [
               {
@@ -6745,6 +6771,13 @@
       },
       "StoryPage": {
         "properties": {
+          "availableYears": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Availableyears",
+            "type": "array"
+          },
           "hasMore": {
             "title": "Hasmore",
             "type": "boolean"

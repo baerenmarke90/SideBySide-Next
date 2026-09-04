@@ -10,11 +10,11 @@ from fastapi import APIRouter, Path, Response
 from fastapi import status as http_status
 from pydantic import ConfigDict, Field, field_validator
 
+from sidebyside.api.authors import resolve_author_summaries, resolve_author_summary
 from sidebyside.api.concurrency import IfMatchVersion, etag_for
 from sidebyside.api.deps import Authorization, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel, AuthorSummary, ResourceCapabilities
-from sidebyside.identity.models import Account
 from sidebyside.reminders import service
 from sidebyside.reminders.models import ReminderScheduleType, ReminderSource
 
@@ -150,11 +150,14 @@ def _schedule_definition(value: ReminderSchedule) -> service.ScheduleDefinition:
     )
 
 
-def reminder_detail(session: DbSession, view: service.ReminderView) -> ReminderDetail:
+def reminder_detail(
+    session: DbSession,
+    view: service.ReminderView,
+    creator: AuthorSummary | None = None,
+) -> ReminderDetail:
     reminder = view.reminder
-    creator = session.get(Account, reminder.owner_id)
     if creator is None:
-        raise RuntimeError("Reminder creator disappeared despite foreign key protection.")
+        creator = resolve_author_summary(session, reminder.owner_id, resource="Reminder creator")
     manual = reminder.source == ReminderSource.MANUAL.value
     return ReminderDetail(
         id=reminder.id,
@@ -172,7 +175,7 @@ def reminder_detail(session: DbSession, view: service.ReminderView) -> ReminderD
         version=reminder.version,
         created_at=reminder.created_at,
         updated_at=reminder.updated_at,
-        creator=AuthorSummary(id=creator.id, display_name=creator.display_name),
+        creator=creator,
         capabilities=ResourceCapabilities(
             can_edit=manual,
             can_delete=manual,
@@ -219,10 +222,12 @@ def list_reminders(
     response: Response,
 ) -> ReminderList:
     response.headers["Cache-Control"] = "private, no-store"
+    views = service.list_reminders(session, authorization)
+    creators = resolve_author_summaries(session, {view.reminder.owner_id for view in views})
     return ReminderList(
         items=[
-            reminder_detail(session, view)
-            for view in service.list_reminders(session, authorization)
+            reminder_detail(session, view, creator=creators.get(view.reminder.owner_id))
+            for view in views
         ]
     )
 

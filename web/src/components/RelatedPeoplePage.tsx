@@ -1,7 +1,9 @@
 import {
+  type ChangeEvent,
   type FormEvent,
   type KeyboardEvent,
   type RefObject,
+  useCallback,
   useEffect,
   useMemo,
   useReducer,
@@ -9,6 +11,7 @@ import {
   useState,
 } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { AttachmentsApi } from '../api/generated/apis/AttachmentsApi';
 import type { PeopleApi } from '../api/generated/apis/PeopleApi';
 import { ContentVisibility } from '../api/generated/models/ContentVisibility';
 import { PersonRelationship } from '../api/generated/models/PersonRelationship';
@@ -29,11 +32,20 @@ import {
 } from '../client/relatedPersonDelete';
 import { normalizeClientError } from '../client/problemDetails';
 import { invalidateDashboard } from '../client/dashboardQueries';
+import { createReferenceApis } from '../client/referenceFlow';
+import {
+  type DraftUploadPhase,
+  uploadMemoryDraftAttachment,
+} from '../client/memoryAttachmentDraft';
+import { useRelatedPersonAvatarUrl } from '../client/useRelatedPersonAvatarUrl';
+import { personInitials } from './PersonIdentity';
 import { useTranslation } from '../i18n';
+import { AddIcon, DestinationIcon } from './DestinationIcon';
 import { ImportantDatesPanel } from './ImportantDatesPanel';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
+import './RelatedPeoplePage.css';
 
 const RELATIONSHIPS = Object.values(PersonRelationship);
 const VISIBILITIES = Object.values(ContentVisibility);
@@ -43,7 +55,10 @@ function dateInputValue(value: Date | null): string {
   return value.toISOString().slice(0, 10);
 }
 
-function personFields(form: FormData): RelatedPersonFields {
+function personFields(
+  form: FormData,
+  avatarAttachmentId: string | null,
+): RelatedPersonFields {
   const birthdayYearKnown = form.get('birthdayYearKnown') === 'on';
   const birthday = birthdayFromInput({
     yearKnown: birthdayYearKnown,
@@ -61,21 +76,72 @@ function personFields(form: FormData): RelatedPersonFields {
     ) as RelatedPersonFields['visibility'],
     birthday,
     birthdayYearKnown: Boolean(birthday && birthdayYearKnown),
+    avatarAttachmentId: avatarAttachmentId || undefined,
   };
 }
 
-function RelatedPersonForm({
+function PersonCardAvatar({
+  person,
+  attachmentsApi,
+  spaceId,
+}: {
+  person: RelatedPersonView;
+  attachmentsApi: AttachmentsApi | undefined | null;
+  spaceId: string;
+}) {
+  const { t } = useTranslation();
+  const { avatarUrl } = useRelatedPersonAvatarUrl(
+    attachmentsApi,
+    spaceId,
+    person.avatarAttachmentId,
+  );
+  const initials = useMemo(
+    () => personInitials(person.displayName),
+    [person.displayName],
+  );
+
+  return (
+    <div className="people-avatar-circle" aria-hidden="true">
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={t('people.avatarAlt', { name: person.displayName })}
+        />
+      ) : (
+        <span>{initials}</span>
+      )}
+    </div>
+  );
+}
+
+function RelatedPersonModalDialog({
   person,
   pending,
+  error,
+  spaceId,
+  apiBaseUrl,
+  accessToken,
+  attachmentsApi,
   onCancel,
   onSubmit,
+  onDeleteRequest,
 }: {
   person: RelatedPersonView | null;
   pending: boolean;
+  error: Error | null;
+  spaceId: string;
+  apiBaseUrl?: string;
+  accessToken?: string;
+  attachmentsApi?: AttachmentsApi | null;
   onCancel: () => void;
   onSubmit: (fields: RelatedPersonFields) => void;
+  onDeleteRequest?: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const dialogRef = useRef<HTMLElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const initialBirthdayParts = birthdayInputParts(person?.birthday ?? null);
   const [birthdayYearKnown, setBirthdayYearKnown] = useState(
     person?.birthday ? person.birthdayYearKnown : true,
@@ -89,6 +155,27 @@ function RelatedPersonForm({
     initialBirthdayParts.monthValue,
   );
   const [birthdayDay, setBirthdayDay] = useState(initialBirthdayParts.dayValue);
+
+  const [currentAvatarId, setCurrentAvatarId] = useState<string | null>(
+    person?.avatarAttachmentId ?? null,
+  );
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<DraftUploadPhase | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const { avatarUrl: existingAvatarUrl } = useRelatedPersonAvatarUrl(
+    attachmentsApi,
+    spaceId,
+    person?.avatarAttachmentId,
+  );
+
+  const displayedAvatarUrl =
+    avatarPreviewUrl || (currentAvatarId ? existingAvatarUrl : null);
+  const initials = useMemo(
+    () => (person ? personInitials(person.displayName) : '?'),
+    [person],
+  );
+
   const monthOptions = useMemo(
     () =>
       Array.from({ length: 12 }, (_, index) => ({
@@ -102,164 +189,384 @@ function RelatedPersonForm({
   );
   const birthdayPartRequired = Boolean(birthdayMonth || birthdayDay);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    onSubmit(personFields(new FormData(event.currentTarget)));
+  const createdObjectUrlRef = useRef<string | null>(null);
+
+  const setPreviewUrl = useCallback((url: string | null) => {
+    if (createdObjectUrlRef.current && createdObjectUrlRef.current !== url) {
+      URL.revokeObjectURL(createdObjectUrlRef.current);
+      createdObjectUrlRef.current = null;
+    }
+    createdObjectUrlRef.current = url;
+    setAvatarPreviewUrl(url);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (createdObjectUrlRef.current) {
+        URL.revokeObjectURL(createdObjectUrlRef.current);
+        createdObjectUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const previousFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    cancelButtonRef.current?.focus();
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      previousFocus?.focus();
+    };
+  }, []);
+
+  function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === 'Escape' && !pending && !uploadPhase) {
+      event.preventDefault();
+      onCancel();
+      return;
+    }
+    if (event.key !== 'Tab' || !dialogRef.current) return;
+
+    const focusable = Array.from(
+      dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      ),
+    );
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    if (!file.type.startsWith('image/')) {
+      setUploadError(t('flow.imageOnly'));
+      return;
+    }
+    if (apiBaseUrl && accessToken) {
+      try {
+        const referenceApis = createReferenceApis(apiBaseUrl, accessToken);
+        const ready = await uploadMemoryDraftAttachment(
+          referenceApis,
+          apiBaseUrl,
+          accessToken,
+          spaceId,
+          file,
+          setUploadPhase,
+        );
+        setCurrentAvatarId(ready.attachmentId);
+        const objectUrl = URL.createObjectURL(file);
+        setPreviewUrl(objectUrl);
+      } catch (err) {
+        setUploadError(
+          err instanceof Error ? err.message : t('flow.uploadFailed'),
+        );
+      } finally {
+        setUploadPhase(null);
+      }
+    } else {
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+    }
+  }
+
+  function handleAvatarRemove() {
+    setCurrentAvatarId(null);
+    setPreviewUrl(null);
+    setUploadError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSubmit(personFields(new FormData(event.currentTarget), currentAvatarId));
+  }
+
+  const backdropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const backdropEl = backdropRef.current;
+    if (!backdropEl) return;
+    function handleBackdropClick(e: MouseEvent) {
+      if (e.target === backdropEl && !pending && !uploadPhase) {
+        onCancel();
+      }
+    }
+    backdropEl.addEventListener('click', handleBackdropClick);
+    return () => backdropEl.removeEventListener('click', handleBackdropClick);
+  }, [pending, uploadPhase, onCancel]);
+
   return (
-    <section className="form-card" aria-labelledby="related-person-form-title">
-      <h2 id="related-person-form-title">
-        {person ? t('people.editTitle') : t('people.createTitle')}
-      </h2>
-      <form key={person?.id ?? 'new'} className="form-grid" onSubmit={submit}>
-        <div className="field-group">
-          <label htmlFor="related-person-name">{t('people.nameLabel')}</label>
-          <input
-            id="related-person-name"
-            name="displayName"
-            required
-            maxLength={120}
-            defaultValue={person?.displayName ?? ''}
-            autoComplete="off"
-          />
-        </div>
-
-        <div className="field-group">
-          <label htmlFor="related-person-relationship">
-            {t('people.relationshipLabel')}
-          </label>
-          <select
-            id="related-person-relationship"
-            name="relationship"
-            defaultValue={person?.relationship ?? PersonRelationship.OTHER}
+    <div ref={backdropRef} className="modal-backdrop" role="presentation">
+      <section
+        ref={dialogRef}
+        className="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="related-person-modal-title"
+        onKeyDown={handleDialogKeyDown}
+      >
+        <div className="people-modal-header">
+          <h2 id="related-person-modal-title">
+            {person ? t('people.editTitle') : t('people.createTitle')}
+          </h2>
+          <button
+            type="button"
+            className="people-modal-close"
+            onClick={onCancel}
+            aria-label={t('people.closeDialogAria')}
+            disabled={pending || Boolean(uploadPhase)}
           >
-            {RELATIONSHIPS.map((relationship) => (
-              <option key={relationship} value={relationship}>
-                {t(`people.relationship.${relationship}`)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field-group">
-          <span>{t('people.birthdayLabel')}</span>
-          <label
-            className="choice-row"
-            htmlFor="related-person-birthday-year-known"
-          >
-            <input
-              id="related-person-birthday-year-known"
-              name="birthdayYearKnown"
-              type="checkbox"
-              checked={birthdayYearKnown}
-              onChange={(event) => {
-                const nextYearKnown = event.currentTarget.checked;
-                if (!nextYearKnown && knownBirthday) {
-                  const knownDate = new Date(`${knownBirthday}T00:00:00.000Z`);
-                  setBirthdayMonth(String(knownDate.getUTCMonth() + 1));
-                  setBirthdayDay(String(knownDate.getUTCDate()));
-                }
-                setBirthdayYearKnown(nextYearKnown);
-              }}
-            />
-            <span>{t('people.birthdayYearKnown')}</span>
-          </label>
-
-          {birthdayYearKnown ? (
-            <input
-              id="related-person-birthday"
-              name="birthday"
-              type="date"
-              value={knownBirthday}
-              onChange={(event) => setKnownBirthday(event.currentTarget.value)}
-            />
-          ) : (
-            <>
-              <div className="form-actions">
-                <div className="field-group">
-                  <label htmlFor="related-person-birthday-day">
-                    {t('people.birthdayDayLabel')}
-                  </label>
-                  <input
-                    id="related-person-birthday-day"
-                    name="birthdayDay"
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={daysInMonth(Number(birthdayMonth))}
-                    required={birthdayPartRequired}
-                    value={birthdayDay}
-                    onChange={(event) =>
-                      setBirthdayDay(event.currentTarget.value)
-                    }
-                  />
-                </div>
-                <div className="field-group">
-                  <label htmlFor="related-person-birthday-month">
-                    {t('people.birthdayMonthLabel')}
-                  </label>
-                  <select
-                    id="related-person-birthday-month"
-                    name="birthdayMonth"
-                    required={birthdayPartRequired}
-                    value={birthdayMonth}
-                    onChange={(event) =>
-                      setBirthdayMonth(event.currentTarget.value)
-                    }
-                  >
-                    <option value="">
-                      {t('people.birthdayMonthPlaceholder')}
-                    </option>
-                    {monthOptions.map((month) => (
-                      <option key={month.value} value={month.value}>
-                        {month.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <p className="field-help">
-                {t('people.birthdayUnknownYearHelp')}
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="field-group">
-          <label htmlFor="related-person-visibility">
-            {t('people.visibilityLabel')}
-          </label>
-          <select
-            id="related-person-visibility"
-            name="visibility"
-            defaultValue={person?.visibility ?? ContentVisibility.SHARED}
-          >
-            {VISIBILITIES.map((visibility) => (
-              <option key={visibility} value={visibility}>
-                {t(`people.visibility.${visibility}`)}
-              </option>
-            ))}
-          </select>
-          <p className="field-help">{t('people.visibilityHelp')}</p>
-        </div>
-
-        <div className="form-actions">
-          {person ? (
-            <button type="button" className="secondary" onClick={onCancel}>
-              {t('common.cancel')}
-            </button>
-          ) : null}
-          <button type="submit" disabled={pending}>
-            {pending
-              ? t('people.saving')
-              : person
-                ? t('people.saveChanges')
-                : t('people.create')}
+            ✕
           </button>
         </div>
-      </form>
-    </section>
+
+        <form key={person?.id ?? 'new'} className="form-grid" onSubmit={submit}>
+          <div className="field-group">
+            <span id="related-person-avatar-label">
+              {t('people.avatarLabel')}
+            </span>
+            <div className="people-modal-avatar-row">
+              <div className="people-modal-avatar-preview" aria-hidden="true">
+                {displayedAvatarUrl ? (
+                  <img src={displayedAvatarUrl} alt="" />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </div>
+              <div className="people-modal-avatar-actions">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                  aria-label={t('people.avatarLabel')}
+                />
+                <button
+                  type="button"
+                  className="secondary compact-action"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={pending || Boolean(uploadPhase)}
+                >
+                  {displayedAvatarUrl
+                    ? t('people.avatarChange')
+                    : t('people.avatarUpload')}
+                </button>
+                {displayedAvatarUrl ? (
+                  <button
+                    type="button"
+                    className="tertiary compact-action"
+                    onClick={handleAvatarRemove}
+                    disabled={pending || Boolean(uploadPhase)}
+                  >
+                    {t('people.avatarRemove')}
+                  </button>
+                ) : null}
+                {uploadPhase ? (
+                  <small className="field-help">
+                    {uploadPhase === 'validating'
+                      ? t('people.avatarValidating')
+                      : t('people.avatarUploading')}
+                  </small>
+                ) : null}
+              </div>
+            </div>
+            {uploadError ? (
+              <p className="field-help" style={{ color: 'var(--color-error)' }}>
+                {uploadError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="related-person-name">{t('people.nameLabel')}</label>
+            <input
+              id="related-person-name"
+              name="displayName"
+              required
+              maxLength={120}
+              defaultValue={person?.displayName ?? ''}
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="related-person-relationship">
+              {t('people.relationshipLabel')}
+            </label>
+            <select
+              id="related-person-relationship"
+              name="relationship"
+              defaultValue={person?.relationship ?? PersonRelationship.OTHER}
+            >
+              {RELATIONSHIPS.map((relationship) => (
+                <option key={relationship} value={relationship}>
+                  {t(`people.relationship.${relationship}`)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field-group">
+            <span>{t('people.birthdayLabel')}</span>
+            <label
+              className="choice-row"
+              htmlFor="related-person-birthday-year-known"
+            >
+              <input
+                id="related-person-birthday-year-known"
+                name="birthdayYearKnown"
+                type="checkbox"
+                checked={birthdayYearKnown}
+                onChange={(event) => {
+                  const nextYearKnown = event.currentTarget.checked;
+                  if (!nextYearKnown && knownBirthday) {
+                    const knownDate = new Date(
+                      `${knownBirthday}T00:00:00.000Z`,
+                    );
+                    setBirthdayMonth(String(knownDate.getUTCMonth() + 1));
+                    setBirthdayDay(String(knownDate.getUTCDate()));
+                  }
+                  setBirthdayYearKnown(nextYearKnown);
+                }}
+              />
+              <span>{t('people.birthdayYearKnown')}</span>
+            </label>
+
+            {birthdayYearKnown ? (
+              <input
+                id="related-person-birthday"
+                name="birthday"
+                type="date"
+                value={knownBirthday}
+                onChange={(event) =>
+                  setKnownBirthday(event.currentTarget.value)
+                }
+              />
+            ) : (
+              <>
+                <div className="form-actions">
+                  <div className="field-group">
+                    <label htmlFor="related-person-birthday-day">
+                      {t('people.birthdayDayLabel')}
+                    </label>
+                    <input
+                      id="related-person-birthday-day"
+                      name="birthdayDay"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={daysInMonth(Number(birthdayMonth))}
+                      required={birthdayPartRequired}
+                      value={birthdayDay}
+                      onChange={(event) =>
+                        setBirthdayDay(event.currentTarget.value)
+                      }
+                    />
+                  </div>
+                  <div className="field-group">
+                    <label htmlFor="related-person-birthday-month">
+                      {t('people.birthdayMonthLabel')}
+                    </label>
+                    <select
+                      id="related-person-birthday-month"
+                      name="birthdayMonth"
+                      required={birthdayPartRequired}
+                      value={birthdayMonth}
+                      onChange={(event) =>
+                        setBirthdayMonth(event.currentTarget.value)
+                      }
+                    >
+                      <option value="">
+                        {t('people.birthdayMonthPlaceholder')}
+                      </option>
+                      {monthOptions.map((month) => (
+                        <option key={month.value} value={month.value}>
+                          {month.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="field-help">
+                  {t('people.birthdayUnknownYearHelp')}
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="field-group">
+            <label htmlFor="related-person-visibility">
+              {t('people.visibilityLabel')}
+            </label>
+            <select
+              id="related-person-visibility"
+              name="visibility"
+              defaultValue={person?.visibility ?? ContentVisibility.SHARED}
+            >
+              {VISIBILITIES.map((visibility) => (
+                <option key={visibility} value={visibility}>
+                  {t(`people.visibility.${visibility}`)}
+                </option>
+              ))}
+            </select>
+            <p className="field-help">{t('people.visibilityHelp')}</p>
+          </div>
+
+          {error ? <ProblemState error={error} /> : null}
+
+          <div className="form-actions">
+            <button
+              ref={cancelButtonRef}
+              type="button"
+              className="secondary"
+              onClick={onCancel}
+              disabled={pending || Boolean(uploadPhase)}
+            >
+              {t('common.cancel')}
+            </button>
+            <button type="submit" disabled={pending || Boolean(uploadPhase)}>
+              {pending
+                ? t('people.saving')
+                : person
+                  ? t('people.saveChanges')
+                  : t('people.create')}
+            </button>
+          </div>
+
+          {person && onDeleteRequest ? (
+            <div className="people-modal-danger-zone">
+              <button
+                type="button"
+                className="secondary danger compact-action"
+                onClick={onDeleteRequest}
+                disabled={pending || Boolean(uploadPhase)}
+              >
+                {t('people.delete')}
+              </button>
+            </div>
+          ) : null}
+        </form>
+      </section>
+    </div>
   );
 }
 
@@ -413,7 +720,13 @@ function DeleteRelatedPersonDialog({
         ? document.activeElement
         : null;
     cancelButtonRef.current?.focus();
-    return () => previousFocus?.focus();
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      previousFocus?.focus();
+    };
   }, []);
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -466,13 +779,22 @@ function DeleteRelatedPersonDialog({
 export function RelatedPeoplePage({
   peopleApi,
   spaceId,
+  apiBaseUrl,
+  accessToken,
+  attachmentsApi,
 }: {
   peopleApi: PeopleApi;
   spaceId: string;
+  apiBaseUrl?: string;
+  accessToken?: string;
+  attachmentsApi?: AttachmentsApi;
 }) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState<RelatedPersonView | null>(null);
+  const [editingPerson, setEditingPerson] = useState<RelatedPersonView | null>(
+    null,
+  );
+  const [isCreating, setIsCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<RelatedPersonView | null>(
     null,
   );
@@ -515,12 +837,12 @@ export function RelatedPeoplePage({
   const saveMutation = useMutation({
     mutationFn: async (fields: RelatedPersonFields) => {
       try {
-        if (editing) {
+        if (editingPerson) {
           return await peopleApi.updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut(
             {
-              personId: editing.id,
+              personId: editingPerson.id,
               spaceId,
-              ifMatch: String(editing.version),
+              ifMatch: String(editingPerson.version),
               relatedPersonFields: fields,
             },
           );
@@ -536,8 +858,11 @@ export function RelatedPeoplePage({
       }
     },
     onSuccess: async () => {
-      setSavedMessage(editing ? t('people.updated') : t('people.created'));
-      setEditing(null);
+      setSavedMessage(
+        editingPerson ? t('people.updated') : t('people.created'),
+      );
+      setEditingPerson(null);
+      setIsCreating(false);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ['related-people', spaceId],
@@ -584,6 +909,21 @@ export function RelatedPeoplePage({
         eyebrow={t('people.eyebrow')}
         title={t('people.title')}
         description={t('people.intro')}
+        action={
+          <button
+            type="button"
+            className="primary compact-action"
+            onClick={() => {
+              setIsCreating(true);
+              setEditingPerson(null);
+              saveMutation.reset();
+              setSavedMessage(null);
+            }}
+          >
+            <AddIcon />
+            <span>{t('people.addPersonAction')}</span>
+          </button>
+        }
       />
 
       {savedMessage ? (
@@ -592,127 +932,128 @@ export function RelatedPeoplePage({
         </div>
       ) : null}
 
-      <div className="layout-split layout-split-lead-rail">
-        <aside
-          className="layout-rail layout-rail-sticky"
-          aria-label={t('people.formRailAria')}
-        >
-          <RelatedPersonForm
-            key={editing?.id ?? 'new'}
-            person={editing}
-            pending={saveMutation.isPending}
-            onCancel={() => {
-              setEditing(null);
-              saveMutation.reset();
-            }}
-            onSubmit={(fields) => {
-              setSavedMessage(null);
-              saveMutation.mutate(fields);
-            }}
-          />
-          {saveMutation.error ? (
-            <ProblemState error={saveMutation.error} />
-          ) : null}
-        </aside>
-
-        <div className="layout-main">
-          <section
-            className="story-surface"
-            aria-labelledby="related-people-list-title"
-          >
-            <div className="section-head">
-              <div>
-                <p className="section-kicker">{t('people.listKicker')}</p>
-                <h2 id="related-people-list-title">{t('people.listTitle')}</h2>
-              </div>
-              <button
-                type="button"
-                className="secondary compact-action"
-                onClick={() => void peopleQuery.refetch()}
-                disabled={peopleQuery.isFetching}
-              >
-                {peopleQuery.isFetching
-                  ? t('common.refreshing')
-                  : t('common.refresh')}
-              </button>
-            </div>
-
-            {peopleQuery.isLoading ? (
-              <UiState kind="loading" title={t('people.loading')} />
-            ) : null}
-            {peopleQuery.error ? (
-              <ProblemState
-                error={peopleQuery.error}
-                onRetry={() => void peopleQuery.refetch()}
-              />
-            ) : null}
-            {peopleQuery.data?.length === 0 ? (
-              <UiState
-                kind="empty"
-                title={t('people.emptyTitle')}
-                body={t('people.emptyBody')}
-              />
-            ) : null}
-            {peopleQuery.data?.length ? (
-              <ul className="story-list" aria-label={t('people.listAria')}>
-                {peopleQuery.data.map((person) => (
-                  <li key={person.id} className="story-card">
-                    <div className="section-head">
-                      <div>
-                        <h3>{person.displayName}</h3>
-                        <p>
-                          {t(`people.relationship.${person.relationship}`)} ·{' '}
-                          {t(`people.visibility.${person.visibility}`)}
-                        </p>
-                        {person.birthday ? (
-                          <p>
-                            {t('people.birthdayValue', {
-                              date: person.birthdayYearKnown
-                                ? birthdayFormatter.format(person.birthday)
-                                : birthdayWithoutYearFormatter.format(
-                                    person.birthday,
-                                  ),
-                            })}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="form-actions">
-                        <button
-                          type="button"
-                          className="secondary compact-action"
-                          onClick={() => {
-                            setEditing(person);
-                            saveMutation.reset();
-                            setSavedMessage(null);
-                          }}
-                        >
-                          {t('people.edit')}
-                        </button>
-                        <button
-                          type="button"
-                          className="tertiary compact-action"
-                          onClick={() => {
-                            setDeleteTarget(person);
-                            deleteMutation.reset();
-                          }}
-                        >
-                          {t('people.delete')}
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-
-          <ImportantDatesPanel
-            peopleApi={peopleApi}
-            spaceId={spaceId}
-            people={peopleQuery.data ?? []}
-          />
+      <section
+        className="story-surface"
+        aria-labelledby="related-people-list-title"
+      >
+        <div className="section-head">
+          <div>
+            <p className="section-kicker">{t('people.listKicker')}</p>
+            <h2 id="related-people-list-title">{t('people.listTitle')}</h2>
+          </div>
         </div>
-      </div>
+
+        {peopleQuery.isLoading ? (
+          <UiState kind="loading" title={t('people.loading')} />
+        ) : null}
+        {peopleQuery.error ? (
+          <ProblemState
+            error={peopleQuery.error}
+            onRetry={() => void peopleQuery.refetch()}
+          />
+        ) : null}
+        {peopleQuery.data?.length === 0 ? (
+          <UiState
+            kind="empty"
+            title={t('people.emptyTitle')}
+            body={t('people.emptyBody')}
+          />
+        ) : null}
+        {peopleQuery.data?.length ? (
+          <ul className="people-grid" aria-label={t('people.listAria')}>
+            {peopleQuery.data.map((person) => (
+              <li key={person.id} className="people-card-item">
+                <button
+                  type="button"
+                  className="people-card"
+                  onClick={() => {
+                    setEditingPerson(person);
+                    setIsCreating(false);
+                    saveMutation.reset();
+                    setSavedMessage(null);
+                  }}
+                >
+                  <PersonCardAvatar
+                    person={person}
+                    attachmentsApi={attachmentsApi}
+                    spaceId={spaceId}
+                  />
+                  <div className="people-card-body">
+                    <h3 className="people-card-name">{person.displayName}</h3>
+                    <p className="people-card-relationship">
+                      {t(`people.relationship.${person.relationship}`)}
+                    </p>
+                    {person.birthday ? (
+                      <p className="people-card-birthday">
+                        <span
+                          className="people-card-birthday-icon"
+                          aria-hidden="true"
+                        >
+                          <DestinationIcon icon="birthday" />
+                        </span>
+                        <span>
+                          {person.birthdayYearKnown
+                            ? birthdayFormatter.format(person.birthday)
+                            : birthdayWithoutYearFormatter.format(
+                                person.birthday,
+                              )}
+                        </span>
+                      </p>
+                    ) : null}
+                    <span
+                      className={`people-card-badge ${
+                        person.visibility === ContentVisibility.PRIVATE
+                          ? 'people-card-badge-private'
+                          : ''
+                      }`.trim()}
+                    >
+                      {t(`people.visibility.${person.visibility}`)}
+                    </span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
+      <ImportantDatesPanel
+        peopleApi={peopleApi}
+        spaceId={spaceId}
+        people={peopleQuery.data ?? []}
+      />
+
+      {isCreating || editingPerson ? (
+        <RelatedPersonModalDialog
+          key={editingPerson?.id ?? 'create'}
+          person={editingPerson}
+          pending={saveMutation.isPending}
+          error={saveMutation.error}
+          spaceId={spaceId}
+          apiBaseUrl={apiBaseUrl}
+          accessToken={accessToken}
+          attachmentsApi={attachmentsApi}
+          onCancel={() => {
+            setIsCreating(false);
+            setEditingPerson(null);
+            saveMutation.reset();
+          }}
+          onSubmit={(fields) => {
+            setSavedMessage(null);
+            saveMutation.mutate(fields);
+          }}
+          onDeleteRequest={
+            editingPerson
+              ? () => {
+                  const target = editingPerson;
+                  setIsCreating(false);
+                  setEditingPerson(null);
+                  setDeleteTarget(target);
+                }
+              : undefined
+          }
+        />
+      ) : null}
 
       {deleteTarget ? (
         <DeleteRelatedPersonDialog

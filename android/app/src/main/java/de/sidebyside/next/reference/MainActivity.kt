@@ -977,6 +977,7 @@ private fun DemoShell(
                     onOpen = { entry ->
                         engagementTargetRoute(entry.targetType, entry.targetId)?.let { controller.navigate(it) }
                     },
+                    currentAccountId = state.accountId,
                     onLoadMore = viewModel::loadMoreActivity.takeIf { state.activityHasMore },
                     loadingMore = state.activityLoadingMore,
                 )

@@ -1,15 +1,15 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { SpacesApi } from '../api/generated/apis/SpacesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
-import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
+import { Configuration } from '../api/generated/runtime';
 import { useTranslation } from '../i18n';
-import { PartnerConnectionPanel } from './PartnerConnectionPanel';
-import { PartnerIdentityPanel } from './PartnerIdentityPanel';
-import { ProfileAppearancePanel } from './ProfileAppearancePanel';
+import { PageHeader } from './PageHeader';
 import { ProfileIdentityPanel } from './ProfileIdentityPanel';
-import { ProfilePage as ProfilePageBase } from './ProfilePageBase';
-import { ProfileSettingsIndex } from './ProfileSettingsIndex';
-import { TransferPanel } from './TransferPanel';
+import {
+  ProfilePreferencesSection,
+  RelationshipSummarySection,
+} from './ProfilePageBase';
+import './ProfilePage.css';
 
 export interface ProfilePageProps {
   apiBaseUrl: string;
@@ -21,52 +21,52 @@ export interface ProfilePageProps {
 export function ProfilePage(props: ProfilePageProps) {
   const { t } = useTranslation();
   const [displayName, setDisplayName] = useState(props.account.displayName);
-  const currentAccount = { ...props.account, displayName };
-  const currentProps = { ...props, account: currentAccount };
+  const currentAccount = useMemo(
+    () => ({ ...props.account, displayName }),
+    [props.account, displayName],
+  );
+  const currentProps = useMemo(
+    () => ({ ...props, account: currentAccount }),
+    [props, currentAccount],
+  );
+
+  const configuration = useMemo(
+    () =>
+      new Configuration({
+        basePath: props.apiBaseUrl,
+        headers: { Authorization: `Bearer ${props.accessToken}` },
+      }),
+    [props.accessToken, props.apiBaseUrl],
+  );
+  const spacesApi = useMemo(
+    () => new SpacesApi(configuration),
+    [configuration],
+  );
 
   return (
-    <>
-      <ProfilePageBase {...currentProps} />
-      <ProfileSettingsIndex />
-      <ProfileAppearancePanel />
-      <div id="profile-identity-settings">
-        <ProfileIdentityPanel
-          {...currentProps}
-          onDisplayNameChanged={(nextDisplayName) => {
-            // AccountView is the current in-memory session projection. Updating the
-            // existing object keeps subsequent routes in this session from showing
-            // the pre-edit name; Space/Profile queries are invalidated separately by
-            // ProfileIdentityPanel and remain server-authoritative.
-            props.account.displayName = nextDisplayName;
-            setDisplayName(nextDisplayName);
-          }}
-        />
-      </div>
-      <div id="profile-partner-settings">
-        <PartnerIdentityPanel {...currentProps} />
-        <PartnerConnectionPanel {...currentProps} />
-      </div>
-      <div id="profile-data-settings">
-        <TransferPanel
-          apiBaseUrl={props.apiBaseUrl}
-          accessToken={props.accessToken}
-          spaceId={props.spaceId}
-        />
-      </div>
-      <section className="form-card" aria-labelledby="private-area-entry-title">
-        <p className="eyebrow">{t('privateArea.privacyLabel')}</p>
-        <h2 id="private-area-entry-title">{t('privateArea.entry.title')}</h2>
-        <p>{t('privateArea.entry.body')}</p>
-        <p className="field-help">{t('privateArea.entry.privacy')}</p>
-        <div className="form-actions">
-          <Link
-            className="button-link secondary-link"
-            to={PRIVATE_AREA_ROOT_PATH}
-          >
-            {t('privateArea.entry.action')}
-          </Link>
-        </div>
-      </section>
-    </>
+    <div className="page profile-page">
+      <PageHeader
+        eyebrow={t('profiles.eyebrow')}
+        title={t('profiles.title')}
+        description={t('profiles.intro')}
+      />
+
+      {/* Relationship compact badge/row (if anniversary date is configured) */}
+      <RelationshipSummarySection
+        spacesApi={spacesApi}
+        spaceId={props.spaceId}
+      />
+
+      {/* 1. Identity panel for current user */}
+      <ProfileIdentityPanel
+        {...currentProps}
+        onDisplayNameChanged={(nextDisplayName) => {
+          setDisplayName(nextDisplayName);
+        }}
+      />
+
+      {/* 2. Preferences & partner block */}
+      <ProfilePreferencesSection {...currentProps} />
+    </div>
   );
 }
