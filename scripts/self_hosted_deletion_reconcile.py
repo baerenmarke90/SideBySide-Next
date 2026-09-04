@@ -7,14 +7,26 @@ import argparse
 from pathlib import Path
 from uuid import UUID
 
-from scripts.self_hosted_recovery import (
-    TRANSIENT_WRITER_SERVICES,
-    WRITER_SERVICES,
-    ComposeTarget,
-    RecoveryError,
-    _require_postgres,
-    _run,
-)
+try:
+    from scripts.self_hosted_recovery import (
+        TRANSIENT_WRITER_SERVICES,
+        WRITER_SERVICES,
+        ComposeTarget,
+        RecoveryError,
+        _require_postgres,
+        _run,
+    )
+except ModuleNotFoundError as exc:
+    if exc.name != "scripts":
+        raise
+    from self_hosted_recovery import (  # type: ignore[no-redef]
+        TRANSIENT_WRITER_SERVICES,
+        WRITER_SERVICES,
+        ComposeTarget,
+        RecoveryError,
+        _require_postgres,
+        _run,
+    )
 
 
 def reconcile_restored_target(
