@@ -1,5 +1,18 @@
 import type { AppRouteIcon } from '../client/routes';
 
+export function AddIcon({ className }: { className?: string } = {}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      className={className ? `button-icon ${className}` : 'button-icon'}
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
 /**
  * Line icons for destinations, drawn rather than pulled from a package.
  *
@@ -9,11 +22,7 @@ import type { AppRouteIcon } from '../client/routes';
 export function DestinationIcon({ icon }: { icon: AppRouteIcon }) {
   switch (icon) {
     case 'add':
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      );
+      return <AddIcon />;
     case 'today':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">

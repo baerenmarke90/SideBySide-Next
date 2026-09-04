@@ -23,6 +23,7 @@ import {
 import { normalizeClientError } from '../client/problemDetails';
 import { invalidateDashboard } from '../client/dashboardQueries';
 import { useTranslation } from '../i18n';
+import { AddIcon } from './DestinationIcon';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 
@@ -75,16 +76,18 @@ function ImportantDateModalDialog({
 
   const [label, setLabel] = useState(initialDraft.label);
   const [dateVal, setDateVal] = useState(initialDraft.date);
-  const [type, setType] = useState<ImportantDateDraft['type']>(initialDraft.type);
+  const [type, setType] = useState<ImportantDateDraft['type']>(
+    initialDraft.type,
+  );
   const [repeats, setRepeats] = useState<ImportantDateDraft['repeats']>(
     initialDraft.repeats,
   );
   const [relatedPersonId, setRelatedPersonId] = useState(
     initialDraft.relatedPersonId,
   );
-  const [visibility, setVisibility] = useState<ImportantDateDraft['visibility']>(
-    initialDraft.visibility,
-  );
+  const [visibility, setVisibility] = useState<
+    ImportantDateDraft['visibility']
+  >(initialDraft.visibility);
 
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -98,7 +101,15 @@ function ImportantDateModalDialog({
       relatedPersonId !== initialDraft.relatedPersonId ||
       visibility !== initialDraft.visibility
     );
-  }, [label, dateVal, type, repeats, relatedPersonId, visibility, initialDraft]);
+  }, [
+    label,
+    dateVal,
+    type,
+    repeats,
+    relatedPersonId,
+    visibility,
+    initialDraft,
+  ]);
 
   const handleCloseAttempt = useCallback(() => {
     if (pending || deletePending) return;
@@ -362,7 +373,9 @@ function ImportantDateModalDialog({
               name="visibility"
               value={visibility}
               onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                setVisibility(e.target.value as ImportantDateDraft['visibility'])
+                setVisibility(
+                  e.target.value as ImportantDateDraft['visibility'],
+                )
               }
             >
               {VISIBILITIES.map((vVal) => (
@@ -544,7 +557,8 @@ export function ImportantDatesPanel({
             setSavedMessage(null);
           }}
         >
-          + {t('importantDates.create')}
+          <AddIcon />
+          <span>{t('importantDates.create')}</span>
         </button>
       </div>
 
@@ -603,7 +617,7 @@ export function ImportantDatesPanel({
           />
         ) : null}
         {datesQuery.data?.length ? (
-          <ul className="story-list">
+          <ul className="important-dates-list">
             {datesQuery.data.map((date) => {
               const linkedPersonName = date.relatedPersonId
                 ? personNames.get(date.relatedPersonId)
@@ -612,7 +626,7 @@ export function ImportantDatesPanel({
                 <li key={date.id} className="important-date-item">
                   <button
                     type="button"
-                    className="story-card important-date-card"
+                    className="important-date-card"
                     onClick={() => {
                       setEditing(date);
                       setIsCreating(false);
@@ -622,23 +636,37 @@ export function ImportantDatesPanel({
                     }}
                     aria-label={`${date.label} – ${t('importantDates.edit')}`}
                   >
-                    <div className="important-date-content">
-                      <h4>{date.label}</h4>
-                      <p>
-                        {t('importantDates.dateValue', {
-                          date: dateFormatter.format(date.date),
-                        })}{' '}
-                        · {t(`importantDates.type.${date.type}`)} ·{' '}
-                        {t(`importantDates.repeats.${date.repeats}`)} ·{' '}
+                    <div className="important-date-card-header">
+                      <div className="important-date-title-group">
+                        <h4 className="important-date-title">{date.label}</h4>
+                        {linkedPersonName ? (
+                          <span className="important-date-person">
+                            {t('importantDates.linkedPerson', {
+                              name: linkedPersonName,
+                            })}
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="important-date-date">
+                        {dateFormatter.format(date.date)}
+                      </span>
+                    </div>
+                    <div className="important-date-chips">
+                      <span className="important-date-chip">
+                        {t(`importantDates.type.${date.type}`)}
+                      </span>
+                      <span className="important-date-chip">
+                        {t(`importantDates.repeats.${date.repeats}`)}
+                      </span>
+                      <span
+                        className={`important-date-chip ${
+                          date.visibility === ContentVisibility.PRIVATE
+                            ? 'important-date-chip-private'
+                            : 'important-date-chip-shared'
+                        }`}
+                      >
                         {t(`importantDates.visibility.${date.visibility}`)}
-                      </p>
-                      {linkedPersonName ? (
-                        <p>
-                          {t('importantDates.linkedPerson', {
-                            name: linkedPersonName,
-                          })}
-                        </p>
-                      ) : null}
+                      </span>
                     </div>
                   </button>
                 </li>
@@ -650,4 +678,3 @@ export function ImportantDatesPanel({
     </section>
   );
 }
-

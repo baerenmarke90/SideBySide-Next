@@ -40,7 +40,7 @@ import {
 import { useRelatedPersonAvatarUrl } from '../client/useRelatedPersonAvatarUrl';
 import { personInitials } from './PersonIdentity';
 import { useTranslation } from '../i18n';
-import { DestinationIcon } from './DestinationIcon';
+import { AddIcon, DestinationIcon } from './DestinationIcon';
 import { ImportantDatesPanel } from './ImportantDatesPanel';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -169,7 +169,8 @@ function RelatedPersonModalDialog({
     person?.avatarAttachmentId,
   );
 
-  const displayedAvatarUrl = avatarPreviewUrl || (currentAvatarId ? existingAvatarUrl : null);
+  const displayedAvatarUrl =
+    avatarPreviewUrl || (currentAvatarId ? existingAvatarUrl : null);
   const initials = useMemo(
     () => (person ? personInitials(person.displayName) : '?'),
     [person],
@@ -272,7 +273,9 @@ function RelatedPersonModalDialog({
         const objectUrl = URL.createObjectURL(file);
         setPreviewUrl(objectUrl);
       } catch (err) {
-        setUploadError(err instanceof Error ? err.message : t('flow.uploadFailed'));
+        setUploadError(
+          err instanceof Error ? err.message : t('flow.uploadFailed'),
+        );
       } finally {
         setUploadPhase(null);
       }
@@ -311,11 +314,7 @@ function RelatedPersonModalDialog({
   }, [pending, uploadPhase, onCancel]);
 
   return (
-    <div
-      ref={backdropRef}
-      className="modal-backdrop"
-      role="presentation"
-    >
+    <div ref={backdropRef} className="modal-backdrop" role="presentation">
       <section
         ref={dialogRef}
         className="modal-card"
@@ -341,14 +340,13 @@ function RelatedPersonModalDialog({
 
         <form key={person?.id ?? 'new'} className="form-grid" onSubmit={submit}>
           <div className="field-group">
-            <span id="related-person-avatar-label">{t('people.avatarLabel')}</span>
+            <span id="related-person-avatar-label">
+              {t('people.avatarLabel')}
+            </span>
             <div className="people-modal-avatar-row">
               <div className="people-modal-avatar-preview" aria-hidden="true">
                 {displayedAvatarUrl ? (
-                  <img
-                    src={displayedAvatarUrl}
-                    alt=""
-                  />
+                  <img src={displayedAvatarUrl} alt="" />
                 ) : (
                   <span>{initials}</span>
                 )}
@@ -441,7 +439,9 @@ function RelatedPersonModalDialog({
                 onChange={(event) => {
                   const nextYearKnown = event.currentTarget.checked;
                   if (!nextYearKnown && knownBirthday) {
-                    const knownDate = new Date(`${knownBirthday}T00:00:00.000Z`);
+                    const knownDate = new Date(
+                      `${knownBirthday}T00:00:00.000Z`,
+                    );
                     setBirthdayMonth(String(knownDate.getUTCMonth() + 1));
                     setBirthdayDay(String(knownDate.getUTCDate()));
                   }
@@ -457,7 +457,9 @@ function RelatedPersonModalDialog({
                 name="birthday"
                 type="date"
                 value={knownBirthday}
-                onChange={(event) => setKnownBirthday(event.currentTarget.value)}
+                onChange={(event) =>
+                  setKnownBirthday(event.currentTarget.value)
+                }
               />
             ) : (
               <>
@@ -789,9 +791,13 @@ export function RelatedPeoplePage({
 }) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
-  const [editingPerson, setEditingPerson] = useState<RelatedPersonView | null>(null);
+  const [editingPerson, setEditingPerson] = useState<RelatedPersonView | null>(
+    null,
+  );
   const [isCreating, setIsCreating] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<RelatedPersonView | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RelatedPersonView | null>(
+    null,
+  );
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   const birthdayFormatter = useMemo(
@@ -852,7 +858,9 @@ export function RelatedPeoplePage({
       }
     },
     onSuccess: async () => {
-      setSavedMessage(editingPerson ? t('people.updated') : t('people.created'));
+      setSavedMessage(
+        editingPerson ? t('people.updated') : t('people.created'),
+      );
       setEditingPerson(null);
       setIsCreating(false);
       await Promise.all([
@@ -912,7 +920,8 @@ export function RelatedPeoplePage({
               setSavedMessage(null);
             }}
           >
-            + {t('people.addPersonAction')}
+            <AddIcon />
+            <span>{t('people.addPersonAction')}</span>
           </button>
         }
       />
@@ -970,39 +979,39 @@ export function RelatedPeoplePage({
                     spaceId={spaceId}
                   />
                   <div className="people-card-body">
-                  <h3 className="people-card-name">{person.displayName}</h3>
-                  <p className="people-card-relationship">
-                    {t(`people.relationship.${person.relationship}`)}
-                  </p>
-                  {person.birthday ? (
-                    <p className="people-card-birthday">
-                      <span
-                        className="people-card-birthday-icon"
-                        aria-hidden="true"
-                      >
-                        <DestinationIcon icon="birthday" />
-                      </span>
-                      <span>
-                        {person.birthdayYearKnown
-                          ? birthdayFormatter.format(person.birthday)
-                          : birthdayWithoutYearFormatter.format(
-                              person.birthday,
-                            )}
-                      </span>
+                    <h3 className="people-card-name">{person.displayName}</h3>
+                    <p className="people-card-relationship">
+                      {t(`people.relationship.${person.relationship}`)}
                     </p>
-                  ) : null}
-                  <span
-                    className={`people-card-badge ${
-                      person.visibility === ContentVisibility.PRIVATE
-                        ? 'people-card-badge-private'
-                        : ''
-                    }`.trim()}
-                  >
-                    {t(`people.visibility.${person.visibility}`)}
-                  </span>
-                </div>
-              </button>
-            </li>
+                    {person.birthday ? (
+                      <p className="people-card-birthday">
+                        <span
+                          className="people-card-birthday-icon"
+                          aria-hidden="true"
+                        >
+                          <DestinationIcon icon="birthday" />
+                        </span>
+                        <span>
+                          {person.birthdayYearKnown
+                            ? birthdayFormatter.format(person.birthday)
+                            : birthdayWithoutYearFormatter.format(
+                                person.birthday,
+                              )}
+                        </span>
+                      </p>
+                    ) : null}
+                    <span
+                      className={`people-card-badge ${
+                        person.visibility === ContentVisibility.PRIVATE
+                          ? 'people-card-badge-private'
+                          : ''
+                      }`.trim()}
+                    >
+                      {t(`people.visibility.${person.visibility}`)}
+                    </span>
+                  </div>
+                </button>
+              </li>
             ))}
           </ul>
         ) : null}
@@ -1014,7 +1023,7 @@ export function RelatedPeoplePage({
         people={peopleQuery.data ?? []}
       />
 
-      {(isCreating || editingPerson) ? (
+      {isCreating || editingPerson ? (
         <RelatedPersonModalDialog
           key={editingPerson?.id ?? 'create'}
           person={editingPerson}

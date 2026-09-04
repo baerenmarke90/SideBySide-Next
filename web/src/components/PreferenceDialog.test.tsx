@@ -200,11 +200,11 @@ describe('PreferenceManager focus restoration and terminology', () => {
     );
   }
 
-  it('restores focus to + Vorliebe trigger button after closing modal', async () => {
+  it('restores focus to Vorliebe trigger button after closing modal', async () => {
     const user = userEvent.setup();
     renderManagerFixture(ProfileVisibility.SELF_PROFILE);
 
-    const triggerBtn = screen.getByRole('button', { name: '+ Vorliebe' });
+    const triggerBtn = screen.getByRole('button', { name: /Vorliebe/i });
     triggerBtn.focus();
     expect(document.activeElement).toBe(triggerBtn);
 
@@ -222,11 +222,11 @@ describe('PreferenceManager focus restoration and terminology', () => {
     });
   });
 
-  it('restores focus to + Notiz trigger button for private partner notes', async () => {
+  it('restores focus to Notiz trigger button for private partner notes', async () => {
     const user = userEvent.setup();
     renderManagerFixture(ProfileVisibility.PRIVATE_PARTNER_NOTE);
 
-    const triggerBtn = screen.getByRole('button', { name: '+ Notiz' });
+    const triggerBtn = screen.getByRole('button', { name: /Notiz/i });
     triggerBtn.focus();
     expect(document.activeElement).toBe(triggerBtn);
 

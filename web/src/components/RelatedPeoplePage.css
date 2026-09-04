@@ -71,6 +71,14 @@
   color: var(--color-text-secondary);
 }
 
+.important-dates-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
 .important-date-item {
   list-style: none;
 }
@@ -81,20 +89,100 @@
   text-align: left;
   width: 100%;
   cursor: pointer;
-  transition: transform var(--motion-duration-short) ease,
-    box-shadow var(--motion-duration-short) ease,
-    border-color var(--motion-duration-short) ease;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-large);
+  box-shadow: 0 1px 3px rgba(35, 30, 40, 0.04);
+  transition:
+    transform var(--motion-fast),
+    box-shadow var(--motion-fast),
+    border-color var(--motion-fast);
 }
 
 .important-date-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--color-brand-glow);
-  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-soft);
 }
 
 .important-date-card:focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.important-date-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.important-date-title-group {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.important-date-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--color-text);
+}
+
+.important-date-person {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.important-date-date {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.important-date-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.important-date-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-subtle);
+  border-radius: var(--radius-pill);
+}
+
+.important-date-chip-private {
+  color: var(--color-private);
+  background: color-mix(
+    in srgb,
+    var(--color-brand-surface) 75%,
+    var(--color-surface-subtle)
+  );
+}
+
+.important-date-chip-shared {
+  color: var(--color-shared);
+  background: color-mix(
+    in srgb,
+    var(--color-shared-surface) 75%,
+    var(--color-surface-subtle)
+  );
 }
 
 .important-dates-modal-actions {
@@ -217,7 +305,9 @@ button.danger:hover:not(:disabled) {
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   cursor: pointer;
-  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
   text-align: left;
   width: 100%;
   box-sizing: border-box;
@@ -389,4 +479,3 @@ button.danger:hover:not(:disabled) {
   display: flex;
   justify-content: flex-start;
 }
-

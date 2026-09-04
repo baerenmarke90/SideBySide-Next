@@ -10,7 +10,10 @@ import { RelatedPersonDeletePolicy } from '../api/generated/models/RelatedPerson
 import type { RelatedPersonView } from '../api/generated/models/RelatedPersonView';
 import de from '../i18n/locales/de';
 import people from '../i18n/locales/people';
-import { DeleteRelatedPersonDialogContent, RelatedPeoplePage } from './RelatedPeoplePage';
+import {
+  DeleteRelatedPersonDialogContent,
+  RelatedPeoplePage,
+} from './RelatedPeoplePage';
 
 const person: RelatedPersonView = {
   id: 'person-1',
@@ -87,29 +90,41 @@ describe('RelatedPerson delete dialog', () => {
 });
 
 describe('RelatedPeoplePage redesigned surface', () => {
-  function createMockPeopleApi(initialPeople: RelatedPersonView[] = [person]): PeopleApi {
+  function createMockPeopleApi(
+    initialPeople: RelatedPersonView[] = [person],
+  ): PeopleApi {
     return {
-      listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGet: vi.fn().mockResolvedValue(initialPeople),
-      createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPost: vi.fn().mockImplementation(({ relatedPersonFields }) =>
-        Promise.resolve({
-          id: 'person-new',
-          ...relatedPersonFields,
-          version: 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }),
-      ),
-      updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut: vi.fn().mockImplementation(({ personId, relatedPersonFields }) =>
-        Promise.resolve({
-          id: personId,
-          ...relatedPersonFields,
-          version: 2,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }),
-      ),
-      deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDelete: vi.fn().mockResolvedValue(undefined),
-      listImportantDatesApiV1SpacesSpaceIdImportantDatesGet: vi.fn().mockResolvedValue([]),
+      listRelatedPersonsApiV1SpacesSpaceIdRelatedPersonsGet: vi
+        .fn()
+        .mockResolvedValue(initialPeople),
+      createRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPost: vi
+        .fn()
+        .mockImplementation(({ relatedPersonFields }) =>
+          Promise.resolve({
+            id: 'person-new',
+            ...relatedPersonFields,
+            version: 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }),
+        ),
+      updateRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdPut: vi
+        .fn()
+        .mockImplementation(({ personId, relatedPersonFields }) =>
+          Promise.resolve({
+            id: personId,
+            ...relatedPersonFields,
+            version: 2,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }),
+        ),
+      deleteRelatedPersonApiV1SpacesSpaceIdRelatedPersonsPersonIdDelete: vi
+        .fn()
+        .mockResolvedValue(undefined),
+      listImportantDatesApiV1SpacesSpaceIdImportantDatesGet: vi
+        .fn()
+        .mockResolvedValue([]),
     } as unknown as PeopleApi;
   }
 
@@ -173,7 +188,9 @@ describe('RelatedPeoplePage redesigned surface', () => {
       expect(screen.getByRole('heading', { name: 'Lisa' })).not.toBeNull();
     });
 
-    const card = screen.getByRole('heading', { name: 'Lisa' }).closest('.people-card');
+    const card = screen
+      .getByRole('heading', { name: 'Lisa' })
+      .closest('.people-card');
     expect(card).not.toBeNull();
     if (!card) throw new Error('card not found');
     fireEvent.click(card);
@@ -241,7 +258,9 @@ describe('RelatedPeoplePage redesigned surface', () => {
     expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test-avatar-1');
 
     // Close modal via close button
-    const closeBtn = screen.getByRole('button', { name: people.closeDialogAria });
+    const closeBtn = screen.getByRole('button', {
+      name: people.closeDialogAria,
+    });
     fireEvent.click(closeBtn);
 
     // Second URL revoked on unmount
