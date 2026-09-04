@@ -128,7 +128,7 @@ def test_accepted_tombstone_is_immediately_fail_closed_and_idempotent(session: S
     assert deletion.accepted_at == accepted_at
     assert account.disabled_at == accepted_at
     assert membership.status == MembershipStatus.LEFT.value
-    assert membership.ended_at is not None
+    assert membership.ended_at == accepted_at
     assert device.revoked_at is not None
     assert device.access_token_hash is None
     assert endpoint.disabled_at == accepted_at
@@ -137,11 +137,10 @@ def test_accepted_tombstone_is_immediately_fail_closed_and_idempotent(session: S
     with pytest.raises(UnauthenticatedError):
         sessions.authenticate(session, issued.access_token)
 
-    first_ended_at = membership.ended_at
     repeated = apply_accepted_tombstone(session, account.id, accepted_at=accepted_at)
     assert repeated is not None
     assert repeated.account_id == deletion.account_id
-    assert membership.ended_at == first_ended_at
+    assert membership.ended_at == accepted_at
     assert _count(session, AccountDeletion, AccountDeletion.account_id == account.id) == 1
 
 
@@ -299,6 +298,7 @@ def test_core_cleanup_deletes_private_identity_state_but_retains_shared_history(
         )
     ).scalar_one()
     assert membership.status == MembershipStatus.LEFT.value
+    assert membership.ended_at == accepted_at
 
     assert account.display_name == DELETED_ACCOUNT_DISPLAY_NAME
     assert account.birthday is None
