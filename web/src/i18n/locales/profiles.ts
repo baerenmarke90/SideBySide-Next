@@ -17,6 +17,7 @@ const profiles = {
   relationshipCurrent: 'Aktuell: {{duration}}',
   relationshipYearsMonths: '{{years}} Jahre, {{months}} Monate',
   relationshipDays: '{{days}} Tage',
+  relationshipDurationTitle: 'Eure Zeit',
   relationshipNotAvailable: 'Noch keine Beziehungsdauer verfügbar.',
   relationshipSave: 'Beziehungsprofil speichern',
   relationshipSaving: 'Wird gespeichert …',

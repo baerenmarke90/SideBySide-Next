@@ -301,6 +301,7 @@ ALLOWED_LOCALIZED_TEXTS = (
     "Pfingstrosen im Juni",
     "Scharf mit Koriander",
     "von Alex",
+    "von Sam",
 )
 
 DIAGNOSTIC_CALLS = {"print", "fail", "skip", "xfail"}

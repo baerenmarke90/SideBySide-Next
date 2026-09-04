@@ -9,7 +9,11 @@ import { ProfilePage } from './ProfilePage';
 const SPACE_ID = 'space-1';
 const ACCOUNT_ID = 'account-1';
 
-function renderProfilePageFixture(preferences: unknown[] = []): string {
+function renderProfilePageFixture(
+  preferences: unknown[] = [],
+  partnerPreferences: unknown[] = [],
+  spaceProfileOverrides: Record<string, unknown> = {},
+): string {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -22,6 +26,14 @@ function renderProfilePageFixture(preferences: unknown[] = []): string {
   });
 
   queryClient.setQueryData(['profile-preferences', SPACE_ID], preferences);
+
+  queryClient.setQueryData(['partner-profile', SPACE_ID, 'account-2'], {
+    accountId: 'account-2',
+    displayName: 'Sam',
+    profileAttachmentId: null,
+    preferences: partnerPreferences,
+    version: 1,
+  });
 
   queryClient.setQueryData(['space', SPACE_ID], {
     id: SPACE_ID,
@@ -38,6 +50,7 @@ function renderProfilePageFixture(preferences: unknown[] = []): string {
     relationshipYears: null,
     relationshipMonths: null,
     relationshipDays: null,
+    ...spaceProfileOverrides,
   });
 
   queryClient.setQueryData(['instance-status'], {
@@ -163,5 +176,76 @@ describe('Profile page reorganization', () => {
     expect(html).toContain('+ Notiz');
     expect(html).toContain('Lieblingsblumen');
     expect(html).toContain('private-partner-notes-badge');
+  });
+
+  it('filters self preferences strictly by current account ID and shows partner preferences only in read-only section', () => {
+    const html = renderProfilePageFixture(
+      [
+        {
+          id: 'pref-self',
+          accountId: ACCOUNT_ID,
+          category: PreferenceCategory.FOOD,
+          sentiment: PreferenceSentiment.LOVE,
+          topic: 'Pasta',
+          value: 'Al dente mit Salbei',
+          visibility: ProfileVisibility.SELF_PROFILE,
+          version: 1,
+        },
+        {
+          id: 'pref-partner-shared',
+          accountId: 'account-2',
+          category: PreferenceCategory.DRINK,
+          sentiment: PreferenceSentiment.LIKE,
+          topic: 'Matcha Tea',
+          value: 'Zeremoniell',
+          visibility: ProfileVisibility.SELF_PROFILE,
+          version: 1,
+        },
+      ],
+      [
+        {
+          id: 'pref-partner-shared',
+          accountId: 'account-2',
+          category: PreferenceCategory.DRINK,
+          sentiment: PreferenceSentiment.LIKE,
+          topic: 'Matcha Tea',
+          value: 'Zeremoniell',
+          visibility: ProfileVisibility.SELF_PROFILE,
+          version: 1,
+        },
+      ],
+    );
+
+    // Current account's preference appears in "Meine Vorlieben" as an editable chip
+    expect(html).toContain('Pasta');
+    expect(html).toContain('Al dente mit Salbei');
+
+    // Partner preference is NOT rendered as an editable chip in self preferences
+    expect(html).not.toContain(
+      'profile-preference-chip" type="button"><span aria-hidden="true" class="profile-preference-chip-sentiment" data-sentiment="LIKE">👍</span><span class="profile-preference-chip-topic">Matcha Tea',
+    );
+
+    // Partner preference appears exclusively in the read-only partner profile section as a card
+    expect(html).toContain('Profil von Sam');
+    expect(html).toContain('profile-preference-card');
+    expect(html).toContain('Matcha Tea');
+    expect(html).toContain('Zeremoniell');
+  });
+
+  it('renders both anniversary date and duration in read-only relationship summary when configured', () => {
+    const html = renderProfilePageFixture([], [], {
+      relationshipStartedOn: new Date('2022-02-14T00:00:00.000Z'),
+      showRelationshipDuration: true,
+      durationDisplayMode: 'YEARS_MONTHS',
+      relationshipYears: 4,
+      relationshipMonths: 6,
+    });
+
+    expect(html).toContain('relationship-summary-section');
+    expect(html).toContain('profile-relationship-start');
+    expect(html).toContain('Zusammen seit');
+    expect(html).toContain('profile-duration');
+    expect(html).toContain('Eure Zeit');
+    expect(html).toContain('4 Jahre, 6 Monate');
   });
 });

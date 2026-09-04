@@ -19,7 +19,7 @@ import {
   profilePreferenceCreateFromDraft,
   profilePreferenceUpdateFromDraft,
 } from '../client/profilePreferenceDraft';
-import { useTranslation } from '../i18n';
+import { resolvedLocale, useTranslation } from '../i18n';
 import { PartnerIdentityPanel } from './PartnerIdentityPanel';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -72,6 +72,14 @@ function relationshipDuration(
   return t('profiles.relationshipNotAvailable');
 }
 
+function formatDateOnly(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat(resolvedLocale(), {
+    dateStyle: 'long',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
 /** Strictly read-only relationship summary for personal profile view. */
 export function RelationshipSummarySection({
   spacesApi,
@@ -113,14 +121,32 @@ export function RelationshipSummarySection({
         />
       ) : null}
       {profileQuery.data ? (
-        <p className="profile-duration" role="status">
-          {profileQuery.data.relationshipStartedOn &&
-          profileQuery.data.showRelationshipDuration
-            ? t('profiles.relationshipCurrent', {
-                duration: relationshipDuration(profileQuery.data, t),
-              })
-            : t('profiles.relationshipNotAvailable')}
-        </p>
+        profileQuery.data.relationshipStartedOn ? (
+          <div className="profile-relationship-summary" role="status">
+            <p className="profile-relationship-start">
+              <span className="profile-relationship-label">
+                {t('profiles.relationshipStartLabel')}:{' '}
+              </span>
+              <span className="profile-relationship-value">
+                {formatDateOnly(profileQuery.data.relationshipStartedOn)}
+              </span>
+            </p>
+            {profileQuery.data.showRelationshipDuration ? (
+              <p className="profile-duration">
+                <span className="profile-relationship-label">
+                  {t('profiles.relationshipDurationTitle')}:{' '}
+                </span>
+                <span className="profile-relationship-value">
+                  {relationshipDuration(profileQuery.data, t)}
+                </span>
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="profile-duration" role="status">
+            {t('profiles.relationshipNotAvailable')}
+          </p>
+        )
       ) : null}
     </section>
   );
@@ -1017,15 +1043,20 @@ export function ProfilePreferencesSection({
 
   const selfPreferences = preferencesQuery.data
     ? preferencesQuery.data.filter(
-        (pref) => pref.visibility === ProfileVisibility.SELF_PROFILE,
+        (pref) =>
+          pref.accountId === account.id &&
+          pref.visibility === ProfileVisibility.SELF_PROFILE,
       )
     : [];
 
-  const privatePartnerNotes = preferencesQuery.data
-    ? preferencesQuery.data.filter(
-        (pref) => pref.visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE,
-      )
-    : [];
+  const privatePartnerNotes =
+    preferencesQuery.data && partner
+      ? preferencesQuery.data.filter(
+          (pref) =>
+            pref.accountId === partner.id &&
+            pref.visibility === ProfileVisibility.PRIVATE_PARTNER_NOTE,
+        )
+      : [];
 
   return (
     <div className="profile-preferences-section">
