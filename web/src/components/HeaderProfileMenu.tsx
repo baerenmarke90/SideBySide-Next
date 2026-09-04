@@ -80,7 +80,7 @@ export function HeaderProfileMenu({
       <button
         ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
-        className="header-profile-trigger"
+        className="shell-utility-link header-profile-trigger"
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-label={t('navigation.profileMenu')}
@@ -160,4 +160,3 @@ export function HeaderProfileMenu({
     </div>
   );
 }
-

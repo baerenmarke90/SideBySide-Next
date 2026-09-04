@@ -82,11 +82,8 @@
 
 .header-profile-trigger {
   list-style: none;
-  background: transparent;
-  border: 0;
+  overflow: hidden;
   padding: 0;
-  cursor: pointer;
-  display: inline-flex;
 }
 
 .header-profile-trigger::-webkit-details-marker {
@@ -94,7 +91,19 @@
 }
 
 .header-profile-trigger .person-identity {
+  display: inline-grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
   gap: 0;
+}
+
+.header-profile-trigger .person-identity-avatar {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-size: 0.95rem;
 }
 
 .header-profile-popover {
@@ -310,6 +319,27 @@
 
 .header-notifications-all-link:hover {
   text-decoration: underline;
+}
+
+.header-notifications-portal {
+  position: relative;
+  z-index: 90;
+}
+
+.header-notifications-bottom-sheet {
+  position: fixed;
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 80vh;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  border-bottom: none;
+  z-index: 91;
+  padding-bottom: max(var(--space-2), env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
 }
 
 @media (max-width: 640px) {

@@ -4,18 +4,27 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import type { NotificationItem } from '../api/generated/models/NotificationItem';
-import { notificationUnreadCountQueryKey, notificationsListQueryKey } from '../client/notificationQueries';
+import {
+  notificationUnreadCountQueryKey,
+  notificationsListQueryKey,
+} from '../client/notificationQueries';
 import m5s5 from '../i18n/locales/m5s5';
 import navigation from '../i18n/locales/navigation';
 import { HeaderNotificationsMenu } from './HeaderNotificationsMenu';
 
-function LocationTracker({ onLocation }: { onLocation: (loc: string) => void }) {
+function LocationTracker({
+  onLocation,
+}: {
+  onLocation: (loc: string) => void;
+}) {
   const loc = useLocation();
   onLocation(loc.pathname);
   return null;
 }
 
-function createSampleNotification(overrides: Partial<NotificationItem> = {}): NotificationItem {
+function createSampleNotification(
+  overrides: Partial<NotificationItem> = {},
+): NotificationItem {
   return {
     id: 'notif-1',
     actorId: 'account-partner',
@@ -43,7 +52,9 @@ function renderNotificationMenu({
   });
 
   const spaceId = 'space-1';
-  queryClient.setQueryData(notificationUnreadCountQueryKey(spaceId), { unreadCount });
+  queryClient.setQueryData(notificationUnreadCountQueryKey(spaceId), {
+    unreadCount,
+  });
   queryClient.setQueryData(notificationsListQueryKey(spaceId), {
     pages: [{ items, nextCursor: null }],
     pageParams: [null],
@@ -55,8 +66,14 @@ function renderNotificationMenu({
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/today']}>
         <div>
-          <LocationTracker onLocation={(loc) => { currentLocation = loc; }} />
-          <button type="button" data-testid="outside-target">Outside Element</button>
+          <LocationTracker
+            onLocation={(loc) => {
+              currentLocation = loc;
+            }}
+          />
+          <button type="button" data-testid="outside-target">
+            Outside Element
+          </button>
           <HeaderNotificationsMenu
             apiBaseUrl="http://api.example.test"
             accessToken="test-token"
@@ -146,13 +163,17 @@ describe('HeaderNotificationsMenu', () => {
 
   it('clicking "Alle Benachrichtigungen anzeigen" navigates to /more/notifications and closes', () => {
     renderNotificationMenu({ unreadCount: 0 });
-    const trigger = screen.getByRole('button', { name: navigation.notifications });
+    const trigger = screen.getByRole('button', {
+      name: navigation.notifications,
+    });
 
     act(() => {
       fireEvent.click(trigger);
     });
 
-    const allLink = screen.getByRole('link', { name: m5s5.notifications.showAll });
+    const allLink = screen.getByRole('link', {
+      name: m5s5.notifications.showAll,
+    });
     expect(allLink.getAttribute('href')).toBe('/more/notifications');
 
     act(() => {
@@ -164,7 +185,9 @@ describe('HeaderNotificationsMenu', () => {
 
   it('dismisses on outside pointerdown but stays open on inside click', () => {
     renderNotificationMenu({ unreadCount: 0 });
-    const trigger = screen.getByRole('button', { name: navigation.notifications });
+    const trigger = screen.getByRole('button', {
+      name: navigation.notifications,
+    });
     const outside = screen.getByTestId('outside-target');
 
     act(() => {
@@ -173,7 +196,9 @@ describe('HeaderNotificationsMenu', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('true');
 
     // Inside panel click
-    const panel = screen.getByRole('region', { name: m5s5.notifications.previewTitle });
+    const panel = screen.getByRole('region', {
+      name: m5s5.notifications.previewTitle,
+    });
     act(() => {
       fireEvent.pointerDown(panel);
     });
@@ -188,7 +213,9 @@ describe('HeaderNotificationsMenu', () => {
 
   it('dismisses on Escape key and restores focus to bell trigger', () => {
     renderNotificationMenu({ unreadCount: 0 });
-    const trigger = screen.getByRole('button', { name: navigation.notifications });
+    const trigger = screen.getByRole('button', {
+      name: navigation.notifications,
+    });
 
     act(() => {
       fireEvent.click(trigger);
@@ -204,12 +231,159 @@ describe('HeaderNotificationsMenu', () => {
 
   it('renders empty state when there are no notifications', () => {
     renderNotificationMenu({ unreadCount: 0, items: [] });
-    const trigger = screen.getByRole('button', { name: navigation.notifications });
+    const trigger = screen.getByRole('button', {
+      name: navigation.notifications,
+    });
 
     act(() => {
       fireEvent.click(trigger);
     });
 
     expect(screen.getByText(m5s5.notifications.emptyPreview)).toBeDefined();
+  });
+
+  it('renders anchored popover inside header container on desktop viewports', () => {
+    renderNotificationMenu({ unreadCount: 1 });
+    const trigger = screen.getByRole('button', { name: /1 ungelesen/i });
+
+    act(() => {
+      fireEvent.click(trigger);
+    });
+
+    // On desktop, popover is rendered directly inside the header menu container
+    const menuContainer = trigger.closest('.header-notifications-menu');
+    expect(menuContainer).not.toBeNull();
+    const popover = menuContainer?.querySelector(
+      '.header-notifications-popover',
+    );
+    expect(popover).not.toBeNull();
+    expect(
+      popover?.classList.contains('header-notifications-bottom-sheet'),
+    ).toBe(false);
+
+    // No portal rendered into document.body
+    expect(
+      document.body.querySelector('.header-notifications-portal'),
+    ).toBeNull();
+  });
+
+  describe('compact / mobile viewport bottom sheet', () => {
+    const originalMatchMedia = window.matchMedia;
+
+    beforeEach(() => {
+      window.matchMedia = vi.fn().mockImplementation((query) => ({
+        matches: query === '(max-width: 640px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+    });
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+      document.body.style.overflow = '';
+    });
+
+    it('renders viewport-level bottom sheet into document.body and locks body scroll', () => {
+      document.body.style.overflow = 'auto';
+      renderNotificationMenu({ unreadCount: 1 });
+      const trigger = screen.getByRole('button', { name: /1 ungelesen/i });
+
+      act(() => {
+        fireEvent.click(trigger);
+      });
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+
+      // Portalled into document.body
+      const portal = document.body.querySelector(
+        '.header-notifications-portal',
+      );
+      expect(portal).not.toBeNull();
+
+      // Portal container has dialog accessibility role
+      expect(portal?.getAttribute('role')).toBe('dialog');
+      expect(portal?.getAttribute('aria-modal')).toBe('true');
+
+      // Sheet has bottom sheet class
+      const sheet = portal?.querySelector('.header-notifications-bottom-sheet');
+      expect(sheet).not.toBeNull();
+
+      // Body scroll is locked
+      expect(document.body.style.overflow).toBe('hidden');
+
+      // Clicking backdrop dismisses sheet and restores body scroll
+      const backdrop = portal?.querySelector('.header-notifications-backdrop');
+      expect(backdrop).not.toBeNull();
+      act(() => {
+        fireEvent.click(backdrop as HTMLElement);
+      });
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      expect(
+        document.body.querySelector('.header-notifications-portal'),
+      ).toBeNull();
+      expect(document.body.style.overflow).toBe('auto');
+    });
+
+    it('mobile bottom sheet dismisses on Escape and restores body scroll and focus', () => {
+      document.body.style.overflow = 'visible';
+      renderNotificationMenu({ unreadCount: 1 });
+      const trigger = screen.getByRole('button', { name: /1 ungelesen/i });
+
+      act(() => {
+        fireEvent.click(trigger);
+      });
+
+      expect(document.body.style.overflow).toBe('hidden');
+
+      act(() => {
+        fireEvent.keyDown(window, { key: 'Escape' });
+      });
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      expect(
+        document.body.querySelector('.header-notifications-portal'),
+      ).toBeNull();
+      expect(document.body.style.overflow).toBe('visible');
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('clicking a notification in mobile bottom sheet navigates, closes sheet, and restores body scroll', () => {
+      document.body.style.overflow = '';
+      const { getLocation } = renderNotificationMenu({
+        unreadCount: 1,
+        items: [
+          createSampleNotification({
+            id: 'notif-mobile-1',
+            targetType: 'PLAN',
+            targetId: 'plan-mobile-456',
+          }),
+        ],
+      });
+
+      const trigger = screen.getByRole('button', { name: /1 ungelesen/i });
+      act(() => {
+        fireEvent.click(trigger);
+      });
+
+      expect(document.body.style.overflow).toBe('hidden');
+
+      const notifItem = screen.getByRole('button', { name: /Alex Partner/i });
+      act(() => {
+        fireEvent.click(notifItem);
+      });
+
+      expect(getLocation()).toBe('/plan/plans/plan-mobile-456');
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      expect(
+        document.body.querySelector('.header-notifications-portal'),
+      ).toBeNull();
+      expect(document.body.style.overflow).toBe('');
+    });
   });
 });

@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { NotificationsApi } from '../api/generated/apis/NotificationsApi';
@@ -17,6 +18,42 @@ import { useDismissiblePopover } from '../client/useDismissiblePopover';
 import { useTranslation } from '../i18n';
 import { DestinationIcon } from './DestinationIcon';
 import { AuthorAvatar } from './PersonIdentity';
+
+function useIsCompact(query = '(max-width: 640px)'): boolean {
+  const [isCompact, setIsCompact] = useState(() => {
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return false;
+    }
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return;
+    }
+    const media = window.matchMedia(query);
+    setIsCompact(media.matches);
+
+    const listener = (event: MediaQueryListEvent) => {
+      setIsCompact(event.matches);
+    };
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', listener);
+      return () => media.removeEventListener('change', listener);
+    }
+    media.addListener?.(listener);
+    return () => media.removeListener?.(listener);
+  }, [query]);
+
+  return isCompact;
+}
 
 export interface HeaderNotificationsMenuProps {
   apiBaseUrl: string;
@@ -129,11 +166,129 @@ export function HeaderNotificationsMenu({
     }
   }
 
-  return (
-    <div
-      ref={panelRef as React.RefObject<HTMLDivElement>}
-      className="header-notifications-menu"
+  const isCompact = useIsCompact();
+
+  // Manage body scroll locking when mobile bottom sheet is open
+  useEffect(() => {
+    if (!isOpen || !isCompact || typeof document === 'undefined') return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen, isCompact]);
+
+  const popoverContent = (
+    <section
+      ref={panelRef as React.RefObject<HTMLElement>}
+      className={`header-notifications-popover${isCompact ? ' header-notifications-bottom-sheet' : ''}`}
+      aria-label={t('m5s5.notifications.previewTitle')}
+      hidden={!isOpen}
     >
+      <div className="header-notifications-head">
+        <h2 className="header-notifications-title">
+          {t('m5s5.notifications.previewTitle')}
+        </h2>
+      </div>
+
+      <div className="header-notifications-body">
+        {notificationsQuery.isLoading ? (
+          <div
+            className="header-notifications-loading"
+            role="status"
+            aria-busy="true"
+          >
+            {t('states.loading.title')}
+          </div>
+        ) : previewItems.length === 0 ? (
+          <div className="header-notifications-empty" role="status">
+            {t('m5s5.notifications.emptyPreview')}
+          </div>
+        ) : (
+          <ul className="header-notifications-list">
+            {previewItems.map((item) => {
+              const isUnread = !item.readAt;
+              const isOwn = Boolean(
+                currentAccountId && item.actor?.id === currentAccountId,
+              );
+              const title = getNotificationItemTitle(item, t, currentAccountId);
+              const relativeTime = formatRelativeTime(item.createdAt, t);
+
+              return (
+                <li key={item.id} className="header-notifications-item-wrapper">
+                  <button
+                    type="button"
+                    className={`header-notifications-item${isUnread ? ' header-notifications-item-unread' : ''}`}
+                    onClick={() => handleNotificationClick(item)}
+                  >
+                    <div
+                      className="header-notifications-item-avatar"
+                      aria-hidden="true"
+                    >
+                      {item.actor ? (
+                        <AuthorAvatar
+                          author={
+                            isOwn
+                              ? {
+                                  ...item.actor,
+                                  displayName: t('m5s5.activity.you'),
+                                }
+                              : item.actor
+                          }
+                          profilesApi={profilesApi}
+                          spaceId={spaceId}
+                          size="small"
+                        />
+                      ) : item.kind === 'THINKING_OF_YOU' ? (
+                        <span
+                          className="notification-heart-icon"
+                          aria-hidden="true"
+                        >
+                          ♥
+                        </span>
+                      ) : (
+                        <span className="header-notifications-fallback-icon">
+                          <DestinationIcon icon="notifications" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="header-notifications-item-content">
+                      <p className="header-notifications-item-title">{title}</p>
+                      <time
+                        className="header-notifications-item-time"
+                        dateTime={item.createdAt.toISOString()}
+                      >
+                        {relativeTime}
+                      </time>
+                    </div>
+                    {isUnread ? (
+                      <span
+                        className="header-notification-unread-dot"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="header-notifications-footer">
+        <Link
+          to={MORE_NOTIFICATIONS_ROUTE}
+          className="header-notifications-all-link"
+          onClick={() => close()}
+        >
+          {t('m5s5.notifications.showAll')}
+        </Link>
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="header-notifications-menu">
       <button
         ref={triggerRef as React.RefObject<HTMLButtonElement>}
         type="button"
@@ -155,128 +310,29 @@ export function HeaderNotificationsMenu({
         </span>
       </button>
 
-      {isOpen ? (
-        <div
-          className="header-notifications-backdrop"
-          aria-hidden="true"
-          onClick={() => close()}
-        />
-      ) : null}
-
-      <section
-        className="header-notifications-popover"
-        aria-label={t('m5s5.notifications.previewTitle')}
-        hidden={!isOpen}
-      >
-        <div className="header-notifications-head">
-          <h2 className="header-notifications-title">
-            {t('m5s5.notifications.previewTitle')}
-          </h2>
-        </div>
-
-        <div className="header-notifications-body">
-          {notificationsQuery.isLoading ? (
+      {/* Mobile: Viewport-level bottom sheet portalled outside header containing block */}
+      {isCompact && isOpen && typeof document !== 'undefined'
+        ? createPortal(
             <div
-              className="header-notifications-loading"
-              role="status"
-              aria-busy="true"
+              className="header-notifications-portal"
+              data-testid="header-notifications-portal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('m5s5.notifications.previewTitle')}
             >
-              {t('states.loading.title')}
-            </div>
-          ) : previewItems.length === 0 ? (
-            <div className="header-notifications-empty" role="status">
-              {t('m5s5.notifications.emptyPreview')}
-            </div>
-          ) : (
-            <ul className="header-notifications-list">
-              {previewItems.map((item) => {
-                const isUnread = !item.readAt;
-                const isOwn = Boolean(
-                  currentAccountId && item.actor?.id === currentAccountId,
-                );
-                const title = getNotificationItemTitle(
-                  item,
-                  t,
-                  currentAccountId,
-                );
-                const relativeTime = formatRelativeTime(item.createdAt, t);
+              <div
+                className="header-notifications-backdrop"
+                aria-hidden="true"
+                onClick={() => close()}
+              />
+              {popoverContent}
+            </div>,
+            document.body,
+          )
+        : null}
 
-                return (
-                  <li
-                    key={item.id}
-                    className="header-notifications-item-wrapper"
-                  >
-                    <button
-                      type="button"
-                      className={`header-notifications-item${isUnread ? ' header-notifications-item-unread' : ''}`}
-                      onClick={() => handleNotificationClick(item)}
-                    >
-                      <div
-                        className="header-notifications-item-avatar"
-                        aria-hidden="true"
-                      >
-                        {item.actor ? (
-                          <AuthorAvatar
-                            author={
-                              isOwn
-                                ? {
-                                    ...item.actor,
-                                    displayName: t('m5s5.activity.you'),
-                                  }
-                                : item.actor
-                            }
-                            profilesApi={profilesApi}
-                            spaceId={spaceId}
-                            size="small"
-                          />
-                        ) : item.kind === 'THINKING_OF_YOU' ? (
-                          <span
-                            className="notification-heart-icon"
-                            aria-hidden="true"
-                          >
-                            ♥
-                          </span>
-                        ) : (
-                          <span className="header-notifications-fallback-icon">
-                            <DestinationIcon icon="notifications" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="header-notifications-item-content">
-                        <p className="header-notifications-item-title">
-                          {title}
-                        </p>
-                        <time
-                          className="header-notifications-item-time"
-                          dateTime={item.createdAt.toISOString()}
-                        >
-                          {relativeTime}
-                        </time>
-                      </div>
-                      {isUnread ? (
-                        <span
-                          className="header-notification-unread-dot"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        <div className="header-notifications-footer">
-          <Link
-            to={MORE_NOTIFICATIONS_ROUTE}
-            className="header-notifications-all-link"
-            onClick={() => close()}
-          >
-            {t('m5s5.notifications.showAll')}
-          </Link>
-        </div>
-      </section>
+      {/* Desktop: Anchored popover in normal header flow */}
+      {!isCompact ? popoverContent : null}
     </div>
   );
 }
