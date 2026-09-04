@@ -83,6 +83,36 @@ describe('StoryList', () => {
     expect(html).not.toContain('Meilenstein öffnen');
   });
 
+  it('renders date and author together in the shared card footer', () => {
+    const item = StoryItemFromJSON({
+      kind: 'MEMORY',
+      effectiveDate: '2026-08-26',
+      memory: {
+        attachments: [],
+        author: {
+          id: '00000000-0000-0000-0000-000000000001',
+          displayName: 'Alex',
+        },
+        capabilities: { canComment: true, canDelete: true, canEdit: true },
+        createdAt: '2026-08-26T08:00:00Z',
+        happenedOn: '2026-08-26',
+        id: '00000000-0000-0000-0000-000000000002',
+        title: 'Strandspaziergang',
+      },
+    });
+
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <StoryList items={[item]} loadMemoryImage={loadMemoryImage} />
+      </MemoryRouter>,
+    );
+
+    expect(html).toContain('class="story-card-footer"');
+    expect(html).toContain('<time');
+    expect(html).toContain('story-card-footer-author');
+    expect(html).toContain('von Alex');
+  });
+
   it('announces an empty story as a status', () => {
     const html = renderToStaticMarkup(
       <StoryList items={[]} loadMemoryImage={loadMemoryImage} />,
