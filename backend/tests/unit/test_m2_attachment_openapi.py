@@ -71,14 +71,14 @@ def test_read_request_accepts_the_unbound_variant() -> None:
     request = components["AttachmentReadRequest"]
     parent_type = request["properties"]["parentType"]
     values = set(parent_type.get("enum") or [])
-    assert values == {"MEMORY", "HEART_MOMENT", "NONE"}
+    assert values == {"MEMORY", "HEART_MOMENT", "NONE", "RELATED_PERSON"}
     assert request["additionalProperties"] is False
 
 
 def test_the_manifest_lists_the_same_variants() -> None:
     contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
     variants = {entry["parentType"] for entry in contract["attachmentReadRequestVariants"]}
-    assert variants == {"MEMORY", "HEART_MOMENT", "NONE"}
+    assert variants == {"MEMORY", "HEART_MOMENT", "NONE", "RELATED_PERSON"}
     unbound = next(
         entry
         for entry in contract["attachmentReadRequestVariants"]
