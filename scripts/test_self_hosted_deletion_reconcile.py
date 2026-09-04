@@ -71,7 +71,7 @@ class DeletionReconcileGuardTest(unittest.TestCase):
         first = run_command.call_args_list[0].args[0]
         second = run_command.call_args_list[1].args[0]
         self.assertIn("migrate", first)
-        self.assertIn("scripts.reconcile_account_deletions", second)
+        self.assertIn("sidebyside.identity.deletion_reconcile", second)
         self.assertIn(str(INSTANCE_ID), second)
         require_postgres.assert_called_once()
 
