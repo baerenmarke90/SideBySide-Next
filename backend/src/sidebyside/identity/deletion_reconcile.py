@@ -20,6 +20,11 @@ from sidebyside.identity.deletion_journal import (
     DeletionJournalError,
     DeletionTombstone,
 )
+from sidebyside.identity.deletion_media import apply_account_media_cleanup
+
+
+class DeletionMediaCleanupError(RuntimeError):
+    """Restore replay could not converge accepted Account media safely."""
 
 
 def reconcile_tombstones(tombstones: Sequence[DeletionTombstone]) -> int:
@@ -35,6 +40,15 @@ def reconcile_tombstones(tombstones: Sequence[DeletionTombstone]) -> int:
             )
         with unit_of_work() as session:
             apply_core_cleanup(session, tombstone.account_id)
+        # Media deletion is provider-backed and therefore has a distinct
+        # failure boundary. Commit DELETE_FAILED / AccountDeletion FAILED state
+        # before rejecting startup so retries remain durable and fail-closed.
+        with unit_of_work() as session:
+            media_result = apply_account_media_cleanup(session, tombstone.account_id)
+        if not media_result.converged:
+            raise DeletionMediaCleanupError(
+                "Account deletion media cleanup did not converge during restore replay."
+            )
     return len(tombstones)
 
 
@@ -86,12 +100,16 @@ def main() -> int:
             )
         else:
             count = reconcile(args.journal, instance_id=args.confirm_instance_id)
-    except (DeletionJournalError, DeletionAcceptanceConflictError):
+    except (
+        DeletionJournalError,
+        DeletionAcceptanceConflictError,
+        DeletionMediaCleanupError,
+    ):
         # Deliberately do not echo journal contents, identifiers, database
         # values or raw exception prose into operator logs.
         print("Account deletion reconciliation rejected an inconsistent recovery state.")
         return 1
-    print(f"Account deletion core reconciliation completed for {count} tombstone(s).")
+    print(f"Account deletion reconciliation completed for {count} tombstone(s).")
     return 0
 
 
