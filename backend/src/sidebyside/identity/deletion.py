@@ -3,7 +3,7 @@
 The restore-safe journal defined by #520 is intentionally outside this module.
 Callers may invoke :func:`apply_accepted_tombstone` only after that journal has
 accepted the Account tombstone. This module then provides the database-side,
-retry-safe fail-closed and cleanup phases.
+retry-safe fail-closed and core-cleanup phases.
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 
 from sidebyside.auth import sessions
 from sidebyside.authorization.retention import hard_delete_owner_only
-from sidebyside.core.clock import now
 from sidebyside.engagement.models import Notification, PushEndpoint, ThinkingOfYouRequest
 from sidebyside.identity.deletion_models import AccountDeletion, AccountDeletionStatus
 from sidebyside.identity.models import (
@@ -168,8 +167,14 @@ def _delete_account_rows(session: Session, model: type[Any], account_id: UUID, c
     return int(result.rowcount or 0)
 
 
-def complete_accepted_deletion(session: Session, account_id: UUID) -> AccountDeletion | None:
-    """Delete/pseudonymize Account data after fail-closed acceptance committed.
+def apply_core_cleanup(session: Session, account_id: UUID) -> AccountDeletion | None:
+    """Delete/pseudonymize core Account data after fail-closed acceptance committed.
+
+    This function deliberately does **not** mark the overall deletion
+    ``COMPLETED``. Attachments/media, stale asynchronous work and restore
+    reconciliation are separate required #520 cleanup paths. The future
+    orchestrator may set ``COMPLETED`` only after every required path has
+    converged successfully.
 
     Attachments are deliberately not removed here. Their technical rows are
     OWNER_ONLY even when a binding points at retained SPACE_SHARED content, so
@@ -247,10 +252,10 @@ def complete_accepted_deletion(session: Session, account_id: UUID) -> AccountDel
     if account.disabled_at is None:
         account.disabled_at = deletion.accepted_at
 
-    deletion.status = AccountDeletionStatus.COMPLETED.value
-    deletion.completed_at = now()
-    deletion.failed_at = None
-    deletion.last_failure_code = None
+    # Overall status intentionally remains PENDING until media/async/restore
+    # reconciliation has also converged. This prevents partial deletion from
+    # ever being represented as complete.
+    deletion.completed_at = None
     session.flush()
     return deletion
 
@@ -282,7 +287,7 @@ def mark_deletion_failed(
 
     deletion.status = AccountDeletionStatus.FAILED.value
     deletion.completed_at = None
-    deletion.failed_at = now()
+    deletion.failed_at = datetime.now(deletion.accepted_at.tzinfo)
     deletion.last_failure_code = normalized
     session.flush()
     return deletion
