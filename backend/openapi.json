@@ -28,6 +28,51 @@
         "title": "AccountCapabilitiesView",
         "type": "object"
       },
+      "AccountDeletionAccepted": {
+        "description": "Safe client state after irreversible deletion acceptance.",
+        "properties": {
+          "acceptedAt": {
+            "format": "date-time",
+            "title": "Acceptedat",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountDeletionStatus"
+          }
+        },
+        "required": [
+          "acceptedAt",
+          "status"
+        ],
+        "title": "AccountDeletionAccepted",
+        "type": "object"
+      },
+      "AccountDeletionRequest": {
+        "additionalProperties": false,
+        "description": "Explicit destructive confirmation; the target is always the caller.",
+        "properties": {
+          "confirmation": {
+            "const": "DELETE_ACCOUNT",
+            "title": "Confirmation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmation"
+        ],
+        "title": "AccountDeletionRequest",
+        "type": "object"
+      },
+      "AccountDeletionStatus": {
+        "description": "Runtime progress after an external deletion tombstone was accepted.",
+        "enum": [
+          "PENDING",
+          "COMPLETED",
+          "FAILED"
+        ],
+        "title": "AccountDeletionStatus",
+        "type": "string"
+      },
       "AccountMembershipView": {
         "description": "Active Space membership belonging to the authenticated account.",
         "properties": {
@@ -7592,6 +7637,78 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/account/deletion": {
+      "post": {
+        "description": "Accept deletion for the authenticated Account only.\n\nNo Account identifier is accepted from the client, so this route cannot be\nrepurposed into a cross-account deletion primitive. Once the external\ntombstone and fail-closed state commit, cleanup continues through the\nexisting worker even if the client disconnects.",
+        "operationId": "delete_own_account_api_v1_account_deletion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDeletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "A capability required for this operation is not configured on this instance."
+          }
+        },
+        "summary": "Delete the authenticated Account",
+        "tags": [
+          "account"
+        ]
+      }
+    },
     "/api/v1/auth/capabilities": {
       "get": {
         "description": "Return presentation capabilities without replacing endpoint authorization.",

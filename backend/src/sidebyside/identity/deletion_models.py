@@ -21,6 +21,16 @@ class AccountDeletionStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class DeletionConfirmationMailStatus(StrEnum):
+    """PII-free best-effort confirmation-mail state."""
+
+    CLAIMED = "CLAIMED"
+    SENT = "SENT"
+    UNAVAILABLE = "UNAVAILABLE"
+    FAILED = "FAILED"
+    NO_VERIFIED_PRIMARY = "NO_VERIFIED_PRIMARY"
+
+
 class AccountDeletion(Base):
     """Database-side progress for one irreversibly accepted Account deletion.
 
@@ -42,6 +52,8 @@ class AccountDeletion(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_failure_code: Mapped[str | None] = mapped_column(String(64))
+    confirmation_mail_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmation_mail_status: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -65,6 +77,12 @@ class AccountDeletion(Base):
             "(status = 'FAILED' AND completed_at IS NULL AND failed_at IS NOT NULL "
             "AND last_failure_code IS NOT NULL)",
             name="status_matches_timestamps",
+        ),
+        CheckConstraint(
+            "(confirmation_mail_attempted_at IS NULL AND confirmation_mail_status IS NULL) OR "
+            "(confirmation_mail_attempted_at IS NOT NULL AND confirmation_mail_status IN "
+            "('CLAIMED', 'SENT', 'UNAVAILABLE', 'FAILED', 'NO_VERIFIED_PRIMARY'))",
+            name="confirmation_mail_state_is_valid",
         ),
         Index("ix_account_deletions_status_updated_at", "status", "updated_at"),
     )

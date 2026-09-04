@@ -4,7 +4,7 @@
 
 **Scope:** PostgreSQL 17 plus `LocalMediaStore`; S3 boundary documented separately
 
-**Related:** #190, #375, `SELF-HOSTING.md`, `DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`
+**Related:** #190, #375, #520, `SELF-HOSTING.md`, `ACCOUNT-DELETION-SELF-HOSTED.md`, `DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`
 
 This runbook covers operational recovery of a complete SideBySide Self-Hosted
 instance. It is separate from the user-facing Transfer Bundle: a Transfer Bundle
@@ -14,13 +14,14 @@ state.
 
 ## 1. Recovery contract
 
-A recoverable instance consists of three independently protected units:
+A recoverable instance consists of four independently protected units:
 
-| Unit | Backup mechanism | Included in the recovery archive |
+| Unit | Backup mechanism | Included in the coordinated data archive |
 |---|---|---|
 | PostgreSQL | PostgreSQL 17 `pg_dump --format=custom`; restored with `pg_restore --single-transaction` | yes |
 | `LocalMediaStore` | exact durable object set from the private Compose `media_data` volume | yes |
-| configuration and secrets | operator secret/configuration backup | no |
+| forward Account-deletion journal | newest validated forward-only state from the private `deletion_journal_data` volume; protected independently and never rolled back with a point-in-time database backup | no |
+| configuration and secrets | operator secret/configuration backup, including the stable deletion-authority instance UUID | no |
 
 The archive contains every PostgreSQL row. This includes all accounts, tenants,
 memberships, owner-only content, sessions, jobs, and other internal state. The media
@@ -29,6 +30,14 @@ Heart Moment, or account profile attachment. It includes each required original
 and declared thumbnail. Temporary or unbound upload objects are deliberately
 excluded; their database lifecycle state may remain and normal cleanup may expire
 it after recovery.
+
+The forward Account-deletion journal is deliberately **not** part of that
+point-in-time archive. It exists so an older PostgreSQL/media backup cannot
+resurrect an Account whose deletion was accepted later. Protect the newest
+validated journal independently, keep its `SBS_ACCOUNT_DELETION_INSTANCE_ID` with
+the operator configuration, and never replace a newer journal with an older
+snapshot. The binding operational rules are in
+[`ACCOUNT-DELETION-SELF-HOSTED.md`](ACCOUNT-DELETION-SELF-HOSTED.md).
 
 The helper quiesces the normal writers by stopping API and worker, takes the
 database dump, resolves the durable media set from that stable database, archives
@@ -56,11 +65,18 @@ from the data archive:
 
 - the untracked `.env` or equivalent secret-manager entries;
 - PostgreSQL credentials and the stable cursor signing key;
+- the stable `SBS_ACCOUNT_DELETION_INSTANCE_ID` that must match the protected
+  forward deletion journal;
 - mail, OIDC, WebAuthn, S3, and other provider configuration/credentials in use;
 - the Compose project name and public origin;
 - reverse-proxy, TLS, DNS, firewall, and scheduler configuration;
 - the exact deployed commit SHA and SideBySide Compose variant;
 - any external backup encryption keys and restore instructions.
+
+Protect the forward deletion journal separately from both this configuration
+backup and the coordinated PostgreSQL/media archive. It is deletion-safety state,
+not a normal point-in-time snapshot. Retain it until every application backup that
+predates its accepted tombstones can no longer be restored.
 
 Do not place this material inside the SideBySide archive. Do not store the archive
 next to an unencrypted copy of its decryption key. The one-time bootstrap token is
@@ -102,12 +118,18 @@ result there. Established tools such as restic or rclone may provide encryption,
 retention, and remote transport; they are an operator layer and not a new
 SideBySide runtime dependency.
 
+The coordinated archive is only the PostgreSQL/media recovery point. Independently
+protect the newest forward deletion journal according to
+`ACCOUNT-DELETION-SELF-HOSTED.md`. Do not roll that journal back when rotating or
+restoring the coordinated archive.
+
 ## 4. Restore into a fresh target
 
 Restore only into a new Compose project with an empty PostgreSQL database and
 empty `media_data` volume. Recover the target configuration/secrets separately,
-check out the intended immutable SideBySide revision, and place the archive on the
-host with restrictive permissions.
+recover the **newest validated forward deletion journal**, check out the intended
+immutable SideBySide revision, and place the archive on the host with restrictive
+permissions.
 
 ```bash
 # In the clean target checkout, with the separately recovered .env in place:
@@ -134,15 +156,31 @@ count, regular-file-only storage paths, an empty database, an empty media volume
 the restored file set, and the restored Alembic revision. API and worker must not
 be running.
 
-After restore, migrate first with the verified candidate and only then start the
-application:
+### Mandatory Account-deletion reconciliation
+
+Before API/worker startup, replay the newest protected forward journal into the
+restored database. The helper migrates the restored schema and keeps normal writers
+stopped:
+
+```bash
+python3 scripts/self_hosted_deletion_reconcile.py \
+  --compose-file compose.yaml \
+  --env-file .env \
+  --confirm-project "$SBS_RECOVERY_PROJECT" \
+  --journal /secure/path/account-deletions.journal \
+  --confirm-instance-id "$SBS_ACCOUNT_DELETION_INSTANCE_ID"
+```
+
+Use `compose.arcane.yaml` consistently for Arcane. A missing, corrupt, foreign-
+instance, or older substituted journal is not a condition to bypass. Keep normal
+writers stopped and repair the recovery inputs instead. This step is what prevents
+a pre-deletion database backup from restoring stale authentication or private data.
+
+After successful deletion reconciliation, start the application from the verified
+candidate and perform the normal acceptance checks:
 
 ```bash
 CANDIDATE=$(git rev-parse HEAD)
-
-python3 scripts/compose_checked.py \
-  --expected-revision "$CANDIDATE" \
-  run --rm migrate alembic upgrade head
 
 python3 scripts/compose_checked.py \
   --expected-revision "$CANDIDATE" \
@@ -153,31 +191,37 @@ python3 scripts/deployment_smoke.py \
   --expected-revision "$CANDIDATE"
 ```
 
-For Arcane, pin `SBS_SOURCE_REF` to the exact candidate SHA, run the migration,
-recreate the complete stack, and perform the same revision-aware smoke check.
+For Arcane, pin `SBS_SOURCE_REF` to the exact candidate SHA, run the deletion
+reconciliation against that candidate, recreate the complete stack, and perform
+the same revision-aware smoke check.
 
 Also verify an authenticated shared-content read and an owner-only content path
 with fictional operator accounts appropriate for the target. A restore is accepted
-only when database readiness, tenant/owner assignments, privacy behavior, media
-bytes, and both application revision identities are correct.
+only when database readiness, deletion reconciliation, tenant/owner assignments,
+privacy behavior, media bytes, and both application revision identities are
+correct.
 
-If restore fails after writing either target, keep API/worker stopped. Discard only
-the explicitly confirmed fresh target project's database and media volumes, fix the
-cause, and repeat from a verified archive. Do not attempt to merge a partial
-restore with existing data.
+If restore or deletion reconciliation fails after writing either target, keep
+API/worker stopped. Discard only the explicitly confirmed fresh target project's
+database and media volumes, fix the cause, and repeat from verified inputs. Do not
+attempt to merge a partial restore with existing data. Do not discard or roll back
+the newer protected deletion journal merely to make an old application backup
+start.
 
 ## 5. Upgrade and rollforward
 
 Before every Production upgrade:
 
 1. record the current and candidate commit SHAs;
-2. create a coordinated backup and protect its separate configuration/secret set;
-3. retain the previous known-good application revision;
-4. know the migrations between both revisions and whether old code remains
+2. create a coordinated PostgreSQL/media backup and protect its separate
+   configuration/secret set;
+3. verify the newest forward Account-deletion journal is independently protected;
+4. retain the previous known-good application revision;
+5. know the migrations between both revisions and whether old code remains
    compatible with the post-migration schema;
-5. verify the candidate and migrations in persistent Development;
-6. apply Alembic before starting API/worker;
-7. require readiness, revision parity, authenticated reads, and affected media/job
+6. verify the candidate and migrations in persistent Development;
+7. apply Alembic before starting API/worker;
+8. require readiness, revision parity, authenticated reads, and affected media/job
    acceptance before declaring success.
 
 The repository gate executes a reproducible prior-schema exercise from Alembic
@@ -185,7 +229,9 @@ revision `0032` (the delivered final M4 schema), seeds tenant, owner-only, share
 authentication, and local-media state, migrates to the current head, and verifies
 the current application. It also creates a current-schema backup, destroys the
 source volumes, restores into fresh volumes, and repeats the integrity and
-authorization checks. Run it locally with:
+authorization checks. Separate Account-deletion recovery acceptance additionally
+proves that a backup taken before deletion cannot resurrect the deleted Account
+when the forward journal is replayed. Run the base recovery exercise locally with:
 
 ```bash
 python3 scripts/self_hosted_recovery_acceptance.py
@@ -203,8 +249,9 @@ use only one explicitly reviewed path:
 
 - a tested corrective forward migration and compatible application;
 - a separately tested downgrade migration; or
-- discard the failed target, restore the verified pre-upgrade archive, and deploy
-  the previous compatible immutable revision.
+- discard the failed target, restore the verified pre-upgrade archive, replay the
+  newest forward deletion journal, and deploy the previous compatible immutable
+  revision.
 
 ## 6. S3/object-storage boundary
 
@@ -220,12 +267,16 @@ An S3-backed operator must establish a provider-specific coordinated procedure:
    quiesced point;
 4. preserve bucket/prefix, version identifiers, region/endpoint configuration,
    credentials, encryption keys, retention, and deletion policy separately;
-5. restore database and objects into an isolated target before starting writers;
-6. verify database references, exact media availability, tenant/privacy behavior,
+5. preserve the newest forward Account-deletion journal independently of both
+   database and object-store snapshots;
+6. restore database and objects into an isolated target, then replay that forward
+   journal before starting writers;
+7. verify database references, exact media availability, tenant/privacy behavior,
    readiness, and application revision.
 
 Bucket replication alone is not database consistency. A database-only backup is
-not media recovery. Object versioning alone is not a tested restore. Provider
+not media recovery. Object versioning alone is not a tested restore. The deletion
+journal must not be rolled back to the object/database snapshot time. Provider
 snapshots, managed database backups, cross-region replication, retention, cost,
 and support remain hoster/operator responsibilities until a separately reviewed
 provider-specific implementation exists.
@@ -243,10 +294,12 @@ changes, and on every push to `main` or manual invocation. It proves:
 - account, tenant, membership, owner, shared, and owner-only invariants;
 - authorization behavior through the current HTTP API;
 - API/database/Web readiness and backend/Web revision parity after restore;
-- rollforward from the reproducible prior schema to the current Alembic head.
+- rollforward from the reproducible prior schema to the current Alembic head;
+- through the Account-deletion recovery acceptance path, replay of a newer
+  deletion journal against an older restored database before writers resume.
 
 CI uses only generated fictional data and a randomly named disposable Compose
 project. Its cleanup is scoped to that project. CI does not prove the operator's
-real offsite archive, secrets, S3/provider snapshot, encryption-key custody,
-retention, hardware capacity, or actual Production restore time; those require a
-recorded infrastructure exercise.
+real offsite archive, protected forward deletion journal, secrets, S3/provider
+snapshot, encryption-key custody, retention, hardware capacity, or actual
+Production restore time; those require a recorded infrastructure exercise.

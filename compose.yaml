@@ -21,6 +21,8 @@ x-runtime-environment: &runtime-environment
   SBS_S3_ACCESS_KEY_ID: "${SBS_S3_ACCESS_KEY_ID:-}"
   SBS_S3_SECRET_ACCESS_KEY: "${SBS_S3_SECRET_ACCESS_KEY:-}"
   SBS_S3_SESSION_TOKEN: "${SBS_S3_SESSION_TOKEN:-}"
+  SBS_ACCOUNT_DELETION_JOURNAL_PATH: /var/lib/sidebyside/deletion-journal/account-deletions.journal
+  SBS_ACCOUNT_DELETION_INSTANCE_ID: "${SBS_ACCOUNT_DELETION_INSTANCE_ID:-}"
   SBS_ALLOWED_HOSTS: '${SBS_ALLOWED_HOSTS:-["localhost","127.0.0.1"]}'
   SBS_PUBLIC_BASE_URL: "${SBS_PUBLIC_BASE_URL:-http://localhost:8080}"
   SBS_OIDC_CONNECTIONS: '${SBS_OIDC_CONNECTIONS:-[]}'
@@ -110,6 +112,7 @@ services:
       FORWARDED_ALLOW_IPS: "${TRUSTED_PROXY_IPS:-127.0.0.1}"
     volumes:
       - media_data:/var/lib/sidebyside/media
+      - deletion_journal_data:/var/lib/sidebyside/deletion-journal
     networks:
       - app
     ports:
@@ -173,3 +176,4 @@ networks:
 volumes:
   postgres_data:
   media_data:
+  deletion_journal_data:

@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends
 
 from sidebyside.api.deps import require_normal_operation
 from sidebyside.api.v1 import (
+    account,
     attachments,
     auth,
     chapter_relations,
@@ -58,6 +59,7 @@ router.include_router(server_admin.router)
 router.include_router(server_admin_observability.router)
 
 normal_router = APIRouter(dependencies=[Depends(require_normal_operation)])
+normal_router.include_router(account.router)
 normal_router.include_router(session_context.router)
 normal_router.include_router(demo.router)
 normal_router.include_router(invitations.router)

@@ -2,6 +2,9 @@
 /* eslint-disable */
 export * from './AcceptRequest';
 export * from './AccountCapabilitiesView';
+export * from './AccountDeletionAccepted';
+export * from './AccountDeletionRequest';
+export * from './AccountDeletionStatus';
 export * from './AccountMembershipView';
 export * from './AccountView';
 export * from './ActivityItem';
