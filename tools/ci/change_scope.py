@@ -168,7 +168,8 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
 
         # Recovery acceptance is expensive and is needed for actual recovery
         # tooling/contracts plus schema migrations that an old snapshot must
-        # survive. Ordinary backend or Web feature work does not affect it.
+        # survive. Account-deletion replay is part of that same restore
+        # authority, so changes to its journal/core path must run this gate too.
         if _matches(
             path,
             prefixes=("backend/alembic/",),
@@ -177,8 +178,15 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
                 ".env.example",
                 *SELF_HOSTED_COMPOSE_FILES,
                 "scripts/self_hosted_recovery.py",
+                "scripts/self_hosted_deletion_reconcile.py",
                 "scripts/self_hosted_recovery_acceptance.py",
+                "scripts/account_deletion_recovery_acceptance.py",
                 "scripts/test_self_hosted_recovery.py",
+                "backend/scripts/reconcile_account_deletions.py",
+                "backend/src/sidebyside/identity/deletion.py",
+                "backend/src/sidebyside/identity/deletion_journal.py",
+                "backend/src/sidebyside/identity/deletion_models.py",
+                "backend/src/sidebyside/authorization/retention.py",
                 "docs/SELF-HOSTED-RECOVERY.md",
                 "docs/SELF-HOSTING.md",
                 "docs/DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md",
