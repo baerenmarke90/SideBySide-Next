@@ -19,6 +19,12 @@ import {
   profilePreferenceCreateFromDraft,
   profilePreferenceUpdateFromDraft,
 } from '../client/profilePreferenceDraft';
+import {
+  calculateNextAnniversary,
+  calculateRelationshipDuration,
+  formatAnniversaryDetail,
+  formatRelationshipDuration,
+} from '../client/relationshipPreview';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { PartnerIdentityPanel } from './PartnerIdentityPanel';
 import { ProblemState } from './ProblemState';
@@ -178,6 +184,65 @@ export function RelationshipSettingsSection({
     retry: false,
   });
 
+  const serverStartedOn = relationshipDateInput(
+    profileQuery.data?.relationshipStartedOn,
+  );
+  const serverShowDuration =
+    profileQuery.data?.showRelationshipDuration ?? false;
+  const serverDurationMode =
+    profileQuery.data?.durationDisplayMode ?? DurationDisplayMode.YEARS_MONTHS;
+
+  const [startedOn, setStartedOn] = useState(serverStartedOn);
+  const [showDuration, setShowDuration] = useState(serverShowDuration);
+  const [durationMode, setDurationMode] =
+    useState<SpaceProfileView['durationDisplayMode']>(serverDurationMode);
+
+  useEffect(() => {
+    if (profileQuery.data) {
+      setStartedOn(
+        relationshipDateInput(profileQuery.data.relationshipStartedOn),
+      );
+      setShowDuration(profileQuery.data.showRelationshipDuration ?? false);
+      setDurationMode(
+        profileQuery.data.durationDisplayMode ??
+          DurationDisplayMode.YEARS_MONTHS,
+      );
+    }
+  }, [profileQuery.data]);
+
+  const isDirty = useMemo(() => {
+    if (!profileQuery.data) return false;
+    return (
+      startedOn !== serverStartedOn ||
+      showDuration !== serverShowDuration ||
+      durationMode !== serverDurationMode
+    );
+  }, [
+    profileQuery.data,
+    startedOn,
+    showDuration,
+    durationMode,
+    serverStartedOn,
+    serverShowDuration,
+    serverDurationMode,
+  ]);
+
+  const calculatedDuration = useMemo(() => {
+    return calculateRelationshipDuration(startedOn);
+  }, [startedOn]);
+
+  const nextAnniversary = useMemo(() => {
+    return calculateNextAnniversary(startedOn);
+  }, [startedOn]);
+
+  const currentDurationText = useMemo(() => {
+    return formatRelationshipDuration(calculatedDuration, durationMode, t);
+  }, [calculatedDuration, durationMode, t]);
+
+  const nextAnniversaryText = useMemo(() => {
+    return formatAnniversaryDetail(nextAnniversary, t, formatDateOnly);
+  }, [nextAnniversary, t]);
+
   const mutation = useMutation({
     mutationFn: async ({
       relationshipStartedOn,
@@ -219,15 +284,14 @@ export function RelationshipSettingsSection({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isDirty || mutation.isPending) return;
     setSaved(false);
-    const form = new FormData(event.currentTarget);
-    const start = String(form.get('relationshipStartedOn') || '');
     mutation.mutate({
-      relationshipStartedOn: start ? new Date(`${start}T00:00:00.000Z`) : null,
-      showRelationshipDuration: form.get('showRelationshipDuration') === 'on',
-      durationDisplayMode: String(
-        form.get('durationDisplayMode'),
-      ) as SpaceProfileView['durationDisplayMode'],
+      relationshipStartedOn: startedOn
+        ? new Date(`${startedOn}T00:00:00.000Z`)
+        : null,
+      showRelationshipDuration: showDuration,
+      durationDisplayMode: durationMode,
     });
   }
 
@@ -241,7 +305,7 @@ export function RelationshipSettingsSection({
           {t('profiles.relationshipTitle')}
         </h2>
         <p className="settings-section-intro">
-          {t('profiles.relationshipDurationHelp')}
+          {t('profiles.relationshipIntro')}
         </p>
       </div>
 
@@ -268,9 +332,11 @@ export function RelationshipSettingsSection({
               id="relationship-started-on"
               name="relationshipStartedOn"
               type="date"
-              defaultValue={relationshipDateInput(
-                profileQuery.data.relationshipStartedOn,
-              )}
+              value={startedOn}
+              onChange={(e) => {
+                setStartedOn(e.target.value);
+                setSaved(false);
+              }}
             />
           </div>
 
@@ -279,7 +345,11 @@ export function RelationshipSettingsSection({
               id="show-relationship-duration"
               name="showRelationshipDuration"
               type="checkbox"
-              defaultChecked={profileQuery.data.showRelationshipDuration}
+              checked={showDuration}
+              onChange={(e) => {
+                setShowDuration(e.target.checked);
+                setSaved(false);
+              }}
             />
             <span>
               <strong>{t('profiles.relationshipDurationLabel')}</strong>
@@ -294,10 +364,13 @@ export function RelationshipSettingsSection({
             <select
               id="relationship-duration-mode"
               name="durationDisplayMode"
-              defaultValue={
-                profileQuery.data.durationDisplayMode ??
-                DurationDisplayMode.YEARS_MONTHS
-              }
+              value={durationMode}
+              onChange={(e) => {
+                setDurationMode(
+                  e.target.value as SpaceProfileView['durationDisplayMode'],
+                );
+                setSaved(false);
+              }}
             >
               <option value={DurationDisplayMode.YEARS_MONTHS}>
                 {t('profiles.relationshipModeYearsMonths')}
@@ -308,27 +381,55 @@ export function RelationshipSettingsSection({
             </select>
           </div>
 
-          <p className="profile-duration" role="status">
-            {t('profiles.relationshipCurrent', {
-              duration: relationshipDuration(profileQuery.data, t),
-            })}
-          </p>
+          {/* Relationship Preview Card */}
+          <div className="relationship-preview-card">
+            <h3 className="relationship-preview-heading">
+              {t('profiles.relationshipPreviewTitle')}
+            </h3>
+            <div className="relationship-preview-items">
+              <div className="relationship-preview-item">
+                <span className="relationship-preview-label">
+                  {t('profiles.relationshipCurrentLabel')}
+                </span>
+                <span className="relationship-preview-value">
+                  {currentDurationText}
+                </span>
+              </div>
+              <div className="relationship-preview-item">
+                <span className="relationship-preview-label">
+                  {t('profiles.nextAnniversaryLabel')}
+                </span>
+                <span className="relationship-preview-value">
+                  {nextAnniversaryText}
+                </span>
+              </div>
+            </div>
+          </div>
 
-          <div className="form-actions">
-            <button type="submit" disabled={mutation.isPending}>
+          <div className="form-actions relationship-form-actions">
+            <button type="submit" disabled={!isDirty || mutation.isPending}>
               {mutation.isPending
-                ? t('profiles.relationshipSaving')
-                : t('profiles.relationshipSave')}
+                ? t('profiles.saving')
+                : t('profiles.saveChanges')}
             </button>
+            {saved && !isDirty ? (
+              <span className="relationship-saved-feedback" role="status">
+                {t('profiles.relationshipSavedSubtle')}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="relationship-notification-hint-row">
+            <a
+              href="#settings-notifications"
+              className="relationship-notification-hint-link"
+            >
+              {t('profiles.relationshipNotificationHint')}
+            </a>
           </div>
         </form>
       ) : null}
 
-      {saved ? (
-        <div className="inline-message inline-message-success" role="status">
-          <span>{t('profiles.relationshipSaved')}</span>
-        </div>
-      ) : null}
       {mutation.error ? <ProblemState error={mutation.error} /> : null}
     </section>
   );
