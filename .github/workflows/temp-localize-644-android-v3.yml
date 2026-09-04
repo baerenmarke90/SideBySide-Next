@@ -1,0 +1,34 @@
+name: Temporary Android Account Localization Move V3
+
+on:
+  push:
+    branches:
+      - feat/644-android-account-deletion
+    paths:
+      - .github/workflows/temp-localize-644-android-v3.yml
+
+permissions:
+  contents: write
+
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Apply localization move
+        run: python tools/temp_localize_644_android.py
+      - name: Verify resource patch
+        run: git diff --check
+      - name: Commit localization move and remove temporary helpers
+        run: |
+          git rm .github/workflows/temp-localize-644-android.yml
+          git rm .github/workflows/temp-localize-644-android-v3.yml
+          git rm tools/temp_localize_644_android.py
+          git rm android/app/src/main/res/values/account_deletion_strings.xml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/app/src/main/res/values/strings.xml
+          git commit -m "fix(android): keep Account copy in localization resource"
+          git push origin HEAD:feat/644-android-account-deletion
