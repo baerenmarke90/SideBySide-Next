@@ -3,6 +3,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
   type RefObject,
+  useCallback,
   useEffect,
   useMemo,
   useReducer,
@@ -186,13 +187,39 @@ function RelatedPersonModalDialog({
   );
   const birthdayPartRequired = Boolean(birthdayMonth || birthdayDay);
 
+  const createdObjectUrlRef = useRef<string | null>(null);
+
+  const setPreviewUrl = useCallback((url: string | null) => {
+    if (createdObjectUrlRef.current && createdObjectUrlRef.current !== url) {
+      URL.revokeObjectURL(createdObjectUrlRef.current);
+      createdObjectUrlRef.current = null;
+    }
+    createdObjectUrlRef.current = url;
+    setAvatarPreviewUrl(url);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (createdObjectUrlRef.current) {
+        URL.revokeObjectURL(createdObjectUrlRef.current);
+        createdObjectUrlRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     const previousFocus =
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
     cancelButtonRef.current?.focus();
-    return () => previousFocus?.focus();
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      previousFocus?.focus();
+    };
   }, []);
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -241,20 +268,22 @@ function RelatedPersonModalDialog({
           setUploadPhase,
         );
         setCurrentAvatarId(ready.attachmentId);
-        setAvatarPreviewUrl(URL.createObjectURL(file));
+        const objectUrl = URL.createObjectURL(file);
+        setPreviewUrl(objectUrl);
       } catch (err) {
         setUploadError(err instanceof Error ? err.message : t('flow.uploadFailed'));
       } finally {
         setUploadPhase(null);
       }
     } else {
-      setAvatarPreviewUrl(URL.createObjectURL(file));
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
     }
   }
 
   function handleAvatarRemove() {
     setCurrentAvatarId(null);
-    setAvatarPreviewUrl(null);
+    setPreviewUrl(null);
     setUploadError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -688,7 +717,13 @@ function DeleteRelatedPersonDialog({
         ? document.activeElement
         : null;
     cancelButtonRef.current?.focus();
-    return () => previousFocus?.focus();
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      previousFocus?.focus();
+    };
   }, []);
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {

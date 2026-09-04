@@ -203,4 +203,52 @@ describe('RelatedPeoplePage redesigned surface', () => {
     fireEvent.click(cancelBtn);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
+
+  it('manages body scroll lock and revokes avatar object URLs on replacement and unmount', async () => {
+    document.body.style.overflow = 'visible';
+    const originalCreate = URL.createObjectURL;
+    const originalRevoke = URL.revokeObjectURL;
+    const createObjectURLSpy = vi.fn().mockReturnValue('blob:test-avatar-1');
+    const revokeObjectURLSpy = vi.fn();
+    URL.createObjectURL = createObjectURLSpy;
+    URL.revokeObjectURL = revokeObjectURLSpy;
+
+    renderRelatedPeoplePage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Lisa' })).not.toBeNull();
+    });
+
+    const addBtn = screen.getByRole('button', {
+      name: new RegExp(people.addPersonAction, 'i'),
+    });
+    fireEvent.click(addBtn);
+
+    expect(document.body.style.overflow).toBe('hidden');
+
+    const fileInput = screen.getByLabelText(people.avatarLabel);
+    const file1 = new File(['image1'], 'avatar1.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file1] } });
+
+    expect(createObjectURLSpy).toHaveBeenCalledWith(file1);
+
+    // Replace with second file
+    createObjectURLSpy.mockReturnValue('blob:test-avatar-2');
+    const file2 = new File(['image2'], 'avatar2.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file2] } });
+
+    // First URL revoked
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test-avatar-1');
+
+    // Close modal via close button
+    const closeBtn = screen.getByRole('button', { name: people.closeDialogAria });
+    fireEvent.click(closeBtn);
+
+    // Second URL revoked on unmount
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:test-avatar-2');
+    expect(document.body.style.overflow).toBe('visible');
+
+    URL.createObjectURL = originalCreate;
+    URL.revokeObjectURL = originalRevoke;
+  });
 });
