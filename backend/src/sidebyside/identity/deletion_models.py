@@ -52,9 +52,7 @@ class AccountDeletion(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_failure_code: Mapped[str | None] = mapped_column(String(64))
-    confirmation_mail_attempted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True)
-    )
+    confirmation_mail_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     confirmation_mail_status: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
