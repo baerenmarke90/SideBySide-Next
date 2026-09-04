@@ -2276,6 +2276,7 @@ class ReferenceViewModel(
                         displayName = displayName,
                         relationship = relationship,
                         visibility = visibility,
+                        avatarAttachmentId = person.avatarAttachmentId,
                     ),
                 )
             }
