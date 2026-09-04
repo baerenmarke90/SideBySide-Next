@@ -524,6 +524,8 @@ export function PrivateCollectionDetailPage({
       void queryClient.invalidateQueries({
         queryKey: privateAreaQueryKeys.collections(accountId, spaceId),
       });
+      setIsEditing(false);
+      setConfirmDelete(false);
       setShowTitleSaved(true);
       setTimeout(() => setShowTitleSaved(false), 2000);
     },

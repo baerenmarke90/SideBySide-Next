@@ -1,8 +1,12 @@
+// @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { describe, expect, it, vi } from 'vitest';
 import type { PrivateAreaApi } from '../api/generated/apis/PrivateAreaApi';
 import { privateAreaQueryKeys } from '../client/privateArea';
+import '../i18n';
 import {
   PrivateCollectionDetailPage,
   PrivateCollectionEditPage,
@@ -149,5 +153,105 @@ describe('PrivateCollectionsPage', () => {
     // Replaced legacy checkbox and separate edit page artifacts
     expect(html).not.toContain('private-checklist-checkbox');
     expect(html).not.toContain('private-area-badge');
+  });
+
+  it('resets isEditing and confirmDelete on successful title update', async () => {
+    const sampleCollection = collection();
+
+    const updatePrivateCollectionMock = vi
+      .fn()
+      .mockImplementation(async ({ privateCollectionUpdate }) => ({
+        ...sampleCollection,
+        title: privateCollectionUpdate.title,
+        version: 2,
+      }));
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    queryClient.setQueryData(
+      privateAreaQueryKeys.collection(ACCOUNT_ID, SPACE_ID, COLLECTION_ID),
+      sampleCollection,
+    );
+
+    const mockApi = {
+      getPrivateCollection: vi.fn().mockResolvedValue(sampleCollection),
+      updatePrivateCollection: updatePrivateCollectionMock,
+    } as unknown as PrivateAreaApi;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter
+          initialEntries={[`/private/collections/${COLLECTION_ID}`]}
+        >
+          <Routes>
+            <Route
+              path="/private/collections/:collectionId"
+              element={
+                <PrivateCollectionDetailPage
+                  api={mockApi}
+                  accountId={ACCOUNT_ID}
+                  spaceId={SPACE_ID}
+                />
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    // Click edit button to enter edit mode
+    const editBtn = screen.getByRole('button', {
+      name: /common\.edit|bearbeiten/i,
+    });
+    fireEvent.click(editBtn);
+
+    // isEditing is true: input and delete trigger are visible
+    const input = screen.getByRole('textbox', {
+      name: /titel|privatearea\.collections\.titlelabel/i,
+    });
+    expect(input).toBeDefined();
+
+    const deleteTrigger = screen.getByRole('button', { name: /^löschen$/i });
+    fireEvent.click(deleteTrigger);
+
+    // confirmDelete is true: danger confirmation zone is visible
+    expect(
+      screen.getByRole('button', { name: /endgültig löschen/i }),
+    ).toBeDefined();
+
+    // Update title
+    fireEvent.change(input, { target: { value: 'New Private Packing list' } });
+
+    // Save changes
+    const saveBtn = screen.getByRole('button', {
+      name: /änderungen speichern/i,
+    });
+    fireEvent.click(saveBtn);
+
+    // Wait for mutation to finish
+    await waitFor(() => {
+      expect(updatePrivateCollectionMock).toHaveBeenCalled();
+    });
+
+    // Verify isEditing is reset to false: input is gone, edit button is back
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('textbox', {
+          name: /titel|privatearea\.collections\.titlelabel/i,
+        }),
+      ).toBeNull();
+    });
+    expect(
+      screen.getByRole('button', { name: /common\.edit|bearbeiten/i }),
+    ).toBeDefined();
+
+    // Verify confirmDelete is reset to false: danger zone with confirm delete button is gone
+    expect(
+      screen.queryByRole('button', { name: /endgültig löschen/i }),
+    ).toBeNull();
   });
 });

@@ -206,6 +206,8 @@ export function CollectionProductPage({
       ),
     onSuccess: async (data) => {
       await commitCollection(data);
+      setIsEditing(false);
+      setConfirmDelete(false);
       setShowTitleSaved(true);
       setTimeout(() => setShowTitleSaved(false), 2500);
     },
