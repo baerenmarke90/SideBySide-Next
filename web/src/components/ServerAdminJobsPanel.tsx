@@ -5,6 +5,7 @@ import type {
   ServerAdminApi,
 } from '../api/generated/apis/ServerAdminApi';
 import { resolvedLocale, useTranslation } from '../i18n';
+import './ServerAdminObservabilityPanels.css';
 
 const PAGE_SIZE = 25;
 
