@@ -49,6 +49,10 @@ class DeletionNotAcceptedError(RuntimeError):
     """Cleanup was attempted without an accepted external tombstone."""
 
 
+class DeletionAcceptanceConflictError(RuntimeError):
+    """The local DB and forward journal disagree about irreversible acceptance."""
+
+
 def _deletion_for_update(session: Session, account_id: UUID) -> AccountDeletion | None:
     return session.execute(
         select(AccountDeletion).where(AccountDeletion.account_id == account_id).with_for_update()
@@ -154,6 +158,12 @@ def apply_accepted_tombstone(
             accepted_at=accepted_at,
         )
         session.add(deletion)
+    elif deletion.accepted_at != accepted_at:
+        # The forward journal is the irreversible authority. Silently choosing
+        # either timestamp would hide a corrupted/mismatched restore source.
+        raise DeletionAcceptanceConflictError(
+            "Account deletion acceptance timestamp conflicts with the forward journal."
+        )
     elif deletion.status != AccountDeletionStatus.COMPLETED.value:
         deletion.status = AccountDeletionStatus.PENDING.value
         deletion.failed_at = None
