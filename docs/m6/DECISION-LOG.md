@@ -42,12 +42,18 @@ that classification.
 
 ### M6-B02 — Complete Account deletion/retention matrix
 
-**Status:** `BLOCKING` for G5, owner #520, coordinated with #518.
+**Status:** `FROZEN / RESOLVED` by `ACCOUNT-DELETION-RETENTION.md` v1.0 under #520. Runtime implementation and final G5 evidence remain open.
 
-The launch contract must decide hard-delete/anonymize/retain behavior for Account,
-authentication, Membership history, shared/private content, media, jobs, Audit and
-commercial references, including how a restore of an older backup re-applies a
-previous deletion request.
+The frozen contract requires:
+
+- one server-authoritative Account-deletion lifecycle, distinct from Space/relationship offboarding;
+- removal of authentication/profile/private data while a minimal disabled/pseudonymized Account identity may remain for legitimate historical references;
+- hard deletion of the deleted Account's `OWNER_ONLY` data without transfer or reclassification;
+- retention of legitimate `SPACE_SHARED` history without blind `accounts` cascade deletion or ownership transfer;
+- reuse of the existing session, Membership, Job/Outbox, MediaStore cleanup and #345 portability primitives;
+- stale side effects to fail closed against current deletion state and authorization;
+- a minimal forward-only deletion reconciliation journal outside the point-in-time application database so #190 restores predating deletion cannot reactivate the Account before API/worker startup;
+- #518 to remain authoritative for orphaned-Space retention/destruction and deliberate reconnect semantics.
 
 ### M6-B03 — Cloud/Managed launch topology
 
