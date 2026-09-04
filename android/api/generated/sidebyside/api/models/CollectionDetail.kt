@@ -38,7 +38,6 @@ import kotlinx.serialization.Contextual
  * @param createdAt 
  * @param createdBy 
  * @param creator 
- * @param icon 
  * @param id 
  * @param items 
  * @param spaceId 
@@ -61,9 +60,6 @@ data class CollectionDetail (
 
     @SerialName(value = "creator")
     val creator: AuthorSummary,
-
-    @SerialName(value = "icon")
-    val icon: kotlin.String?,
 
     @Contextual @SerialName(value = "id")
     val id: java.util.UUID,

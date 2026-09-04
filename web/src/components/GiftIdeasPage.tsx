@@ -249,22 +249,28 @@ export function GiftIdeasListPage({ api, accountId, spaceId }: Props) {
         <section className="private-area-results" aria-live="polite">
           <ul className="private-area-list layout-columns layout-columns-dense">
             {ideas.map((gift) => (
-              <li key={gift.id} className="private-area-card">
-                <div className="private-area-card-heading">
-                  <h2>{gift.title}</h2>
-                  <span className="private-area-badge">
-                    {t(`privateArea.gifts.status.${gift.status}`)}
-                  </span>
-                </div>
-                {gift.recipient ? <p>{gift.recipient}</p> : null}
-                {gift.description ? (
-                  <p className="private-area-excerpt">{gift.description}</p>
-                ) : null}
+              <li key={gift.id}>
                 <Link
-                  className="button-link secondary-link"
+                  className="private-area-card private-area-card-clickable"
                   to={privateGiftIdeaPath(gift.id)}
                 >
-                  {t('privateArea.edit')}
+                  <div className="private-area-card-main">
+                    <div className="private-area-card-heading">
+                      <h2>{gift.title}</h2>
+                      <span className="private-area-badge">
+                        {t(`privateArea.gifts.status.${gift.status}`)}
+                      </span>
+                    </div>
+                    {gift.recipient ? (
+                      <p className="private-area-recipient">{gift.recipient}</p>
+                    ) : null}
+                    {gift.description ? (
+                      <p className="private-area-excerpt">{gift.description}</p>
+                    ) : null}
+                  </div>
+                  <span className="private-area-card-arrow" aria-hidden="true">
+                    →
+                  </span>
                 </Link>
               </li>
             ))}

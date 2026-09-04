@@ -152,6 +152,12 @@ body.theme-vault .private-area-badge {
   margin: 0;
   padding: 0;
   list-style: none;
+  align-items: stretch;
+}
+
+.private-area-list > li {
+  display: flex;
+  height: 100%;
 }
 
 .private-area-card,
@@ -163,6 +169,21 @@ body.theme-vault .private-area-badge {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-medium);
   background: var(--color-surface);
+  width: 100%;
+  height: 100%;
+}
+
+.private-area-card-main {
+  display: grid;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+.private-area-recipient {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
 }
 
 /* One direct action per card, at its own width. */

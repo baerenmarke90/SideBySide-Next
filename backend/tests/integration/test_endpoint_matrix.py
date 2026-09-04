@@ -117,11 +117,11 @@ RULE_PREFERENCE = {
 }
 PLACE = {"name": "Matrix Place", "latitude": 52.520008, "longitude": 13.404954}
 CHAPTER = {"title": "Matrix Chapter", "description": "Text"}
-COLLECTION = {"title": "Matrix Collection", "icon": "list"}
+COLLECTION = {"title": "Matrix Collection"}
 COLLECTION_ITEM = {"title": "Matrix Collection Item"}
 PRIVATE_NOTE = {"title": "Matrix Private Note", "body": "Private body"}
 GIFT_IDEA = {"title": "Matrix Gift Idea"}
-PRIVATE_COLLECTION = {"title": "Matrix Private Collection", "icon": "lock"}
+PRIVATE_COLLECTION = {"title": "Matrix Private Collection"}
 PRIVATE_COLLECTION_ITEM = {"title": "Matrix Private Collection Item"}
 PRIVATE_COLLECTION_FIXTURES = {
     "collectionId": "privateCollectionId",

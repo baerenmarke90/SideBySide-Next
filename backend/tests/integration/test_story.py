@@ -295,3 +295,65 @@ class TestProjection:
         """The card needs a heading, not the complete text."""
         memory(client, couple)
         assert "body" not in timeline(client, couple).json()["items"][0]["memory"]
+
+
+class TestAvailableYears:
+    def test_available_years_are_kind_aware_and_ordered_descending(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+        # Memory 2024 + Milestone 2026
+        memory(client, couple, title="Mem 2024", happened_on="2024-05-10")
+        milestone(client, couple, title="Mile 2026", happened_on="2026-07-20")
+
+        # 1. Alle Inhalte -> [2026, 2024]
+        res_all = timeline(client, couple)
+        assert res_all.status_code == 200
+        assert res_all.json()["availableYears"] == [2026, 2024]
+
+        # 2. kind=MILESTONE -> [2026]
+        res_milestone = timeline(client, couple, type=["MILESTONE"])
+        assert res_milestone.status_code == 200
+        assert res_milestone.json()["availableYears"] == [2026]
+
+        # 3. kind=MEMORY -> [2024]
+        res_memory = timeline(client, couple, type=["MEMORY"])
+        assert res_memory.status_code == 200
+        assert res_memory.json()["availableYears"] == [2024]
+
+    def test_available_years_ignores_active_year_filter_so_deep_links_recover(
+        self, client, couple
+    ) -> None:  # type: ignore[no-untyped-def]
+        milestone(client, couple, title="Mile 2026", happened_on="2026-07-20")
+
+        # Deep link ?type=MILESTONE&year=1997
+        res = timeline(client, couple, type=["MILESTONE"], year=1997)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["items"] == []
+        # Crucial #618 requirement: availableYears still contains 2026!
+        assert data["availableYears"] == [2026]
+
+    def test_available_years_preserves_older_years_across_pagination(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+        memory(client, couple, title="Mem 2023", happened_on="2023-01-01")
+        memory(client, couple, title="Mem 2025", happened_on="2025-01-01")
+        memory(client, couple, title="Mem 2026", happened_on="2026-01-01")
+
+        # First page with limit=1 only returns 1 item, but availableYears has all 3
+        res = timeline(client, couple, limit=1)
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data["items"]) == 1
+        assert data["hasMore"] is True
+        assert data["availableYears"] == [2026, 2025, 2023]
+
+    def test_private_heart_moment_does_not_leak_year(self, client, couple) -> None:  # type: ignore[no-untyped-def]
+        # Partner creates a private heart moment in 2022
+        heart_moment(
+            client, couple, visibility="PRIVATE", happened_on="2022-03-15", token=couple["token_b"]
+        )
+        # Shared memory in 2025
+        memory(client, couple, title="Shared 2025", happened_on="2025-01-01")
+
+        # Token A (Anna) timeline must NOT show 2022 in availableYears
+        res = timeline(client, couple, token=couple["token_a"])
+        assert res.status_code == 200
+        assert 2022 not in res.json()["availableYears"]
+        assert res.json()["availableYears"] == [2025]

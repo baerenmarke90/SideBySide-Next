@@ -67,31 +67,18 @@ function CollectionFields({
 }) {
   const { t } = useTranslation();
   return (
-    <>
-      <div className="field-group">
-        <label htmlFor="private-collection-title">
-          {t('privateArea.collections.titleLabel')}
-        </label>
-        <input
-          id="private-collection-title"
-          name="title"
-          required
-          maxLength={200}
-          defaultValue={collection?.title ?? ''}
-        />
-      </div>
-      <div className="field-group">
-        <label htmlFor="private-collection-icon">
-          {t('privateArea.collections.iconLabel')}
-        </label>
-        <input
-          id="private-collection-icon"
-          name="icon"
-          maxLength={8}
-          defaultValue={collection?.icon ?? ''}
-        />
-      </div>
-    </>
+    <div className="field-group">
+      <label htmlFor="private-collection-title">
+        {t('privateArea.collections.titleLabel')}
+      </label>
+      <input
+        id="private-collection-title"
+        name="title"
+        required
+        maxLength={200}
+        defaultValue={collection?.title ?? ''}
+      />
+    </div>
   );
 }
 
@@ -108,15 +95,16 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
         }),
       ),
     initialPageParam: null as string | null,
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    getNextPageParam: (page) => (page.hasMore ? page.nextCursor : undefined),
     retry: false,
   });
-  const collections = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = query.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <>
       <PageHeader
         before={<PrivateAreaBackToMore />}
+        eyebrow={t('privateArea.privacyLabel')}
         title={t('privateArea.collections.title')}
         description={t('privateArea.collections.intro')}
         action={
@@ -134,28 +122,24 @@ export function PrivateCollectionsListPage({ api, accountId, spaceId }: Props) {
           onRetry={() => void query.refetch()}
         />
       ) : null}
-      {query.data && collections.length === 0 ? (
+      {query.data && items.length === 0 ? (
         <UiState
           kind="empty"
           title={t('privateArea.collections.emptyTitle')}
           body={t('privateArea.collections.emptyBody')}
         />
       ) : null}
-      {collections.length > 0 ? (
-        <section className="private-area-results" aria-live="polite">
+      {items.length > 0 ? (
+        <section className="private-area-section">
           <ul className="private-area-list layout-columns layout-columns-dense">
-            {collections.map((collection) => (
+            {items.map((collection) => (
               <li key={collection.id}>
                 <Link
                   className="private-area-card private-area-card-clickable"
                   to={privateCollectionPath(collection.id)}
                 >
                   <div className="private-area-card-heading">
-                    <h2>
-                      {collection.icon
-                        ? `${collection.icon} ${collection.title}`
-                        : collection.title}
-                    </h2>
+                    <h2>{collection.title}</h2>
                   </div>
                   <span className="private-area-card-arrow" aria-hidden="true">
                     →
@@ -184,11 +168,11 @@ export function PrivateCollectionCreatePage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: ({ title, icon }: { title: string; icon: string }) =>
+    mutationFn: (title: string) =>
       privateApiCall(() =>
         api.createPrivateCollection({
           spaceId,
-          privateCollectionCreate: { title, icon: icon || undefined },
+          privateCollectionCreate: { title },
         }),
       ),
     onSuccess: async (collection) => {
@@ -202,10 +186,7 @@ export function PrivateCollectionCreatePage({
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    mutation.mutate({
-      title: String(data.get('title') || '').trim(),
-      icon: String(data.get('icon') || '').trim(),
-    });
+    mutation.mutate(String(data.get('title') || '').trim());
   }
 
   return (
@@ -572,11 +553,7 @@ export function PrivateCollectionDetailPage({
           </Link>
         }
         eyebrow={t('privateArea.privacyLabel')}
-        title={
-          collection.icon
-            ? `${collection.icon} ${collection.title}`
-            : collection.title
-        }
+        title={collection.title}
         action={
           collection.capabilities.canEdit ? (
             <Link
@@ -614,18 +591,16 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
     mutationFn: ({
       collection,
       title,
-      icon,
     }: {
       collection: PrivateCollectionDetail;
       title: string;
-      icon: string;
     }) =>
       privateApiCall(() =>
         api.updatePrivateCollection({
           spaceId,
           collectionId: collection.id,
           ifMatch: String(collection.version),
-          privateCollectionUpdate: { title, icon: icon || null },
+          privateCollectionUpdate: { title },
         }),
       ),
     onSuccess: async (collection) => {
@@ -669,7 +644,6 @@ export function PrivateCollectionEditPage({ api, accountId, spaceId }: Props) {
     mutation.mutate({
       collection: editableCollection,
       title: String(data.get('title') || '').trim(),
-      icon: String(data.get('icon') || '').trim(),
     });
   }
 

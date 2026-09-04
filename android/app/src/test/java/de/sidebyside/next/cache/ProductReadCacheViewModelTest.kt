@@ -680,7 +680,6 @@ private class CollectionsApi : FakeReferenceContract() {
                     createdAt = OffsetDateTime.now(),
                     createdBy = UUID.randomUUID(),
                     creator = AuthorSummary(displayName = "Lea", id = UUID.randomUUID()),
-                    icon = null,
                     id = UUID.randomUUID(),
                     items = emptyList(),
                     spaceId = spaceId,

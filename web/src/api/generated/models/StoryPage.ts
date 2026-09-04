@@ -29,6 +29,12 @@ import {
 export interface StoryPage {
     /**
      * 
+     * @type {Array<number>}
+     * @memberof StoryPage
+     */
+    availableYears?: Array<number>;
+    /**
+     * 
      * @type {boolean}
      * @memberof StoryPage
      */
@@ -67,6 +73,7 @@ export function StoryPageFromJSONTyped(json: any, ignoreDiscriminator: boolean):
     }
     return {
         
+        'availableYears': json['availableYears'] == null ? undefined : json['availableYears'],
         'hasMore': json['hasMore'],
         'items': ((json['items'] as Array<any>).map(StoryItemFromJSON)),
         'nextCursor': json['nextCursor'],
@@ -84,6 +91,7 @@ export function StoryPageToJSONTyped(value?: StoryPage | null, ignoreDiscriminat
 
     return {
         
+        'availableYears': value['availableYears'],
         'hasMore': value['hasMore'],
         'items': ((value['items'] as Array<any>).map(StoryItemToJSON)),
         'nextCursor': value['nextCursor'],

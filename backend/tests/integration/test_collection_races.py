@@ -31,7 +31,6 @@ def _setup(production_client):  # type: ignore[no-untyped-def]
             session,
             anna_context,
             title="Race list",
-            icon=None,
         )
         first = service.create_item(
             session,

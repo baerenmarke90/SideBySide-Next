@@ -48,6 +48,13 @@ MAX_LIMIT = 50
 ACTIVITY_CURSOR_VERSION = "activity-v1"
 NOTIFICATION_CURSOR_VERSION = "notification-v1"
 
+_OWN_NOISE_KINDS = {
+    ActivityKind.PLAN_CREATED.value,
+    ActivityKind.PLACE_CREATED.value,
+    ActivityKind.COLLECTION_CREATED.value,
+    ActivityKind.WISH_CREATED.value,
+}
+
 _TARGET_MODELS: dict[EngagementTarget, Any] = {
     EngagementTarget.MEMORY: Memory,
     EngagementTarget.HEART_MOMENT: HeartMoment,
@@ -353,6 +360,11 @@ def read_activity(
     statement = select(Activity).where(
         Activity.space_id == context.space_id,
         _projectable_predicate(Activity.target_type, Activity.target_id, context),
+        or_(
+            Activity.actor_id != context.account_id,
+            Activity.actor_id.is_(None),
+            Activity.kind.not_in(_OWN_NOISE_KINDS),
+        ),
     )
     if cursor is not None:
         occurred_at, item_id = _decode_position(cursor, binding)

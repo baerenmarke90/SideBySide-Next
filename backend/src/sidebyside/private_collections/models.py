@@ -29,7 +29,6 @@ class PrivateCollectionPayload(ProtectedPayload):
     """Protected content of a PrivateCollection root."""
 
     title: str
-    icon: str | None = None
 
 
 class PrivateCollectionItemPayload(ProtectedPayload):

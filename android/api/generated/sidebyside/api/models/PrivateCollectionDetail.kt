@@ -35,7 +35,6 @@ import kotlinx.serialization.Contextual
  *
  * @param capabilities 
  * @param createdAt 
- * @param icon 
  * @param id 
  * @param items 
  * @param ownerId 
@@ -53,9 +52,6 @@ data class PrivateCollectionDetail (
 
     @Contextual @SerialName(value = "createdAt")
     val createdAt: java.time.OffsetDateTime,
-
-    @SerialName(value = "icon")
-    val icon: kotlin.String?,
 
     @Contextual @SerialName(value = "id")
     val id: java.util.UUID,

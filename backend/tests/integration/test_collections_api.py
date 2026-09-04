@@ -54,7 +54,7 @@ def couple(session: Session):  # type: ignore[no-untyped-def]
 def create_collection(client, couple, *, token_key: str = "token_a", title: str = "Trips"):  # type: ignore[no-untyped-def]
     return client.post(
         path(couple["space"].id),
-        json={"title": title, "icon": "map"},
+        json={"title": title},
         headers=auth(couple[token_key]),
     )
 
@@ -76,7 +76,6 @@ class TestCollectionCrud:
         collection = created.json()
         assert UUID(collection["id"]).version == 7
         assert collection["title"] == "Trips"
-        assert collection["icon"] == "map"
         assert collection["items"] == []
         assert collection["createdBy"] == str(couple["anna"].id)
         assert collection["creator"]["displayName"] == "Anna"
@@ -92,12 +91,11 @@ class TestCollectionCrud:
 
         updated = client.patch(
             f"{path(couple['space'].id)}/{collection['id']}",
-            json={"title": "  Weekend trips  ", "icon": None},
+            json={"title": "  Weekend trips  "},
             headers=if_match(couple["token_b"], 1),
         )
         assert updated.status_code == 200
         assert updated.json()["title"] == "Weekend trips"
-        assert updated.json()["icon"] is None
         assert updated.json()["createdBy"] == str(couple["anna"].id)
         assert updated.json()["version"] == 2
 

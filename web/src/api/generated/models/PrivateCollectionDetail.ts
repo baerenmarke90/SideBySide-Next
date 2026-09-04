@@ -51,12 +51,6 @@ export interface PrivateCollectionDetail {
      * @type {string}
      * @memberof PrivateCollectionDetail
      */
-    icon: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof PrivateCollectionDetail
-     */
     id: string;
     /**
      * 
@@ -102,7 +96,6 @@ export interface PrivateCollectionDetail {
 export function instanceOfPrivateCollectionDetail(value: object): value is PrivateCollectionDetail {
     if (!('capabilities' in value) || value['capabilities'] === undefined) return false;
     if (!('createdAt' in value) || value['createdAt'] === undefined) return false;
-    if (!('icon' in value) || value['icon'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('items' in value) || value['items'] === undefined) return false;
     if (!('ownerId' in value) || value['ownerId'] === undefined) return false;
@@ -125,7 +118,6 @@ export function PrivateCollectionDetailFromJSONTyped(json: any, ignoreDiscrimina
         
         'capabilities': ResourceCapabilitiesFromJSON(json['capabilities']),
         'createdAt': (new Date(json['createdAt'])),
-        'icon': json['icon'],
         'id': json['id'],
         'items': ((json['items'] as Array<any>).map(PrivateCollectionItemDetailFromJSON)),
         'ownerId': json['ownerId'],
@@ -149,7 +141,6 @@ export function PrivateCollectionDetailToJSONTyped(value?: PrivateCollectionDeta
         
         'capabilities': ResourceCapabilitiesToJSON(value['capabilities']),
         'createdAt': value['createdAt'].toISOString(),
-        'icon': value['icon'],
         'id': value['id'],
         'items': ((value['items'] as Array<any>).map(PrivateCollectionItemDetailToJSON)),
         'ownerId': value['ownerId'],

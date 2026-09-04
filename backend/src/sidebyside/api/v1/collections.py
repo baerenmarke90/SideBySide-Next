@@ -32,7 +32,6 @@ class CollectionCreate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str
-    icon: str | None = None
 
     @field_validator("title")
     @classmethod
@@ -47,7 +46,6 @@ class CollectionUpdate(ApiModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | SkipJsonSchema[None] = None
-    icon: str | None = None
 
     @model_validator(mode="after")
     def _validate_patch(self) -> Self:
@@ -119,7 +117,6 @@ class CollectionDetail(ApiModel):
     space_id: UUID
     created_by: UUID
     title: str
-    icon: str | None
     version: int
     created_at: datetime
     updated_at: datetime
@@ -167,7 +164,6 @@ def collection_detail(session: DbSession, collection: Collection) -> CollectionD
         space_id=collection.space_id,
         created_by=collection.owner_id,
         title=collection.payload.title,
-        icon=collection.payload.icon,
         version=collection.version,
         created_at=collection.created_at,
         updated_at=collection.updated_at,
@@ -201,7 +197,6 @@ def create_collection(
         session,
         authorization,
         title=body.title,
-        icon=body.icon,
     )
     response.headers["ETag"] = etag_for(collection.version)
     return collection_detail(session, collection)
@@ -265,7 +260,6 @@ def update_collection(
         expected_version=expected_version,
         changed_fields=frozenset(body.model_fields_set),
         title=body.title,
-        icon=body.icon,
     )
     response.headers["ETag"] = etag_for(collection.version)
     return collection_detail(session, collection)

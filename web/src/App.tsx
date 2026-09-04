@@ -582,7 +582,14 @@ function AuthenticatedApp({
           />
           <Route
             path={ACTIVITY_ROUTE}
-            element={<ActivityProductPage apis={m4Apis} spaceId={spaceId} />}
+            element={
+              <ActivityProductPage
+                apis={m4Apis}
+                spaceId={spaceId}
+                profilesApi={profilesApi}
+                currentAccountId={account.id}
+              />
+            }
           />
           <Route
             path={SEARCH_ROUTE}

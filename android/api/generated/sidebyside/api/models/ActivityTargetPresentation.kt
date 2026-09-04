@@ -23,7 +23,7 @@
 
 package sidebyside.api.models
 
-import sidebyside.api.models.StoryItem
+import sidebyside.api.models.EngagementTarget
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
@@ -32,26 +32,22 @@ import kotlinx.serialization.Contextual
 /**
  * 
  *
- * @param hasMore 
- * @param items 
- * @param nextCursor 
- * @param availableYears 
+ * @param targetId 
+ * @param targetType 
+ * @param title 
  */
 @Serializable
 
-data class StoryPage (
+data class ActivityTargetPresentation (
 
-    @SerialName(value = "hasMore")
-    val hasMore: kotlin.Boolean,
+    @Contextual @SerialName(value = "targetId")
+    val targetId: java.util.UUID,
 
-    @SerialName(value = "items")
-    val items: kotlin.collections.List<StoryItem>,
+    @Contextual @SerialName(value = "targetType")
+    val targetType: EngagementTarget,
 
-    @SerialName(value = "nextCursor")
-    val nextCursor: kotlin.String?,
-
-    @SerialName(value = "availableYears")
-    val availableYears: kotlin.collections.List<kotlin.Int>? = null
+    @SerialName(value = "title")
+    val title: kotlin.String? = null
 
 ) {
 

@@ -13,11 +13,10 @@ const ACCOUNT_ID = 'account-1';
 const SPACE_ID = 'space-1';
 const COLLECTION_ID = 'collection-1';
 
-function collection(icon: string | null) {
+function collection() {
   return {
     capabilities: { canComment: false, canDelete: true, canEdit: true },
     createdAt: new Date('2026-08-01T10:00:00Z'),
-    icon,
     id: COLLECTION_ID,
     items: [],
     ownerId: ACCOUNT_ID,
@@ -29,14 +28,14 @@ function collection(icon: string | null) {
 }
 
 describe('PrivateCollectionsPage', () => {
-  it('shows the icon as a title prefix in the list', () => {
+  it('shows the title cleanly in the list (#373)', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
     queryClient.setQueryData(
       privateAreaQueryKeys.collections(ACCOUNT_ID, SPACE_ID),
       {
-        pages: [{ items: [collection('🧳')], nextCursor: null }],
+        pages: [{ items: [collection()], nextCursor: null }],
         pageParams: [null],
       },
     );
@@ -53,21 +52,20 @@ describe('PrivateCollectionsPage', () => {
       </QueryClientProvider>,
     );
 
-    // #606: the icon field existed on the API but was never exposed here.
-    expect(html).toContain('🧳 Packing list');
+    expect(html).toContain('Packing list');
     // #616: entire card is the primary navigation link without redundant edit button
     expect(html).toContain('private-area-card-clickable');
     expect(html).toContain(`/more/private/collections/${COLLECTION_ID}`);
     expect(html).not.toContain('button-link secondary-link');
   });
 
-  it('offers an icon field when editing', () => {
+  it('does not offer an icon field when editing (#373)', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
     queryClient.setQueryData(
       privateAreaQueryKeys.collection(ACCOUNT_ID, SPACE_ID, COLLECTION_ID),
-      collection('🧳'),
+      collection(),
     );
 
     const html = renderToStaticMarkup(
@@ -91,7 +89,7 @@ describe('PrivateCollectionsPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).toContain('private-collection-icon');
+    expect(html).not.toContain('private-collection-icon');
   });
 
   it('renders checklist items with checkboxes, autosave inputs, and grouped sections', () => {
@@ -101,7 +99,7 @@ describe('PrivateCollectionsPage', () => {
     queryClient.setQueryData(
       privateAreaQueryKeys.collection(ACCOUNT_ID, SPACE_ID, COLLECTION_ID),
       {
-        ...collection('📝'),
+        ...collection(),
         items: [
           {
             id: 'item-1',

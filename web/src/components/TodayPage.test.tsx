@@ -844,4 +844,115 @@ describe('formatRelationshipDuration', () => {
       ),
     ).toBe('15 Tage zusammen');
   });
+
+  describe('issue #617: keep third-party dates out of primary context', () => {
+    it('selects shared plan as primary context when upcoming contains couple plan', () => {
+      const html = renderTodayPage({
+        space: {
+          id: 'space-1',
+          partner: { id: 'partner-1', displayName: 'Sam' },
+        },
+        relationshipDuration: null,
+        upcoming: [
+          {
+            id: 'plan-1',
+            type: 'PLAN',
+            titleOrText: 'Weekend by the lake',
+            scheduledAt: new Date('2026-09-10T10:00:00Z'),
+          },
+        ],
+        recentShared: [],
+        retrospective: null,
+      });
+
+      expect(html).toContain('today-context-area');
+      expect(html).toContain('Weekend by the lake');
+      expect(html).not.toContain('today-section-upcoming');
+    });
+
+    it('omits primary context slot when upcoming is empty (no forced fallback for third-party dates)', () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      queryClient.setQueryData(['m5-s5', 'dashboard', 'space-1'], {
+        space: {
+          id: 'space-1',
+          partner: { id: 'partner-1', displayName: 'Sam' },
+        },
+        relationshipDuration: { daysTogether: 100 },
+        upcoming: [], // Filtered at projection boundary (#617)
+        recentShared: [
+          {
+            id: 'mem-1',
+            type: 'MEMORY',
+            titleOrText: 'Konzertbesuch',
+            occurredOn: new Date('2026-09-01T19:00:00Z'),
+          },
+        ],
+        retrospective: null,
+      });
+      queryClient.setQueryData(['m4', 'activity', 'space-1'], {
+        items: [],
+        nextCursor: null,
+      });
+
+      const html = renderToStaticMarkup(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <TodayPage apis={{} as M4ProductApis} spaceId="space-1" />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+
+      // Context area must disappear cleanly; page flows directly into recent shared
+      expect(html).not.toContain('today-context-area');
+      expect(html).toContain('Konzertbesuch');
+    });
+
+    it('renders couple anniversary as eligible primary context', () => {
+      const html = renderTodayPage({
+        space: {
+          id: 'space-1',
+          partner: { id: 'partner-1', displayName: 'Sam' },
+        },
+        relationshipDuration: { daysTogether: 730 },
+        upcoming: [
+          {
+            id: 'anniv-1',
+            type: 'ANNIVERSARY',
+            titleOrText: 'Jahrestag',
+            occurredOn: new Date('2026-09-12T00:00:00Z'),
+          },
+        ],
+        recentShared: [],
+        retrospective: null,
+      });
+
+      expect(html).toContain('today-context-area');
+      expect(html).toContain('today-context-card');
+    });
+
+    it('renders couple important date as eligible primary context', () => {
+      const html = renderTodayPage({
+        space: {
+          id: 'space-1',
+          partner: { id: 'partner-1', displayName: 'Sam' },
+        },
+        relationshipDuration: { daysTogether: 730 },
+        upcoming: [
+          {
+            id: 'date-1',
+            type: 'IMPORTANT_DATE',
+            titleOrText: 'Zusammengezogen',
+            occurredOn: new Date('2026-09-15T00:00:00Z'),
+          },
+        ],
+        recentShared: [],
+        retrospective: null,
+      });
+
+      expect(html).toContain('today-context-area');
+      expect(html).toContain('Zusammengezogen');
+    });
+  });
 });

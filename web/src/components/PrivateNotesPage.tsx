@@ -141,23 +141,27 @@ export function PrivateNotesListPage({ api, accountId, spaceId }: Props) {
         <section className="private-area-results" aria-live="polite">
           <ul className="private-area-list layout-columns layout-columns-dense">
             {notes.map((note) => (
-              <li key={note.id} className="private-area-card">
-                <div className="private-area-card-heading">
-                  <h2>{note.title}</h2>
-                  {note.pinned ? (
-                    <span className="private-area-badge">
-                      {t('privateArea.notes.pinned')}
-                    </span>
-                  ) : null}
-                </div>
-                {note.body ? (
-                  <p className="private-area-excerpt">{note.body}</p>
-                ) : null}
+              <li key={note.id}>
                 <Link
-                  className="button-link secondary-link"
+                  className="private-area-card private-area-card-clickable"
                   to={privateNotePath(note.id)}
                 >
-                  {t('privateArea.edit')}
+                  <div className="private-area-card-main">
+                    <div className="private-area-card-heading">
+                      <h2>{note.title}</h2>
+                      {note.pinned ? (
+                        <span className="private-area-badge">
+                          {t('privateArea.notes.pinned')}
+                        </span>
+                      ) : null}
+                    </div>
+                    {note.body ? (
+                      <p className="private-area-excerpt">{note.body}</p>
+                    ) : null}
+                  </div>
+                  <span className="private-area-card-arrow" aria-hidden="true">
+                    →
+                  </span>
                 </Link>
               </li>
             ))}

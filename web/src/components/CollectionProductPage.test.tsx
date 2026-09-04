@@ -5,7 +5,7 @@ import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { CollectionProductPage } from './CollectionProductPage';
 
 describe('CollectionProductPage', () => {
-  it('shows the icon as a title prefix and offers an icon field when editing', () => {
+  it('shows collection title cleanly without icon prefix or edit field (#373)', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -16,7 +16,6 @@ describe('CollectionProductPage', () => {
         createdAt: new Date('2026-08-01T10:00:00Z'),
         createdBy: 'account-1',
         creator: { id: 'account-1', displayName: 'Lea' },
-        icon: '🧳',
         id: 'collection-1',
         items: [],
         spaceId: 'space-1',
@@ -44,8 +43,7 @@ describe('CollectionProductPage', () => {
       </QueryClientProvider>,
     );
 
-    // #606: the icon field existed on the API but was never exposed here.
-    expect(html).toContain('🧳 Packing list');
-    expect(html).toContain('collection-edit-icon');
+    expect(html).toContain('Packing list');
+    expect(html).not.toContain('collection-edit-icon');
   });
 });

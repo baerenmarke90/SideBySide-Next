@@ -70,12 +70,6 @@ export interface CollectionDetail {
      * @type {string}
      * @memberof CollectionDetail
      */
-    icon: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CollectionDetail
-     */
     id: string;
     /**
      * 
@@ -117,7 +111,6 @@ export function instanceOfCollectionDetail(value: object): value is CollectionDe
     if (!('createdAt' in value) || value['createdAt'] === undefined) return false;
     if (!('createdBy' in value) || value['createdBy'] === undefined) return false;
     if (!('creator' in value) || value['creator'] === undefined) return false;
-    if (!('icon' in value) || value['icon'] === undefined) return false;
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('items' in value) || value['items'] === undefined) return false;
     if (!('spaceId' in value) || value['spaceId'] === undefined) return false;
@@ -141,7 +134,6 @@ export function CollectionDetailFromJSONTyped(json: any, ignoreDiscriminator: bo
         'createdAt': (new Date(json['createdAt'])),
         'createdBy': json['createdBy'],
         'creator': AuthorSummaryFromJSON(json['creator']),
-        'icon': json['icon'],
         'id': json['id'],
         'items': ((json['items'] as Array<any>).map(CollectionItemDetailFromJSON)),
         'spaceId': json['spaceId'],
@@ -166,7 +158,6 @@ export function CollectionDetailToJSONTyped(value?: CollectionDetail | null, ign
         'createdAt': value['createdAt'].toISOString(),
         'createdBy': value['createdBy'],
         'creator': AuthorSummaryToJSON(value['creator']),
-        'icon': value['icon'],
         'id': value['id'],
         'items': ((value['items'] as Array<any>).map(CollectionItemDetailToJSON)),
         'spaceId': value['spaceId'],

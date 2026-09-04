@@ -78,9 +78,12 @@ def engine() -> Iterator[Engine]:
     from sidebyside.attachments import binding as _binding  # noqa: F401
     from sidebyside.attachments import models as _attachments  # noqa: F401
     from sidebyside.chapters import models as _chapters  # noqa: F401
+    from sidebyside.collections import models as _collections  # noqa: F401
     from sidebyside.comments import models as _comments  # noqa: F401
     from sidebyside.db.base import Base
+    from sidebyside.engagement import models as _engagement  # noqa: F401
     from sidebyside.entitlements import models as _entitlements  # noqa: F401
+    from sidebyside.gift_ideas import models as _gift_ideas  # noqa: F401
     from sidebyside.heart_moments import models as _heart_moments  # noqa: F401
     from sidebyside.identity import models as _identity  # noqa: F401
     from sidebyside.jobs import models as _jobs  # noqa: F401
@@ -90,9 +93,14 @@ def engine() -> Iterator[Engine]:
     from sidebyside.people import models as _people  # noqa: F401
     from sidebyside.places import models as _places  # noqa: F401
     from sidebyside.plans import models as _plans  # noqa: F401
+    from sidebyside.private_collections import models as _private_collections  # noqa: F401
+    from sidebyside.private_notes import models as _private_notes  # noqa: F401
     from sidebyside.profiles import models as _profiles  # noqa: F401
     from sidebyside.relations import models as _relations  # noqa: F401
     from sidebyside.relationship import models as _relationship  # noqa: F401
+    from sidebyside.reminders import models as _reminders  # noqa: F401
+    from sidebyside.reminders import runtime_models as _reminder_runtime  # noqa: F401
+    from sidebyside.transfer import models as _transfer  # noqa: F401
     from sidebyside.wishes import models as _wishes  # noqa: F401
 
     # Test probe for owner/privacy authorization. It deliberately exists only
