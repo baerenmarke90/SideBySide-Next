@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { NotificationsApi } from '../api/generated/apis/NotificationsApi';
 import type { M4ProductApis } from '../client/m4Product';
@@ -167,26 +167,56 @@ describe('Notifications Product Experience', () => {
       unreadCount: 3,
     });
 
+    function LocationProbe() {
+      const location = useLocation();
+      return <div data-testid="location-probe">{location.pathname}</div>;
+    }
+
     render(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <NotificationsProductPage
-            apis={
-              {
-                notifications: {
-                  markNotificationRead,
-                } as unknown as NotificationsApi,
-              } as M4ProductApis
-            }
-            spaceId={SPACE_ID}
-            currentAccountId="user-self"
-          />
+        <MemoryRouter initialEntries={['/more/notifications']}>
+          <LocationProbe />
+          <Routes>
+            <Route
+              path="/more/notifications"
+              element={
+                <NotificationsProductPage
+                  apis={
+                    {
+                      notifications: {
+                        markNotificationRead,
+                      } as unknown as NotificationsApi,
+                    } as M4ProductApis
+                  }
+                  spaceId={SPACE_ID}
+                  currentAccountId="user-self"
+                />
+              }
+            />
+            <Route
+              path="/plan/plans/:planId"
+              element={<div data-testid="plan-detail-target">Plan Detail</div>}
+            />
+          </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
     );
 
+    expect(screen.getByTestId('location-probe').textContent).toBe(
+      '/more/notifications',
+    );
+    expect(screen.queryByTestId('plan-detail-target')).toBeNull();
+
     const link = screen.getByRole('link', { name: /Konzertkarte/i });
     fireEvent.click(link);
+
+    // Navigates immediately to expected detail path while markNotificationRead is still pending
+    expect(screen.getByTestId('location-probe').textContent).toBe(
+      '/plan/plans/plan-123',
+    );
+    expect(screen.getByTestId('plan-detail-target').textContent).toBe(
+      'Plan Detail',
+    );
 
     // Unread count decremented immediately in cache without waiting for API resolution
     await waitFor(() => {
