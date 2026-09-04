@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ServerAdminApi } from '../api/generated/apis/ServerAdminApi';
 import { ServerAdminJobsPanel } from './ServerAdminJobsPanel';
@@ -6,7 +7,7 @@ import { ServerAdminStoragePanel } from './ServerAdminStoragePanel';
 
 const api = {} as ServerAdminApi;
 
-function renderWithClient(client: QueryClient, node: React.ReactNode): string {
+function renderWithClient(client: QueryClient, node: ReactNode): string {
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>{node}</QueryClientProvider>,
   );
