@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ServerAdminApi } from '../api/generated/apis/ServerAdminApi';
 import { resolvedLocale, useTranslation } from '../i18n';
+import './ServerAdminObservabilityPanels.css';
 
 function formatNumber(value: number): string {
   return new Intl.NumberFormat(resolvedLocale()).format(value);
@@ -76,8 +77,7 @@ export function ServerAdminStoragePanel({ api }: { api: ServerAdminApi }) {
   const { t } = useTranslation();
   const storageQuery = useQuery({
     queryKey: ['server-admin', 'storage'],
-    queryFn: () =>
-      api.getServerAdminStorageApiV1ServerAdminStorageGet(),
+    queryFn: () => api.getServerAdminStorageApiV1ServerAdminStorageGet(),
     retry: false,
   });
 
