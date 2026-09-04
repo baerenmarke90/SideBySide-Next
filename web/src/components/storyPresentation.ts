@@ -42,16 +42,8 @@ function emotionLabel(emotion: string, t: TFunction): string {
   }
 }
 
-export function storyItemKey(item: StoryItem): string {
-  switch (item.kind) {
-    case 'MEMORY':
-      return `memory-${item.memory.id}`;
-    case 'HEART_MOMENT':
-      return `heart-${item.heartMoment.id}`;
-    case 'MILESTONE':
-      return `milestone-${item.milestone.id}`;
-  }
-}
+export { storyItemKey } from '../client/storyProduct';
+
 
 export function resolveStoryKindLabel(
   kind: StoryKind | string | null | undefined,
