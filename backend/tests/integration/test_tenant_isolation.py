@@ -261,18 +261,21 @@ class TestUpperBound:
             service.add_member(session, couple["space"].id, couple["b"])
         assert error.value.code == "ACCOUNT_ALREADY_MEMBER"
 
-    def test_space_has_room_after_member_leaves(
+    def test_relationship_history_rejects_replacement_after_member_leaves(
         self,
         session: Session,
         couple,
     ) -> None:  # type: ignore[no-untyped-def]
+        from sidebyside.core.errors import ConflictError
+
         membership = service.require_membership(session, couple["b"], couple["space"].id)
         service.end_membership(membership)
         session.flush()
 
         third = make_account(session, "Dritte Person")
-        new_membership = service.add_member(session, couple["space"].id, third)
-        assert new_membership.is_active
+        with pytest.raises(ConflictError) as error:
+            service.add_member(session, couple["space"].id, third)
+        assert error.value.code == service.SpaceErrorCode.RELATIONSHIP_ENDED
 
 
 class TestNoAuthenticationData:
