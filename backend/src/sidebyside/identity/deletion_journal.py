@@ -69,9 +69,7 @@ def _parse_record(raw: str, *, line_number: int) -> DeletionTombstone:
             f"Deletion journal line {line_number} is not valid JSON."
         ) from exc
     if not isinstance(record, dict) or frozenset(record) != _RECORD_KEYS:
-        raise DeletionJournalError(
-            f"Deletion journal line {line_number} has an invalid field set."
-        )
+        raise DeletionJournalError(f"Deletion journal line {line_number} has an invalid field set.")
     if record.get("format") != JOURNAL_FORMAT or record.get("formatVersion") != JOURNAL_VERSION:
         raise DeletionJournalError(
             f"Deletion journal line {line_number} uses an unsupported format."
@@ -111,9 +109,7 @@ def _read_records(handle: TextIO) -> tuple[DeletionTombstone, ...]:
     for line_number, raw in enumerate(handle, start=1):
         line = raw.strip()
         if not line:
-            raise DeletionJournalError(
-                f"Deletion journal line {line_number} is empty."
-            )
+            raise DeletionJournalError(f"Deletion journal line {line_number} is empty.")
         record = _parse_record(line, line_number=line_number)
         if instance_id is None:
             instance_id = record.instance_id
