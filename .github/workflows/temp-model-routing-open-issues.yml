@@ -1,0 +1,220 @@
+name: Temporary open-issue model and tool routing
+
+on:
+  push:
+    branches:
+      - automation/model-routing-open-issues-20260904
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  route-open-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Normalize model and tool routing on open issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import time
+          import urllib.request
+
+          token = os.environ["GH_TOKEN"]
+          repo = os.environ["REPOSITORY"]
+          api = "https://api.github.com"
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "sidebyside-model-tool-routing",
+          }
+
+          def request(url, method="GET", payload=None):
+              data = None if payload is None else json.dumps(payload).encode("utf-8")
+              req = urllib.request.Request(url, data=data, headers=headers, method=method)
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+
+          def contains_any(value, needles):
+              return any(needle in value for needle in needles)
+
+          def route_for(issue):
+              title = (issue.get("title") or "").lower()
+              labels = " ".join(
+                  (label.get("name") or "").lower()
+                  for label in issue.get("labels", [])
+                  if isinstance(label, dict)
+              )
+              signal = f"{title} {labels}"
+
+              deep_reasoning = [
+                  "architecture", "architektur", "security", "sicherheit", "privacy", "datenschutz",
+                  "auth", "oidc", "passkey", "sso", "authorization", "permission", "identity",
+                  "encrypt", "verschlüssel", "consent", "vault", "tresor", "safe space", "safe-space",
+                  "realtime", "real-time", "websocket", "concurrency", "race", "idempot",
+                  "offline", "cache isolation", "billing", "payment", "entitlement",
+                  "push notification delivery", "notification policy", "quiet hours", "digest",
+                  "maintenance mode", "server administration", "serveradmin", "server-admin",
+                  "ai historian", "historiker", "prompt injection", "unlock", "locked", "reveal",
+              ]
+              repo_heavy = [
+                  "refactor", "cleanup", "legacy", "migration", "migrate", "domain model",
+                  "repository", "codebase", "consolidat", "deduplic", "remove legacy",
+              ]
+              small_mechanical = [
+                  "copy", "wording", "text", "typo", "i18n", "localization", "lokalis",
+                  "lint", "format", "formatting", "docs", "documentation", "dokumentation",
+                  "spacing", "icon", "avatar", "placeholder", "color", "colour", "farbe",
+                  "haptic", "screenshot", "small polish", "microcopy",
+              ]
+              bounded_bug = [
+                  "fix", "bug", "regression", "broken", "failure", "fails", "error", "fehler",
+                  "incorrect", "falsch", "missing", "fehlt",
+              ]
+              ui_multifile = [
+                  "ux", "ui", "design", "redesign", "rebrand", "web", "android", "dashboard",
+                  "profile", "profil", "timeline", "responsive", "foldable", "navigation",
+                  "notification settings", "settings", "polish",
+              ]
+
+              if contains_any(signal, deep_reasoning):
+                  return {
+                      "recommended": "Google Antigravity · Gemini 3.1 Pro · High",
+                      "alternative": "Claude Code Console · Claude Opus 5 · High",
+                      "claude_chat": "Claude Opus 5 · High — possible; strong for architecture, security/privacy review, and difficult reasoning, but direct repository execution depends on available tools",
+                      "gemini_chat": "Gemini 3.1 Pro · High — possible; strong for architecture and review, but direct repository execution depends on available tools",
+                      "chatgpt": "GPT-5.6 Sol Chat · Very High — possible for architecture/review; direct end-to-end implementation depends on available repository and test tools",
+                      "codex": "Codex · GPT-5.6 Sol · High — reserve option only because Codex quota is scarce",
+                      "category": "deep",
+                  }
+
+              if contains_any(signal, repo_heavy):
+                  return {
+                      "recommended": "Claude Code Console · Claude Sonnet 5 · High",
+                      "alternative": "Google Antigravity · Gemini 3.8 Flash · High",
+                      "claude_chat": "Claude Sonnet 5 · High — possible for analysis/review; direct repository execution depends on available tools",
+                      "gemini_chat": "Gemini 3.8 Flash · High — possible for analysis/review; direct repository execution depends on available tools",
+                      "chatgpt": "GPT-5.6 Sol Chat · High — possible; direct implementation depends on available repository and test tools",
+                      "codex": "Codex · GPT-5.6 Sol · High — reserve option only; no quota-efficient advantage by default",
+                      "category": "repo-heavy",
+                  }
+
+              if contains_any(signal, small_mechanical):
+                  return {
+                      "recommended": "Google Antigravity · Gemini 3.8 Flash · Medium",
+                      "alternative": "Claude Code Console · Claude Sonnet 5 · Medium",
+                      "claude_chat": "Claude Sonnet 5 · Medium — possible",
+                      "gemini_chat": "Gemini 3.8 Flash · Medium — possible",
+                      "chatgpt": "GPT-5.6 Sol Chat · Medium — possible",
+                      "codex": "Codex · GPT-5.6 Terra · Medium — not recommended; unnecessary Codex quota spend for routine work",
+                      "category": "small",
+                  }
+
+              if contains_any(signal, bounded_bug):
+                  return {
+                      "recommended": "Google Antigravity · Gemini 3.8 Flash · Medium",
+                      "alternative": "Claude Code Console · Claude Sonnet 5 · Medium",
+                      "claude_chat": "Claude Sonnet 5 · Medium — possible for diagnosis/review",
+                      "gemini_chat": "Gemini 3.8 Flash · Medium — possible for diagnosis/review",
+                      "chatgpt": "GPT-5.6 Sol Chat · Medium — possible",
+                      "codex": "Codex · GPT-5.6 Terra · Medium — not recommended; unnecessary Codex quota spend for a bounded fix",
+                      "category": "bug",
+                  }
+
+              if contains_any(signal, ui_multifile):
+                  return {
+                      "recommended": "Google Antigravity · Gemini 3.8 Flash · High",
+                      "alternative": "Claude Code Console · Claude Sonnet 5 · High",
+                      "claude_chat": "Claude Sonnet 5 · High — possible for UX/code review and implementation guidance",
+                      "gemini_chat": "Gemini 3.8 Flash · High — possible for UX/code review and implementation guidance",
+                      "chatgpt": "GPT-5.6 Sol Chat · High — possible; direct implementation depends on available repository and test tools",
+                      "codex": "Codex · GPT-5.6 Sol · High — not recommended by default; no clear quota-efficient advantage",
+                      "category": "ui-multifile",
+                  }
+
+              return {
+                  "recommended": "Claude Code Console · Claude Sonnet 5 · High",
+                  "alternative": "Google Antigravity · Gemini 3.8 Flash · High",
+                  "claude_chat": "Claude Sonnet 5 · High — possible for review, planning, and code analysis",
+                  "gemini_chat": "Gemini 3.8 Flash · High — possible for review, planning, and code analysis",
+                  "chatgpt": "GPT-5.6 Sol Chat · High — possible; direct implementation depends on available repository and test tools",
+                  "codex": "Codex · GPT-5.6 Sol · High — not recommended unless it offers a concrete task-specific advantage",
+                  "category": "general",
+              }
+
+          def routing_block(route):
+              return (
+                  "## 🤖 Model / tool routing\n\n"
+                  f"**Recommended:** {route['recommended']}\n"
+                  f"**Alternative:** {route['alternative']}\n"
+                  f"**Claude Chat:** {route['claude_chat']}\n"
+                  f"**Gemini Chat:** {route['gemini_chat']}\n"
+                  f"**ChatGPT:** {route['chatgpt']}\n"
+                  f"**Codex:** {route['codex']}\n\n"
+                  "> Routing is based on the current issue scope. Reassess when scope or model quota changes. Every entry names the intended language model explicitly."
+              )
+
+          legacy_patterns = [
+              re.compile(r"\n*##\s*🤖\s*Model\s*/?\s*tool routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*🤖\s*Model-Routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*Model-Routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*🤖\s*Modell-/Tool-Routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*Modell-/Tool-Routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*Modell-Empfehlung\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+          ]
+
+          def without_legacy_routing(body):
+              cleaned = body.rstrip()
+              for pattern in legacy_patterns:
+                  candidate = pattern.sub("", cleaned).rstrip()
+                  if candidate != cleaned:
+                      return candidate
+              return cleaned
+
+          issues = []
+          page = 1
+          while True:
+              batch = request(f"{api}/repos/{repo}/issues?state=open&per_page=100&page={page}")
+              issues.extend(issue for issue in batch if "pull_request" not in issue)
+              if len(batch) < 100:
+                  break
+              page += 1
+
+          updated = []
+          unchanged = []
+          category_counts = {}
+
+          for issue in issues:
+              number = issue["number"]
+              body = issue.get("body") or ""
+              route = route_for(issue)
+              base = without_legacy_routing(body)
+              block = routing_block(route)
+              new_body = f"{base}\n\n{block}" if base else block
+
+              if new_body == body.rstrip():
+                  unchanged.append(number)
+                  continue
+
+              request(
+                  f"{api}/repos/{repo}/issues/{number}",
+                  method="PATCH",
+                  payload={"body": new_body},
+              )
+              updated.append(number)
+              category = route["category"]
+              category_counts[category] = category_counts.get(category, 0) + 1
+              time.sleep(0.15)
+
+          print(f"open_issues={len(issues)}")
+          print(f"updated={len(updated)}")
+          print(f"unchanged={len(unchanged)}")
+          print("updated_numbers=" + ",".join(map(str, updated)))
+          print("category_counts=" + json.dumps(category_counts, sort_keys=True))
+          PY
