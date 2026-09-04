@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sidebyside.authorization import PrivacyClass
 from sidebyside.config import Environment, get_settings
 from sidebyside.core.errors import ConflictError, NotFoundError
+from sidebyside.identity.models import Account
 from sidebyside.memories.models import Memory, MemoryPayload
 from sidebyside.private_notes.models import PrivateNote, PrivateNotePayload
 from sidebyside.relationship import invitations, offboarding, service
@@ -40,14 +41,12 @@ def _setup_relationship(maker):  # type: ignore[no-untyped-def]
         ben = make_account(session, "Ben")
         space = make_space(session, anna)
         service.add_member(session, space.id, ben)
-        anna_token = sign_in(session, anna)
-        ben_token = sign_in(session, ben)
         result = {
             "anna_id": anna.id,
             "ben_id": ben.id,
             "space_id": space.id,
-            "anna_token": anna_token,
-            "ben_token": ben_token,
+            "anna_token": sign_in(session, anna),
+            "ben_token": sign_in(session, ben),
         }
         session.commit()
     return result
@@ -98,15 +97,19 @@ class TestSelfLeaveHttp:
         assert repeated.json() == first.json()
 
         with maker() as session:
-            memberships = session.execute(
-                select(Membership).where(Membership.space_id == setup["space_id"])
-            ).scalars().all()
+            memberships = (
+                session.execute(
+                    select(Membership).where(Membership.space_id == setup["space_id"])
+                )
+                .scalars()
+                .all()
+            )
             assert len(memberships) == 2
             anna_membership = next(
-                membership for membership in memberships if membership.account_id == setup["anna_id"]
+                item for item in memberships if item.account_id == setup["anna_id"]
             )
             ben_membership = next(
-                membership for membership in memberships if membership.account_id == setup["ben_id"]
+                item for item in memberships if item.account_id == setup["ben_id"]
             )
             assert anna_membership.status == MembershipStatus.LEFT.value
             assert anna_membership.ended_at is not None
@@ -164,17 +167,9 @@ class TestOffboardingPrivacy:
         client, maker = production_client
         setup = _setup_relationship(maker)
         with maker() as session:
-            anna = session.get(Membership, None)  # keep type checkers from widening fixture values
-            del anna
-            second_space = make_space(
-                session,
-                session.execute(
-                    select(Membership).where(
-                        Membership.space_id == setup["space_id"],
-                        Membership.account_id == setup["anna_id"],
-                    )
-                ).scalar_one().account,
-            )
+            anna = session.get(Account, setup["anna_id"])
+            assert anna is not None
+            second_space = make_space(session, anna)
             own_exited = _private_note(
                 session,
                 owner_id=setup["anna_id"],
@@ -223,14 +218,16 @@ class TestOffboardingPrivacy:
 
 
 class TestRelationshipHistoryLock:
-    def test_exit_revokes_open_invitation_and_blocks_future_joining(self, production_client) -> None:  # type: ignore[no-untyped-def]
+    def test_exit_revokes_open_invitation_and_blocks_stale_acceptance(
+        self,
+        production_client,
+    ) -> None:  # type: ignore[no-untyped-def]
         client, maker = production_client
         with maker() as session:
             anna = make_account(session, "Anna")
             space = make_space(session, anna)
             issued = invitations.create(session, space.id, anna)
             anna_token = sign_in(session, anna)
-            anna_id = anna.id
             space_id = space.id
             invitation_id = issued.invitation.id
             token = issued.token
@@ -245,13 +242,10 @@ class TestRelationshipHistoryLock:
         with maker() as session:
             invitation = session.get(Invitation, invitation_id)
             assert invitation is not None and invitation.revoked_at is not None
-            former = session.get(type(session.get(Membership, None)), anna_id)  # unreachable sentinel
-            del former
             new_account = make_account(session, "New Partner")
             with pytest.raises(ConflictError) as error:
                 service.add_member(session, space_id, new_account)
             assert error.value.code == service.SpaceErrorCode.RELATIONSHIP_ENDED
-            session.rollback()
 
         with maker() as session:
             newcomer = make_account(session, "Token Recipient")
@@ -265,6 +259,26 @@ class TestRelationshipHistoryLock:
         assert rejected.status_code == 422
         assert rejected.json()["code"] == invitations.InvitationErrorCode.INVALID
 
+    def test_surviving_partner_cannot_invite_a_new_partner_into_old_history(
+        self,
+        production_client,
+    ) -> None:  # type: ignore[no-untyped-def]
+        client, maker = production_client
+        setup = _setup_relationship(maker)
+
+        left = client.post(
+            f"/api/v1/spaces/{setup['space_id']}/membership/leave",
+            headers=auth(setup["anna_token"]),
+        )
+        assert left.status_code == 200
+
+        create = client.post(
+            f"/api/v1/spaces/{setup['space_id']}/invitations",
+            headers=auth(setup["ben_token"]),
+        )
+        assert create.status_code == 409
+        assert create.json()["code"] == service.SpaceErrorCode.RELATIONSHIP_ENDED
+
 
 class TestLifecycleBarrier:
     def test_self_exit_waits_for_already_authorized_request(self, production_client) -> None:  # type: ignore[no-untyped-def]
@@ -275,10 +289,7 @@ class TestLifecycleBarrier:
 
         def hold_authorized_request() -> None:
             with maker() as session:
-                account = session.get(
-                    __import__("sidebyside.identity.models", fromlist=["Account"]).Account,
-                    setup["anna_id"],
-                )
+                account = session.get(Account, setup["anna_id"])
                 assert account is not None
                 service.require_membership(session, account, setup["space_id"])
                 authorized.set()
@@ -288,10 +299,7 @@ class TestLifecycleBarrier:
         def leave() -> None:
             assert authorized.wait(timeout=5)
             with maker() as session:
-                account = session.get(
-                    __import__("sidebyside.identity.models", fromlist=["Account"]).Account,
-                    setup["anna_id"],
-                )
+                account = session.get(Account, setup["anna_id"])
                 assert account is not None
                 offboarding.leave_space(session, account, setup["space_id"])
                 session.commit()
@@ -307,10 +315,7 @@ class TestLifecycleBarrier:
             leaver.result(timeout=5)
 
         with maker() as session:
-            account = session.get(
-                __import__("sidebyside.identity.models", fromlist=["Account"]).Account,
-                setup["anna_id"],
-            )
+            account = session.get(Account, setup["anna_id"])
             assert account is not None
             with pytest.raises(NotFoundError):
                 service.require_membership(session, account, setup["space_id"])
