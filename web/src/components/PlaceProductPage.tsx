@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { PlaceDetail } from '../api/generated/models/PlaceDetail';
@@ -7,7 +7,7 @@ import {
   planningIfMatch,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { appRoutePath } from '../client/routes';
+import { MORE_PLACES_ROUTE } from '../client/routes';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
@@ -98,7 +98,7 @@ export function PlaceProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'places', spaceId],
       });
-      navigate(appRoutePath('more'), { replace: true });
+      navigate(MORE_PLACES_ROUTE, { replace: true });
     },
   });
 
@@ -149,7 +149,7 @@ export function PlaceProductPage({
     <div className="page planning-page">
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('more')}>
+          <Link className="back-link" to={MORE_PLACES_ROUTE}>
             {t('m5s3.common.back')}
           </Link>
         }

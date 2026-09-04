@@ -87,6 +87,16 @@ export function DestinationIcon({ icon }: { icon: AppRouteIcon }) {
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
       );
+    case 'birthday':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" />
+          <path d="M4 16s2-1 4-1 4 1 4 1 2-1 4-1 4 1 4 1" />
+          <path d="M2 21h20" />
+          <line x1="12" y1="8" x2="12" y2="5" />
+          <circle cx="12" cy="3.5" r="1" />
+        </svg>
+      );
     case 'private':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">

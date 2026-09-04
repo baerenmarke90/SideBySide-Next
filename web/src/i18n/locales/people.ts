@@ -70,7 +70,7 @@ const people = {
     OTHER: 'Andere Beziehung',
   },
   visibility: {
-    SHARED: 'Mit Partner geteilt',
+    SHARED: 'Für uns beide',
     PRIVATE: 'Nur für mich',
   },
 } as const;

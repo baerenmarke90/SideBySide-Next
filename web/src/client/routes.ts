@@ -22,6 +22,7 @@ export type AppRouteIcon =
   | 'places'
   | 'collections'
   | 'chapter'
+  | 'birthday'
   | 'private'
   | 'profile'
   | 'settings'
@@ -135,7 +136,7 @@ export const MILESTONE_CREATE_ROUTE = '/story/milestones/new';
 export const MILESTONE_DETAIL_ROUTE_PATTERN = '/story/milestones/:milestoneId';
 export const MILESTONE_EDIT_ROUTE_PATTERN =
   '/story/milestones/:milestoneId/edit';
-export const CHAPTER_DETAIL_ROUTE_PATTERN = '/story/chapters/:chapterId';
+export const CHAPTER_DETAIL_ROUTE_PATTERN = '/plan/chapters/:chapterId';
 
 /* Planning content -------------------------------------------------------- */
 
@@ -144,9 +145,9 @@ export const PLAN_DETAIL_ROUTE_PATTERN = '/plan/plans/:planId';
 
 /* More / Organisieren content --------------------------------------------- */
 
-export const PLACE_DETAIL_ROUTE_PATTERN = '/more/places/:placeId';
+export const PLACE_DETAIL_ROUTE_PATTERN = '/plan/places/:placeId';
 export const COLLECTION_DETAIL_ROUTE_PATTERN =
-  '/more/collections/:collectionId';
+  '/plan/collections/:collectionId';
 
 /* Legacy paths ------------------------------------------------------------ */
 
@@ -160,9 +161,6 @@ export const LEGACY_ROUTE_REWRITES = [
   { from: '/dashboard', to: '/today' },
   { from: '/activity', to: ACTIVITY_ROUTE },
   { from: '/planning', to: '/plan' },
-  { from: '/plan/chapters', to: '/story/chapters' },
-  { from: '/plan/places', to: '/more/places' },
-  { from: '/plan/collections', to: '/more/collections' },
   { from: '/people', to: MORE_PEOPLE_ROUTE },
   { from: '/notifications', to: MORE_NOTIFICATIONS_ROUTE },
   { from: '/profile', to: MORE_PROFILE_ROUTE },
@@ -184,6 +182,35 @@ export function rewriteLegacyPath(pathname: string): string | null {
     if (pathname.startsWith(`${from}/`)) {
       return to + pathname.slice(from.length);
     }
+  }
+  return null;
+}
+
+/**
+ * Resolves which primary navigation area is active for a given pathname.
+ * Corrects active state for domains that belong to an area conceptually (e.g.
+ * chapters belong to Story/Momente, places & collections belong to Mehr)
+ * while keeping existing deep links stable without URL migrations.
+ */
+export function activeNavigationArea(pathname: string): AppRouteId | null {
+  if (pathname === '/today' || pathname.startsWith('/today/')) return 'today';
+  if (
+    pathname === '/story' ||
+    pathname.startsWith('/story/') ||
+    pathname.startsWith('/plan/chapters')
+  ) {
+    return 'story';
+  }
+  if (
+    pathname === '/more' ||
+    pathname.startsWith('/more/') ||
+    pathname.startsWith('/plan/places') ||
+    pathname.startsWith('/plan/collections')
+  ) {
+    return 'more';
+  }
+  if (pathname === '/plan' || pathname.startsWith('/plan/')) {
+    return 'plan';
   }
   return null;
 }
@@ -223,13 +250,13 @@ export function planDetailPath(planId: string): string {
 }
 
 export function placeDetailPath(placeId: string): string {
-  return `/more/places/${encodeURIComponent(placeId)}`;
+  return `/plan/places/${encodeURIComponent(placeId)}`;
 }
 
 export function chapterDetailPath(chapterId: string): string {
-  return `/story/chapters/${encodeURIComponent(chapterId)}`;
+  return `/plan/chapters/${encodeURIComponent(chapterId)}`;
 }
 
 export function collectionDetailPath(collectionId: string): string {
-  return `/more/collections/${encodeURIComponent(collectionId)}`;
+  return `/plan/collections/${encodeURIComponent(collectionId)}`;
 }

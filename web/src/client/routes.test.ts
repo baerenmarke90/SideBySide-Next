@@ -22,6 +22,7 @@ import {
   RESERVED_DISCOVER_ROUTE,
   SEARCH_ROUTE,
   WISH_DETAIL_ROUTE_PATTERN,
+  activeNavigationArea,
   appRoutePath,
   chapterDetailPath,
   collectionDetailPath,
@@ -133,18 +134,36 @@ describe('content deep links', () => {
   it('builds encoded planning deep links under the Plan area', () => {
     expect(WISH_DETAIL_ROUTE_PATTERN).toBe('/plan/wishes/:wishId');
     expect(PLAN_DETAIL_ROUTE_PATTERN).toBe('/plan/plans/:planId');
-    expect(PLACE_DETAIL_ROUTE_PATTERN).toBe('/more/places/:placeId');
-    expect(CHAPTER_DETAIL_ROUTE_PATTERN).toBe('/story/chapters/:chapterId');
+    expect(PLACE_DETAIL_ROUTE_PATTERN).toBe('/plan/places/:placeId');
+    expect(CHAPTER_DETAIL_ROUTE_PATTERN).toBe('/plan/chapters/:chapterId');
     expect(COLLECTION_DETAIL_ROUTE_PATTERN).toBe(
-      '/more/collections/:collectionId',
+      '/plan/collections/:collectionId',
     );
     expect(wishDetailPath('wish/one')).toBe('/plan/wishes/wish%2Fone');
     expect(planDetailPath('plan one')).toBe('/plan/plans/plan%20one');
-    expect(placeDetailPath('place-1')).toBe('/more/places/place-1');
-    expect(chapterDetailPath('chapter-1')).toBe('/story/chapters/chapter-1');
+    expect(placeDetailPath('place-1')).toBe('/plan/places/place-1');
+    expect(chapterDetailPath('chapter-1')).toBe('/plan/chapters/chapter-1');
     expect(collectionDetailPath('collection-1')).toBe(
-      '/more/collections/collection-1',
+      '/plan/collections/collection-1',
     );
+  });
+
+  it('resolves active navigation area with corrected domain semantics', () => {
+    expect(activeNavigationArea('/today')).toBe('today');
+    expect(activeNavigationArea('/today/activity')).toBe('today');
+    expect(activeNavigationArea('/story')).toBe('story');
+    expect(activeNavigationArea('/story/chapters')).toBe('story');
+    expect(activeNavigationArea('/plan/chapters/c1')).toBe('story');
+    expect(activeNavigationArea('/more')).toBe('more');
+    expect(activeNavigationArea('/more/places')).toBe('more');
+    expect(activeNavigationArea('/plan/places/p1')).toBe('more');
+    expect(activeNavigationArea('/more/collections')).toBe('more');
+    expect(activeNavigationArea('/plan/collections/k1')).toBe('more');
+    expect(activeNavigationArea('/more/people')).toBe('more');
+    expect(activeNavigationArea('/more/private/notes')).toBe('more');
+    expect(activeNavigationArea('/plan')).toBe('plan');
+    expect(activeNavigationArea('/plan/plans/p1')).toBe('plan');
+    expect(activeNavigationArea('/plan/wishes/w1')).toBe('plan');
   });
 });
 
@@ -153,9 +172,6 @@ describe('legacy paths', () => {
     expect(rewriteLegacyPath('/dashboard')).toBe('/today');
     expect(rewriteLegacyPath('/activity')).toBe('/today/activity');
     expect(rewriteLegacyPath('/planning')).toBe('/plan');
-    expect(rewriteLegacyPath('/plan/chapters')).toBe('/story/chapters');
-    expect(rewriteLegacyPath('/plan/places')).toBe('/more/places');
-    expect(rewriteLegacyPath('/plan/collections')).toBe('/more/collections');
     expect(rewriteLegacyPath('/people')).toBe('/more/people');
     expect(rewriteLegacyPath('/notifications')).toBe('/more/notifications');
     expect(rewriteLegacyPath('/profile')).toBe('/more/profile');
@@ -177,15 +193,6 @@ describe('legacy paths', () => {
     );
     expect(rewriteLegacyPath('/planning/wishes/wish-1')).toBe(
       '/plan/wishes/wish-1',
-    );
-    expect(rewriteLegacyPath('/plan/chapters/chapter-1')).toBe(
-      '/story/chapters/chapter-1',
-    );
-    expect(rewriteLegacyPath('/plan/places/place-1')).toBe(
-      '/more/places/place-1',
-    );
-    expect(rewriteLegacyPath('/plan/collections/collection-1')).toBe(
-      '/more/collections/collection-1',
     );
     expect(rewriteLegacyPath('/private/notes/note-1')).toBe(
       '/more/private/notes/note-1',

@@ -15,6 +15,7 @@ import {
   APP_ROUTES,
   DEFAULT_APP_ROUTE,
   SEARCH_ROUTE,
+  activeNavigationArea,
   type AppRouteDefinition,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
@@ -28,14 +29,14 @@ import { ThemeControl } from './ThemeControl';
 
 function NavigationLink({ route }: { route: AppRouteDefinition }) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const activeArea = activeNavigationArea(location.pathname);
+  const isActive = activeArea === route.id;
 
   return (
     <NavLink
       to={route.path}
-      end={route.end}
-      className={({ isActive }) =>
-        `shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`
-      }
+      className={`shell-nav-link${isActive ? ' shell-nav-link-active' : ''}`}
     >
       <span className="shell-nav-icon">
         <DestinationIcon icon={route.icon} />

@@ -79,7 +79,7 @@ SideBySide Next
 │   ├── Erinnerung
 │   │   ├── media
 │   │   ├── place and date
-│   │   ├── status "Geteilt"
+│   │   ├── status "Für uns beide"
 │   │   └── editing
 │   └── new memory
 ├── Planen
@@ -263,7 +263,7 @@ object within it.
 | API value | Meaning | UI label |
 |---|---|---|
 | `OWNER_ONLY` | owner only | Nur für mich |
-| `SPACE_SHARED` | both active Space members | Geteilt / Mit Partner teilen |
+| `SPACE_SHARED` | both active Space members | Für uns beide / Mit Partner teilen |
 | `TEMPORARY_SHARED` | limited-time sharing | only after domain implementation |
 | `EPHEMERAL_CONTEXT` | short-lived context with expiry | context-dependent |
 | `SYSTEM_METADATA` | technical metadata | no regular UI label |

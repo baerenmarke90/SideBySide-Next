@@ -11,7 +11,7 @@ This document describes the critical end-to-end flows for the WebApp and Android
 - Web and Android produce the same domain outcome; presentation and platform mechanics may differ.
 - Every access runs in the current `spaceId` and with an active Membership.
 - `OWNER_ONLY` is enforced exclusively server-side and never appears in Story, partner search, Dashboard, partner notifications, or partner export.
-- `SPACE_SHARED` means the intentional de-DE product label **„Geteilt“** in the regular couple UI.
+- `SPACE_SHARED` means the intentional de-DE product label **„Für uns beide“** in the regular couple UI.
 - Android may show the most recently loaded data offline in the MVP, but must **not write offline**.
 - Mutable objects carry a `version`; conflicts surface as HTTP 409 and are never silently overwritten.
 - Sensitive content appears neither in Analytics nor in logs.

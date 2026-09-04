@@ -26,6 +26,7 @@ import {
   formatRelationshipDuration,
 } from '../client/relationshipPreview';
 import { resolvedLocale, useTranslation } from '../i18n';
+import { DestinationIcon } from './DestinationIcon';
 import { PartnerIdentityPanel } from './PartnerIdentityPanel';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -1063,7 +1064,9 @@ export function PrivatePartnerNotesSection({
   return (
     <div className="private-partner-notes-wrapper">
       <div className="private-partner-notes-badge" role="note">
-        <span aria-hidden="true">🔒</span>
+        <span className="private-partner-notes-icon" aria-hidden="true">
+          <DestinationIcon icon="private" />
+        </span>
         <span>{t('privateArea.entry.privacy')}</span>
       </div>
       <PreferenceManager

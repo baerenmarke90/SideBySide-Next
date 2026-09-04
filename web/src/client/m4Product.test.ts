@@ -14,12 +14,12 @@ describe('M5 S5/S3 product navigation', () => {
     expect(searchResultPath('MILESTONE', 'milestone-id')).toBe('/story');
     expect(searchResultPath('WISH', 'wish-id')).toBe('/plan/wishes/wish-id');
     expect(searchResultPath('PLAN', 'plan-id')).toBe('/plan/plans/plan-id');
-    expect(searchResultPath('PLACE', 'place-id')).toBe('/more/places/place-id');
+    expect(searchResultPath('PLACE', 'place-id')).toBe('/plan/places/place-id');
     expect(searchResultPath('CHAPTER', 'chapter-id')).toBe(
-      '/story/chapters/chapter-id',
+      '/plan/chapters/chapter-id',
     );
     expect(searchResultPath('COLLECTION', 'collection-id')).toBe(
-      '/more/collections/collection-id',
+      '/plan/collections/collection-id',
     );
     expect(searchResultPath('COLLECTION_ITEM', 'item-id')).toBe('/more');
 
@@ -43,13 +43,13 @@ describe('M5 S5/S3 product navigation', () => {
     );
     expect(engagementTargetPath('PLAN', 'plan-id')).toBe('/plan/plans/plan-id');
     expect(engagementTargetPath('PLACE', 'place-id')).toBe(
-      '/more/places/place-id',
+      '/plan/places/place-id',
     );
     expect(engagementTargetPath('CHAPTER', 'chapter-id')).toBe(
-      '/story/chapters/chapter-id',
+      '/plan/chapters/chapter-id',
     );
     expect(engagementTargetPath('COLLECTION', 'collection-id')).toBe(
-      '/more/collections/collection-id',
+      '/plan/collections/collection-id',
     );
 
     expect(engagementTargetPath(null, 'memory-id')).toBeNull();
@@ -65,13 +65,13 @@ describe('M5 S5/S3 product navigation', () => {
     expect(dashboardItemPath('WISH', 'wish-id')).toBe('/plan/wishes/wish-id');
     expect(dashboardItemPath('PLAN', 'plan-id')).toBe('/plan/plans/plan-id');
     expect(dashboardItemPath('PLACE', 'place-id')).toBe(
-      '/more/places/place-id',
+      '/plan/places/place-id',
     );
     expect(dashboardItemPath('CHAPTER', 'chapter-id')).toBe(
-      '/story/chapters/chapter-id',
+      '/plan/chapters/chapter-id',
     );
     expect(dashboardItemPath('COLLECTION', 'collection-id')).toBe(
-      '/more/collections/collection-id',
+      '/plan/collections/collection-id',
     );
   });
 });

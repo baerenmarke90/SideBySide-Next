@@ -253,7 +253,7 @@ const de = {
       happy: 'Glücklich',
       fallback: 'Herzmoment',
     },
-    shared: 'Geteilt',
+    shared: 'Für uns beide',
     photos_one: '{{count}} Foto',
     photos_other: '{{count}} Fotos',
   },

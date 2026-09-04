@@ -97,14 +97,17 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
     ),
     Path("docs/API-UI-CONTRACTS.md"): (
         "Nur für mich",
+        "Für uns beide",
     ),
     Path("docs/COMPONENT-CONTRACTS.md"): (
         "Nur für mich",
+        "Für uns beide",
         "Wird gespeichert",
         "Noch nicht gespeichert",
     ),
     Path("docs/CONTENT-PRIVACY-GUIDELINES.md"): (
         "Nur für mich",
+        "Für uns beide",
         "Geteilt",
         "Mit Partner teilen",
         "Mit Partner geteilt",
@@ -154,6 +157,7 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
     ),
     Path("docs/INFORMATION-ARCHITECTURE.md"): (
         "Nur für mich",
+        "Für uns beide",
         "Mit Partner teilen",
         "Geteilt",
     ),
@@ -165,6 +169,7 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
         "Noch nicht gespeichert",
     ),
     Path("docs/USER-FLOWS.md"): (
+        "Für uns beide",
         "Mit Partner geteilt",
         "Noch nicht gespeichert",
         "Nur für mich",
@@ -176,6 +181,7 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
         "Dieser Inhalt wurde inzwischen geändert.",
     ),
     Path("docs/UX-PATTERNS.md"): (
+        "Für uns beide",
         "Wird gespeichert",
         "Noch nicht gespeichert",
         "Nur für mich",

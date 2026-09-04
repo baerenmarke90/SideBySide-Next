@@ -40,6 +40,7 @@ import {
 import { useRelatedPersonAvatarUrl } from '../client/useRelatedPersonAvatarUrl';
 import { personInitials } from './PersonIdentity';
 import { useTranslation } from '../i18n';
+import { DestinationIcon } from './DestinationIcon';
 import { ImportantDatesPanel } from './ImportantDatesPanel';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
@@ -975,7 +976,12 @@ export function RelatedPeoplePage({
                   </p>
                   {person.birthday ? (
                     <p className="people-card-birthday">
-                      <span aria-hidden="true">🎂</span>
+                      <span
+                        className="people-card-birthday-icon"
+                        aria-hidden="true"
+                      >
+                        <DestinationIcon icon="birthday" />
+                      </span>
                       <span>
                         {person.birthdayYearKnown
                           ? birthdayFormatter.format(person.birthday)

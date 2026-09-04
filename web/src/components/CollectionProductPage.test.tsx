@@ -27,10 +27,10 @@ describe('CollectionProductPage', () => {
 
     const html = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/more/collections/collection-1']}>
+        <MemoryRouter initialEntries={['/plan/collections/collection-1']}>
           <Routes>
             <Route
-              path="/more/collections/:collectionId"
+              path="/plan/collections/:collectionId"
               element={
                 <CollectionProductPage
                   apis={{} as SharedPlanningApis}

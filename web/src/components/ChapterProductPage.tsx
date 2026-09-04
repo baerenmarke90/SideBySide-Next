@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { ChapterDetail } from '../api/generated/models/ChapterDetail';
@@ -10,7 +10,7 @@ import {
   planningIfMatch,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { appRoutePath } from '../client/routes';
+import { STORY_CHAPTERS_ROUTE } from '../client/routes';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
@@ -106,7 +106,7 @@ export function ChapterProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'chapters', spaceId],
       });
-      navigate(appRoutePath('story'), { replace: true });
+      navigate(STORY_CHAPTERS_ROUTE, { replace: true });
     },
   });
 
@@ -152,7 +152,7 @@ export function ChapterProductPage({
     <div className="page planning-page">
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('story')}>
+          <Link className="back-link" to={STORY_CHAPTERS_ROUTE}>
             {t('m5s3.common.back')}
           </Link>
         }

@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { CollectionDetail } from '../api/generated/models/CollectionDetail';
@@ -8,7 +8,7 @@ import {
   planningIfMatch,
   type SharedPlanningApis,
 } from '../client/sharedPlanning';
-import { appRoutePath } from '../client/routes';
+import { MORE_COLLECTIONS_ROUTE } from '../client/routes';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
@@ -186,7 +186,7 @@ export function CollectionProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'collections', spaceId],
       });
-      navigate(appRoutePath('more'), { replace: true });
+      navigate(MORE_COLLECTIONS_ROUTE, { replace: true });
     },
   });
 
@@ -273,7 +273,7 @@ export function CollectionProductPage({
     <div className="page planning-page">
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('more')}>
+          <Link className="back-link" to={MORE_COLLECTIONS_ROUTE}>
             {t('m5s3.common.back')}
           </Link>
         }

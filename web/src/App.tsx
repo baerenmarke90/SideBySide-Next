@@ -569,6 +569,10 @@ function AuthenticatedApp({
             element={<ChaptersOverviewPage {...planningProductProps} />}
           />
           <Route
+            path="/plan/chapters"
+            element={<Navigate replace to={STORY_CHAPTERS_ROUTE} />}
+          />
+          <Route
             path={CHAPTER_DETAIL_ROUTE_PATTERN}
             element={<ChapterProductPage {...planningProductProps} />}
           />
@@ -577,12 +581,20 @@ function AuthenticatedApp({
             element={<PlacesOverviewPage {...planningProductProps} />}
           />
           <Route
+            path="/plan/places"
+            element={<Navigate replace to={MORE_PLACES_ROUTE} />}
+          />
+          <Route
             path={PLACE_DETAIL_ROUTE_PATTERN}
             element={<PlaceProductPage {...planningProductProps} />}
           />
           <Route
             path={MORE_COLLECTIONS_ROUTE}
             element={<CollectionsOverviewPage {...planningProductProps} />}
+          />
+          <Route
+            path="/plan/collections"
+            element={<Navigate replace to={MORE_COLLECTIONS_ROUTE} />}
           />
           <Route
             path={COLLECTION_DETAIL_ROUTE_PATTERN}

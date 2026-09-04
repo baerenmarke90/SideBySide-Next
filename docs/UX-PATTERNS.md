@@ -138,7 +138,7 @@ Every data-driven component and screen supports these states:
 
 - Every object has a domain privacy class. The UI maps `OWNER_ONLY` to the
   intentional de-DE label **„Nur für mich“** and `SPACE_SHARED` to
-  **„Geteilt“**.
+  **„Für uns beide“**.
 - A privacy choice appears only in domains supporting multiple classes; Memory,
   Wish, and Plan remain `SPACE_SHARED` in the current Core.
 - Visibility state appears near the title, form completion area, or primary
