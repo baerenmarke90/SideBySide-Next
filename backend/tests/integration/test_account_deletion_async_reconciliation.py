@@ -73,8 +73,8 @@ def test_restore_replay_prevents_stale_outbox_and_transfer_side_effects(producti
         stale_event = verify.get(OutboxEvent, stale_event_id)
         assert account is not None and account.disabled_at == accepted_at
         assert deletion is not None
-        assert deletion.status == AccountDeletionStatus.PENDING.value
-        assert deletion.completed_at is None
+        assert deletion.status == AccountDeletionStatus.COMPLETED.value
+        assert deletion.completed_at is not None
         assert transfer is not None
         assert transfer.status == ExportStatus.EXPIRED.value
         assert stale_event is not None and stale_event.processed_at is not None

@@ -281,14 +281,19 @@ def mark_deletion_failed(
     *,
     failure_code: str,
 ) -> AccountDeletion:
-    """Record a retryable cleanup failure without storing exception prose."""
+    """Record a retryable cleanup failure without storing exception prose.
+
+    Account is locked before AccountDeletion, matching acceptance, core cleanup,
+    Media/Async convergence, and terminal completion. A single lock order avoids
+    a failure-reporting transaction deadlocking against the lifecycle workflow.
+    """
+    account = _account_for_update(session, account_id)
     deletion = _deletion_for_update(session, account_id)
     if deletion is None:
         raise DeletionNotAcceptedError(
             "Cannot record deletion failure before the tombstone is accepted."
         )
 
-    account = _account_for_update(session, account_id)
     if account is not None:
         _enforce_fail_closed(session, account, deletion)
 
