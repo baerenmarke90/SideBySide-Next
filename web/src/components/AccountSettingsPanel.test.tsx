@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AccountApi } from '../api/generated/apis/AccountApi';
 import { AccountDeletionStatus } from '../api/generated/models/AccountDeletionStatus';
+import accountSettings from '../i18n/locales/accountSettings';
 import { AccountSettingsPanel } from './AccountSettingsPanel';
 
 function renderPanel({
@@ -35,16 +36,20 @@ function renderPanel({
 }
 
 function advanceToFinalConfirmation() {
-  fireEvent.click(screen.getByRole('button', { name: 'Konto löschen' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: accountSettings.deleteAction }),
+  );
   expect(screen.getByRole('dialog')).toBeDefined();
-  expect(screen.getByText('Folgen der Kontolöschung')).toBeDefined();
+  expect(screen.getByText(accountSettings.consequencesTitle)).toBeDefined();
   const exportLink = screen.getByRole('link', {
-    name: 'Vorher Daten exportieren',
+    name: accountSettings.exportBefore,
   }) as HTMLAnchorElement;
   expect(exportLink.getAttribute('href')).toBe('#settings-data');
 
-  fireEvent.click(screen.getByRole('button', { name: 'Weiter' }));
-  expect(screen.getByText('Kontolöschung bestätigen')).toBeDefined();
+  fireEvent.click(
+    screen.getByRole('button', { name: accountSettings.continueAction }),
+  );
+  expect(screen.getByText(accountSettings.finalTitle)).toBeDefined();
 }
 
 afterEach(() => {
@@ -59,11 +64,9 @@ describe('AccountSettingsPanel', () => {
     );
     renderPanel({ demoMode: true });
 
-    expect(
-      screen.getByText('Kontolöschung in der Demo nicht verfügbar'),
-    ).toBeDefined();
+    expect(screen.getByText(accountSettings.demoTitle)).toBeDefined();
     const deleteButton = screen.getByRole('button', {
-      name: 'Konto löschen',
+      name: accountSettings.deleteAction,
     }) as HTMLButtonElement;
     expect(deleteButton.disabled).toBe(true);
     fireEvent.click(deleteButton);
@@ -84,17 +87,17 @@ describe('AccountSettingsPanel', () => {
     advanceToFinalConfirmation();
 
     const submit = screen.getByRole('button', {
-      name: 'Konto endgültig löschen',
+      name: accountSettings.submitAction,
     }) as HTMLButtonElement;
     expect(submit.disabled).toBe(true);
 
-    fireEvent.change(screen.getByLabelText('Bestätigung'), {
-      target: { value: 'KONTO LOSCHEN' },
+    fireEvent.change(screen.getByLabelText(accountSettings.confirmLabel), {
+      target: { value: 'WRONG' },
     });
     expect(submit.disabled).toBe(true);
 
-    fireEvent.change(screen.getByLabelText('Bestätigung'), {
-      target: { value: 'KONTO LÖSCHEN' },
+    fireEvent.change(screen.getByLabelText(accountSettings.confirmLabel), {
+      target: { value: accountSettings.confirmPhrase },
     });
     expect(submit.disabled).toBe(false);
     fireEvent.click(submit);
@@ -116,11 +119,11 @@ describe('AccountSettingsPanel', () => {
     renderPanel({ onDeletionAccepted });
 
     advanceToFinalConfirmation();
-    fireEvent.change(screen.getByLabelText('Bestätigung'), {
-      target: { value: 'KONTO LÖSCHEN' },
+    fireEvent.change(screen.getByLabelText(accountSettings.confirmLabel), {
+      target: { value: accountSettings.confirmPhrase },
     });
     fireEvent.click(
-      screen.getByRole('button', { name: 'Konto endgültig löschen' }),
+      screen.getByRole('button', { name: accountSettings.submitAction }),
     );
 
     await waitFor(() => {

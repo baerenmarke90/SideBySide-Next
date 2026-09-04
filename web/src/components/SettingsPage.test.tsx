@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import accountSettings from '../i18n/locales/accountSettings';
 import { SettingsPage } from './SettingsPage';
 
 const SPACE_ID = 'space-1';
@@ -70,37 +71,29 @@ describe('SettingsPage', () => {
   it('renders settings header, index, and five dedicated configuration sections', () => {
     const html = renderSettingsPageFixture();
 
-    // Page header
     expect(html).toContain('settings-page');
     expect(html).toContain('Einstellungen');
-
-    // Quick Index
     expect(html).toContain('settings-index');
     expect(html).toContain('href="#settings-account"');
 
-    // Section 1: Appearance
     expect(html).toContain('id="settings-appearance"');
     expect(html).toContain('theme-control');
 
-    // Section 2: Notifications (retained with inbox link and real anniversary reminder configuration)
     expect(html).toContain('id="settings-notifications"');
     expect(html).toContain('anniversary-reminder-form');
     expect(html).toContain('name="anniversaryReminderEnabled"');
     expect(html).toContain('href="/more/notifications"');
 
-    // Section 3: Account hub with a distinct Danger Zone
     expect(html).toContain('id="settings-account"');
     expect(html).toContain('account-settings-panel');
     expect(html).toContain('account-danger-zone');
-    expect(html).toContain('Konto löschen');
+    expect(html).toContain(accountSettings.deleteAction);
 
-    // Section 4: Relationship configuration remains distinct from Account deletion
     expect(html).toContain('id="settings-connection"');
     expect(html).toContain('relationship-settings-title');
     expect(html).toContain('name="relationshipStartedOn"');
     expect(html).toContain('name="showRelationshipDuration"');
 
-    // Section 5: Data & Portability
     expect(html).toContain('id="settings-data"');
     expect(html).toContain('id="data-transfer"');
   });
