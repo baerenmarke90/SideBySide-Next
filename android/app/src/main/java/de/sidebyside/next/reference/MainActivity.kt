@@ -46,6 +46,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import de.sidebyside.next.account.AccountSettingsContent
 import de.sidebyside.next.demo.DemoBanner
 import de.sidebyside.next.invitation.AwaitingSpaceScreen
 import de.sidebyside.next.invitation.InvitationsScreen
@@ -1127,13 +1128,26 @@ private fun DemoShell(
                     activeSpaceId = state.activeSpaceId,
                     onSelectSpace = onSelectSpace,
                     profileContent = {
-                        ProfileSettingsContent(
-                            state = state.profile,
-                            onRetry = viewModel::refreshProfile,
-                            onSaveDisplayName = viewModel::saveProfileDisplayName,
-                            onChooseAvatar = onPickProfileAvatar,
-                            onRemoveAvatar = viewModel::removeProfileAvatar,
-                        )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(
+                                SideBySideTheme.spacing.step6,
+                            ),
+                        ) {
+                            ProfileSettingsContent(
+                                state = state.profile,
+                                onRetry = viewModel::refreshProfile,
+                                onSaveDisplayName = viewModel::saveProfileDisplayName,
+                                onChooseAvatar = onPickProfileAvatar,
+                                onRemoveAvatar = viewModel::removeProfileAvatar,
+                            )
+                            AccountSettingsContent(
+                                demoMode = state.demoMode,
+                                busy = state.accountDeletionBusy,
+                                problem = state.accountDeletionProblem,
+                                onOpenDataExport = { navController.navigate(DATA_EXPORT_ROUTE) },
+                                onDeleteAccount = viewModel::deleteOwnAccount,
+                            )
+                        }
                     },
                 )
             }

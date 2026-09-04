@@ -2,6 +2,8 @@ package de.sidebyside.next.reference
 
 import de.sidebyside.next.demo.DemoPersona
 import java.util.UUID
+import sidebyside.api.models.AccountDeletionAccepted
+import sidebyside.api.models.AccountDeletionRequest
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
@@ -119,6 +121,11 @@ abstract class FakeReferenceContract : ReferenceContract {
 
     override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
         notExercised("listMemberships")
+
+    override suspend fun deleteOwnAccount(
+        accessToken: String,
+        request: AccountDeletionRequest,
+    ): AccountDeletionAccepted = notExercised("deleteOwnAccount")
 
     override suspend fun createDemoEntry(baseUrl: String, persona: DemoPersona): String =
         notExercised("createDemoEntry")

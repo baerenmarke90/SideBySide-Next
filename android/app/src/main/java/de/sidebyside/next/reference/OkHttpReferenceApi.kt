@@ -21,6 +21,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.BufferedSink
 import okio.source
+import sidebyside.api.models.AccountDeletionAccepted
+import sidebyside.api.models.AccountDeletionRequest
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
@@ -228,6 +230,21 @@ class OkHttpReferenceApi(
                 .get()
                 .build(),
             ListSerializer(AccountMembershipView.serializer()),
+        )
+
+    override suspend fun deleteOwnAccount(
+        accessToken: String,
+        request: AccountDeletionRequest,
+    ): AccountDeletionAccepted =
+        executeJson(
+            authenticatedRequest("$baseUrl/api/v1/account/deletion", accessToken)
+                .post(
+                    SideBySideJson
+                        .encodeToString(AccountDeletionRequest.serializer(), request)
+                        .toRequestBody(jsonMediaType),
+                )
+                .build(),
+            AccountDeletionAccepted.serializer(),
         )
 
     /*
