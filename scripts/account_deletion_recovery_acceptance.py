@@ -11,7 +11,7 @@ from pathlib import Path
 from types import ModuleType
 from uuid import UUID, uuid4
 
-from scripts.self_hosted_recovery_acceptance import (
+from self_hosted_recovery_acceptance import (
     ATTACHMENT_ID,
     DURABLE_ORIGINAL,
     MEMORY_ID,
