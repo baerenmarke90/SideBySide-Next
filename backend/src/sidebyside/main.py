@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -12,6 +14,7 @@ from sidebyside.api.openapi import SideBySideFastAPI
 from sidebyside.api.transport import RequireHttpsForExternalHostsMiddleware
 from sidebyside.api.v1 import router as v1_router
 from sidebyside.config import Environment, Settings, get_settings
+from sidebyside.identity.deletion_self_service import reconcile_configured_deletions_on_startup
 from sidebyside.observability import (
     RequestIdMiddleware,
     RequestLoggingMiddleware,
@@ -51,6 +54,15 @@ def _log_operating_mode(settings: Settings) -> None:
     )
 
 
+@asynccontextmanager
+async def _lifespan(_: FastAPI) -> AsyncIterator[None]:
+    # A forward deletion tombstone may have been fsynced immediately before a
+    # process failure. Re-establish its fail-closed database state before this
+    # process can serve normal requests.
+    reconcile_configured_deletions_on_startup()
+    yield
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     _log_operating_mode(settings)
@@ -64,6 +76,7 @@ def create_app() -> FastAPI:
         docs_url=None if settings.is_production else "/docs",
         redoc_url=None,
         openapi_url=None if settings.is_production else "/openapi.json",
+        lifespan=_lifespan,
     )
 
     if settings.is_production:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import func, select
 
 from sidebyside.auth import sessions
@@ -19,7 +20,7 @@ from sidebyside.identity.deletion_models import (
 from sidebyside.identity.models import Account, AccountEmail, DeviceSession
 from sidebyside.jobs.models import Job, JobStatus
 from sidebyside.jobs.worker import run_once
-from sidebyside.mail import MailMessage, MailSender
+from sidebyside.mail import MailMessage, MailSender, MailUnavailableError
 from tests.conftest import auth, requires_database
 
 
@@ -29,6 +30,12 @@ class RecordingMailSender(MailSender):
 
     def send(self, message: MailMessage) -> None:
         self.messages.append(message)
+
+
+class UnavailableMailSender(MailSender):
+    def send(self, message: MailMessage) -> None:
+        del message
+        raise MailUnavailableError()
 
 
 def _account_with_session(maker):  # type: ignore[no-untyped-def]
@@ -109,6 +116,76 @@ class TestSelfServiceAccountDeletion:
                 select(Job).where(Job.kind == deletion_jobs.CONVERGENCE_JOB)
             ).scalar_one().status == JobStatus.SUCCEEDED.value
 
+    def test_mail_unavailable_never_rolls_back_accepted_deletion(
+        self, production_client, tmp_path, monkeypatch  # type: ignore[no-untyped-def]
+    ) -> None:
+        client, maker = production_client
+        account_id, device_session_id, token = _account_with_session(maker)
+        journal = DeletionJournal.initialize(tmp_path / "deletions.journal", instance_id=uuid4())
+        monkeypatch.setattr(deletion_self_service, "_configured_journal", lambda: journal)
+        monkeypatch.setattr(
+            deletion_self_service,
+            "configured_mail_sender",
+            lambda: UnavailableMailSender(),
+        )
+
+        response = client.post(
+            "/api/v1/account/deletion",
+            headers=auth(token),
+            json={"confirmation": "DELETE_ACCOUNT"},
+        )
+
+        assert response.status_code == 202
+        with maker() as session:
+            account = session.get(Account, account_id)
+            device_session = session.get(DeviceSession, device_session_id)
+            deletion = session.get(AccountDeletion, account_id)
+            assert account is not None and account.disabled_at is not None
+            assert device_session is not None and device_session.revoked_at is not None
+            assert deletion is not None
+            assert (
+                deletion.confirmation_mail_status
+                == DeletionConfirmationMailStatus.UNAVAILABLE.value
+            )
+            assert session.execute(
+                select(func.count()).select_from(Job).where(
+                    Job.kind == deletion_jobs.CONVERGENCE_JOB,
+                    Job.status == JobStatus.PENDING.value,
+                )
+            ).scalar_one() == 1
+
+    def test_startup_reapplies_forward_tombstone_before_traffic(
+        self, production_client, tmp_path, monkeypatch  # type: ignore[no-untyped-def]
+    ) -> None:
+        _, maker = production_client
+        account_id, device_session_id, _ = _account_with_session(maker)
+        instance_id = uuid4()
+        journal_path = tmp_path / "deletions.journal"
+        journal = DeletionJournal.initialize(journal_path, instance_id=instance_id)
+        tombstone = journal.accept(account_id, accepted_at=now())
+        authority = deletion_self_service.DeletionAuthoritySettings(
+            journal_path=journal_path,
+            instance_id=instance_id,
+        )
+        monkeypatch.setattr(deletion_self_service, "_authority_settings", lambda: authority)
+
+        deletion_self_service.reconcile_configured_deletions_on_startup()
+
+        with maker() as session:
+            account = session.get(Account, account_id)
+            device_session = session.get(DeviceSession, device_session_id)
+            deletion = session.get(AccountDeletion, account_id)
+            assert account is not None and account.disabled_at is not None
+            assert device_session is not None and device_session.revoked_at is not None
+            assert deletion is not None
+            assert deletion.accepted_at == tombstone.accepted_at
+            assert session.execute(
+                select(func.count()).select_from(Job).where(
+                    Job.kind == deletion_jobs.CONVERGENCE_JOB,
+                    Job.status == JobStatus.PENDING.value,
+                )
+            ).scalar_one() == 1
+
     def test_demo_rejection_happens_before_tombstone_or_side_effects(
         self, production_client, tmp_path, monkeypatch  # type: ignore[no-untyped-def]
     ) -> None:
@@ -163,3 +240,17 @@ class TestSelfServiceAccountDeletion:
             json={"confirmation": "yes"},
         )
         assert response.status_code == 422
+
+    def test_existing_journal_without_instance_id_blocks_startup(
+        self, tmp_path, monkeypatch  # type: ignore[no-untyped-def]
+    ) -> None:
+        journal_path = tmp_path / "deletions.journal"
+        journal_path.write_text("protected-journal-present\n", encoding="utf-8")
+        authority = deletion_self_service.DeletionAuthoritySettings(
+            journal_path=journal_path,
+            instance_id=None,
+        )
+        monkeypatch.setattr(deletion_self_service, "_authority_settings", lambda: authority)
+
+        with pytest.raises(RuntimeError, match="INSTANCE_ID"):
+            deletion_self_service.reconcile_configured_deletions_on_startup()

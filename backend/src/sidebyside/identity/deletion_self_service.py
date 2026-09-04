@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
+from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import select
 
@@ -56,6 +57,11 @@ class DeletionAuthoritySettings(BaseSettings):
     )
     instance_id: UUID | None = None
 
+    @field_validator("instance_id", mode="before")
+    @classmethod
+    def empty_instance_id_is_unset(cls, value: object) -> object | None:
+        return None if value == "" else value
+
 
 @dataclass(frozen=True, slots=True)
 class AcceptedSelfDeletion:
@@ -71,27 +77,88 @@ def _authority_unavailable() -> ServiceUnavailableError:
     )
 
 
-def _configured_journal() -> DeletionJournal:
-    authority = DeletionAuthoritySettings()
-    if authority.instance_id is None:
+def _authority_settings() -> DeletionAuthoritySettings:
+    try:
+        return DeletionAuthoritySettings()
+    except ValidationError as exc:
+        raise _authority_unavailable() from exc
+
+
+def _configured_journal(
+    authority: DeletionAuthoritySettings | None = None,
+) -> DeletionJournal:
+    active_authority = authority if authority is not None else _authority_settings()
+    if active_authority.instance_id is None:
         raise _authority_unavailable()
 
-    path = authority.journal_path
+    path = active_authority.journal_path
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
             try:
-                journal = DeletionJournal.initialize(path, instance_id=authority.instance_id)
+                journal = DeletionJournal.initialize(
+                    path,
+                    instance_id=active_authority.instance_id,
+                )
             except DeletionJournalError:
                 # A concurrent request may have created the same journal after
                 # the existence check. Validate the resulting file before use.
-                journal = DeletionJournal(path, instance_id=authority.instance_id)
+                journal = DeletionJournal(
+                    path,
+                    instance_id=active_authority.instance_id,
+                )
         else:
-            journal = DeletionJournal(path, instance_id=authority.instance_id)
+            journal = DeletionJournal(
+                path,
+                instance_id=active_authority.instance_id,
+            )
         journal.read_all()
         return journal
     except (DeletionJournalError, OSError) as exc:
         raise _authority_unavailable() from exc
+
+
+def reconcile_configured_deletions_on_startup() -> None:
+    """Re-establish fail-closed state before accepting traffic after a restart.
+
+    Filesystem and PostgreSQL commits cannot be one atomic transaction. If a
+    process exits after the forward tombstone was fsynced but before the local
+    fail-closed transaction commits, the next API start must consume that
+    tombstone before serving normal requests. Full cleanup remains a retry-safe
+    worker concern after authorization has been closed again.
+    """
+    try:
+        authority = _authority_settings()
+    except ServiceUnavailableError as exc:
+        raise RuntimeError("Account deletion authority configuration is invalid.") from exc
+
+    if authority.instance_id is None:
+        if authority.journal_path.exists():
+            raise RuntimeError(
+                "An Account deletion journal exists but SBS_ACCOUNT_DELETION_INSTANCE_ID "
+                "is missing. Refusing to serve traffic without reconciliation."
+            )
+        return
+
+    try:
+        journal = _configured_journal(authority)
+    except ServiceUnavailableError as exc:
+        raise RuntimeError("The Account deletion journal could not be validated.") from exc
+
+    for tombstone in journal.read_all():
+        with unit_of_work() as session:
+            deletion = apply_accepted_tombstone(
+                session,
+                tombstone.account_id,
+                accepted_at=tombstone.accepted_at,
+            )
+            if deletion is not None and deletion.status != AccountDeletionStatus.COMPLETED.value:
+                enqueue_convergence(
+                    session,
+                    account_id=tombstone.account_id,
+                    accepted_at=tombstone.accepted_at,
+                )
+            session.flush()
 
 
 def _preflight(account_id: UUID) -> str | None:
@@ -173,11 +240,11 @@ def _deliver_confirmation(
         active_mail.send(
             MailMessage(
                 to=primary_email,
-                subject="Deine Kontoloeschung wurde gestartet",
+                subject="Deine Kontolöschung wurde gestartet",
                 body=(
-                    "Deine Kontoloeschung wurde gestartet. Du musst nichts weiter tun.\n\n"
+                    "Deine Kontolöschung wurde gestartet. Du musst nichts weiter tun.\n\n"
                     "Der Zugriff auf dein SideBySide-Konto wurde beendet. Die weitere "
-                    "Loeschung laeuft automatisch nach den geltenden Aufbewahrungsregeln."
+                    "Löschung läuft automatisch nach den geltenden Aufbewahrungsregeln."
                 ),
             )
         )
