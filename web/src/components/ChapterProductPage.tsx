@@ -39,6 +39,7 @@ export function ChapterProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const key = authorSummaryQueryKeys.chapterDetail(spaceId, chapterId);
 
   const chapterQuery = useQuery({
@@ -159,12 +160,22 @@ export function ChapterProductPage({
         eyebrow={t('m5s3.chapter.detailEyebrow')}
         title={chapter.title}
         description={chapter.description || t('m5s3.chapter.noDescription')}
+        action={
+          chapter.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
+        }
       />
 
-      <section className="planning-subsection">
-        <h2>{t('m5s3.common.edit')}</h2>
-        {chapter.capabilities.canEdit ? (
-          <form className="form-grid" onSubmit={submitEdit}>
+      {isEditing ? (
+        <section className="planning-subsection">
+          <h2>{t('m5s3.common.edit')}</h2>
+          <form className="form-grid" onSubmit={(e) => { submitEdit(e); setIsEditing(false); }}>
             <label htmlFor="chapter-edit-title">{t('m5s3.common.title')}</label>
             <input
               id="chapter-edit-title"
@@ -172,6 +183,7 @@ export function ChapterProductPage({
               required
               maxLength={200}
               defaultValue={chapter.title}
+              autoFocus
             />
             <label htmlFor="chapter-edit-description">
               {t('m5s3.common.description')}
@@ -219,11 +231,16 @@ export function ChapterProductPage({
                 </option>
               ))}
             </select>
-            <button type="submit" disabled={updateMutation.isPending}>
-              {updateMutation.isPending
-                ? t('m5s3.common.saving')
-                : t('m5s3.common.saveChanges')}
-            </button>
+            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <button type="submit" disabled={updateMutation.isPending}>
+                {updateMutation.isPending
+                  ? t('m5s3.common.saving')
+                  : t('m5s3.common.saveChanges')}
+              </button>
+              <button type="button" className="tertiary" onClick={() => { setIsEditing(false); setConfirmDelete(false); }}>
+                {t('common.cancel')}
+              </button>
+            </div>
             {updateMutation.error ? (
               <ProblemState
                 error={updateMutation.error}
@@ -231,10 +248,54 @@ export function ChapterProductPage({
               />
             ) : null}
           </form>
-        ) : (
-          <p className="planning-meta">{t('m5s3.common.readOnly')}</p>
-        )}
-      </section>
+
+          {chapter.capabilities.canDelete ? (
+            <div
+              className="planning-danger-zone"
+              aria-labelledby="chapter-delete-heading"
+              style={{ marginTop: 'var(--space-4)' }}
+            >
+              <h2 id="chapter-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
+              <p>{t('m5s3.chapter.deleteConsequence')}</p>
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  {t('m5s3.common.delete')}
+                </button>
+              ) : (
+                <div className="planning-confirm-row">
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => deleteMutation.mutate(chapter)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    {deleteMutation.isPending
+                      ? t('m5s3.common.deleting')
+                      : t('m5s3.common.confirmDelete')}
+                  </button>
+                  <button
+                    type="button"
+                    className="tertiary"
+                    onClick={() => setConfirmDelete(false)}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              )}
+              {deleteMutation.error ? (
+                <ProblemState
+                  error={deleteMutation.error}
+                  onRetry={() => void chapterQuery.refetch()}
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <PlanningRelationManager
         apis={apis}
@@ -242,51 +303,6 @@ export function ChapterProductPage({
         ownerKind="chapter"
         ownerId={chapter.id}
       />
-
-      {chapter.capabilities.canDelete ? (
-        <section
-          className="planning-danger-zone"
-          aria-labelledby="chapter-delete-heading"
-        >
-          <h2 id="chapter-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
-          <p>{t('m5s3.chapter.deleteConsequence')}</p>
-          {!confirmDelete ? (
-            <button
-              type="button"
-              className="danger"
-              onClick={() => setConfirmDelete(true)}
-            >
-              {t('m5s3.common.delete')}
-            </button>
-          ) : (
-            <div className="planning-confirm-row">
-              <button
-                type="button"
-                className="danger"
-                onClick={() => deleteMutation.mutate(chapter)}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending
-                  ? t('m5s3.common.deleting')
-                  : t('m5s3.common.confirmDelete')}
-              </button>
-              <button
-                type="button"
-                className="tertiary"
-                onClick={() => setConfirmDelete(false)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          )}
-          {deleteMutation.error ? (
-            <ProblemState
-              error={deleteMutation.error}
-              onRetry={() => void chapterQuery.refetch()}
-            />
-          ) : null}
-        </section>
-      ) : null}
     </div>
   );
 }

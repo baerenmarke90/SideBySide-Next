@@ -327,42 +327,20 @@
 }
 
 .planning-check:hover:not(:disabled) {
-  border-color: var(--color-shared);
-  background: var(--color-shared-surface);
-  color: var(--color-shared);
+  border-color: var(--color-brand);
+  background: var(--color-brand-surface);
+  color: var(--color-brand);
 }
 
 .planning-check[aria-pressed="true"],
 .planning-item-completed .planning-check {
-  background: var(--color-shared);
-  border-color: var(--color-shared);
+  background: var(--color-brand);
+  border-color: var(--color-brand);
   color: var(--color-surface, #ffffff);
 }
 
 .planning-check[aria-pressed="true"]:hover:not(:disabled),
 .planning-item-completed .planning-check:hover:not(:disabled) {
-  background: var(--color-shared-accent);
-  border-color: var(--color-shared-accent);
-  color: var(--color-surface, #ffffff);
-}
-
-.planning-check.is-private:hover:not(:disabled),
-.private-collection .planning-check:hover:not(:disabled) {
-  border-color: var(--color-private);
-  background: var(--color-brand-surface);
-  color: var(--color-private);
-}
-
-.planning-check.is-private[aria-pressed="true"],
-.private-collection .planning-check[aria-pressed="true"],
-.private-collection .planning-item-completed .planning-check {
-  background: var(--color-private);
-  border-color: var(--color-private);
-  color: var(--color-surface, #ffffff);
-}
-
-.planning-check.is-private[aria-pressed="true"]:hover:not(:disabled),
-.private-collection .planning-check[aria-pressed="true"]:hover:not(:disabled) {
   background: var(--color-brand-strong);
   border-color: var(--color-brand-strong);
   color: var(--color-surface, #ffffff);

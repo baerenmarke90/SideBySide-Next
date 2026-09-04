@@ -36,9 +36,9 @@
 }
 
 button.list-entry-icon-button.list-entry-add-button {
-  color: var(--color-shared);
-  background: var(--color-shared-surface);
-  border: 1px solid var(--color-shared);
+  color: var(--color-brand);
+  background: var(--color-brand-surface);
+  border: 1px solid var(--color-brand);
   border-radius: var(--radius-medium);
   transition:
     background var(--motion-fast),
@@ -48,24 +48,7 @@ button.list-entry-icon-button.list-entry-add-button {
 }
 
 button.list-entry-icon-button.list-entry-add-button:hover:not(:disabled) {
-  background: var(--color-shared);
+  background: var(--color-brand);
   color: var(--color-surface, #ffffff);
-  border-color: var(--color-shared);
-}
-
-button.list-entry-icon-button.list-entry-add-button.is-private,
-.private-collection button.list-entry-icon-button.list-entry-add-button {
-  color: var(--color-private);
-  background: var(--color-brand-surface);
-  border-color: var(--color-private);
-}
-
-button.list-entry-icon-button.list-entry-add-button.is-private:hover:not(
-  :disabled
-),
-.private-collection
-  button.list-entry-icon-button.list-entry-add-button:hover:not(:disabled) {
-  background: var(--color-private);
-  color: var(--color-surface, #ffffff);
-  border-color: var(--color-private);
+  border-color: var(--color-brand);
 }

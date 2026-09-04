@@ -482,6 +482,7 @@ export function HeartMomentProductPage({
               <Link
                 className="button-link secondary-link"
                 to={heartMomentDetailPath(heartMoment.id)}
+                onClick={() => setConfirmDelete(false)}
               >
                 {t('common.cancel')}
               </Link>
@@ -497,6 +498,53 @@ export function HeartMomentProductPage({
           </form>
           {updateMutation.error ? (
             <ProblemState error={updateMutation.error} />
+          ) : null}
+
+          {heartMoment.capabilities.canDelete && !offline ? (
+            <div
+              className="memory-danger-zone"
+              aria-label={t('heartMomentProduct.delete')}
+              style={{ marginTop: 'var(--space-8)' }}
+            >
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  {t('heartMomentProduct.delete')}
+                </button>
+              ) : (
+                <div className="memory-delete-confirmation" role="alert">
+                  <div>
+                    <h2>{t('heartMomentProduct.deleteConfirmTitle')}</h2>
+                    <p>{t('heartMomentProduct.deleteConfirmBody')}</p>
+                  </div>
+                  <div className="memory-actions">
+                    <button
+                      type="button"
+                      className="tertiary"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {t('heartMomentProduct.deleteCancel')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteMutation.mutate(heartMoment)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending
+                        ? t('heartMomentProduct.deleting')
+                        : t('heartMomentProduct.deleteConfirm')}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {deleteMutation.error ? (
+                <ProblemState error={deleteMutation.error} />
+              ) : null}
+            </div>
           ) : null}
         </section>
       </div>
@@ -645,51 +693,7 @@ export function HeartMomentProductPage({
               <p className="muted">{t('heartMomentProduct.commentsPrivate')}</p>
             )}
 
-            {heartMoment.capabilities.canDelete && !offline ? (
-              <section
-                className="memory-danger-zone"
-                aria-label={t('heartMomentProduct.delete')}
-              >
-                {!confirmDelete ? (
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    {t('heartMomentProduct.delete')}
-                  </button>
-                ) : (
-                  <div className="memory-delete-confirmation" role="alert">
-                    <div>
-                      <h2>{t('heartMomentProduct.deleteConfirmTitle')}</h2>
-                      <p>{t('heartMomentProduct.deleteConfirmBody')}</p>
-                    </div>
-                    <div className="memory-actions">
-                      <button
-                        type="button"
-                        className="tertiary"
-                        onClick={() => setConfirmDelete(false)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        {t('heartMomentProduct.deleteCancel')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteMutation.mutate(heartMoment)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        {deleteMutation.isPending
-                          ? t('heartMomentProduct.deleting')
-                          : t('heartMomentProduct.deleteConfirm')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {deleteMutation.error ? (
-                  <ProblemState error={deleteMutation.error} />
-                ) : null}
-              </section>
-            ) : null}
+
           </article>
         </div>
       </div>

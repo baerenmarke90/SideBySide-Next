@@ -143,7 +143,6 @@ describe('PrivateCollectionsPage', () => {
     expect(html).toContain('planning-collection-items');
     expect(html).toContain('planning-check');
     expect(html).toContain('planning-inline-create');
-    expect(html).toContain('planning-collection-meta-edit');
     expect(html).toContain('Order photo album');
     expect(html).toContain('Book train tickets');
 

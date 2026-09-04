@@ -167,7 +167,7 @@ type IconButtonProps = Omit<
   'aria-label' | 'title' | 'children'
 > & {
   label: string;
-  icon: 'save' | 'delete' | 'reorder' | 'add';
+  icon: 'save' | 'delete' | 'reorder' | 'add' | 'edit';
   variant?: 'tertiary' | 'add';
 };
 
@@ -235,6 +235,9 @@ function ListEntryIcon({ kind }: { kind: IconButtonProps['icon'] }) {
           <path d="M5 12h14" />
           <path d="M5 17h14" />
         </>
+      ) : null}
+      {kind === 'edit' ? (
+        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
       ) : null}
     </svg>
   );

@@ -347,31 +347,6 @@ export function GiftIdeaDetailPage({ api, accountId, spaceId }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { giftIdeaId, query } = useGiftIdea(api, accountId, spaceId);
-  const deleteMutation = useMutation({
-    mutationFn: (gift: GiftIdeaDetail) =>
-      privateApiCall(() =>
-        api.deleteGiftIdea({
-          spaceId,
-          giftIdeaId: gift.id,
-          ifMatch: String(gift.version),
-        }),
-      ),
-    onSuccess: async () => {
-      if (giftIdeaId) {
-        queryClient.removeQueries({
-          queryKey: privateAreaQueryKeys.giftIdea(
-            accountId,
-            spaceId,
-            giftIdeaId,
-          ),
-        });
-      }
-      await queryClient.invalidateQueries({
-        queryKey: privateAreaQueryKeys.giftIdeas(accountId, spaceId),
-      });
-      navigate(PRIVATE_GIFT_IDEAS_PATH, { replace: true });
-    },
-  });
 
   if (query.isLoading)
     return <UiState kind="loading" title={t('privateArea.gifts.loading')} />;
@@ -441,13 +416,7 @@ export function GiftIdeaDetailPage({ api, accountId, spaceId }: Props) {
         <p className="private-area-detail-body">
           {gift.description || t('privateArea.gifts.noDetails')}
         </p>
-        {gift.capabilities.canDelete ? (
-          <DeleteConfirmation
-            onDelete={() => deleteMutation.mutate(gift)}
-            pending={deleteMutation.isPending}
-            error={deleteMutation.error}
-          />
-        ) : null}
+
       </article>
     </>
   );
@@ -457,7 +426,33 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { query } = useGiftIdea(api, accountId, spaceId);
+  const { giftIdeaId, query } = useGiftIdea(api, accountId, spaceId);
+  const deleteMutation = useMutation({
+    mutationFn: (targetGift: GiftIdeaDetail) =>
+      privateApiCall(() =>
+        api.deleteGiftIdea({
+          spaceId,
+          giftIdeaId: targetGift.id,
+          ifMatch: String(targetGift.version),
+        }),
+      ),
+    onSuccess: async () => {
+      if (giftIdeaId) {
+        queryClient.removeQueries({
+          queryKey: privateAreaQueryKeys.giftIdea(
+            accountId,
+            spaceId,
+            giftIdeaId,
+          ),
+        });
+      }
+      await queryClient.invalidateQueries({
+        queryKey: privateAreaQueryKeys.giftIdeas(accountId, spaceId),
+      });
+      navigate(PRIVATE_GIFT_IDEAS_PATH, { replace: true });
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: ({ gift, data }: { gift: GiftIdeaDetail; data: FormData }) => {
       const values = giftValues(data);
@@ -544,6 +539,16 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
         </form>
         {mutation.error ? <ProblemState error={mutation.error} /> : null}
       </section>
+
+      {gift.capabilities.canDelete ? (
+        <article className="private-area-detail-card" style={{ marginTop: 'var(--space-8)' }}>
+          <DeleteConfirmation
+            onDelete={() => deleteMutation.mutate(gift)}
+            pending={deleteMutation.isPending}
+            error={deleteMutation.error}
+          />
+        </article>
+      ) : null}
     </>
   );
 }

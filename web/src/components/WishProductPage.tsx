@@ -37,6 +37,7 @@ export function WishProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const key = authorSummaryQueryKeys.wishDetail(spaceId, wishId);
 
   const wishQuery = useQuery({
@@ -183,13 +184,23 @@ export function WishProductPage({
         eyebrow={t('m5s3.wish.detailEyebrow')}
         title={wish.title}
         description={t(`m5s3.wish.status.${wish.status}`)}
+        action={
+          wish.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
+        }
       />
 
       <div className="planning-detail-grid">
-        <section className="planning-subsection">
-          <h2>{t('m5s3.common.edit')}</h2>
-          {wish.capabilities.canEdit ? (
-            <form className="form-grid" onSubmit={submitEdit}>
+        {isEditing ? (
+          <section className="planning-subsection">
+            <h2>{t('m5s3.common.edit')}</h2>
+            <form className="form-grid" onSubmit={(e) => { submitEdit(e); setIsEditing(false); }}>
               <label htmlFor="wish-edit-title">{t('m5s3.common.title')}</label>
               <input
                 id="wish-edit-title"
@@ -197,12 +208,18 @@ export function WishProductPage({
                 required
                 maxLength={200}
                 defaultValue={wish.title}
+                autoFocus
               />
-              <button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending
-                  ? t('m5s3.common.saving')
-                  : t('m5s3.common.saveChanges')}
-              </button>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.saveChanges')}
+                </button>
+                <button type="button" className="tertiary" onClick={() => { setIsEditing(false); setConfirmDelete(false); }}>
+                  {t('common.cancel')}
+                </button>
+              </div>
               {updateMutation.error ? (
                 <ProblemState
                   error={updateMutation.error}
@@ -210,10 +227,54 @@ export function WishProductPage({
                 />
               ) : null}
             </form>
-          ) : (
-            <p className="planning-meta">{t('m5s3.common.readOnly')}</p>
-          )}
-        </section>
+            
+            {wish.capabilities.canDelete ? (
+              <div
+                className="planning-danger-zone"
+                aria-labelledby="wish-delete-heading"
+                style={{ marginTop: 'var(--space-4)' }}
+              >
+                <h2 id="wish-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
+                <p>{t('m5s3.wish.deleteConsequence')}</p>
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    {t('m5s3.common.delete')}
+                  </button>
+                ) : (
+                  <div className="planning-confirm-row">
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => deleteMutation.mutate(wish)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending
+                        ? t('m5s3.common.deleting')
+                        : t('m5s3.common.confirmDelete')}
+                    </button>
+                    <button
+                      type="button"
+                      className="tertiary"
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                )}
+                {deleteMutation.error ? (
+                  <ProblemState
+                    error={deleteMutation.error}
+                    onRetry={() => void wishQuery.refetch()}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {wish.status === 'OPEN' && wish.capabilities.canEdit ? (
           <section className="planning-subsection">
@@ -262,50 +323,7 @@ export function WishProductPage({
         ) : null}
       </div>
 
-      {wish.capabilities.canDelete ? (
-        <section
-          className="planning-danger-zone"
-          aria-labelledby="wish-delete-heading"
-        >
-          <h2 id="wish-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
-          <p>{t('m5s3.wish.deleteConsequence')}</p>
-          {!confirmDelete ? (
-            <button
-              type="button"
-              className="danger"
-              onClick={() => setConfirmDelete(true)}
-            >
-              {t('m5s3.common.delete')}
-            </button>
-          ) : (
-            <div className="planning-confirm-row">
-              <button
-                type="button"
-                className="danger"
-                onClick={() => deleteMutation.mutate(wish)}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending
-                  ? t('m5s3.common.deleting')
-                  : t('m5s3.common.confirmDelete')}
-              </button>
-              <button
-                type="button"
-                className="tertiary"
-                onClick={() => setConfirmDelete(false)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          )}
-          {deleteMutation.error ? (
-            <ProblemState
-              error={deleteMutation.error}
-              onRetry={() => void wishQuery.refetch()}
-            />
-          ) : null}
-        </section>
-      ) : null}
+
     </div>
   );
 }

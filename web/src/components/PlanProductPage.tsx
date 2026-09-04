@@ -49,6 +49,7 @@ export function PlanProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const key = authorSummaryQueryKeys.planDetail(spaceId, planId);
 
   const planQuery = useQuery({
@@ -266,11 +267,14 @@ export function PlanProductPage({
         title={plan.title}
         description={t(`m5s3.plan.status.${plan.status}`)}
         action={
-          plan.capabilities.canEdit ? (
-            <a className="button-link secondary" href="#plan-edit-section">
-              {t('m5s3.plan.editAction')}
-            </a>
-          ) : null
+          plan.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
         }
       />
 
@@ -299,10 +303,10 @@ export function PlanProductPage({
       </section>
 
       <div className="planning-detail-grid">
-        <section id="plan-edit-section" className="planning-subsection">
-          <h2>{t('m5s3.common.edit')}</h2>
-          {plan.capabilities.canEdit ? (
-            <form className="form-grid" onSubmit={submitEdit}>
+        {isEditing ? (
+          <section id="plan-edit-section" className="planning-subsection">
+            <h2>{t('m5s3.common.edit')}</h2>
+            <form className="form-grid" onSubmit={(e) => { submitEdit(e); setIsEditing(false); }}>
               <label htmlFor="plan-edit-title">{t('m5s3.common.title')}</label>
               <input
                 id="plan-edit-title"
@@ -310,6 +314,7 @@ export function PlanProductPage({
                 required
                 maxLength={200}
                 defaultValue={plan.title}
+                autoFocus
               />
               <label htmlFor="plan-edit-description">
                 {t('m5s3.common.description')}
@@ -346,11 +351,16 @@ export function PlanProductPage({
                   />
                 </>
               ) : null}
-              <button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending
-                  ? t('m5s3.common.saving')
-                  : t('m5s3.common.saveChanges')}
-              </button>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending
+                    ? t('m5s3.common.saving')
+                    : t('m5s3.common.saveChanges')}
+                </button>
+                <button type="button" className="tertiary" onClick={() => { setIsEditing(false); setConfirmDelete(false); }}>
+                  {t('common.cancel')}
+                </button>
+              </div>
               {updateMutation.error ? (
                 <ProblemState
                   error={updateMutation.error}
@@ -358,10 +368,54 @@ export function PlanProductPage({
                 />
               ) : null}
             </form>
-          ) : (
-            <p className="planning-meta">{t('m5s3.common.readOnly')}</p>
-          )}
-        </section>
+            
+            {plan.capabilities.canDelete ? (
+              <div
+                className="planning-danger-zone"
+                aria-labelledby="plan-delete-heading"
+                style={{ marginTop: 'var(--space-4)' }}
+              >
+                <h2 id="plan-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
+                <p>{t('m5s3.plan.deleteConsequence')}</p>
+                {!confirmDelete ? (
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    {t('m5s3.common.delete')}
+                  </button>
+                ) : (
+                  <div className="planning-confirm-row">
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => deleteMutation.mutate(plan)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending
+                        ? t('m5s3.common.deleting')
+                        : t('m5s3.common.confirmDelete')}
+                    </button>
+                    <button
+                      type="button"
+                      className="tertiary"
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                )}
+                {deleteMutation.error ? (
+                  <ProblemState
+                    error={deleteMutation.error}
+                    onRetry={() => void planQuery.refetch()}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {plan.status === 'COMPLETED' ? (
           <section className="plan-completed-celebration sbs-motion-reveal">
@@ -459,50 +513,7 @@ export function PlanProductPage({
         ) : null}
       </div>
 
-      {plan.capabilities.canDelete ? (
-        <section
-          className="planning-danger-zone"
-          aria-labelledby="plan-delete-heading"
-        >
-          <h2 id="plan-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
-          <p>{t('m5s3.plan.deleteConsequence')}</p>
-          {!confirmDelete ? (
-            <button
-              type="button"
-              className="danger"
-              onClick={() => setConfirmDelete(true)}
-            >
-              {t('m5s3.common.delete')}
-            </button>
-          ) : (
-            <div className="planning-confirm-row">
-              <button
-                type="button"
-                className="danger"
-                onClick={() => deleteMutation.mutate(plan)}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending
-                  ? t('m5s3.common.deleting')
-                  : t('m5s3.common.confirmDelete')}
-              </button>
-              <button
-                type="button"
-                className="tertiary"
-                onClick={() => setConfirmDelete(false)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          )}
-          {deleteMutation.error ? (
-            <ProblemState
-              error={deleteMutation.error}
-              onRetry={() => void planQuery.refetch()}
-            />
-          ) : null}
-        </section>
-      ) : null}
+
     </div>
   );
 }

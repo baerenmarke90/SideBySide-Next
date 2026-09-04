@@ -424,6 +424,7 @@ export function MemoryProductPage({
               <Link
                 className="button-link secondary-link"
                 to={memoryDetailPath(memory.id)}
+                onClick={() => setConfirmDelete(false)}
               >
                 {t('common.cancel')}
               </Link>
@@ -442,6 +443,56 @@ export function MemoryProductPage({
               error={updateMutation.error}
               onRetry={() => void reloadCurrentMemory()}
             />
+          ) : null}
+
+          {memory.capabilities.canDelete && !offline ? (
+            <div
+              className="memory-danger-zone"
+              aria-label={t('memoryProduct.delete')}
+              style={{ marginTop: 'var(--space-8)' }}
+            >
+              {!confirmDelete ? (
+                <button
+                  type="button"
+                  className="secondary memory-delete-trigger"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  {t('memoryProduct.delete')}
+                </button>
+              ) : (
+                <div className="memory-delete-confirmation" role="alert">
+                  <div>
+                    <h2>{t('memoryProduct.deleteConfirmTitle')}</h2>
+                    <p>{t('memoryProduct.deleteConfirmBody')}</p>
+                  </div>
+                  <div className="memory-actions">
+                    <button
+                      type="button"
+                      className="tertiary"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {t('memoryProduct.deleteCancel')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteMutation.mutate(memory)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending
+                        ? t('memoryProduct.deleting')
+                        : t('memoryProduct.deleteConfirm')}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {deleteMutation.error ? (
+                <ProblemState
+                  error={deleteMutation.error}
+                  onRetry={() => void reloadCurrentMemory()}
+                />
+              ) : null}
+            </div>
           ) : null}
         </section>
       </div>
@@ -529,54 +580,7 @@ export function MemoryProductPage({
             </p>
           </footer>
 
-          {memory.capabilities.canDelete && !offline ? (
-            <section
-              className="memory-danger-zone"
-              aria-label={t('memoryProduct.delete')}
-            >
-              {!confirmDelete ? (
-                <button
-                  type="button"
-                  className="secondary memory-delete-trigger"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  {t('memoryProduct.delete')}
-                </button>
-              ) : (
-                <div className="memory-delete-confirmation" role="alert">
-                  <div>
-                    <h2>{t('memoryProduct.deleteConfirmTitle')}</h2>
-                    <p>{t('memoryProduct.deleteConfirmBody')}</p>
-                  </div>
-                  <div className="memory-actions">
-                    <button
-                      type="button"
-                      className="tertiary"
-                      onClick={() => setConfirmDelete(false)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      {t('memoryProduct.deleteCancel')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteMutation.mutate(memory)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      {deleteMutation.isPending
-                        ? t('memoryProduct.deleting')
-                        : t('memoryProduct.deleteConfirm')}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {deleteMutation.error ? (
-                <ProblemState
-                  error={deleteMutation.error}
-                  onRetry={() => void reloadCurrentMemory()}
-                />
-              ) : null}
-            </section>
-          ) : null}
+          </footer>
         </article>
       </div>
     </div>

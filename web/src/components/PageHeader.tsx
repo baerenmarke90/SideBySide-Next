@@ -9,8 +9,8 @@ export function PageHeader({
   className = '',
 }: {
   eyebrow?: string;
-  title: string;
-  description?: string;
+  title: ReactNode;
+  description?: ReactNode;
   action?: ReactNode;
   before?: ReactNode;
   className?: string;

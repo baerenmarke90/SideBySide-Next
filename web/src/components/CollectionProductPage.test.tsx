@@ -98,7 +98,7 @@ describe('CollectionProductPage', () => {
     );
 
     // Title input row has compact save button disabled initially
-    expect(html).toContain('planning-collection-title-row');
+    // (Removed because title row is now inside edit mode)
     // Add button is rendered
     expect(html).toContain('planning-inline-create');
     // Item row has item title, checkbox, reorder, delete, but no per-item save button

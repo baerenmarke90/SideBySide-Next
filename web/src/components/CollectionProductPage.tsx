@@ -150,6 +150,7 @@ export function CollectionProductPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [showTitleSaved, setShowTitleSaved] = useState(false);
   const key = authorSummaryQueryKeys.collectionDetail(spaceId, collectionId);
@@ -394,73 +395,93 @@ export function CollectionProductPage({
           </Link>
         }
         eyebrow={t('m5s3.collection.detailEyebrow')}
-        title={collection.title}
-        description={t('m5s3.collection.itemCount', { count: items.length })}
-      />
-
-      {collection.capabilities.canEdit ? (
-        <section className="planning-subsection planning-collection-meta-edit">
-          <form
-            className="planning-collection-title-form"
-            onSubmit={submitCollection}
-          >
-            <label htmlFor="collection-edit-title" className="sr-only">
-              {t('m5s3.common.title')}
-            </label>
-            <div className="planning-collection-title-row">
-              <input
-                id="collection-edit-title"
-                name="title"
-                required
-                maxLength={200}
-                value={titleDraft}
-                onChange={(e) => setTitleDraft(e.target.value)}
-                placeholder={t('m5s3.common.title')}
-                aria-label={t('m5s3.common.title')}
-              />
-              <ListEntryIconButton
-                type="submit"
-                icon="save"
-                className="tertiary"
-                label={
-                  updateCollection.isPending
-                    ? t('m5s3.common.saving')
-                    : t('m5s3.common.saveChanges')
+        title={
+          isEditing ? (
+            <form
+              className="planning-collection-title-form"
+              onSubmit={(e) => {
+                submitCollection(e);
+                if (titleDraft.trim().length > 0) {
+                  setIsEditing(false);
                 }
-                disabled={!isTitleDirty || updateCollection.isPending}
-              />
-              {showTitleSaved ? (
-                <span
-                  className="planning-title-saved-hint"
-                  role="status"
-                  aria-live="polite"
+              }}
+            >
+              <label htmlFor="collection-edit-title" className="sr-only">
+                {t('m5s3.common.title')}
+              </label>
+              <div className="planning-collection-title-row">
+                <input
+                  id="collection-edit-title"
+                  name="title"
+                  required
+                  maxLength={200}
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  placeholder={t('m5s3.common.title')}
+                  aria-label={t('m5s3.common.title')}
+                  autoFocus
+                />
+                <ListEntryIconButton
+                  type="submit"
+                  icon="save"
+                  className="tertiary"
+                  label={
+                    updateCollection.isPending
+                      ? t('m5s3.common.saving')
+                      : t('m5s3.common.saveChanges')
+                  }
+                  disabled={!isTitleDirty || updateCollection.isPending}
+                />
+                <button
+                  type="button"
+                  className="button-link secondary-link"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setTitleDraft(collection.title);
+                  }}
+                  disabled={updateCollection.isPending}
                 >
+                  {t('common.cancel')}
+                </button>
+              </div>
+              {updateCollection.error ? (
+                <ProblemState
+                  error={updateCollection.error}
+                  onRetry={() => void collectionQuery.refetch()}
+                />
+              ) : null}
+            </form>
+          ) : (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              {collection.title}
+              {showTitleSaved ? (
+                <span className="planning-title-saved-hint" role="status" aria-live="polite">
                   ✓
                 </span>
               ) : null}
-            </div>
-            {updateCollection.error ? (
-              <ProblemState
-                error={updateCollection.error}
-                onRetry={() => void collectionQuery.refetch()}
-              />
-            ) : null}
-          </form>
-        </section>
-      ) : null}
+            </span>
+          )
+        }
+        description={t('m5s3.collection.itemCount', { count: items.length })}
+        action={
+          collection.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
+        }
+      />
 
       <section
         className="planning-subsection"
         aria-labelledby="collection-items-heading"
       >
-        <div className="layout-section-head">
-          <div>
-            <h2 id="collection-items-heading">
-              {t('m5s3.collection.itemsHeading')}
-            </h2>
-            <p>{t('m5s3.collection.itemsIntro')}</p>
-          </div>
-        </div>
+        <h2 id="collection-items-heading" className="sr-only">
+          {t('m5s3.collection.itemsHeading')}
+        </h2>
 
         {collection.capabilities.canEdit ? (
           <form className="planning-inline-create" onSubmit={submitItem}>
@@ -529,7 +550,7 @@ export function CollectionProductPage({
         ) : null}
       </section>
 
-      {collection.capabilities.canDelete ? (
+      {isEditing && collection.capabilities.canDelete ? (
         <section
           className="planning-danger-zone"
           aria-labelledby="collection-delete-heading"
