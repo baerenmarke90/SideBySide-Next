@@ -15,7 +15,8 @@ from tests.conftest import auth, requires_database
 
 @requires_database
 def test_client_cannot_supply_a_different_account_id(
-    production_client, monkeypatch  # type: ignore[no-untyped-def]
+    production_client,
+    monkeypatch,  # type: ignore[no-untyped-def]
 ) -> None:
     client, maker = production_client
     with maker() as session:
@@ -58,8 +59,11 @@ def test_client_cannot_supply_a_different_account_id(
         assert other is not None and other.disabled_at is None
         assert session.get(AccountDeletion, caller_id) is None
         assert session.get(AccountDeletion, other_id) is None
-        assert session.execute(
-            select(func.count()).select_from(Job).where(
-                Job.kind == deletion_jobs.CONVERGENCE_JOB
-            )
-        ).scalar_one() == 0
+        assert (
+            session.execute(
+                select(func.count())
+                .select_from(Job)
+                .where(Job.kind == deletion_jobs.CONVERGENCE_JOB)
+            ).scalar_one()
+            == 0
+        )
