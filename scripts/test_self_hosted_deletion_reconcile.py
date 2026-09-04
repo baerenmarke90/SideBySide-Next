@@ -55,11 +55,12 @@ class DeletionReconcileGuardTest(unittest.TestCase):
         require_postgres.assert_called_once()
 
     @patch.object(self_hosted_deletion_reconcile, "_require_postgres")
-    def test_migration_precedes_journal_replay(self, require_postgres) -> None:  # type: ignore[no-untyped-def]
+    def test_migration_precedes_stdin_journal_replay(self, require_postgres) -> None:  # type: ignore[no-untyped-def]
         target = FakeTarget()
+        journal_bytes = b"protected-journal-snapshot\n"
         with tempfile.TemporaryDirectory() as temp_name:
             journal = Path(temp_name) / "journal.jsonl"
-            journal.write_text("", encoding="utf-8")
+            journal.write_bytes(journal_bytes)
             with patch.object(self_hosted_deletion_reconcile, "_run") as run_command:
                 self_hosted_deletion_reconcile.reconcile_restored_target(
                     target,  # type: ignore[arg-type]
@@ -68,11 +69,17 @@ class DeletionReconcileGuardTest(unittest.TestCase):
                 )
 
         self.assertEqual(run_command.call_count, 2)
-        first = run_command.call_args_list[0].args[0]
-        second = run_command.call_args_list[1].args[0]
+        first_call, second_call = run_command.call_args_list
+        first = first_call.args[0]
+        second = second_call.args[0]
         self.assertIn("migrate", first)
+        self.assertIn("-T", first)
         self.assertIn("sidebyside.identity.deletion_reconcile", second)
+        self.assertIn("--journal-stdin", second)
         self.assertIn(str(INSTANCE_ID), second)
+        self.assertNotIn("--volume", second)
+        self.assertNotIn(str(journal), second)
+        self.assertEqual(second_call.kwargs, {"input_bytes": journal_bytes})
         require_postgres.assert_called_once()
 
 
