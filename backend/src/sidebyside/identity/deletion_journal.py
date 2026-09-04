@@ -276,22 +276,19 @@ def initialize_journal(path: str | Path, *, instance_id: UUID) -> None:
     try:
         try:
             os.fchmod(descriptor, 0o600)
-            wrote_header = False
             with os.fdopen(descriptor, "r+", encoding="utf-8", closefd=False) as handle:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
                 handle.seek(0, os.SEEK_END)
                 if handle.tell() == 0:
                     handle.seek(0)
                     handle.write(_line(_header_payload(instance_id)))
-                    handle.flush()
-                    os.fsync(handle.fileno())
-                    wrote_header = True
                 else:
                     journal_instance_id, _ = _read_records(handle)
                     if journal_instance_id != instance_id:
                         raise DeletionJournalError("Deletion journal belongs to a different instance.")
-            if wrote_header:
-                _fsync_directory(journal.parent)
+                handle.flush()
+                os.fsync(handle.fileno())
+            _fsync_directory(journal.parent)
         except OSError as exc:
             raise DeletionJournalError("Deletion journal initialization could not be synchronized.") from exc
     finally:
@@ -325,6 +322,7 @@ def append_tombstone(
         raise DeletionJournalError("Deletion journal could not be opened for append.") from exc
     try:
         try:
+            result = candidate
             os.fchmod(descriptor, 0o600)
             with os.fdopen(descriptor, "r+", encoding="utf-8", closefd=False) as handle:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
@@ -346,14 +344,15 @@ def append_tombstone(
                         raise DeletionJournalError(
                             "Account tombstone already exists with a different acceptance timestamp."
                         )
-                    return existing
-                handle.seek(0, os.SEEK_END)
-                handle.write(tombstone_line)
+                    result = existing
+                else:
+                    handle.seek(0, os.SEEK_END)
+                    handle.write(tombstone_line)
                 handle.flush()
                 os.fsync(handle.fileno())
             _fsync_directory(journal.parent)
         except OSError as exc:
             raise DeletionJournalError("Deletion journal append could not be synchronized.") from exc
-        return candidate
+        return result
     finally:
         os.close(descriptor)
