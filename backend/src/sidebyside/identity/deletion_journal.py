@@ -83,6 +83,10 @@ def _parse_timestamp(value: object) -> datetime:
         ) from exc
     if parsed.tzinfo is None or parsed.utcoffset() != UTC.utcoffset(parsed):
         raise DeletionJournalError("Deletion journal acceptance timestamps must be UTC.")
+    if _timestamp(parsed) != value:
+        raise DeletionJournalError(
+            "Deletion journal contains a non-canonical acceptance timestamp."
+        )
     return parsed
 
 
@@ -99,10 +103,10 @@ def _parse_uuid(value: object, *, field: str) -> UUID:
 
 
 def _decode_line(raw_line: bytes) -> dict[str, Any]:
-    if not raw_line.endswith(b"\n"):
-        raise DeletionJournalError("Deletion journal contains a truncated final record.")
     if len(raw_line) > _MAX_LINE_BYTES:
         raise DeletionJournalError("Deletion journal record exceeds the maximum safe size.")
+    if not raw_line.endswith(b"\n"):
+        raise DeletionJournalError("Deletion journal contains a truncated final record.")
     try:
         decoded = raw_line.decode("utf-8")
         value = json.loads(decoded)
@@ -115,6 +119,16 @@ def _decode_line(raw_line: bytes) -> dict[str, Any]:
 
 def _digest(payload: dict[str, Any]) -> str:
     return hashlib.sha256(_canonical_json(payload)).hexdigest()
+
+
+def _write_all(descriptor: int, payload: bytes) -> None:
+    """Write a complete record or fail without treating a short write as success."""
+    offset = 0
+    while offset < len(payload):
+        written = os.write(descriptor, payload[offset:])
+        if written <= 0:
+            raise OSError("short write")
+        offset += written
 
 
 class DeletionJournal:
@@ -149,7 +163,7 @@ class DeletionJournal:
             "type": _HEADER_TYPE,
         }
         try:
-            os.write(descriptor, _canonical_json(header) + b"\n")
+            _write_all(descriptor, _canonical_json(header) + b"\n")
             os.fsync(descriptor)
         except OSError as exc:
             try:
@@ -181,9 +195,9 @@ class DeletionJournal:
         journal.read_all()
         return journal
 
-    def _open_locked(self) -> int:
+    def _open_locked(self, *, writable: bool) -> int:
         descriptor: int | None = None
-        flags = os.O_RDWR
+        flags = os.O_RDWR | os.O_APPEND if writable else os.O_RDONLY
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
         try:
@@ -191,7 +205,8 @@ class DeletionJournal:
             metadata = os.fstat(descriptor)
             if not stat.S_ISREG(metadata.st_mode):
                 raise DeletionJournalError("Deletion journal must be a regular file.")
-            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            lock_mode = fcntl.LOCK_EX if writable else fcntl.LOCK_SH
+            fcntl.flock(descriptor, lock_mode)
             return descriptor
         except DeletionJournalError:
             if descriptor is not None:
@@ -205,80 +220,94 @@ class DeletionJournal:
     def _read_locked(self, descriptor: int) -> list[DeletionTombstone]:
         try:
             os.lseek(descriptor, 0, os.SEEK_SET)
-            with os.fdopen(os.dup(descriptor), "rb") as source:
-                lines = source.readlines()
+            source = os.fdopen(os.dup(descriptor), "rb")
         except OSError as exc:
             raise DeletionJournalError("Deletion journal could not be read.") from exc
 
-        if not lines:
-            raise DeletionJournalError("Deletion journal is missing its header.")
-
-        header = _decode_line(lines[0])
-        if frozenset(header) != _HEADER_KEYS:
-            raise DeletionJournalError("Deletion journal header has an unexpected schema.")
-        if (
-            header.get("format") != JOURNAL_FORMAT
-            or header.get("formatVersion") != JOURNAL_VERSION
-            or header.get("type") != _HEADER_TYPE
-        ):
-            raise DeletionJournalError("Deletion journal header format is unsupported.")
-        header_instance = _parse_uuid(header.get("instanceId"), field="instance identifier")
-        if header_instance != self.instance_id:
-            raise DeletionJournalError("Deletion journal belongs to a different instance.")
-
-        records: list[DeletionTombstone] = []
-        seen_accounts: set[UUID] = set()
-        expected_previous = _GENESIS_DIGEST
-        for raw_line in lines[1:]:
-            payload = _decode_line(raw_line)
-            if frozenset(payload) != _TOMBSTONE_KEYS:
-                raise DeletionJournalError("Deletion journal tombstone has an unexpected schema.")
+        with source:
+            header_line = source.readline(_MAX_LINE_BYTES + 1)
+            if not header_line:
+                raise DeletionJournalError("Deletion journal is missing its header.")
+            header = _decode_line(header_line)
+            if frozenset(header) != _HEADER_KEYS:
+                raise DeletionJournalError("Deletion journal header has an unexpected schema.")
             if (
-                payload.get("formatVersion") != JOURNAL_VERSION
-                or payload.get("type") != _TOMBSTONE_TYPE
+                header.get("format") != JOURNAL_FORMAT
+                or header.get("formatVersion") != JOURNAL_VERSION
+                or header.get("type") != _HEADER_TYPE
             ):
-                raise DeletionJournalError("Deletion journal tombstone format is unsupported.")
-
-            instance_id = _parse_uuid(payload.get("instanceId"), field="instance identifier")
-            account_id = _parse_uuid(payload.get("accountId"), field="Account identifier")
-            accepted_at = _parse_timestamp(payload.get("acceptedAt"))
-            previous_digest = payload.get("previousDigest")
-            stored_digest = payload.get("digest")
-            if not isinstance(previous_digest, str) or previous_digest != expected_previous:
-                raise DeletionJournalError("Deletion journal hash chain is broken.")
-            if not isinstance(stored_digest, str) or len(stored_digest) != 64:
-                raise DeletionJournalError("Deletion journal contains an invalid integrity digest.")
-            if instance_id != self.instance_id:
-                raise DeletionJournalError(
-                    "Deletion journal tombstone belongs to another instance."
-                )
-            if account_id in seen_accounts:
-                raise DeletionJournalError(
-                    "Deletion journal contains a duplicate Account tombstone."
-                )
-
-            unsigned = dict(payload)
-            del unsigned["digest"]
-            calculated = _digest(unsigned)
-            if not hmac.compare_digest(stored_digest, calculated):
-                raise DeletionJournalError("Deletion journal integrity validation failed.")
-
-            records.append(
-                DeletionTombstone(
-                    instance_id=instance_id,
-                    account_id=account_id,
-                    accepted_at=accepted_at,
-                    previous_digest=previous_digest,
-                    digest=stored_digest,
-                )
+                raise DeletionJournalError("Deletion journal header format is unsupported.")
+            header_instance = _parse_uuid(
+                header.get("instanceId"), field="instance identifier"
             )
-            seen_accounts.add(account_id)
-            expected_previous = stored_digest
-        return records
+            if header_instance != self.instance_id:
+                raise DeletionJournalError("Deletion journal belongs to a different instance.")
+
+            records: list[DeletionTombstone] = []
+            seen_accounts: set[UUID] = set()
+            expected_previous = _GENESIS_DIGEST
+            while raw_line := source.readline(_MAX_LINE_BYTES + 1):
+                payload = _decode_line(raw_line)
+                if frozenset(payload) != _TOMBSTONE_KEYS:
+                    raise DeletionJournalError(
+                        "Deletion journal tombstone has an unexpected schema."
+                    )
+                if (
+                    payload.get("formatVersion") != JOURNAL_VERSION
+                    or payload.get("type") != _TOMBSTONE_TYPE
+                ):
+                    raise DeletionJournalError(
+                        "Deletion journal tombstone format is unsupported."
+                    )
+
+                instance_id = _parse_uuid(
+                    payload.get("instanceId"), field="instance identifier"
+                )
+                account_id = _parse_uuid(
+                    payload.get("accountId"), field="Account identifier"
+                )
+                accepted_at = _parse_timestamp(payload.get("acceptedAt"))
+                previous_digest = payload.get("previousDigest")
+                stored_digest = payload.get("digest")
+                if not isinstance(previous_digest, str) or previous_digest != expected_previous:
+                    raise DeletionJournalError("Deletion journal hash chain is broken.")
+                if not isinstance(stored_digest, str) or len(stored_digest) != 64:
+                    raise DeletionJournalError(
+                        "Deletion journal contains an invalid integrity digest."
+                    )
+                if instance_id != self.instance_id:
+                    raise DeletionJournalError(
+                        "Deletion journal tombstone belongs to another instance."
+                    )
+                if account_id in seen_accounts:
+                    raise DeletionJournalError(
+                        "Deletion journal contains a duplicate Account tombstone."
+                    )
+
+                unsigned = dict(payload)
+                del unsigned["digest"]
+                calculated = _digest(unsigned)
+                if not hmac.compare_digest(stored_digest, calculated):
+                    raise DeletionJournalError(
+                        "Deletion journal integrity validation failed."
+                    )
+
+                records.append(
+                    DeletionTombstone(
+                        instance_id=instance_id,
+                        account_id=account_id,
+                        accepted_at=accepted_at,
+                        previous_digest=previous_digest,
+                        digest=stored_digest,
+                    )
+                )
+                seen_accounts.add(account_id)
+                expected_previous = stored_digest
+            return records
 
     def read_all(self) -> tuple[DeletionTombstone, ...]:
         """Validate the complete journal and return tombstones in acceptance order."""
-        descriptor = self._open_locked()
+        descriptor = self._open_locked(writable=False)
         try:
             return tuple(self._read_locked(descriptor))
         finally:
@@ -290,7 +319,7 @@ class DeletionJournal:
     def accept(self, account_id: UUID, *, accepted_at: datetime) -> DeletionTombstone:
         """Durably accept one Account deletion, idempotently by Account UUID."""
         normalized_timestamp = _timestamp(accepted_at)
-        descriptor = self._open_locked()
+        descriptor = self._open_locked(writable=True)
         try:
             records = self._read_locked(descriptor)
             for record in records:
@@ -311,10 +340,7 @@ class DeletionJournal:
             payload["digest"] = digest
             encoded = _canonical_json(payload) + b"\n"
             try:
-                os.lseek(descriptor, 0, os.SEEK_END)
-                written = os.write(descriptor, encoded)
-                if written != len(encoded):
-                    raise OSError("short write")
+                _write_all(descriptor, encoded)
                 os.fsync(descriptor)
             except OSError as exc:
                 raise DeletionJournalError(
