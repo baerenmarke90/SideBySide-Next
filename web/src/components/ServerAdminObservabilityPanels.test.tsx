@@ -53,7 +53,10 @@ describe('ServerAdmin observability drill-downs', () => {
       },
     );
 
-    const html = renderWithClient(queryClient, <ServerAdminJobsPanel api={api} />);
+    const html = renderWithClient(
+      queryClient,
+      <ServerAdminJobsPanel api={api} />,
+    );
 
     expect(html).toContain('Job-Verzeichnis');
     expect(html).toContain('mail.dispatch');
