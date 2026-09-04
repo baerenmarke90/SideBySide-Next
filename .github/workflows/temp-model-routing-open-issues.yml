@@ -1,0 +1,218 @@
+name: Temporary open-issue model and tool routing
+
+on:
+  push:
+    branches:
+      - automation/model-routing-open-issues-20260904
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  route-open-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Normalize model and tool routing on open issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import time
+          import urllib.request
+
+          token = os.environ["GH_TOKEN"]
+          repo = os.environ["REPOSITORY"]
+          api = "https://api.github.com"
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "sidebyside-model-tool-routing",
+          }
+
+          def request(url, method="GET", payload=None):
+              data = None if payload is None else json.dumps(payload).encode("utf-8")
+              req = urllib.request.Request(url, data=data, headers=headers, method=method)
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+
+          def contains_any(value, needles):
+              return any(needle in value for needle in needles)
+
+          def route_for(issue):
+              title = (issue.get("title") or "").lower()
+              labels = " ".join(
+                  (label.get("name") or "").lower()
+                  for label in issue.get("labels", [])
+                  if isinstance(label, dict)
+              )
+              signal = f"{title} {labels}"
+
+              # Reserve the highest reasoning budget for genuinely coupled architecture,
+              # security/privacy, realtime/concurrency, identity, consent, and delivery-policy work.
+              deep_reasoning = [
+                  "architecture", "architektur", "security", "sicherheit", "privacy", "datenschutz",
+                  "auth", "oidc", "passkey", "sso", "authorization", "permission", "identity",
+                  "encrypt", "verschlüssel", "consent", "vault", "tresor", "safe space", "safe-space",
+                  "realtime", "real-time", "websocket", "concurrency", "race", "idempot",
+                  "offline", "cache isolation", "billing", "payment", "entitlement",
+                  "push notification delivery", "notification policy", "quiet hours", "digest",
+                  "maintenance mode", "server administration", "serveradmin", "server-admin",
+                  "ai historian", "historiker", "prompt injection", "unlock", "locked", "reveal",
+              ]
+
+              # Repo-heavy structural work benefits from Claude Code's sustained exploration.
+              repo_heavy = [
+                  "refactor", "cleanup", "legacy", "migration", "migrate", "domain model",
+                  "repository", "codebase", "consolidat", "deduplic", "remove legacy",
+              ]
+
+              # Small, well-bounded or mechanical work should avoid premium reasoning spend.
+              small_mechanical = [
+                  "copy", "wording", "text", "typo", "i18n", "localization", "lokalis",
+                  "lint", "format", "formatting", "docs", "documentation", "dokumentation",
+                  "spacing", "icon", "avatar", "placeholder", "color", "colour", "farbe",
+                  "haptic", "screenshot", "small polish", "microcopy",
+              ]
+
+              # Clearly bounded bug fixes are usually Flash/Medium unless a deep-risk signal matched first.
+              bounded_bug = [
+                  "fix", "bug", "regression", "broken", "failure", "fails", "error", "fehler",
+                  "incorrect", "falsch", "missing", "fehlt",
+              ]
+
+              # Clear multi-surface UI work is usually broad but not architecture-hard.
+              ui_multifile = [
+                  "ux", "ui", "design", "redesign", "rebrand", "web", "android", "dashboard",
+                  "profile", "profil", "timeline", "responsive", "foldable", "navigation",
+                  "notification settings", "settings", "polish",
+              ]
+
+              if contains_any(signal, deep_reasoning):
+                  return {
+                      "recommended": "Google Antigravity · Gemini 3.1 Pro · High",
+                      "alternative": "Claude Code Console · High",
+                      "chatgpt": "GPT-5.6 Sol Chat · Very High — eingeschränkt; für Architektur/Review sehr geeignet, direkte End-to-End-Umsetzung nur mit verfügbaren Repo-/Testwerkzeugen",
+                      "codex": "möglich, aber wegen Nutzungslimit nur Reserve",
+                      "category": "deep",
+                  }
+
+              if contains_any(signal, repo_heavy):
+                  return {
+                      "recommended": "Claude Code Console · High",
+                      "alternative": "Google Antigravity · Gemini 3.8 Flash · High",
+                      "chatgpt": "GPT-5.6 Sol Chat · High — eingeschränkt; Review/Planung geeignet, direkte Umsetzung von verfügbaren Repo-/Testwerkzeugen abhängig",
+                      "codex": "möglich, aber wegen Nutzungslimit nur Reserve",
+                      "category": "repo-heavy",
+                  }
+
+              if contains_any(signal, small_mechanical):
+                  return {
+                      "recommended": "Google Antigravity · Gemini 3.8 Flash · Medium",
+                      "alternative": "Claude Code Console · Medium",
+                      "chatgpt": "GPT-5.6 Sol Chat · Medium — möglich",
+                      "codex": "nicht empfohlen – für diese Aufgabe unnötiger Kontingentverbrauch",
+                      "category": "small",
+                  }
+
+              if contains_any(signal, bounded_bug):
+                  return {
+                      "recommended": "Google Antigravity · Gemini 3.8 Flash · Medium",
+                      "alternative": "Claude Code Console · Medium",
+                      "chatgpt": "GPT-5.6 Sol Chat · Medium — möglich",
+                      "codex": "nicht empfohlen – für diese Aufgabe unnötiger Kontingentverbrauch",
+                      "category": "bug",
+                  }
+
+              if contains_any(signal, ui_multifile):
+                  return {
+                      "recommended": "Google Antigravity · Gemini 3.8 Flash · High",
+                      "alternative": "Claude Code Console · High",
+                      "chatgpt": "GPT-5.6 Sol Chat · High — eingeschränkt; direkte Umsetzung sinnvoll, sofern die nötigen Repo-/Testwerkzeuge im Chat verfügbar sind",
+                      "codex": "nicht empfohlen – für diese Aufgabe unnötiger Kontingentverbrauch",
+                      "category": "ui-multifile",
+                  }
+
+              return {
+                  "recommended": "Claude Code Console · High",
+                  "alternative": "Google Antigravity · Gemini 3.8 Flash · High",
+                  "chatgpt": "GPT-5.6 Sol Chat · High — eingeschränkt; für Review/Planung voll geeignet, direkte Umsetzung von verfügbaren Repo-/Testwerkzeugen abhängig",
+                  "codex": "nicht empfohlen – kein klarer Mehrwert gegenüber Claude, Gemini oder GPT-5.6 Sol",
+                  "category": "general",
+              }
+
+          def routing_block(route):
+              return (
+                  "## 🤖 Modell-/Tool-Routing\n\n"
+                  f"**Empfohlen:** {route['recommended']}\n"
+                  f"**Alternative:** {route['alternative']}\n"
+                  f"**ChatGPT:** {route['chatgpt']}\n"
+                  f"**Codex:** {route['codex']}\n\n"
+                  "> Routing nach aktuellem Issue-Scope. Bei wesentlich verändertem Scope oder knappem Modellkontingent neu bewerten."
+              )
+
+          legacy_patterns = [
+              re.compile(r"\n*##\s*🤖\s*Model-Routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*Model-Routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*🤖\s*Modell-/Tool-Routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*Modell-/Tool-Routing\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+              re.compile(r"\n*##\s*Modell-Empfehlung\s*\n.*\Z", re.IGNORECASE | re.DOTALL),
+          ]
+
+          def without_legacy_routing(body):
+              cleaned = body.rstrip()
+              for pattern in legacy_patterns:
+                  candidate = pattern.sub("", cleaned).rstrip()
+                  if candidate != cleaned:
+                      return candidate
+              return cleaned
+
+          issues = []
+          page = 1
+          while True:
+              batch = request(f"{api}/repos/{repo}/issues?state=open&per_page=100&page={page}")
+              issues.extend(issue for issue in batch if "pull_request" not in issue)
+              if len(batch) < 100:
+                  break
+              page += 1
+
+          updated = []
+          unchanged = []
+          category_counts = {}
+
+          for issue in issues:
+              number = issue["number"]
+              body = issue.get("body") or ""
+              route = route_for(issue)
+              base = without_legacy_routing(body)
+              block = routing_block(route)
+              new_body = f"{base}\n\n{block}" if base else block
+
+              if new_body == body.rstrip():
+                  unchanged.append(number)
+                  continue
+
+              request(
+                  f"{api}/repos/{repo}/issues/{number}",
+                  method="PATCH",
+                  payload={"body": new_body},
+              )
+              updated.append(number)
+              category = route["category"]
+              category_counts[category] = category_counts.get(category, 0) + 1
+              time.sleep(0.15)
+
+          print(f"open_issues={len(issues)}")
+          print(f"updated={len(updated)}")
+          print(f"unchanged={len(unchanged)}")
+          print("updated_numbers=" + ",".join(map(str, updated)))
+          print("category_counts=" + json.dumps(category_counts, sort_keys=True))
+          PY
