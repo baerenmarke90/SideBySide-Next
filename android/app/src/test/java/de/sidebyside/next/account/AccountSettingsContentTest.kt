@@ -3,7 +3,9 @@ package de.sidebyside.next.account
 import android.content.Context
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -35,10 +37,7 @@ class AccountSettingsContentTest {
         composeRule
             .onNodeWithText(context.getString(R.string.account_delete_demo_unavailable), substring = true)
             .assertExists()
-        composeRule
-            .onNodeWithText(context.getString(R.string.account_delete_action))
-            .assertIsNotEnabled()
-            .performClick()
+        deletionAction().assertIsNotEnabled()
         composeRule
             .onNodeWithText(context.getString(R.string.account_delete_consequences_title))
             .assertDoesNotExist()
@@ -50,9 +49,7 @@ class AccountSettingsContentTest {
         var exports = 0
         render(onOpenDataExport = { exports += 1 })
 
-        composeRule
-            .onNodeWithText(context.getString(R.string.account_delete_action))
-            .performClick()
+        deletionAction().performClick()
         composeRule
             .onNodeWithText(context.getString(R.string.account_delete_export_first))
             .performClick()
@@ -68,9 +65,7 @@ class AccountSettingsContentTest {
         var deletes = 0
         render(onDeleteAccount = { deletes += 1 })
 
-        composeRule
-            .onNodeWithText(context.getString(R.string.account_delete_action))
-            .performClick()
+        deletionAction().performClick()
         composeRule
             .onNodeWithText(context.getString(R.string.account_delete_continue))
             .performClick()
@@ -91,6 +86,10 @@ class AccountSettingsContentTest {
 
         assertEquals(1, deletes)
     }
+
+    private fun deletionAction() = composeRule.onNode(
+        hasText(context.getString(R.string.account_delete_action)) and hasClickAction(),
+    )
 
     private fun render(
         demoMode: Boolean = false,
