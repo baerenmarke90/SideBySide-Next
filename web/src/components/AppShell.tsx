@@ -240,7 +240,7 @@ export function AppShell({
         <aside className="shell-sidebar">
           <div className="shell-sidebar-inner">
             <div className="shell-primary-action">
-              <QuickCreateMenu />
+              <QuickCreateMenu variant="desktop" />
             </div>
             <nav className="shell-nav" aria-label={t('navigation.primary')}>
               <PrimaryNavigationLinks />
@@ -259,7 +259,7 @@ export function AppShell({
       </div>
 
       <div className="mobile-quick-create">
-        <QuickCreateMenu />
+        <QuickCreateMenu variant="mobile" />
       </div>
 
       <nav className="mobile-bottom-nav" aria-label={t('navigation.primary')}>

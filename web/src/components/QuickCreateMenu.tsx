@@ -1,4 +1,11 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   HEART_MOMENT_CREATE_ROUTE,
@@ -76,35 +83,101 @@ const PLANNING_TARGETS: readonly QuickCreateTarget[] = [
   },
 ];
 
-export function QuickCreateMenu() {
+export interface QuickCreateMenuProps {
+  variant?: 'desktop' | 'mobile';
+}
+
+export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const menuId = useId();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const firstFocusableRef = useRef<HTMLButtonElement>(null);
 
+  const closeMenu = useCallback((): void => {
+    setOpen(false);
+    setTimeout(() => {
+      triggerRef.current?.focus();
+    }, 0);
+  }, []);
+
+  // Scroll locking for mobile bottom sheet
+  useEffect(() => {
+    if (!open || variant !== 'mobile') return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [open, variant]);
+
+  // Initial focus for mobile sheet
+  useEffect(() => {
+    if (open && variant === 'mobile') {
+      const timer = setTimeout(() => {
+        firstFocusableRef.current?.focus();
+      }, 30);
+      return () => clearTimeout(timer);
+    }
+  }, [open, variant]);
+
+  // Escape key and outside click handling
   useEffect(() => {
     if (!open) return;
 
     function onPointerDown(event: MouseEvent): void {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (variant === 'desktop') {
+        if (!rootRef.current?.contains(event.target as Node)) {
+          setOpen(false);
+        }
+      }
     }
 
-    function onEscape(event: globalThis.KeyboardEvent): void {
-      if (event.key !== 'Escape') return;
-      setOpen(false);
-      triggerRef.current?.focus();
+    function onKeyDown(event: globalThis.KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        closeMenu();
+        return;
+      }
+
+      if (variant === 'mobile' && event.key === 'Tab' && sheetRef.current) {
+        const focusable = sheetRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey) {
+          if (
+            document.activeElement === first ||
+            !sheetRef.current.contains(document.activeElement)
+          ) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (
+            document.activeElement === last ||
+            !sheetRef.current.contains(document.activeElement)
+          ) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
+      }
     }
 
     document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onEscape);
+    window.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onEscape);
+      window.removeEventListener('keydown', onKeyDown);
     };
-  }, [open]);
+  }, [open, variant, closeMenu]);
 
+  // Anchor hash scrolling
   useEffect(() => {
     const targetId = location.hash.replace(/^#/, '');
     if (!targetId) return;
@@ -156,7 +229,7 @@ export function QuickCreateMenu() {
     }
   }
 
-  function renderTarget(target: QuickCreateTarget) {
+  function renderDesktopTarget(target: QuickCreateTarget) {
     return (
       <Link
         key={target.labelKey}
@@ -173,8 +246,31 @@ export function QuickCreateMenu() {
     );
   }
 
+  function renderMobileTarget(target: QuickCreateTarget) {
+    return (
+      <Link
+        key={target.labelKey}
+        className={`quick-create-mobile-item quick-create-mobile-item-${target.tone}`}
+        to={target.to}
+        onClick={closeMenu}
+      >
+        <span className="quick-create-tile-icon" aria-hidden="true">
+          <DestinationIcon icon={target.icon} />
+        </span>
+        <span className="quick-create-mobile-item-label">
+          {t(target.labelKey)}
+        </span>
+      </Link>
+    );
+  }
+
+  const isMobile = variant === 'mobile';
+
   return (
-    <div className="quick-create quick-create-polished" ref={rootRef}>
+    <div
+      className={`quick-create quick-create-polished ${isMobile ? 'quick-create-mobile-variant' : 'quick-create-desktop-variant'}`}
+      ref={rootRef}
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -182,6 +278,13 @@ export function QuickCreateMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
+        style={
+          isMobile && open
+            ? { visibility: 'hidden', pointerEvents: 'none' }
+            : undefined
+        }
+        aria-hidden={isMobile && open ? true : undefined}
+        tabIndex={isMobile && open ? -1 : 0}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={handleTriggerKeyDown}
       >
@@ -191,7 +294,8 @@ export function QuickCreateMenu() {
         <span>{t('navigation.newContent')}</span>
       </button>
 
-      {open ? (
+      {/* Desktop Popover Menu */}
+      {!isMobile && open ? (
         <div
           id={menuId}
           className="quick-create-menu"
@@ -203,14 +307,14 @@ export function QuickCreateMenu() {
             {t('navigation.quickCreateShared')}
           </div>
           <div className="quick-create-tile-grid">
-            {STORY_TARGETS.map(renderTarget)}
+            {STORY_TARGETS.map(renderDesktopTarget)}
           </div>
 
           <div className="quick-create-group-label quick-create-planning-label">
             {t('navigation.quickCreatePlanning')}
           </div>
           <div className="quick-create-tile-grid">
-            {PLANNING_TARGETS.map(renderTarget)}
+            {PLANNING_TARGETS.map(renderDesktopTarget)}
           </div>
 
           <hr className="quick-create-separator" />
@@ -228,6 +332,74 @@ export function QuickCreateMenu() {
             </span>
             <span>{t('navigation.quickCreatePrivateNote')}</span>
           </Link>
+        </div>
+      ) : null}
+
+      {/* Mobile Responsive Action Sheet */}
+      {isMobile && open ? (
+        <div className="quick-create-mobile-portal">
+          <div
+            className="quick-create-mobile-backdrop"
+            onClick={closeMenu}
+            aria-hidden="true"
+          />
+          <div
+            ref={sheetRef}
+            id={menuId}
+            className="quick-create-mobile-sheet sbs-motion-reveal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('navigation.newContent')}
+          >
+            <div className="quick-create-sheet-header">
+              <h2 className="quick-create-sheet-title">
+                {t('navigation.newContent')}
+              </h2>
+              <button
+                ref={firstFocusableRef}
+                type="button"
+                className="quick-create-sheet-close"
+                onClick={closeMenu}
+                aria-label={t('navigation.closeMenu')}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="quick-create-sheet-scrollable">
+              <div className="quick-create-group-label">
+                {t('navigation.quickCreateShared')}
+              </div>
+              <div className="quick-create-mobile-list">
+                {STORY_TARGETS.map(renderMobileTarget)}
+              </div>
+
+              <div className="quick-create-group-label quick-create-planning-label">
+                {t('navigation.quickCreatePlanning')}
+              </div>
+              <div className="quick-create-mobile-list">
+                {PLANNING_TARGETS.map(renderMobileTarget)}
+              </div>
+
+              <div className="quick-create-group-label quick-create-private-label">
+                {t('navigation.quickCreatePrivate')}
+              </div>
+              <div className="quick-create-mobile-list">
+                <Link
+                  className="quick-create-mobile-item quick-create-mobile-item-private"
+                  to={PRIVATE_NOTE_CREATE_ROUTE}
+                  onClick={closeMenu}
+                >
+                  <span className="quick-create-tile-icon" aria-hidden="true">
+                    <DestinationIcon icon="private" />
+                  </span>
+                  <span className="quick-create-mobile-item-label">
+                    {t('navigation.quickCreatePrivateNote')}
+                  </span>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

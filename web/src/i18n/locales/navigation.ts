@@ -20,6 +20,7 @@ const navigation = {
   settings: 'Einstellungen',
   activity: 'Unsere Aktivitäten',
   newContent: 'Neu festhalten',
+  closeMenu: 'Menü schließen',
   quickCreateShared: 'Gemeinsam',
   quickCreatePlanning: 'Planen',
   quickCreateMemory: 'Erinnerung',
