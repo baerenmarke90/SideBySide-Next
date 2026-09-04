@@ -39,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
@@ -188,9 +189,16 @@ fun RelatedPersonsScreen(
                         )
                     }
                     Box {
+                        val moreActionsDescription = stringResource(
+                            R.string.related_person_more_actions,
+                            person.displayName,
+                        )
                         IconButton(
                             onClick = { menuExpanded = true },
                             enabled = !busy,
+                            modifier = Modifier.semantics {
+                                contentDescription = moreActionsDescription
+                            },
                         ) {
                             MoreVertGlyph(tint = SideBySideTheme.colors.textSecondary)
                         }

@@ -358,6 +358,7 @@
     <string name="related_person_open">Besondere Tage ansehen</string>
     <string name="related_person_edit">Bearbeiten</string>
     <string name="related_person_edit_title">%1$s bearbeiten</string>
+    <string name="related_person_more_actions">Weitere Aktionen für %1$s</string>
     <string name="related_person_delete">Löschen</string>
     <string name="related_person_cancel">Abbrechen</string>
     <string name="related_person_delete_title">%1$s löschen?</string>

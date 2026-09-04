@@ -1,15 +1,21 @@
 package de.sidebyside.next.people
 
 import android.content.Context
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
 import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -20,6 +26,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import sidebyside.api.models.ContentVisibility
 import sidebyside.api.models.PersonRelationship
+import sidebyside.api.models.RelatedPersonView
 
 /**
  * The add-person form.
@@ -141,5 +148,48 @@ class RelatedPersonsScreenAddTest {
 
         assertEquals(LocalDate.of(1990, 5, 1), addedBirthday)
         assertFalse(addedYearKnown == true)
+    }
+
+    @Test
+    fun moreActionsButtonExposesAccessibleNameWithPersonName() {
+        val testPerson = RelatedPersonView(
+            birthday = null,
+            birthdayYearKnown = false,
+            createdAt = OffsetDateTime.now(),
+            displayName = "Lisa",
+            id = UUID.randomUUID(),
+            relationship = PersonRelationship.FRIEND,
+            updatedAt = OffsetDateTime.now(),
+            version = 1,
+            visibility = ContentVisibility.SHARED,
+        )
+        composeRule.setContent {
+            SideBySideTheme {
+                RelatedPersonsScreen(
+                    people = listOf(testPerson),
+                    busy = false,
+                    problem = null,
+                    onBack = {},
+                    onAdd = { _, _, _, _, _ -> },
+                    onEdit = { _, _, _, _, _, _ -> },
+                    onOpenDates = {},
+                    onDelete = { _, _ -> },
+                )
+            }
+        }
+
+        composeRule.onNode(hasScrollToIndexAction()).performScrollToIndex(3)
+
+        composeRule
+            .onNodeWithContentDescription(
+                context.getString(R.string.related_person_more_actions, "Lisa"),
+                useUnmergedTree = true,
+            )
+            .assertIsDisplayed()
+            .performClick()
+
+        composeRule
+            .onNodeWithText(context.getString(R.string.related_person_edit))
+            .assertIsDisplayed()
     }
 }
