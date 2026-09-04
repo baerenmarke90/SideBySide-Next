@@ -1,5 +1,6 @@
 import {
   type KeyboardEvent,
+  type TouchEvent,
   useCallback,
   useEffect,
   useId,
@@ -11,7 +12,10 @@ import {
   HEART_MOMENT_CREATE_ROUTE,
   MEMORY_CREATE_ROUTE,
   MILESTONE_CREATE_ROUTE,
+  MORE_COLLECTIONS_ROUTE,
+  MORE_PLACES_ROUTE,
   MORE_PRIVATE_ROUTE,
+  STORY_CHAPTERS_ROUTE,
   appRoutePath,
   type AppRouteIcon,
 } from '../client/routes';
@@ -26,10 +30,10 @@ type QuickCreateTarget = {
   labelKey: string;
   to: string;
   icon: AppRouteIcon;
-  tone: 'story' | 'planning';
+  tone: 'story' | 'planning' | 'private';
 };
 
-const STORY_TARGETS: readonly QuickCreateTarget[] = [
+const MOMENTE_TARGETS: readonly QuickCreateTarget[] = [
   {
     labelKey: 'navigation.quickCreateMemory',
     to: MEMORY_CREATE_ROUTE,
@@ -48,9 +52,15 @@ const STORY_TARGETS: readonly QuickCreateTarget[] = [
     icon: 'today',
     tone: 'story',
   },
+  {
+    labelKey: 'navigation.quickCreateChapter',
+    to: `${STORY_CHAPTERS_ROUTE}#chapter-title`,
+    icon: 'chapter',
+    tone: 'story',
+  },
 ];
 
-const PLANNING_TARGETS: readonly QuickCreateTarget[] = [
+const PLANEN_TARGETS: readonly QuickCreateTarget[] = [
   {
     labelKey: 'navigation.quickCreatePlan',
     to: `${PLAN_ROUTE}#plan-title`,
@@ -63,23 +73,29 @@ const PLANNING_TARGETS: readonly QuickCreateTarget[] = [
     icon: 'more',
     tone: 'planning',
   },
+];
+
+const ORGANISIEREN_TARGETS: readonly QuickCreateTarget[] = [
   {
     labelKey: 'navigation.quickCreatePlace',
-    to: `${PLAN_ROUTE}#place-name`,
-    icon: 'people',
-    tone: 'planning',
-  },
-  {
-    labelKey: 'navigation.quickCreateChapter',
-    to: `${PLAN_ROUTE}#chapter-title`,
-    icon: 'story',
+    to: `${MORE_PLACES_ROUTE}#place-name`,
+    icon: 'places',
     tone: 'planning',
   },
   {
     labelKey: 'navigation.quickCreateCollection',
-    to: `${PLAN_ROUTE}#collection-title`,
-    icon: 'more',
+    to: `${MORE_COLLECTIONS_ROUTE}#collection-title`,
+    icon: 'collections',
     tone: 'planning',
+  },
+];
+
+const FOR_ME_TARGETS: readonly QuickCreateTarget[] = [
+  {
+    labelKey: 'navigation.quickCreatePrivateNote',
+    to: PRIVATE_NOTE_CREATE_ROUTE,
+    icon: 'private',
+    tone: 'private',
   },
 ];
 
@@ -96,6 +112,7 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const firstFocusableRef = useRef<HTMLButtonElement>(null);
+  const touchStartY = useRef<number | null>(null);
 
   const closeMenu = useCallback((): void => {
     setOpen(false);
@@ -229,6 +246,19 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
     }
   }
 
+  function handleTouchStart(e: TouchEvent<HTMLDivElement>) {
+    touchStartY.current = e.touches[0].clientY;
+  }
+
+  function handleTouchEnd(e: TouchEvent<HTMLDivElement>) {
+    if (touchStartY.current === null) return;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    if (deltaY > 60) {
+      closeMenu();
+    }
+    touchStartY.current = null;
+  }
+
   function renderDesktopTarget(target: QuickCreateTarget) {
     return (
       <Link
@@ -274,10 +304,12 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
       <button
         ref={triggerRef}
         type="button"
-        className="button-link quick-create-trigger"
-        aria-haspopup="menu"
+        className={`button-link quick-create-trigger ${isMobile ? 'quick-create-fab' : ''}`}
+        aria-haspopup={isMobile ? 'dialog' : 'menu'}
         aria-expanded={open}
         aria-controls={menuId}
+        aria-label={t('navigation.newContent')}
+        title={t('navigation.newContent')}
         style={
           isMobile && open
             ? { visibility: 'hidden', pointerEvents: 'none' }
@@ -291,7 +323,7 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
         <span className="shell-nav-icon" aria-hidden="true">
           <DestinationIcon icon="add" />
         </span>
-        <span>{t('navigation.newContent')}</span>
+        {!isMobile ? <span>{t('navigation.newContent')}</span> : null}
       </button>
 
       {/* Desktop Popover Menu */}
@@ -304,34 +336,33 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
           onKeyDown={handleMenuKeyDown}
         >
           <div className="quick-create-group-label">
-            {t('navigation.quickCreateShared')}
+            {t('navigation.quickCreateMoments')}
           </div>
           <div className="quick-create-tile-grid">
-            {STORY_TARGETS.map(renderDesktopTarget)}
+            {MOMENTE_TARGETS.map(renderDesktopTarget)}
           </div>
 
           <div className="quick-create-group-label quick-create-planning-label">
             {t('navigation.quickCreatePlanning')}
           </div>
           <div className="quick-create-tile-grid">
-            {PLANNING_TARGETS.map(renderDesktopTarget)}
+            {PLANEN_TARGETS.map(renderDesktopTarget)}
+          </div>
+
+          <div className="quick-create-group-label quick-create-planning-label">
+            {t('navigation.quickCreateOrganize')}
+          </div>
+          <div className="quick-create-tile-grid">
+            {ORGANISIEREN_TARGETS.map(renderDesktopTarget)}
           </div>
 
           <hr className="quick-create-separator" />
           <div className="quick-create-group-label">
-            {t('navigation.quickCreatePrivate')}
+            {t('navigation.quickCreateForMe')}
           </div>
-          <Link
-            role="menuitem"
-            className="quick-create-menu-item quick-create-private-item"
-            to={PRIVATE_NOTE_CREATE_ROUTE}
-            onClick={() => setOpen(false)}
-          >
-            <span className="shell-nav-icon" aria-hidden="true">
-              <DestinationIcon icon="private" />
-            </span>
-            <span>{t('navigation.quickCreatePrivateNote')}</span>
-          </Link>
+          <div className="quick-create-tile-grid">
+            {FOR_ME_TARGETS.map(renderDesktopTarget)}
+          </div>
         </div>
       ) : null}
 
@@ -350,6 +381,8 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
             role="dialog"
             aria-modal="true"
             aria-label={t('navigation.newContent')}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             <div className="quick-create-sheet-header">
               <h2 className="quick-create-sheet-title">
@@ -368,35 +401,31 @@ export function QuickCreateMenu({ variant = 'desktop' }: QuickCreateMenuProps) {
 
             <div className="quick-create-sheet-scrollable">
               <div className="quick-create-group-label">
-                {t('navigation.quickCreateShared')}
+                {t('navigation.quickCreateMoments')}
               </div>
               <div className="quick-create-mobile-list">
-                {STORY_TARGETS.map(renderMobileTarget)}
+                {MOMENTE_TARGETS.map(renderMobileTarget)}
               </div>
 
               <div className="quick-create-group-label quick-create-planning-label">
                 {t('navigation.quickCreatePlanning')}
               </div>
               <div className="quick-create-mobile-list">
-                {PLANNING_TARGETS.map(renderMobileTarget)}
+                {PLANEN_TARGETS.map(renderMobileTarget)}
               </div>
 
-              <div className="quick-create-group-label quick-create-private-label">
-                {t('navigation.quickCreatePrivate')}
+              <div className="quick-create-group-label quick-create-planning-label">
+                {t('navigation.quickCreateOrganize')}
               </div>
               <div className="quick-create-mobile-list">
-                <Link
-                  className="quick-create-mobile-item quick-create-mobile-item-private"
-                  to={PRIVATE_NOTE_CREATE_ROUTE}
-                  onClick={closeMenu}
-                >
-                  <span className="quick-create-tile-icon" aria-hidden="true">
-                    <DestinationIcon icon="private" />
-                  </span>
-                  <span className="quick-create-mobile-item-label">
-                    {t('navigation.quickCreatePrivateNote')}
-                  </span>
-                </Link>
+                {ORGANISIEREN_TARGETS.map(renderMobileTarget)}
+              </div>
+
+              <div className="quick-create-group-label quick-create-for-me-label">
+                {t('navigation.quickCreateForMe')}
+              </div>
+              <div className="quick-create-mobile-list">
+                {FOR_ME_TARGETS.map(renderMobileTarget)}
               </div>
             </div>
           </div>

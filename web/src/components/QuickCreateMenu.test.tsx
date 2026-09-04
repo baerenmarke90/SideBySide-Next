@@ -117,8 +117,8 @@ describe('QuickCreateMenu - Mobile Action Sheet', () => {
 
     // Sheet closes
     expect(screen.queryByRole('dialog')).toBeNull();
-    // Path updated to plan anchor
-    expect(currentPath).toBe('/plan#collection-title');
+    // Path updated to collection anchor under /more/collections
+    expect(currentPath).toBe('/more/collections#collection-title');
   });
 });
 
@@ -138,6 +138,6 @@ describe('QuickCreateMenu - Desktop Popover', () => {
     const menu = screen.getByRole('menu');
     expect(menu).toBeDefined();
     expect(menu.className).toContain('quick-create-menu');
-    expect(screen.getByText(navigation.quickCreateShared)).toBeDefined();
+    expect(screen.getByText(navigation.quickCreateMoments)).toBeDefined();
   });
 });
