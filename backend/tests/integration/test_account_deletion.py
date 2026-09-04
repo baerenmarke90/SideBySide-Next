@@ -20,6 +20,7 @@ from sidebyside.identity.deletion import (
     DELETED_ACCOUNT_DISPLAY_NAME,
     DELETED_ACCOUNT_LOCALE,
     DELETED_ACCOUNT_TIMEZONE,
+    DeletionAcceptanceConflictError,
     DeletionNotAcceptedError,
     apply_accepted_tombstone,
     apply_core_cleanup,
@@ -142,6 +143,25 @@ def test_accepted_tombstone_is_immediately_fail_closed_and_idempotent(session: S
     assert repeated.account_id == deletion.account_id
     assert membership.ended_at == accepted_at
     assert _count(session, AccountDeletion, AccountDeletion.account_id == account.id) == 1
+
+
+def test_accepted_tombstone_rejects_conflicting_forward_timestamp(session: Session) -> None:
+    account = make_account(session, "Anna")
+    make_space(session, account)
+    accepted_at = now()
+    deletion = apply_accepted_tombstone(session, account.id, accepted_at=accepted_at)
+    assert deletion is not None
+
+    with pytest.raises(DeletionAcceptanceConflictError, match="conflicts with the forward journal"):
+        apply_accepted_tombstone(
+            session,
+            account.id,
+            accepted_at=accepted_at + timedelta(seconds=1),
+        )
+
+    assert deletion.accepted_at == accepted_at
+    assert account.disabled_at == accepted_at
+    assert not account.is_active
 
 
 def test_core_cleanup_deletes_private_identity_state_but_retains_shared_history(
