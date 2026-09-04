@@ -54,7 +54,7 @@ def reconcile_restored_target(
             "api",
             "python",
             "-m",
-            "scripts.reconcile_account_deletions",
+            "sidebyside.identity.deletion_reconcile",
             "--journal",
             CONTAINER_JOURNAL_PATH,
             "--confirm-instance-id",
