@@ -65,14 +65,50 @@
   border-top: 1px solid var(--color-border-subtle);
 }
 
-.important-dates-create[open] {
-  width: 100%;
-}
-
 .important-dates-intro {
   max-width: 60ch;
   margin-bottom: 0;
   color: var(--color-text-secondary);
+}
+
+.important-date-item {
+  list-style: none;
+}
+
+.important-date-card {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: transform var(--motion-duration-short) ease,
+    box-shadow var(--motion-duration-short) ease,
+    border-color var(--motion-duration-short) ease;
+}
+
+.important-date-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-brand-glow);
+  box-shadow: var(--shadow-card);
+}
+
+.important-date-card:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.important-dates-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.important-dates-modal-actions .form-actions-end {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .inline-delete-confirmation {
