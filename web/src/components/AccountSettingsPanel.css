@@ -35,7 +35,7 @@
 .account-delete-button {
   width: fit-content;
   background: var(--color-error);
-  color: var(--color-on-error, #fff);
+  color: var(--color-on-accent);
   border-color: var(--color-error);
 }
 
@@ -53,7 +53,7 @@
   gap: var(--space-2);
   padding: var(--space-4);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   background: var(--color-surface-subtle);
 }
 
@@ -68,7 +68,8 @@
   display: grid;
   place-items: center;
   padding: var(--space-4);
-  background: color-mix(in srgb, var(--color-text) 36%, transparent);
+  background: rgb(0 0 0 / 45%);
+  backdrop-filter: blur(4px);
 }
 
 .account-deletion-dialog {
@@ -103,7 +104,7 @@
 .account-confirmation-phrase {
   margin: 0;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   background: var(--color-surface-subtle);
   color: var(--color-text);
   font-weight: 700;
@@ -119,7 +120,7 @@
   .account-deletion-dialog {
     width: 100%;
     max-height: 92vh;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   }
 
   .account-deletion-actions {
