@@ -9,7 +9,7 @@ import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 from uuid import UUID
 
 JOURNAL_FORMAT = "sidebyside-account-deletion-journal"
@@ -103,7 +103,7 @@ def _parse_record(raw: str, *, line_number: int) -> DeletionTombstone:
     return DeletionTombstone(instance_id, account_id, accepted_at, actual_digest)
 
 
-def _read_records(handle: Any) -> tuple[DeletionTombstone, ...]:
+def _read_records(handle: TextIO) -> tuple[DeletionTombstone, ...]:
     handle.seek(0)
     records: list[DeletionTombstone] = []
     seen_accounts: set[UUID] = set()
@@ -126,6 +126,20 @@ def _read_records(handle: Any) -> tuple[DeletionTombstone, ...]:
     return tuple(records)
 
 
+def _fsync_directory(directory: Path) -> None:
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        descriptor = os.open(directory, flags)
+    except OSError as exc:
+        raise DeletionJournalError("Deletion journal directory could not be synchronized.") from exc
+    try:
+        os.fsync(descriptor)
+    except OSError as exc:
+        raise DeletionJournalError("Deletion journal directory could not be synchronized.") from exc
+    finally:
+        os.close(descriptor)
+
+
 def load_tombstones(
     path: str | Path,
     *,
@@ -135,6 +149,7 @@ def load_tombstones(
     journal = Path(path)
     try:
         with journal.open("r", encoding="utf-8") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_SH)
             records = _read_records(handle)
     except OSError as exc:
         raise DeletionJournalError("Deletion journal could not be opened.") from exc
@@ -165,7 +180,11 @@ def append_tombstone(
     candidate = DeletionTombstone(instance_id, account_id, normalized_at, digest)
     line = json.dumps({**payload, "sha256": digest}, sort_keys=True, separators=(",", ":")) + "\n"
 
-    descriptor = os.open(journal, os.O_CREAT | os.O_RDWR, 0o600)
+    flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(journal, flags, 0o600)
+    except OSError as exc:
+        raise DeletionJournalError("Deletion journal could not be opened for append.") from exc
     try:
         os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "r+", encoding="utf-8", closefd=False) as handle:
@@ -187,6 +206,7 @@ def append_tombstone(
             handle.write(line)
             handle.flush()
             os.fsync(handle.fileno())
-            return candidate
+        _fsync_directory(journal.parent)
+        return candidate
     finally:
         os.close(descriptor)
