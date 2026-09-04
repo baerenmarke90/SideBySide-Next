@@ -67,7 +67,7 @@ def _enforce_fail_closed(
     deletion: AccountDeletion,
 ) -> None:
     """Make an accepted deletion unusable before slower cleanup runs."""
-    if account.disabled_at is None:
+    if account.disabled_at is None or account.disabled_at > deletion.accepted_at:
         account.disabled_at = deletion.accepted_at
 
     sessions.revoke_all(session, account)
@@ -154,10 +154,15 @@ def apply_accepted_tombstone(
             accepted_at=accepted_at,
         )
         session.add(deletion)
-    elif deletion.status != AccountDeletionStatus.COMPLETED.value:
-        deletion.status = AccountDeletionStatus.PENDING.value
-        deletion.failed_at = None
-        deletion.last_failure_code = None
+    else:
+        # The external journal is the irreversible acceptance authority. A
+        # restored partial database row must converge to that timestamp rather
+        # than silently becoming a competing source of truth.
+        deletion.accepted_at = accepted_at
+        if deletion.status != AccountDeletionStatus.COMPLETED.value:
+            deletion.status = AccountDeletionStatus.PENDING.value
+            deletion.failed_at = None
+            deletion.last_failure_code = None
 
     _enforce_fail_closed(session, account, deletion)
     session.flush()
