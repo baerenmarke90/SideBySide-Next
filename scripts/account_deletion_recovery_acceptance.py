@@ -3,9 +3,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
+from types import ModuleType
+from uuid import UUID, uuid4
 
 from scripts.self_hosted_recovery_acceptance import (
     ATTACHMENT_ID,
@@ -25,36 +29,42 @@ from scripts.self_hosted_recovery_acceptance import (
 
 ROOT = Path(__file__).resolve().parents[1]
 RECONCILE_SCRIPT = ROOT / "scripts" / "self_hosted_deletion_reconcile.py"
+JOURNAL_MODULE = ROOT / "backend" / "src" / "sidebyside" / "identity" / "deletion_journal.py"
 
 INSTANCE_ID = "01990000-0000-7000-8000-000000000901"
 OWNER_ID = "01990000-0000-7000-8000-000000000001"
 ACCEPTED_AT = "2026-09-04T17:30:00Z"
-JOURNAL_CONTAINER = "/sidebyside-journal/deletions.jsonl"
 
 
-def _append_synthetic_tombstone(scenario: Scenario, journal: Path) -> None:
-    journal.parent.mkdir(parents=True, exist_ok=True)
-    code = (
-        "from datetime import datetime; from pathlib import Path; from uuid import UUID; "
-        "from sidebyside.identity.deletion_journal import append_tombstone; "
-        f"append_tombstone(Path('{JOURNAL_CONTAINER}'), "
-        f"instance_id=UUID('{INSTANCE_ID}'), account_id=UUID('{OWNER_ID}'), "
-        f"accepted_at=datetime.fromisoformat('{ACCEPTED_AT}'.replace('Z', '+00:00')))"
-    )
-    run(
-        scenario.compose(
-            "run",
-            "--rm",
-            "--no-deps",
-            "--volume",
-            f"{journal.parent}:/sidebyside-journal",
-            "api",
-            "python",
-            "-c",
-            code,
-        ),
-        action="Synthetic deletion tombstone append",
-    )
+def _load_journal_module() -> ModuleType:
+    """Load the stdlib-only journal module without importing backend package dependencies."""
+    name = "sidebyside_deletion_journal_acceptance"
+    spec = importlib.util.spec_from_file_location(name, JOURNAL_MODULE)
+    if spec is None or spec.loader is None:
+        raise AcceptanceError("Deletion journal implementation could not be loaded.")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        raise AcceptanceError("Deletion journal implementation could not be loaded.") from exc
+    return module
+
+
+def _append_synthetic_tombstone(journal: Path) -> None:
+    module = _load_journal_module()
+    append_tombstone = getattr(module, "append_tombstone", None)
+    if not callable(append_tombstone):
+        raise AcceptanceError("Deletion journal append primitive is unavailable.")
+    try:
+        append_tombstone(
+            journal,
+            instance_id=UUID(INSTANCE_ID),
+            account_id=UUID(OWNER_ID),
+            accepted_at=datetime.fromisoformat(ACCEPTED_AT.replace("Z", "+00:00")),
+        )
+    except Exception as exc:
+        raise AcceptanceError("Synthetic deletion tombstone could not be recorded.") from exc
     if not journal.is_file():
         raise AcceptanceError("Synthetic deletion journal was not created.")
 
@@ -171,6 +181,11 @@ def _verify_reconciled_state(scenario: Scenario, stale_owner_token: str) -> None
     )
     _expect_scalar(
         scenario,
+        f"SELECT count(*) FROM device_sessions WHERE account_id = '{OWNER_ID}'::uuid",
+        "0",
+    )
+    _expect_scalar(
+        scenario,
         f"SELECT count(*) FROM memberships WHERE account_id = '{OWNER_ID}'::uuid "
         "AND status = 'LEFT'",
         "1",
@@ -198,7 +213,7 @@ def _verify_reconciled_state(scenario: Scenario, stale_owner_token: str) -> None
 
 
 def run_acceptance() -> None:
-    project_name = "sbs-deletion-recovery-acceptance"
+    project_name = f"sbs-deletion-recovery-{uuid4().hex[:12]}"
     api_port = available_port()
     web_port = available_port()
     if api_port == web_port:
@@ -224,7 +239,7 @@ def run_acceptance() -> None:
 
             # The irreversible deletion happens after this recovery point.
             # Only the forward journal therefore knows about it.
-            _append_synthetic_tombstone(scenario, journal)
+            _append_synthetic_tombstone(journal)
 
             scenario.cleanup()
             scenario.start_postgres()
