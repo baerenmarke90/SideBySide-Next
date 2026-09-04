@@ -204,7 +204,7 @@ def _verify_reconciled_state(scenario: Scenario, stale_owner_token: str) -> None
     _expect_scalar(
         scenario,
         f"SELECT status FROM account_deletions WHERE account_id = '{OWNER_ID}'::uuid",
-        "PENDING",
+        "COMPLETED",
     )
 
 
