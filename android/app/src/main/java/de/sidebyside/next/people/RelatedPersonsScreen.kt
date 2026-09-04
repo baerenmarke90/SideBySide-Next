@@ -1,11 +1,14 @@
 package de.sidebyside.next.people
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
@@ -15,6 +18,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -24,10 +30,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -149,45 +158,65 @@ fun RelatedPersonsScreen(
 
         items(count = people.size, key = { index -> people[index].id.toString() }) { index ->
             val person = people[index]
+            var menuExpanded by remember { mutableStateOf(false) }
             Surface(
+                onClick = { onOpenDates(person.id) },
                 shape = RoundedCornerShape(SideBySideTheme.radii.card),
                 color = SideBySideTheme.colors.surface,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(
-                    modifier = Modifier.padding(SideBySideTheme.spacing.cardPadding),
-                    verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2),
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(SideBySideTheme.spacing.cardPadding),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = person.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = SideBySideTheme.colors.textPrimary,
-                    )
-                    Text(
-                        text = stringResource(person.relationship.labelRes()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SideBySideTheme.colors.textSecondary,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step3)) {
-                        TextButton(
-                            onClick = { onOpenDates(person.id) },
-                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
-                        ) {
-                            Text(stringResource(R.string.related_person_open))
-                        }
-                        TextButton(
-                            onClick = { editing = person.id.toString() },
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step1),
+                    ) {
+                        Text(
+                            text = person.displayName,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SideBySideTheme.colors.textPrimary,
+                        )
+                        Text(
+                            text = stringResource(person.relationship.labelRes()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SideBySideTheme.colors.textSecondary,
+                        )
+                    }
+                    Box {
+                        IconButton(
+                            onClick = { menuExpanded = true },
                             enabled = !busy,
-                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
                         ) {
-                            Text(stringResource(R.string.related_person_edit))
+                            MoreVertGlyph(tint = SideBySideTheme.colors.textSecondary)
                         }
-                        TextButton(
-                            onClick = { deleteTarget = person.id.toString() },
-                            enabled = !busy,
-                            modifier = Modifier.heightIn(min = MinimumTouchTarget),
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
                         ) {
-                            Text(stringResource(R.string.related_person_delete))
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.related_person_edit)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    editing = person.id.toString()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(R.string.related_person_delete),
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    deleteTarget = person.id.toString()
+                                },
+                            )
                         }
                     }
                 }
@@ -499,4 +528,14 @@ private fun PersonRelationship.labelRes(): Int = when (this) {
     PersonRelationship.SIBLING -> R.string.related_relationship_sibling
     PersonRelationship.FRIEND -> R.string.related_relationship_friend
     PersonRelationship.OTHER -> R.string.related_relationship_other
+}
+
+@Composable
+private fun MoreVertGlyph(tint: Color) {
+    Canvas(modifier = Modifier.size(24.dp)) {
+        val radius = this.size.minDimension * 0.08f
+        drawCircle(color = tint, radius = radius, center = Offset(size.width / 2f, size.height * 0.25f))
+        drawCircle(color = tint, radius = radius, center = Offset(size.width / 2f, size.height * 0.5f))
+        drawCircle(color = tint, radius = radius, center = Offset(size.width / 2f, size.height * 0.75f))
+    }
 }

@@ -42,6 +42,80 @@
   margin-top: var(--space-1);
 }
 
+.comment-menu {
+  position: relative;
+  display: inline-block;
+  justify-self: end;
+}
+
+.comment-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  list-style: none;
+  color: var(--color-text-secondary);
+  transition: background var(--motion-fast), color var(--motion-fast);
+}
+
+.comment-menu-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.comment-menu-trigger:hover,
+.comment-menu-trigger:focus-visible {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.comment-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: var(--space-1);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-medium);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-1);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.comment-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  transition: background var(--motion-fast);
+}
+
+.comment-menu-item:hover,
+.comment-menu-item:focus-visible {
+  background: var(--color-surface-subtle);
+}
+
+.comment-menu-item-danger {
+  color: var(--color-error);
+}
+
+.comment-menu-item-danger:hover,
+.comment-menu-item-danger:focus-visible {
+  background: var(--color-error-surface);
+}
+
 .comment-icon-action {
   position: relative;
   display: inline-flex;
