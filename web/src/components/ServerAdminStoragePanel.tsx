@@ -104,11 +104,9 @@ export function ServerAdminStoragePanel({ api }: { api: ServerAdminApi }) {
   const storage = storageQuery.data;
   if (!storage) return null;
 
-  const hasOperationalWarning =
+  const needsOperationalAttention =
     storage.failedCount > 0 ||
     storage.deleteFailedCount > 0 ||
-    storage.uploadingCount > 0 ||
-    storage.validatingCount > 0 ||
     storage.deletingCount > 0;
 
   return (
@@ -154,41 +152,41 @@ export function ServerAdminStoragePanel({ api }: { api: ServerAdminApi }) {
         </p>
       </section>
 
-      {hasOperationalWarning ? (
-        <section
-          className="server-admin-panel server-admin-panel-wide server-admin-warning-panel"
-          aria-labelledby="server-storage-operations-title"
-        >
-          <h2 id="server-storage-operations-title">
-            {t('serverAdmin.storage.operationsTitle')}
-          </h2>
-          <p className="server-admin-muted">
-            {t('serverAdmin.storage.operationsBody')}
-          </p>
-          <dl className="server-admin-metrics server-admin-storage-metrics">
-            <StorageMetric
-              label={t('serverAdmin.storage.failed')}
-              value={formatNumber(storage.failedCount)}
-            />
-            <StorageMetric
-              label={t('serverAdmin.storage.deleteFailed')}
-              value={formatNumber(storage.deleteFailedCount)}
-            />
-            <StorageMetric
-              label={t('serverAdmin.storage.uploading')}
-              value={formatNumber(storage.uploadingCount)}
-            />
-            <StorageMetric
-              label={t('serverAdmin.storage.validating')}
-              value={formatNumber(storage.validatingCount)}
-            />
-            <StorageMetric
-              label={t('serverAdmin.storage.deleting')}
-              value={formatNumber(storage.deletingCount)}
-            />
-          </dl>
-        </section>
-      ) : null}
+      <section
+        className={`server-admin-panel server-admin-panel-wide${
+          needsOperationalAttention ? ' server-admin-warning-panel' : ''
+        }`}
+        aria-labelledby="server-storage-operations-title"
+      >
+        <h2 id="server-storage-operations-title">
+          {t('serverAdmin.storage.operationsTitle')}
+        </h2>
+        <p className="server-admin-muted">
+          {t('serverAdmin.storage.operationsBody')}
+        </p>
+        <dl className="server-admin-metrics server-admin-storage-metrics">
+          <StorageMetric
+            label={t('serverAdmin.storage.failed')}
+            value={formatNumber(storage.failedCount)}
+          />
+          <StorageMetric
+            label={t('serverAdmin.storage.deleteFailed')}
+            value={formatNumber(storage.deleteFailedCount)}
+          />
+          <StorageMetric
+            label={t('serverAdmin.storage.uploading')}
+            value={formatNumber(storage.uploadingCount)}
+          />
+          <StorageMetric
+            label={t('serverAdmin.storage.validating')}
+            value={formatNumber(storage.validatingCount)}
+          />
+          <StorageMetric
+            label={t('serverAdmin.storage.deleting')}
+            value={formatNumber(storage.deletingCount)}
+          />
+        </dl>
+      </section>
 
       <section
         className="server-admin-panel"
