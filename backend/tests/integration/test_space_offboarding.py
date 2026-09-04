@@ -98,9 +98,7 @@ class TestSelfLeaveHttp:
 
         with maker() as session:
             memberships = (
-                session.execute(
-                    select(Membership).where(Membership.space_id == setup["space_id"])
-                )
+                session.execute(select(Membership).where(Membership.space_id == setup["space_id"]))
                 .scalars()
                 .all()
             )
