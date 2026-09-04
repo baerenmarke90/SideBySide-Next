@@ -31,6 +31,7 @@ class SpaceErrorCode:
     NOT_FOUND = "SPACE_NOT_FOUND"
     FULL = "SPACE_FULL"
     ALREADY_MEMBER = "ACCOUNT_ALREADY_MEMBER"
+    RELATIONSHIP_ENDED = "SPACE_RELATIONSHIP_ENDED"
 
 
 def require_membership(session: Session, account: Account, space_id: UUID) -> Membership:
@@ -103,21 +104,57 @@ def active_memberships(session: Session, space_id: UUID) -> Sequence[Membership]
     )
 
 
-def add_member(session: Session, space_id: UUID, account: Account) -> Membership:
-    """Add an account to a Space.
-
-    The upper bound is enforced here rather than only when accepting an
-    invitation. A couple Space has at most two active partners, and that rule
-    must not depend on the path through which somebody joins.
-
-    The Space row serializes the check and mutation until commit, so two
-    different invitations cannot claim the final free slot concurrently.
-    """
+def lock_space(session: Session, space_id: UUID) -> Space:
+    """Lock the shared relationship lifecycle row or return privacy-safe 404."""
     space = session.execute(
         select(Space).where(Space.id == space_id).with_for_update()
     ).scalar_one_or_none()
     if space is None:
         raise NotFoundError("Space not found.", SpaceErrorCode.NOT_FOUND)
+    return space
+
+
+def has_ended_membership(session: Session, space_id: UUID) -> bool:
+    """Return whether this Space has entered relationship-history state."""
+    return (
+        session.execute(
+            select(Membership.id)
+            .where(
+                Membership.space_id == space_id,
+                Membership.status.in_(
+                    (MembershipStatus.LEFT.value, MembershipStatus.REMOVED.value)
+                ),
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        is not None
+    )
+
+
+def ensure_joinable_space_locked(session: Session, space_id: UUID) -> Space:
+    """Lock a Space and reject ordinary joining after any Membership ended."""
+    space = lock_space(session, space_id)
+    if has_ended_membership(session, space_id):
+        raise ConflictError(
+            "This relationship history cannot accept another partner.",
+            SpaceErrorCode.RELATIONSHIP_ENDED,
+        )
+    return space
+
+
+def add_member(session: Session, space_id: UUID, account: Account) -> Membership:
+    """Add an account to a joinable Space.
+
+    The upper bound and the #518 history lock are enforced here rather than
+    only when accepting an invitation. A couple Space has at most two active
+    partners, and once any Membership has ended its history cannot be reused for
+    a later relationship.
+
+    The Space row serializes the checks and mutation until commit, so two
+    different invitations cannot claim the final free slot concurrently and an
+    invitation cannot race a concurrent offboarding transition.
+    """
+    ensure_joinable_space_locked(session, space_id)
 
     existing = session.execute(
         select(Membership).where(
@@ -132,16 +169,9 @@ def add_member(session: Session, space_id: UUID, account: Account) -> Membership
     if len(active_memberships(session, space_id)) >= MAX_ACTIVE_PARTNERS:
         raise ConflictError("This space already has two partners.", SpaceErrorCode.FULL)
 
-    if existing is not None:
-        # Reactivate an earlier ended membership rather than creating a
-        # duplicate, preserving uniqueness per Space and account.
-        existing.status = MembershipStatus.ACTIVE.value
-        existing.joined_at = now()
-        existing.ended_at = None
-        session.flush()
-        _ensure_partner_profile(session, space_id, account.id)
-        return existing
-
+    # An ended Membership can only exist when the Space is history-locked, so
+    # ensure_joinable_space_locked() has already rejected that state. Ordinary
+    # joining therefore never reactivates a former relationship implicitly.
     membership = Membership(
         space_id=space_id,
         account_id=account.id,
