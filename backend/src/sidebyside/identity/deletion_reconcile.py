@@ -9,60 +9,30 @@ from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
-from sidebyside.db.session import unit_of_work
 from sidebyside.identity.deletion import (
     DeletionAcceptanceConflictError,
-    apply_accepted_tombstone,
-    apply_core_cleanup,
+    DeletionNotAcceptedError,
 )
-from sidebyside.identity.deletion_async import apply_account_async_cleanup
 from sidebyside.identity.deletion_journal import (
     DeletionJournal,
     DeletionJournalError,
     DeletionTombstone,
 )
-from sidebyside.identity.deletion_media import apply_account_media_cleanup
-
-
-class DeletionMediaCleanupError(RuntimeError):
-    """Restore replay could not converge accepted Account media safely."""
-
-
-class DeletionAsyncCleanupError(RuntimeError):
-    """Restore replay could not converge accepted Account async state safely."""
+from sidebyside.identity.deletion_lifecycle import (
+    DeletionAsyncCleanupError,
+    DeletionCompletionError,
+    DeletionMediaCleanupError,
+    converge_accepted_deletion,
+)
 
 
 def reconcile_tombstones(tombstones: Sequence[DeletionTombstone]) -> int:
-    """Re-apply validated deletions in the required fail-closed transaction order."""
+    """Re-apply validated deletions through the authoritative lifecycle workflow."""
     for tombstone in tombstones:
-        # Commit fail-closed state independently so a later cleanup failure can
-        # never reactivate an Account restored from an older backup.
-        with unit_of_work() as session:
-            apply_accepted_tombstone(
-                session,
-                tombstone.account_id,
-                accepted_at=tombstone.accepted_at,
-            )
-        with unit_of_work() as session:
-            apply_core_cleanup(session, tombstone.account_id)
-        # Provider-backed attachment deletion is the first external cleanup
-        # boundary. Persist DELETE_FAILED / AccountDeletion FAILED state before
-        # rejecting startup so retries remain durable and fail-closed.
-        with unit_of_work() as session:
-            media_result = apply_account_media_cleanup(session, tombstone.account_id)
-        if not media_result.converged:
-            raise DeletionMediaCleanupError(
-                "Account deletion media cleanup did not converge during restore replay."
-            )
-        # Account-scoped runtime work and temporary Transfer artifacts are the
-        # final async boundary. Keep it in a distinct transaction so any
-        # terminal/retry state survives a startup rejection.
-        with unit_of_work() as session:
-            async_result = apply_account_async_cleanup(session, tombstone.account_id)
-        if not async_result.converged:
-            raise DeletionAsyncCleanupError(
-                "Account deletion async cleanup did not converge during restore replay."
-            )
+        converge_accepted_deletion(
+            tombstone.account_id,
+            accepted_at=tombstone.accepted_at,
+        )
     return len(tombstones)
 
 
@@ -117,8 +87,10 @@ def main() -> int:
     except (
         DeletionJournalError,
         DeletionAcceptanceConflictError,
+        DeletionNotAcceptedError,
         DeletionMediaCleanupError,
         DeletionAsyncCleanupError,
+        DeletionCompletionError,
     ):
         # Deliberately do not echo journal contents, identifiers, database
         # values or raw exception prose into operator logs.
