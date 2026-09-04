@@ -1,0 +1,49 @@
+name: Temporary #644 OpenAPI generation
+
+on:
+  push:
+    branches:
+      - feat/644-account-self-service-deletion-api
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: feat/644-account-self-service-deletion-api
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v6.0.0
+        with:
+          python-version: '3.13.7'
+
+      - name: Install locked backend dependencies
+        run: |
+          python -m pip install 'uv==0.12.5'
+          cd backend
+          uv sync --frozen
+
+      - name: Regenerate canonical OpenAPI contract
+        run: |
+          cd backend
+          uv run --frozen python scripts/openapi_contract.py write
+
+      - name: Regenerate Web and Android clients
+        run: tools/openapi/generate.sh
+
+      - name: Commit generated artifacts
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/openapi.json web/src/api/generated android/api/generated
+          if git diff --cached --quiet; then
+            echo 'Generated artifacts already current.'
+            exit 0
+          fi
+          git commit -m 'chore(api): regenerate deletion API clients'
+          git push origin HEAD:feat/644-account-self-service-deletion-api
