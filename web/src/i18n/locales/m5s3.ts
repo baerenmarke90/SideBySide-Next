@@ -2,10 +2,13 @@ const m5s3 = {
   common: {
     saved: 'gespeichert',
     back: '← Zurück zu Planen',
+    backToPlan: '← Zurück zu Planen',
+    backToStory: '← Zurück zu Momente',
+    backToMore: '← Zurück zu Mehr',
     title: 'Titel',
     description: 'Beschreibung',
     place: 'Ort',
-    noPlace: 'Kein Ort verknüpft',
+    noPlace: 'Ohne Ort',
     open: 'Öffnen',
     edit: 'Bearbeiten',
     save: 'Speichern',
@@ -32,7 +35,7 @@ const m5s3 = {
     eyebrow: 'Gemeinsam planen',
     title: 'Eure Wünsche und Pläne',
     intro:
-      'Wünsche, konkrete Pläne, gemeinsame Orte, Kapitel und Listen – ohne versteckte Automatik und immer auf dem aktuellen Serverstand.',
+      'Wünsche und konkrete Pläne für eure gemeinsame Zukunft – ohne versteckte Automatik und immer auf dem aktuellen Serverstand.',
   },
   wish: {
     heading: 'Wünsche',
@@ -51,23 +54,23 @@ const m5s3 = {
     status: {
       OPEN: 'Offen',
       PLANNED: 'Als Plan weitergeführt',
-      COMPLETED: 'Erledigt',
+      COMPLETED: 'Gemeinsam erlebt',
     },
   },
   plan: {
     heading: 'Pläne',
-    intro: 'Vom ersten Gedanken über einen Termin bis zum gemeinsam Erlebten.',
+    intro: 'Vom ersten Gedanken über einen Zeitpunkt bis zum gemeinsam Erlebten.',
     create: 'Plan hinzufügen',
     loading: 'Plan wird geladen …',
     detailEyebrow: 'Gemeinsamer Plan',
-    lifecycleHeading: 'Planstatus ändern',
-    scheduleFacts: 'Termin und Erlebnisdatum',
-    plannedStart: 'Geplanter Beginn',
-    plannedEnd: 'Geplantes Ende',
+    lifecycleHeading: 'Wo steht ihr gerade?',
+    scheduleFacts: 'Zeitpunkt und Erlebnisdatum',
+    plannedStart: 'Wann geht\'s los?',
+    plannedEnd: 'Bis wann?',
     experiencedOn: 'Erlebt am',
-    schedule: 'Termin festlegen',
-    reschedule: 'Termin ändern',
-    unschedule: 'Termin wieder entfernen',
+    schedule: 'Wann soll\'s sein?',
+    reschedule: 'Zeitpunkt ändern',
+    unschedule: 'Noch ohne festen Zeitpunkt',
     editAction: 'Plan bearbeiten',
     complete: 'Als erlebt abschließen',
     returnToWish: 'Zurück zum Wunsch',
@@ -78,8 +81,8 @@ const m5s3 = {
       'Der Plan wird gelöscht. Ein verknüpfter Ort oder andere eigenständige Inhalte bleiben erhalten.',
     status: {
       IDEA: 'Idee',
-      PLANNED: 'Geplant',
-      COMPLETED: 'Erlebt',
+      PLANNED: 'Das haben wir vor',
+      COMPLETED: 'Gemeinsam erlebt',
     },
   },
   place: {
@@ -108,7 +111,7 @@ const m5s3 = {
   },
   chapter: {
     heading: 'Kapitel',
-    intro: 'Bündelt bestehende gemeinsame Inhalte, ohne sie zu duplizieren.',
+    intro: 'Kapitel bündeln eure gemeinsamen Erinnerungen und Meilensteine.',
     create: 'Kapitel hinzufügen',
     loading: 'Kapitel wird geladen …',
     detailEyebrow: 'Gemeinsames Kapitel',
@@ -119,16 +122,16 @@ const m5s3 = {
       'Nur das Kapitel und seine Verknüpfungen werden gelöscht. Die enthaltenen Erinnerungen, Herzmomente und Meilensteine bleiben unverändert erhalten.',
   },
   relations: {
-    heading: 'Verknüpfte gemeinsame Inhalte',
+    heading: 'Was gehört zu diesem Kapitel?',
     intro:
       'Auswählbar sind ausschließlich Inhalte aus eurer gemeinsamen Story. Private Herzmomente erscheinen hier nicht.',
     loading: 'Verknüpfungen werden geladen …',
-    empty: 'Noch keine Inhalte verknüpft.',
+    empty: 'Hier gehört noch kein Moment dazu.',
     contentFallback: 'Verknüpfter Inhalt',
-    addLabel: 'Gemeinsamen Inhalt verknüpfen',
+    addLabel: 'Moment hinzufügen',
     choose: 'Inhalt auswählen',
     link: 'Verknüpfen',
-    unlink: 'Verknüpfung lösen',
+    unlink: 'Aus Kapitel entfernen',
     noMoreTargets:
       'Alle aktuell verfügbaren gemeinsamen Story-Inhalte sind bereits verknüpft.',
     kind: {
@@ -163,6 +166,6 @@ const m5s3 = {
     deleteConsequence:
       'Die Liste und ihre eigenen Listeneinträge werden gelöscht. Andere SidebySide-Inhalte werden nicht gelöscht.',
   },
-} as const;
+};
 
 export default m5s3;

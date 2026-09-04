@@ -29,10 +29,10 @@ const profiles = {
   relationshipYearsMonths: '{{years}} Jahre, {{months}} Monate',
   relationshipDays: '{{days}} Tage',
   relationshipDurationTitle: 'Eure Zeit',
-  relationshipNotAvailable: 'Noch keine Beziehungsdauer verfügbar.',
-  relationshipSave: 'Beziehungsprofil speichern',
+  relationshipNotAvailable: 'Tragt ein, seit wann ihr zusammen seid.',
+  relationshipSave: 'Änderungen speichern',
   relationshipSaving: 'Wird gespeichert …',
-  relationshipSaved: 'Beziehungsprofil wurde gespeichert.',
+  relationshipSaved: 'Änderungen wurden gespeichert.',
   selfTitle: 'Meine Vorlieben',
   selfIntro:
     'Diese Angaben gehören zu deinem Profil und können deinem Partner angezeigt werden.',
@@ -43,7 +43,7 @@ const profiles = {
   noPartnerTitle: 'Noch kein Partner verbunden',
   noPartnerBody:
     'Sobald ein Partner mit diesem Bereich verbunden ist, erscheint hier sein freigegebenes Profil.',
-  privateTitle: 'Private Notizen über {{name}}',
+  privateTitle: 'Notizen über {{name}} für mich',
   privateIntro:
     'Diese Notizen sind nur für dich sichtbar. Sie erscheinen niemals im Profil deines Partners.',
   preferenceCreateTitle: 'Vorliebe hinzufügen',
@@ -52,8 +52,8 @@ const profiles = {
   addPreferenceShort: '+ Vorliebe',
   addNoteShort: '+ Notiz',
   editName: 'Name bearbeiten',
-  noteCreateTitle: 'Private Notiz hinzufügen',
-  noteEditTitle: 'Private Notiz bearbeiten',
+  noteCreateTitle: 'Notiz für mich hinzufügen',
+  noteEditTitle: 'Notiz für mich bearbeiten',
   categoryLabel: 'Kategorie',
   sentimentLabel: 'Einordnung',
   topicLabel: 'Thema',
@@ -73,9 +73,9 @@ const profiles = {
   emptySelfTitle: 'Noch keine eigene Vorliebe gespeichert',
   emptySelfBody:
     'Ergänze Dinge, die dich ausmachen oder die dein Partner wissen darf.',
-  emptyPrivateTitle: 'Noch keine private Notiz gespeichert',
+  emptyPrivateTitle: 'Noch keine Notiz für mich gespeichert',
   emptyPrivateBody:
-    'Private Notizen helfen dir, persönliche Details nur für dich festzuhalten.',
+    'Notizen helfen dir, persönliche Geschenkideen oder Gedanken nur für dich festzuhalten.',
   edit: 'Bearbeiten',
   delete: 'Löschen',
   deleteQuestion: 'Diesen Eintrag wirklich löschen?',

@@ -16,16 +16,26 @@ const de = {
     eyebrow: 'Mehr',
     title: 'Alles Weitere',
     intro:
-      'Wichtige Menschen und dein privater Bereich für persönliche Notizen und Ideen.',
+      'Wichtige Menschen, Orte, gemeinsame Listen und dein Bereich für persönliche Gedanken.',
     people: {
       title: 'Menschen',
       description:
         'Personen, die euch wichtig sind, mit Geburtstagen und Jahrestagen.',
     },
-    private: {
-      title: 'Mein Bereich',
+    places: {
+      title: 'Orte',
       description:
-        'Notizen, Geschenkideen und Listen, die nur für dich sichtbar sind.',
+        'Eure liebsten Orte, Cafés und Reiseziele auf einen Blick.',
+    },
+    collections: {
+      title: 'Gemeinsame Listen',
+      description:
+        'Packlisten, Ideen und Sammlungen für euch beide.',
+    },
+    private: {
+      title: 'Für mich',
+      description:
+        'Notizen, Geschenkideen und Gedanken, die erst einmal nur für dich bestimmt sind.',
     },
     notifications: {
       title: 'Benachrichtigungen',
