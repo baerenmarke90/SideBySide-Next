@@ -157,6 +157,7 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
     ),
     Path("docs/INFORMATION-ARCHITECTURE.md"): (
         "Nur für mich",
+        "Für mich",
         "Für uns beide",
         "Mit Partner teilen",
         "Geteilt",
@@ -186,6 +187,9 @@ ALLOWED_DOCUMENTATION_TEXTS_BY_PATH = {
         "Noch nicht gespeichert",
         "Nur für mich",
         "Erinnerung endgültig löschen",
+    ),
+    Path("docs/decisions/0008-product-ia-harmonization-and-domain-alignment.md"): (
+        "Für mich",
     ),
     Path("docs/m2/DEMO-SCENARIO.md"): (
         "Sonnenaufgang am See",

@@ -4,6 +4,7 @@
 **Version:** 1.4  
 **Effective from:** September 1, 2026  
 **Route model decided by:** `decisions/0003-primary-navigation-and-route-model.md`  
+**Harmonized by:** `decisions/0008-product-ia-harmonization-and-domain-alignment.md`
 **Navigation surface decided by:** `decisions/0004-android-uses-bottom-navigation-at-every-size.md`
 
 This document defines navigation, naming, routes, and product-function
@@ -28,11 +29,11 @@ conventions.
 
 | Route ID | de-DE product name | Purpose | Availability |
 |---|---|---|---|
-| `today` | Übersicht | shared overview and next meaningful actions | now |
-| `story` | Story | non-public shared timeline of memories | now |
+| `today` | Wir | shared overview, partner pulse, and next meaningful actions | now |
+| `story` | Momente | non-public shared timeline of memories, milestones, and chapters | now |
 | `plan` | Planen | wishes and concrete plans; shopping later | now |
 | `discover` | Entdecken | curated inspiration for shared time | **M7** |
-| `more` | Mehr | secondary product areas and settings | now |
+| `more` | Mehr | people, places, shared lists, private area, and settings | now |
 
 `discover` depends on the Discover domain, which `docs/ROADMAP.md` places in
 M7. Its route ID, label and position in the order are reserved from now, and it
@@ -43,10 +44,14 @@ therefore carries four destinations.
 The label *Entdecken* is reserved for this area and must not be reused for a
 navigation group, a section heading, or any other surface.
 
-The visible label **Übersicht** intentionally replaces the former **Heute**
-wording while retaining the stable `today` route ID and `/today` path. On Web,
-Übersicht is the first primary destination and the ordinary signed-in landing
-surface.
+The visible label **Wir** intentionally replaces previous **Heute** and
+**Übersicht** designations while retaining the stable `today` route ID and
+`/today` path. On Web, Wir is the first primary destination and the ordinary
+signed-in landing surface.
+
+The visible label **Momente** intentionally designates the `story` area
+(replacing former **Story** phrasing) while retaining the stable `story` route ID
+and `/story` path.
 
 ### Platform representation
 
@@ -69,41 +74,40 @@ see section 6. Only the navigation surface is platform-specific.
 
 ```text
 SideBySide Next
-├── Übersicht
+├── Wir
 │   ├── next shared moment
 │   ├── personal and shared recommendations
 │   ├── recaps
 │   └── open tasks and notices
-├── Story
+├── Momente
 │   ├── Timeline
-│   ├── Erinnerung
-│   │   ├── media
-│   │   ├── place and date
-│   │   ├── status "Für uns beide"
-│   │   └── editing
-│   └── new memory
+│   ├── Erinnerungen
+│   ├── Herzmomente
+│   ├── Meilensteine
+│   └── Kapitel
 ├── Planen
 │   ├── Wünsche
 │   │   ├── open
 │   │   ├── planned
-│   │   ├── completed
-│   │   └── wish detail
+│   │   └── completed
 │   ├── Pläne
 │   │   ├── status
 │   │   ├── date
 │   │   ├── checklist
 │   │   └── media and notes
 │   └── Einkauf (later, feature-controlled)
-├── Entdecken
+├── Entdecken (M7)
 │   ├── feed
 │   ├── filters
 │   ├── recommendation
 │   └── convert into wish or plan
 └── Mehr
+    ├── Menschen (related people and important dates)
+    ├── Orte (shared places and destinations)
+    ├── Gemeinsame Listen (collections)
+    ├── Für mich (owner-only area)
     ├── Space and partner
     ├── privacy and permissions
-    ├── related people and important dates
-    ├── owner-only area
     ├── data export and account deletion
     └── help, legal, and app information
 
@@ -122,8 +126,7 @@ Deep-Linkable.
 
 ## 4. Planen as shared hub
 
-`Planen` combines two closely related states in Core and keeps a future area
-architecturally open:
+`Planen` focuses on ideas and execution for shared couple time:
 
 1. **Wish:** an idea without a binding date.
 2. **Plan:** a concretized idea with status, date, or tasks.
@@ -134,6 +137,9 @@ Wishes and plans must not appear as isolated data worlds. Converting a wish
 into a plan is a visible, understandable state transition. Discover does not
 create a fourth copy of content; it can adopt a recommendation as a wish or
 plan.
+
+Life chapters (Kapitel) are preserved under Momente. Places (Orte) and shared
+lists (Gemeinsame Listen) are organized under Mehr.
 
 ### Secondary navigation
 
@@ -151,11 +157,12 @@ Links. IDs are opaque, stable identifiers.
 
 | Task | Canonical path |
 |---|---|
-| Open Übersicht | `/today` |
+| Open Wir | `/today` |
 | Activity between the partners | `/today/activity` |
-| Open Story | `/story` |
+| Open Momente | `/story` |
 | Open memory | `/story/memories/:memoryId` |
 | Create memory | `/story/memories/new` |
+| Open chapter (Momente) | `/plan/chapters/:chapterId` |
 | Planen hub | `/plan` |
 | Wishes | `/plan/wishes` |
 | Open wish | `/plan/wishes/:wishId` |
@@ -165,9 +172,13 @@ Links. IDs are opaque, stable identifiers.
 | Discover, reserved for M7 | `/discover` |
 | Open recommendation, reserved for M7 | `/discover/:recommendationId` |
 | More | `/more` |
+| Places (Mehr) | `/plan/places` |
+| Open place | `/plan/places/:placeId` |
+| Collections (Mehr) | `/plan/collections` |
+| Open collection | `/plan/collections/:collectionId` |
 | Space and partner | `/more/space` |
 | Related people and important dates | `/more/people` |
-| Owner-only area | `/more/private` |
+| Owner-only area (Für mich) | `/more/private` |
 | Privacy | `/more/privacy` |
 | Notifications | `/more/notifications` |
 | Profile | `/more/profile` |
@@ -196,8 +207,8 @@ destinations.
 ### Signed-in landing and Deep-Link return
 
 - The authenticated root/default route resolves to `/today`, whose visible
-  product label is **Übersicht**.
-- A normal successful sign-in therefore lands on Übersicht.
+  product label is **Wir**.
+- A normal successful sign-in therefore lands on Wir.
 - A valid protected Deep Link requested before authentication takes precedence
   and is restored after login instead of being replaced by the default landing
   route.
@@ -211,6 +222,10 @@ destinations.
   destination.
 - Deleted content receives an understandable state instead of a generic empty
   page.
+- IA does not dictate URL structure (ADR 0008). Stable detail deep links
+  (`/plan/chapters/:id`, `/plan/places/:id`, `/plan/collections/:id`) remain
+  unchanged while their active navigation highlights and conceptual home map
+  to their natural domain.
 - Visible label changes and shell-placement changes do not rename stable route
   IDs merely for presentation reasons.
 
@@ -218,7 +233,7 @@ destinations.
 
 | Content | Compact | Medium | Expanded |
 |---|---|---|---|
-| Story | list or detail | list or detail | timeline + detail |
+| Momente | list or detail | list or detail | timeline + detail |
 | Wishes | list or detail | list or detail | list + detail |
 | Plans | list or detail | list or detail | list + detail + optional support |
 | Shopping, later | one list | list + optional recipe card | list + recipe/detail pane |
