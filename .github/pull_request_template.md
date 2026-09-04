@@ -1,3 +1,10 @@
+<!--
+Engineering language is English for repository work.
+PR titles, descriptions, review comments, commit messages, technical discussion, and engineering artifacts must be written in English.
+Follow docs/ENGINEERING-LANGUAGE.md.
+User-facing product copy remains governed by i18n and may be localized.
+-->
+
 ## Summary
 
 <!-- What does this PR change and why? -->
@@ -149,6 +156,7 @@ For larger runtime slices, client features, and production user flows, document 
 - [ ] business/freemium model consistency result is complete and traceable
 - [ ] no Clean-Room, security, privacy, tenant-isolation, provenance, licensing, or engineering-language rule weakened
 - [ ] no recognizable cross-cutting consequence deferred without justification
+- [ ] PR title/body, review discussion, commit messages, and technical engineering prose are in English
 
 ## Notes / risks
 
