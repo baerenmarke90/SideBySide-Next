@@ -16,7 +16,7 @@ const de = {
     eyebrow: 'Mehr',
     title: 'Alles Weitere',
     intro:
-      'Menschen, euer privater Bereich, Benachrichtigungen und euer Profil.',
+      'Wichtige Menschen und dein privater Bereich für persönliche Notizen und Ideen.',
     people: {
       title: 'Menschen',
       description:
