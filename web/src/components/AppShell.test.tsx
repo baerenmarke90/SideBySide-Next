@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
@@ -239,9 +239,25 @@ describe('AppShell', () => {
         dispatchEvent: vi.fn(),
       }));
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ unreadCount: 0 }), { status: 200 })));
+    let unreadCountResponse = 0;
+    let unreadCountCalls = 0;
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.includes('/api/v1/spaces/space-1/notifications/unread-count')) {
+        unreadCountCalls += 1;
+        return Promise.resolve(
+          new Response(JSON.stringify({ unreadCount: unreadCountResponse }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      }
+      return Promise.resolve(new Response('{}', { status: 200 }));
+    });
+
     const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+      defaultOptions: { queries: { retry: false, staleTime: 15_000 } },
     });
     queryClient.setQueryData(['profile-identity', 'space-1', 'account-1'], {
       accountId: 'account-1',
@@ -249,10 +265,6 @@ describe('AppShell', () => {
       profileAttachmentId: null,
       version: 1,
     });
-    queryClient.setQueryData(
-      ['m5-s5', 'notification-unread-count', 'space-1'],
-      { unreadCount: 0 },
-    );
 
     const { container } = render(
       <QueryClientProvider client={queryClient}>
@@ -270,36 +282,46 @@ describe('AppShell', () => {
       </QueryClientProvider>,
     );
 
-    // Initial state on /today: unread count is 0, no notification dot
+    // Initial state on /today: API returns 0, no notification dot
     await waitFor(() => {
-      expect(container.querySelector('.notification-dot')).toBeNull();
+      expect(unreadCountCalls).toBeGreaterThanOrEqual(1);
     });
+    expect(container.querySelector('.notification-dot')).toBeNull();
     let trigger = container.querySelector('.header-notifications-trigger');
     expect(trigger?.getAttribute('aria-label')).toBe(navigation.notifications);
 
-    // Server receives unread notification while user stays on /today
+    const initialCalls = unreadCountCalls;
+
+    // Server receives unread notification while user stays on /today.
+    // On next poll/refocus (simulating window focus / tab switch back to app):
+    unreadCountResponse = 1;
     act(() => {
-      queryClient.setQueryData(
-        ['m5-s5', 'notification-unread-count', 'space-1'],
-        { unreadCount: 1 },
-      );
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
     });
 
-    // Dot appears without visiting notifications or clicking bell
+    // API is queried again and dot appears dynamically
+    await waitFor(() => {
+      expect(unreadCountCalls).toBeGreaterThan(initialCalls);
+    });
     await waitFor(() => {
       expect(container.querySelector('.notification-dot')).not.toBeNull();
     });
     trigger = container.querySelector('.header-notifications-trigger');
     expect(trigger?.getAttribute('aria-label')).toContain('1 ungelesen');
 
-    // Unread count returns to 0 -> dot disappears
+    const secondCalls = unreadCountCalls;
+
+    // Server unread count returns to 0 on next refocus/poll
+    unreadCountResponse = 0;
     act(() => {
-      queryClient.setQueryData(
-        ['m5-s5', 'notification-unread-count', 'space-1'],
-        { unreadCount: 0 },
-      );
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
     });
 
+    await waitFor(() => {
+      expect(unreadCountCalls).toBeGreaterThan(secondCalls);
+    });
     await waitFor(() => {
       expect(container.querySelector('.notification-dot')).toBeNull();
     });

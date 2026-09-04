@@ -149,8 +149,9 @@ export function AppShell({
   const unreadQuery = useQuery({
     queryKey: notificationUnreadCountQueryKey(spaceId),
     queryFn: () => notificationsApi.getNotificationUnreadCount({ spaceId }),
+    staleTime: 0,
     refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: 'always',
     enabled: Boolean(spaceId && accessToken),
   });
   const unreadCount = unreadQuery.data?.unreadCount ?? 0;
