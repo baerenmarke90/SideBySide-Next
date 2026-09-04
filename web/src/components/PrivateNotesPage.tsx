@@ -240,10 +240,7 @@ export function PrivateNoteCreatePage({ api, accountId, spaceId }: Props) {
 
 export function PrivateNoteDetailPage({ api, accountId, spaceId }: Props) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { noteId, query } = usePrivateNote(api, accountId, spaceId);
-
+  const { query } = usePrivateNote(api, accountId, spaceId);
 
   if (query.isLoading)
     return <UiState kind="loading" title={t('privateArea.notes.loading')} />;
@@ -284,7 +281,6 @@ export function PrivateNoteDetailPage({ api, accountId, spaceId }: Props) {
         <p className="private-area-detail-body">
           {note.body || t('privateArea.notes.noBody')}
         </p>
-
       </article>
     </>
   );
@@ -295,7 +291,7 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { noteId, query } = usePrivateNote(api, accountId, spaceId);
-  
+
   const deleteMutation = useMutation({
     mutationFn: (targetNote: PrivateNoteDetail) =>
       privateApiCall(() =>
@@ -408,9 +404,12 @@ export function PrivateNoteEditPage({ api, accountId, spaceId }: Props) {
         </form>
         {mutation.error ? <ProblemState error={mutation.error} /> : null}
       </section>
-      
+
       {note.capabilities.canDelete ? (
-        <article className="private-area-detail-card" style={{ marginTop: 'var(--space-8)' }}>
+        <article
+          className="private-area-detail-card"
+          style={{ marginTop: 'var(--space-8)' }}
+        >
           <DeleteConfirmation
             onDelete={() => deleteMutation.mutate(note)}
             pending={deleteMutation.isPending}

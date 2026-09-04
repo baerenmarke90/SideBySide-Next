@@ -344,9 +344,7 @@ export function GiftIdeaCreatePage({ api, accountId, spaceId }: Props) {
 
 export function GiftIdeaDetailPage({ api, accountId, spaceId }: Props) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { giftIdeaId, query } = useGiftIdea(api, accountId, spaceId);
+  const { query } = useGiftIdea(api, accountId, spaceId);
 
   if (query.isLoading)
     return <UiState kind="loading" title={t('privateArea.gifts.loading')} />;
@@ -416,7 +414,6 @@ export function GiftIdeaDetailPage({ api, accountId, spaceId }: Props) {
         <p className="private-area-detail-body">
           {gift.description || t('privateArea.gifts.noDetails')}
         </p>
-
       </article>
     </>
   );
@@ -541,7 +538,10 @@ export function GiftIdeaEditPage({ api, accountId, spaceId }: Props) {
       </section>
 
       {gift.capabilities.canDelete ? (
-        <article className="private-area-detail-card" style={{ marginTop: 'var(--space-8)' }}>
+        <article
+          className="private-area-detail-card"
+          style={{ marginTop: 'var(--space-8)' }}
+        >
           <DeleteConfirmation
             onDelete={() => deleteMutation.mutate(gift)}
             pending={deleteMutation.isPending}

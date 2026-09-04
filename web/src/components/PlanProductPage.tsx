@@ -17,6 +17,7 @@ import {
 } from '../client/sharedPlanning';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
+import { ListEntryIconButton } from './ListEntryActions';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
 import './SharedPlanningPages.css';
@@ -99,7 +100,11 @@ export function PlanProductPage({
           planUpdate: { title, description, placeId, experiencedOn },
         }),
       ),
-    onSuccess: commitPlan,
+    onSuccess: async (data) => {
+      await commitPlan(data);
+      setIsEditing(false);
+      setConfirmDelete(false);
+    },
   });
 
   const scheduleMutation = useMutation({
@@ -257,6 +262,15 @@ export function PlanProductPage({
 
   return (
     <div className="page planning-page">
+      {isEditing ? (
+        <form
+          id="plan-edit-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitEdit(e);
+          }}
+        />
+      ) : null}
       <PageHeader
         before={
           <Link className="back-link" to={appRoutePath('plan')}>
@@ -265,8 +279,20 @@ export function PlanProductPage({
         }
         eyebrow={t('m5s3.plan.detailEyebrow')}
         title={plan.title}
+        titleEditor={
+          isEditing ? (
+            <input
+              form="plan-edit-form"
+              name="title"
+              required
+              maxLength={200}
+              defaultValue={plan.title}
+              aria-label={t('m5s3.common.title')}
+            />
+          ) : undefined
+        }
         description={t(`m5s3.plan.status.${plan.status}`)}
-        action={
+        titleAction={
           plan.capabilities.canEdit && !isEditing ? (
             <ListEntryIconButton
               icon="edit"
@@ -306,20 +332,12 @@ export function PlanProductPage({
         {isEditing ? (
           <section id="plan-edit-section" className="planning-subsection">
             <h2>{t('m5s3.common.edit')}</h2>
-            <form className="form-grid" onSubmit={(e) => { submitEdit(e); setIsEditing(false); }}>
-              <label htmlFor="plan-edit-title">{t('m5s3.common.title')}</label>
-              <input
-                id="plan-edit-title"
-                name="title"
-                required
-                maxLength={200}
-                defaultValue={plan.title}
-                autoFocus
-              />
+            <div className="form-grid">
               <label htmlFor="plan-edit-description">
                 {t('m5s3.common.description')}
               </label>
               <textarea
+                form="plan-edit-form"
                 id="plan-edit-description"
                 name="description"
                 rows={4}
@@ -327,6 +345,7 @@ export function PlanProductPage({
               />
               <label htmlFor="plan-edit-place">{t('m5s3.common.place')}</label>
               <select
+                form="plan-edit-form"
                 id="plan-edit-place"
                 name="placeId"
                 defaultValue={plan.placeId ?? ''}
@@ -344,6 +363,7 @@ export function PlanProductPage({
                     {t('m5s3.plan.experiencedOn')}
                   </label>
                   <input
+                    form="plan-edit-form"
                     id="plan-edit-experienced"
                     name="experiencedOn"
                     type="date"
@@ -352,12 +372,23 @@ export function PlanProductPage({
                 </>
               ) : null}
               <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                <button type="submit" disabled={updateMutation.isPending}>
+                <button
+                  form="plan-edit-form"
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                >
                   {updateMutation.isPending
                     ? t('m5s3.common.saving')
                     : t('m5s3.common.saveChanges')}
                 </button>
-                <button type="button" className="tertiary" onClick={() => { setIsEditing(false); setConfirmDelete(false); }}>
+                <button
+                  type="button"
+                  className="tertiary"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setConfirmDelete(false);
+                  }}
+                >
                   {t('common.cancel')}
                 </button>
               </div>
@@ -367,51 +398,54 @@ export function PlanProductPage({
                   onRetry={() => void planQuery.refetch()}
                 />
               ) : null}
-            </form>
-            
+            </div>
+
             {plan.capabilities.canDelete ? (
-              <div
-                className="planning-danger-zone"
-                aria-labelledby="plan-delete-heading"
-                style={{ marginTop: 'var(--space-4)' }}
-              >
-                <h2 id="plan-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
-                <p>{t('m5s3.plan.deleteConsequence')}</p>
+              <div style={{ marginTop: 'var(--space-8)' }}>
                 {!confirmDelete ? (
                   <button
                     type="button"
-                    className="danger"
+                    className="button-link danger-link"
                     onClick={() => setConfirmDelete(true)}
                   >
                     {t('m5s3.common.delete')}
                   </button>
                 ) : (
-                  <div className="planning-confirm-row">
-                    <button
-                      type="button"
-                      className="danger"
-                      onClick={() => deleteMutation.mutate(plan)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      {deleteMutation.isPending
-                        ? t('m5s3.common.deleting')
-                        : t('m5s3.common.confirmDelete')}
-                    </button>
-                    <button
-                      type="button"
-                      className="tertiary"
-                      onClick={() => setConfirmDelete(false)}
-                    >
-                      {t('common.cancel')}
-                    </button>
-                  </div>
+                  <section
+                    className="planning-danger-zone"
+                    aria-labelledby="plan-delete-heading"
+                  >
+                    <h2 id="plan-delete-heading">
+                      {t('m5s3.common.deleteHeading')}
+                    </h2>
+                    <p>{t('m5s3.plan.deleteConsequence')}</p>
+                    <div className="planning-confirm-row">
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => deleteMutation.mutate(plan)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending
+                          ? t('m5s3.common.deleting')
+                          : t('m5s3.common.confirmDelete')}
+                      </button>
+                      <button
+                        type="button"
+                        className="tertiary"
+                        onClick={() => setConfirmDelete(false)}
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                    {deleteMutation.error ? (
+                      <ProblemState
+                        error={deleteMutation.error}
+                        onRetry={() => void planQuery.refetch()}
+                      />
+                    ) : null}
+                  </section>
                 )}
-                {deleteMutation.error ? (
-                  <ProblemState
-                    error={deleteMutation.error}
-                    onRetry={() => void planQuery.refetch()}
-                  />
-                ) : null}
               </div>
             ) : null}
           </section>
@@ -512,8 +546,6 @@ export function PlanProductPage({
           </section>
         ) : null}
       </div>
-
-
     </div>
   );
 }

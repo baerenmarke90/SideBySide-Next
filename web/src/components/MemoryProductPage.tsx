@@ -446,21 +446,21 @@ export function MemoryProductPage({
           ) : null}
 
           {memory.capabilities.canDelete && !offline ? (
-            <div
-              className="memory-danger-zone"
-              aria-label={t('memoryProduct.delete')}
-              style={{ marginTop: 'var(--space-8)' }}
-            >
+            <div style={{ marginTop: 'var(--space-8)' }}>
               {!confirmDelete ? (
                 <button
                   type="button"
-                  className="secondary memory-delete-trigger"
+                  className="button-link danger-link"
                   onClick={() => setConfirmDelete(true)}
                 >
                   {t('memoryProduct.delete')}
                 </button>
               ) : (
-                <div className="memory-delete-confirmation" role="alert">
+                <section
+                  className="memory-danger-zone memory-delete-confirmation"
+                  aria-label={t('memoryProduct.delete')}
+                  role="alert"
+                >
                   <div>
                     <h2>{t('memoryProduct.deleteConfirmTitle')}</h2>
                     <p>{t('memoryProduct.deleteConfirmBody')}</p>
@@ -476,6 +476,7 @@ export function MemoryProductPage({
                     </button>
                     <button
                       type="button"
+                      className="danger"
                       onClick={() => deleteMutation.mutate(memory)}
                       disabled={deleteMutation.isPending}
                     >
@@ -484,14 +485,14 @@ export function MemoryProductPage({
                         : t('memoryProduct.deleteConfirm')}
                     </button>
                   </div>
-                </div>
+                  {deleteMutation.error && (
+                    <ProblemState
+                      error={deleteMutation.error}
+                      onRetry={() => deleteMutation.reset()}
+                    />
+                  )}
+                </section>
               )}
-              {deleteMutation.error ? (
-                <ProblemState
-                  error={deleteMutation.error}
-                  onRetry={() => void reloadCurrentMemory()}
-                />
-              ) : null}
             </div>
           ) : null}
         </section>
@@ -578,8 +579,6 @@ export function MemoryProductPage({
                 createdAt: formatCreatedAt(memory.createdAt),
               })}
             </p>
-          </footer>
-
           </footer>
         </article>
       </div>

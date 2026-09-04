@@ -424,13 +424,9 @@ function CollectionItems({
       className="planning-subsection private-collection-items-section"
       aria-labelledby="private-list-items-title"
     >
-      <div className="layout-section-head">
-        <div>
-          <h2 id="private-list-items-title">
-            {t('privateArea.collections.itemsTitle')}
-          </h2>
-        </div>
-      </div>
+      <h2 id="private-list-items-title" className="sr-only">
+        {t('privateArea.collections.itemsTitle')}
+      </h2>
 
       {collection.capabilities.canEdit ? (
         <form className="planning-inline-create" onSubmit={submitItem}>
@@ -583,6 +579,7 @@ export function PrivateCollectionDetailPage({
   return (
     <div className="page planning-page private-collection-page">
       <PageHeader
+        className="page-heading-collection"
         before={
           <Link className="back-link" to={PRIVATE_COLLECTIONS_PATH}>
             {t('privateArea.collections.detailBack')}
@@ -590,17 +587,47 @@ export function PrivateCollectionDetailPage({
         }
         eyebrow={t('privateArea.privacyLabel')}
         title={
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+            }}
+          >
+            {collection.title}
+            {showTitleSaved ? (
+              <span
+                className="planning-title-saved-hint"
+                role="status"
+                aria-live="polite"
+              >
+                ✓
+              </span>
+            ) : null}
+          </span>
+        }
+        titleAction={
+          collection.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
+        }
+        titleEditor={
           isEditing ? (
             <form
               className="planning-collection-title-form"
               onSubmit={(e) => {
                 submitCollectionTitle(e);
-                if (titleDraft.trim().length > 0) {
-                  setIsEditing(false);
-                }
               }}
             >
-              <label htmlFor="private-collection-edit-title" className="sr-only">
+              <label
+                htmlFor="private-collection-edit-title"
+                className="sr-only"
+              >
                 {t('privateArea.collections.titleLabel')}
               </label>
               <div className="planning-collection-title-row">
@@ -613,7 +640,6 @@ export function PrivateCollectionDetailPage({
                   onChange={(e) => setTitleDraft(e.target.value)}
                   placeholder={t('privateArea.collections.titleLabel')}
                   aria-label={t('privateArea.collections.titleLabel')}
-                  autoFocus
                 />
                 <ListEntryIconButton
                   type="submit"
@@ -646,30 +672,11 @@ export function PrivateCollectionDetailPage({
                 />
               ) : null}
             </form>
-          ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              {collection.title}
-              {showTitleSaved ? (
-                <span className="planning-title-saved-hint" role="status" aria-live="polite">
-                  ✓
-                </span>
-              ) : null}
-            </span>
-          )
+          ) : undefined
         }
         description={t('m5s3.collection.itemCount', {
           count: collection.items.length,
         })}
-        action={
-          collection.capabilities.canEdit && !isEditing ? (
-            <ListEntryIconButton
-              icon="edit"
-              className="tertiary"
-              label={t('common.edit')}
-              onClick={() => setIsEditing(true)}
-            />
-          ) : undefined
-        }
       />
 
       <CollectionItems

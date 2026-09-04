@@ -14,6 +14,7 @@ import { STORY_CHAPTERS_ROUTE } from '../client/routes';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { useTranslation } from '../i18n';
 import { PageHeader } from './PageHeader';
+import { ListEntryIconButton } from './ListEntryActions';
 import { PlanningRelationManager } from './PlanningRelationManager';
 import { ProblemState } from './ProblemState';
 import { UiState } from './UiState';
@@ -90,6 +91,8 @@ export function ChapterProductPage({
         }),
         queryClient.invalidateQueries({ queryKey: key }),
       ]);
+      setIsEditing(false);
+      setConfirmDelete(false);
     },
   });
 
@@ -151,6 +154,15 @@ export function ChapterProductPage({
 
   return (
     <div className="page planning-page">
+      {isEditing ? (
+        <form
+          id="chapter-edit-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitEdit(e);
+          }}
+        />
+      ) : null}
       <PageHeader
         before={
           <Link className="back-link" to={STORY_CHAPTERS_ROUTE}>
@@ -159,8 +171,20 @@ export function ChapterProductPage({
         }
         eyebrow={t('m5s3.chapter.detailEyebrow')}
         title={chapter.title}
+        titleEditor={
+          isEditing ? (
+            <input
+              form="chapter-edit-form"
+              name="title"
+              required
+              maxLength={200}
+              defaultValue={chapter.title}
+              aria-label={t('m5s3.common.title')}
+            />
+          ) : undefined
+        }
         description={chapter.description || t('m5s3.chapter.noDescription')}
-        action={
+        titleAction={
           chapter.capabilities.canEdit && !isEditing ? (
             <ListEntryIconButton
               icon="edit"
@@ -175,20 +199,12 @@ export function ChapterProductPage({
       {isEditing ? (
         <section className="planning-subsection">
           <h2>{t('m5s3.common.edit')}</h2>
-          <form className="form-grid" onSubmit={(e) => { submitEdit(e); setIsEditing(false); }}>
-            <label htmlFor="chapter-edit-title">{t('m5s3.common.title')}</label>
-            <input
-              id="chapter-edit-title"
-              name="title"
-              required
-              maxLength={200}
-              defaultValue={chapter.title}
-              autoFocus
-            />
+          <div className="form-grid">
             <label htmlFor="chapter-edit-description">
               {t('m5s3.common.description')}
             </label>
             <textarea
+              form="chapter-edit-form"
               id="chapter-edit-description"
               name="description"
               rows={4}
@@ -200,6 +216,7 @@ export function ChapterProductPage({
                   {t('m5s3.chapter.startOn')}
                 </label>
                 <input
+                  form="chapter-edit-form"
                   id="chapter-edit-start"
                   name="startOn"
                   type="date"
@@ -211,6 +228,7 @@ export function ChapterProductPage({
                   {t('m5s3.chapter.endOn')}
                 </label>
                 <input
+                  form="chapter-edit-form"
                   id="chapter-edit-end"
                   name="endOn"
                   type="date"
@@ -220,6 +238,7 @@ export function ChapterProductPage({
             </div>
             <label htmlFor="chapter-edit-place">{t('m5s3.common.place')}</label>
             <select
+              form="chapter-edit-form"
               id="chapter-edit-place"
               name="placeId"
               defaultValue={chapter.placeId ?? ''}
@@ -232,12 +251,23 @@ export function ChapterProductPage({
               ))}
             </select>
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <button type="submit" disabled={updateMutation.isPending}>
+              <button
+                form="chapter-edit-form"
+                type="submit"
+                disabled={updateMutation.isPending}
+              >
                 {updateMutation.isPending
                   ? t('m5s3.common.saving')
                   : t('m5s3.common.saveChanges')}
               </button>
-              <button type="button" className="tertiary" onClick={() => { setIsEditing(false); setConfirmDelete(false); }}>
+              <button
+                type="button"
+                className="tertiary"
+                onClick={() => {
+                  setIsEditing(false);
+                  setConfirmDelete(false);
+                }}
+              >
                 {t('common.cancel')}
               </button>
             </div>
@@ -247,51 +277,54 @@ export function ChapterProductPage({
                 onRetry={() => void chapterQuery.refetch()}
               />
             ) : null}
-          </form>
+          </div>
 
           {chapter.capabilities.canDelete ? (
-            <div
-              className="planning-danger-zone"
-              aria-labelledby="chapter-delete-heading"
-              style={{ marginTop: 'var(--space-4)' }}
-            >
-              <h2 id="chapter-delete-heading">{t('m5s3.common.deleteHeading')}</h2>
-              <p>{t('m5s3.chapter.deleteConsequence')}</p>
+            <div style={{ marginTop: 'var(--space-8)' }}>
               {!confirmDelete ? (
                 <button
                   type="button"
-                  className="danger"
+                  className="button-link danger-link"
                   onClick={() => setConfirmDelete(true)}
                 >
                   {t('m5s3.common.delete')}
                 </button>
               ) : (
-                <div className="planning-confirm-row">
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => deleteMutation.mutate(chapter)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    {deleteMutation.isPending
-                      ? t('m5s3.common.deleting')
-                      : t('m5s3.common.confirmDelete')}
-                  </button>
-                  <button
-                    type="button"
-                    className="tertiary"
-                    onClick={() => setConfirmDelete(false)}
-                  >
-                    {t('common.cancel')}
-                  </button>
-                </div>
+                <section
+                  className="planning-danger-zone"
+                  aria-labelledby="chapter-delete-heading"
+                >
+                  <h2 id="chapter-delete-heading">
+                    {t('m5s3.common.deleteHeading')}
+                  </h2>
+                  <p>{t('m5s3.chapter.deleteConsequence')}</p>
+                  <div className="planning-confirm-row">
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => deleteMutation.mutate(chapter)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      {deleteMutation.isPending
+                        ? t('m5s3.common.deleting')
+                        : t('m5s3.common.confirmDelete')}
+                    </button>
+                    <button
+                      type="button"
+                      className="tertiary"
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                  {deleteMutation.error ? (
+                    <ProblemState
+                      error={deleteMutation.error}
+                      onRetry={() => void chapterQuery.refetch()}
+                    />
+                  ) : null}
+                </section>
               )}
-              {deleteMutation.error ? (
-                <ProblemState
-                  error={deleteMutation.error}
-                  onRetry={() => void chapterQuery.refetch()}
-                />
-              ) : null}
             </div>
           ) : null}
         </section>

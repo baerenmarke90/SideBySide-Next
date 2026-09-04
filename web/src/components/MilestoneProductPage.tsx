@@ -361,21 +361,21 @@ export function MilestoneProductPage({
           ) : null}
 
           {milestone.capabilities.canDelete && !offline ? (
-            <div
-              className="memory-danger-zone"
-              aria-label={t('milestoneProduct.delete')}
-              style={{ marginTop: 'var(--space-8)' }}
-            >
+            <div style={{ marginTop: 'var(--space-8)' }}>
               {!confirmDelete ? (
                 <button
                   type="button"
-                  className="secondary"
+                  className="button-link danger-link"
                   onClick={() => setConfirmDelete(true)}
                 >
                   {t('milestoneProduct.delete')}
                 </button>
               ) : (
-                <div className="memory-delete-confirmation" role="alert">
+                <section
+                  className="memory-danger-zone memory-delete-confirmation"
+                  aria-label={t('milestoneProduct.delete')}
+                  role="alert"
+                >
                   <div>
                     <h2>{t('milestoneProduct.deleteConfirmTitle')}</h2>
                     <p>{t('milestoneProduct.deleteConfirmBody')}</p>
@@ -391,6 +391,7 @@ export function MilestoneProductPage({
                     </button>
                     <button
                       type="button"
+                      className="danger"
                       onClick={() => deleteMutation.mutate(milestone)}
                       disabled={deleteMutation.isPending}
                     >
@@ -399,7 +400,7 @@ export function MilestoneProductPage({
                         : t('milestoneProduct.deleteConfirm')}
                     </button>
                   </div>
-                </div>
+                </section>
               )}
               {deleteMutation.error ? (
                 <ProblemState error={deleteMutation.error} />
@@ -477,8 +478,6 @@ export function MilestoneProductPage({
               canComment={milestone.capabilities.canComment}
               offline={offline}
             />
-
-
           </article>
         </div>
       </div>

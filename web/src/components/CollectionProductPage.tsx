@@ -389,6 +389,7 @@ export function CollectionProductPage({
   return (
     <div className="page planning-page">
       <PageHeader
+        className="page-heading-collection"
         before={
           <Link className="back-link" to={MORE_COLLECTIONS_ROUTE}>
             {t('m5s3.common.backToCollections')}
@@ -396,14 +397,42 @@ export function CollectionProductPage({
         }
         eyebrow={t('m5s3.collection.detailEyebrow')}
         title={
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-2)',
+            }}
+          >
+            {collection.title}
+            {showTitleSaved ? (
+              <span
+                className="planning-title-saved-hint"
+                role="status"
+                aria-live="polite"
+              >
+                ✓
+              </span>
+            ) : null}
+          </span>
+        }
+        titleAction={
+          collection.capabilities.canEdit && !isEditing ? (
+            <ListEntryIconButton
+              icon="edit"
+              className="tertiary"
+              label={t('common.edit')}
+              onClick={() => setIsEditing(true)}
+            />
+          ) : undefined
+        }
+        titleEditor={
           isEditing ? (
             <form
               className="planning-collection-title-form"
               onSubmit={(e) => {
+                e.preventDefault();
                 submitCollection(e);
-                if (titleDraft.trim().length > 0) {
-                  setIsEditing(false);
-                }
               }}
             >
               <label htmlFor="collection-edit-title" className="sr-only">
@@ -419,7 +448,6 @@ export function CollectionProductPage({
                   onChange={(e) => setTitleDraft(e.target.value)}
                   placeholder={t('m5s3.common.title')}
                   aria-label={t('m5s3.common.title')}
-                  autoFocus
                 />
                 <ListEntryIconButton
                   type="submit"
@@ -437,6 +465,7 @@ export function CollectionProductPage({
                   className="button-link secondary-link"
                   onClick={() => {
                     setIsEditing(false);
+                    setConfirmDelete(false);
                     setTitleDraft(collection.title);
                   }}
                   disabled={updateCollection.isPending}
@@ -451,28 +480,9 @@ export function CollectionProductPage({
                 />
               ) : null}
             </form>
-          ) : (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              {collection.title}
-              {showTitleSaved ? (
-                <span className="planning-title-saved-hint" role="status" aria-live="polite">
-                  ✓
-                </span>
-              ) : null}
-            </span>
-          )
-        }
-        description={t('m5s3.collection.itemCount', { count: items.length })}
-        action={
-          collection.capabilities.canEdit && !isEditing ? (
-            <ListEntryIconButton
-              icon="edit"
-              className="tertiary"
-              label={t('common.edit')}
-              onClick={() => setIsEditing(true)}
-            />
           ) : undefined
         }
+        description={t('m5s3.collection.itemCount', { count: items.length })}
       />
 
       <section

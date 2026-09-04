@@ -501,21 +501,21 @@ export function HeartMomentProductPage({
           ) : null}
 
           {heartMoment.capabilities.canDelete && !offline ? (
-            <div
-              className="memory-danger-zone"
-              aria-label={t('heartMomentProduct.delete')}
-              style={{ marginTop: 'var(--space-8)' }}
-            >
+            <div style={{ marginTop: 'var(--space-8)' }}>
               {!confirmDelete ? (
                 <button
                   type="button"
-                  className="secondary"
+                  className="button-link danger-link"
                   onClick={() => setConfirmDelete(true)}
                 >
                   {t('heartMomentProduct.delete')}
                 </button>
               ) : (
-                <div className="memory-delete-confirmation" role="alert">
+                <section
+                  className="memory-danger-zone memory-delete-confirmation"
+                  aria-label={t('heartMomentProduct.delete')}
+                  role="alert"
+                >
                   <div>
                     <h2>{t('heartMomentProduct.deleteConfirmTitle')}</h2>
                     <p>{t('heartMomentProduct.deleteConfirmBody')}</p>
@@ -531,6 +531,7 @@ export function HeartMomentProductPage({
                     </button>
                     <button
                       type="button"
+                      className="danger"
                       onClick={() => deleteMutation.mutate(heartMoment)}
                       disabled={deleteMutation.isPending}
                     >
@@ -539,7 +540,7 @@ export function HeartMomentProductPage({
                         : t('heartMomentProduct.deleteConfirm')}
                     </button>
                   </div>
-                </div>
+                </section>
               )}
               {deleteMutation.error ? (
                 <ProblemState error={deleteMutation.error} />
@@ -692,8 +693,6 @@ export function HeartMomentProductPage({
             ) : (
               <p className="muted">{t('heartMomentProduct.commentsPrivate')}</p>
             )}
-
-
           </article>
         </div>
       </div>
