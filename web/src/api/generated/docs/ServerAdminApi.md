@@ -10,8 +10,10 @@ All URIs are relative to *http://localhost*
 | [**getServerAdminOverviewApiV1ServerAdminOverviewGet**](ServerAdminApi.md#getserveradminoverviewapiv1serveradminoverviewget) | **GET** /api/v1/server-admin/overview | Get Server Admin Overview |
 | [**getServerAdminSettingsApiV1ServerAdminSettingsGet**](ServerAdminApi.md#getserveradminsettingsapiv1serveradminsettingsget) | **GET** /api/v1/server-admin/settings | Get Server Admin Settings |
 | [**getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet**](ServerAdminApi.md#getserveradminspaceapiv1serveradminspacesspaceidget) | **GET** /api/v1/server-admin/spaces/{space_id} | Get Server Admin Space |
+| [**getServerAdminStorageApiV1ServerAdminStorageGet**](ServerAdminApi.md#getserveradminstorageapiv1serveradminstorageget) | **GET** /api/v1/server-admin/storage | Get Server Admin Storage |
 | [**issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost**](ServerAdminApi.md#issueserveradminoperatorrecoveryapiv1serveradminaccountsaccountidrecoveryoperatorpost) | **POST** /api/v1/server-admin/accounts/{accountId}/recovery/operator | Issue Server Admin Operator Recovery |
 | [**listServerAdminAccountsApiV1ServerAdminAccountsGet**](ServerAdminApi.md#listserveradminaccountsapiv1serveradminaccountsget) | **GET** /api/v1/server-admin/accounts | List Server Admin Accounts |
+| [**listServerAdminJobsApiV1ServerAdminJobsGet**](ServerAdminApi.md#listserveradminjobsapiv1serveradminjobsget) | **GET** /api/v1/server-admin/jobs | List Server Admin Jobs |
 | [**listServerAdminSpacesApiV1ServerAdminSpacesGet**](ServerAdminApi.md#listserveradminspacesapiv1serveradminspacesget) | **GET** /api/v1/server-admin/spaces | List Server Admin Spaces |
 | [**requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost**](ServerAdminApi.md#requestserveradminaccountrecoveryemailapiv1serveradminaccountsaccountidrecoveryemailpost) | **POST** /api/v1/server-admin/accounts/{accountId}/recovery/email | Request Server Admin Account Recovery Email |
 | [**revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost**](ServerAdminApi.md#revokeserveradminaccountsessionsapiv1serveradminaccountsaccountidsessionsrevokepost) | **POST** /api/v1/server-admin/accounts/{accountId}/sessions/revoke | Revoke Server Admin Account Sessions |
@@ -398,6 +400,67 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## getServerAdminStorageApiV1ServerAdminStorageGet
+
+> ServerAdminStorageOverview getServerAdminStorageApiV1ServerAdminStorageGet()
+
+Get Server Admin Storage
+
+Return authoritative aggregate storage state, never an attachment directory.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { GetServerAdminStorageApiV1ServerAdminStorageGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  try {
+    const data = await api.getServerAdminStorageApiV1ServerAdminStorageGet();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**ServerAdminStorageOverview**](ServerAdminStorageOverview.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost
 
 > ServerAdminRecoveryProof issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost(accountId)
@@ -527,6 +590,91 @@ example().catch(console.error);
 ### Return type
 
 [**ServerAdminAccountList**](ServerAdminAccountList.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## listServerAdminJobsApiV1ServerAdminJobsGet
+
+> ServerAdminJobList listServerAdminJobsApiV1ServerAdminJobsGet(status, kind, exhausted, createdWithin, limit, offset)
+
+List Server Admin Jobs
+
+List technical job state without selecting sensitive queue columns.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { ListServerAdminJobsApiV1ServerAdminJobsGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' (optional)
+    status: status_example,
+    // string (optional)
+    kind: kind_example,
+    // boolean (optional)
+    exhausted: true,
+    // '24h' | '7d' | '30d' (optional)
+    createdWithin: createdWithin_example,
+    // number (optional)
+    limit: 56,
+    // number (optional)
+    offset: 56,
+  } satisfies ListServerAdminJobsApiV1ServerAdminJobsGetRequest;
+
+  try {
+    const data = await api.listServerAdminJobsApiV1ServerAdminJobsGet(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **status** | `PENDING`, `RUNNING`, `SUCCEEDED`, `FAILED` |  | [Optional] [Defaults to `undefined`] [Enum: PENDING, RUNNING, SUCCEEDED, FAILED] |
+| **kind** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **exhausted** | `boolean` |  | [Optional] [Defaults to `undefined`] |
+| **createdWithin** | `24h`, `7d`, `30d` |  | [Optional] [Defaults to `undefined`] [Enum: 24h, 7d, 30d] |
+| **limit** | `number` |  | [Optional] [Defaults to `50`] |
+| **offset** | `number` |  | [Optional] [Defaults to `0`] |
+
+### Return type
+
+[**ServerAdminJobList**](ServerAdminJobList.md)
 
 ### Authorization
 

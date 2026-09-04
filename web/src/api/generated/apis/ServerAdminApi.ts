@@ -54,6 +54,11 @@ import {
     ServerAdminEmailVerificationRequestToJSON,
 } from '../models/ServerAdminEmailVerificationRequest';
 import {
+    type ServerAdminJobList,
+    ServerAdminJobListFromJSON,
+    ServerAdminJobListToJSON,
+} from '../models/ServerAdminJobList';
+import {
     type ServerAdminOverview,
     ServerAdminOverviewFromJSON,
     ServerAdminOverviewToJSON,
@@ -93,6 +98,11 @@ import {
     ServerAdminSpaceListFromJSON,
     ServerAdminSpaceListToJSON,
 } from '../models/ServerAdminSpaceList';
+import {
+    type ServerAdminStorageOverview,
+    ServerAdminStorageOverviewFromJSON,
+    ServerAdminStorageOverviewToJSON,
+} from '../models/ServerAdminStorageOverview';
 
 export interface GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetRequest {
     accountId: string;
@@ -110,6 +120,15 @@ export interface ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest {
     query?: string | null;
     status?: ListServerAdminAccountsApiV1ServerAdminAccountsGetStatusEnum;
     verification?: ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum;
+    limit?: number;
+    offset?: number;
+}
+
+export interface ListServerAdminJobsApiV1ServerAdminJobsGetRequest {
+    status?: ListServerAdminJobsApiV1ServerAdminJobsGetStatusEnum;
+    kind?: string | null;
+    exhausted?: boolean | null;
+    createdWithin?: ListServerAdminJobsApiV1ServerAdminJobsGetCreatedWithinEnum;
     limit?: number;
     offset?: number;
 }
@@ -396,6 +415,45 @@ export class ServerAdminApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getServerAdminStorageApiV1ServerAdminStorageGet without sending the request
+     */
+    async getServerAdminStorageApiV1ServerAdminStorageGetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/storage`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return authoritative aggregate storage state, never an attachment directory.
+     * Get Server Admin Storage
+     */
+    async getServerAdminStorageApiV1ServerAdminStorageGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminStorageOverview>> {
+        const requestOptions = await this.getServerAdminStorageApiV1ServerAdminStorageGetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminStorageOverviewFromJSON(jsonValue));
+    }
+
+    /**
+     * Return authoritative aggregate storage state, never an attachment directory.
+     * Get Server Admin Storage
+     */
+    async getServerAdminStorageApiV1ServerAdminStorageGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminStorageOverview> {
+        const response = await this.getServerAdminStorageApiV1ServerAdminStorageGetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost without sending the request
      */
     async issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequestOpts(requestParameters: IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest): Promise<runtime.RequestOpts> {
@@ -496,6 +554,69 @@ export class ServerAdminApi extends runtime.BaseAPI {
      */
     async listServerAdminAccountsApiV1ServerAdminAccountsGet(requestParameters: ListServerAdminAccountsApiV1ServerAdminAccountsGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminAccountList> {
         const response = await this.listServerAdminAccountsApiV1ServerAdminAccountsGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listServerAdminJobsApiV1ServerAdminJobsGet without sending the request
+     */
+    async listServerAdminJobsApiV1ServerAdminJobsGetRequestOpts(requestParameters: ListServerAdminJobsApiV1ServerAdminJobsGetRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['status'] != null) {
+            queryParameters['status'] = requestParameters['status'];
+        }
+
+        if (requestParameters['kind'] != null) {
+            queryParameters['kind'] = requestParameters['kind'];
+        }
+
+        if (requestParameters['exhausted'] != null) {
+            queryParameters['exhausted'] = requestParameters['exhausted'];
+        }
+
+        if (requestParameters['createdWithin'] != null) {
+            queryParameters['createdWithin'] = requestParameters['createdWithin'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        if (requestParameters['offset'] != null) {
+            queryParameters['offset'] = requestParameters['offset'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/jobs`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * List technical job state without selecting sensitive queue columns.
+     * List Server Admin Jobs
+     */
+    async listServerAdminJobsApiV1ServerAdminJobsGetRaw(requestParameters: ListServerAdminJobsApiV1ServerAdminJobsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminJobList>> {
+        const requestOptions = await this.listServerAdminJobsApiV1ServerAdminJobsGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminJobListFromJSON(jsonValue));
+    }
+
+    /**
+     * List technical job state without selecting sensitive queue columns.
+     * List Server Admin Jobs
+     */
+    async listServerAdminJobsApiV1ServerAdminJobsGet(requestParameters: ListServerAdminJobsApiV1ServerAdminJobsGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminJobList> {
+        const response = await this.listServerAdminJobsApiV1ServerAdminJobsGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -876,6 +997,25 @@ export const ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum 
     unverified: 'unverified'
 } as const;
 export type ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum = typeof ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum[keyof typeof ListServerAdminAccountsApiV1ServerAdminAccountsGetVerificationEnum];
+/**
+ * @export
+ */
+export const ListServerAdminJobsApiV1ServerAdminJobsGetStatusEnum = {
+    PENDING: 'PENDING',
+    RUNNING: 'RUNNING',
+    SUCCEEDED: 'SUCCEEDED',
+    FAILED: 'FAILED'
+} as const;
+export type ListServerAdminJobsApiV1ServerAdminJobsGetStatusEnum = typeof ListServerAdminJobsApiV1ServerAdminJobsGetStatusEnum[keyof typeof ListServerAdminJobsApiV1ServerAdminJobsGetStatusEnum];
+/**
+ * @export
+ */
+export const ListServerAdminJobsApiV1ServerAdminJobsGetCreatedWithinEnum = {
+    _24h: '24h',
+    _7d: '7d',
+    _30d: '30d'
+} as const;
+export type ListServerAdminJobsApiV1ServerAdminJobsGetCreatedWithinEnum = typeof ListServerAdminJobsApiV1ServerAdminJobsGetCreatedWithinEnum[keyof typeof ListServerAdminJobsApiV1ServerAdminJobsGetCreatedWithinEnum];
 /**
  * @export
  */
