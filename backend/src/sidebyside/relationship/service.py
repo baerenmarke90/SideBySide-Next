@@ -35,22 +35,29 @@ class SpaceErrorCode:
 
 
 def require_membership(session: Session, account: Account, space_id: UUID) -> Membership:
-    """Return the active membership, or 404.
+    """Return and share-lock the active Membership, or privacy-safe 404.
 
     Deliberately use NotFoundError rather than ForbiddenError because a 403
     confirms that the Space exists. Someone probing foreign IDs must not learn
     which ones exist. To the caller, another Space is indistinguishable from
     one that does not exist.
 
-    An ended membership follows the same path: after leaving the Space, an
-    account no longer sees its content.
+    The read lock is also the #518 lifecycle barrier. A request that has been
+    authorized for this Account holds the Membership in `ACTIVE` state until
+    its transaction finishes. Self-offboarding takes an exclusive lock on the
+    same row before changing it to `LEFT`, so an already-authorized mutation
+    must commit or roll back before the exit can become durable; a request that
+    starts afterwards sees no active Membership and cannot create a stale
+    post-exit effect.
     """
     membership = session.execute(
-        select(Membership).where(
+        select(Membership)
+        .where(
             Membership.account_id == account.id,
             Membership.space_id == space_id,
             Membership.status == MembershipStatus.ACTIVE.value,
         )
+        .with_for_update(read=True)
     ).scalar_one_or_none()
 
     if membership is None:
