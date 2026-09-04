@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`avatarAttachmentId` | string
 `birthday` | Date
 `birthdayYearKnown` | boolean
 `createdAt` | Date
@@ -23,6 +24,7 @@ import type { RelatedPersonView } from ''
 
 // TODO: Update the object below with actual values
 const example = {
+  "avatarAttachmentId": null,
   "birthday": null,
   "birthdayYearKnown": null,
   "createdAt": null,

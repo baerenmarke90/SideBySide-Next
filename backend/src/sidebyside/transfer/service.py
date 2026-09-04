@@ -399,6 +399,11 @@ def _media_rows(
         for row in rows.get("heart_moments", [])
         if isinstance(row.get("attachment_id"), UUID)
     )
+    attachment_ids.update(
+        row["avatar_attachment_id"]
+        for row in rows.get("related_persons", [])
+        if isinstance(row.get("avatar_attachment_id"), UUID)
+    )
     if not attachment_ids:
         return []
     metadata = MetaData()
@@ -1018,6 +1023,10 @@ def _validate_media(
         row = _row_snake(raw)
         if row.get("attachment_id") is not None:
             referenced.add(_uuid(row["attachment_id"], ErrorCode.TRANSFER_RELATION_INVALID))
+    for raw in tables.get("related_persons", []):
+        row = _row_snake(raw)
+        if row.get("avatar_attachment_id") is not None:
+            referenced.add(_uuid(row["avatar_attachment_id"], ErrorCode.TRANSFER_RELATION_INVALID))
     indexed: set[UUID] = set()
     for item in media:
         source_id = _uuid(item.get("sourceId"), ErrorCode.TRANSFER_RELATION_INVALID)

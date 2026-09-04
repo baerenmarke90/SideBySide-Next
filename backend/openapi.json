@@ -399,6 +399,7 @@
             "enum": [
               "MEMORY",
               "HEART_MOMENT",
+              "RELATED_PERSON",
               "NONE"
             ],
             "title": "Parenttype",
@@ -4629,6 +4630,18 @@
       },
       "RelatedPersonFields": {
         "properties": {
+          "avatarAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarattachmentid"
+          },
           "birthday": {
             "anyOf": [
               {
@@ -4669,6 +4682,18 @@
       },
       "RelatedPersonView": {
         "properties": {
+          "avatarAttachmentId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarattachmentid"
+          },
           "birthday": {
             "anyOf": [
               {

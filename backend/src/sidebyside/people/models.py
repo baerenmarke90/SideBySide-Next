@@ -25,6 +25,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
+    ForeignKey,
     ForeignKeyConstraint,
     Index,
     SmallInteger,
@@ -115,6 +116,11 @@ class RelatedPerson(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin,
         default=CRYPTO_VERSION_PLAINTEXT,
         server_default=text("0"),
     )
+    avatar_attachment_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("attachments.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     payload: Mapped[RelatedPersonPayload] = mapped_column(
         ProtectedPayloadJSON(RelatedPersonPayload),
         nullable=False,
@@ -129,6 +135,10 @@ class RelatedPerson(IdMixin, TimestampMixin, VersionMixin, PrivateResourceMixin,
             "space_id",
             "privacy_class",
             name="uq_related_persons_person_link",
+        ),
+        UniqueConstraint(
+            "avatar_attachment_id",
+            name="uq_related_persons_avatar_attachment",
         ),
         CheckConstraint(
             "relationship IN ('CHILD', 'PARENT', 'SIBLING', 'FRIEND', 'OTHER')",

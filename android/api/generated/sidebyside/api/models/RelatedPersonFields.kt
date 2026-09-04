@@ -36,6 +36,7 @@ import kotlinx.serialization.Contextual
  * @param displayName 
  * @param relationship 
  * @param visibility 
+ * @param avatarAttachmentId 
  * @param birthday 
  * @param birthdayYearKnown 
  */
@@ -51,6 +52,9 @@ data class RelatedPersonFields (
 
     @Contextual @SerialName(value = "visibility")
     val visibility: ContentVisibility,
+
+    @Contextual @SerialName(value = "avatarAttachmentId")
+    val avatarAttachmentId: java.util.UUID? = null,
 
     @Contextual @SerialName(value = "birthday")
     val birthday: java.time.LocalDate? = null,

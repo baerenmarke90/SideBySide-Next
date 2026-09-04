@@ -144,6 +144,7 @@ def parent_of(session: Session, attachment_id: UUID) -> tuple[str, UUID] | None:
     visibility.
     """
     from sidebyside.heart_moments.models import HeartMoment
+    from sidebyside.people.models import RelatedPerson
 
     memory_id = session.execute(
         select(MemoryAttachment.memory_id).where(MemoryAttachment.attachment_id == attachment_id)
@@ -156,6 +157,12 @@ def parent_of(session: Session, attachment_id: UUID) -> tuple[str, UUID] | None:
     ).scalar_one_or_none()
     if heart_moment_id is not None:
         return "HEART_MOMENT", heart_moment_id
+
+    related_person_id = session.execute(
+        select(RelatedPerson.id).where(RelatedPerson.avatar_attachment_id == attachment_id)
+    ).scalar_one_or_none()
+    if related_person_id is not None:
+        return "RELATED_PERSON", related_person_id
 
     account_id = session.execute(
         select(AccountProfileAttachment.account_id).where(
