@@ -2,6 +2,7 @@ package de.sidebyside.next.account
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -344,7 +345,7 @@ private fun AccountDeletionConfirmationDialog(
 @Composable
 private fun AccountDeletionDialog(
     onDismiss: () -> Unit,
-    content: @Composable Column.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
