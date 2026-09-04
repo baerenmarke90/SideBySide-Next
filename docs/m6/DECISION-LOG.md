@@ -26,6 +26,7 @@ that classification.
 | M6-D11 | Account deletion is distinct from Space/relationship offboarding and both are launch data-lifecycle concerns. | FROZEN BOUNDARY | #518, #520 |
 | M6-D12 | No new orchestration/queue/backup/export platform is introduced without Reuse-before-build evidence and demonstrated need. | FROZEN | repository governance |
 | M6-D13 | Commercial entitlements are Space/couple-scoped, downgrade is strictly non-destructive, Self-Hosted is offline-resilient, and domain gating uses normalized capabilities. | FROZEN | #262, `FREEMIUM-FEATURE-MATRIX.md` v1.1, ADR 0006 |
+| M6-D14 | V1 Space offboarding is self-exit only for normal clients: `ACTIVE -> LEFT`, no partner removal, no implicit reconnect, and a new relationship always receives a new Space. | FROZEN | #518, `SPACE-OFFBOARDING-LIFECYCLE.md` v1.0 |
 
 ## Blocking decisions
 
@@ -42,7 +43,7 @@ that classification.
 
 ### M6-B02 — Complete Account deletion/retention matrix
 
-**Status:** `FROZEN / RESOLVED` by `ACCOUNT-DELETION-RETENTION.md` v1.0 under #520. Runtime implementation and final G5 evidence remain open.
+**Status:** `FROZEN / RESOLVED` by `ACCOUNT-DELETION-RETENTION.md` v1.0 under #520. Runtime, public self-service API/mail and Web/Android cleanup are completed through #651-#654; final integrated G5 evidence remains owned by #524.
 
 The frozen contract requires:
 
@@ -65,6 +66,42 @@ versioned supported deployment representation. It must reuse #375/#190 rather th
 creating Cloud-only Domain semantics.
 
 ### M6-B04 — Launch entitlement-source adapters
+
+**Status:** `BLOCKING` after #262/#523 for every commercial source actually used at
+launch.
+
+One focused issue/PR is required per selected source. Examples may include Google
+Play, a hosted subscription provider or a Self-Hosted commercial license, but M6-S0
+does not assume that all examples are required. Each adapter maps provider evidence
+into #523; no provider SDK/state may leak into feature code.
+
+### M6-B05 — Space/relationship offboarding lifecycle
+
+**Status:** `FROZEN / RESOLVED` by `SPACE-OFFBOARDING-LIFECYCLE.md` v1.0 under #518. Runtime/client implementation and final G5 evidence remain open.
+
+The frozen V1 contract requires:
+
+- normal clients may end only their own active Membership (`ACTIVE -> LEFT`); no unilateral partner-removal control is exposed;
+- ordinary self-exit preserves shared history while another active member remains and never transfers ownership;
+- the leaving Account's Space-scoped `OWNER_ONLY` data is deleted rather than stranded as inaccessible ghost data; #345 `PERSONAL` export is the optional pre-exit portability path;
+- pending/running Transfer work does not gain post-exit authorization and no special breakup archive/grace credential is added;
+- a Space with any ended Membership is relationship-history locked: stale invitations cannot add a new partner and ordinary `add_member()` cannot reactivate an ended Membership;
+- V1 has no reconnect; a new or renewed relationship creates a new Space;
+- zero-active Spaces are inaccessible immediately and enter a bounded 30-day retention window before existing cleanup primitives purge the orphaned shared Space;
+- account sessions remain valid after leaving one Space while Web/Android clear only the exited Space state/cache/drafts and move to another active Space or the existing awaiting-Space state;
+- membership-sensitive jobs/provider effects must revalidate current authorization at the side-effect boundary;
+- exit, privacy cleanup and essential portability remain non-paywallable.
+
+### M6-B06 — Cloud/Managed launch topology
+
+**Status:** `BLOCKING` for managed launch support, owner #521.
+
+The initial managed deployment must freeze API/Web/worker/migrate/database/media,
+secret ownership, ingress, backup responsibility, capacity assumptions and one
+versioned supported deployment representation. It must reuse #375/#190 rather than
+creating Cloud-only Domain semantics.
+
+### M6-B07 — Launch entitlement-source adapters
 
 **Status:** `BLOCKING` after #262/#523 for every commercial source actually used at
 launch.
