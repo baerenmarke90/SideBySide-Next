@@ -168,17 +168,20 @@ type IconButtonProps = Omit<
 > & {
   label: string;
   icon: 'save' | 'delete' | 'reorder' | 'add';
+  variant?: 'tertiary' | 'add';
 };
 
 export function ListEntryIconButton({
   label,
   icon,
+  variant = icon === 'add' ? 'add' : 'tertiary',
   className,
   type = 'button',
   ...props
 }: IconButtonProps) {
   const classes = [
     'list-entry-icon-button',
+    variant === 'add' ? 'list-entry-add-button' : null,
     icon === 'reorder' ? 'list-entry-drag-handle' : null,
     className,
   ]

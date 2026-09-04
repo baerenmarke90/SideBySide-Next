@@ -34,3 +34,38 @@
 .list-entry-dragging {
   opacity: 0.72;
 }
+
+button.list-entry-icon-button.list-entry-add-button {
+  color: var(--color-shared);
+  background: var(--color-shared-surface);
+  border: 1px solid var(--color-shared);
+  border-radius: var(--radius-medium);
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    border-color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+button.list-entry-icon-button.list-entry-add-button:hover:not(:disabled) {
+  background: var(--color-shared);
+  color: var(--color-surface, #ffffff);
+  border-color: var(--color-shared);
+}
+
+button.list-entry-icon-button.list-entry-add-button.is-private,
+.private-collection button.list-entry-icon-button.list-entry-add-button {
+  color: var(--color-private);
+  background: var(--color-brand-surface);
+  border-color: var(--color-private);
+}
+
+button.list-entry-icon-button.list-entry-add-button.is-private:hover:not(
+  :disabled
+),
+.private-collection
+  button.list-entry-icon-button.list-entry-add-button:hover:not(:disabled) {
+  background: var(--color-private);
+  color: var(--color-surface, #ffffff);
+  border-color: var(--color-private);
+}

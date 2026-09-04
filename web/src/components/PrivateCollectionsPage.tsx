@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -13,18 +13,14 @@ import {
   PRIVATE_COLLECTIONS_PATH,
   privateApiCall,
   privateAreaQueryKeys,
-  privateCollectionEditPath,
   privateCollectionPath,
 } from '../client/privateArea';
 import { useTranslation } from '../i18n';
 import { ListEntryIconButton, useListItemReorder } from './ListEntryActions';
 import { PageHeader } from './PageHeader';
 import { ProblemState } from './ProblemState';
-import {
-  DeleteConfirmation,
-  LoadMoreButton,
-  PrivateAreaBackToMore,
-} from './PrivateAreaLayout';
+import './SharedPlanningPages.css';
+import { LoadMoreButton, PrivateAreaBackToMore } from './PrivateAreaLayout';
 import { UiState } from './UiState';
 
 const PAGE_SIZE = 20;
@@ -339,57 +335,51 @@ function CollectionItems({
     updateMutation.mutate({ item, update: { title } });
   }
 
-  const openItems = items.filter((item) => !item.completed);
-  const completedItems = items.filter((item) => item.completed);
-
   function renderChecklistItem(item: PrivateCollectionItemDetail) {
     return (
       <li
         key={item.id}
         data-sortable-item-id={item.id}
         className={[
-          'private-area-item',
-          'private-checklist-row',
-          item.completed ? 'is-completed' : null,
+          item.completed ? 'planning-item-completed' : null,
           reorder.activeItemId === item.id ? 'list-entry-dragging' : null,
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        <div className="private-area-item-main">
-          <label
-            className="private-checklist-check-label"
-            htmlFor={`private-item-check-${item.id}`}
-          >
-            <input
-              id={`private-item-check-${item.id}`}
-              type="checkbox"
-              className="private-checklist-checkbox"
-              checked={item.completed}
-              onChange={() =>
-                updateMutation.mutate({
-                  item,
-                  update: { completed: !item.completed },
-                })
-              }
-              aria-label={
-                item.completed
-                  ? t('privateArea.collections.markOpen')
-                  : t('privateArea.collections.markComplete')
-              }
-              disabled={updateMutation.isPending}
-            />
-          </label>
+        <button
+          type="button"
+          className="planning-check is-private"
+          aria-pressed={item.completed}
+          aria-label={
+            item.completed
+              ? t('privateArea.collections.markOpen')
+              : t('privateArea.collections.markComplete')
+          }
+          onClick={() =>
+            updateMutation.mutate({
+              item,
+              update: { completed: !item.completed },
+            })
+          }
+          disabled={
+            !collection.capabilities.canEdit || updateMutation.isPending
+          }
+        >
+          {item.completed ? '✓' : ''}
+        </button>
+        <div className="planning-item-title-form">
           <label className="sr-only" htmlFor={`private-item-${item.id}`}>
             {t('privateArea.collections.rename')}
           </label>
           <input
             id={`private-item-${item.id}`}
             name="title"
+            className={`private-checklist-title-input${item.completed ? ' is-completed' : ''}`}
             defaultValue={item.title}
-            className={`private-checklist-title-input ${item.completed ? 'is-completed' : ''}`}
             required
             maxLength={200}
+            disabled={!collection.capabilities.canEdit}
             onBlur={(event) => {
               commitRename(
                 item,
@@ -408,15 +398,15 @@ function CollectionItems({
             }}
           />
         </div>
-        <div className="private-area-actions">
-          {collection.capabilities.canEdit ? (
-            <ListEntryIconButton
-              icon="reorder"
-              className="tertiary"
-              label={t('privateArea.collections.reorderItem')}
-              {...reorder.handleProps(item.id)}
-            />
-          ) : null}
+        {collection.capabilities.canEdit ? (
+          <ListEntryIconButton
+            icon="reorder"
+            className="tertiary"
+            label={t('privateArea.collections.reorderItem')}
+            {...reorder.handleProps(item.id)}
+          />
+        ) : null}
+        {collection.capabilities.canEdit ? (
           <ListEntryIconButton
             icon="delete"
             className="tertiary"
@@ -424,22 +414,27 @@ function CollectionItems({
             onClick={() => deleteMutation.mutate(item)}
             disabled={deleteMutation.isPending}
           />
-        </div>
+        ) : null}
       </li>
     );
   }
 
   return (
     <section
-      className="private-area-section"
+      className="planning-subsection private-collection-items-section"
       aria-labelledby="private-list-items-title"
     >
-      <h2 id="private-list-items-title">
-        {t('privateArea.collections.itemsTitle')}
-      </h2>
-      <form className="private-area-inline-form" onSubmit={submitItem}>
-        <div className="field-group">
-          <label htmlFor="private-list-new-item">
+      <div className="layout-section-head">
+        <div>
+          <h2 id="private-list-items-title">
+            {t('privateArea.collections.itemsTitle')}
+          </h2>
+        </div>
+      </div>
+
+      {collection.capabilities.canEdit ? (
+        <form className="planning-inline-create" onSubmit={submitItem}>
+          <label className="sr-only" htmlFor="private-list-new-item">
             {t('privateArea.collections.itemTitleLabel')}
           </label>
           <input
@@ -447,39 +442,34 @@ function CollectionItems({
             name="title"
             required
             maxLength={200}
+            placeholder={t('privateArea.collections.itemTitleLabel')}
           />
-        </div>
-        <button type="submit" disabled={createMutation.isPending}>
-          {createMutation.isPending
-            ? t('privateArea.collections.addingItem')
-            : t('privateArea.collections.addItem')}
-        </button>
-      </form>
+          <ListEntryIconButton
+            type="submit"
+            icon="add"
+            className="list-entry-add-button is-private"
+            label={
+              createMutation.isPending
+                ? t('common.saving')
+                : t('privateArea.collections.addItem')
+            }
+            disabled={createMutation.isPending}
+          />
+        </form>
+      ) : null}
+
       {createMutation.error ? (
         <ProblemState error={createMutation.error} />
       ) : null}
-      {items.length === 0 ? (
-        <p>{t('privateArea.collections.noItems')}</p>
-      ) : null}
-      {openItems.length > 0 ? (
-        <ol className="private-area-item-list checklist-open">
-          {openItems.map(renderChecklistItem)}
+
+      {items.length > 0 ? (
+        <ol className="planning-collection-items private-collection-items">
+          {items.map(renderChecklistItem)}
         </ol>
-      ) : null}
-      {completedItems.length > 0 ? (
-        <section
-          className="private-checklist-completed-section"
-          aria-label={t('privateArea.collections.completedSection')}
-        >
-          <h3 className="private-checklist-completed-heading">
-            {t('privateArea.collections.completedSection')} (
-            {completedItems.length})
-          </h3>
-          <ol className="private-area-item-list checklist-completed">
-            {completedItems.map(renderChecklistItem)}
-          </ol>
-        </section>
-      ) : null}
+      ) : (
+        <p className="planning-empty">{t('privateArea.collections.noItems')}</p>
+      )}
+
       {reorderMutation.isPending ? (
         <p role="status">{t('privateArea.collections.reordering')}</p>
       ) : null}
@@ -505,13 +495,50 @@ export function PrivateCollectionDetailPage({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { collectionId, query } = usePrivateCollection(api, accountId, spaceId);
-  const deleteMutation = useMutation({
-    mutationFn: (collection: PrivateCollectionDetail) =>
-      privateApiCall(() =>
-        api.deletePrivateCollection({
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [showTitleSaved, setShowTitleSaved] = useState(false);
+
+  const collection = query.data;
+
+  useEffect(() => {
+    if (collection?.title) {
+      setTitleDraft(collection.title);
+    }
+  }, [collection?.title]);
+
+  const updateCollectionMutation = useMutation({
+    mutationFn: (newTitle: string) => {
+      if (!collection) throw new Error('Missing collection');
+      return privateApiCall(() =>
+        api.updatePrivateCollection({
           spaceId,
           collectionId: collection.id,
           ifMatch: String(collection.version),
+          privateCollectionUpdate: { title: newTitle },
+        }),
+      );
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(
+        privateAreaQueryKeys.collection(accountId, spaceId, updated.id),
+        updated,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: privateAreaQueryKeys.collections(accountId, spaceId),
+      });
+      setShowTitleSaved(true);
+      setTimeout(() => setShowTitleSaved(false), 2000);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (collectionToDelete: PrivateCollectionDetail) =>
+      privateApiCall(() =>
+        api.deletePrivateCollection({
+          spaceId,
+          collectionId: collectionToDelete.id,
+          ifMatch: String(collectionToDelete.version),
         }),
       ),
     onSuccess: async () => {
@@ -541,11 +568,19 @@ export function PrivateCollectionDetailPage({
       <ProblemState error={query.error} onRetry={() => void query.refetch()} />
     );
   }
-  const collection = query.data;
   if (!collection) return null;
 
+  const isTitleDirty =
+    titleDraft.trim().length > 0 && titleDraft.trim() !== collection.title;
+
+  function submitCollectionTitle(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!isTitleDirty || updateCollectionMutation.isPending) return;
+    updateCollectionMutation.mutate(titleDraft.trim());
+  }
+
   return (
-    <>
+    <div className="page planning-page private-collection-page">
       <PageHeader
         before={
           <Link className="back-link" to={PRIVATE_COLLECTIONS_PATH}>
@@ -554,31 +589,116 @@ export function PrivateCollectionDetailPage({
         }
         eyebrow={t('privateArea.privacyLabel')}
         title={collection.title}
-        action={
-          collection.capabilities.canEdit ? (
-            <Link
-              className="button-link secondary-link"
-              to={privateCollectionEditPath(collection.id)}
-            >
-              {t('privateArea.edit')}
-            </Link>
-          ) : undefined
-        }
+        description={t('m5s3.collection.itemCount', {
+          count: collection.items.length,
+        })}
       />
+
+      {collection.capabilities.canEdit ? (
+        <section className="planning-subsection planning-collection-meta-edit">
+          <form
+            className="planning-collection-title-form"
+            onSubmit={submitCollectionTitle}
+          >
+            <label htmlFor="private-collection-edit-title" className="sr-only">
+              {t('privateArea.collections.titleLabel')}
+            </label>
+            <div className="planning-collection-title-row">
+              <input
+                id="private-collection-edit-title"
+                name="title"
+                required
+                maxLength={200}
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                placeholder={t('privateArea.collections.titleLabel')}
+                aria-label={t('privateArea.collections.titleLabel')}
+              />
+              <ListEntryIconButton
+                type="submit"
+                icon="save"
+                className="tertiary"
+                label={
+                  updateCollectionMutation.isPending
+                    ? t('common.saving')
+                    : t('m5s3.common.saveChanges')
+                }
+                disabled={!isTitleDirty || updateCollectionMutation.isPending}
+              />
+              {showTitleSaved ? (
+                <span
+                  className="planning-title-saved-hint"
+                  role="status"
+                  aria-live="polite"
+                >
+                  ✓
+                </span>
+              ) : null}
+            </div>
+            {updateCollectionMutation.error ? (
+              <ProblemState
+                error={updateCollectionMutation.error}
+                onRetry={() => void query.refetch()}
+              />
+            ) : null}
+          </form>
+        </section>
+      ) : null}
+
       <CollectionItems
         api={api}
         accountId={accountId}
         spaceId={spaceId}
         collection={collection}
       />
+
       {collection.capabilities.canDelete ? (
-        <DeleteConfirmation
-          onDelete={() => deleteMutation.mutate(collection)}
-          pending={deleteMutation.isPending}
-          error={deleteMutation.error}
-        />
+        <section
+          className="planning-danger-zone"
+          aria-labelledby="private-collection-delete-heading"
+        >
+          <h2 id="private-collection-delete-heading">
+            {t('m5s3.common.deleteHeading')}
+          </h2>
+          <p>{t('privateArea.deleteConfirmBody')}</p>
+          {!confirmDelete ? (
+            <button
+              type="button"
+              className="danger"
+              onClick={() => setConfirmDelete(true)}
+            >
+              {t('m5s3.common.delete')}
+            </button>
+          ) : (
+            <div className="planning-confirm-row">
+              <button
+                type="button"
+                className="danger"
+                onClick={() => deleteMutation.mutate(collection)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending
+                  ? t('m5s3.common.deleting')
+                  : t('m5s3.common.confirmDelete')}
+              </button>
+              <button
+                type="button"
+                className="tertiary"
+                onClick={() => setConfirmDelete(false)}
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          )}
+          {deleteMutation.error ? (
+            <ProblemState
+              error={deleteMutation.error}
+              onRetry={() => void query.refetch()}
+            />
+          ) : null}
+        </section>
       ) : null}
-    </>
+    </div>
   );
 }
 

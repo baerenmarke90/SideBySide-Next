@@ -40,6 +40,18 @@ function renderSettingsPageFixture(): string {
     relationshipDays: null,
   });
 
+  queryClient.setQueryData(
+    ['rules', SPACE_ID, 'relationship_anniversary_reminder', 'preference'],
+    {
+      ruleKey: 'relationship_anniversary_reminder',
+      enabled: true,
+      parameters: {
+        daysBefore: [30, 7, 1],
+        localTime: '09:00:00',
+      },
+    },
+  );
+
   return renderToStaticMarkup(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -69,8 +81,10 @@ describe('SettingsPage', () => {
     expect(html).toContain('id="settings-appearance"');
     expect(html).toContain('theme-control');
 
-    // Section 2: Notifications (retained with inbox link and clear distinction)
+    // Section 2: Notifications (retained with inbox link and real anniversary reminder configuration)
     expect(html).toContain('id="settings-notifications"');
+    expect(html).toContain('anniversary-reminder-form');
+    expect(html).toContain('name="anniversaryReminderEnabled"');
     expect(html).toContain('href="/more/notifications"');
 
     // Section 3: Connection & Relationship configuration form

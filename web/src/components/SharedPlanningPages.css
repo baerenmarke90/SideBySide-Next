@@ -199,12 +199,29 @@
 
 .planning-confirm-row,
 .planning-order-actions,
-.planning-inline-create,
 .planning-relation-form {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+}
+
+.planning-inline-create {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.planning-inline-create input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .planning-inline-create {
+    flex-wrap: wrap;
+  }
 }
 
 .planning-order-actions {
@@ -295,6 +312,71 @@
   place-items: center;
   border-radius: 50%;
   padding: 0;
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  color: transparent;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.planning-check:hover:not(:disabled) {
+  border-color: var(--color-shared);
+  background: var(--color-shared-surface);
+  color: var(--color-shared);
+}
+
+.planning-check[aria-pressed="true"],
+.planning-item-completed .planning-check {
+  background: var(--color-shared);
+  border-color: var(--color-shared);
+  color: var(--color-surface, #ffffff);
+}
+
+.planning-check[aria-pressed="true"]:hover:not(:disabled),
+.planning-item-completed .planning-check:hover:not(:disabled) {
+  background: var(--color-shared-accent);
+  border-color: var(--color-shared-accent);
+  color: var(--color-surface, #ffffff);
+}
+
+.planning-check.is-private:hover:not(:disabled),
+.private-collection .planning-check:hover:not(:disabled) {
+  border-color: var(--color-private);
+  background: var(--color-brand-surface);
+  color: var(--color-private);
+}
+
+.planning-check.is-private[aria-pressed="true"],
+.private-collection .planning-check[aria-pressed="true"],
+.private-collection .planning-item-completed .planning-check {
+  background: var(--color-private);
+  border-color: var(--color-private);
+  color: var(--color-surface, #ffffff);
+}
+
+.planning-check.is-private[aria-pressed="true"]:hover:not(:disabled),
+.private-collection .planning-check[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--color-brand-strong);
+  border-color: var(--color-brand-strong);
+  color: var(--color-surface, #ffffff);
+}
+
+.planning-check:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.planning-check:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .planning-item-completed .planning-item-title-form input {

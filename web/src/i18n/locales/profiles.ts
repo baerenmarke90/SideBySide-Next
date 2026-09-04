@@ -10,9 +10,9 @@ const profiles = {
   relationshipIntro:
     'Euer gemeinsamer Startpunkt für Jahrestage und eure Beziehungsdauer.',
   relationshipStartLabel: 'Zusammen seit',
-  relationshipDurationLabel: 'Beziehungsdauer anzeigen',
+  relationshipDurationLabel: 'Gemeinsame Zeit anzeigen',
   relationshipDurationHelp:
-    'Zeigt eure gemeinsame Zeit im Profil und an passenden Stellen in SidebySide.',
+    'Zeigt eure gemeinsame Zeit auf „Wir“ und an passenden Stellen in SideBySide.',
   relationshipModeLabel: 'Beziehungsdauer anzeigen als',
   relationshipModeYearsMonths: 'Jahre und Monate',
   relationshipModeDays: 'Tage',

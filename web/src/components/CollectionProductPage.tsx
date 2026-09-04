@@ -477,7 +477,7 @@ export function CollectionProductPage({
             <ListEntryIconButton
               type="submit"
               icon="add"
-              className="tertiary"
+              className="list-entry-add-button"
               label={
                 createItem.isPending
                   ? t('m5s3.common.saving')

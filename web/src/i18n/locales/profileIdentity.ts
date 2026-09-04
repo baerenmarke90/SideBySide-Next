@@ -40,6 +40,21 @@ const profileIdentity = {
   settingsNotificationsIntro:
     'Hier legst du fest, wie SideBySide dich über Neuigkeiten informiert. Deine aktuellen Mitteilungen findest du im Posteingang.',
   settingsNotificationsAction: 'Zum Benachrichtigungs-Posteingang',
+  anniversaryReminderTitle: 'Jahrestag-Erinnerung',
+  anniversaryReminderIntro:
+    'Hier kannst du einstellen, ob und wann du an euren nächsten Jahrestag erinnert werden möchtest.',
+  anniversaryReminderToggle: 'An unseren Jahrestag erinnern',
+  anniversaryReminderToggleHelp:
+    'Sendet dir rechtzeitig persönliche Benachrichtigungen vor eurem Jahrestag.',
+  anniversaryReminderDaysHeading: 'Erinnerungszeitpunkte vor dem Jahrestag',
+  anniversaryReminderDay30: '30 Tage vorher',
+  anniversaryReminderDay7: '7 Tage vorher',
+  anniversaryReminderDay1: '1 Tag vorher',
+  anniversaryReminderTimeLabel: 'Uhrzeit der Benachrichtigung',
+  anniversaryReminderSave: 'Änderungen speichern',
+  anniversaryReminderSaving: 'Wird gespeichert …',
+  anniversaryReminderSaved: '✓ Gespeichert',
+  anniversaryReminderLoading: 'Einstellungen werden geladen …',
   settingsPrivacy: 'Privater Bereich',
   settingsData: 'Daten und Portabilität',
   appearanceIntro:

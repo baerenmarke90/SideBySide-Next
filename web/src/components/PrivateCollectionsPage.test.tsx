@@ -140,15 +140,15 @@ describe('PrivateCollectionsPage', () => {
       </QueryClientProvider>,
     );
 
-    expect(html).toContain('checklist-open');
-    expect(html).toContain('checklist-completed');
-    expect(html).toContain('private-checklist-checkbox');
-    expect(html).toContain('private-checklist-check-label');
-    expect(html).toContain('private-checklist-title-input');
+    expect(html).toContain('planning-collection-items');
+    expect(html).toContain('planning-check');
+    expect(html).toContain('planning-inline-create');
+    expect(html).toContain('planning-collection-meta-edit');
     expect(html).toContain('Order photo album');
     expect(html).toContain('Book train tickets');
 
-    // Old CRUD artifacts are removed
+    // Replaced legacy checkbox and separate edit page artifacts
+    expect(html).not.toContain('private-checklist-checkbox');
     expect(html).not.toContain('private-area-badge');
   });
 });

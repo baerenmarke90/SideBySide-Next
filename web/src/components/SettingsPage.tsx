@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { RulesApi } from '../api/generated/apis/RulesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { Configuration } from '../api/generated/runtime';
 import { MORE_NOTIFICATIONS_ROUTE } from '../client/routes';
 import { useTranslation } from '../i18n';
+import { AnniversaryReminderSettings } from './AnniversaryReminderSettings';
 import { PageHeader } from './PageHeader';
 import { PartnerConnectionPanel } from './PartnerConnectionPanel';
 import { ProfileAppearancePanel } from './ProfileAppearancePanel';
@@ -35,6 +37,7 @@ export function SettingsPage(props: SettingsPageProps) {
     () => new SpacesApi(configuration),
     [configuration],
   );
+  const rulesApi = useMemo(() => new RulesApi(configuration), [configuration]);
 
   return (
     <div className="page settings-page">
@@ -66,7 +69,11 @@ export function SettingsPage(props: SettingsPageProps) {
               {t('profileIdentity.settingsNotificationsIntro')}
             </p>
           </div>
-          <div className="form-actions">
+          <AnniversaryReminderSettings
+            rulesApi={rulesApi}
+            spaceId={props.spaceId}
+          />
+          <div className="form-actions settings-notification-inbox-action">
             <Link
               className="button-link secondary-link"
               to={MORE_NOTIFICATIONS_ROUTE}
