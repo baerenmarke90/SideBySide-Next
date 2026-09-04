@@ -19,6 +19,9 @@ export function SettingsIndex() {
           </a>
         </li>
         <li>
+          <a href="#settings-account">{t('accountSettings.title')}</a>
+        </li>
+        <li>
           <a href="#settings-connection">
             {t('profileIdentity.settingsRelationship')}
           </a>
