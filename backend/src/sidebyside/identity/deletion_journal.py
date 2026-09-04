@@ -90,11 +90,14 @@ def _digest(payload: dict[str, Any]) -> str:
 
 
 def _line(payload: dict[str, Any]) -> str:
-    return json.dumps(
-        {**payload, "sha256": _digest(payload)},
-        sort_keys=True,
-        separators=(",", ":"),
-    ) + "\n"
+    return (
+        json.dumps(
+            {**payload, "sha256": _digest(payload)},
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n"
+    )
 
 
 def _json_record(raw: str, *, line_number: int) -> dict[str, Any]:
