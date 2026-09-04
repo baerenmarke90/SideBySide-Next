@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 from sidebyside.auth import sessions
 from sidebyside.authorization.retention import hard_delete_owner_only
+from sidebyside.core.clock import now
 from sidebyside.engagement.models import Notification, PushEndpoint, ThinkingOfYouRequest
 from sidebyside.identity.deletion_models import AccountDeletion, AccountDeletionStatus
 from sidebyside.identity.models import (
@@ -287,7 +288,7 @@ def mark_deletion_failed(
 
     deletion.status = AccountDeletionStatus.FAILED.value
     deletion.completed_at = None
-    deletion.failed_at = datetime.now(deletion.accepted_at.tzinfo)
+    deletion.failed_at = now()
     deletion.last_failure_code = normalized
     session.flush()
     return deletion
