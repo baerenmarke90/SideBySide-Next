@@ -151,6 +151,17 @@
 
 body {
   color: var(--color-text);
+  background-color: var(--color-background);
+  transition:
+    background-color 0.4s ease,
+    color 0.4s ease;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(
       circle at 8% -6%,
@@ -161,12 +172,9 @@ body {
       circle at 96% 4%,
       var(--color-page-tint-shared) 0,
       transparent 30rem
-    ),
-    var(--color-background);
-  background-attachment: fixed;
-  transition:
-    background-color 0.4s ease,
-    color 0.4s ease;
+    );
+  transform: translateZ(0);
+  content: "";
 }
 
 /* Private Area / Vault: Intimate, warm, privacy-first atmosphere */

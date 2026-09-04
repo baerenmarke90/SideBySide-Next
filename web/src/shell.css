@@ -20,23 +20,15 @@
 
 .product-shell {
   min-height: 100vh;
-  background:
-    radial-gradient(
-      circle at top,
-      var(--color-entry-aura-brand) 0%,
-      transparent 60%
-    ),
-    radial-gradient(
-      circle at bottom left,
-      var(--color-entry-aura-shared) 0%,
-      transparent 50%
-    ),
-    var(--color-background);
+  background: transparent;
 }
 
 .product-topbar {
   z-index: 40;
-  background: transparent;
+  background: var(--color-header-surface);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transform: translateZ(0);
 }
 
 .product-shell-body {
