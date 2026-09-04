@@ -26,8 +26,6 @@
 .product-topbar {
   z-index: 40;
   background: var(--color-header-surface);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
   transform: translateZ(0);
 }
 
@@ -358,7 +356,6 @@
   padding: var(--space-2) var(--space-3)
     calc(var(--space-2) + env(safe-area-inset-bottom));
   background: var(--color-header-surface);
-  backdrop-filter: blur(18px);
 }
 
 .mobile-bottom-nav .shell-nav-link {
