@@ -113,6 +113,7 @@ class ChangeScopeTest(unittest.TestCase):
             "scripts/self_hosted_recovery_acceptance.py",
             "scripts/account_deletion_recovery_acceptance.py",
             "scripts/test_self_hosted_recovery.py",
+            "scripts/test_self_hosted_deletion_reconcile.py",
             "docs/SELF-HOSTED-RECOVERY.md",
         ):
             with self.subTest(path=path):
@@ -126,8 +127,8 @@ class ChangeScopeTest(unittest.TestCase):
 
     def test_deletion_replay_command_enables_backend_and_recovery(self) -> None:
         self.assert_scope(
-            ["backend/scripts/reconcile_account_deletions.py"],
-            enabled={"backend", "recovery"},
+            ["backend/src/sidebyside/identity/deletion_reconcile.py"],
+            enabled={"backend", "backend_integration", "recovery"},
         )
 
     def test_filter_changes_fail_closed(self) -> None:
