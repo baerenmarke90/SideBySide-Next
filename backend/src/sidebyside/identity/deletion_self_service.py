@@ -52,9 +52,7 @@ class DeletionAuthoritySettings(BaseSettings):
         extra="ignore",
     )
 
-    journal_path: Path = Path(
-        "/var/lib/sidebyside/deletion-journal/account-deletions.journal"
-    )
+    journal_path: Path = Path("/var/lib/sidebyside/deletion-journal/account-deletions.journal")
     instance_id: UUID | None = None
 
     @field_validator("instance_id", mode="before")
@@ -198,9 +196,7 @@ def _claim_confirmation_mail(
 
     deletion.confirmation_mail_attempted_at = now()
     if primary_email is None:
-        deletion.confirmation_mail_status = (
-            DeletionConfirmationMailStatus.NO_VERIFIED_PRIMARY.value
-        )
+        deletion.confirmation_mail_status = DeletionConfirmationMailStatus.NO_VERIFIED_PRIMARY.value
         return False
 
     # Commit the claim before touching a provider. A crash may therefore omit a
@@ -221,8 +217,7 @@ def _record_confirmation_mail_result(
         ).scalar_one_or_none()
         if (
             deletion is not None
-            and deletion.confirmation_mail_status
-            == DeletionConfirmationMailStatus.CLAIMED.value
+            and deletion.confirmation_mail_status == DeletionConfirmationMailStatus.CLAIMED.value
         ):
             deletion.confirmation_mail_status = result.value
             session.flush()
