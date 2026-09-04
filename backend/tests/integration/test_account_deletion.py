@@ -22,7 +22,7 @@ from sidebyside.identity.deletion import (
     DELETED_ACCOUNT_TIMEZONE,
     DeletionNotAcceptedError,
     apply_accepted_tombstone,
-    complete_accepted_deletion,
+    apply_core_cleanup,
     mark_deletion_failed,
 )
 from sidebyside.identity.deletion_models import AccountDeletion, AccountDeletionStatus
@@ -145,7 +145,7 @@ def test_accepted_tombstone_is_immediately_fail_closed_and_idempotent(session: S
     assert _count(session, AccountDeletion, AccountDeletion.account_id == account.id) == 1
 
 
-def test_completion_deletes_private_identity_state_but_retains_shared_history(
+def test_core_cleanup_deletes_private_identity_state_but_retains_shared_history(
     session: Session,
 ) -> None:
     account = make_account(session, "Anna")
@@ -237,11 +237,11 @@ def test_completion_deletes_private_identity_state_but_retains_shared_history(
 
     accepted_at = now()
     apply_accepted_tombstone(session, account.id, accepted_at=accepted_at)
-    deletion = complete_accepted_deletion(session, account.id)
+    deletion = apply_core_cleanup(session, account.id)
 
     assert deletion is not None
-    assert deletion.status == AccountDeletionStatus.COMPLETED.value
-    assert deletion.completed_at is not None
+    assert deletion.status == AccountDeletionStatus.PENDING.value
+    assert deletion.completed_at is None
 
     # Shared history survives even though its original author deleted their Account.
     assert _count(session, Memory, Memory.id == shared_memory.id) == 1
@@ -307,15 +307,16 @@ def test_completion_deletes_private_identity_state_but_retains_shared_history(
     assert account.disabled_at == accepted_at
     assert not account.is_active
 
-    # Repeating cleanup converges on the same state rather than deleting shared data.
-    repeated = complete_accepted_deletion(session, account.id)
+    # Repeating core cleanup converges without claiming full deletion completion.
+    repeated = apply_core_cleanup(session, account.id)
     assert repeated is not None
-    assert repeated.status == AccountDeletionStatus.COMPLETED.value
+    assert repeated.status == AccountDeletionStatus.PENDING.value
+    assert repeated.completed_at is None
     assert repeated.account_id == deletion.account_id
     assert _count(session, Memory, Memory.id == shared_memory.id) == 1
 
 
-def test_completion_requires_an_accepted_external_tombstone(session: Session) -> None:
+def test_core_cleanup_requires_an_accepted_external_tombstone(session: Session) -> None:
     account = make_account(session, "Anna")
     space = make_space(session, account)
     note = _private_note(
@@ -326,7 +327,7 @@ def test_completion_requires_an_accepted_external_tombstone(session: Session) ->
     )
 
     with pytest.raises(DeletionNotAcceptedError):
-        complete_accepted_deletion(session, account.id)
+        apply_core_cleanup(session, account.id)
 
     assert account.is_active
     assert _count(session, PrivateNote, PrivateNote.id == note.id) == 1
