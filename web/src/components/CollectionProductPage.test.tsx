@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
-import '../i18n';
+import { i18n } from '../i18n';
 import { CollectionProductPage } from './CollectionProductPage';
 
 describe('CollectionProductPage', () => {
@@ -182,7 +182,9 @@ describe('CollectionProductPage', () => {
 
     // confirmDelete is true: danger confirmation zone is visible
     expect(
-      screen.getByRole('button', { name: /endgültig löschen/i }),
+      screen.getByRole('button', {
+        name: i18n.t('m5s3.common.confirmDelete'),
+      }),
     ).toBeDefined();
 
     // Update title
@@ -209,7 +211,9 @@ describe('CollectionProductPage', () => {
 
     // Verify confirmDelete is reset to false: danger zone with confirm delete button is gone
     expect(
-      screen.queryByRole('button', { name: /endgültig löschen/i }),
+      screen.queryByRole('button', {
+        name: i18n.t('m5s3.common.confirmDelete'),
+      }),
     ).toBeNull();
   });
 });
