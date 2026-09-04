@@ -106,7 +106,7 @@ export function ChapterProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'chapters', spaceId],
       });
-      navigate(appRoutePath('plan'), { replace: true });
+      navigate(appRoutePath('story'), { replace: true });
     },
   });
 
@@ -152,7 +152,7 @@ export function ChapterProductPage({
     <div className="page planning-page">
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('plan')}>
+          <Link className="back-link" to={appRoutePath('story')}>
             {t('m5s3.common.back')}
           </Link>
         }

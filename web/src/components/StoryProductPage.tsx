@@ -31,6 +31,7 @@ import {
   heartMomentDetailPath,
   memoryDetailPath,
   milestoneDetailPath,
+  STORY_CHAPTERS_ROUTE,
 } from '../client/routes';
 import { resolvedLocale, useTranslation } from '../i18n';
 import type { ProfilesApi } from '../api/generated/apis/ProfilesApi';
@@ -513,7 +514,7 @@ export function StoryProductPage({
                 </p>
               </Link>
             ) : null}
-            <Link to="/plan#chapter-title" className="momente-sub-card">
+            <Link to={STORY_CHAPTERS_ROUTE} className="momente-sub-card">
               <span className="momente-sub-card-kicker">
                 📖 {t('story.chaptersKicker')}
               </span>

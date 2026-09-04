@@ -19,6 +19,9 @@ export type AppRouteIcon =
   | 'activity'
   | 'notifications'
   | 'people'
+  | 'places'
+  | 'collections'
+  | 'chapter'
   | 'private'
   | 'profile'
   | 'settings'
@@ -53,7 +56,7 @@ export const APP_ROUTES = [
     path: '/story',
     labelKey: 'navigation.story',
     icon: 'story',
-    end: true,
+    end: false,
   },
   {
     id: 'plan',
@@ -102,6 +105,8 @@ export const SEARCH_ROUTE = '/search';
 export const ACTIVITY_ROUTE = '/today/activity';
 
 export const MORE_PEOPLE_ROUTE = '/more/people';
+export const MORE_PLACES_ROUTE = '/more/places';
+export const MORE_COLLECTIONS_ROUTE = '/more/collections';
 /** Existing surface; the Web shell exposes it as the header bell utility. */
 export const MORE_NOTIFICATIONS_ROUTE = '/more/notifications';
 /** Existing surface; the Web shell exposes it through the avatar/account tree. */
@@ -117,6 +122,7 @@ export const SERVER_ADMIN_ROUTE = '/server-admin';
 
 /* Story content ---------------------------------------------------------- */
 
+export const STORY_CHAPTERS_ROUTE = '/story/chapters';
 export const MEMORY_CREATE_ROUTE = '/story/memories/new';
 export const MEMORY_DETAIL_ROUTE_PATTERN = '/story/memories/:memoryId';
 export const MEMORY_EDIT_ROUTE_PATTERN = '/story/memories/:memoryId/edit';
@@ -129,15 +135,18 @@ export const MILESTONE_CREATE_ROUTE = '/story/milestones/new';
 export const MILESTONE_DETAIL_ROUTE_PATTERN = '/story/milestones/:milestoneId';
 export const MILESTONE_EDIT_ROUTE_PATTERN =
   '/story/milestones/:milestoneId/edit';
+export const CHAPTER_DETAIL_ROUTE_PATTERN = '/story/chapters/:chapterId';
 
 /* Planning content -------------------------------------------------------- */
 
 export const WISH_DETAIL_ROUTE_PATTERN = '/plan/wishes/:wishId';
 export const PLAN_DETAIL_ROUTE_PATTERN = '/plan/plans/:planId';
-export const PLACE_DETAIL_ROUTE_PATTERN = '/plan/places/:placeId';
-export const CHAPTER_DETAIL_ROUTE_PATTERN = '/plan/chapters/:chapterId';
+
+/* More / Organisieren content --------------------------------------------- */
+
+export const PLACE_DETAIL_ROUTE_PATTERN = '/more/places/:placeId';
 export const COLLECTION_DETAIL_ROUTE_PATTERN =
-  '/plan/collections/:collectionId';
+  '/more/collections/:collectionId';
 
 /* Legacy paths ------------------------------------------------------------ */
 
@@ -151,6 +160,9 @@ export const LEGACY_ROUTE_REWRITES = [
   { from: '/dashboard', to: '/today' },
   { from: '/activity', to: ACTIVITY_ROUTE },
   { from: '/planning', to: '/plan' },
+  { from: '/plan/chapters', to: '/story/chapters' },
+  { from: '/plan/places', to: '/more/places' },
+  { from: '/plan/collections', to: '/more/collections' },
   { from: '/people', to: MORE_PEOPLE_ROUTE },
   { from: '/notifications', to: MORE_NOTIFICATIONS_ROUTE },
   { from: '/profile', to: MORE_PROFILE_ROUTE },
@@ -211,13 +223,13 @@ export function planDetailPath(planId: string): string {
 }
 
 export function placeDetailPath(placeId: string): string {
-  return `/plan/places/${encodeURIComponent(placeId)}`;
+  return `/more/places/${encodeURIComponent(placeId)}`;
 }
 
 export function chapterDetailPath(chapterId: string): string {
-  return `/plan/chapters/${encodeURIComponent(chapterId)}`;
+  return `/story/chapters/${encodeURIComponent(chapterId)}`;
 }
 
 export function collectionDetailPath(collectionId: string): string {
-  return `/plan/collections/${encodeURIComponent(collectionId)}`;
+  return `/more/collections/${encodeURIComponent(collectionId)}`;
 }

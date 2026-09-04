@@ -66,12 +66,15 @@ import {
   MILESTONE_EDIT_ROUTE_PATTERN,
   MORE_NOTIFICATIONS_ROUTE,
   MORE_PEOPLE_ROUTE,
+  MORE_PLACES_ROUTE,
+  MORE_COLLECTIONS_ROUTE,
   MORE_PROFILE_ROUTE,
   MORE_SETTINGS_ROUTE,
   PLAN_DETAIL_ROUTE_PATTERN,
   PLACE_DETAIL_ROUTE_PATTERN,
   SEARCH_ROUTE,
   SERVER_ADMIN_ROUTE,
+  STORY_CHAPTERS_ROUTE,
   WISH_DETAIL_ROUTE_PATTERN,
 } from './client/routes';
 import { createSharedPlanningApis } from './client/sharedPlanning';
@@ -87,7 +90,9 @@ import { AppShell } from './components/AppShell';
 import { AttachmentDraftPicker } from './components/AttachmentDraftPicker';
 import { Brand } from './components/Brand';
 import { ChapterProductPage } from './components/ChapterProductPage';
+import { ChaptersOverviewPage } from './components/ChaptersOverviewPage';
 import { CollectionProductPage } from './components/CollectionProductPage';
+import { CollectionsOverviewPage } from './components/CollectionsOverviewPage';
 import { DemoEntry } from './components/DemoEntry';
 import { HeartMomentProductPage } from './components/HeartMomentProductPage';
 import { IdentityEntry } from './components/IdentityEntry';
@@ -102,6 +107,7 @@ import { MilestoneProductPage } from './components/MilestoneProductPage';
 import { MoreOverviewPage } from './components/MoreOverviewPage';
 import { PageHeader } from './components/PageHeader';
 import { PlaceProductPage } from './components/PlaceProductPage';
+import { PlacesOverviewPage } from './components/PlacesOverviewPage';
 import { PlanProductPage } from './components/PlanProductPage';
 import { PrivateAreaProductPage } from './components/PrivateAreaProductPage';
 import { ProblemState } from './components/ProblemState';
@@ -559,12 +565,24 @@ function AuthenticatedApp({
             element={<PlanProductPage {...planningProductProps} />}
           />
           <Route
-            path={PLACE_DETAIL_ROUTE_PATTERN}
-            element={<PlaceProductPage {...planningProductProps} />}
+            path={STORY_CHAPTERS_ROUTE}
+            element={<ChaptersOverviewPage {...planningProductProps} />}
           />
           <Route
             path={CHAPTER_DETAIL_ROUTE_PATTERN}
             element={<ChapterProductPage {...planningProductProps} />}
+          />
+          <Route
+            path={MORE_PLACES_ROUTE}
+            element={<PlacesOverviewPage {...planningProductProps} />}
+          />
+          <Route
+            path={PLACE_DETAIL_ROUTE_PATTERN}
+            element={<PlaceProductPage {...planningProductProps} />}
+          />
+          <Route
+            path={MORE_COLLECTIONS_ROUTE}
+            element={<CollectionsOverviewPage {...planningProductProps} />}
           />
           <Route
             path={COLLECTION_DETAIL_ROUTE_PATTERN}

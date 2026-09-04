@@ -61,7 +61,7 @@ export function searchResultPath(type: SearchKind, id: string): string | null {
     case 'COLLECTION':
       return collectionDetailPath(id);
     case 'COLLECTION_ITEM':
-      return appRoutePath('plan');
+      return appRoutePath('more');
     default:
       return null;
   }

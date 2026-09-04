@@ -4,6 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import type { SharedPlanningApis } from '../client/sharedPlanning';
 import { SharedPlanningOverviewPage } from './SharedPlanningOverviewPage';
 
+import { CollectionsOverviewPage } from './CollectionsOverviewPage';
+
 describe('SharedPlanningOverviewPage', () => {
   it('renders only the shared M3 planning product areas', () => {
     const queryClient = new QueryClient({
@@ -22,15 +24,12 @@ describe('SharedPlanningOverviewPage', () => {
 
     expect(html).toContain('Wünsche');
     expect(html).toContain('Pläne');
-    expect(html).toContain('Orte');
-    expect(html).toContain('Kapitel');
-    expect(html).toContain('Gemeinsame Listen');
     expect(html).not.toContain('PrivateNote');
     expect(html).not.toContain('GiftIdea');
     expect(html).not.toContain('PrivateCollection');
   });
 
-  it('shows a Collection icon as a prefix, and offers an icon field when creating one', () => {
+  it('shows a Collection title cleanly without legacy emoji icon (#373)', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -65,7 +64,7 @@ describe('SharedPlanningOverviewPage', () => {
     const html = renderToStaticMarkup(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <SharedPlanningOverviewPage
+          <CollectionsOverviewPage
             apis={{} as SharedPlanningApis}
             spaceId="space-1"
           />
@@ -79,7 +78,7 @@ describe('SharedPlanningOverviewPage', () => {
     expect(html).not.toContain('collection-icon');
   });
 
-  it('renders all three timeline stops with markers and semantic sections', () => {
+  it('renders both timeline stops with markers and semantic sections', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -95,9 +94,9 @@ describe('SharedPlanningOverviewPage', () => {
     );
 
     const stopMatches = html.match(/<section\b[^>]*class="[^"]*future-map-stop/g);
-    expect(stopMatches).toHaveLength(3);
+    expect(stopMatches).toHaveLength(2);
 
     const markerMatches = html.match(/class="future-map-marker"/g);
-    expect(markerMatches).toHaveLength(3);
+    expect(markerMatches).toHaveLength(2);
   });
 });

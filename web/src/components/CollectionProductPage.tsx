@@ -186,7 +186,7 @@ export function CollectionProductPage({
       await queryClient.invalidateQueries({
         queryKey: ['m5-s3', 'collections', spaceId],
       });
-      navigate(appRoutePath('plan'), { replace: true });
+      navigate(appRoutePath('more'), { replace: true });
     },
   });
 
@@ -273,7 +273,7 @@ export function CollectionProductPage({
     <div className="page planning-page">
       <PageHeader
         before={
-          <Link className="back-link" to={appRoutePath('plan')}>
+          <Link className="back-link" to={appRoutePath('more')}>
             {t('m5s3.common.back')}
           </Link>
         }

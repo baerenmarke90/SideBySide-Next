@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { PRIVATE_AREA_ROOT_PATH } from '../client/privateArea';
 import {
+  MORE_COLLECTIONS_ROUTE,
   MORE_PEOPLE_ROUTE,
+  MORE_PLACES_ROUTE,
   type AppRouteIcon,
 } from '../client/routes';
 import { useTranslation } from '../i18n';
@@ -26,6 +28,18 @@ const MORE_DESTINATIONS: readonly MoreDestination[] = [
     icon: 'people',
     titleKey: 'more.people.title',
     descriptionKey: 'more.people.description',
+  },
+  {
+    path: MORE_PLACES_ROUTE,
+    icon: 'places',
+    titleKey: 'more.places.title',
+    descriptionKey: 'more.places.description',
+  },
+  {
+    path: MORE_COLLECTIONS_ROUTE,
+    icon: 'collections',
+    titleKey: 'more.collections.title',
+    descriptionKey: 'more.collections.description',
   },
   {
     path: PRIVATE_AREA_ROOT_PATH,
