@@ -85,9 +85,9 @@ body:
       label: 🤖 Modell-/Tool-Routing
       description: Assess the actual scope and choose the most efficient tool and reasoning budget. Always evaluate GPT-5.6 Sol Chat as a real implementation/review option where technically meaningful. Prefer Gemini 3.8 Flash over Gemini 3.1 Pro when deeper architecture/state reasoning is unnecessary. Codex quota is limited, so recommend it only when it has a concrete advantage. Do not choose Very High by default.
       placeholder: |
-        **Empfohlen:** [Tool · Modell · Reasoning]
-        **Alternative:** [Tool · Modell/Reasoning]
-        **ChatGPT:** GPT-5.6 Sol Chat · [Low / Medium / High / Very High] — [möglich / eingeschränkt / nicht sinnvoll]
-        **Codex:** [nicht empfohlen / möglich als Reserve / begründete Empfehlung]
+        **Empfohlen:** [Tool · Model · Reasoning]
+        **Alternative:** [Tool · Model/Reasoning]
+        **ChatGPT:** GPT-5.6 Sol Chat · [Low / Medium / High / Very High] — [possible / limited / not suitable]
+        **Codex:** [not recommended / reserve option / recommended with concrete rationale]
     validations:
       required: true
