@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import accountSettings from '../i18n/locales/accountSettings';
+import spaceOffboarding from '../i18n/locales/spaceOffboarding';
 import { SettingsPage } from './SettingsPage';
 
 const SPACE_ID = 'space-1';
@@ -93,12 +94,14 @@ describe('SettingsPage', () => {
     expect(html).toContain('relationship-settings-title');
     expect(html).toContain('name="relationshipStartedOn"');
     expect(html).toContain('name="showRelationshipDuration"');
+    expect(html).toContain('space-offboarding-panel');
+    expect(html).toContain(spaceOffboarding.action);
 
     expect(html).toContain('id="settings-data"');
     expect(html).toContain('id="data-transfer"');
   });
 
-  it('keeps private area and partner identity out of Settings while Account deletion stays separate from relationship actions', () => {
+  it('keeps private area and partner identity out of Settings while Account deletion stays separate from relationship exit', () => {
     const html = renderSettingsPageFixture();
 
     expect(html).not.toContain('id="settings-privacy"');
@@ -106,7 +109,11 @@ describe('SettingsPage', () => {
     expect(html).not.toContain('Mein Bereich');
     expect(html).not.toContain('partner-identity-title');
 
-    expect(html).toContain('id="settings-account"');
-    expect(html).toContain('id="settings-connection"');
+    const accountIndex = html.indexOf('id="settings-account"');
+    const connectionIndex = html.indexOf('id="settings-connection"');
+    expect(accountIndex).toBeGreaterThanOrEqual(0);
+    expect(connectionIndex).toBeGreaterThan(accountIndex);
+    expect(html).toContain(accountSettings.deleteAction);
+    expect(html).toContain(spaceOffboarding.action);
   });
 });

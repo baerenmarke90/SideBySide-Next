@@ -16,6 +16,7 @@ import profileIdentity from './locales/profileIdentity';
 import profiles from './locales/profiles';
 import serverAdmin from './locales/serverAdmin';
 import snackbar from './locales/snackbar';
+import spaceOffboarding from './locales/spaceOffboarding';
 import storyProducts from './locales/storyProducts';
 
 export const DEFAULT_LOCALE = 'de';
@@ -49,6 +50,7 @@ if (!i18n.isInitialized) {
           profileIdentity,
           profiles,
           serverAdmin,
+          spaceOffboarding,
           ...snackbar,
           ...storyProducts,
         },
