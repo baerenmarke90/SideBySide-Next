@@ -163,9 +163,7 @@ def test_space_exit_marks_only_leaver_private_media_and_expires_only_scoped_tran
     )
     assert (
         session.execute(
-            select(func.count(HeartMoment.id)).where(
-                HeartMoment.id == partner_private_heart.id
-            )
+            select(func.count(HeartMoment.id)).where(HeartMoment.id == partner_private_heart.id)
         ).scalar_one()
         == 1
     )
