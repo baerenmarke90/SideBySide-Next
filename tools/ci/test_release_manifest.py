@@ -61,6 +61,26 @@ class ReleaseManifestTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
+    def _previous_manifest(self, *, signing: str = "signed-release") -> dict[str, object]:
+        return {
+            "schemaVersion": 1,
+            "product": {"name": "SideBySide", "version": "0.0.9", "tag": "v0.0.9"},
+            "sourceRevision": "b" * 40,
+            "artifacts": self.evidence["artifacts"],
+            "android": {
+                **self.evidence["android"],
+                "versionName": "0.0.9",
+                "signing": signing,
+            },
+            "previousKnownGood": None,
+            "rollback": {
+                "applicationReleaseSelectable": False,
+                "databaseRollbackImplied": False,
+                "schemaCompatibilityReviewRequired": True,
+                "authority": ["#190", "#375"],
+            },
+        }
+
     def test_valid_evidence_has_one_coherent_release_identity(self) -> None:
         source, artifacts, android = release_manifest.validate_evidence(self.evidence, "0.1.0")
         self.assertEqual(source, "a" * 40)
@@ -119,26 +139,21 @@ class ReleaseManifestTest(unittest.TestCase):
         with self.assertRaises(release_manifest.ManifestError):
             release_manifest.verify_manifest(args)
 
-    def test_previous_known_good_comes_from_a_manifest_not_free_form_sha(self) -> None:
-        manifest = {
-            "schemaVersion": 1,
-            "product": {"name": "SideBySide", "version": "0.0.9", "tag": "v0.0.9"},
-            "sourceRevision": "b" * 40,
-            "artifacts": self.evidence["artifacts"],
-            "android": {**self.evidence["android"], "versionName": "0.0.9"},
-            "previousKnownGood": None,
-            "rollback": {
-                "applicationReleaseSelectable": False,
-                "databaseRollbackImplied": False,
-                "schemaCompatibilityReviewRequired": True,
-                "authority": ["#190", "#375"],
-            },
-        }
+    def test_previous_known_good_comes_from_a_signed_manifest_not_free_form_sha(self) -> None:
         previous = self.root / "previous.json"
-        previous.write_text(json.dumps(manifest), encoding="utf-8")
+        previous.write_text(json.dumps(self._previous_manifest()), encoding="utf-8")
         identity = release_manifest.previous_identity(previous, False)
         self.assertEqual(identity["sourceRevision"], "b" * 40)
         self.assertEqual(identity["tag"], "v0.0.9")
+
+    def test_previous_known_good_rejects_unsigned_candidate_manifest(self) -> None:
+        previous = self.root / "unsigned-previous.json"
+        previous.write_text(
+            json.dumps(self._previous_manifest(signing="unsigned-evidence-only")),
+            encoding="utf-8",
+        )
+        with self.assertRaises(release_manifest.ManifestError):
+            release_manifest.previous_identity(previous, False)
 
 
 if __name__ == "__main__":
