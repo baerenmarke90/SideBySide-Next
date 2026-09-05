@@ -111,10 +111,11 @@ detectable because it indicates a copied token.
 `last_used_at`, `expires_at`, and `revoked_at`. Sessions can be revoked
 individually.
 
-Cloud uses email verification, Magic Link, Passkey, and Recovery without
-requiring a password. Self-Hosted additionally supports local password login
-and OIDC so an external provider can be configured without a special-case
-model.
+The intended Cloud product model uses email verification, Magic Link, Passkey,
+and Recovery without requiring a password. Self-Hosted additionally intends to
+support local password login and configurable OIDC without a special-case
+provider model. The deployment-mode matrix below is normative product policy;
+current runtime enforcement is stated separately.
 
 ### Target policy by deployment mode
 
@@ -132,7 +133,7 @@ policy above is not yet fully enforced by the current runtime router.** Until
 that productization hardening is implemented, a client must not treat the
 deployment mode as a security boundary. Enablement must ultimately be enforced
 in the backend; UI visibility is only a representation of the same server
-decision.
+decision. GitHub issue **#710** owns this runtime gap.
 
 For OIDC, the external account is identified exclusively by `(issuer,
 subject)`. A freely configurable `connection_id` selects the adapter; Pocket ID
@@ -176,8 +177,13 @@ callback ends with 401.
 
 There are two controlled ways to introduce a new OIDC identity:
 
-1. `/auth/oidc/{connectionId}/link` binds it, after a successful OIDC callback,
-   to exactly the account that is already authenticated.
+1. **Normative invariant:** `/auth/oidc/{connectionId}/link` must remain bound,
+   after a successful OIDC callback, to exactly the Account that initiated the
+   authenticated link flow. **Current runtime gap:** if the returned
+   `(issuer, subject)` is already linked to a different Account, current
+   resolution can still select that existing Account instead of failing closed.
+   GitHub issue **#704** owns this gap. Until it is fixed, the link endpoint must
+   not be treated as an enforced initiating-Account boundary.
 2. A flow started through `/auth/oidc/{connectionId}/start` may carry an
    invitation. Only the invitation-token hash is stored. Account, OIDC identity,
    and Membership are created in the same request transaction only after
@@ -212,13 +218,20 @@ Challenge, origin, RP ID, signature, and signature counter are validated.
 Every failure returns the same response (`PASSKEY_CEREMONY_INVALID`); the
 specific failed check is not exposed in the response.
 
-The challenge is stored in `webauthn_challenges` for five minutes and is
-**always** consumed when completing the ceremony, even if validation fails
-afterward. Otherwise the same challenge could be tried repeatedly.
+The challenge is stored in `webauthn_challenges` for five minutes. Completion
+is bound to the exact challenge carried by that ceremony and consumes that
+single unexpired challenge even when later WebAuthn validation fails. A
+parallel ceremony therefore cannot make a finish operation consume some other
+newer challenge.
 
-The anonymous authentication start currently creates a challenge row on every
-call. The still-open abuse/concurrency hardening for this write path is tracked
-in GitHub issue **#59**.
+Anonymous authentication start has a database-backed abuse boundary that works
+across API instances. That hardening was delivered under GitHub issue **#59**;
+#59 is complete and is not an open security item.
+
+Authentication sign-counter verification is serialized per credential after
+the owning Account is locked. Verification therefore uses the authoritative
+post-lock counter, while authenticators that legitimately remain at counter 0
+continue to work.
 
 A signature counter that stops increasing after previously increasing suggests
 a copied authenticator and causes rejection. If a device does not count at all
@@ -246,19 +259,33 @@ successful authentication method converges on the same `DeviceSession` output.
 | Email verification | `/auth/email/verification/request` (authenticated), `/auth/email/verification/confirm` | 24 hours |
 | Account Recovery | `/auth/recovery/request`, `/auth/recovery/consume` | 30 minutes |
 
-**No account-existence disclosure.** Both `request` endpoints always return
-`202` with an empty body, for a known address exactly as for an unknown one.
-Rate limiting applies identically to both; otherwise the behavior difference
-would itself disclose existence. A mail-server delivery failure is logged but
-does not change the response.
+**No account-existence disclosure when mail delivery is available.** The
+unauthenticated Magic Link and Recovery request endpoints return `202` with an
+empty body for a known address exactly as for an unknown one. Rate limiting
+applies identically to both; otherwise the behavior difference would itself
+disclose existence. A mail-server delivery failure is logged without message
+content and does not change the response.
 
-A residual timing difference remains: a mail is handed off for a known address
-but not for an unknown one. This is accepted because the endpoints are rate
-limited; equalizing it would require deliberately delaying delivery.
+With `SBS_MAIL_TRANSPORT=none`, mail-dependent endpoints fail at the common mail
+dependency before address lookup, token issuance, or rate-limit reservation.
+They therefore do not create undeliverable proofs and do not turn the disabled
+mail capability into an account-existence oracle.
 
-**Only the most recently requested link is valid.** A new request invalidates
-older still-open links for the same flow. Otherwise valid authentication proofs
-would accumulate in a mailbox.
+A residual timing difference remains when mail delivery is enabled: a mail is
+handed off for a known address but not for an unknown one. This is accepted
+because the endpoints are rate limited; equalizing it would require deliberately
+delaying delivery.
+
+**Normative invariant — only the most recently requested link is valid.** A new
+request must invalidate older still-open links for the same flow so valid
+authentication proofs do not accumulate in a mailbox.
+
+**Current runtime gap:** this supersession rule is not yet atomic or complete.
+Concurrent Magic-Link or Recovery requests can each establish a still-open
+successor, and repeated Email-Verification requests do not currently revoke
+older open verification proofs. Individual tokens remain hashed, expiring and
+single-use, but requesting a replacement must not be treated as proof that all
+older links became invalid until GitHub issue **#712** is fixed.
 
 **Redeeming a Magic Link verifies the address.** Opening the link from the
 mailbox proves possession; a second verification path would create another
@@ -275,14 +302,28 @@ is no second place where tokens are issued.
 
 ### Outgoing mail
 
-The plaintext token exists exactly twice: in the return value of the issuance
-function and in the mail message. It is neither persisted nor logged.
+Action-token plaintext is transient only. It exists while an issuance result is
+being turned into a mail message; persisted token material is hashed. General
+application logging and error tracking must redact authentication tokens.
 
-The development adapter that writes messages to the log is therefore not
-allowed in production: `SBS_MAIL_TRANSPORT` must be `smtp` there and
-`SBS_PUBLIC_BASE_URL` must start with `https://`, otherwise the application
-refuses to start. Failing startup is safer than silently running an instance
-that writes authentication credentials to logs.
+Production and Demo permit `SBS_MAIL_TRANSPORT=smtp` or
+`SBS_MAIL_TRANSPORT=none`; the development `log` adapter is forbidden there.
+`SBS_PUBLIC_BASE_URL` must also start with `https://` in a public runtime, or
+the application refuses to start.
+
+`none` is an explicit supported no-mail mode, not a degraded SMTP adapter. Mail
+flows are unavailable and stop before token issuance, while password, Passkey,
+and OIDC authentication remain technically available subject to the separate
+deployment-mode policy above.
+
+The non-production `log` adapter still emits the development mail body into the
+logging pipeline, but the current global redaction filter removes sensitive
+query-token values before configured log sinks receive them. As a result, the
+historical local workflow of copying a valid Magic-Link, verification, or
+Recovery token from container logs does **not** currently work. GitHub issue
+**#676** owns that focused development/bootstrap blocker. The fix must preserve
+general token redaction rather than making authentication tokens broadly
+loggable.
 
 The base address for links comes from configuration and never from a request
 header. A forged `Host` header could otherwise redirect a link to a foreign
@@ -388,10 +429,12 @@ Every generation of the family remains attributable. The rate limit does not
 shorten replay history and is explicitly not a time window through which old
 tokens can fall out of detection.
 
-The still-open serialization of the general `count -> check -> record`
-threshold under concurrent requests is tracked in GitHub issue **#60**. It is
-not an authentication bypass, but it must be hardened before public Managed
-exposure so the configured limit also holds under burst load.
+Rate-limit threshold reservation is serialized per `(action, key)` with a
+PostgreSQL advisory transaction lock and is therefore shared across API
+instances. Production request sessions reserve and commit the slot in a short
+security transaction so a later request rollback does not erase the attempt.
+This concurrency hardening was delivered under GitHub issue **#60**; #60 is
+complete and is not an open security item.
 
 ## Invitations
 
@@ -502,6 +545,8 @@ test is created.
 | Refresh replay permanently revokes the family across generations | `test_auth_flows.py`, `test_sessions.py::TestReplay` |
 | Concurrent refresh has exactly one winner | `test_auth_flows.py::test_parallele_refresh_rotation_hat_exactly_a_sieger` |
 | Successful rotations are themselves limited | `test_sessions.py::TestRotationsflut` |
+| Passkey finishes consume the exact ceremony challenge rather than a global newest challenge | `test_passkey_challenge_binding.py` |
+| WebAuthn sign-counter verification serializes per credential under the Account-first lock order | `test_passkey_counter_concurrency.py` |
 | Two concurrent invitation acceptances cannot grow a Space beyond two partners | `test_invitations.py::TestRace` |
 | Concurrent bootstrap creates exactly one initial owner | `test_auth_flows.py::test_paralleler_bootstrap_hat_exactly_a_owner` |
 | Security-relevant integration tests actually run in CI and are not silently skipped | CI step **Integration tests actually ran** |
