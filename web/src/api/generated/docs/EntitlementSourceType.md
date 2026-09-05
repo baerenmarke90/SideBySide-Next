@@ -1,34 +1,21 @@
 
-# ServerAdminActionActivityItem
+# EntitlementSourceType
 
+Normalized origin of an entitlement grant.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
-`action` | string
-`actorId` | string
-`createdAt` | Date
-`effectCount` | number
-`id` | string
-`targetAccountId` | string
-`targetSpaceId` | string
 
 ## Example
 
 ```typescript
-import type { ServerAdminActionActivityItem } from ''
+import type { EntitlementSourceType } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "action": null,
-  "actorId": null,
-  "createdAt": null,
-  "effectCount": null,
-  "id": null,
-  "targetAccountId": null,
-  "targetSpaceId": null,
-} satisfies ServerAdminActionActivityItem
+} satisfies EntitlementSourceType
 
 console.log(example)
 
@@ -37,7 +24,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as ServerAdminActionActivityItem
+const exampleParsed = JSON.parse(exampleJSON) as EntitlementSourceType
 console.log(exampleParsed)
 ```
 

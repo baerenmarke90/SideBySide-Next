@@ -1,34 +1,22 @@
 
-# ServerAdminActionActivityItem
+# ServerAdminEntitlementRevokeRequest
 
 
 ## Properties
 
 Name | Type
 ------------ | -------------
-`action` | string
-`actorId` | string
-`createdAt` | Date
-`effectCount` | number
-`id` | string
-`targetAccountId` | string
-`targetSpaceId` | string
+`reason` | string
 
 ## Example
 
 ```typescript
-import type { ServerAdminActionActivityItem } from ''
+import type { ServerAdminEntitlementRevokeRequest } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "action": null,
-  "actorId": null,
-  "createdAt": null,
-  "effectCount": null,
-  "id": null,
-  "targetAccountId": null,
-  "targetSpaceId": null,
-} satisfies ServerAdminActionActivityItem
+  "reason": null,
+} satisfies ServerAdminEntitlementRevokeRequest
 
 console.log(example)
 
@@ -37,7 +25,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as ServerAdminActionActivityItem
+const exampleParsed = JSON.parse(exampleJSON) as ServerAdminEntitlementRevokeRequest
 console.log(exampleParsed)
 ```
 

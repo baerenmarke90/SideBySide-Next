@@ -1517,6 +1517,18 @@
         "title": "EngagementTarget",
         "type": "string"
       },
+      "EntitlementSourceType": {
+        "description": "Normalized origin of an entitlement grant.",
+        "enum": [
+          "GOOGLE_PLAY",
+          "CLOUD_STRIPE",
+          "SELF_HOSTED_KEY",
+          "ADMIN_GRANT",
+          "TEST_FIXTURE"
+        ],
+        "title": "EntitlementSourceType",
+        "type": "string"
+      },
       "EntitlementStatus": {
         "description": "Lifecycle state of an entitlement grant.",
         "enum": [
@@ -5730,12 +5742,25 @@
               }
             ],
             "title": "Targetaccountid"
+          },
+          "targetSpaceId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetspaceid"
           }
         },
         "required": [
           "id",
           "actorId",
           "targetAccountId",
+          "targetSpaceId",
           "action",
           "effectCount",
           "createdAt"
@@ -5802,6 +5827,143 @@
           "confirmationEmail"
         ],
         "title": "ServerAdminEmailVerificationRequest",
+        "type": "object"
+      },
+      "ServerAdminEntitlementGrantRequest": {
+        "properties": {
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "effectiveUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveuntil"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/EntitlementTier",
+            "default": "PREMIUM"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ServerAdminEntitlementGrantRequest",
+        "type": "object"
+      },
+      "ServerAdminEntitlementGrantView": {
+        "description": "One historical grant row. Never exposes provider secrets/tokens.",
+        "properties": {
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "format": "date-time",
+            "title": "Effectivefrom",
+            "type": "string"
+          },
+          "effectiveUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveuntil"
+          },
+          "externalReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Externalreference"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/EntitlementSourceType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EntitlementStatus"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/EntitlementTier"
+          }
+        },
+        "required": [
+          "id",
+          "sourceType",
+          "status",
+          "tier",
+          "effectiveFrom",
+          "effectiveUntil",
+          "capabilities",
+          "externalReference",
+          "createdAt"
+        ],
+        "title": "ServerAdminEntitlementGrantView",
+        "type": "object"
+      },
+      "ServerAdminEntitlementRevokeRequest": {
+        "properties": {
+          "reason": {
+            "default": "revoked",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "ServerAdminEntitlementRevokeRequest",
         "type": "object"
       },
       "ServerAdminFailedJob": {
@@ -6367,6 +6529,62 @@
           "latestMembershipEndedAt"
         ],
         "title": "ServerAdminSpaceDetail",
+        "type": "object"
+      },
+      "ServerAdminSpaceEntitlementView": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "effectiveUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveuntil"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminEntitlementGrantView"
+            },
+            "title": "Grants",
+            "type": "array"
+          },
+          "isInGracePeriod": {
+            "title": "Isingraceperiod",
+            "type": "boolean"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EntitlementStatus"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/EntitlementTier"
+          }
+        },
+        "required": [
+          "spaceId",
+          "tier",
+          "status",
+          "effectiveUntil",
+          "isInGracePeriod",
+          "capabilities",
+          "grants"
+        ],
+        "title": "ServerAdminSpaceEntitlementView",
         "type": "object"
       },
       "ServerAdminSpaceList": {
@@ -10102,6 +10320,248 @@
           }
         },
         "summary": "Get Server Admin Space",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/spaces/{space_id}/entitlement": {
+      "get": {
+        "description": "Return the effective entitlement state and full grant history for a Space.",
+        "operationId": "get_server_admin_space_entitlement_api_v1_server_admin_spaces__space_id__entitlement_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Space Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSpaceEntitlementView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Server Admin Space Entitlement",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/spaces/{space_id}/entitlement/grants": {
+      "post": {
+        "description": "Record a manual Premium grant for a Space (V1 launch entitlement source).\n\nThis is the only entitlement source implemented for the first launch;\nGoogle Play/Stripe/Self-Hosted-license adapters are deliberately out of\nscope until a real launch channel requires them (docs/m6/\nENTITLEMENT-BOUNDARY.md §7). It reuses the existing normalized\n`record_grant` source-update interface unchanged rather than adding a\nsecond grant-mutation path.",
+        "operationId": "grant_server_admin_space_entitlement_api_v1_server_admin_spaces__space_id__entitlement_grants_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Space Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAdminEntitlementGrantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSpaceEntitlementView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Grant Server Admin Space Entitlement",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/spaces/{space_id}/entitlement/grants/{grant_id}/revoke": {
+      "post": {
+        "description": "Revoke one grant (e.g. an admin mistake, abuse, or a refund/chargeback).",
+        "operationId": "revoke_server_admin_space_entitlement_grant_api_v1_server_admin_spaces__space_id__entitlement_grants__grant_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAdminEntitlementRevokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSpaceEntitlementView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Revoke Server Admin Space Entitlement Grant",
         "tags": [
           "server-admin"
         ]

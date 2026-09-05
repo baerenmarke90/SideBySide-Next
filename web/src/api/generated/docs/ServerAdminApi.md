@@ -10,13 +10,16 @@ All URIs are relative to *http://localhost*
 | [**getServerAdminOverviewApiV1ServerAdminOverviewGet**](ServerAdminApi.md#getserveradminoverviewapiv1serveradminoverviewget) | **GET** /api/v1/server-admin/overview | Get Server Admin Overview |
 | [**getServerAdminSettingsApiV1ServerAdminSettingsGet**](ServerAdminApi.md#getserveradminsettingsapiv1serveradminsettingsget) | **GET** /api/v1/server-admin/settings | Get Server Admin Settings |
 | [**getServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGet**](ServerAdminApi.md#getserveradminspaceapiv1serveradminspacesspaceidget) | **GET** /api/v1/server-admin/spaces/{space_id} | Get Server Admin Space |
+| [**getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGet**](ServerAdminApi.md#getserveradminspaceentitlementapiv1serveradminspacesspaceidentitlementget) | **GET** /api/v1/server-admin/spaces/{space_id}/entitlement | Get Server Admin Space Entitlement |
 | [**getServerAdminStorageApiV1ServerAdminStorageGet**](ServerAdminApi.md#getserveradminstorageapiv1serveradminstorageget) | **GET** /api/v1/server-admin/storage | Get Server Admin Storage |
+| [**grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPost**](ServerAdminApi.md#grantserveradminspaceentitlementapiv1serveradminspacesspaceidentitlementgrantspost) | **POST** /api/v1/server-admin/spaces/{space_id}/entitlement/grants | Grant Server Admin Space Entitlement |
 | [**issueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPost**](ServerAdminApi.md#issueserveradminoperatorrecoveryapiv1serveradminaccountsaccountidrecoveryoperatorpost) | **POST** /api/v1/server-admin/accounts/{accountId}/recovery/operator | Issue Server Admin Operator Recovery |
 | [**listServerAdminAccountsApiV1ServerAdminAccountsGet**](ServerAdminApi.md#listserveradminaccountsapiv1serveradminaccountsget) | **GET** /api/v1/server-admin/accounts | List Server Admin Accounts |
 | [**listServerAdminJobsApiV1ServerAdminJobsGet**](ServerAdminApi.md#listserveradminjobsapiv1serveradminjobsget) | **GET** /api/v1/server-admin/jobs | List Server Admin Jobs |
 | [**listServerAdminSpacesApiV1ServerAdminSpacesGet**](ServerAdminApi.md#listserveradminspacesapiv1serveradminspacesget) | **GET** /api/v1/server-admin/spaces | List Server Admin Spaces |
 | [**requestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsAccountIdRecoveryEmailPost**](ServerAdminApi.md#requestserveradminaccountrecoveryemailapiv1serveradminaccountsaccountidrecoveryemailpost) | **POST** /api/v1/server-admin/accounts/{accountId}/recovery/email | Request Server Admin Account Recovery Email |
 | [**revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost**](ServerAdminApi.md#revokeserveradminaccountsessionsapiv1serveradminaccountsaccountidsessionsrevokepost) | **POST** /api/v1/server-admin/accounts/{accountId}/sessions/revoke | Revoke Server Admin Account Sessions |
+| [**revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost**](ServerAdminApi.md#revokeserveradminspaceentitlementgrantapiv1serveradminspacesspaceidentitlementgrantsgrantidrevokepost) | **POST** /api/v1/server-admin/spaces/{space_id}/entitlement/grants/{grant_id}/revoke | Revoke Server Admin Space Entitlement Grant |
 | [**updateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePut**](ServerAdminApi.md#updatemaintenancesettingapiv1serveradminsettingsmaintenanceput) | **PUT** /api/v1/server-admin/settings/maintenance | Update Maintenance Setting |
 | [**updateRegistrationSettingApiV1ServerAdminSettingsRegistrationPut**](ServerAdminApi.md#updateregistrationsettingapiv1serveradminsettingsregistrationput) | **PUT** /api/v1/server-admin/settings/registration | Update Registration Setting |
 | [**updateServerAdminAccountSuspensionApiV1ServerAdminAccountsAccountIdSuspensionPut**](ServerAdminApi.md#updateserveradminaccountsuspensionapiv1serveradminaccountsaccountidsuspensionput) | **PUT** /api/v1/server-admin/accounts/{accountId}/suspension | Update Server Admin Account Suspension |
@@ -400,6 +403,76 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGet
+
+> ServerAdminSpaceEntitlementView getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGet(spaceId)
+
+Get Server Admin Space Entitlement
+
+Return the effective entitlement state and full grant history for a Space.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { GetServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    spaceId: spaceId_example,
+  } satisfies GetServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRequest;
+
+  try {
+    const data = await api.getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGet(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **spaceId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ServerAdminSpaceEntitlementView**](ServerAdminSpaceEntitlementView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## getServerAdminStorageApiV1ServerAdminStorageGet
 
 > ServerAdminStorageOverview getServerAdminStorageApiV1ServerAdminStorageGet()
@@ -457,6 +530,80 @@ No authorization required
 | **200** | Successful Response |  -  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPost
+
+> ServerAdminSpaceEntitlementView grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPost(spaceId, serverAdminEntitlementGrantRequest)
+
+Grant Server Admin Space Entitlement
+
+Record a manual Premium grant for a Space (V1 launch entitlement source).  This is the only entitlement source implemented for the first launch; Google Play/Stripe/Self-Hosted-license adapters are deliberately out of scope until a real launch channel requires them (docs/m6/ ENTITLEMENT-BOUNDARY.md §7). It reuses the existing normalized &#x60;record_grant&#x60; source-update interface unchanged rather than adding a second grant-mutation path.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { GrantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    spaceId: spaceId_example,
+    // ServerAdminEntitlementGrantRequest
+    serverAdminEntitlementGrantRequest: ...,
+  } satisfies GrantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRequest;
+
+  try {
+    const data = await api.grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **spaceId** | `string` |  | [Defaults to `undefined`] |
+| **serverAdminEntitlementGrantRequest** | [ServerAdminEntitlementGrantRequest](ServerAdminEntitlementGrantRequest.md) |  | |
+
+### Return type
+
+[**ServerAdminSpaceEntitlementView**](ServerAdminSpaceEntitlementView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -910,6 +1057,83 @@ No authorization required
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
 | **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost
+
+> ServerAdminSpaceEntitlementView revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost(spaceId, grantId, serverAdminEntitlementRevokeRequest)
+
+Revoke Server Admin Space Entitlement Grant
+
+Revoke one grant (e.g. an admin mistake, abuse, or a refund/chargeback).
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ServerAdminApi,
+} from '';
+import type { RevokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new ServerAdminApi();
+
+  const body = {
+    // string
+    spaceId: spaceId_example,
+    // string
+    grantId: grantId_example,
+    // ServerAdminEntitlementRevokeRequest
+    serverAdminEntitlementRevokeRequest: ...,
+  } satisfies RevokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRequest;
+
+  try {
+    const data = await api.revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **spaceId** | `string` |  | [Defaults to `undefined`] |
+| **grantId** | `string` |  | [Defaults to `undefined`] |
+| **serverAdminEntitlementRevokeRequest** | [ServerAdminEntitlementRevokeRequest](ServerAdminEntitlementRevokeRequest.md) |  | |
+
+### Return type
+
+[**ServerAdminSpaceEntitlementView**](ServerAdminSpaceEntitlementView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+| **422** | Request parameters or domain inputs are invalid. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
