@@ -276,7 +276,9 @@ export function SpaceOffboardingPanel({
                   </p>
                 </div>
 
-                {mutation.error ? <ProblemState error={mutation.error} /> : null}
+                {mutation.error ? (
+                  <ProblemState error={mutation.error} />
+                ) : null}
                 {mutation.isPending ? (
                   <p className="status" role="status" aria-live="polite">
                     {t('spaceOffboarding.submitting')}
