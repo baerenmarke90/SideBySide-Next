@@ -355,6 +355,8 @@ class Settings(BaseSettings):
             raise ValueError(
                 "SBS_S3_ENDPOINT must be an http(s) origin without credentials or path."
             )
+        if self.is_production and endpoint.scheme != "https":
+            raise ValueError("Production and Demo require an https SBS_S3_ENDPOINT.")
         if "/" in self.s3_bucket:
             raise ValueError("SBS_S3_BUCKET must be a bucket name, not a path.")
         return self

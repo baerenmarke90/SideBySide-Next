@@ -231,10 +231,14 @@ SBS_S3_SECRET_ACCESS_KEY=...
 # SBS_S3_SESSION_TOKEN=...
 ```
 
-The bucket must remain private. Production traffic over untrusted networks uses
-HTTPS. Provider credentials need only the object operations required by the
-SideBySide media lifecycle; no public bucket policy or static website exposure is
-required.
+The bucket must remain private. The configured S3 endpoint is client-facing:
+presigned PUT and GET capabilities use that exact origin rather than an internal
+server-only storage URL. `SBS_ENVIRONMENT=production` and `demo` therefore reject
+`http://` S3 endpoints and require HTTPS. Development and test may still use HTTP
+for local S3-compatible fixtures such as MinIO. This restriction applies only when
+`SBS_MEDIA_STORE=s3`; the LocalMediaStore remains a supported production topology.
+Provider credentials need only the object operations required by the SideBySide
+media lifecycle; no public bucket policy or static website exposure is required.
 
 Uploads use short-lived server-signed PUT capabilities for the exact generated
 object key. A provider upload does not make an Attachment `READY`; server-side
