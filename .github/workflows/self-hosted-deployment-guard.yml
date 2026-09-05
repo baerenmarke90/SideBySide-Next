@@ -101,6 +101,9 @@ jobs:
             exit 1
           fi
 
+      - name: Cloud/Managed deployment recipe contract (#521)
+        run: python3 tools/ci/test_cloud_managed_topology.py -v
+
       - name: Verified checkout revision contract
         run: |
           set -euo pipefail

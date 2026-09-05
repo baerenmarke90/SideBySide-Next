@@ -153,6 +153,8 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
                 ".github/workflows/self-hosted-deployment-guard.yml",
                 ".env.example",
                 *SELF_HOSTED_COMPOSE_FILES,
+                "deploy/compose.cloud.yml",
+                "deploy/cloud-managed.env.example",
                 "backend/Dockerfile",
                 "web/Dockerfile",
                 "web/nginx.conf",
