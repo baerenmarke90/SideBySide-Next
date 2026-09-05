@@ -107,15 +107,23 @@ does not depend on one backup vendor/tool merely to be restorable.
 
 ### Cloud/Managed
 
-#521 must map the same logical units to the selected managed platform:
+`docs/m6/CLOUD-MANAGED-TOPOLOGY.md` §6 (#521) maps the same logical units to the
+selected managed platform:
 
 1. managed PostgreSQL backup/restore;
 2. object-storage versioning/snapshot/export strategy;
-3. managed secret/config recovery;
-4. #519 immutable release identity;
-5. coordination expectations between database and media recovery points.
+3. the #520 self-service Account-deletion journal's shared-volume durability,
+   included in the same recovery-point discipline as the database (§3.5/§6 of
+   the topology contract — this unit does not exist in the generic Self-Hosted
+   list above because Self-Hosted already treats it as part of the single-host
+   protected volume set);
+4. managed secret/config recovery;
+5. #519 immutable release identity;
+6. coordination expectations between database and media recovery points.
 
-Provider-specific mechanics stay at the deployment boundary.
+Provider-specific mechanics stay at the deployment boundary. A provider snapshot
+is not recovery evidence until `#524` has exercised an actual restore against
+this topology.
 
 ## 5. Upgrade and rollback rules
 

@@ -62,6 +62,11 @@ class ChangeScopeTest(unittest.TestCase):
                     enabled={"self_hosted", "deployment_guard", "recovery"},
                 )
 
+    def test_cloud_managed_deployment_files_enable_deployment_guard(self) -> None:
+        for path in ("deploy/compose.cloud.yml", "deploy/cloud-managed.env.example"):
+            with self.subTest(path=path):
+                self.assert_scope([path], enabled={"deployment_guard"})
+
     def test_web_dockerfile_enables_build_and_deployment_gates(self) -> None:
         self.assert_scope(
             ["web/Dockerfile"],

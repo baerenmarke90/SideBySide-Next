@@ -58,12 +58,19 @@ The frozen contract requires:
 
 ### M6-B03 — Cloud/Managed launch topology
 
-**Status:** `BLOCKING` for managed launch support, owner #521.
+**Status:** `FROZEN / RESOLVED` by `CLOUD-MANAGED-TOPOLOGY.md` v1 under #521.
+Integrated `#524` rehearsal evidence (including a real managed restore) remains
+open.
 
-The initial managed deployment must freeze API/Web/worker/migrate/database/media,
-secret ownership, ingress, backup responsibility, capacity assumptions and one
-versioned supported deployment representation. It must reuse #375/#190 rather than
-creating Cloud-only Domain semantics.
+The managed deployment freezes API/Web/worker/migrate/database/media, secret
+ownership, ingress, backup responsibility, capacity assumptions and one versioned
+deployment representation (`deploy/compose.cloud.yml`,
+`deploy/cloud-managed.env.example`). It reuses #375/#190/#519/#189 rather than
+creating Cloud-only Domain semantics. One notable non-stateless exception is
+recorded explicitly: the #520 self-service Account-deletion journal requires a
+shared/ReadWriteMany-equivalent volume across `api` replicas, because its
+append-only hash-chain contract predates this issue and is not weakened to make
+horizontal scaling simpler.
 
 ### M6-B04 — Launch entitlement-source adapters
 
