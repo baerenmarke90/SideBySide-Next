@@ -109,8 +109,11 @@ class SpaceOffboardingContentTest {
         render(onLeaveSpace = { leaves += 1 })
 
         exitAction().performClick()
+        // The consequences dialog scrolls on small screens, so the continue
+        // action has to be brought into the dialog window before it is clicked.
         composeRule
             .onNodeWithText(context.getString(R.string.space_offboarding_continue))
+            .performScrollTo()
             .performClick()
         composeRule.onNode(hasSetTextAction()).performTextInput(
             context.getString(R.string.space_offboarding_confirmation_phrase),
