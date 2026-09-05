@@ -119,6 +119,7 @@ import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.SignInRequest
+import sidebyside.api.models.SpaceMembershipExitView
 import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
@@ -230,6 +231,17 @@ class OkHttpReferenceApi(
                 .get()
                 .build(),
             ListSerializer(AccountMembershipView.serializer()),
+        )
+
+    override suspend fun leaveSpace(
+        spaceId: UUID,
+        accessToken: String,
+    ): SpaceMembershipExitView =
+        executeJson(
+            authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/membership/leave", accessToken)
+                .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType))
+                .build(),
+            SpaceMembershipExitView.serializer(),
         )
 
     override suspend fun deleteOwnAccount(

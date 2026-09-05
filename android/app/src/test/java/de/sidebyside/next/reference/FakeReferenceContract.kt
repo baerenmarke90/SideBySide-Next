@@ -85,6 +85,7 @@ import sidebyside.api.models.PlanSchedule
 import sidebyside.api.models.PlanUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
+import sidebyside.api.models.SpaceMembershipExitView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
 import sidebyside.api.models.WishCreate
@@ -121,6 +122,11 @@ abstract class FakeReferenceContract : ReferenceContract {
 
     override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> =
         notExercised("listMemberships")
+
+    override suspend fun leaveSpace(
+        spaceId: UUID,
+        accessToken: String,
+    ): SpaceMembershipExitView = notExercised("leaveSpace")
 
     override suspend fun deleteOwnAccount(
         accessToken: String,

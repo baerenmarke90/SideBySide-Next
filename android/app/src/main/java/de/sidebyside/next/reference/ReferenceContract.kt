@@ -94,6 +94,7 @@ import sidebyside.api.models.PlanUpdate
 import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
+import sidebyside.api.models.SpaceMembershipExitView
 import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
@@ -136,6 +137,12 @@ interface ReferenceContract {
      * demo persona's Space is not known at build time.
      */
     suspend fun listMemberships(accessToken: String): List<AccountMembershipView>
+
+    /** Ends only the current Account's Membership in [spaceId]. */
+    suspend fun leaveSpace(
+        spaceId: UUID,
+        accessToken: String,
+    ): SpaceMembershipExitView
 
     /** Deletes only the Account represented by [accessToken]. */
     suspend fun deleteOwnAccount(
