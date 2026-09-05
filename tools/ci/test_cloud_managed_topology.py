@@ -182,9 +182,12 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
         )
         config = self._resolve(overrides)
         self.assertEqual(config["services"]["api"]["environment"]["SBS_MEDIA_STORE"], "s3")
+        endpoint = config["services"]["api"]["environment"]["SBS_S3_ENDPOINT"]
+        self.assertEqual(endpoint, "https://s3.example.com")
+        self.assertTrue(endpoint.startswith("https://"))
         self.assertEqual(
             config["services"]["web"]["environment"]["SBS_WEB_CSP_CONNECT_ORIGINS"],
-            "https://s3.example.com",
+            endpoint,
         )
 
     def test_missing_backend_image_fails_closed(self) -> None:
