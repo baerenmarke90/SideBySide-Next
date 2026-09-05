@@ -1,4 +1,4 @@
-"""Current Account state checks for asynchronous side-effect boundaries."""
+"""Current Account and Membership state checks for asynchronous side-effect boundaries."""
 
 from __future__ import annotations
 
@@ -48,14 +48,24 @@ def has_active_membership(
     account_id: UUID,
     space_id: UUID,
 ) -> bool:
-    """Return whether an already enabled Account still has live Space access."""
+    """Share-lock the current Membership barrier and report active Space access.
+
+    This is the asynchronous counterpart of ``require_membership``. Provider
+    and background side effects keep the matching ACTIVE Membership row under a
+    shared lock for their transaction. #518 self-offboarding takes the exclusive
+    side of that same row before ``ACTIVE -> LEFT``. Therefore either an
+    already-authorized side effect finishes before exit can become durable, or
+    exit commits first and this recheck observes no active Membership.
+    """
     return (
         session.execute(
-            select(Membership.id).where(
+            select(Membership.id)
+            .where(
                 Membership.space_id == space_id,
                 Membership.account_id == account_id,
                 Membership.status == MembershipStatus.ACTIVE.value,
             )
+            .with_for_update(read=True)
         ).scalar_one_or_none()
         is not None
     )
