@@ -77,7 +77,10 @@ class TestProduction:
             ),
         )
         production = TestClient(
-            create_app(), base_url="http://localhost", raise_server_exceptions=False
+            create_app(),
+            base_url="http://localhost",
+            client=("127.0.0.1", 50000),
+            raise_server_exceptions=False,
         )
         assert production.get("/openapi.json").status_code == 404
         assert production.get("/docs").status_code == 404
