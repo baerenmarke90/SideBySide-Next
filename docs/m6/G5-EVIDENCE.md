@@ -4,6 +4,7 @@
 **Integrated evidence owner:** #524  
 **Final gate decision:** #525  
 **S0 baseline:** `main` at `7564800df85f53f9f0c9a99a7414de22906ade73`
+**2026-09-05 integrated rehearsal:** `docs/m6/G5-EVIDENCE-REPORT-2026-09-05.md` (candidate `d0a4f2030a22f775a22679f7f225117bf51e91df`)
 
 This matrix is the authoritative M6 index for **G5 — Launch-ready** evidence. It
 separates reusable repository baselines from final release-candidate proof.
@@ -60,27 +61,27 @@ These inputs reduce duplicated work but do not waive the integrated G5 checks.
 
 ## 4. G5 criteria
 
-| ID | Criterion | Required evidence / owner | S0 status |
-|---|---|---|---|
-| G5-01 | G4 Core Release Candidate baseline | final M5/G4 review, including #192 where applicable; exact candidate reused by M6 | `BLOCKED` — G4 must pass |
-| G5-02 | Coherent immutable release identity and controlled Android signing/versioning | #194 baseline, #519 release manifest/artifacts, #524 release verification | `BLOCKED` |
-| G5-03 | SBOM, attestations and provenance | #193 bound to exact #519 artifact/release identity; #524 verification | `BLOCKED` |
-| G5-04 | Self-Hosted backup/restore/upgrade/recovery | #190 baseline plus #524 real restore/upgrade/recovery evidence | `BLOCKED` — repository baseline available |
-| G5-05 | Development-to-Production promotion, migration and rollback/forward-fix | #375 baseline, #519 release identity, #524 candidate rehearsal | `BLOCKED` — repository baseline available |
-| G5-06 | Supported Cloud/Managed production topology | #521 deployment contract, recovery/capacity evidence and #524 rehearsal if managed launch is in scope | `BLOCKED` |
-| G5-07 | Registration, maintenance and ServerAdmin lockout safety | #334, #335, #524 privileged-flow and negative-access evidence | `BLOCKED` |
-| G5-08 | Structured observability and redaction | #189 logs/correlation/metrics plus #524 redaction/diagnostic evidence | `BLOCKED` |
-| G5-09 | Incident detection, response and recovery drill | #522 runbooks + controlled drill, integrated/recorded by #524 | `BLOCKED` |
-| G5-10 | Relationship/Space offboarding and retention | #518 lifecycle contract and #524 old-Membership/cache/job/privacy evidence | `BLOCKED` |
-| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and #524 deletion/restore evidence | `BLOCKED` |
-| G5-12 | Accepted versioned commercial/Entitlement product model | #262 final capability matrix, ownership, lifecycle, downgrade and launch-channel decisions | `BLOCKED` |
-| G5-13 | Central Entitlement enforcement and launch source adapters | #523 plus one focused adapter per source selected by #262; #524 lifecycle/outage/restore evidence | `BLOCKED` |
-| G5-14 | Final Security/Privacy/Tenant Isolation | G4 baseline plus #524 synthetic cross-Space, `OWNER_ONLY`, admin/ops and data-lifecycle negative tests | `BLOCKED` |
-| G5-15 | Final release-state Accessibility acceptance | G4/#192 automation reused; #524 manual keyboard/focus/TalkBack/large-text launch-state gaps only | `BLOCKED` |
-| G5-16 | Launch-topology performance/capacity | #521 assumptions and #524 bounded synthetic API/worker/database/media evidence | `BLOCKED` |
-| G5-17 | Public Demo exposure/isolation boundary | #304 baseline plus #524 release regression for DB/media/secrets/reset/auth/Entitlement isolation | `BLOCKED` — repository baseline available |
-| G5-18 | Integrated launch rehearsal evidence complete | #524 dated report with every criterion linked to an artifact/test/drill/decision or blocker | `BLOCKED` |
-| G5-19 | Final explicit G5 decision | #525 review of this matrix and #524 report against exact release candidate | `BLOCKED` |
+| ID | Criterion | Required evidence / owner | S0 status | 2026-09-05 rehearsal status |
+|---|---|---|---|---|
+| G5-01 | G4 Core Release Candidate baseline | final M5/G4 review, including #192 where applicable; exact candidate reused by M6 | `BLOCKED` — G4 must pass | `PASS` — M5 client issues (#295, #350) closed; #192 automation green in CI on this lineage |
+| G5-02 | Coherent immutable release identity and controlled Android signing/versioning | #194 baseline, #519 release manifest/artifacts, #524 release verification | `BLOCKED` | `BLOCKED` — no release published yet; needs real signing secrets + operator-approved `release-publish.yml` run (report §1) |
+| G5-03 | SBOM, attestations and provenance | #193 bound to exact #519 artifact/release identity; #524 verification | `BLOCKED` | `BLOCKED` — same as G5-02; mechanism contract-tested and green, nothing published to verify yet (report §2) |
+| G5-04 | Self-Hosted backup/restore/upgrade/recovery | #190 baseline plus #524 real restore/upgrade/recovery evidence | `BLOCKED` — repository baseline available | `PASS` — real backup→fresh-target restore→migrate→smoke cycle executed, data/history integrity verified (report §4) |
+| G5-05 | Development-to-Production promotion, migration and rollback/forward-fix | #375 baseline, #519 release identity, #524 candidate rehearsal | `BLOCKED` — repository baseline available | `BLOCKED` — mechanics (migration-before-traffic, revision consistency, smoke) proven live and in CI; genuine two-host promotion needs real infrastructure (report §3) |
+| G5-06 | Supported Cloud/Managed production topology | #521 deployment contract, recovery/capacity evidence and #524 rehearsal if managed launch is in scope | `BLOCKED` | `BLOCKED` — #521 topology/recipe frozen and contract-tested; no real managed cloud account available to exercise a real restore (report §11) |
+| G5-07 | Registration, maintenance and ServerAdmin lockout safety | #334, #335, #524 privileged-flow and negative-access evidence | `BLOCKED` | `FAIL` — maintenance/lockout mechanics confirmed live; documented log-mail bootstrap path is broken by over-redaction, filed as #676 (report §5) |
+| G5-08 | Structured observability and redaction | #189 logs/correlation/metrics plus #524 redaction/diagnostic evidence | `BLOCKED` | `PASS` — live incident drill produced sanitized logs/correlation IDs throughout, no secret/ProtectedPayload leakage (report §6) |
+| G5-09 | Incident detection, response and recovery drill | #522 runbooks + controlled drill, integrated/recorded by #524 | `BLOCKED` | `PASS` — full database-readiness-loss drill executed live with real timestamps (report §6) |
+| G5-10 | Relationship/Space offboarding and retention | #518 lifecycle contract and #524 old-Membership/cache/job/privacy evidence | `BLOCKED` | `PASS` — verified against merged code/tests when #518 closed this session; `test_space_offboarding*.py` family green in CI (report §8) |
+| G5-11 | Complete Account deletion and restore reconciliation | #520 retention/deletion matrix and #524 deletion/restore evidence | `BLOCKED` | `PASS` — `test_account_deletion*.py` (12 files, incl. reconciliation/restore-replay) green in `Backend Integration` this session; not separately re-executed live (report §8) |
+| G5-12 | Accepted versioned commercial/Entitlement product model | #262 final capability matrix, ownership, lifecycle, downgrade and launch-channel decisions | `BLOCKED` | `PASS` — ADR-0006 + Feature Matrix v1.1 authoritative; launch channel declared (`ENTITLEMENT-BOUNDARY.md` §7.1) |
+| G5-13 | Central Entitlement enforcement and launch source adapters | #523 plus one focused adapter per source selected by #262; #524 lifecycle/outage/restore evidence | `BLOCKED` | `PASS` for `ADMIN_GRANT` (grant/downgrade/audit exercised live end to end); `NOT_APPLICABLE` for `GOOGLE_PLAY`/`CLOUD_STRIPE`/`SELF_HOSTED_KEY` (report §7) |
+| G5-14 | Final Security/Privacy/Tenant Isolation | G4 baseline plus #524 synthetic cross-Space, `OWNER_ONLY`, admin/ops and data-lifecycle negative tests | `BLOCKED` | `PASS` — live cross-tenant probe (404) and ServerAdmin content-boundary check both confirmed (report §8) |
+| G5-15 | Final release-state Accessibility acceptance | G4/#192 automation reused; #524 manual keyboard/focus/TalkBack/large-text launch-state gaps only | `BLOCKED` | `BLOCKED` — automation green in CI; manual keyboard/TalkBack spot-check of maintenance/entitlement states not performed this session (report §9) |
+| G5-16 | Launch-topology performance/capacity | #521 assumptions and #524 bounded synthetic API/worker/database/media evidence | `BLOCKED` | `PASS` — bounded single-host synthetic check recorded, explicitly not an SLA claim (report §10) |
+| G5-17 | Public Demo exposure/isolation boundary | #304 baseline plus #524 release regression for DB/media/secrets/reset/auth/Entitlement isolation | `BLOCKED` — repository baseline available | `BLOCKED` — config-layer hardening (signing key, HTTPS) confirmed fail-closed live; full live rehearsal needs a real TLS/domain (report §11) |
+| G5-18 | Integrated launch rehearsal evidence complete | #524 dated report with every criterion linked to an artifact/test/drill/decision or blocker | `BLOCKED` | `PASS` — this report and table constitute that package |
+| G5-19 | Final explicit G5 decision | #525 review of this matrix and #524 report against exact release candidate | `BLOCKED` | `BLOCKED` — reserved for #525; not decided here |
 
 ## 5. Evidence expectations by criterion class
 
