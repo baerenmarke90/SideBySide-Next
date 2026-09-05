@@ -278,7 +278,11 @@ private fun SpaceExitConfirmationDialog(
         }
         Button(
             onClick = onConfirm,
-            enabled = !busy && confirmation == phrase,
+            enabled = spaceOffboardingConfirmationEnabled(
+                busy = busy,
+                confirmation = confirmation,
+                phrase = phrase,
+            ),
             colors = ButtonDefaults.buttonColors(
                 containerColor = SideBySideTheme.colors.error,
                 contentColor = SideBySideTheme.colors.onAccent,
@@ -322,6 +326,13 @@ private fun Consequence(resourceId: Int) {
         modifier = Modifier.widthIn(max = ReadingMeasure),
     )
 }
+
+internal fun spaceOffboardingConfirmationEnabled(
+    *,
+    busy: Boolean,
+    confirmation: String,
+    phrase: String,
+): Boolean = !busy && confirmation == phrase
 
 private val ReadingMeasure = 560.dp
 private const val DialogStepNone = 0
