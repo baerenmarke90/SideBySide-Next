@@ -19,6 +19,7 @@ from uuid import UUID
 
 import webauthn
 from sqlalchemy import delete, or_, select
+from sqlalchemy.engine import Engine
 
 if TYPE_CHECKING:
     from sqlalchemy import CursorResult
@@ -94,36 +95,122 @@ def _issue_challenge(
     return entry
 
 
-def _consume_challenge(
-    session: Session, *, purpose: str, account_id: UUID | None
-) -> WebAuthnChallenge:
-    """Consume the newest open challenge for this purpose.
+def _challenge_from_client_data(credential: dict[str, Any]) -> bytes:
+    """Extract only the challenge from unverified WebAuthn client data.
 
-    The challenge is consumed regardless of whether later verification
-    succeeds. Otherwise the same challenge could be tried repeatedly.
+    The value is used solely to select the exact server-issued challenge row.
+    No account, credential identity, origin, RP ID, or other claim from this
+    unverified payload is trusted; ``py_webauthn`` remains authoritative for
+    the complete ceremony verification afterward.
     """
+    try:
+        response = credential["response"]
+        if not isinstance(response, dict):
+            raise TypeError("WebAuthn response must be an object")
+
+        encoded_client_data = response["clientDataJSON"]
+        if not isinstance(encoded_client_data, str):
+            raise TypeError("clientDataJSON must be a string")
+
+        client_data = json.loads(base64url_to_bytes(encoded_client_data))
+        if not isinstance(client_data, dict):
+            raise TypeError("clientDataJSON must contain an object")
+
+        encoded_challenge = client_data["challenge"]
+        if not isinstance(encoded_challenge, str):
+            raise TypeError("challenge must be a string")
+        challenge = base64url_to_bytes(encoded_challenge)
+    except (KeyError, TypeError, ValueError) as error:
+        raise _invalid() from error
+
+    if not challenge:
+        raise _invalid()
+    return challenge
+
+
+def _consume_challenge_row(
+    session: Session,
+    *,
+    purpose: str,
+    account_id: UUID | None,
+    challenge: bytes,
+) -> WebAuthnChallenge:
+    """Lock and consume exactly one matching open challenge row."""
     current_time = now()
     conditions = [
         WebAuthnChallenge.purpose == purpose,
+        WebAuthnChallenge.challenge == challenge,
         WebAuthnChallenge.consumed_at.is_(None),
         WebAuthnChallenge.expires_at > current_time,
     ]
-    if account_id is not None:
+    if account_id is None:
+        conditions.append(WebAuthnChallenge.account_id.is_(None))
+    else:
         conditions.append(WebAuthnChallenge.account_id == account_id)
 
-    entry = session.execute(
-        select(WebAuthnChallenge)
-        .where(*conditions)
-        .order_by(WebAuthnChallenge.created_at.desc())
-        .limit(1)
-        .with_for_update()
-    ).scalar_one_or_none()
-    if entry is None:
+    entries = (
+        session.execute(select(WebAuthnChallenge).where(*conditions).with_for_update())
+        .scalars()
+        .all()
+    )
+    if len(entries) != 1:
         raise _invalid()
 
+    entry = entries[0]
     entry.consumed_at = current_time
     session.flush()
     return entry
+
+
+def _consume_challenge(
+    session: Session,
+    *,
+    purpose: str,
+    account_id: UUID | None,
+    challenge: bytes,
+) -> bytes:
+    """Atomically consume the exact challenge presented by this ceremony.
+
+    Production request sessions are engine-bound. There, challenge consumption
+    is a short security transaction committed before cryptographic verification
+    continues. A later invalid signature/origin/RP result therefore cannot roll
+    the one-time challenge back into an open state. The row lock and open-row
+    predicate ensure concurrent finishes for the same challenge have at most
+    one winner.
+
+    Tests that deliberately bind a Session to an already-open connection stay
+    inside that test transaction so the helper does not break test isolation.
+    """
+    bind = session.get_bind()
+    if isinstance(bind, Engine):
+        # Late import mirrors the rate-limit security transaction. Tests may
+        # replace get_sessionmaker, and that replacement must apply here too.
+        from sidebyside.db import session as db_session
+
+        security_session = db_session.get_sessionmaker()()
+        try:
+            entry = _consume_challenge_row(
+                security_session,
+                purpose=purpose,
+                account_id=account_id,
+                challenge=challenge,
+            )
+            expected_challenge = bytes(entry.challenge)
+            security_session.commit()
+            return expected_challenge
+        except Exception:
+            security_session.rollback()
+            raise
+        finally:
+            security_session.close()
+
+    entry = _consume_challenge_row(
+        session,
+        purpose=purpose,
+        account_id=account_id,
+        challenge=challenge,
+    )
+    return bytes(entry.challenge)
 
 
 def start_registration(session: Session, account: Account) -> dict[str, Any]:
@@ -173,12 +260,18 @@ def finish_registration(
     session: Session, account: Account, *, credential: dict[str, Any], name: str = ""
 ) -> WebAuthnCredential:
     settings = get_settings()
-    entry = _consume_challenge(session, purpose=REGISTRATION, account_id=account.id)
+    challenge = _challenge_from_client_data(credential)
+    expected_challenge = _consume_challenge(
+        session,
+        purpose=REGISTRATION,
+        account_id=account.id,
+        challenge=challenge,
+    )
 
     try:
         verified = webauthn.verify_registration_response(
             credential=credential,
-            expected_challenge=entry.challenge,
+            expected_challenge=expected_challenge,
             expected_origin=settings.relying_party_origins,
             expected_rp_id=settings.relying_party_id,
             require_user_verification=False,
@@ -236,6 +329,54 @@ def _credential_by_id(session: Session, credential_id: bytes) -> WebAuthnCredent
     ).scalar_one_or_none()
 
 
+def _credential_account_id(session: Session, credential_id: bytes) -> UUID | None:
+    """Resolve only the owner ID needed to establish the authentication lock order."""
+    return session.execute(
+        select(WebAuthnCredential.account_id).where(
+            WebAuthnCredential.credential_id == credential_id
+        )
+    ).scalar_one_or_none()
+
+
+def _lock_authentication_credential(
+    session: Session,
+    credential_id: bytes,
+) -> tuple[WebAuthnCredential, Account]:
+    """Lock Account then credential for one authentication transition.
+
+    Account deletion already locks the Account before removing WebAuthn
+    credentials. Authentication follows the same Account -> Credential order so
+    a concurrent deletion cannot deadlock with sign-counter serialization and a
+    disable that wins the Account lock is observed before a new session is
+    issued.
+    """
+    account_id = _credential_account_id(session, credential_id)
+    if account_id is None:
+        raise _invalid()
+
+    account = session.execute(
+        select(Account).where(Account.id == account_id).with_for_update()
+    ).scalar_one_or_none()
+    if account is None or not account.is_active:
+        raise UnauthenticatedError("Authentication required.", PasskeyErrorCode.CREDENTIAL_UNKNOWN)
+
+    passkey = session.execute(
+        select(WebAuthnCredential)
+        .where(
+            WebAuthnCredential.credential_id == credential_id,
+            WebAuthnCredential.account_id == account.id,
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if passkey is None:
+        # The Account lock makes account deletion/removal serialize with this
+        # transition. A missing row therefore remains the same privacy-safe
+        # unknown-credential ceremony failure.
+        raise _invalid()
+
+    return passkey, account
+
+
 def start_authentication(session: Session) -> dict[str, Any]:
     """Start passkey authentication without account enumeration.
 
@@ -262,23 +403,28 @@ def finish_authentication(
     platform: str = "",
 ) -> SignedIn:
     settings = get_settings()
-    entry = _consume_challenge(session, purpose=AUTHENTICATION, account_id=None)
+    challenge = _challenge_from_client_data(credential)
+    expected_challenge = _consume_challenge(
+        session,
+        purpose=AUTHENTICATION,
+        account_id=None,
+        challenge=challenge,
+    )
 
     try:
         raw_id = base64url_to_bytes(str(credential["rawId"]))
     except (KeyError, ValueError, TypeError) as error:
         raise _invalid() from error
 
-    passkey = _credential_by_id(session, raw_id)
-    if passkey is None:
-        # Unknown credential and invalid signature intentionally produce the
-        # same response.
-        raise _invalid()
+    # Locking begins before verification so the sign counter supplied to
+    # py_webauthn is authoritative for this transaction. The locks remain held
+    # through metadata update and session creation until the request commits.
+    passkey, account = _lock_authentication_credential(session, raw_id)
 
     try:
         verified = webauthn.verify_authentication_response(
             credential=credential,
-            expected_challenge=entry.challenge,
+            expected_challenge=expected_challenge,
             expected_rp_id=settings.relying_party_id,
             expected_origin=settings.relying_party_origins,
             credential_public_key=passkey.public_key,
@@ -293,10 +439,6 @@ def finish_authentication(
     # advance is rejected when the authenticator uses counters, which can signal
     # a cloned authenticator. Devices that do not count keep both values at zero
     # and remain valid; many passkeys behave that way.
-    account = session.get(Account, passkey.account_id)
-    if account is None or not account.is_active:
-        raise UnauthenticatedError("Authentication required.", PasskeyErrorCode.CREDENTIAL_UNKNOWN)
-
     passkey.sign_count = verified.new_sign_count
     passkey.last_used_at = now()
     # Authentication has no allow-list, so successful credential selection also
