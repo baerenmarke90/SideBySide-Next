@@ -49,6 +49,7 @@ class VirtualAuthenticator:
     credential_id: bytes = field(default_factory=lambda: os.urandom(32))
     backup_eligible: bool = False
     backup_state: bool = False
+    supports_resident_key: bool = True
 
     def _cose_key(self) -> bytes:
         numbers = self.private_key.public_key().public_numbers()
@@ -104,6 +105,14 @@ class VirtualAuthenticator:
     def register(
         self, options: dict[str, Any], *, origin: str | None = None, rp_id: str | None = None
     ) -> dict[str, Any]:
+        selection = options.get("authenticatorSelection")
+        if (
+            isinstance(selection, dict)
+            and selection.get("residentKey") == "required"
+            and not self.supports_resident_key
+        ):
+            raise ValueError("Authenticator cannot create a required discoverable credential.")
+
         client_data = self._client_data(
             ceremony_type="webauthn.create",
             challenge=options["challenge"],
