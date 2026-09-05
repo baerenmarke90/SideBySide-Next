@@ -21,7 +21,11 @@ AUTHENTICATION_START = "/api/v1/auth/passkeys/authentication/start"
 AUTHENTICATION_FINISH = "/api/v1/auth/passkeys/authentication/finish"
 
 
-def _register_shared(client, session, authenticator: VirtualAuthenticator) -> None:  # type: ignore[no-untyped-def]
+def _register_shared(
+    client,
+    session,
+    authenticator: VirtualAuthenticator,
+) -> None:  # type: ignore[no-untyped-def]
     account = make_account(session, "Anna")
     headers = auth(sign_in(session, account))
     options = client.post(REGISTRATION_START, headers=headers).json()
@@ -33,7 +37,10 @@ def _register_shared(client, session, authenticator: VirtualAuthenticator) -> No
     assert response.status_code == 201, response.text
 
 
-def _register_production(production_client, authenticator: VirtualAuthenticator):  # type: ignore[no-untyped-def]
+def _register_production(
+    production_client,
+    authenticator: VirtualAuthenticator,
+):  # type: ignore[no-untyped-def]
     client, maker = production_client
     with maker.begin() as setup:
         account = make_account(setup, "Anna")
@@ -50,7 +57,10 @@ def _register_production(production_client, authenticator: VirtualAuthenticator)
     return client, maker
 
 
-def _stored_challenge(session, encoded_challenge: str) -> WebAuthnChallenge:  # type: ignore[no-untyped-def]
+def _stored_challenge(
+    session,
+    encoded_challenge: str,
+) -> WebAuthnChallenge:  # type: ignore[no-untyped-def]
     return session.execute(
         select(WebAuthnChallenge).where(
             WebAuthnChallenge.challenge == from_b64url(encoded_challenge)
@@ -86,7 +96,10 @@ def test_two_started_registrations_finish_against_their_own_challenges(
     assert len(session.execute(select(WebAuthnCredential)).scalars().all()) == 2
 
 
-def test_two_started_authentications_finish_independently(client, session) -> None:  # type: ignore[no-untyped-def]
+def test_two_started_authentications_finish_independently(
+    client,
+    session,
+) -> None:  # type: ignore[no-untyped-def]
     authenticator = VirtualAuthenticator()
     _register_shared(client, session, authenticator)
 
@@ -102,7 +115,10 @@ def test_two_started_authentications_finish_independently(client, session) -> No
     assert second.status_code == 201, second.text
 
 
-def test_invalid_assertion_consumes_only_its_matching_challenge(client, session) -> None:  # type: ignore[no-untyped-def]
+def test_invalid_assertion_consumes_only_its_matching_challenge(
+    client,
+    session,
+) -> None:  # type: ignore[no-untyped-def]
     authenticator = VirtualAuthenticator()
     _register_shared(client, session, authenticator)
 
@@ -127,7 +143,9 @@ def test_invalid_assertion_consumes_only_its_matching_challenge(client, session)
     assert accepted.status_code == 201, accepted.text
 
 
-def test_rejected_assertion_consumption_survives_request_rollback(production_client) -> None:  # type: ignore[no-untyped-def]
+def test_rejected_assertion_consumption_survives_request_rollback(
+    production_client,
+) -> None:  # type: ignore[no-untyped-def]
     authenticator = VirtualAuthenticator()
     client, maker = _register_production(production_client, authenticator)
 
@@ -152,7 +170,9 @@ def test_rejected_assertion_consumption_survives_request_rollback(production_cli
     assert accepted.status_code == 201, accepted.text
 
 
-def test_concurrent_finishes_for_same_challenge_have_one_winner(production_client) -> None:  # type: ignore[no-untyped-def]
+def test_concurrent_finishes_for_same_challenge_have_one_winner(
+    production_client,
+) -> None:  # type: ignore[no-untyped-def]
     authenticator = VirtualAuthenticator()
     client, _maker = _register_production(production_client, authenticator)
     options = client.post(AUTHENTICATION_START).json()
