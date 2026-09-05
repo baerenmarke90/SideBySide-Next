@@ -21,7 +21,7 @@ from sidebyside.config import get_settings
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ForbiddenError, NotFoundError, ValidationError
 from sidebyside.identity import service as accounts
-from sidebyside.identity.models import Account, AccountEmail, AccountRecoveryToken
+from sidebyside.identity.models import Account, AccountEmail
 
 
 class ServerAdminAccountErrorCode:
@@ -231,18 +231,9 @@ def issue_operator_recovery(
             ServerAdminAccountErrorCode.LOCAL_RECOVERY_UNAVAILABLE,
         )
 
-    existing = list(
-        session.execute(
-            select(AccountRecoveryToken).where(AccountRecoveryToken.account_id == target.id)
-        )
-        .scalars()
-        .all()
-    )
-    current_time = now()
-    for model in existing:
-        if model.is_open(current_time):
-            action_tokens.revoke(session, model)
-
+    # Older open proofs are superseded inside the issuing function, under the
+    # same subject lock that serializes an operator proof against a recovery
+    # link the Account holder requests at the same moment.
     model, issued = action_tokens.issue_account_recovery(session, target.id)
     administration.record_action(
         session,
