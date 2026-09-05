@@ -328,7 +328,6 @@ private fun Consequence(resourceId: Int) {
 }
 
 internal fun spaceOffboardingConfirmationEnabled(
-    *,
     busy: Boolean,
     confirmation: String,
     phrase: String,
