@@ -19,6 +19,7 @@ from uuid import UUID
 
 import webauthn
 from sqlalchemy import delete, or_, select
+from sqlalchemy.engine import Engine
 
 if TYPE_CHECKING:
     from sqlalchemy import CursorResult
@@ -94,36 +95,122 @@ def _issue_challenge(
     return entry
 
 
-def _consume_challenge(
-    session: Session, *, purpose: str, account_id: UUID | None
-) -> WebAuthnChallenge:
-    """Consume the newest open challenge for this purpose.
+def _challenge_from_client_data(credential: dict[str, Any]) -> bytes:
+    """Extract only the challenge from unverified WebAuthn client data.
 
-    The challenge is consumed regardless of whether later verification
-    succeeds. Otherwise the same challenge could be tried repeatedly.
+    The value is used solely to select the exact server-issued challenge row.
+    No account, credential identity, origin, RP ID, or other claim from this
+    unverified payload is trusted; ``py_webauthn`` remains authoritative for
+    the complete ceremony verification afterward.
     """
+    try:
+        response = credential["response"]
+        if not isinstance(response, dict):
+            raise TypeError("WebAuthn response must be an object")
+
+        encoded_client_data = response["clientDataJSON"]
+        if not isinstance(encoded_client_data, str):
+            raise TypeError("clientDataJSON must be a string")
+
+        client_data = json.loads(base64url_to_bytes(encoded_client_data))
+        if not isinstance(client_data, dict):
+            raise TypeError("clientDataJSON must contain an object")
+
+        encoded_challenge = client_data["challenge"]
+        if not isinstance(encoded_challenge, str):
+            raise TypeError("challenge must be a string")
+        challenge = base64url_to_bytes(encoded_challenge)
+    except (KeyError, TypeError, ValueError) as error:
+        raise _invalid() from error
+
+    if not challenge:
+        raise _invalid()
+    return challenge
+
+
+def _consume_challenge_row(
+    session: Session,
+    *,
+    purpose: str,
+    account_id: UUID | None,
+    challenge: bytes,
+) -> WebAuthnChallenge:
+    """Lock and consume exactly one matching open challenge row."""
     current_time = now()
     conditions = [
         WebAuthnChallenge.purpose == purpose,
+        WebAuthnChallenge.challenge == challenge,
         WebAuthnChallenge.consumed_at.is_(None),
         WebAuthnChallenge.expires_at > current_time,
     ]
-    if account_id is not None:
+    if account_id is None:
+        conditions.append(WebAuthnChallenge.account_id.is_(None))
+    else:
         conditions.append(WebAuthnChallenge.account_id == account_id)
 
-    entry = session.execute(
-        select(WebAuthnChallenge)
-        .where(*conditions)
-        .order_by(WebAuthnChallenge.created_at.desc())
-        .limit(1)
-        .with_for_update()
-    ).scalar_one_or_none()
-    if entry is None:
+    entries = (
+        session.execute(select(WebAuthnChallenge).where(*conditions).with_for_update())
+        .scalars()
+        .all()
+    )
+    if len(entries) != 1:
         raise _invalid()
 
+    entry = entries[0]
     entry.consumed_at = current_time
     session.flush()
     return entry
+
+
+def _consume_challenge(
+    session: Session,
+    *,
+    purpose: str,
+    account_id: UUID | None,
+    challenge: bytes,
+) -> bytes:
+    """Atomically consume the exact challenge presented by this ceremony.
+
+    Production request sessions are engine-bound. There, challenge consumption
+    is a short security transaction committed before cryptographic verification
+    continues. A later invalid signature/origin/RP result therefore cannot roll
+    the one-time challenge back into an open state. The row lock and open-row
+    predicate ensure concurrent finishes for the same challenge have at most
+    one winner.
+
+    Tests that deliberately bind a Session to an already-open connection stay
+    inside that test transaction so the helper does not break test isolation.
+    """
+    bind = session.get_bind()
+    if isinstance(bind, Engine):
+        # Late import mirrors the rate-limit security transaction. Tests may
+        # replace get_sessionmaker, and that replacement must apply here too.
+        from sidebyside.db import session as db_session
+
+        security_session = db_session.get_sessionmaker()()
+        try:
+            entry = _consume_challenge_row(
+                security_session,
+                purpose=purpose,
+                account_id=account_id,
+                challenge=challenge,
+            )
+            expected_challenge = bytes(entry.challenge)
+            security_session.commit()
+            return expected_challenge
+        except Exception:
+            security_session.rollback()
+            raise
+        finally:
+            security_session.close()
+
+    entry = _consume_challenge_row(
+        session,
+        purpose=purpose,
+        account_id=account_id,
+        challenge=challenge,
+    )
+    return bytes(entry.challenge)
 
 
 def start_registration(session: Session, account: Account) -> dict[str, Any]:
@@ -173,12 +260,18 @@ def finish_registration(
     session: Session, account: Account, *, credential: dict[str, Any], name: str = ""
 ) -> WebAuthnCredential:
     settings = get_settings()
-    entry = _consume_challenge(session, purpose=REGISTRATION, account_id=account.id)
+    challenge = _challenge_from_client_data(credential)
+    expected_challenge = _consume_challenge(
+        session,
+        purpose=REGISTRATION,
+        account_id=account.id,
+        challenge=challenge,
+    )
 
     try:
         verified = webauthn.verify_registration_response(
             credential=credential,
-            expected_challenge=entry.challenge,
+            expected_challenge=expected_challenge,
             expected_origin=settings.relying_party_origins,
             expected_rp_id=settings.relying_party_id,
             require_user_verification=False,
@@ -262,7 +355,13 @@ def finish_authentication(
     platform: str = "",
 ) -> SignedIn:
     settings = get_settings()
-    entry = _consume_challenge(session, purpose=AUTHENTICATION, account_id=None)
+    challenge = _challenge_from_client_data(credential)
+    expected_challenge = _consume_challenge(
+        session,
+        purpose=AUTHENTICATION,
+        account_id=None,
+        challenge=challenge,
+    )
 
     try:
         raw_id = base64url_to_bytes(str(credential["rawId"]))
@@ -278,7 +377,7 @@ def finish_authentication(
     try:
         verified = webauthn.verify_authentication_response(
             credential=credential,
-            expected_challenge=entry.challenge,
+            expected_challenge=expected_challenge,
             expected_rp_id=settings.relying_party_id,
             expected_origin=settings.relying_party_origins,
             credential_public_key=passkey.public_key,
