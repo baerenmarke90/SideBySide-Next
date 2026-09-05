@@ -14,6 +14,7 @@ import { PartnerConnectionPanel } from './PartnerConnectionPanel';
 import { ProfileAppearancePanel } from './ProfileAppearancePanel';
 import { RelationshipSettingsSection } from './ProfilePageBase';
 import { SettingsIndex } from './SettingsIndex';
+import { SpaceOffboardingPanel } from './SpaceOffboardingPanel';
 import { TransferPanel } from './TransferPanel';
 import './SettingsPage.css';
 
@@ -22,6 +23,7 @@ export interface SettingsPageProps {
   accessToken: string;
   account: AccountView;
   spaceId: string;
+  onSpaceLeft: () => void | Promise<void>;
 }
 
 export function SettingsPage(props: SettingsPageProps) {
@@ -99,7 +101,7 @@ export function SettingsPage(props: SettingsPageProps) {
           <PartnerConnectionPanel {...props} />
         </div>
 
-        {/* 4. Relationship configuration remains separate from Account deletion. */}
+        {/* 4. Relationship configuration and relationship offboarding stay separate from Account deletion. */}
         <div
           id="settings-connection"
           className="settings-section settings-connection-block"
@@ -107,6 +109,12 @@ export function SettingsPage(props: SettingsPageProps) {
           <RelationshipSettingsSection
             spacesApi={spacesApi}
             spaceId={props.spaceId}
+          />
+          <SpaceOffboardingPanel
+            spacesApi={spacesApi}
+            spaceId={props.spaceId}
+            demoMode={demoMode}
+            onSpaceLeft={props.onSpaceLeft}
           />
         </div>
 
