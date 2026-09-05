@@ -814,9 +814,7 @@ def _entitlement_grant_view(grant: EntitlementGrant) -> ServerAdminEntitlementGr
     )
 
 
-def _space_entitlement_view(
-    session: Session, space_id: UUID
-) -> ServerAdminSpaceEntitlementView:
+def _space_entitlement_view(session: Session, space_id: UUID) -> ServerAdminSpaceEntitlementView:
     """Effective state plus full grant history, for operator transparency.
 
     This is a privileged ServerAdmin projection, distinct from the ordinary

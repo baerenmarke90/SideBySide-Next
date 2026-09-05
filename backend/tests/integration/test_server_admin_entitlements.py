@@ -64,9 +64,7 @@ def test_ordinary_account_is_forbidden(client, session) -> None:  # type: ignore
     assert response.status_code == 403
 
 
-def test_unknown_space_is_privacy_safe_not_found(
-    client, session, server_admin_allowlist
-) -> None:  # type: ignore[no-untyped-def]
+def test_unknown_space_is_privacy_safe_not_found(client, session, server_admin_allowlist) -> None:  # type: ignore[no-untyped-def]
     _, admin_token = _admin(session)
     unknown_space_id = "00000000-0000-0000-0000-000000000000"
 
@@ -94,9 +92,7 @@ def test_new_space_starts_free_with_no_grant_history(
     assert body["grants"] == []
 
 
-def test_admin_can_grant_and_the_grant_is_audited(
-    client, session, server_admin_allowlist
-) -> None:  # type: ignore[no-untyped-def]
+def test_admin_can_grant_and_the_grant_is_audited(client, session, server_admin_allowlist) -> None:  # type: ignore[no-untyped-def]
     admin, admin_token = _admin(session)
     space = make_space(session, admin)
 
@@ -129,9 +125,7 @@ def test_admin_can_grant_and_the_grant_is_audited(
     assert action.actor_id == admin.id
 
 
-def test_grant_without_a_reason_is_rejected(
-    client, session, server_admin_allowlist
-) -> None:  # type: ignore[no-untyped-def]
+def test_grant_without_a_reason_is_rejected(client, session, server_admin_allowlist) -> None:  # type: ignore[no-untyped-def]
     admin, admin_token = _admin(session)
     space = make_space(session, admin)
 

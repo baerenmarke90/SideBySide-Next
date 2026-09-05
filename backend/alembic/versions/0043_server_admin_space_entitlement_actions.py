@@ -37,9 +37,7 @@ def upgrade() -> None:
         unique=False,
     )
 
-    op.drop_constraint(
-        "action_valid", "instance_administration_action_events", type_="check"
-    )
+    op.drop_constraint("action_valid", "instance_administration_action_events", type_="check")
     op.create_check_constraint(
         "action_valid",
         "instance_administration_action_events",
@@ -57,9 +55,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "action_valid", "instance_administration_action_events", type_="check"
-    )
+    op.drop_constraint("action_valid", "instance_administration_action_events", type_="check")
     op.create_check_constraint(
         "action_valid",
         "instance_administration_action_events",
