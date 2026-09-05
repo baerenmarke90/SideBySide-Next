@@ -9,6 +9,8 @@ body:
       value: |
         User-facing features are product-design work from the start. Read `docs/PARTNER-APP-EXPERIENCE-STANDARD.md` before describing a client feature. SideBySide should feel warm, modern, lively, beautiful, and lightly playful rather than cold or administrative.
 
+        **Engineering language is English.** Issue titles, bodies, acceptance criteria, model/tool routing, technical comments, and follow-up engineering discussion must be written in English. User-facing product copy remains governed by i18n and may of course be localized.
+
   - type: textarea
     id: user_value
     attributes:
@@ -78,3 +80,18 @@ body:
     attributes:
       label: Dependencies / related work
       description: Link relevant milestones, issues, API contracts, or parallel work.
+
+  - type: textarea
+    id: model_tool_routing
+    attributes:
+      label: 🤖 Model / tool routing
+      description: The language model is mandatory for every tool/environment entry. Name the exact model family/version intended at issue creation time (for example Claude Sonnet 5, Claude Opus 5, Gemini 3.8 Flash, Gemini 3.1 Pro, or GPT-5.6 Sol). Distinguish agentic environments such as Google Antigravity and Claude Code Console from Claude Chat, Gemini Chat, ChatGPT, and Codex. Always evaluate GPT-5.6 Sol Chat as a real implementation/review option where technically meaningful. Prefer efficient models and reasoning budgets when they are sufficient. Codex quota is limited, so recommend it only when it has a concrete advantage. An entry such as `Claude Code Console · High` is invalid because the language model is missing.
+      placeholder: |
+        **Recommended:** [Tool/environment · exact language model · reasoning/effort]
+        **Alternative:** [Tool/environment · exact language model · reasoning/effort]
+        **Claude Chat:** Claude [Sonnet 5 / Opus 5] · [Low / Medium / High] — [possible / limited / not suitable]
+        **Gemini Chat:** Gemini [3.8 Flash / 3.1 Pro] · [Low / Medium / High] — [possible / limited / not suitable]
+        **ChatGPT:** GPT-5.6 Sol Chat · [Low / Medium / High / Very High] — [possible / limited / not suitable]
+        **Codex:** Codex · GPT-5.6 [Terra / Sol] · [Low / Medium / High] — [not recommended / reserve option / recommended with concrete rationale]
+    validations:
+      required: true
