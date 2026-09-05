@@ -186,9 +186,13 @@ def _shorten_owner_transfer_retention(
     )
 
     changed = 0
-    for transfer in [*exports, *imports]:
-        if transfer.expires_at > current_time:
-            transfer.expires_at = current_time
+    for transfer_export in exports:
+        if transfer_export.expires_at > current_time:
+            transfer_export.expires_at = current_time
+            changed += 1
+    for transfer_import in imports:
+        if transfer_import.expires_at > current_time:
+            transfer_import.expires_at = current_time
             changed += 1
 
     if exports or imports:
