@@ -155,8 +155,18 @@ def test_space_exit_marks_only_leaver_private_media_and_expires_only_scoped_tran
 
     assert result.changed
     assert result.membership.status == MembershipStatus.LEFT.value
-    assert session.get(HeartMoment, private_heart.id) is None
-    assert session.get(HeartMoment, partner_private_heart.id) is not None
+    assert (
+        session.execute(
+            select(func.count(HeartMoment.id)).where(HeartMoment.id == private_heart.id)
+        ).scalar_one()
+        == 0
+    )
+    assert (
+        session.execute(
+            select(func.count(HeartMoment.id)).where(HeartMoment.id == partner_private_heart.id)
+        ).scalar_one()
+        == 1
+    )
 
     assert shared_attachment.status == AttachmentStatus.READY.value
     assert private_attachment.status == AttachmentStatus.DELETING.value

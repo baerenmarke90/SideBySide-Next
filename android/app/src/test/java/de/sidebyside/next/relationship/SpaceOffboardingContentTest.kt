@@ -79,8 +79,8 @@ class SpaceOffboardingContentTest {
             .onNodeWithText(context.getString(R.string.space_offboarding_continue))
             .performClick()
 
-        val finalAction = composeRule.onNodeWithText(
-            context.getString(R.string.space_offboarding_confirm_action),
+        val finalAction = composeRule.onNode(
+            hasText(context.getString(R.string.space_offboarding_confirm_action)) and hasClickAction(),
         )
         finalAction.assertIsNotEnabled()
 

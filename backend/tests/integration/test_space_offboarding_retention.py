@@ -179,6 +179,33 @@ def test_final_retention_purges_only_due_orphaned_space(
     assert not store.exists(transfer_service.import_storage_key(transfer_import))
 
 
+def test_retention_starts_when_last_active_membership_ends(session: Session) -> None:
+    instant = now()
+    owner = make_account(session, "Anna")
+    partner = make_account(session, "Ben")
+    space = make_space(session, owner)
+    add_member(session, space.id, partner)
+
+    memberships = {
+        membership.account_id: membership
+        for membership in session.execute(
+            select(Membership).where(Membership.space_id == space.id)
+        ).scalars()
+    }
+    memberships[owner.id].status = MembershipStatus.LEFT.value
+    memberships[owner.id].ended_at = (
+        instant - retention.SPACE_OFFBOARDING_RETENTION - timedelta(days=1)
+    )
+    memberships[partner.id].status = MembershipStatus.LEFT.value
+    memberships[partner.id].ended_at = instant - timedelta(days=5)
+    session.flush()
+
+    result = retention.purge_due_spaces(session, current_time=instant)
+
+    assert result == (0, 0, 0)
+    assert session.get(Space, space.id) is not None
+
+
 class _FailDeleteOnceStore(LocalMediaStore):
     def __init__(self, root: Path) -> None:
         super().__init__(root)
