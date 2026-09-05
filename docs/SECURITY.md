@@ -177,17 +177,36 @@ callback ends with 401.
 
 There are two controlled ways to introduce a new OIDC identity:
 
-1. **Normative invariant:** `/auth/oidc/{connectionId}/link` must remain bound,
+1. **Normative invariant:** `/auth/oidc/{connectionId}/link` remains bound,
    after a successful OIDC callback, to exactly the Account that initiated the
-   authenticated link flow. **Current runtime gap:** if the returned
-   `(issuer, subject)` is already linked to a different Account, current
-   resolution can still select that existing Account instead of failing closed.
-   GitHub issue **#704** owns this gap. Until it is fixed, the link endpoint must
-   not be treated as an enforced initiating-Account boundary.
+   authenticated link flow. The callback resolves request intent **before**
+   existing-identity sign-in: when the request carries an Account, an identity
+   that is already linked to a different Account fails closed with
+   `OIDC_IDENTITY_ALREADY_LINKED` (409) instead of signing the caller into that
+   other Account, and an identity already linked to the initiating Account is
+   accepted idempotently. The rejection writes nothing to either Account, and it
+   never names the owning Account: the caller has just proved control of the
+   external identity at the provider, so "this method is already in use" states
+   nothing an ordinary unbound sign-in would not also reveal.
 2. A flow started through `/auth/oidc/{connectionId}/start` may carry an
    invitation. Only the invitation-token hash is stored. Account, OIDC identity,
    and Membership are created in the same request transaction only after
    successful OIDC validation and renewed locked validation of the invitation.
+
+A callback serializes on the external identity itself before it reads and
+decides it, through a PostgreSQL advisory transaction lock over
+`(issuer, subject)`. A row lock cannot cover the case that actually has to be
+serialized, because the identity row does not exist yet while two callbacks are
+both about to create it. The lock is taken after the provider calls, so no
+network request is made while it is held, and it is released when the request
+transaction ends. Two link flows for the same unlinked identity therefore end as
+one link and one `OIDC_IDENTITY_ALREADY_LINKED`, not as a database uniqueness
+error.
+
+A cross-account link rejection rolls its request transaction back but keeps the
+state redeemed. The authorization code has already been exchanged at that point,
+so a retry cannot be a legitimate continuation of the flow; the state is spent
+in a separate transaction so the rejected attempt cannot be repeated.
 
 An invalid, expired, revoked, or already-used invitation token does not open an
 alternative path. Concurrent callbacks for the same invitation serialize on
@@ -198,7 +217,8 @@ another account.
 
 Provider error text never leaves the adapter because it may contain internal
 addresses or the client secret. Externally, errors remain the stable codes
-`OIDC_TOKEN_INVALID`, `OIDC_STATE_INVALID`, and `OIDC_PROVIDER_UNREACHABLE`.
+`OIDC_TOKEN_INVALID`, `OIDC_STATE_INVALID`, `OIDC_PROVIDER_UNREACHABLE`,
+`OIDC_NO_ACCOUNT`, and `OIDC_IDENTITY_ALREADY_LINKED`.
 
 Passkeys are stored as independent WebAuthn credentials with globally unique
 credential ID, public key, signature counter, AAGUID, transports, and
