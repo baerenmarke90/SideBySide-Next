@@ -22,8 +22,9 @@ Cloud/Managed reuses, unchanged:
 - the modular-monolith process boundary (API, Web, worker, one-shot `migrate`);
 - PostgreSQL as the authoritative database and the existing PostgreSQL Job
   Queue/Outbox (`FOR UPDATE SKIP LOCKED`) for worker concurrency;
-- the `MediaStore` abstraction, including the existing S3-compatible object-storage
-  adapter (`SBS_MEDIA_STORE=s3`);
+- the `MediaStore` abstraction as-is, including both existing backends
+  (`SBS_MEDIA_STORE=local` and the S3-compatible adapter) — the choice between
+  them is an operator/topology decision (§3.3), not fixed by this document;
 - `/api/v1/health` and `/api/v1/health/ready`, and the `X-SideBySide-Revision`
   response header;
 - `#375`'s environment/promotion/revision contract and `scripts/deployment_smoke.py`
@@ -41,15 +42,16 @@ what Self-Hosted uses, the reuse justification is stated inline (see §3.5).
 | Process | Image | Replicas | State |
 |---|---|---|---|
 | `migrate` | backend runtime image, `alembic upgrade head` | exactly one execution per release, run to completion before `api`/`worker` start | none (must not run concurrently against the same database) |
-| `api` | backend runtime image, ASGI server | N, horizontally replicated behind the ingress | stateless, except the deletion-journal file described in §3.5 |
+| `api` | backend runtime image, ASGI server | N, horizontally replicated behind the ingress | stateless, except the deletion-journal file (§3.5) and, if `local` MediaStore is selected, the media directory (§3.3) |
 | `worker` | backend runtime image, `python -m sidebyside.jobs.runner` | N, horizontally replicated | stateless; job/outbox concurrency is already `SKIP LOCKED`-safe |
 | `web` | Web runtime image (static assets + Nginx) | N, horizontally replicated | fully stateless |
 | PostgreSQL | managed provider service | provider-managed (primary + standby/read-replica per provider offering) | authoritative persistent state |
-| Object storage | provider S3-compatible service | provider-managed | durable media |
+| Media storage | `local` (persistent/shared volume) or a provider S3-compatible service — operator choice, see §3.3 | provider-managed (S3) or operator-provisioned durable volume (`local`) | durable media |
 
 This is the same five-process shape `compose.yaml` already uses for Self-Hosted;
-Cloud/Managed removes the bundled `postgres` container and the `local` MediaStore
-default in favor of managed equivalents, and removes `demo-init` (§5).
+Cloud/Managed removes the bundled `postgres` container in favor of a managed
+database, keeps the existing `MediaStore` choice between `local` and `s3`
+(§3.3) rather than mandating one, and removes `demo-init` (§5).
 
 ## 3. Required launch-topology decisions
 
@@ -88,23 +90,47 @@ default in favor of managed equivalents, and removes `demo-init` (§5).
 
 ### 3.3 MediaStore
 
-- `SBS_MEDIA_STORE=s3` against a provider S3-compatible bucket is the only
-  supported Cloud/Managed v1 media backend; `local` is rejected (§7).
-- One bucket (or one clearly separated prefix per environment inside a single
-  bucket, consistent with `#375`/`#304` isolation) per environment
-  (Development/Demo/Production); Production must not share a bucket or prefix
-  with Development or Demo.
-- Credentials are scoped to that bucket/prefix only (least privilege); the
-  application never exposes a public bucket URL — all media access continues to
-  go through the existing signed/read-descriptor path already used by
-  `OkHttpReferenceApi`/Web transfer code.
-- Object lifecycle, versioning and backup/export strategy are the provider's
-  responsibility, consistent with `docs/m6/OPERATIONS-RECOVERY.md` §6; Core does
-  not implement a second application-level object backup engine.
-- Backup/recovery-point coordination between PostgreSQL and object storage is the
-  operator's responsibility: a media backup and a database backup used together
-  for restore must be reconciled to the same point in time or later reconciled
-  through the existing consistency checks used by Self-Hosted recovery.
+Cloud/Managed v1 keeps the existing `MediaStore` abstraction's two backends as
+an **operator/topology choice**, not a fixed requirement. Nothing in the
+accepted product/architecture decisions (`#262`, `#521`, `docs/m6/
+OPERATIONS-RECOVERY.md`) mandates a specific object-storage provider, and this
+document does not invent that requirement. Both options remain fully
+Core-supported (`backend/src/sidebyside/config.py`'s `MediaStoreBackend`
+already models exactly this):
+
+- **`SBS_MEDIA_STORE=s3`** against a provider S3-compatible bucket —
+  recommended once the deployment runs multiple `api`/`worker` replicas or the
+  operator's platform already offers managed object storage as the simpler
+  durable-storage primitive. One bucket (or one clearly separated prefix per
+  environment inside a single bucket, consistent with `#375`/`#304` isolation)
+  per environment (Development/Demo/Production); Production must not share a
+  bucket or prefix with Development or Demo. Credentials are scoped to that
+  bucket/prefix only (least privilege); the application never exposes a public
+  bucket URL — all media access continues to go through the existing
+  signed/read-descriptor path already used by `OkHttpReferenceApi`/Web
+  transfer code. Object lifecycle, versioning and backup/export strategy are
+  the provider's responsibility, consistent with `docs/m6/
+  OPERATIONS-RECOVERY.md` §6; Core does not implement a second
+  application-level object backup engine.
+- **`SBS_MEDIA_STORE=local`** against a persistent volume — a fully supported
+  Cloud/Managed v1 option, for example a smaller single-`api`-replica launch,
+  or a platform where the operator provisions a persistent (optionally
+  shared/network) volume rather than adopting an object-storage service. This
+  is the same backend, the same durable-key layout and the same signed/read
+  path Self-Hosted already uses; Cloud/Managed does not fork it. If more than
+  one `api`/`worker` replica is deployed with `local` selected, the mounted
+  media directory must be the same shared/network volume across every
+  replica — the identical constraint §3.5 already states for the
+  Account-deletion journal, for the same reason (a request can land on any
+  replica). A single-replica `api`/`worker` deployment has no such
+  requirement: an ordinary per-instance persistent volume is sufficient,
+  exactly as in Self-Hosted.
+
+Whichever backend is selected, backup/recovery-point coordination between
+PostgreSQL and media storage is the operator's responsibility: a media backup
+and a database backup used together for restore must be reconciled to the same
+point in time or later reconciled through the existing consistency checks used
+by Self-Hosted recovery (§6 maps both backends' recovery unit explicitly).
 
 ### 3.4 Ingress / TLS
 
@@ -173,8 +199,9 @@ Cloud/Managed keeps the same three-environment separation `#375`/`#304` already
 require (Development, Demo, Production), with independent values for at least:
 
 - `SBS_DATABASE_URL` (managed PostgreSQL credentials/endpoint);
-- `SBS_S3_ACCESS_KEY_ID` / `SBS_S3_SECRET_ACCESS_KEY` / `SBS_S3_SESSION_TOKEN` /
-  `SBS_S3_BUCKET` / `SBS_S3_ENDPOINT`;
+- if `SBS_MEDIA_STORE=s3` is selected (§3.3): `SBS_S3_ACCESS_KEY_ID` /
+  `SBS_S3_SECRET_ACCESS_KEY` / `SBS_S3_SESSION_TOKEN` / `SBS_S3_BUCKET` /
+  `SBS_S3_ENDPOINT`;
 - `SBS_CURSOR_SIGNING_KEY`;
 - `SBS_BOOTSTRAP_TOKEN` (removed after first ServerAdmin bootstrap, as today);
 - `SBS_SMTP_*` mail credentials;
@@ -278,18 +305,23 @@ only as required by this document:
 
 - no bundled `postgres` service — `SBS_DATABASE_URL` must point at the managed
   database;
-- no `local` MediaStore default and no `media_data` volume — `SBS_MEDIA_STORE=s3`
-  is required;
+- `SBS_MEDIA_STORE` defaults to `local` (matching Self-Hosted's own default) with
+  a `media_data` volume, exactly as `compose.yaml` already models; setting
+  `SBS_MEDIA_STORE=s3` plus the `SBS_S3_*` variables switches to the S3-compatible
+  backend instead — an operator choice, not a fixed requirement (§3.3);
 - no `demo-init` service (§5);
 - `api`/`worker`/`web`/`migrate` use `image:` references to the exact `#519`
   released image archives (loaded/pushed by the operator to a registry the
   managed platform can pull from — see §4.1) instead of `build:` — Cloud/Managed
   never builds from source at deploy time;
-- an explicit named volume for the deletion-journal path, documented as requiring
-  a shared/network-backed implementation per §3.5 (Compose's own named-volume
-  driver is the local/single-host expression of this; the managed platform's
-  actual multi-replica deployment descriptor generated from this Compose file
-  must bind that mount to its ReadWriteMany-equivalent volume type).
+- explicit named volumes for the deletion-journal path (§3.5) and, when `local`
+  MediaStore is selected, the media directory (§3.3), documented as requiring a
+  shared/network-backed implementation whenever more than one `api`/`worker`
+  replica is deployed (Compose's own named-volume driver is the
+  local/single-host expression of this; the managed platform's actual
+  multi-replica deployment descriptor generated from this Compose file must
+  bind that mount to its ReadWriteMany-equivalent volume type for a
+  multi-replica deployment).
 
 This file is the reviewable *contract* (process shape, environment variables,
 health checks, volume/network boundaries); the operator's actual managed-platform
@@ -334,8 +366,11 @@ topology:
    configured at the smallest interval the provider offers; restore path is the
    provider's own restore-to-new-instance mechanism, followed by repointing
    `SBS_DATABASE_URL`.
-2. **Object storage** — provider bucket versioning (or equivalent
-   backup/replication feature) enabled on the Production bucket.
+2. **Media storage** — depends on the §3.3 backend choice: provider bucket
+   versioning (or equivalent backup/replication feature) enabled on the
+   Production bucket for `s3`, or the operator's own volume-level
+   backup/snapshot mechanism for the Production media volume for `local`
+   (the same recovery unit Self-Hosted already treats as protected data).
 3. **Deletion-journal volume (§3.5)** — included in the same recovery-point
    discipline as the database; a database restore without the matching journal
    state (or vice versa) is treated as an inconsistent recovery point and must be
@@ -367,18 +402,22 @@ explicitly rather than silently assumed away.
 `tools/ci/test_cloud_managed_topology.py` (added by this change) enforces the
 mechanical parts of this contract so they cannot silently regress:
 
-- `deploy/compose.cloud.yml` declares no `postgres` service and no `local`-backed
-  media volume;
+- `deploy/compose.cloud.yml` declares no `postgres` service;
 - `demo-init` is absent from the Cloud Compose file;
 - `api`/`worker`/`web`/`migrate` use `image:` (not `build:`);
 - the default/example image reference is neither empty nor `latest`/`main`
   (fails closed rather than silently defaulting to a floating tag);
 - `migrate` has no automatic restart policy;
 - the deletion-journal path is mounted from a dedicated named volume, not an
-  ephemeral container-local path;
-- `deploy/cloud-managed.env.example` requires `SBS_ENVIRONMENT=production`,
-  `SBS_DEPLOYMENT=cloud`, `SBS_MEDIA_STORE=s3` and rejects a `local` media
-  configuration;
+  ephemeral container-local path, for both the `local`-media and `s3`-media
+  resolved configurations;
+- the media directory is likewise mounted from a dedicated named volume when
+  `local` MediaStore is selected (the default), and the S3 variables become
+  required only when `SBS_MEDIA_STORE=s3` is explicitly chosen — neither
+  backend is silently unavailable;
+- `deploy/cloud-managed.env.example` requires `SBS_ENVIRONMENT=production` and
+  `SBS_DEPLOYMENT=cloud`, and documents both supported `SBS_MEDIA_STORE`
+  values rather than assuming one;
 - `scripts/check_environment_isolation.py`, unmodified, accepts the Cloud
   template paired with the existing Development template and rejects a Cloud
   Production file that reuses a Development signing key or bootstrap token.
