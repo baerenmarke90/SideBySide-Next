@@ -24,6 +24,7 @@ import logging
 import secrets
 from dataclasses import dataclass
 from datetime import timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlencode, urlsplit
 from uuid import UUID
@@ -41,9 +42,16 @@ from sidebyside.auth.sessions import IssuedTokens
 from sidebyside.auth.tokens import generate_token, hash_token
 from sidebyside.config import OidcConnection, get_settings
 from sidebyside.core.clock import now
-from sidebyside.core.errors import ErrorCode, UnauthenticatedError, ValidationError
+from sidebyside.core.errors import (
+    ConflictError,
+    ErrorCode,
+    UnauthenticatedError,
+    ValidationError,
+)
+from sidebyside.db.locks import lock_subject
+from sidebyside.db.session import schedule_after_rollback
 from sidebyside.identity import service as accounts
-from sidebyside.identity.models import Account, OidcAuthRequest
+from sidebyside.identity.models import Account, AuthIdentity, OidcAuthRequest
 from sidebyside.relationship import invitations
 from sidebyside.relationship.invitations import InvitationErrorCode
 
@@ -57,6 +65,15 @@ that an abandoned row does not become permanent state.
 """
 
 ACTION_OIDC_START = "oidc_start"
+
+IDENTITY_LOCK = "oidc_identity"
+"""Namespace for the serialization boundary around one external identity.
+
+The decision "which account does this (issuer, subject) belong to" reads the
+identity and may then create it. The row does not exist in exactly the case
+that has to be serialized, so the boundary is keyed on the identity itself
+rather than on a row.
+"""
 
 OIDC_START = rate_limit.Limit(attempts=60, window=timedelta(minutes=15))
 """Limit how many authentication flows may start per connection.
@@ -81,6 +98,16 @@ class OidcErrorCode:
     PROVIDER_UNREACHABLE = "OIDC_PROVIDER_UNREACHABLE"
     INVALID_TOKEN = "OIDC_TOKEN_INVALID"
     NO_ACCOUNT = "OIDC_NO_ACCOUNT"
+    IDENTITY_ALREADY_LINKED = "OIDC_IDENTITY_ALREADY_LINKED"
+    """A link flow returned an identity that belongs to a different account.
+
+    The code states that the external identity is already in use. It never
+    names the owning account, and it is the same response whether that account
+    is active, inactive, or belongs to a different Space. The caller has just
+    proved control of the external identity at the provider, so learning that
+    it is linked somewhere discloses nothing an ordinary unbound sign-in would
+    not already reveal.
+    """
 
 
 @dataclass(frozen=True)
@@ -470,6 +497,76 @@ def _onboard_with_invitation(
     return account
 
 
+def _mark_consumed(session: Session, *, request_id: UUID) -> None:
+    """Redeem the state in a separate transaction."""
+    stored = session.execute(
+        select(OidcAuthRequest).where(OidcAuthRequest.id == request_id).with_for_update()
+    ).scalar_one_or_none()
+    if stored is not None and stored.consumed_at is None:
+        stored.consumed_at = now()
+        session.flush()
+
+
+def _keep_state_consumed(session: Session, request: OidcAuthRequest) -> None:
+    """Keep the state redeemed although this callback will roll back.
+
+    ``_open_request`` marks the state consumed, but a rejected callback rolls
+    the whole request transaction back and would return the state to the pool.
+    By this point the authorization code has already been exchanged at the
+    provider, so a retry can no longer be a legitimate continuation of the
+    flow. Leaving the state redeemable would preserve nothing except a window
+    for repeating the rejected attempt.
+    """
+    schedule_after_rollback(session, partial(_mark_consumed, request_id=request.id))
+
+
+def _complete_link(
+    session: Session,
+    *,
+    request: OidcAuthRequest,
+    identity: AuthIdentity | None,
+    issuer: str,
+    subject: str,
+    connection_id: str,
+) -> Account | None:
+    """Resolve a link flow strictly inside the account that started it.
+
+    ``request.account_id`` is the account that was authenticated when the flow
+    started, and it is the only account this callback may end in. An identity
+    that already belongs to a different account does not redirect the flow to
+    that account: the attempt fails and neither account is modified. Provider
+    authentication is genuine in that case, but the operation the user started
+    was "link to this account", not "sign in as whoever owns this identity".
+    """
+    target_id = request.account_id
+    if identity is not None and identity.account_id != target_id:
+        # Fail before resolving the target account so the rejection is the same
+        # response regardless of the state of either account.
+        _keep_state_consumed(session, request)
+        log.info(
+            "oidc link rejected because the identity belongs to another account",
+            extra={"connection": connection_id},
+        )
+        raise ConflictError(
+            "This sign-in method is already linked to an account.",
+            OidcErrorCode.IDENTITY_ALREADY_LINKED,
+        )
+
+    account = session.get(Account, target_id)
+    if account is None or not account.is_active:
+        return None
+
+    if identity is None:
+        accounts.add_oidc_identity(
+            session,
+            account,
+            issuer=issuer,
+            subject=subject,
+            connection_id=connection_id,
+        )
+    return account
+
+
 def complete(
     session: Session,
     connection_id: str,
@@ -480,6 +577,10 @@ def complete(
     platform: str = "",
 ) -> SignedIn:
     """Complete the callback from the provider.
+
+    A request that carries an account is a link flow and stays bound to that
+    account. Only a flow without one resolves an existing identity into its own
+    account, which is ordinary sign-in.
 
     The result is always a normal ``DeviceSession``. Token creation has no
     separate path for external authentication.
@@ -497,19 +598,28 @@ def complete(
     )
     subject = str(claims["sub"])
 
+    # Serialize the identity decision before reading it, and only after the
+    # provider calls are done so no network request is made under the lock.
+    # Two callbacks that both find no identity would otherwise both create one
+    # and let the (issuer, subject) uniqueness constraint decide the outcome as
+    # a database error instead of as an authentication decision.
+    lock_subject(session, IDENTITY_LOCK, discovery.issuer, subject)
     identity = accounts.oidc_identity(session, issuer=discovery.issuer, subject=subject)
-    if identity is not None:
+
+    # Request intent is resolved before existing-identity sign-in. A link flow
+    # carries the account it started in, and that binding is what makes it a
+    # link rather than a sign-in.
+    if request.account_id is not None:
+        account = _complete_link(
+            session,
+            request=request,
+            identity=identity,
+            issuer=discovery.issuer,
+            subject=subject,
+            connection_id=configured.id,
+        )
+    elif identity is not None:
         account = session.get(Account, identity.account_id)
-    elif request.account_id is not None:
-        account = session.get(Account, request.account_id)
-        if account is not None:
-            accounts.add_oidc_identity(
-                session,
-                account,
-                issuer=discovery.issuer,
-                subject=subject,
-                connection_id=configured.id,
-            )
     elif request.invitation_token_hash is not None:
         account = _onboard_with_invitation(
             session,

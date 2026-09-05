@@ -11,7 +11,6 @@ information than this function needs.
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import partial
@@ -27,6 +26,7 @@ from sqlalchemy.orm import Session
 from sidebyside.auth.tokens import hash_token
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ErrorCode, RateLimitedError
+from sidebyside.db.locks import lock_subject
 from sidebyside.db.session import schedule_after_rollback
 from sidebyside.identity.models import RateLimitEvent
 
@@ -60,17 +60,6 @@ def _record_hashed_attempt(session: Session, *, action: str, key_hash: str) -> N
     session.flush()
 
 
-def _advisory_lock_id(action: str, key_hash: str) -> int:
-    """Derive a stable PostgreSQL lock key from action and hashed key.
-
-    PostgreSQL advisory locks accept a signed 64-bit integer. The derivation
-    deliberately uses only the already-hashed rate-limit key; plaintext enters
-    neither the table nor the lock key.
-    """
-    digest = hashlib.sha256(f"{action}\0{key_hash}".encode()).digest()
-    return int.from_bytes(digest[:8], byteorder="big", signed=True)
-
-
 def _reserve_hashed_attempt(
     session: Session,
     *,
@@ -79,7 +68,9 @@ def _reserve_hashed_attempt(
     limit: Limit,
 ) -> None:
     """Check and consume a slot under a database-wide per-key lock."""
-    session.execute(select(func.pg_advisory_xact_lock(_advisory_lock_id(action, key_hash))))
+    # The lock key deliberately uses only the already-hashed rate-limit key;
+    # plaintext enters neither the table nor the lock key.
+    lock_subject(session, action, key_hash)
 
     since = now() - limit.window
     attempts = session.execute(
