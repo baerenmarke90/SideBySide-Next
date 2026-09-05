@@ -87,6 +87,31 @@ class SpaceOffboardingTest {
         }
 
     @Test
+    fun membershipRefreshFailureAfterAcceptedExitNeverRestoresTheOldSpace() =
+        runTest(dispatcher) {
+            val api = OffboardingApi(
+                remainingSpaces = listOf(SPACE_B),
+                membershipRefreshFailsAfterExit = true,
+            )
+            val model = model(api)
+
+            model.signIn("someone@example.test", "secret")
+            advanceUntilIdle()
+            model.leaveActiveSpace()
+            advanceUntilIdle()
+
+            // The server accepted the exit, so it stays authoritative even
+            // though the follow-up membership refresh failed.
+            assertEquals(listOf(SPACE_A), api.leftSpaces)
+            val state = model.uiState.value
+            assertFalse(state.loggedIn)
+            assertTrue(state.awaitingSpace)
+            assertEquals(null, state.activeSpaceId)
+            assertTrue(state.availableSpaces.isEmpty())
+            assertFalse(state.spaceOffboardingBusy)
+        }
+
+    @Test
     fun rejectedExitKeepsCurrentSpaceAndSurfacesProblem() = runTest(dispatcher) {
         val api = OffboardingApi(
             remainingSpaces = listOf(SPACE_B),
@@ -137,6 +162,7 @@ class SpaceOffboardingTest {
 private class OffboardingApi(
     private val remainingSpaces: List<UUID>,
     private val leaveFailure: Throwable? = null,
+    private val membershipRefreshFailsAfterExit: Boolean = false,
 ) : FakeReferenceContract() {
     val leaveAttempts = mutableListOf<UUID>()
     val leftSpaces = mutableListOf<UUID>()
@@ -150,6 +176,13 @@ private class OffboardingApi(
     override suspend fun consumeMagicLink(token: String): SessionView = session()
 
     override suspend fun listMemberships(accessToken: String): List<AccountMembershipView> {
+        if (exited && membershipRefreshFailsAfterExit) {
+            throw ReferenceApiException(
+                code = "MEMBERSHIP_REFRESH_UNAVAILABLE",
+                message = "unavailable",
+                status = 503,
+            )
+        }
         val spaces = if (exited) remainingSpaces else listOf(SPACE_A, SPACE_B)
         return spaces.map { spaceId ->
             AccountMembershipView(role = "PARTNER", spaceId = spaceId, status = "ACTIVE")
