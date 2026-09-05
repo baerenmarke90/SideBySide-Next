@@ -23,7 +23,6 @@ export interface SettingsPageProps {
   accessToken: string;
   account: AccountView;
   spaceId: string;
-  onSpaceLeft: () => void | Promise<void>;
 }
 
 export function SettingsPage(props: SettingsPageProps) {
@@ -114,7 +113,6 @@ export function SettingsPage(props: SettingsPageProps) {
             spacesApi={spacesApi}
             spaceId={props.spaceId}
             demoMode={demoMode}
-            onSpaceLeft={props.onSpaceLeft}
           />
         </div>
 
