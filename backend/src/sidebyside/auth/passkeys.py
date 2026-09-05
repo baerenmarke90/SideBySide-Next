@@ -329,6 +329,54 @@ def _credential_by_id(session: Session, credential_id: bytes) -> WebAuthnCredent
     ).scalar_one_or_none()
 
 
+def _credential_account_id(session: Session, credential_id: bytes) -> UUID | None:
+    """Resolve only the owner ID needed to establish the authentication lock order."""
+    return session.execute(
+        select(WebAuthnCredential.account_id).where(
+            WebAuthnCredential.credential_id == credential_id
+        )
+    ).scalar_one_or_none()
+
+
+def _lock_authentication_credential(
+    session: Session,
+    credential_id: bytes,
+) -> tuple[WebAuthnCredential, Account]:
+    """Lock Account then credential for one authentication transition.
+
+    Account deletion already locks the Account before removing WebAuthn
+    credentials. Authentication follows the same Account -> Credential order so
+    a concurrent deletion cannot deadlock with sign-counter serialization and a
+    disable that wins the Account lock is observed before a new session is
+    issued.
+    """
+    account_id = _credential_account_id(session, credential_id)
+    if account_id is None:
+        raise _invalid()
+
+    account = session.execute(
+        select(Account).where(Account.id == account_id).with_for_update()
+    ).scalar_one_or_none()
+    if account is None or not account.is_active:
+        raise UnauthenticatedError("Authentication required.", PasskeyErrorCode.CREDENTIAL_UNKNOWN)
+
+    passkey = session.execute(
+        select(WebAuthnCredential)
+        .where(
+            WebAuthnCredential.credential_id == credential_id,
+            WebAuthnCredential.account_id == account.id,
+        )
+        .with_for_update()
+    ).scalar_one_or_none()
+    if passkey is None:
+        # The Account lock makes account deletion/removal serialize with this
+        # transition. A missing row therefore remains the same privacy-safe
+        # unknown-credential ceremony failure.
+        raise _invalid()
+
+    return passkey, account
+
+
 def start_authentication(session: Session) -> dict[str, Any]:
     """Start passkey authentication without account enumeration.
 
@@ -368,11 +416,10 @@ def finish_authentication(
     except (KeyError, ValueError, TypeError) as error:
         raise _invalid() from error
 
-    passkey = _credential_by_id(session, raw_id)
-    if passkey is None:
-        # Unknown credential and invalid signature intentionally produce the
-        # same response.
-        raise _invalid()
+    # Locking begins before verification so the sign counter supplied to
+    # py_webauthn is authoritative for this transaction. The locks remain held
+    # through metadata update and session creation until the request commits.
+    passkey, account = _lock_authentication_credential(session, raw_id)
 
     try:
         verified = webauthn.verify_authentication_response(
@@ -392,10 +439,6 @@ def finish_authentication(
     # advance is rejected when the authenticator uses counters, which can signal
     # a cloned authenticator. Devices that do not count keep both values at zero
     # and remain valid; many passkeys behave that way.
-    account = session.get(Account, passkey.account_id)
-    if account is None or not account.is_active:
-        raise UnauthenticatedError("Authentication required.", PasskeyErrorCode.CREDENTIAL_UNKNOWN)
-
     passkey.sign_count = verified.new_sign_count
     passkey.last_used_at = now()
     # Authentication has no allow-list, so successful credential selection also
