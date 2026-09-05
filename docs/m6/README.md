@@ -64,7 +64,7 @@ G5 is evidence-testable. Launch-ready means all required items below have tracea
 | M6-C Deployment/environments | #375, #521, #304 | RESOLVED | Self-Hosted promotion, Demo and Cloud/Managed launch topology (`CLOUD-MANAGED-TOPOLOGY.md`) all frozen; `#524` performs the integrated rehearsal |
 | M6-D Administration | #334, #335 | OPEN | registration/maintenance before ServerAdmin integration |
 | M6-E Observability/incidents | #189, #522 | OPEN | safe diagnostics first, incident runbooks/drill second |
-| M6-F Entitlements | #262, #523, provider-specific follow-ups | BLOCKED | #262 must freeze product semantics before runtime |
+| M6-F Entitlements | #262, #523, provider-specific follow-ups | RESOLVED | #262/#523 core done; first launch uses `ADMIN_GRANT` only (`ENTITLEMENT-BOUNDARY.md` §7.1), real payment providers `NOT_APPLICABLE` for V1 |
 | M6-G Integrated evidence/gate | #524, #525 | BLOCKED | runs after required G4/M6 work is complete |
 
 ### Delivered evidence reused by M6

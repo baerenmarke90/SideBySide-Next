@@ -40,6 +40,8 @@ class AdministrationAction(StrEnum):
     ACCOUNT_EMAIL_VERIFIED = "account_email_verified"
     ACCOUNT_RECOVERY_EMAIL_REQUESTED = "account_recovery_email_requested"
     ACCOUNT_RECOVERY_ISSUED = "account_recovery_issued"
+    SPACE_ENTITLEMENT_GRANTED = "space_entitlement_granted"
+    SPACE_ENTITLEMENT_REVOKED = "space_entitlement_revoked"
 
 
 class InstanceAdministrationSettings(TimestampMixin, VersionMixin, Base):
@@ -106,6 +108,10 @@ class InstanceAdministrationActionEvent(IdMixin, Base):
         postgresql.UUID(as_uuid=True),
         ForeignKey("accounts.id", ondelete="SET NULL"),
     )
+    target_space_id: Mapped[UUID | None] = mapped_column(
+        postgresql.UUID(as_uuid=True),
+        ForeignKey("spaces.id", ondelete="SET NULL"),
+    )
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     effect_count: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(
@@ -120,10 +126,16 @@ class InstanceAdministrationActionEvent(IdMixin, Base):
             "'account_sessions_revoked', "
             "'account_email_verified', "
             "'account_recovery_email_requested', "
-            "'account_recovery_issued'"
+            "'account_recovery_issued', "
+            "'space_entitlement_granted', "
+            "'space_entitlement_revoked'"
             ")",
             name="action_valid",
         ),
         Index("ix_instance_administration_action_events_created_at", "created_at"),
         Index("ix_instance_administration_action_events_target", "target_account_id"),
+        Index(
+            "ix_instance_administration_action_events_target_space",
+            "target_space_id",
+        ),
     )

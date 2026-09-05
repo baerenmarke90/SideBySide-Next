@@ -12,6 +12,7 @@ from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Path, Query, Response
+from pydantic import Field
 from sqlalchemy import case, distinct, exists, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -33,6 +34,13 @@ from sidebyside.config import get_settings as get_runtime_settings
 from sidebyside.core.clock import now
 from sidebyside.core.errors import NotFoundError, ValidationError
 from sidebyside.core.ids import parse_id
+from sidebyside.entitlements import service as entitlements
+from sidebyside.entitlements.models import (
+    EntitlementGrant,
+    EntitlementSourceType,
+    EntitlementStatus,
+    EntitlementTier,
+)
 from sidebyside.identity import service as accounts
 from sidebyside.identity.models import (
     Account,
@@ -137,6 +145,7 @@ class ServerAdminActionActivityItem(ApiModel):
     id: UUID
     actor_id: UUID | None
     target_account_id: UUID | None
+    target_space_id: UUID | None
     action: str
     effect_count: int | None
     created_at: datetime
@@ -200,6 +209,41 @@ class ServerAdminSpaceList(ApiModel):
     total: int
     limit: int
     offset: int
+
+
+class ServerAdminEntitlementGrantView(ApiModel):
+    """One historical grant row. Never exposes provider secrets/tokens."""
+
+    id: UUID
+    source_type: EntitlementSourceType
+    status: EntitlementStatus
+    tier: EntitlementTier
+    effective_from: datetime
+    effective_until: datetime | None
+    capabilities: list[str] | None
+    external_reference: str | None
+    created_at: datetime
+
+
+class ServerAdminSpaceEntitlementView(ApiModel):
+    space_id: UUID
+    tier: EntitlementTier
+    status: EntitlementStatus
+    effective_until: datetime | None
+    is_in_grace_period: bool
+    capabilities: list[str]
+    grants: list[ServerAdminEntitlementGrantView]
+
+
+class ServerAdminEntitlementGrantRequest(ApiModel):
+    tier: EntitlementTier = EntitlementTier.PREMIUM
+    capabilities: list[str] | None = None
+    effective_until: datetime | None = None
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class ServerAdminEntitlementRevokeRequest(ApiModel):
+    reason: str = Field(min_length=1, max_length=500, default="revoked")
 
 
 class ServerAdminAccountSuspensionUpdate(ApiModel):
@@ -749,6 +793,147 @@ def get_server_admin_space(
     return _space_detail_from_row(row)
 
 
+def _require_space(session: Session, space_id: str) -> UUID:
+    parsed = _parse_space_id(space_id)
+    if session.get(Space, parsed) is None:
+        raise NotFoundError("Space not found.", "SERVER_ADMIN_SPACE_NOT_FOUND")
+    return parsed
+
+
+def _entitlement_grant_view(grant: EntitlementGrant) -> ServerAdminEntitlementGrantView:
+    return ServerAdminEntitlementGrantView(
+        id=grant.id,
+        source_type=EntitlementSourceType(grant.source_type),
+        status=EntitlementStatus(grant.status),
+        tier=EntitlementTier(grant.tier),
+        effective_from=grant.effective_from,
+        effective_until=grant.effective_until,
+        capabilities=grant.capabilities,
+        external_reference=grant.external_reference,
+        created_at=grant.created_at,
+    )
+
+
+def _space_entitlement_view(session: Session, space_id: UUID) -> ServerAdminSpaceEntitlementView:
+    """Effective state plus full grant history, for operator transparency.
+
+    This is a privileged ServerAdmin projection, distinct from the ordinary
+    tenant-scoped `/spaces/{spaceId}/entitlements` read model: it additionally
+    lists every historical grant so an operator can see how the current
+    effective state was reached, without exposing provider secrets/tokens —
+    only normalized identifiers already safe for the ordinary read model plus
+    the opaque `external_reference` a provider adapter itself recorded.
+    """
+    effective = entitlements.get_effective_space_entitlement(session, space_id)
+    grants = (
+        session.execute(
+            select(EntitlementGrant)
+            .where(EntitlementGrant.space_id == space_id)
+            .order_by(EntitlementGrant.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+    return ServerAdminSpaceEntitlementView(
+        space_id=effective.space_id,
+        tier=effective.tier,
+        status=effective.status,
+        effective_until=effective.effective_until,
+        is_in_grace_period=effective.is_in_grace_period,
+        capabilities=effective.capabilities,
+        grants=[_entitlement_grant_view(grant) for grant in grants],
+    )
+
+
+@router.get(
+    "/spaces/{space_id}/entitlement",
+    response_model=ServerAdminSpaceEntitlementView,
+    responses=problem_responses(401, 403, 404),
+)
+def get_server_admin_space_entitlement(
+    _: CurrentServerAdmin,
+    session: DbSession,
+    space_id: Annotated[str, Path(max_length=64)],
+) -> ServerAdminSpaceEntitlementView:
+    """Return the effective entitlement state and full grant history for a Space."""
+    parsed = _require_space(session, space_id)
+    return _space_entitlement_view(session, parsed)
+
+
+@router.post(
+    "/spaces/{space_id}/entitlement/grants",
+    response_model=ServerAdminSpaceEntitlementView,
+    responses=problem_responses(401, 403, 404, 422),
+)
+def grant_server_admin_space_entitlement(
+    body: ServerAdminEntitlementGrantRequest,
+    admin: CurrentServerAdmin,
+    session: DbSession,
+    space_id: Annotated[str, Path(max_length=64)],
+) -> ServerAdminSpaceEntitlementView:
+    """Record a manual Premium grant for a Space (V1 launch entitlement source).
+
+    This is the only entitlement source implemented for the first launch;
+    Google Play/Stripe/Self-Hosted-license adapters are deliberately out of
+    scope until a real launch channel requires them (docs/m6/
+    ENTITLEMENT-BOUNDARY.md §7). It reuses the existing normalized
+    `record_grant` source-update interface unchanged rather than adding a
+    second grant-mutation path.
+    """
+    parsed = _require_space(session, space_id)
+    entitlements.record_grant(
+        session,
+        space_id=parsed,
+        source_type=EntitlementSourceType.ADMIN_GRANT,
+        status=EntitlementStatus.ACTIVE,
+        tier=body.tier,
+        effective_from=now(),
+        effective_until=body.effective_until,
+        account_id=admin.id,
+        capabilities=body.capabilities,
+        metadata={"reason": body.reason},
+    )
+    administration.record_action(
+        session,
+        actor_id=admin.id,
+        action=AdministrationAction.SPACE_ENTITLEMENT_GRANTED,
+        target_space_id=parsed,
+    )
+    return _space_entitlement_view(session, parsed)
+
+
+@router.post(
+    "/spaces/{space_id}/entitlement/grants/{grant_id}/revoke",
+    response_model=ServerAdminSpaceEntitlementView,
+    responses=problem_responses(401, 403, 404, 422),
+)
+def revoke_server_admin_space_entitlement_grant(
+    body: ServerAdminEntitlementRevokeRequest,
+    admin: CurrentServerAdmin,
+    session: DbSession,
+    space_id: Annotated[str, Path(max_length=64)],
+    grant_id: Annotated[str, Path(max_length=64)],
+) -> ServerAdminSpaceEntitlementView:
+    """Revoke one grant (e.g. an admin mistake, abuse, or a refund/chargeback)."""
+    parsed_space = _require_space(session, space_id)
+    parsed_grant = parse_id(grant_id)
+    if parsed_grant is None:
+        raise NotFoundError("Entitlement grant not found.", "SERVER_ADMIN_GRANT_NOT_FOUND")
+
+    grant = session.get(EntitlementGrant, parsed_grant)
+    if grant is None or grant.space_id != parsed_space:
+        raise NotFoundError("Entitlement grant not found.", "SERVER_ADMIN_GRANT_NOT_FOUND")
+
+    entitlements.revoke_grant(session, parsed_grant, reason=body.reason)
+    administration.record_action(
+        session,
+        actor_id=admin.id,
+        action=AdministrationAction.SPACE_ENTITLEMENT_REVOKED,
+        target_space_id=parsed_space,
+    )
+    return _space_entitlement_view(session, parsed_space)
+
+
 @router.get(
     "/accounts",
     response_model=ServerAdminAccountList,
@@ -1053,6 +1238,7 @@ def get_server_admin_action_activity(
             id=event.id,
             actor_id=event.actor_id,
             target_account_id=event.target_account_id,
+            target_space_id=event.target_space_id,
             action=event.action,
             effect_count=event.effect_count,
             created_at=event.created_at,

@@ -74,13 +74,17 @@ horizontal scaling simpler.
 
 ### M6-B04 — Launch entitlement-source adapters
 
-**Status:** `BLOCKING` after #262/#523 for every commercial source actually used at
-launch.
+**Status:** `FROZEN / RESOLVED` (2026-09-05). See `ENTITLEMENT-BOUNDARY.md` §7.1.
 
-One focused issue/PR is required per selected source. Examples may include Google
-Play, a hosted subscription provider or a Self-Hosted commercial license, but M6-S0
-does not assume that all examples are required. Each adapter maps provider evidence
-into #523; no provider SDK/state may leak into feature code.
+The first launch uses `ADMIN_GRANT` only. `GOOGLE_PLAY`, `CLOUD_STRIPE` and
+`SELF_HOSTED_KEY` are `NOT_APPLICABLE` for this launch — no real payment/store
+provider is part of the initial launch target, and none of the required
+external prerequisites (Play Console access, a Stripe account, a
+license-signing process) exist. A ServerAdmin-authorized manual grant/revoke
+surface implements `ADMIN_GRANT` by reusing the existing `#523`
+`record_grant`/`revoke_grant` interface unchanged. A future real commercial
+channel remains a separate, focused issue/PR when the product actually needs
+one.
 
 ### M6-B05 — Space/relationship offboarding lifecycle
 

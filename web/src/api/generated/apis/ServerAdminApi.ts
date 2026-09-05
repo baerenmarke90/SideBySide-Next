@@ -54,6 +54,16 @@ import {
     ServerAdminEmailVerificationRequestToJSON,
 } from '../models/ServerAdminEmailVerificationRequest';
 import {
+    type ServerAdminEntitlementGrantRequest,
+    ServerAdminEntitlementGrantRequestFromJSON,
+    ServerAdminEntitlementGrantRequestToJSON,
+} from '../models/ServerAdminEntitlementGrantRequest';
+import {
+    type ServerAdminEntitlementRevokeRequest,
+    ServerAdminEntitlementRevokeRequestFromJSON,
+    ServerAdminEntitlementRevokeRequestToJSON,
+} from '../models/ServerAdminEntitlementRevokeRequest';
+import {
     type ServerAdminJobList,
     ServerAdminJobListFromJSON,
     ServerAdminJobListToJSON,
@@ -94,6 +104,11 @@ import {
     ServerAdminSpaceDetailToJSON,
 } from '../models/ServerAdminSpaceDetail';
 import {
+    type ServerAdminSpaceEntitlementView,
+    ServerAdminSpaceEntitlementViewFromJSON,
+    ServerAdminSpaceEntitlementViewToJSON,
+} from '../models/ServerAdminSpaceEntitlementView';
+import {
     type ServerAdminSpaceList,
     ServerAdminSpaceListFromJSON,
     ServerAdminSpaceListToJSON,
@@ -110,6 +125,15 @@ export interface GetServerAdminAccountApiV1ServerAdminAccountsAccountIdGetReques
 
 export interface GetServerAdminSpaceApiV1ServerAdminSpacesSpaceIdGetRequest {
     spaceId: string;
+}
+
+export interface GetServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRequest {
+    spaceId: string;
+}
+
+export interface GrantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRequest {
+    spaceId: string;
+    serverAdminEntitlementGrantRequest: ServerAdminEntitlementGrantRequest;
 }
 
 export interface IssueServerAdminOperatorRecoveryApiV1ServerAdminAccountsAccountIdRecoveryOperatorPostRequest {
@@ -146,6 +170,12 @@ export interface RequestServerAdminAccountRecoveryEmailApiV1ServerAdminAccountsA
 
 export interface RevokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequest {
     accountId: string;
+}
+
+export interface RevokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRequest {
+    spaceId: string;
+    grantId: string;
+    serverAdminEntitlementRevokeRequest: ServerAdminEntitlementRevokeRequest;
 }
 
 export interface UpdateMaintenanceSettingApiV1ServerAdminSettingsMaintenancePutRequest {
@@ -415,6 +445,53 @@ export class ServerAdminApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGet without sending the request
+     */
+    async getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRequestOpts(requestParameters: GetServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGet().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/server-admin/spaces/{space_id}/entitlement`;
+        urlPath = urlPath.replace('{space_id}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Return the effective entitlement state and full grant history for a Space.
+     * Get Server Admin Space Entitlement
+     */
+    async getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRaw(requestParameters: GetServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSpaceEntitlementView>> {
+        const requestOptions = await this.getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSpaceEntitlementViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Return the effective entitlement state and full grant history for a Space.
+     * Get Server Admin Space Entitlement
+     */
+    async getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGet(requestParameters: GetServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSpaceEntitlementView> {
+        const response = await this.getServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getServerAdminStorageApiV1ServerAdminStorageGet without sending the request
      */
     async getServerAdminStorageApiV1ServerAdminStorageGetRequestOpts(): Promise<runtime.RequestOpts> {
@@ -450,6 +527,63 @@ export class ServerAdminApi extends runtime.BaseAPI {
      */
     async getServerAdminStorageApiV1ServerAdminStorageGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminStorageOverview> {
         const response = await this.getServerAdminStorageApiV1ServerAdminStorageGetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPost without sending the request
+     */
+    async grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRequestOpts(requestParameters: GrantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPost().'
+            );
+        }
+
+        if (requestParameters['serverAdminEntitlementGrantRequest'] == null) {
+            throw new runtime.RequiredError(
+                'serverAdminEntitlementGrantRequest',
+                'Required parameter "serverAdminEntitlementGrantRequest" was null or undefined when calling grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/server-admin/spaces/{space_id}/entitlement/grants`;
+        urlPath = urlPath.replace('{space_id}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ServerAdminEntitlementGrantRequestToJSON(requestParameters['serverAdminEntitlementGrantRequest']),
+        };
+    }
+
+    /**
+     * Record a manual Premium grant for a Space (V1 launch entitlement source).  This is the only entitlement source implemented for the first launch; Google Play/Stripe/Self-Hosted-license adapters are deliberately out of scope until a real launch channel requires them (docs/m6/ ENTITLEMENT-BOUNDARY.md §7). It reuses the existing normalized `record_grant` source-update interface unchanged rather than adding a second grant-mutation path.
+     * Grant Server Admin Space Entitlement
+     */
+    async grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRaw(requestParameters: GrantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSpaceEntitlementView>> {
+        const requestOptions = await this.grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSpaceEntitlementViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Record a manual Premium grant for a Space (V1 launch entitlement source).  This is the only entitlement source implemented for the first launch; Google Play/Stripe/Self-Hosted-license adapters are deliberately out of scope until a real launch channel requires them (docs/m6/ ENTITLEMENT-BOUNDARY.md §7). It reuses the existing normalized `record_grant` source-update interface unchanged rather than adding a second grant-mutation path.
+     * Grant Server Admin Space Entitlement
+     */
+    async grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPost(requestParameters: GrantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSpaceEntitlementView> {
+        const response = await this.grantServerAdminSpaceEntitlementApiV1ServerAdminSpacesSpaceIdEntitlementGrantsPostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -762,6 +896,71 @@ export class ServerAdminApi extends runtime.BaseAPI {
      */
     async revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePost(requestParameters: RevokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSessionRevocationResult> {
         const response = await this.revokeServerAdminAccountSessionsApiV1ServerAdminAccountsAccountIdSessionsRevokePostRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost without sending the request
+     */
+    async revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRequestOpts(requestParameters: RevokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost().'
+            );
+        }
+
+        if (requestParameters['grantId'] == null) {
+            throw new runtime.RequiredError(
+                'grantId',
+                'Required parameter "grantId" was null or undefined when calling revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost().'
+            );
+        }
+
+        if (requestParameters['serverAdminEntitlementRevokeRequest'] == null) {
+            throw new runtime.RequiredError(
+                'serverAdminEntitlementRevokeRequest',
+                'Required parameter "serverAdminEntitlementRevokeRequest" was null or undefined when calling revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/api/v1/server-admin/spaces/{space_id}/entitlement/grants/{grant_id}/revoke`;
+        urlPath = urlPath.replace('{space_id}', encodeURIComponent(String(requestParameters['spaceId'])));
+        urlPath = urlPath.replace('{grant_id}', encodeURIComponent(String(requestParameters['grantId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ServerAdminEntitlementRevokeRequestToJSON(requestParameters['serverAdminEntitlementRevokeRequest']),
+        };
+    }
+
+    /**
+     * Revoke one grant (e.g. an admin mistake, abuse, or a refund/chargeback).
+     * Revoke Server Admin Space Entitlement Grant
+     */
+    async revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRaw(requestParameters: RevokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ServerAdminSpaceEntitlementView>> {
+        const requestOptions = await this.revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ServerAdminSpaceEntitlementViewFromJSON(jsonValue));
+    }
+
+    /**
+     * Revoke one grant (e.g. an admin mistake, abuse, or a refund/chargeback).
+     * Revoke Server Admin Space Entitlement Grant
+     */
+    async revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePost(requestParameters: RevokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ServerAdminSpaceEntitlementView> {
+        const response = await this.revokeServerAdminSpaceEntitlementGrantApiV1ServerAdminSpacesSpaceIdEntitlementGrantsGrantIdRevokePostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
