@@ -1,0 +1,622 @@
+name: Publish Immutable Release
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release-publish.yml"
+      - ".github/actions/attest-release-artifact/**"
+      - "scripts/release_manifest.py"
+      - "tools/ci/test_release_manifest.py"
+      - "tools/ci/test_release_publish_workflow.py"
+      - "docs/m6/IMMUTABLE-RELEASES.md"
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: SemVer product version without the v prefix; must equal Android versionName.
+        required: true
+        type: string
+      android_version_code:
+        description: Monotonically increasing Google Play versionCode.
+        required: true
+        type: number
+      initial_release:
+        description: Select only for the first product release with no previous known-good release.
+        required: true
+        default: false
+        type: boolean
+      previous_known_good_version:
+        description: Previous released SemVer without v; required unless this is the initial release.
+        required: false
+        type: string
+      confirm_publish:
+        description: Confirm creation of the immutable Git tag and GitHub Release after protected signing.
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release-${{ inputs.release_version || github.ref }}
+  cancel-in-progress: false
+
+env:
+  SYFT_VERSION: "1.42.3"
+  SYFT_LINUX_AMD64_SHA256: "0d6be741479eddd2c8644a288990c04f3df0d609bbc1599a005532a9dff63509"
+
+jobs:
+  contract:
+    name: Release publication contract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run immutable release tests
+        run: |
+          python3 tools/ci/test_release_manifest.py
+          python3 tools/ci/test_release_publish_workflow.py
+
+  evidence:
+    name: Build and attest one source revision
+    if: github.event_name == 'workflow_dispatch'
+    needs: contract
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/release-evidence.yml
+    with:
+      android_version_code: ${{ inputs.android_version_code }}
+
+  preflight:
+    name: Verify immutable release inputs
+    if: github.event_name == 'workflow_dispatch'
+    needs: evidence
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: read
+    steps:
+      - name: Checkout exact release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Download exact #193 evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: release-evidence
+
+      - name: Verify #193 transport checksums
+        run: (cd release-evidence && sha256sum --check --strict SHA256SUMS)
+
+      - name: Require explicit publish confirmation
+        env:
+          CONFIRM_PUBLISH: ${{ inputs.confirm_publish }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRM_PUBLISH" != "true" ]; then
+            echo "Final publication requires confirm_publish=true." >&2
+            exit 1
+          fi
+
+      - name: Require source revision to be merged into main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Release source $GITHUB_SHA is not reachable from origin/main." >&2
+            exit 1
+          fi
+
+      - name: Require existing repository checks to be green
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs?filter=latest&per_page=100" \
+            > "$RUNNER_TEMP/check-runs.json"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(Path(os.environ["RUNNER_TEMP"] + "/check-runs.json").read_text())
+          current = f"/actions/runs/{os.environ['CURRENT_RUN_ID']}/"
+          checks = [
+              item for item in data.get("check_runs", [])
+              if current not in (item.get("details_url") or "")
+          ]
+          if not checks:
+              raise SystemExit("No pre-existing CI/security checks found for release source")
+          pending = [item["name"] for item in checks if item.get("status") != "completed"]
+          failed = [
+              f"{item['name']}={item.get('conclusion')}"
+              for item in checks
+              if item.get("status") == "completed"
+              and item.get("conclusion") not in {"success", "neutral", "skipped"}
+          ]
+          if pending:
+              raise SystemExit("Release source still has pending checks: " + ", ".join(sorted(pending)))
+          if failed:
+              raise SystemExit("Release source has non-green checks: " + ", ".join(sorted(failed)))
+          print(f"Verified {len(checks)} pre-existing checks for release source")
+          PY
+
+      - name: Require release tag and GitHub Release to be unused
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+          tag="v${RELEASE_VERSION}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Release tag ${tag} already exists and is immutable." >&2
+            exit 1
+          fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub Release ${tag} already exists and is immutable." >&2
+            exit 1
+          fi
+
+      - name: Resolve previous-known-good manifest
+        id: previous
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INITIAL_RELEASE: ${{ inputs.initial_release }}
+          PREVIOUS_VERSION: ${{ inputs.previous_known_good_version }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-preflight
+          if [ "$INITIAL_RELEASE" = "true" ]; then
+            if [ -n "$PREVIOUS_VERSION" ]; then
+              echo "The initial release cannot declare a previous-known-good version." >&2
+              exit 1
+            fi
+            touch release-preflight/INITIAL_RELEASE
+            echo "argument=--initial-release" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "$PREVIOUS_VERSION" ]; then
+            echo "A non-initial release requires previous_known_good_version." >&2
+            exit 1
+          fi
+          mkdir -p release-preflight/previous-known-good
+          gh release download "v${PREVIOUS_VERSION}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern sidebyside-release-manifest.json \
+            --dir release-preflight/previous-known-good
+          test -s release-preflight/previous-known-good/sidebyside-release-manifest.json
+          echo "argument=--previous-manifest release-preflight/previous-known-good/sidebyside-release-manifest.json" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release identity before protected signing
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          PREVIOUS_ARGUMENT: ${{ steps.previous.outputs.argument }}
+        run: |
+          set -euo pipefail
+          # PREVIOUS_ARGUMENT is emitted only by the closed choices above.
+          # shellcheck disable=SC2086
+          python3 scripts/release_manifest.py build \
+            --evidence-index release-evidence/evidence-index.json \
+            --version "$RELEASE_VERSION" \
+            $PREVIOUS_ARGUMENT \
+            --output release-preflight/preflight-manifest.json
+          test "$(python3 -c 'import json; print(json.load(open("release-preflight/preflight-manifest.json"))["sourceRevision"])')" = "$GITHUB_SHA"
+
+      - name: Upload verified preflight state
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-preflight-${{ github.sha }}
+          path: release-preflight/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish:
+    name: Sign and publish immutable release
+    if: github.event_name == 'workflow_dispatch'
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment:
+      name: production-release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout exact release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Download exact #193 evidence
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: release-evidence
+
+      - name: Download retained #193 attestations
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-attestations-${{ github.sha }}
+          path: release-evidence/attestations
+
+      - name: Download verified preflight state
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-preflight-${{ github.sha }}
+          path: release-preflight
+
+      - name: Re-verify transported #193 evidence
+        run: (cd release-evidence && sha256sum --check --strict SHA256SUMS)
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle cache and validate wrapper
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Verify pinned Gradle wrapper JAR
+        working-directory: android
+        shell: bash
+        run: |
+          printf '%s  %s\n' \
+            '497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7' \
+            'gradle/wrapper/gradle-wrapper.jar' \
+            | sha256sum --check --strict -
+
+      - name: Install Android SDK 37.1
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-37.1" "build-tools;36.0.0"
+
+      - name: Build and verify final signed Android artifacts
+        working-directory: android
+        shell: bash
+        env:
+          ANDROID_VERSION_CODE: ${{ inputs.android_version_code }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          KEYSTORE_BASE64: ${{ secrets.SBS_RELEASE_KEYSTORE_BASE64 }}
+          SBS_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.SBS_RELEASE_KEYSTORE_PASSWORD }}
+          SBS_RELEASE_KEY_ALIAS: ${{ secrets.SBS_RELEASE_KEY_ALIAS }}
+          SBS_RELEASE_KEY_PASSWORD: ${{ secrets.SBS_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in KEYSTORE_BASE64 SBS_RELEASE_KEYSTORE_PASSWORD SBS_RELEASE_KEY_ALIAS SBS_RELEASE_KEY_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              echo "Required production-release signing secret ${name} is missing." >&2
+              exit 1
+            fi
+          done
+
+          keystore="$RUNNER_TEMP/sidebyside-upload.jks"
+          trap 'rm -f "$keystore"' EXIT
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          test -s "$keystore"
+          export SBS_RELEASE_KEYSTORE="$keystore"
+
+          ./gradlew --no-daemon --stacktrace --dependency-verification strict \
+            -PsbsVersionCode="$ANDROID_VERSION_CODE" \
+            :app:assembleRelease :app:bundleRelease
+
+          apk=$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)
+          aab=$(find app/build/outputs/bundle/release -maxdepth 1 -type f -name '*.aab' -print -quit)
+          test -n "$apk"
+          test -n "$aab"
+          test -s "$apk"
+          test -s "$aab"
+
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk"
+          jarsigner -verify "$aab" >/dev/null
+
+          analyzer="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer"
+          test -x "$analyzer"
+          test "$("$analyzer" manifest application-id "$apk")" = "de.sidebyside.app"
+          test "$("$analyzer" manifest version-name "$apk")" = "$RELEASE_VERSION"
+          test "$("$analyzer" manifest version-code "$apk")" = "$ANDROID_VERSION_CODE"
+
+          mkdir -p ../release-evidence/android
+          cp -- "$apk" ../release-evidence/android/sidebyside-release.apk
+          cp -- "$aab" ../release-evidence/android/sidebyside-release.aab
+          rm -f \
+            ../release-evidence/android/sidebyside-release-unsigned.apk \
+            ../release-evidence/android/sidebyside-release-unsigned.aab
+
+      - name: Install verified Syft release
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+          install_dir="$RUNNER_TEMP/syft"
+          mkdir -p "$install_dir"
+          curl --fail --location --silent --show-error \
+            "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/syft_${SYFT_VERSION}_linux_amd64.tar.gz" \
+            --output "$archive"
+          printf '%s  %s\n' "$SYFT_LINUX_AMD64_SHA256" "$archive" \
+            | sha256sum --check --strict -
+          tar -xzf "$archive" -C "$install_dir" syft
+          "$install_dir/syft" version
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Regenerate Android SPDX SBOMs for signed bytes
+        env:
+          SYFT_CHECK_FOR_APP_UPDATE: "false"
+        run: |
+          set -euo pipefail
+          syft scan "file:release-evidence/android/sidebyside-release.apk" \
+            -o "spdx-json=release-evidence/sbom/android-apk.spdx.json"
+          syft scan "file:release-evidence/android/sidebyside-release.aab" \
+            -o "spdx-json=release-evidence/sbom/android-aab.spdx.json"
+
+      - name: Rebind evidence index to final signed Android bytes
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          ANDROID_VERSION_CODE: ${{ inputs.android_version_code }}
+          SOURCE_REVISION: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("release-evidence")
+          index_path = root / "evidence-index.json"
+          evidence = json.loads(index_path.read_text(encoding="utf-8"))
+
+          if evidence.get("sourceRevision") != os.environ["SOURCE_REVISION"]:
+              raise SystemExit("#193 evidence sourceRevision changed before publication")
+          android = evidence.get("android", {})
+          if android.get("applicationId") != "de.sidebyside.app":
+              raise SystemExit("Unexpected Android applicationId in #193 evidence")
+          if android.get("versionName") != os.environ["RELEASE_VERSION"]:
+              raise SystemExit("Android versionName does not match release version")
+          if android.get("versionCode") != int(os.environ["ANDROID_VERSION_CODE"]):
+              raise SystemExit("Android versionCode does not match publication input")
+
+          def sha256(path: Path) -> str:
+              digest = hashlib.sha256()
+              with path.open("rb") as handle:
+                  for block in iter(lambda: handle.read(1024 * 1024), b""):
+                      digest.update(block)
+              return digest.hexdigest()
+
+          replacements = {
+              "android-apk": (
+                  "android/sidebyside-release.apk",
+                  "sbom/android-apk.spdx.json",
+              ),
+              "android-aab": (
+                  "android/sidebyside-release.aab",
+                  "sbom/android-aab.spdx.json",
+              ),
+          }
+          seen = set()
+          for artifact in evidence.get("artifacts", []):
+              artifact_id = artifact.get("id")
+              if artifact_id not in replacements:
+                  continue
+              relative, sbom_relative = replacements[artifact_id]
+              artifact_path = root / relative
+              sbom_path = root / sbom_relative
+              if not artifact_path.is_file() or not sbom_path.is_file():
+                  raise SystemExit(f"Missing final signed release evidence for {artifact_id}")
+              artifact["path"] = relative
+              artifact["sha256"] = sha256(artifact_path)
+              artifact["sbom"] = sbom_relative
+              artifact["sbomSha256"] = sha256(sbom_path)
+              seen.add(artifact_id)
+          if seen != set(replacements):
+              raise SystemExit("Android release evidence set is incomplete")
+
+          android["signing"] = "signed-release"
+          android["finalSignedArtifactRequiresFreshAttestation"] = False
+          evidence["android"] = android
+          index_path.write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Remove unsigned Android attestation bundles
+        run: |
+          rm -f \
+            release-evidence/attestations/android-apk-provenance.json \
+            release-evidence/attestations/android-apk-sbom.json \
+            release-evidence/attestations/android-aab-provenance.json \
+            release-evidence/attestations/android-aab-sbom.json
+
+      - name: Attest final signed Android APK
+        uses: ./.github/actions/attest-release-artifact
+        with:
+          subject-path: release-evidence/android/sidebyside-release.apk
+          sbom-path: release-evidence/sbom/android-apk.spdx.json
+          bundle-directory: release-evidence/attestations
+          bundle-prefix: android-apk-signed
+
+      - name: Attest final signed Android AAB
+        uses: ./.github/actions/attest-release-artifact
+        with:
+          subject-path: release-evidence/android/sidebyside-release.aab
+          sbom-path: release-evidence/sbom/android-aab.spdx.json
+          bundle-directory: release-evidence/attestations
+          bundle-prefix: android-aab-signed
+
+      - name: Verify retained final attestations
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh attestation trusted-root > release-evidence/attestations/trusted_root.jsonl
+          repo="$GITHUB_REPOSITORY"
+          root="release-evidence/attestations/trusted_root.jsonl"
+          evidence_signer="$GITHUB_REPOSITORY/.github/workflows/release-evidence.yml"
+          publish_signer="$GITHUB_REPOSITORY/.github/workflows/release-publish.yml"
+
+          verify_subject() {
+            local subject="$1"
+            local prefix="$2"
+            local signer="$3"
+            gh attestation verify "$subject" -R "$repo" \
+              --bundle "release-evidence/attestations/${prefix}-provenance.json" \
+              --custom-trusted-root "$root" \
+              --signer-workflow "$signer"
+            gh attestation verify "$subject" -R "$repo" \
+              --bundle "release-evidence/attestations/${prefix}-sbom.json" \
+              --custom-trusted-root "$root" \
+              --signer-workflow "$signer" \
+              --predicate-type "https://spdx.dev/Document/v2.3"
+          }
+
+          verify_subject release-evidence/backend-runtime.image.tar backend-runtime "$evidence_signer"
+          verify_subject release-evidence/web-runtime.image.tar web-runtime "$evidence_signer"
+          verify_subject release-evidence/android/sidebyside-release.apk android-apk-signed "$publish_signer"
+          verify_subject release-evidence/android/sidebyside-release.aab android-aab-signed "$publish_signer"
+
+      - name: Build final signed release manifest
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          INITIAL_RELEASE: ${{ inputs.initial_release }}
+        run: |
+          set -euo pipefail
+          if [ "$INITIAL_RELEASE" = "true" ]; then
+            previous_argument="--initial-release"
+          else
+            previous_manifest="release-preflight/previous-known-good/sidebyside-release-manifest.json"
+            test -s "$previous_manifest"
+            previous_argument="--previous-manifest $previous_manifest"
+          fi
+          # previous_argument is produced only by the closed choices above.
+          # shellcheck disable=SC2086
+          python3 scripts/release_manifest.py build \
+            --evidence-index release-evidence/evidence-index.json \
+            --version "$RELEASE_VERSION" \
+            $previous_argument \
+            --require-signed-android \
+            --output release-evidence/sidebyside-release-manifest.json
+          python3 scripts/release_manifest.py verify \
+            --manifest release-evidence/sidebyside-release-manifest.json \
+            --artifact-root release-evidence \
+            --require-signed-android
+
+      - name: Write human-readable release notes
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          SOURCE_REVISION: ${{ github.sha }}
+          INITIAL_RELEASE: ${{ inputs.initial_release }}
+          PREVIOUS_VERSION: ${{ inputs.previous_known_good_version }}
+        run: |
+          set -euo pipefail
+          if [ "$INITIAL_RELEASE" = "true" ]; then
+            previous="none (initial release)"
+          else
+            previous="v${PREVIOUS_VERSION}"
+          fi
+          cat > release-evidence/RELEASE-NOTES.md <<EOF
+          # SideBySide v${RELEASE_VERSION}
+
+          Source revision: \`${SOURCE_REVISION}\`
+          Previous known-good application release: \`${previous}\`
+
+          This is one immutable build-once release set. Backend API, worker and migrate
+          share one runtime artifact; Web and final signed Android artifacts are bound
+          to the same source revision by \`sidebyside-release-manifest.json\`.
+
+          Android publication uses Google Play App Signing with a distinct upload key.
+          The upload key is supplied only by the protected \`production-release\`
+          environment. Final signed Android bytes have fresh SPDX SBOMs and attestations.
+
+          Application rollback selects the previous immutable release only. It does not
+          imply database rollback; schema compatibility, forward-fix and restore remain
+          governed by #190 and #375.
+          EOF
+
+      - name: Write and verify final release checksums
+        run: |
+          set -euo pipefail
+          rm -f release-evidence/SHA256SUMS
+          (
+            cd release-evidence
+            find . -type f ! -name SHA256SUMS -print0 \
+              | sort -z \
+              | xargs -0 sha256sum \
+              > SHA256SUMS
+            sha256sum --check --strict SHA256SUMS
+          )
+
+      - name: Recheck tag and Release immediately before publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+          tag="v${RELEASE_VERSION}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Release tag ${tag} appeared after preflight; refusing overwrite." >&2
+            exit 1
+          fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub Release ${tag} appeared after preflight; refusing overwrite." >&2
+            exit 1
+          fi
+
+      - name: Publish immutable GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="v${RELEASE_VERSION}"
+          mapfile -d '' assets < <(find release-evidence -type f -print0 | sort -z)
+          gh release create "$tag" "${assets[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "SideBySide v${RELEASE_VERSION}" \
+            --notes-file release-evidence/RELEASE-NOTES.md \
+            --verify-tag=false
+
+      - name: Verify published immutable identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: |
+          set -euo pipefail
+          tag="v${RELEASE_VERSION}"
+          git fetch --force --tags origin
+          test "$(git rev-list -n 1 "$tag")" = "$GITHUB_SHA"
+          mkdir -p "$RUNNER_TEMP/published-release"
+          gh release download "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern sidebyside-release-manifest.json \
+            --dir "$RUNNER_TEMP/published-release"
+          cmp --silent \
+            release-evidence/sidebyside-release-manifest.json \
+            "$RUNNER_TEMP/published-release/sidebyside-release-manifest.json"
+
+      - name: Upload final release evidence snapshot
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: published-release-v${{ inputs.release_version }}-${{ github.sha }}
+          path: release-evidence/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
