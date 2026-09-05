@@ -9,12 +9,13 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import de.sidebyside.next.design.SideBySideTheme
 import de.sidebyside.next.reference.R
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -69,7 +70,41 @@ class SpaceOffboardingContentTest {
     }
 
     @Test
-    fun exactTypedConfirmationUnlocksFinalExit() {
+    fun confirmationGuardRequiresExactPhraseAndIdleState() {
+        val phrase = "BEREICH VERLASSEN"
+
+        assertFalse(
+            spaceOffboardingConfirmationEnabled(
+                busy = false,
+                confirmation = "",
+                phrase = phrase,
+            )
+        )
+        assertFalse(
+            spaceOffboardingConfirmationEnabled(
+                busy = false,
+                confirmation = "WRONG",
+                phrase = phrase,
+            )
+        )
+        assertFalse(
+            spaceOffboardingConfirmationEnabled(
+                busy = true,
+                confirmation = phrase,
+                phrase = phrase,
+            )
+        )
+        assertTrue(
+            spaceOffboardingConfirmationEnabled(
+                busy = false,
+                confirmation = phrase,
+                phrase = phrase,
+            )
+        )
+    }
+
+    @Test
+    fun exactTypedConfirmationTriggersFinalExit() {
         var leaves = 0
         render(onLeaveSpace = { leaves += 1 })
 
@@ -77,22 +112,13 @@ class SpaceOffboardingContentTest {
         composeRule
             .onNodeWithText(context.getString(R.string.space_offboarding_continue))
             .performClick()
-
-        val finalAction = composeRule.onNode(
-            hasText(context.getString(R.string.space_offboarding_confirm_action)) and hasClickAction(),
-        )
-        finalAction.performScrollTo().performClick()
-        assertEquals(0, leaves)
-
-        composeRule.onNode(hasSetTextAction()).performTextInput("WRONG")
-        finalAction.performClick()
-        assertEquals(0, leaves)
-
-        composeRule.onNode(hasSetTextAction()).performTextClearance()
         composeRule.onNode(hasSetTextAction()).performTextInput(
             context.getString(R.string.space_offboarding_confirmation_phrase),
         )
-        finalAction.performScrollTo().performClick()
+
+        composeRule.onNode(
+            hasText(context.getString(R.string.space_offboarding_confirm_action)) and hasClickAction(),
+        ).performScrollTo().performClick()
 
         assertEquals(1, leaves)
     }
