@@ -192,6 +192,9 @@ class TestHttpsBoundary:
 
     def test_missing_or_non_ip_peer_is_not_loopback(self) -> None:
         assert _peer_is_loopback({"type": "http"}) is False  # type: ignore[arg-type]
-        assert _peer_is_loopback(
-            {"type": "http", "client": ("not-an-ip", 50000)}  # type: ignore[arg-type]
-        ) is False
+        assert (
+            _peer_is_loopback(
+                {"type": "http", "client": ("not-an-ip", 50000)}  # type: ignore[arg-type]
+            )
+            is False
+        )
