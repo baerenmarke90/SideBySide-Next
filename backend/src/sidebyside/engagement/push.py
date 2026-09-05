@@ -19,15 +19,21 @@ from sidebyside.engagement.models import (
     PushDeliveryStatus,
     PushEndpoint,
 )
+from sidebyside.identity import effects as account_effects
 from sidebyside.jobs import queue
 from sidebyside.jobs.errors import RetryableJobError
 from sidebyside.jobs.worker import registry
-from sidebyside.relationship.models import Membership, MembershipStatus
 
 JOB_KIND = "push-delivery"
 GENERIC_PRESENTATION_KEY = "notification.generic"
+ACCOUNT_UNAVAILABLE_CODE = "ACCOUNT_UNAVAILABLE"
 MAX_PUSH_ATTEMPTS = 5
 _TECHNICAL_CODE = re.compile(r"[A-Z0-9_-]{1,64}\Z")
+_TERMINAL_DELIVERY_STATUSES = {
+    PushDeliveryStatus.SUCCEEDED.value,
+    PushDeliveryStatus.FAILED.value,
+    PushDeliveryStatus.UNAVAILABLE.value,
+}
 
 
 @dataclass(frozen=True)
@@ -151,6 +157,37 @@ def ensure_deliveries_for_source_event(session: Session, source_event_id: UUID) 
                 )
 
 
+def _delivery_account_snapshot(
+    session: Session,
+    delivery_id: UUID,
+) -> tuple[str, set[UUID]] | None:
+    """Read the Account identities needed before taking lifecycle row locks.
+
+    This first read deliberately does not lock PushDelivery. Account deletion
+    cleanup owns the lock order ``Account -> PushDelivery``; the worker must use
+    the same order or a cleanup failure/race can deadlock the two transactions.
+    Every mutable delivery/notification invariant is rechecked after both lock
+    classes have been acquired.
+    """
+    snapshot = session.execute(
+        select(
+            PushDelivery.status,
+            Notification.recipient_account_id,
+            Notification.actor_id,
+        )
+        .select_from(PushDelivery)
+        .join(Notification, Notification.id == PushDelivery.notification_id)
+        .where(PushDelivery.id == delivery_id)
+    ).one_or_none()
+    if snapshot is None:
+        return None
+    status, recipient_id, actor_id = snapshot
+    account_ids = {recipient_id}
+    if actor_id is not None:
+        account_ids.add(actor_id)
+    return status, account_ids
+
+
 def handle_delivery(session: Session, payload: dict[str, Any]) -> None:
     """Deliver one Notification without carrying relationship plaintext."""
     raw_id = payload.get("deliveryId")
@@ -161,14 +198,22 @@ def handle_delivery(session: Session, payload: dict[str, Any]) -> None:
     except ValueError:
         return
 
+    snapshot = _delivery_account_snapshot(session, delivery_id)
+    if snapshot is None:
+        return
+    snapshot_status, account_ids = snapshot
+    if snapshot_status in _TERMINAL_DELIVERY_STATUSES:
+        return
+
+    accounts_available = account_effects.lock_enabled_accounts(session, account_ids) is not None
+
+    # Lock only after Account rows. Account deletion async cleanup uses the same
+    # order before suppressing stale deliveries, so the two paths can wait but
+    # cannot form an Account <-> PushDelivery deadlock cycle.
     delivery = session.execute(
         select(PushDelivery).where(PushDelivery.id == delivery_id).with_for_update()
     ).scalar_one_or_none()
-    if delivery is None or delivery.status in {
-        PushDeliveryStatus.SUCCEEDED.value,
-        PushDeliveryStatus.FAILED.value,
-        PushDeliveryStatus.UNAVAILABLE.value,
-    }:
+    if delivery is None or delivery.status in _TERMINAL_DELIVERY_STATUSES:
         return
 
     notification = session.get(Notification, delivery.notification_id)
@@ -182,15 +227,21 @@ def handle_delivery(session: Session, payload: dict[str, Any]) -> None:
         _finish_unavailable(delivery)
         return
 
-    active_membership = session.execute(
-        select(Membership.id).where(
-            Membership.space_id == notification.space_id,
-            Membership.account_id == notification.recipient_account_id,
-            Membership.status == MembershipStatus.ACTIVE.value,
+    current_account_ids = {notification.recipient_account_id}
+    if notification.actor_id is not None:
+        current_account_ids.add(notification.actor_id)
+    if current_account_ids != account_ids or not accounts_available:
+        _finish_unavailable(delivery, ACCOUNT_UNAVAILABLE_CODE)
+        return
+    if any(
+        not account_effects.has_active_membership(
+            session,
+            account_id=account_id,
+            space_id=notification.space_id,
         )
-    ).scalar_one_or_none()
-    if active_membership is None:
-        _finish_unavailable(delivery)
+        for account_id in account_ids
+    ):
+        _finish_unavailable(delivery, ACCOUNT_UNAVAILABLE_CODE)
         return
 
     provider = providers.get(delivery.provider_key)
@@ -251,7 +302,10 @@ def _record_failure(delivery: PushDelivery, code: str) -> None:
         delivery.status = PushDeliveryStatus.RETRYING.value
 
 
-def _finish_unavailable(delivery: PushDelivery) -> None:
+def _finish_unavailable(
+    delivery: PushDelivery,
+    code: str = "PUSH_NOT_CONFIGURED",
+) -> None:
     delivery.status = PushDeliveryStatus.UNAVAILABLE.value
-    delivery.last_error_code = "PUSH_NOT_CONFIGURED"
+    delivery.last_error_code = sanitize_error_code(code)
     delivery.finished_at = clock.now()

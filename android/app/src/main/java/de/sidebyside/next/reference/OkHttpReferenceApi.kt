@@ -21,6 +21,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.BufferedSink
 import okio.source
+import sidebyside.api.models.AccountDeletionAccepted
+import sidebyside.api.models.AccountDeletionRequest
 import sidebyside.api.models.AccountMembershipView
 import sidebyside.api.models.AttachmentDetail
 import sidebyside.api.models.AttachmentReadRequest
@@ -117,6 +119,7 @@ import sidebyside.api.models.ProfileIdentityUpdate
 import sidebyside.api.models.ReadDescriptor
 import sidebyside.api.models.SessionView
 import sidebyside.api.models.SignInRequest
+import sidebyside.api.models.SpaceMembershipExitView
 import sidebyside.api.models.SpaceView
 import sidebyside.api.models.StoryPage
 import sidebyside.api.models.UploadDescriptor
@@ -228,6 +231,32 @@ class OkHttpReferenceApi(
                 .get()
                 .build(),
             ListSerializer(AccountMembershipView.serializer()),
+        )
+
+    override suspend fun leaveSpace(
+        spaceId: UUID,
+        accessToken: String,
+    ): SpaceMembershipExitView =
+        executeJson(
+            authenticatedRequest("$baseUrl/api/v1/spaces/$spaceId/membership/leave", accessToken)
+                .post(EMPTY_JSON_BODY.toRequestBody(jsonMediaType))
+                .build(),
+            SpaceMembershipExitView.serializer(),
+        )
+
+    override suspend fun deleteOwnAccount(
+        accessToken: String,
+        request: AccountDeletionRequest,
+    ): AccountDeletionAccepted =
+        executeJson(
+            authenticatedRequest("$baseUrl/api/v1/account/deletion", accessToken)
+                .post(
+                    SideBySideJson
+                        .encodeToString(AccountDeletionRequest.serializer(), request)
+                        .toRequestBody(jsonMediaType),
+                )
+                .build(),
+            AccountDeletionAccepted.serializer(),
         )
 
     /*

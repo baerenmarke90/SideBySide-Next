@@ -61,11 +61,11 @@ G5 is evidence-testable. Launch-ready means all required items below have tracea
 |---|---|---|---|
 | M6-A Release engineering | #519, #193 | OPEN | #194 and #375 reused; publication/signing and provenance remain |
 | M6-B Operations/recovery/data lifecycle | #190, #518, #520 | PARTIAL | #190 reused; retention/offboarding/Account deletion remain |
-| M6-C Deployment/environments | #375, #521, #304 | PARTIAL | Self-Hosted promotion and Demo reused; Cloud/Managed launch topology remains |
+| M6-C Deployment/environments | #375, #521, #304 | RESOLVED | Self-Hosted promotion, Demo and Cloud/Managed launch topology (`CLOUD-MANAGED-TOPOLOGY.md`) all frozen; `#524` performs the integrated rehearsal |
 | M6-D Administration | #334, #335 | OPEN | registration/maintenance before ServerAdmin integration |
 | M6-E Observability/incidents | #189, #522 | OPEN | safe diagnostics first, incident runbooks/drill second |
-| M6-F Entitlements | #262, #523, provider-specific follow-ups | BLOCKED | #262 must freeze product semantics before runtime |
-| M6-G Integrated evidence/gate | #524, #525 | BLOCKED | runs after required G4/M6 work is complete |
+| M6-F Entitlements | #262, #523, provider-specific follow-ups | RESOLVED | #262/#523 core done; first launch uses `ADMIN_GRANT` only (`ENTITLEMENT-BOUNDARY.md` §7.1), real payment providers `NOT_APPLICABLE` for V1 |
+| M6-G Integrated evidence/gate | #524, #525 | PARTIAL | #524 evidence package complete (`G5-EVIDENCE-REPORT-2026-09-05.md`) with real PASS/FAIL/BLOCKED results; #525 final decision remains open |
 
 ### Delivered evidence reused by M6
 
@@ -170,7 +170,9 @@ M6/G5 does not add:
 - `DECISION-LOG.md` — frozen, blocking, before-release and later decisions.
 - `DELIVERY-PLAN.md` — ordered small slices and dependencies.
 - `OPERATIONS-RECOVERY.md` — #190 reuse and remaining G5 gaps.
+- `ACCOUNT-DELETION-RETENTION.md` — #520 Account deletion/retention matrix and restore-reconciliation contract.
 - `DEPLOYMENT-RELEASE.md` — release artifacts, environments, promotion and rollback.
+- `CLOUD-MANAGED-TOPOLOGY.md` — #521 frozen Cloud/Managed v1 topology, deployment representation and recovery mapping.
 - `ADMIN-OBSERVABILITY.md` — privileged administration and diagnostic boundaries.
 - `ENTITLEMENT-BOUNDARY.md` — provider-neutral runtime boundary feeding #523.
 - `G5-EVIDENCE.md` — criterion/evidence ownership and final gate inputs.

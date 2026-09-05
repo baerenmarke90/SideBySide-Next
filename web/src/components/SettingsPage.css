@@ -28,6 +28,7 @@
   color: var(--color-text-secondary);
 }
 
+.settings-account-block,
 .settings-connection-block {
   display: grid;
   gap: var(--space-6);

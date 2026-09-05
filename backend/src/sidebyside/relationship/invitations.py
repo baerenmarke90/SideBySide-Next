@@ -53,11 +53,13 @@ class IssuedInvitation:
 
 
 def create(session: Session, space_id: UUID, created_by: Account) -> IssuedInvitation:
-    """Create an invitation.
+    """Create an invitation only while the relationship history is joinable.
 
-    If the Space is already full, no invitation is created. Otherwise somebody
-    could send a link that only disappoints when opened.
+    The Space row is locked before lifecycle and capacity checks. This shares
+    the same serialization boundary with acceptance and #518 self-offboarding,
+    so a token cannot be issued while a Membership is concurrently ending.
     """
+    service.ensure_joinable_space_locked(session, space_id)
     if len(service.active_memberships(session, space_id)) >= MAX_ACTIVE_PARTNERS:
         raise ConflictError("This space already has two partners.", InvitationErrorCode.SPACE_FULL)
 
@@ -114,19 +116,30 @@ def _invalid() -> ValidationError:
 
 
 def _open_for_update(session: Session, token_hash: str) -> Invitation:
-    """Load an open invitation under a row lock.
+    """Load an open invitation with Space-first lifecycle serialization.
 
-    Internal callers also work only with the hash. This avoids carrying or
-    storing a plaintext token through additional layers.
+    The initial lookup carries no authority; it only discovers which Space row
+    must be locked. After that lock is held, the invitation is reloaded under a
+    row lock and its full validity is checked again. Offboarding uses the same
+    lock order (Space, then invitation), avoiding lock inversion while making a
+    concurrent `LEFT` transition authoritative before acceptance can proceed.
     """
     if not token_hash:
         raise _invalid()
 
+    candidate = session.execute(
+        select(Invitation).where(Invitation.token_hash == token_hash)
+    ).scalar_one_or_none()
+    if candidate is None or not candidate.is_open(now()):
+        raise _invalid()
+
+    service.lock_space(session, candidate.space_id)
     invitation = session.execute(
         select(Invitation).where(Invitation.token_hash == token_hash).with_for_update()
     ).scalar_one_or_none()
-
     if invitation is None or not invitation.is_open(now()):
+        raise _invalid()
+    if service.has_ended_membership(session, invitation.space_id):
         raise _invalid()
     return invitation
 

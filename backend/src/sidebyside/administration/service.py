@@ -122,12 +122,14 @@ def record_action(
     actor_id: UUID | None,
     action: AdministrationAction,
     target_account_id: UUID | None = None,
+    target_space_id: UUID | None = None,
     effect_count: int | None = None,
 ) -> InstanceAdministrationActionEvent:
-    """Record one privileged Account operation without storing user payloads."""
+    """Record one privileged Account/Space operation without storing user payloads."""
     event = InstanceAdministrationActionEvent(
         actor_id=actor_id,
         target_account_id=target_account_id,
+        target_space_id=target_space_id,
         action=action.value,
         effect_count=effect_count,
     )

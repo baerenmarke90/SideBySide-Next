@@ -26,6 +26,7 @@ that classification.
 | M6-D11 | Account deletion is distinct from Space/relationship offboarding and both are launch data-lifecycle concerns. | FROZEN BOUNDARY | #518, #520 |
 | M6-D12 | No new orchestration/queue/backup/export platform is introduced without Reuse-before-build evidence and demonstrated need. | FROZEN | repository governance |
 | M6-D13 | Commercial entitlements are Space/couple-scoped, downgrade is strictly non-destructive, Self-Hosted is offline-resilient, and domain gating uses normalized capabilities. | FROZEN | #262, `FREEMIUM-FEATURE-MATRIX.md` v1.1, ADR 0006 |
+| M6-D14 | V1 Space offboarding is self-exit only for normal clients: `ACTIVE -> LEFT`, no partner removal, no implicit reconnect, and a new relationship always receives a new Space. | FROZEN | #518, `SPACE-OFFBOARDING-LIFECYCLE.md` v1.0 |
 
 ## Blocking decisions
 
@@ -42,31 +43,65 @@ that classification.
 
 ### M6-B02 — Complete Account deletion/retention matrix
 
-**Status:** `BLOCKING` for G5, owner #520, coordinated with #518.
+**Status:** `FROZEN / RESOLVED` by `ACCOUNT-DELETION-RETENTION.md` v1.0 under #520. Runtime, public self-service API/mail and Web/Android cleanup are completed through #651-#654; final integrated G5 evidence remains owned by #524.
 
-The launch contract must decide hard-delete/anonymize/retain behavior for Account,
-authentication, Membership history, shared/private content, media, jobs, Audit and
-commercial references, including how a restore of an older backup re-applies a
-previous deletion request.
+The frozen contract requires:
+
+- one server-authoritative Account-deletion lifecycle, distinct from Space/relationship offboarding;
+- removal of authentication/profile/private data while a minimal disabled/pseudonymized Account identity may remain for legitimate historical references;
+- hard deletion of the deleted Account's `OWNER_ONLY` data without transfer or reclassification;
+- retention of legitimate `SPACE_SHARED` history without blind `accounts` cascade deletion or ownership transfer;
+- reuse of the existing session, Membership, Job/Outbox, MediaStore cleanup and #345 portability primitives;
+- stale side effects to fail closed against current deletion state and authorization;
+- a minimal forward-only deletion reconciliation journal outside the point-in-time application database so #190 restores predating deletion cannot reactivate the Account before API/worker startup;
+- #518 to remain authoritative for orphaned-Space retention/destruction and deliberate reconnect semantics.
 
 ### M6-B03 — Cloud/Managed launch topology
 
-**Status:** `BLOCKING` for managed launch support, owner #521.
+**Status:** `FROZEN / RESOLVED` by `CLOUD-MANAGED-TOPOLOGY.md` v1 under #521.
+Integrated `#524` rehearsal evidence (including a real managed restore) remains
+open.
 
-The initial managed deployment must freeze API/Web/worker/migrate/database/media,
-secret ownership, ingress, backup responsibility, capacity assumptions and one
-versioned supported deployment representation. It must reuse #375/#190 rather than
-creating Cloud-only Domain semantics.
+The managed deployment freezes API/Web/worker/migrate/database/media, secret
+ownership, ingress, backup responsibility, capacity assumptions and one versioned
+deployment representation (`deploy/compose.cloud.yml`,
+`deploy/cloud-managed.env.example`). It reuses #375/#190/#519/#189 rather than
+creating Cloud-only Domain semantics. One notable non-stateless exception is
+recorded explicitly: the #520 self-service Account-deletion journal requires a
+shared/ReadWriteMany-equivalent volume across `api` replicas, because its
+append-only hash-chain contract predates this issue and is not weakened to make
+horizontal scaling simpler.
 
 ### M6-B04 — Launch entitlement-source adapters
 
-**Status:** `BLOCKING` after #262/#523 for every commercial source actually used at
-launch.
+**Status:** `FROZEN / RESOLVED` (2026-09-05). See `ENTITLEMENT-BOUNDARY.md` §7.1.
 
-One focused issue/PR is required per selected source. Examples may include Google
-Play, a hosted subscription provider or a Self-Hosted commercial license, but M6-S0
-does not assume that all examples are required. Each adapter maps provider evidence
-into #523; no provider SDK/state may leak into feature code.
+The first launch uses `ADMIN_GRANT` only. `GOOGLE_PLAY`, `CLOUD_STRIPE` and
+`SELF_HOSTED_KEY` are `NOT_APPLICABLE` for this launch — no real payment/store
+provider is part of the initial launch target, and none of the required
+external prerequisites (Play Console access, a Stripe account, a
+license-signing process) exist. A ServerAdmin-authorized manual grant/revoke
+surface implements `ADMIN_GRANT` by reusing the existing `#523`
+`record_grant`/`revoke_grant` interface unchanged. A future real commercial
+channel remains a separate, focused issue/PR when the product actually needs
+one.
+
+### M6-B05 — Space/relationship offboarding lifecycle
+
+**Status:** `FROZEN / RESOLVED` by `SPACE-OFFBOARDING-LIFECYCLE.md` v1.0 under #518. Runtime/client implementation and final G5 evidence remain open.
+
+The frozen V1 contract requires:
+
+- normal clients may end only their own active Membership (`ACTIVE -> LEFT`); no unilateral partner-removal control is exposed;
+- ordinary self-exit preserves shared history while another active member remains and never transfers ownership;
+- the leaving Account's Space-scoped `OWNER_ONLY` data is deleted rather than stranded as inaccessible ghost data; #345 `PERSONAL` export is the optional pre-exit portability path;
+- pending/running Transfer work does not gain post-exit authorization and no special breakup archive/grace credential is added;
+- a Space with any ended Membership is relationship-history locked: stale invitations cannot add a new partner and ordinary `add_member()` cannot reactivate an ended Membership;
+- V1 has no reconnect; a new or renewed relationship creates a new Space;
+- zero-active Spaces are inaccessible immediately and enter a bounded 30-day retention window before existing cleanup primitives purge the orphaned shared Space;
+- account sessions remain valid after leaving one Space while Web/Android clear only the exited Space state/cache/drafts and move to another active Space or the existing awaiting-Space state;
+- membership-sensitive jobs/provider effects must revalidate current authorization at the side-effect boundary;
+- exit, privacy cleanup and essential portability remain non-paywallable.
 
 ## Before-release decisions
 

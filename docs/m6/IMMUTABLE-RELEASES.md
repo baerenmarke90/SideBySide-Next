@@ -4,52 +4,45 @@
 **Depends on:** #190, #193, #194, #375  
 **Gate:** G4 is already passed; G5 consumes the final release evidence.
 
-This document records the #519 release-engineering decision and the remaining
-operator decision that cannot be made safely without the release owner.
+This document records the #519 release-engineering and Android publication decisions.
+It deliberately keeps release identity, signing custody and rollback selection separate
+from database recovery.
 
 ## Decision: build once, publish immutable artifacts
 
-For launch, SideBySide should move from #375's permitted immutable-source build model
-to **build-once release artifacts** while keeping #375's immutable commit SHA as the
-source identity.
+For launch, SideBySide uses **build-once release artifacts** while keeping #375's exact
+commit SHA as the source identity.
 
-The selected v1 packaging boundary is deliberately conservative:
+The v1 packaging boundary is:
 
-- one backend image archive serves API, worker and migrate;
+- one backend image archive shared by API, worker and migrate;
 - one Web image archive;
-- Android APK/AAB according to the selected distribution channel;
-- SPDX SBOMs and GitHub Artifact Attestations from #193;
+- final signed Android APK/AAB for the selected distribution channel;
+- SPDX 2.3 JSON SBOMs and GitHub Artifact Attestations from #193;
 - one machine-readable release manifest plus checksums;
-- GitHub Releases is the intended publication surface for the first launch rather
-  than introducing Kubernetes, a custom orchestrator or a mandatory external
-  registry.
+- one Git tag `v<product-version>` pointing to the exact release commit;
+- one GitHub Release containing the complete immutable artifact/evidence set.
 
-A Cloud/Managed operator may later load the exact released image archive and push it
-to a registry, recording the resulting immutable registry digest as an additional
-transport identity. The product must not be rebuilt for that promotion. Self-Hosted
-operators retain both the #375 verified-source path and, after publication, the
-released image-archive path. Neither mode may identify Production by mutable `main`.
-
-The current PR intentionally stops at an immutable **release candidate** workflow.
-Final GitHub Release/store publication remains disabled until the Android signing
-custody decision below is made. An unsigned Android candidate is not a launch
-artifact.
+Cloud/Managed may later load the exact released image archives and push them to a
+registry, recording immutable registry digests as additional transport identities.
+The product is not rebuilt for that promotion. Self-Hosted retains the #375 verified
+source path and the released image-archive path. Neither mode identifies Production
+by mutable `main`.
 
 ## Version policy
 
-Launch versions use SemVer and have exactly two representations:
+Launch versions use SemVer and have exactly two human-facing representations:
 
-- product version / Android `versionName`: `MAJOR.MINOR.PATCH` (optionally a SemVer
-  prerelease/build suffix when intentionally used);
+- product version / Android `versionName`: `MAJOR.MINOR.PATCH` with an intentional
+  SemVer prerelease/build suffix only when needed;
 - Git tag: `v<product-version>`.
 
-`android/app/build.gradle.kts` remains the authoritative `versionName` source per
-#194. A release candidate fails when its requested product version differs from that
-value.
+`android/app/build.gradle.kts` remains authoritative for `versionName` per #194. A
+release fails when the requested product version differs from that value.
 
 Android `versionCode` is a positive monotonically increasing integer supplied by the
-publishing environment. It is not derived from the SemVer string and is not a second
-product version.
+publishing workflow. It is not derived from SemVer and is not a second product
+version.
 
 ## Release identity
 
@@ -63,25 +56,24 @@ creates one schema-v1 release manifest. It rejects:
 - Android application IDs other than `de.sidebyside.app`;
 - Android `versionName` differing from the product version;
 - unsafe artifact paths or invalid digests;
-- a final-publication verification request when Android is not `signed-release`.
+- final-publication verification when Android is not `signed-release`.
 
 The manifest contains no credential, token, signing key, `.env` value, user content or
 provider secret.
 
 ## Previous known-good release
 
-The previous-known-good identity is never a free-form operator SHA in the release
-manifest. For every non-initial release, the candidate workflow downloads
-`sidebyside-release-manifest.json` from the explicitly selected previous GitHub
-Release and embeds:
+The previous-known-good identity is never a free-form operator SHA. For every
+non-initial release, the workflow downloads `sidebyside-release-manifest.json` from an
+explicitly selected previous GitHub Release and records:
 
 - previous product version;
 - previous release tag;
 - previous immutable source revision;
 - SHA-256 of the previous manifest.
 
-This makes rollback selection deterministic without pretending application rollback
-also rolls back the database.
+The final publication path accepts only a previously published release as the rollback
+reference. G5 must not treat an unsigned release candidate as known-good Production.
 
 ## Database rollback boundary
 
@@ -93,89 +85,190 @@ Every release manifest states:
 - #190 and #375 remain authoritative for forward-fix, downgrade and restore choices.
 
 An operator must not start an old application merely because its release assets are
-available. If the current schema is not backward-compatible, choose an explicitly
-tested forward fix/downgrade or restore the coordinated pre-change backup according
-to #190/#375.
+available. If the current schema is not backward-compatible, use the explicitly tested
+forward-fix/downgrade path or restore the coordinated recovery point according to
+#190/#375.
 
-## Controlled candidate workflow
+## Candidate workflow
 
-`.github/workflows/release-candidate.yml` is manual-only. The operator selects the
-Git ref in GitHub Actions; `github.sha` is therefore the exact source identity for all
-artifacts in that run.
+`.github/workflows/release-candidate.yml` remains the unprivileged immutable candidate
+workflow. It is manual-only for real candidates and has no `contents: write`
+permission.
 
-The workflow:
+It:
 
-1. calls the #193 reusable release-evidence workflow rather than rebuilding SBOM or
-   attestation logic;
-2. verifies #193 transport checksums;
-3. resolves the previous-known-good manifest from a prior GitHub Release, or records
-   that this is the initial release;
-4. builds the release manifest;
-5. re-hashes every artifact and SBOM against the manifest;
-6. creates human-readable candidate notes;
-7. uploads one immutable workflow artifact named with version plus source SHA.
+1. calls the #193 reusable evidence workflow;
+2. builds backend/Web and unsigned Android release candidates from one exact SHA;
+3. produces SPDX SBOMs and attestations;
+4. binds version, source SHA, artifact digests and previous-known-good identity into a
+   candidate manifest;
+5. verifies all artifact/SBOM digests;
+6. uploads an immutable candidate bundle.
 
-The workflow has no `contents: write` permission and cannot publish a Git tag or
-Release. This is intentional until the signing decision is closed.
+An unsigned Android candidate is never a launch/store artifact.
 
-## Android signing / Play decision still required
+## Android signing and Play decision
 
-The code boundary is already safe: #194 prevents debug-signing fallback and accepts
-release signing material only from the publishing environment. What remains is an
-operator/security decision.
+The release-owner decision is now fixed for the first launch.
 
-### Recommended operating model
+### App-signing model
 
-Use **Google Play App Signing** for the app-signing key. Use a distinct upload key for
-release automation.
+- **Google Play App Signing is enabled** for the production application-signing key.
+- SideBySide release automation uses a **distinct upload key**.
+- The application-signing key is not stored in GitHub, the repository or operator
+  backups; Google Play owns that key boundary.
+- The upload key is the only Android private key consumed by SideBySide release
+  automation.
 
-Recommended custody:
+### Online custody
 
-- Google Play holds the production app-signing key;
-- the release owner keeps an encrypted offline recovery copy of the upload key and
-  recovery documentation;
-- a protected GitHub Actions environment such as `production-release` receives only
-  the upload-key material needed for a release job;
-- access to that environment is least-privilege and requires explicit approval;
-- secrets are materialized only for the Gradle signing step, masked, and deleted at
-  job end;
-- no keystore, password, alias, base64 key material or recovery data is uploaded as a
-  workflow artifact or written to the release manifest.
+The approved online custody point is the protected GitHub Actions environment:
 
-### Decision needed from release owner
+`production-release`
 
-Before final store publication, explicitly choose and record:
+For the first launch, environment approval/use is restricted to the repository release
+owner. Additional approvers may be added only deliberately as release responsibility
+is delegated.
 
-1. whether Google Play App Signing is enabled;
-2. who is the human owner of the offline upload-key recovery copy;
-3. whether GitHub's `production-release` environment is the approved online custody
-   point for the upload key;
-4. who may approve/use that environment.
+The environment supplies exactly these signing secrets:
 
-Until those points are decided and configured, SideBySide can produce fully coherent
-unsigned candidates but **must not publish them as launch releases**.
+- `SBS_RELEASE_KEYSTORE_BASE64` — base64-encoded upload keystore;
+- `SBS_RELEASE_KEYSTORE_PASSWORD`;
+- `SBS_RELEASE_KEY_ALIAS`;
+- `SBS_RELEASE_KEY_PASSWORD`.
 
-## Final publication slice after the decision
+Repository-level secrets are not the approved custody point for these values. The
+workflow materializes the keystore only under `$RUNNER_TEMP`, uses it for the Gradle
+release-signing step and removes it when that step exits. No signing secret is copied
+into release evidence, artifacts, logs, SBOMs, manifests or release notes.
 
-The remaining implementation is intentionally small and reuses this contract:
+The GitHub environment itself and its secret values are operator configuration and are
+not represented in repository files. Before the first real publication, G5/#524 must
+verify that the environment is protected, the expected approver policy is active and
+all four secrets are present.
 
-1. materialize the upload keystore only inside the protected publishing job;
-2. build the final signed AAB/APK from the same `github.sha`, product version and
+### Offline recovery / escrow
+
+The human release owner keeps one encrypted offline recovery copy of the **upload
+key**, plus the alias and recovery procedure, in a location independent from GitHub.
+Passwords protecting that copy must not be stored next to an unencrypted keystore.
+
+If the online upload key is lost but the offline copy is intact, restore the protected
+GitHub environment from that copy and rotate credentials afterward if exposure is
+suspected.
+
+If the upload key is lost or compromised and no trustworthy copy remains, use Google
+Play's supported upload-key reset/rotation process. Do not replace the package identity
+or create a second Play application as an ad-hoc recovery mechanism.
+
+Loss/rotation of the Google-held application-signing key follows Google Play App
+Signing's platform recovery/support process; SideBySide does not invent a second key
+escrow mechanism for it.
+
+## Protected final publication workflow
+
+`.github/workflows/release-publish.yml` is the only repository workflow allowed to
+turn a candidate source revision into a final launch release.
+
+The workflow is fail-closed and uses three boundaries before publication:
+
+### 1. Unprivileged preflight
+
+Before requesting access to signing material, it verifies:
+
+- explicit `confirm_publish=true` operator intent;
+- the exact source SHA is reachable from `main`;
+- existing CI/security checks for that SHA are completed without failure;
+- the requested tag and GitHub Release do not already exist;
+- product version matches the frozen Android `versionName`;
+- previous-known-good selection is valid, or the operator explicitly marks the initial
+  release;
+- #193 artifact transport checksums are intact.
+
+### 2. Protected signing and final evidence
+
+Only after preflight succeeds does the `production-release` job start.
+
+It:
+
+1. materializes the upload keystore only in `$RUNNER_TEMP`;
+2. builds APK and AAB from the same `github.sha` and supplied monotonic `versionCode`;
+3. verifies APK/AAB signatures and checks APK application ID, `versionName` and
    `versionCode`;
-3. regenerate the Android SBOM for the final bytes and use #193's attestation
-   primitive for those final signed subjects;
-4. rebuild the release manifest with Android signing state `signed-release` and run
-   `release_manifest.py verify --require-signed-android`;
-5. create tag `v<version>` pointing to the exact source SHA;
-6. publish one GitHub Release containing backend/Web artifacts, signed Android
-   artifacts, SBOMs, manifest, checksums and release notes;
-7. verify the published tag, manifest and attestation subjects before G5 approval.
+4. removes the unsigned Android candidate from the final evidence set;
+5. regenerates Android SPDX SBOMs for the **signed bytes**;
+6. replaces Android digests in `evidence-index.json` and marks signing as
+   `signed-release`;
+7. discards unsigned Android attestation bundles and creates fresh provenance/SBOM
+   attestations for the signed APK/AAB;
+8. re-verifies retained backend/Web attestations and the new signed Android
+   attestations;
+9. builds and verifies the final release manifest with
+   `--require-signed-android`;
+10. writes and verifies final checksums and human-readable release notes.
 
-No database migration is reversed by any of these publication steps.
+Backend/Web are not rebuilt in the protected job; the exact #193 build-once artifacts
+are retained. Only Android must be rebuilt because signing changes its final bytes.
+
+### 3. Immutable publication
+
+Immediately before write access is used, the workflow rechecks that the release tag
+and GitHub Release are still unused. It then:
+
+- creates `v<version>` at exactly `github.sha`;
+- publishes the complete release-evidence directory as GitHub Release assets;
+- downloads the published release manifest again;
+- confirms the tag resolves to the original source SHA and the published manifest is
+  byte-identical to the locally verified one.
+
+The workflow never overwrites an existing release identity.
+
+## GitHub environment setup before first publication
+
+This repository intentionally cannot create or populate signing secrets itself. The
+release owner must configure GitHub before the first production run:
+
+1. create/protect the `production-release` environment;
+2. require explicit deployment approval by the release owner;
+3. add the four environment secrets listed above;
+4. generate/store the encrypted offline upload-key recovery copy independently;
+5. enable Google Play App Signing and register the matching upload certificate in the
+   Play Console;
+6. execute the first publication only through `Publish Immutable Release` after normal
+   launch gates are green.
+
+If any of these conditions is absent, the workflow must fail rather than falling back
+to debug signing, unsigned publication or a repository secret.
+
+## Self-Hosted and Cloud/Managed
+
+Both operating models consume the same release identity:
+
+`product version -> Git tag -> immutable source SHA -> release manifest -> artifact digests`
+
+Self-Hosted may deploy the released archives directly or use the verified-source path
+from #375. Cloud/Managed may promote the exact archives to an OCI registry and record
+registry digests, but must not rebuild them. Commercial entitlement state is unrelated
+to artifact identity.
 
 ## Focused test contract
 
-`tools/ci/test_release_manifest.py` exercises the key negative cases: mixed Android
-version, split backend roles, unsigned final publication, artifact tampering and
-previous-known-good identity sourced from a real manifest rather than a free-form
-SHA. Normal repository CI remains the gate for the underlying application revision.
+`tools/ci/test_release_manifest.py` covers release-manifest invariants.
+
+`tools/ci/test_release_publish_workflow.py` covers the privileged publication boundary,
+including:
+
+- no privileged `pull_request_target` path;
+- protected environment and least-privilege permissions;
+- explicit publish confirmation and source-on-main requirement;
+- CI/tag/release preflight;
+- environment-only ephemeral signing material;
+- signed Android identity verification;
+- fresh SBOM/attestation generation for signed bytes;
+- final `--require-signed-android` verification;
+- immutable GitHub Release/tag publication;
+- immutable pins for external Actions and the Syft binary.
+
+Normal repository CI/security/privacy/reuse/supply-chain gates remain authoritative for
+the application revision. G5/#524 performs the real operator rehearsal and captures
+the protected-environment/publication evidence.

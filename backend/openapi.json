@@ -28,6 +28,51 @@
         "title": "AccountCapabilitiesView",
         "type": "object"
       },
+      "AccountDeletionAccepted": {
+        "description": "Safe client state after irreversible deletion acceptance.",
+        "properties": {
+          "acceptedAt": {
+            "format": "date-time",
+            "title": "Acceptedat",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountDeletionStatus"
+          }
+        },
+        "required": [
+          "acceptedAt",
+          "status"
+        ],
+        "title": "AccountDeletionAccepted",
+        "type": "object"
+      },
+      "AccountDeletionRequest": {
+        "additionalProperties": false,
+        "description": "Explicit destructive confirmation; the target is always the caller.",
+        "properties": {
+          "confirmation": {
+            "const": "DELETE_ACCOUNT",
+            "title": "Confirmation",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirmation"
+        ],
+        "title": "AccountDeletionRequest",
+        "type": "object"
+      },
+      "AccountDeletionStatus": {
+        "description": "Runtime progress after an external deletion tombstone was accepted.",
+        "enum": [
+          "PENDING",
+          "COMPLETED",
+          "FAILED"
+        ],
+        "title": "AccountDeletionStatus",
+        "type": "string"
+      },
       "AccountMembershipView": {
         "description": "Active Space membership belonging to the authenticated account.",
         "properties": {
@@ -1472,6 +1517,18 @@
         "title": "EngagementTarget",
         "type": "string"
       },
+      "EntitlementSourceType": {
+        "description": "Normalized origin of an entitlement grant.",
+        "enum": [
+          "GOOGLE_PLAY",
+          "CLOUD_STRIPE",
+          "SELF_HOSTED_KEY",
+          "ADMIN_GRANT",
+          "TEST_FIXTURE"
+        ],
+        "title": "EntitlementSourceType",
+        "type": "string"
+      },
       "EntitlementStatus": {
         "description": "Lifecycle state of an entitlement grant.",
         "enum": [
@@ -2354,6 +2411,15 @@
           "VIDEO"
         ],
         "title": "MediaType",
+        "type": "string"
+      },
+      "MembershipStatus": {
+        "enum": [
+          "ACTIVE",
+          "LEFT",
+          "REMOVED"
+        ],
+        "title": "MembershipStatus",
         "type": "string"
       },
       "MembershipView": {
@@ -5676,12 +5742,25 @@
               }
             ],
             "title": "Targetaccountid"
+          },
+          "targetSpaceId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetspaceid"
           }
         },
         "required": [
           "id",
           "actorId",
           "targetAccountId",
+          "targetSpaceId",
           "action",
           "effectCount",
           "createdAt"
@@ -5750,6 +5829,143 @@
         "title": "ServerAdminEmailVerificationRequest",
         "type": "object"
       },
+      "ServerAdminEntitlementGrantRequest": {
+        "properties": {
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "effectiveUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveuntil"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/EntitlementTier",
+            "default": "PREMIUM"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ServerAdminEntitlementGrantRequest",
+        "type": "object"
+      },
+      "ServerAdminEntitlementGrantView": {
+        "description": "One historical grant row. Never exposes provider secrets/tokens.",
+        "properties": {
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "effectiveFrom": {
+            "format": "date-time",
+            "title": "Effectivefrom",
+            "type": "string"
+          },
+          "effectiveUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveuntil"
+          },
+          "externalReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Externalreference"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/EntitlementSourceType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EntitlementStatus"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/EntitlementTier"
+          }
+        },
+        "required": [
+          "id",
+          "sourceType",
+          "status",
+          "tier",
+          "effectiveFrom",
+          "effectiveUntil",
+          "capabilities",
+          "externalReference",
+          "createdAt"
+        ],
+        "title": "ServerAdminEntitlementGrantView",
+        "type": "object"
+      },
+      "ServerAdminEntitlementRevokeRequest": {
+        "properties": {
+          "reason": {
+            "default": "revoked",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "ServerAdminEntitlementRevokeRequest",
+        "type": "object"
+      },
       "ServerAdminFailedJob": {
         "description": "Safe queue metadata without payload or raw exception text.",
         "properties": {
@@ -5791,6 +6007,118 @@
           "finishedAt"
         ],
         "title": "ServerAdminFailedJob",
+        "type": "object"
+      },
+      "ServerAdminJobItem": {
+        "description": "Queue metadata safe for ServerAdmin responses.\n\nDeliberately absent: payload, last_error, locked_by, and payload-derived IDs.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "delayed": {
+            "title": "Delayed",
+            "type": "boolean"
+          },
+          "exhausted": {
+            "title": "Exhausted",
+            "type": "boolean"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "maxAttempts": {
+            "title": "Maxattempts",
+            "type": "integer"
+          },
+          "pendingAgeSeconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pendingageseconds"
+          },
+          "runAfter": {
+            "format": "date-time",
+            "title": "Runafter",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "attempts",
+          "maxAttempts",
+          "createdAt",
+          "runAfter",
+          "finishedAt",
+          "exhausted",
+          "delayed",
+          "pendingAgeSeconds"
+        ],
+        "title": "ServerAdminJobItem",
+        "type": "object"
+      },
+      "ServerAdminJobList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminJobItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ServerAdminJobList",
         "type": "object"
       },
       "ServerAdminOverview": {
@@ -6203,6 +6531,62 @@
         "title": "ServerAdminSpaceDetail",
         "type": "object"
       },
+      "ServerAdminSpaceEntitlementView": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "effectiveUntil": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effectiveuntil"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminEntitlementGrantView"
+            },
+            "title": "Grants",
+            "type": "array"
+          },
+          "isInGracePeriod": {
+            "title": "Isingraceperiod",
+            "type": "boolean"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EntitlementStatus"
+          },
+          "tier": {
+            "$ref": "#/components/schemas/EntitlementTier"
+          }
+        },
+        "required": [
+          "spaceId",
+          "tier",
+          "status",
+          "effectiveUntil",
+          "isInGracePeriod",
+          "capabilities",
+          "grants"
+        ],
+        "title": "ServerAdminSpaceEntitlementView",
+        "type": "object"
+      },
       "ServerAdminSpaceList": {
         "properties": {
           "items": {
@@ -6321,6 +6705,153 @@
           "anomalyCodes"
         ],
         "title": "ServerAdminSpaceSummary",
+        "type": "object"
+      },
+      "ServerAdminStorageGrowth": {
+        "properties": {
+          "readyBytes": {
+            "title": "Readybytes",
+            "type": "integer"
+          },
+          "readyCount": {
+            "title": "Readycount",
+            "type": "integer"
+          },
+          "readySizeUnknownCount": {
+            "title": "Readysizeunknowncount",
+            "type": "integer"
+          },
+          "window": {
+            "enum": [
+              "24h",
+              "7d",
+              "30d"
+            ],
+            "title": "Window",
+            "type": "string"
+          }
+        },
+        "required": [
+          "window",
+          "readyCount",
+          "readyBytes",
+          "readySizeUnknownCount"
+        ],
+        "title": "ServerAdminStorageGrowth",
+        "type": "object"
+      },
+      "ServerAdminStorageMediaCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "mediaType": {
+            "title": "Mediatype",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mediaType",
+          "count"
+        ],
+        "title": "ServerAdminStorageMediaCount",
+        "type": "object"
+      },
+      "ServerAdminStorageOverview": {
+        "description": "Aggregate-only storage projection with no content/ownership metadata.",
+        "properties": {
+          "deleteFailedCount": {
+            "title": "Deletefailedcount",
+            "type": "integer"
+          },
+          "deletingCount": {
+            "title": "Deletingcount",
+            "type": "integer"
+          },
+          "failedCount": {
+            "title": "Failedcount",
+            "type": "integer"
+          },
+          "growth": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminStorageGrowth"
+            },
+            "title": "Growth",
+            "type": "array"
+          },
+          "mediaTypeCounts": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminStorageMediaCount"
+            },
+            "title": "Mediatypecounts",
+            "type": "array"
+          },
+          "readyBytes": {
+            "title": "Readybytes",
+            "type": "integer"
+          },
+          "readyCount": {
+            "title": "Readycount",
+            "type": "integer"
+          },
+          "readySizeUnknownCount": {
+            "title": "Readysizeunknowncount",
+            "type": "integer"
+          },
+          "statusCounts": {
+            "items": {
+              "$ref": "#/components/schemas/ServerAdminStorageStatusCount"
+            },
+            "title": "Statuscounts",
+            "type": "array"
+          },
+          "thumbnailReadyCount": {
+            "title": "Thumbnailreadycount",
+            "type": "integer"
+          },
+          "uploadingCount": {
+            "title": "Uploadingcount",
+            "type": "integer"
+          },
+          "validatingCount": {
+            "title": "Validatingcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "statusCounts",
+          "mediaTypeCounts",
+          "readyCount",
+          "readyBytes",
+          "readySizeUnknownCount",
+          "failedCount",
+          "deleteFailedCount",
+          "uploadingCount",
+          "validatingCount",
+          "deletingCount",
+          "thumbnailReadyCount",
+          "growth"
+        ],
+        "title": "ServerAdminStorageOverview",
+        "type": "object"
+      },
+      "ServerAdminStorageStatusCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ],
+        "title": "ServerAdminStorageStatusCount",
         "type": "object"
       },
       "SessionView": {
@@ -6468,6 +6999,38 @@
           "capabilities"
         ],
         "title": "SpaceEntitlementView",
+        "type": "object"
+      },
+      "SpaceMembershipExitView": {
+        "description": "Safe lifecycle state after self-exit from one Space.",
+        "properties": {
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endedat"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MembershipStatus"
+          }
+        },
+        "required": [
+          "spaceId",
+          "status",
+          "endedAt"
+        ],
+        "title": "SpaceMembershipExitView",
         "type": "object"
       },
       "SpaceProfileUpdate": {
@@ -7333,6 +7896,78 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/account/deletion": {
+      "post": {
+        "description": "Accept deletion for the authenticated Account only.\n\nNo Account identifier is accepted from the client, so this route cannot be\nrepurposed into a cross-account deletion primitive. Once the external\ntombstone and fail-closed state commit, cleanup continues through the\nexisting worker even if the client disconnects.",
+        "operationId": "delete_own_account_api_v1_account_deletion_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDeletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "A capability required for this operation is not configured on this instance."
+          }
+        },
+        "summary": "Delete the authenticated Account",
+        "tags": [
+          "account"
+        ]
+      }
+    },
     "/api/v1/auth/capabilities": {
       "get": {
         "description": "Return presentation capabilities without replacing endpoint authorization.",
@@ -9156,6 +9791,160 @@
         ]
       }
     },
+    "/api/v1/server-admin/jobs": {
+      "get": {
+        "description": "List technical job state without selecting sensitive queue columns.",
+        "operationId": "list_server_admin_jobs_api_v1_server_admin_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PENDING",
+                    "RUNNING",
+                    "SUCCEEDED",
+                    "FAILED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exhausted",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exhausted"
+            }
+          },
+          {
+            "in": "query",
+            "name": "createdWithin",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "24h",
+                    "7d",
+                    "30d"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Createdwithin"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminJobList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "List Server Admin Jobs",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
     "/api/v1/server-admin/overview": {
       "get": {
         "description": "Return safe operational state for an authorized ServerAdmin.",
@@ -9531,6 +10320,290 @@
           }
         },
         "summary": "Get Server Admin Space",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/spaces/{space_id}/entitlement": {
+      "get": {
+        "description": "Return the effective entitlement state and full grant history for a Space.",
+        "operationId": "get_server_admin_space_entitlement_api_v1_server_admin_spaces__space_id__entitlement_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Space Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSpaceEntitlementView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Get Server Admin Space Entitlement",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/spaces/{space_id}/entitlement/grants": {
+      "post": {
+        "description": "Record a manual Premium grant for a Space (V1 launch entitlement source).\n\nThis is the only entitlement source implemented for the first launch;\nGoogle Play/Stripe/Self-Hosted-license adapters are deliberately out of\nscope until a real launch channel requires them (docs/m6/\nENTITLEMENT-BOUNDARY.md §7). It reuses the existing normalized\n`record_grant` source-update interface unchanged rather than adding a\nsecond grant-mutation path.",
+        "operationId": "grant_server_admin_space_entitlement_api_v1_server_admin_spaces__space_id__entitlement_grants_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Space Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAdminEntitlementGrantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSpaceEntitlementView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Grant Server Admin Space Entitlement",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/spaces/{space_id}/entitlement/grants/{grant_id}/revoke": {
+      "post": {
+        "description": "Revoke one grant (e.g. an admin mistake, abuse, or a refund/chargeback).",
+        "operationId": "revoke_server_admin_space_entitlement_grant_api_v1_server_admin_spaces__space_id__entitlement_grants__grant_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "space_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Space Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Grant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServerAdminEntitlementRevokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminSpaceEntitlementView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Request parameters or domain inputs are invalid."
+          }
+        },
+        "summary": "Revoke Server Admin Space Entitlement Grant",
+        "tags": [
+          "server-admin"
+        ]
+      }
+    },
+    "/api/v1/server-admin/storage": {
+      "get": {
+        "description": "Return authoritative aggregate storage state, never an attachment directory.",
+        "operationId": "get_server_admin_storage_api_v1_server_admin_storage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerAdminStorageOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          }
+        },
+        "summary": "Get Server Admin Storage",
         "tags": [
           "server-admin"
         ]
@@ -13944,6 +15017,69 @@
         "summary": "Revoke Invitation",
         "tags": [
           "invitations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/membership/leave": {
+      "post": {
+        "description": "End only the caller's own Membership, never the partner's.\n\nThis route intentionally does not depend on ``Tenant``. Once the first\nrequest commits, the normal tenant dependency correctly stops authorizing\nthis Space; resolving the caller's historical Membership directly is what\nlets a retry return the same safe ended state instead of creating another\nlifecycle.",
+        "operationId": "leave_space_api_v1_spaces__spaceId__membership_leave_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceMembershipExitView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Leave the authenticated Account's Membership in this Space",
+        "tags": [
+          "spaces"
         ]
       }
     },

@@ -116,7 +116,7 @@ def previous_identity(path: Path | None, initial_release: bool) -> dict[str, Any
     if path is None:
         raise ManifestError("Non-initial release requires the previous-known-good release manifest")
     previous = load_json(path)
-    validate_manifest_shape(previous, require_signed_android=False)
+    validate_manifest_shape(previous, require_signed_android=True)
     product = previous["product"]
     return {
         "version": product["version"],

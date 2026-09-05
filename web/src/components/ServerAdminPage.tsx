@@ -10,7 +10,9 @@ import { createServerAdminApis } from '../client/serverAdmin';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { Brand } from './Brand';
 import { ServerAdminAccountsPanel } from './ServerAdminAccountsPanel';
+import { ServerAdminJobsPanel } from './ServerAdminJobsPanel';
 import { ServerAdminSpacesPanel } from './ServerAdminSpacesPanel';
+import { ServerAdminStoragePanel } from './ServerAdminStoragePanel';
 import { ThemeControl } from './ThemeControl';
 import { UiState } from './UiState';
 import './ServerAdminPage.css';
@@ -20,6 +22,7 @@ const SERVER_ADMIN_SECTIONS = [
   'accounts',
   'spaces',
   'jobs',
+  'storage',
   'security',
   'settings',
   'activity',
@@ -52,6 +55,7 @@ export function ServerAdminSectionNavigation({
     { id: 'accounts', label: t('serverAdmin.navigation.accounts') },
     { id: 'spaces', label: t('serverAdmin.navigation.spaces') },
     { id: 'jobs', label: t('serverAdmin.navigation.jobs') },
+    { id: 'storage', label: t('serverAdmin.navigation.storage') },
     { id: 'security', label: t('serverAdmin.navigation.security') },
     { id: 'settings', label: t('serverAdmin.navigation.settings') },
     { id: 'activity', label: t('serverAdmin.navigation.activity') },
@@ -712,8 +716,21 @@ export function ServerAdminPage({
   const mutationError = registrationMutation.error ?? maintenanceMutation.error;
 
   function refreshCurrentSection() {
+    if (section === 'jobs') {
+      void overviewQuery.refetch();
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'jobs'],
+      });
+      return;
+    }
     if (overviewSection) {
       void overviewQuery.refetch();
+      return;
+    }
+    if (section === 'storage') {
+      void queryClient.invalidateQueries({
+        queryKey: ['server-admin', 'storage'],
+      });
       return;
     }
     if (section === 'settings') {
@@ -874,6 +891,14 @@ export function ServerAdminPage({
                   }
                 />
               ) : null
+            ) : null}
+
+            {section === 'jobs' ? (
+              <ServerAdminJobsPanel api={apis.serverAdmin} />
+            ) : null}
+
+            {section === 'storage' ? (
+              <ServerAdminStoragePanel api={apis.serverAdmin} />
             ) : null}
 
             {section === 'accounts' ? (

@@ -153,6 +153,8 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
                 ".github/workflows/self-hosted-deployment-guard.yml",
                 ".env.example",
                 *SELF_HOSTED_COMPOSE_FILES,
+                "deploy/compose.cloud.yml",
+                "deploy/cloud-managed.env.example",
                 "backend/Dockerfile",
                 "web/Dockerfile",
                 "web/nginx.conf",
@@ -167,8 +169,8 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             known = True
 
         # Recovery acceptance is expensive and is needed for actual recovery
-        # tooling/contracts plus schema migrations that an old snapshot must
-        # survive. Ordinary backend or Web feature work does not affect it.
+        # tooling/contracts plus schema migrations and deletion reconciliation
+        # that an old snapshot must survive.
         if _matches(
             path,
             prefixes=("backend/alembic/",),
@@ -177,8 +179,16 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
                 ".env.example",
                 *SELF_HOSTED_COMPOSE_FILES,
                 "scripts/self_hosted_recovery.py",
+                "scripts/self_hosted_deletion_reconcile.py",
                 "scripts/self_hosted_recovery_acceptance.py",
+                "scripts/account_deletion_recovery_acceptance.py",
                 "scripts/test_self_hosted_recovery.py",
+                "scripts/test_self_hosted_deletion_reconcile.py",
+                "backend/src/sidebyside/identity/deletion.py",
+                "backend/src/sidebyside/identity/deletion_journal.py",
+                "backend/src/sidebyside/identity/deletion_reconcile.py",
+                "backend/src/sidebyside/identity/deletion_models.py",
+                "backend/src/sidebyside/authorization/retention.py",
                 "docs/SELF-HOSTED-RECOVERY.md",
                 "docs/SELF-HOSTING.md",
                 "docs/DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md",

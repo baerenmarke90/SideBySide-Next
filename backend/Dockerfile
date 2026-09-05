@@ -35,7 +35,7 @@ RUN python -m scripts.demo_space validate-assets >/dev/null
 
 # Do not run as root: a process escape must not immediately own the container.
 RUN useradd --system --uid 10001 sidebyside \
-    && mkdir -p /var/lib/sidebyside/media \
+    && mkdir -p /var/lib/sidebyside/media /var/lib/sidebyside/deletion-journal \
     && chown -R sidebyside /var/lib/sidebyside
 USER sidebyside
 

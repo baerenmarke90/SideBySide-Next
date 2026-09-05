@@ -14,12 +14,12 @@ from sqlalchemy.orm import Session
 from sidebyside.authorization import AuthorizationContext
 from sidebyside.core.clock import now
 from sidebyside.core.errors import BadRequestError, ErrorCode
+from sidebyside.identity import effects as account_effects
 from sidebyside.jobs import queue
 from sidebyside.jobs.errors import RetryableJobError
 from sidebyside.jobs.models import Job, JobStatus
 from sidebyside.jobs.worker import JobRegistry, registry
 from sidebyside.media import get_media_store
-from sidebyside.relationship.models import Membership, MembershipStatus
 from sidebyside.transfer import service
 from sidebyside.transfer.models import (
     ExportStatus,
@@ -32,6 +32,23 @@ from sidebyside.transfer.models import (
 log = logging.getLogger(__name__)
 CLEANUP_INTERVAL = timedelta(minutes=30)
 _LOCK_KEY = 8_150_345
+_EXPORT_TERMINAL = {
+    ExportStatus.READY.value,
+    ExportStatus.FAILED.value,
+    ExportStatus.EXPIRED.value,
+}
+_VALIDATE_IMPORT_TERMINAL = {
+    ImportStatus.READY_TO_APPLY.value,
+    ImportStatus.APPLYING.value,
+    ImportStatus.COMPLETED.value,
+    ImportStatus.FAILED.value,
+    ImportStatus.EXPIRED.value,
+}
+_APPLY_IMPORT_TERMINAL = {
+    ImportStatus.COMPLETED.value,
+    ImportStatus.FAILED.value,
+    ImportStatus.EXPIRED.value,
+}
 
 
 def _lock(session: Session) -> None:
@@ -68,16 +85,33 @@ def schedule_next(session: Session) -> Job | None:
 def _active_authorization(
     session: Session, *, space_id: UUID, account_id: UUID
 ) -> AuthorizationContext | None:
-    active = session.execute(
-        select(Membership.id).where(
-            Membership.space_id == space_id,
-            Membership.account_id == account_id,
-            Membership.status == MembershipStatus.ACTIVE.value,
-        )
-    ).scalar_one_or_none()
-    if active is None:
+    if account_effects.lock_enabled_accounts(session, [account_id]) is None:
+        return None
+    if not account_effects.has_active_membership(
+        session,
+        account_id=account_id,
+        space_id=space_id,
+    ):
         return None
     return AuthorizationContext(account_id=account_id, space_id=space_id)
+
+
+def _lock_export(session: Session, identifier: UUID) -> TransferExport | None:
+    return session.execute(
+        select(TransferExport)
+        .where(TransferExport.id == identifier)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+
+
+def _lock_import(session: Session, identifier: UUID) -> TransferImport | None:
+    return session.execute(
+        select(TransferImport)
+        .where(TransferImport.id == identifier)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
 
 
 def _identifier(payload: dict[str, Any], key: str) -> UUID | None:
@@ -94,19 +128,26 @@ def handle_export(session: Session, payload: dict[str, Any]) -> None:
     identifier = _identifier(payload, "exportId")
     if identifier is None:
         return
-    transfer = session.get(TransferExport, identifier)
-    if transfer is None or transfer.status in {
-        ExportStatus.READY.value,
-        ExportStatus.FAILED.value,
-        ExportStatus.EXPIRED.value,
-    }:
+    probe = session.get(TransferExport, identifier)
+    if probe is None or probe.status in _EXPORT_TERMINAL:
+        return
+    if probe.expires_at <= now():
+        service.cleanup_expired(session)
+        return
+
+    # Account deletion cleanup takes the same locks in Account -> Transfer
+    # order. Revalidate the Transfer row after obtaining the Account lock so a
+    # concurrent accepted deletion cannot deadlock or be overwritten by stale
+    # in-memory status.
+    authorization = _active_authorization(
+        session, space_id=probe.space_id, account_id=probe.created_by
+    )
+    transfer = _lock_export(session, identifier)
+    if transfer is None or transfer.status in _EXPORT_TERMINAL:
         return
     if transfer.expires_at <= now():
         service.cleanup_expired(session)
         return
-    authorization = _active_authorization(
-        session, space_id=transfer.space_id, account_id=transfer.created_by
-    )
     if authorization is None:
         transfer.status = ExportStatus.FAILED.value
         transfer.error_code = ErrorCode.TRANSFER_EXPORT_FAILED
@@ -156,23 +197,22 @@ def handle_validate_import(session: Session, payload: dict[str, Any]) -> None:
     identifier = _identifier(payload, "importId")
     if identifier is None:
         return
-    transfer = session.execute(
-        select(TransferImport).where(TransferImport.id == identifier).with_for_update()
-    ).scalar_one_or_none()
-    if transfer is None or transfer.status in {
-        ImportStatus.READY_TO_APPLY.value,
-        ImportStatus.APPLYING.value,
-        ImportStatus.COMPLETED.value,
-        ImportStatus.FAILED.value,
-        ImportStatus.EXPIRED.value,
-    }:
+    probe = session.get(TransferImport, identifier)
+    if probe is None or probe.status in _VALIDATE_IMPORT_TERMINAL:
+        return
+    if probe.expires_at <= now():
+        service.cleanup_expired(session)
+        return
+
+    authorization = _active_authorization(
+        session, space_id=probe.space_id, account_id=probe.created_by
+    )
+    transfer = _lock_import(session, identifier)
+    if transfer is None or transfer.status in _VALIDATE_IMPORT_TERMINAL:
         return
     if transfer.expires_at <= now():
         service.cleanup_expired(session)
         return
-    authorization = _active_authorization(
-        session, space_id=transfer.space_id, account_id=transfer.created_by
-    )
     if authorization is None:
         transfer.status = ImportStatus.FAILED.value
         transfer.error_code = ErrorCode.TRANSFER_IMPORT_FAILED
@@ -217,21 +257,22 @@ def handle_apply_import(session: Session, payload: dict[str, Any]) -> None:
     identifier = _identifier(payload, "importId")
     if identifier is None:
         return
-    transfer = session.execute(
-        select(TransferImport).where(TransferImport.id == identifier).with_for_update()
-    ).scalar_one_or_none()
-    if transfer is None or transfer.status in {
-        ImportStatus.COMPLETED.value,
-        ImportStatus.FAILED.value,
-        ImportStatus.EXPIRED.value,
-    }:
+    probe = session.get(TransferImport, identifier)
+    if probe is None or probe.status in _APPLY_IMPORT_TERMINAL:
+        return
+    if probe.expires_at <= now():
+        service.cleanup_expired(session)
+        return
+
+    authorization = _active_authorization(
+        session, space_id=probe.space_id, account_id=probe.created_by
+    )
+    transfer = _lock_import(session, identifier)
+    if transfer is None or transfer.status in _APPLY_IMPORT_TERMINAL:
         return
     if transfer.expires_at <= now():
         service.cleanup_expired(session)
         return
-    authorization = _active_authorization(
-        session, space_id=transfer.space_id, account_id=transfer.created_by
-    )
     if authorization is None:
         transfer.status = ImportStatus.FAILED.value
         transfer.error_code = ErrorCode.TRANSFER_IMPORT_FAILED

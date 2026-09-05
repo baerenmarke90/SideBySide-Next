@@ -37,6 +37,7 @@ import kotlinx.serialization.Contextual
  * @param effectCount 
  * @param id 
  * @param targetAccountId 
+ * @param targetSpaceId 
  */
 @Serializable
 
@@ -58,7 +59,10 @@ data class ServerAdminActionActivityItem (
     val id: java.util.UUID,
 
     @Contextual @SerialName(value = "targetAccountId")
-    val targetAccountId: java.util.UUID?
+    val targetAccountId: java.util.UUID?,
+
+    @Contextual @SerialName(value = "targetSpaceId")
+    val targetSpaceId: java.util.UUID?
 
 ) {
 

@@ -22,9 +22,11 @@ from sidebyside.db.session import unit_of_work
 from sidebyside.demo import reset as demo_reset
 from sidebyside.engagement import push as push_delivery
 from sidebyside.engagement import service as engagement_service
+from sidebyside.identity import deletion_jobs as account_deletion_jobs
 from sidebyside.jobs import maintenance
 from sidebyside.jobs.worker import run_once
 from sidebyside.observability import configure_logging
+from sidebyside.relationship import retention as space_retention
 from sidebyside.reminders import runtime as reminder_runtime
 from sidebyside.transfer import jobs as transfer_jobs
 
@@ -62,6 +64,7 @@ def _ensure_maintenance() -> None:
             reminder_runtime.ensure_scheduled(session)
             demo_reset.ensure_scheduled(session)
             transfer_jobs.ensure_scheduled(session)
+            space_retention.ensure_scheduled(session)
     except Exception:
         log.exception("could not schedule maintenance")
 
@@ -87,6 +90,8 @@ def main() -> None:
     reminder_runtime.register_handlers()
     demo_reset.register_handlers()
     transfer_jobs.register_handlers()
+    space_retention.register_handlers()
+    account_deletion_jobs.register_handlers()
     _ensure_maintenance()
     last_checked = time.monotonic()
 

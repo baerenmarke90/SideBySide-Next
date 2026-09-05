@@ -1,5 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import accountSettings from './locales/accountSettings';
 import de from './locales/de';
 import demo from './locales/demo';
 import importantDates from './locales/importantDates';
@@ -15,6 +16,7 @@ import profileIdentity from './locales/profileIdentity';
 import profiles from './locales/profiles';
 import serverAdmin from './locales/serverAdmin';
 import snackbar from './locales/snackbar';
+import spaceOffboarding from './locales/spaceOffboarding';
 import storyProducts from './locales/storyProducts';
 
 export const DEFAULT_LOCALE = 'de';
@@ -34,6 +36,7 @@ if (!i18n.isInitialized) {
       de: {
         translation: {
           ...de,
+          accountSettings,
           navigation: { ...de.navigation, ...navigation },
           demo,
           importantDates,
@@ -47,6 +50,7 @@ if (!i18n.isInitialized) {
           profileIdentity,
           profiles,
           serverAdmin,
+          spaceOffboarding,
           ...snackbar,
           ...storyProducts,
         },

@@ -4,14 +4,17 @@ import { RulesApi } from '../api/generated/apis/RulesApi';
 import { SpacesApi } from '../api/generated/apis/SpacesApi';
 import type { AccountView } from '../api/generated/models/AccountView';
 import { Configuration } from '../api/generated/runtime';
+import { isDemoModeConfigured } from '../client/demoMode';
 import { MORE_NOTIFICATIONS_ROUTE } from '../client/routes';
 import { useTranslation } from '../i18n';
+import { AccountSettingsPanel } from './AccountSettingsPanel';
 import { AnniversaryReminderSettings } from './AnniversaryReminderSettings';
 import { PageHeader } from './PageHeader';
 import { PartnerConnectionPanel } from './PartnerConnectionPanel';
 import { ProfileAppearancePanel } from './ProfileAppearancePanel';
 import { RelationshipSettingsSection } from './ProfilePageBase';
 import { SettingsIndex } from './SettingsIndex';
+import { SpaceOffboardingPanel } from './SpaceOffboardingPanel';
 import { TransferPanel } from './TransferPanel';
 import './SettingsPage.css';
 
@@ -38,6 +41,7 @@ export function SettingsPage(props: SettingsPageProps) {
     [configuration],
   );
   const rulesApi = useMemo(() => new RulesApi(configuration), [configuration]);
+  const demoMode = isDemoModeConfigured();
 
   return (
     <div className="page settings-page">
@@ -83,7 +87,20 @@ export function SettingsPage(props: SettingsPageProps) {
           </div>
         </section>
 
-        {/* 3. Connection & Relationship Configuration */}
+        {/* 3. Account-level actions. Partner invitation is reused here when authoritative state permits it. */}
+        <div
+          id="settings-account"
+          className="settings-section settings-account-block"
+        >
+          <AccountSettingsPanel
+            apiBaseUrl={props.apiBaseUrl}
+            accessToken={props.accessToken}
+            demoMode={demoMode}
+          />
+          <PartnerConnectionPanel {...props} />
+        </div>
+
+        {/* 4. Relationship configuration and relationship offboarding stay separate from Account deletion. */}
         <div
           id="settings-connection"
           className="settings-section settings-connection-block"
@@ -92,10 +109,14 @@ export function SettingsPage(props: SettingsPageProps) {
             spacesApi={spacesApi}
             spaceId={props.spaceId}
           />
-          <PartnerConnectionPanel {...props} />
+          <SpaceOffboardingPanel
+            spacesApi={spacesApi}
+            spaceId={props.spaceId}
+            demoMode={demoMode}
+          />
         </div>
 
-        {/* 4. Data & Portability */}
+        {/* 5. Data & Portability */}
         <div id="settings-data" className="settings-section">
           <TransferPanel
             apiBaseUrl={props.apiBaseUrl}

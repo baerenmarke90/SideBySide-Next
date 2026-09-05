@@ -15,6 +15,7 @@ mode:
 |---|---|---|
 | `SBS_ENVIRONMENT` | `development` (default) | `production` |
 | cursor signing key | local fallback | required, at least 32 characters |
+| Account deletion authority | optional until self-delete is exercised | stable instance UUID + protected forward journal required for self-service deletion |
 | outgoing mail | `log` allowed | `smtp` or `none`, never `log` |
 | `SBS_PUBLIC_BASE_URL` | HTTP localhost allowed | HTTPS required |
 | HTTPS/host enforcement | off | on |
@@ -141,6 +142,7 @@ Before the first Production startup, configure at least:
 ```dotenv
 SBS_ENVIRONMENT=production
 SBS_CURSOR_SIGNING_KEY=...        # openssl rand -base64 48
+SBS_ACCOUNT_DELETION_INSTANCE_ID=...  # python3 -c 'import uuid; print(uuid.uuid4())'
 SBS_PUBLIC_BASE_URL=https://your-domain.example
 SBS_ALLOWED_HOSTS=["your-domain.example"]
 TRUSTED_PROXY_IPS=...             # smallest real reverse-proxy IP/CIDR
@@ -156,12 +158,43 @@ SBS_SMTP_HOST=smtp.your-domain.example
 
 Production refuses unsafe configuration such as a missing cursor signing key, a
 plaintext public base URL, or `SBS_MAIL_TRANSPORT=log`. These are secure-default
-startup failures and must not be bypassed.
+startup failures and must not be bypassed. Self-service Account deletion also
+fails closed before irreversible acceptance until a valid stable
+`SBS_ACCOUNT_DELETION_INSTANCE_ID` and matching protected journal authority are
+available.
 
 The exact source revision must first pass the persistent Development gates in
 `DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`. For complete-checkout Production,
 perform the actual deploy with `scripts/compose_checked.py`; for Arcane, pin
 `SBS_SOURCE_REF` to the exact approved commit SHA.
+
+## Account deletion authority
+
+Self-service Account deletion has a stronger recovery requirement than ordinary
+point-in-time application data. Canonical Compose therefore gives the API a
+separate private `deletion_journal_data` volume mounted at:
+
+```text
+/var/lib/sidebyside/deletion-journal
+```
+
+The stable instance UUID in `SBS_ACCOUNT_DELETION_INSTANCE_ID` belongs to the
+operator configuration backup. Generate it once per normal installation and keep
+it unchanged across upgrades and restores. Do not reuse the Production UUID for a
+Development or Demo project.
+
+The forward journal must not be rolled back together with PostgreSQL or media.
+Protect the newest validated journal independently and retain it until every
+pre-deletion database/media backup represented by its tombstones has expired.
+API startup replays configured tombstones before normal traffic so a crash after
+journal fsync but before the database fail-closed commit cannot reopen an Account.
+
+Treat `docker compose down -v` as destructive to this safety state. Recreating an
+API container is safe because named volumes persist; deleting/changing the Compose
+project or journal volume requires an explicit migration/recovery decision.
+
+The full operator contract, including post-restore replay, is in
+[`ACCOUNT-DELETION-SELF-HOSTED.md`](ACCOUNT-DELETION-SELF-HOSTED.md).
 
 ## Operation without a mail server
 
@@ -173,7 +206,9 @@ SBS_MAIL_TRANSPORT=none
 
 the instance remains usable through password, Passkey/WebAuthn, and OIDC, but
 mail-dependent Magic Link, password recovery, and address verification return a
-clear unavailable response instead of pretending to send a message.
+clear unavailable response instead of pretending to send a message. An accepted
+Account deletion also continues without rollback when its best-effort confirmation
+mail cannot be sent.
 
 `log` transport is for local testing only. It would put valid one-time
 credentials in logs and is therefore rejected in Production.
@@ -223,15 +258,18 @@ are available to the operator.
 The binding recovery contract and copy-paste operator procedure are in
 [`SELF-HOSTED-RECOVERY.md`](SELF-HOSTED-RECOVERY.md). For the default
 `LocalMediaStore`, `scripts/self_hosted_recovery.py` creates and restores one
-coordinated PostgreSQL/durable-media archive while configuration and secrets stay
-in the operator's separate protected backup. The command intentionally refuses S3
+coordinated PostgreSQL/durable-media archive while configuration/secrets and the
+forward Account-deletion journal remain independently protected recovery units.
+The deletion journal is replayed through the documented reconciliation path before
+normal writers resume after an older restore. The command intentionally refuses S3
 storage; S3 requires the provider-specific consistency procedure documented in
 that runbook.
 
-Production upgrades require a fresh coordinated recovery point, migration-first
-startup, and post-start readiness/revision checks. A database dump without the
-matching media and configuration/secret recovery material is not a complete
-SideBySide recovery point.
+Production upgrades require a fresh coordinated recovery point, current protected
+deletion-journal state, migration-first startup, and post-start readiness/revision
+checks. A database dump without the matching media, forward deletion authority,
+and configuration/secret recovery material is not a complete SideBySide recovery
+plan.
 
 ## One-time initial registration
 

@@ -33,6 +33,7 @@ from sidebyside.engagement.models import (
     NotificationKind,
 )
 from sidebyside.heart_moments.models import HeartMoment
+from sidebyside.identity import effects as account_effects
 from sidebyside.memories.models import Memory
 from sidebyside.milestones.models import Milestone
 from sidebyside.outbox import service as outbox_service
@@ -122,11 +123,37 @@ def project_pending(session: Session, *, limit: int = 50) -> int:
     return len(events)
 
 
+def _event_effects_allowed(session: Session, event: OutboxEvent) -> bool:
+    account_ids = {
+        account_id
+        for account_id in (event.actor_id, event.payload.recipient_id)
+        if account_id is not None
+    }
+    locked = account_effects.lock_enabled_accounts(session, account_ids)
+    if locked is None:
+        return False
+    return all(
+        account_effects.has_active_membership(
+            session,
+            account_id=account_id,
+            space_id=event.space_id,
+        )
+        for account_id in account_ids
+    )
+
+
 def project_event(session: Session, event: OutboxEvent) -> None:
     """Apply the controlled M4-B catalog for one safe Outbox event."""
     try:
         event_type = EventType(event.event_type)
     except ValueError:
+        return
+
+    # Lock all actor/recipient Accounts in deterministic order before any
+    # projection. This serializes stale Outbox work with deletion acceptance
+    # and makes accepted deletion a hard boundary for new activity,
+    # Notification and PushDelivery state.
+    if not _event_effects_allowed(session, event):
         return
 
     if event_type is EventType.PARTNER_THINKING_OF_YOU:

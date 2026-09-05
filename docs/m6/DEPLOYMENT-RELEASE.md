@@ -136,9 +136,10 @@ Self-Hosted product merely to simplify managed hosting.
 
 ## 8. Cloud/Managed production
 
-#521 must produce the supported launch topology and deployment representation. It
-must preserve the same Domain/API/privacy semantics while deciding operational
-responsibilities for:
+`docs/m6/CLOUD-MANAGED-TOPOLOGY.md` (#521) freezes the supported launch topology
+and deployment representation (`deploy/compose.cloud.yml`,
+`deploy/cloud-managed.env.example`), preserving the same Domain/API/privacy
+semantics while deciding operational responsibilities for:
 
 - API/Web/worker/migrate processes;
 - PostgreSQL;
@@ -150,7 +151,9 @@ responsibilities for:
 - backup/restore;
 - capacity/restart/replica assumptions.
 
-Cloud convenience does not justify a Cloud-only Domain branch.
+Cloud convenience does not justify a Cloud-only Domain branch. `#524` performs
+the integrated rehearsal (including a real managed restore) against this
+topology.
 
 ## 9. Configuration and secrets
 
