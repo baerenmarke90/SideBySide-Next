@@ -77,6 +77,26 @@ class TestRegistration:
         assert len(stored) == 1
         assert stored[0].credential_id == authenticator.credential_id
         assert stored[0].account_id == anna["account"].id
+        assert stored[0].is_discoverable is True
+
+    def test_registration_options_require_discoverable_credentials(self, client, anna) -> None:  # type: ignore[no-untyped-def]
+        options = client.post(REGISTRATION_START, headers=anna["headers"]).json()
+
+        selection = options["authenticatorSelection"]
+        assert selection["residentKey"] == "required"
+        assert selection["requireResidentKey"] is True
+
+    def test_authenticator_without_resident_key_support_cannot_register(
+        self, client, session, anna
+    ) -> None:  # type: ignore[no-untyped-def]
+        options = client.post(REGISTRATION_START, headers=anna["headers"]).json()
+        non_resident = VirtualAuthenticator(supports_resident_key=False)
+
+        with pytest.raises(ValueError, match="discoverable credential"):
+            non_resident.register(options)
+
+        session.expire_all()
+        assert session.execute(select(WebAuthnCredential)).scalars().all() == []
 
     def test_private_key_never_reaches_the_server(
         self, client, session, anna, authenticator
@@ -244,13 +264,12 @@ class TestSignatureCounter:
             )
             assert response.status_code == 201
 
-    def test_discoverability_becomes_known_only_during_authentication(
+    def test_discoverable_registration_remains_discoverable_after_authentication(
         self, client, session, anna, authenticator
     ) -> None:  # type: ignore[no-untyped-def]
-        """Registration can request discoverability but cannot prove it."""
         register_passkey(client, anna, authenticator)
         session.expire_all()
-        assert session.execute(select(WebAuthnCredential)).scalars().one().is_discoverable is False
+        assert session.execute(select(WebAuthnCredential)).scalars().one().is_discoverable is True
 
         authenticate_with_passkey(client, authenticator)
         session.expire_all()

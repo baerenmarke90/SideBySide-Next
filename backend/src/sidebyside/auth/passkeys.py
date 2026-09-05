@@ -157,8 +157,11 @@ def start_registration(session: Session, account: Account) -> dict[str, Any]:
         exclude_credentials=[
             PublicKeyCredentialDescriptor(id=credential.credential_id) for credential in existing
         ],
+        # Authentication is intentionally username-less and sends no
+        # allowCredentials list. A successfully registered credential must
+        # therefore be discoverable so the authenticator can select it by RP ID.
         authenticator_selection=AuthenticatorSelectionCriteria(
-            resident_key=ResidentKeyRequirement.PREFERRED,
+            resident_key=ResidentKeyRequirement.REQUIRED,
             user_verification=UserVerificationRequirement.PREFERRED,
         ),
     )
@@ -197,10 +200,11 @@ def finish_registration(
         aaguid=_aaguid(verified.aaguid),
         transports=_transports(credential),
         name=name.strip()[:MAX_CREDENTIAL_NAME],
-        # Registration cannot prove discoverability: ``residentKey`` is a
-        # preference, not a guarantee. It becomes known only after an
-        # authentication without an allow-list and is set there.
-        is_discoverable=False,
+        # The registration request requires a resident/discoverable credential.
+        # WebAuthn creation fails client-side when the authenticator cannot
+        # satisfy that requirement, so every successfully verified registration
+        # follows the username-less authentication contract.
+        is_discoverable=True,
         backup_eligible=verified.credential_device_type == CredentialDeviceType.MULTI_DEVICE,
         backup_state=bool(verified.credential_backed_up),
     )
@@ -295,9 +299,8 @@ def finish_authentication(
 
     passkey.sign_count = verified.new_sign_count
     passkey.last_used_at = now()
-    # Authentication happened without a candidate list, so the authenticator
-    # found the credential itself. That proves discoverability, which
-    # registration could only request.
+    # Authentication has no allow-list, so successful credential selection also
+    # confirms the discoverable registration contract at runtime.
     passkey.is_discoverable = True
     passkey.backup_state = bool(getattr(verified, "credential_backed_up", passkey.backup_state))
 
