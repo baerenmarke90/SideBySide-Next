@@ -209,4 +209,4 @@ def test_stale_async_work_revalidates_membership_after_space_exit(session: Sessi
     assert delivery.last_error_code == push.ACCOUNT_UNAVAILABLE_CODE
     assert provider.calls == 0
     assert occurrence.state == OccurrenceState.CANCELLED.value
-    assert transfer.status == ExportStatus.FAILED.value
+    assert transfer.status == ExportStatus.EXPIRED.value
