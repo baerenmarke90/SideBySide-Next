@@ -5,9 +5,11 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { SpacesApi } from '../api/generated/apis/SpacesApi';
 import { normalizeClientError } from '../client/problemDetails';
+import { clearProductReadCache } from '../client/productReadCache';
+import { loadStoredSession, storeSession } from '../client/sessionPersistence';
 import { useTranslation } from '../i18n';
 import { ProblemState } from './ProblemState';
 import './SpaceOffboardingPanel.css';
@@ -18,7 +20,8 @@ export interface SpaceOffboardingPanelProps {
   spacesApi: SpacesApi;
   spaceId: string;
   demoMode: boolean;
-  onSpaceLeft: () => void | Promise<void>;
+  /** Test/host override. Production reuses the normal Space-context reset boundary. */
+  onSpaceLeft?: () => void | Promise<void>;
 }
 
 export function SpaceOffboardingPanel({
@@ -28,6 +31,7 @@ export function SpaceOffboardingPanel({
   onSpaceLeft,
 }: SpaceOffboardingPanelProps) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<OffboardingStep>(null);
   const [confirmation, setConfirmation] = useState('');
   const dialogRef = useRef<HTMLElement>(null);
@@ -46,7 +50,26 @@ export function SpaceOffboardingPanel({
     onSuccess: async () => {
       setStep(null);
       setConfirmation('');
-      await onSpaceLeft();
+
+      if (onSpaceLeft) {
+        await onSpaceLeft();
+        return;
+      }
+
+      // The Account session remains valid after leaving one Space. Remove only
+      // the former Space selection and local product cache, then hard-reload so
+      // the existing root Space resolver obtains a fresh server-authorized
+      // Membership set and chooses another Space, the picker, or the empty state.
+      const storedSession = loadStoredSession();
+      if (storedSession) {
+        storeSession({ ...storedSession, spaceId: null });
+      }
+      queryClient.clear();
+      try {
+        await clearProductReadCache();
+      } finally {
+        window.location.replace('/');
+      }
     },
   });
 
