@@ -79,9 +79,7 @@ class TestRegistration:
         assert stored[0].account_id == anna["account"].id
         assert stored[0].is_discoverable is True
 
-    def test_registration_options_require_discoverable_credentials(
-        self, client, anna
-    ) -> None:  # type: ignore[no-untyped-def]
+    def test_registration_options_require_discoverable_credentials(self, client, anna) -> None:  # type: ignore[no-untyped-def]
         options = client.post(REGISTRATION_START, headers=anna["headers"]).json()
 
         selection = options["authenticatorSelection"]
