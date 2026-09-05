@@ -44,24 +44,19 @@ def _parse_api_datetime(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def test_first_membership_timestamp_survives_reactivation(
+def test_first_membership_timestamp_survives_relationship_end(
     client,
     session,
     server_admin_allowlist,
 ) -> None:  # type: ignore[no-untyped-def]
     token = _admin_token(session)
-    owner = make_account(session, "Rejoining owner")
+    owner = make_account(session, "Departed owner")
     space = make_space(session, owner)
     membership = relationship.require_membership(session, owner, space.id)
     original_created_at = membership.created_at
 
     relationship.end_membership(membership)
     session.flush()
-    reactivated = relationship.add_member(session, space.id, owner)
-    session.flush()
-
-    assert reactivated.created_at == original_created_at
-    assert reactivated.joined_at is not None
 
     response = client.get(
         f"/api/v1/server-admin/spaces/{space.id}",

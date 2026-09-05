@@ -2401,6 +2401,15 @@
         "title": "MediaType",
         "type": "string"
       },
+      "MembershipStatus": {
+        "enum": [
+          "ACTIVE",
+          "LEFT",
+          "REMOVED"
+        ],
+        "title": "MembershipStatus",
+        "type": "string"
+      },
       "MembershipView": {
         "properties": {
           "role": {
@@ -6772,6 +6781,38 @@
           "capabilities"
         ],
         "title": "SpaceEntitlementView",
+        "type": "object"
+      },
+      "SpaceMembershipExitView": {
+        "description": "Safe lifecycle state after self-exit from one Space.",
+        "properties": {
+          "endedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endedat"
+          },
+          "spaceId": {
+            "format": "uuid",
+            "title": "Spaceid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MembershipStatus"
+          }
+        },
+        "required": [
+          "spaceId",
+          "status",
+          "endedAt"
+        ],
+        "title": "SpaceMembershipExitView",
         "type": "object"
       },
       "SpaceProfileUpdate": {
@@ -14516,6 +14557,69 @@
         "summary": "Revoke Invitation",
         "tags": [
           "invitations"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/membership/leave": {
+      "post": {
+        "description": "End only the caller's own Membership, never the partner's.\n\nThis route intentionally does not depend on ``Tenant``. Once the first\nrequest commits, the normal tenant dependency correctly stops authorizing\nthis Space; resolving the caller's historical Membership directly is what\nlets a retry return the same safe ended state instead of creating another\nlifecycle.",
+        "operationId": "leave_space_api_v1_spaces__spaceId__membership_leave_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "title": "Spaceid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpaceMembershipExitView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Authentication is missing, invalid, or the session has expired."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The caller is authenticated but is not authorized for this operation."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "The resource does not exist or is not visible to the caller."
+          }
+        },
+        "summary": "Leave the authenticated Account's Membership in this Space",
+        "tags": [
+          "spaces"
         ]
       }
     },

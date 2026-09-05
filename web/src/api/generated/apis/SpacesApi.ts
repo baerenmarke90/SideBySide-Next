@@ -19,6 +19,11 @@ import {
     ProblemDetailsToJSON,
 } from '../models/ProblemDetails';
 import {
+    type SpaceMembershipExitView,
+    SpaceMembershipExitViewFromJSON,
+    SpaceMembershipExitViewToJSON,
+} from '../models/SpaceMembershipExitView';
+import {
     type SpaceProfileUpdate,
     SpaceProfileUpdateFromJSON,
     SpaceProfileUpdateToJSON,
@@ -39,6 +44,10 @@ export interface GetSpaceApiV1SpacesSpaceIdGetRequest {
 }
 
 export interface GetSpaceProfileApiV1SpacesSpaceIdProfileGetRequest {
+    spaceId: string;
+}
+
+export interface LeaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRequest {
     spaceId: string;
 }
 
@@ -140,6 +149,53 @@ export class SpacesApi extends runtime.BaseAPI {
      */
     async getSpaceProfileApiV1SpacesSpaceIdProfileGet(requestParameters: GetSpaceProfileApiV1SpacesSpaceIdProfileGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SpaceProfileView> {
         const response = await this.getSpaceProfileApiV1SpacesSpaceIdProfileGetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for leaveSpaceApiV1SpacesSpaceIdMembershipLeavePost without sending the request
+     */
+    async leaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRequestOpts(requestParameters: LeaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['spaceId'] == null) {
+            throw new runtime.RequiredError(
+                'spaceId',
+                'Required parameter "spaceId" was null or undefined when calling leaveSpaceApiV1SpacesSpaceIdMembershipLeavePost().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/api/v1/spaces/{spaceId}/membership/leave`;
+        urlPath = urlPath.replace('{spaceId}', encodeURIComponent(String(requestParameters['spaceId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * End only the caller\'s own Membership, never the partner\'s.  This route intentionally does not depend on ``Tenant``. Once the first request commits, the normal tenant dependency correctly stops authorizing this Space; resolving the caller\'s historical Membership directly is what lets a retry return the same safe ended state instead of creating another lifecycle.
+     * Leave the authenticated Account\'s Membership in this Space
+     */
+    async leaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRaw(requestParameters: LeaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SpaceMembershipExitView>> {
+        const requestOptions = await this.leaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SpaceMembershipExitViewFromJSON(jsonValue));
+    }
+
+    /**
+     * End only the caller\'s own Membership, never the partner\'s.  This route intentionally does not depend on ``Tenant``. Once the first request commits, the normal tenant dependency correctly stops authorizing this Space; resolving the caller\'s historical Membership directly is what lets a retry return the same safe ended state instead of creating another lifecycle.
+     * Leave the authenticated Account\'s Membership in this Space
+     */
+    async leaveSpaceApiV1SpacesSpaceIdMembershipLeavePost(requestParameters: LeaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SpaceMembershipExitView> {
+        const response = await this.leaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

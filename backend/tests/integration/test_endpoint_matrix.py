@@ -130,6 +130,7 @@ PRIVATE_COLLECTION_FIXTURES = {
 
 SPACE_ENDPOINTS: tuple[Endpoint, ...] = (
     Endpoint("GET", "/api/v1/spaces/{spaceId}"),
+    Endpoint("POST", "/api/v1/spaces/{spaceId}/membership/leave"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/entitlements"),
     Endpoint("GET", "/api/v1/spaces/{spaceId}/profile"),
     Endpoint("PUT", "/api/v1/spaces/{spaceId}/profile", body=PROFILE, if_match=True),

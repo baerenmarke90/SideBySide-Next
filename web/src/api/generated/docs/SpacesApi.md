@@ -6,6 +6,7 @@ All URIs are relative to *http://localhost*
 |------------- | ------------- | -------------|
 | [**getSpaceApiV1SpacesSpaceIdGet**](SpacesApi.md#getspaceapiv1spacesspaceidget) | **GET** /api/v1/spaces/{spaceId} | Get Space |
 | [**getSpaceProfileApiV1SpacesSpaceIdProfileGet**](SpacesApi.md#getspaceprofileapiv1spacesspaceidprofileget) | **GET** /api/v1/spaces/{spaceId}/profile | Get Space Profile |
+| [**leaveSpaceApiV1SpacesSpaceIdMembershipLeavePost**](SpacesApi.md#leavespaceapiv1spacesspaceidmembershipleavepost) | **POST** /api/v1/spaces/{spaceId}/membership/leave | Leave the authenticated Account\&#39;s Membership in this Space |
 | [**updateSpaceProfileApiV1SpacesSpaceIdProfilePut**](SpacesApi.md#updatespaceprofileapiv1spacesspaceidprofileput) | **PUT** /api/v1/spaces/{spaceId}/profile | Update Space Profile |
 
 
@@ -139,6 +140,76 @@ No authorization required
 |-------------|-------------|------------------|
 | **200** | Successful Response |  * ETag - Resource version. Send it unchanged in the next write request\&#39;s &#x60;If-Match&#x60; header. <br>  |
 | **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **404** | The resource does not exist or is not visible to the caller. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## leaveSpaceApiV1SpacesSpaceIdMembershipLeavePost
+
+> SpaceMembershipExitView leaveSpaceApiV1SpacesSpaceIdMembershipLeavePost(spaceId)
+
+Leave the authenticated Account\&#39;s Membership in this Space
+
+End only the caller\&#39;s own Membership, never the partner\&#39;s.  This route intentionally does not depend on &#x60;&#x60;Tenant&#x60;&#x60;. Once the first request commits, the normal tenant dependency correctly stops authorizing this Space; resolving the caller\&#39;s historical Membership directly is what lets a retry return the same safe ended state instead of creating another lifecycle.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  SpacesApi,
+} from '';
+import type { LeaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new SpacesApi();
+
+  const body = {
+    // string
+    spaceId: spaceId_example,
+  } satisfies LeaveSpaceApiV1SpacesSpaceIdMembershipLeavePostRequest;
+
+  try {
+    const data = await api.leaveSpaceApiV1SpacesSpaceIdMembershipLeavePost(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **spaceId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**SpaceMembershipExitView**](SpaceMembershipExitView.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **401** | Authentication is missing, invalid, or the session has expired. |  -  |
+| **403** | The caller is authenticated but is not authorized for this operation. |  -  |
 | **404** | The resource does not exist or is not visible to the caller. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
