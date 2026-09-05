@@ -66,7 +66,11 @@ class ReleasePublishWorkflowContractTest(unittest.TestCase):
                 self.assertIn(marker, self.workflow)
         self.assertIn('keystore="$RUNNER_TEMP/sidebyside-upload.jks"', self.workflow)
         self.assertIn("trap 'rm -f \"$keystore\"' EXIT", self.workflow)
-        self.assertNotIn("actions/upload-artifact@", self.workflow.split("Build and verify final signed Android artifacts", 1)[0])
+        signing_step = self.workflow.split("Build and verify final signed Android artifacts", 1)[1].split(
+            "Install verified Syft release", 1
+        )[0]
+        self.assertNotIn('echo "$KEYSTORE_BASE64"', signing_step)
+        self.assertNotIn('cat "$keystore"', signing_step)
 
     def test_signed_android_is_verified_and_replaces_unsigned_candidate(self) -> None:
         self.assertIn('apksigner" verify "$apk"', self.workflow)
