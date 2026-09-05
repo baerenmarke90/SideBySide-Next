@@ -111,7 +111,10 @@ does not depend on one backup vendor/tool merely to be restorable.
 selected managed platform:
 
 1. managed PostgreSQL backup/restore;
-2. object-storage versioning/snapshot/export strategy;
+2. media storage backup strategy, depending on the operator's `MediaStore`
+   choice (`docs/m6/CLOUD-MANAGED-TOPOLOGY.md` §3.3): object-storage
+   versioning/snapshot/export for `s3`, or volume-level backup/snapshot for a
+   `local` persistent volume;
 3. the #520 self-service Account-deletion journal's shared-volume durability,
    included in the same recovery-point discipline as the database (§3.5/§6 of
    the topology contract — this unit does not exist in the generic Self-Hosted

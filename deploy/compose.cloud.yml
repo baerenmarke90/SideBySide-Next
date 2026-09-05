@@ -10,19 +10,26 @@
 #
 #   - no bundled `postgres` service: SBS_DATABASE_URL must point at a managed
 #     PostgreSQL instance;
-#   - no `local` MediaStore volume: SBS_MEDIA_STORE=s3 is required;
 #   - no `demo-init`: the canonical public Demo (#304) is a separate deployment;
 #   - api/worker/web/migrate use `image:` references to exact #519 released
 #     image archives (see docs/m6/CLOUD-MANAGED-TOPOLOGY.md §4.1) instead of
 #     `build:` — Cloud/Managed never builds from source at deploy time;
-#   - the deletion-journal path is an explicit named volume, documented as
-#     requiring a shared/ReadWriteMany-equivalent implementation across every
-#     `api` (and, if applicable, `worker`) replica — see §3.5 of the topology
-#     contract. Plain Compose expresses this as a single named volume because
-#     Compose itself is a single-host runtime; translating this file to the
-#     selected managed platform's actual multi-replica descriptor must bind
-#     that mount to the platform's shared/network volume type, not a
-#     per-replica local disk.
+#   - the deletion-journal path (and, when `local` MediaStore is kept, the
+#     media directory) is an explicit named volume, documented as requiring a
+#     shared/ReadWriteMany-equivalent implementation across every `api` (and,
+#     if applicable, `worker`) replica once more than one replica is deployed
+#     — see §3.5/§3.3 of the topology contract. Plain Compose expresses this
+#     as a single named volume because Compose itself is a single-host
+#     runtime; translating this file to the selected managed platform's
+#     actual multi-replica descriptor must bind that mount to the platform's
+#     shared/network volume type, not a per-replica local disk.
+#
+# `SBS_MEDIA_STORE` defaults to `local` here, exactly as compose.yaml does for
+# Self-Hosted: nothing in the accepted product/architecture decisions mandates
+# object storage for Cloud/Managed v1 (docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.3).
+# Set SBS_MEDIA_STORE=s3 plus the SBS_S3_* variables below to switch to the
+# S3-compatible backend instead — recommended for a multi-replica deployment,
+# but not required.
 #
 # The operator's actual managed-platform deployment descriptor is generated
 # from this file; it is not hand-maintained as a second, divergent recipe.
@@ -34,12 +41,16 @@ x-runtime-environment: &runtime-environment
   SBS_DEMO_MODE: "false"
   SBS_CURSOR_SIGNING_KEY: "${SBS_CURSOR_SIGNING_KEY:?SBS_CURSOR_SIGNING_KEY fehlt}"
   SBS_SERVER_ADMIN_EMAILS: '${SBS_SERVER_ADMIN_EMAILS:-[]}'
-  SBS_MEDIA_STORE: s3
-  SBS_S3_ENDPOINT: "${SBS_S3_ENDPOINT:?SBS_S3_ENDPOINT fehlt}"
-  SBS_S3_REGION: "${SBS_S3_REGION:?SBS_S3_REGION fehlt}"
-  SBS_S3_BUCKET: "${SBS_S3_BUCKET:?SBS_S3_BUCKET fehlt}"
-  SBS_S3_ACCESS_KEY_ID: "${SBS_S3_ACCESS_KEY_ID:?SBS_S3_ACCESS_KEY_ID fehlt}"
-  SBS_S3_SECRET_ACCESS_KEY: "${SBS_S3_SECRET_ACCESS_KEY:?SBS_S3_SECRET_ACCESS_KEY fehlt}"
+  # MediaStore backend choice: docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.3. `local`
+  # requires the media_data volume below to be a shared volume once more than
+  # one api/worker replica is deployed; `s3` requires the SBS_S3_* variables.
+  SBS_MEDIA_STORE: "${SBS_MEDIA_STORE:-local}"
+  SBS_MEDIA_ROOT: /var/lib/sidebyside/media
+  SBS_S3_ENDPOINT: "${SBS_S3_ENDPOINT:-}"
+  SBS_S3_REGION: "${SBS_S3_REGION:-us-east-1}"
+  SBS_S3_BUCKET: "${SBS_S3_BUCKET:-}"
+  SBS_S3_ACCESS_KEY_ID: "${SBS_S3_ACCESS_KEY_ID:-}"
+  SBS_S3_SECRET_ACCESS_KEY: "${SBS_S3_SECRET_ACCESS_KEY:-}"
   SBS_S3_SESSION_TOKEN: "${SBS_S3_SESSION_TOKEN:-}"
   # Shared durable path: see docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.5. The named
   # volume below must resolve to the same physical shared/network volume for
@@ -85,6 +96,7 @@ services:
       <<: *runtime-environment
       FORWARDED_ALLOW_IPS: "${TRUSTED_PROXY_IPS:?TRUSTED_PROXY_IPS fehlt}"
     volumes:
+      - media_data:/var/lib/sidebyside/media
       - deletion_journal_data:/var/lib/sidebyside/deletion-journal
     networks:
       - app
@@ -109,6 +121,7 @@ services:
     environment:
       <<: *runtime-environment
     volumes:
+      - media_data:/var/lib/sidebyside/media
       - deletion_journal_data:/var/lib/sidebyside/deletion-journal
     networks:
       - app
@@ -120,7 +133,10 @@ services:
     <<: *web-image
     restart: unless-stopped
     environment:
-      SBS_WEB_CSP_CONNECT_ORIGINS: "${SBS_S3_ENDPOINT:?SBS_S3_ENDPOINT fehlt}"
+      # Presigned S3 transfers use fetch() in the browser. Add the configured
+      # S3 endpoint to the CSP as an exactly validated connect-src origin;
+      # keep the list empty when using the local MediaStore (the default).
+      SBS_WEB_CSP_CONNECT_ORIGINS: "${SBS_S3_ENDPOINT:-}"
     networks:
       - app
     depends_on:
@@ -132,9 +148,11 @@ networks:
     driver: bridge
 
 volumes:
-  # Placeholder single-host expression of the shared deletion-journal volume
-  # required by docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.5. The selected managed
-  # platform's descriptor must bind this to its ReadWriteMany-equivalent
-  # network volume type across every api (and, if applicable, worker) replica,
-  # not a per-replica local disk.
+  # Placeholder single-host expression of the shared media/deletion-journal
+  # volumes required by docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.3/§3.5 once more
+  # than one api/worker replica is deployed. The selected managed platform's
+  # descriptor must bind these to its ReadWriteMany-equivalent network volume
+  # type across every replica in that case, not a per-replica local disk. A
+  # single-replica deployment has no such requirement.
+  media_data:
   deletion_journal_data:

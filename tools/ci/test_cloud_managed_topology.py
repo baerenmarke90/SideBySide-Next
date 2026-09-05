@@ -46,9 +46,26 @@ class CloudComposeTextContractTest(unittest.TestCase):
         self.assertNotRegex(self.compose, r"(?m)^\s{2}demo-init:")
         self.assertNotIn("scripts.demo_space", self.compose)
 
-    def test_no_local_media_volume(self) -> None:
-        self.assertNotIn("media_data", self.compose)
-        self.assertIn("SBS_MEDIA_STORE: s3", self.compose)
+    def test_media_store_defaults_to_local_like_self_hosted(self) -> None:
+        # docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.3: the MediaStore backend is an
+        # operator/topology choice, not a fixed requirement. `local` (with a
+        # persistent media_data volume) must remain fully supported, exactly
+        # as compose.yaml already defaults for Self-Hosted.
+        self.assertIn("SBS_MEDIA_STORE: \"${SBS_MEDIA_STORE:-local}\"", self.compose)
+        self.assertIn("media_data:/var/lib/sidebyside/media", self.compose)
+        self.assertRegex(self.compose, r"(?m)^  media_data:\s*$")
+
+    def test_s3_variables_are_optional_not_required(self) -> None:
+        # Selecting s3 is still possible (SBS_MEDIA_STORE=s3 plus these
+        # variables), but the recipe must not force S3 on every deployment.
+        for var in (
+            "SBS_S3_ENDPOINT",
+            "SBS_S3_BUCKET",
+            "SBS_S3_ACCESS_KEY_ID",
+            "SBS_S3_SECRET_ACCESS_KEY",
+        ):
+            self.assertIn(f"${{{var}:-", self.compose, msg=f"{var} must not fail closed")
+            self.assertNotIn(f"${{{var}:?", self.compose)
 
     def test_processes_use_immutable_images_not_source_builds(self) -> None:
         self.assertNotRegex(self.compose, r"(?m)^\s{4,}build:")
@@ -73,10 +90,6 @@ class CloudComposeTextContractTest(unittest.TestCase):
         for var in (
             "SBS_DATABASE_URL",
             "SBS_CURSOR_SIGNING_KEY",
-            "SBS_S3_ENDPOINT",
-            "SBS_S3_BUCKET",
-            "SBS_S3_ACCESS_KEY_ID",
-            "SBS_S3_SECRET_ACCESS_KEY",
             "SBS_ACCOUNT_DELETION_INSTANCE_ID",
             "SBS_ALLOWED_HOSTS",
             "SBS_PUBLIC_BASE_URL",
@@ -129,8 +142,6 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
             "SBS_BACKEND_IMAGE": "registry.example/sidebyside-backend:v1.0.0",
             "SBS_WEB_IMAGE": "registry.example/sidebyside-web:v1.0.0",
             "SBS_DATABASE_URL": "postgresql+psycopg://user:pass@db.private:5432/sidebyside",
-            "SBS_S3_ACCESS_KEY_ID": "test-access-key",
-            "SBS_S3_SECRET_ACCESS_KEY": "test-secret-key",
             "SBS_ACCOUNT_DELETION_INSTANCE_ID": "00000000-0000-0000-0000-000000000000",
         }
 
@@ -150,9 +161,31 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
             config["services"]["web"]["image"], "registry.example/sidebyside-web:v1.0.0"
         )
 
-    def test_resolved_media_store_is_s3(self) -> None:
+    def test_resolved_media_store_defaults_to_local_without_any_s3_variable(self) -> None:
+        # No SBS_MEDIA_STORE / SBS_S3_* override at all: the example template's
+        # own default (local) must resolve successfully and mount media_data.
         config = self._resolve(self._valid_overrides())
+        self.assertEqual(config["services"]["api"]["environment"]["SBS_MEDIA_STORE"], "local")
+        api_volume_sources = [volume["source"] for volume in config["services"]["api"]["volumes"]]
+        self.assertIn("media_data", api_volume_sources)
+
+    def test_resolved_media_store_can_opt_into_s3(self) -> None:
+        overrides = self._valid_overrides()
+        overrides.update(
+            {
+                "SBS_MEDIA_STORE": "s3",
+                "SBS_S3_ENDPOINT": "https://s3.example.com",
+                "SBS_S3_BUCKET": "sidebyside-prod",
+                "SBS_S3_ACCESS_KEY_ID": "test-access-key",
+                "SBS_S3_SECRET_ACCESS_KEY": "test-secret-key",
+            }
+        )
+        config = self._resolve(overrides)
         self.assertEqual(config["services"]["api"]["environment"]["SBS_MEDIA_STORE"], "s3")
+        self.assertEqual(
+            config["services"]["web"]["environment"]["SBS_WEB_CSP_CONNECT_ORIGINS"],
+            "https://s3.example.com",
+        )
 
     def test_missing_backend_image_fails_closed(self) -> None:
         overrides = self._valid_overrides()
@@ -203,10 +236,14 @@ class CloudEnvironmentTemplateTest(unittest.TestCase):
         self.assertEqual(self.values["SBS_ENVIRONMENT"], "production")
         self.assertEqual(self.values["SBS_DEPLOYMENT"], "cloud")
 
-    def test_rejects_local_media_store_by_omission(self) -> None:
-        self.assertNotIn("SBS_MEDIA_STORE", self.values)
+    def test_declares_local_media_store_as_the_supported_default(self) -> None:
+        # docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.3: MediaStore backend is an
+        # operator choice; the template declares the supported default
+        # explicitly rather than silently omitting it, and documents the S3
+        # alternative as an opt-in, commented-out block.
+        self.assertEqual(self.values["SBS_MEDIA_STORE"], "local")
         text = _read(CLOUD_ENV_EXAMPLE)
-        self.assertNotIn("SBS_MEDIA_STORE=local", text)
+        self.assertIn("# SBS_MEDIA_STORE=s3", text)
 
     def test_image_placeholders_are_not_floating_tags(self) -> None:
         for var in ("SBS_BACKEND_IMAGE", "SBS_WEB_IMAGE"):
