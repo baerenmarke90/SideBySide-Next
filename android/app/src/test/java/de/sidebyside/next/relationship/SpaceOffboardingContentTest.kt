@@ -1,13 +1,11 @@
 package de.sidebyside.next.relationship
 
 import android.content.Context
-import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -80,17 +78,21 @@ class SpaceOffboardingContentTest {
             .onNodeWithText(context.getString(R.string.space_offboarding_continue))
             .performClick()
 
-        val finalAction = composeRule.onNodeWithTag(SpaceOffboardingConfirmActionTag)
-        finalAction.assertIsNotEnabled()
+        val finalAction = composeRule.onNode(
+            hasText(context.getString(R.string.space_offboarding_confirm_action)) and hasClickAction(),
+        )
+        finalAction.performScrollTo().performClick()
+        assertEquals(0, leaves)
 
         composeRule.onNode(hasSetTextAction()).performTextInput("WRONG")
-        finalAction.assertIsNotEnabled()
+        finalAction.performClick()
+        assertEquals(0, leaves)
 
         composeRule.onNode(hasSetTextAction()).performTextClearance()
         composeRule.onNode(hasSetTextAction()).performTextInput(
             context.getString(R.string.space_offboarding_confirmation_phrase),
         )
-        finalAction.performScrollTo().assertIsEnabled().performClick()
+        finalAction.performScrollTo().performClick()
 
         assertEquals(1, leaves)
     }
