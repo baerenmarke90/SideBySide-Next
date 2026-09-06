@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
+from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session, sessionmaker
 
 from sidebyside.attachments import service
@@ -56,15 +57,28 @@ class UploadClaim:
 
 @contextmanager
 def _short_transaction(source: Session) -> Iterator[Session]:
-    """Use a second short transaction when production is Engine-bound.
+    """Use independently committed authority in production.
 
-    Integration tests commonly bind ``source`` to one externally managed
-    Connection. Reusing that bind keeps those tests isolated while production
-    Sessions, which are Engine-bound, receive a truly independent commit that
-    other PostgreSQL processes can observe before body transfer starts.
+    Production request Sessions are Engine-bound. For those, create a second
+    short Session so the upload claim is committed and visible to other
+    PostgreSQL processes before request-body transfer begins.
+
+    The ordinary integration ``client`` deliberately overrides the request
+    Session with one bound to an externally managed Connection/transaction so
+    fixture data can stay uncommitted and isolated. Committing or rolling back
+    a second Session on that same Connection would accidentally end the outer
+    fixture transaction. Use a SAVEPOINT there instead. Concurrency tests use
+    the production-style Engine-bound fixture and therefore still exercise the
+    real independent-commit protocol.
     """
+    bind = source.get_bind()
+    if isinstance(bind, Connection):
+        with source.begin_nested():
+            yield source
+        return
+
     maker = sessionmaker(
-        bind=source.get_bind(),
+        bind=bind,
         autoflush=False,
         expire_on_commit=False,
         future=True,
@@ -78,8 +92,8 @@ def _short_transaction(source: Session) -> Iterator[Session]:
         raise
     finally:
         worker.close()
-        # A test may share the same Connection between both Sessions; do not
-        # let its identity map retain the pre-claim lifecycle state.
+        # The request Session can have read the lifecycle row before this short
+        # independent transaction. Do not retain stale ORM state afterwards.
         source.expire_all()
 
 
