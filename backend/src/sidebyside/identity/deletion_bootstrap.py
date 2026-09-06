@@ -35,7 +35,9 @@ def bootstrap_new_deletion_authority(*, confirmed_new_installation: bool) -> UUI
     try:
         authority = DeletionAuthoritySettings()
     except ValidationError as exc:
-        raise DeletionBootstrapError("Account deletion authority configuration is invalid.") from exc
+        raise DeletionBootstrapError(
+            "Account deletion authority configuration is invalid."
+        ) from exc
 
     if authority.instance_id is not None:
         raise DeletionBootstrapError(
@@ -46,7 +48,8 @@ def bootstrap_new_deletion_authority(*, confirmed_new_installation: bool) -> UUI
     path = authority.journal_path
     if path.exists():
         raise DeletionBootstrapError(
-            "An Account deletion journal already exists. Refusing to replace or reinitialize it."
+            "An Account deletion journal already exists. Refusing to replace or "
+            "reinitialize it."
         )
 
     instance_id = uuid4()
@@ -55,7 +58,9 @@ def bootstrap_new_deletion_authority(*, confirmed_new_installation: bool) -> UUI
         journal = DeletionJournal.initialize(path, instance_id=instance_id)
         journal.read_all()
     except (DeletionJournalError, OSError) as exc:
-        raise DeletionBootstrapError("The Account deletion journal could not be initialized.") from exc
+        raise DeletionBootstrapError(
+            "The Account deletion journal could not be initialized."
+        ) from exc
 
     return instance_id
 
