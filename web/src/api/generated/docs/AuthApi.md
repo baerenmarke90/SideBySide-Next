@@ -36,7 +36,7 @@ All URIs are relative to *http://localhost*
 
 ## capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet
 
-> CapabilitiesView capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet()
+> CapabilitiesView capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet(client)
 
 Capabilities
 
@@ -53,8 +53,13 @@ async function example() {
   console.log("🚀 Testing  SDK...");
   const api = new AuthApi();
 
+  const body = {
+    // RecentAuthenticationClient (optional)
+    client: ...,
+  } satisfies CapabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequest;
+
   try {
-    const data = await api.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet();
+    const data = await api.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -67,7 +72,10 @@ example().catch(console.error);
 
 ### Parameters
 
-This endpoint does not need any parameter.
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **client** | `RecentAuthenticationClient` |  | [Optional] [Defaults to `undefined`] [Enum: web, android] |
 
 ### Return type
 
@@ -1573,7 +1581,7 @@ No authorization required
 
 ## startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost
 
-> OidcStartView startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost(connectionId)
+> OidcStartView startOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPost(connectionId, client)
 
 Start Oidc
 
@@ -1593,6 +1601,8 @@ async function example() {
   const body = {
     // string
     connectionId: connectionId_example,
+    // RecentAuthenticationClient (optional)
+    client: ...,
   } satisfies StartOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequest;
 
   try {
@@ -1613,6 +1623,7 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **connectionId** | `string` |  | [Defaults to `undefined`] |
+| **client** | `RecentAuthenticationClient` |  | [Optional] [Defaults to `undefined`] [Enum: web, android] |
 
 ### Return type
 

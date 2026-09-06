@@ -4655,6 +4655,14 @@
         "title": "Readiness",
         "type": "object"
       },
+      "RecentAuthenticationClient": {
+        "enum": [
+          "web",
+          "android"
+        ],
+        "title": "RecentAuthenticationClient",
+        "type": "string"
+      },
       "RecentAuthenticationView": {
         "properties": {
           "achievedAt": {
@@ -8828,6 +8836,17 @@
     "/api/v1/auth/recent-authentication/account-deletion": {
       "get": {
         "operationId": "capabilities_api_v1_auth_recent_authentication_account_deletion_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "client",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RecentAuthenticationClient",
+              "default": "web"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -8949,6 +8968,15 @@
             "schema": {
               "title": "Connectionid",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "client",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RecentAuthenticationClient",
+              "default": "web"
             }
           }
         ],

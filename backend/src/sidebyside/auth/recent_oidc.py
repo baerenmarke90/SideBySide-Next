@@ -106,10 +106,19 @@ def start(
     device_session: DeviceSession,
     *,
     purpose: recent_auth.RecentAuthenticationPurpose,
+    client: recent_auth.RecentAuthenticationClient = recent_auth.RecentAuthenticationClient.WEB,
 ) -> oidc.StartedFlow:
     """Request active provider reauthentication for one current session."""
     recent_auth.ensure_context(account, device_session)
     configured = oidc.connection(connection_id)
+    redirect_uri = configured.redirect_uri
+    if client == recent_auth.RecentAuthenticationClient.ANDROID:
+        if configured.android_redirect_uri is None:
+            raise ForbiddenError(
+                "OIDC recent authentication is not available for this client.",
+                recent_auth.RecentAuthenticationErrorCode.METHOD_UNAVAILABLE,
+            )
+        redirect_uri = configured.android_redirect_uri
     linked = session.execute(
         select(AuthIdentity.id).where(
             AuthIdentity.account_id == account.id,
@@ -137,7 +146,7 @@ def start(
             state_hash=hash_token(state),
             nonce=nonce,
             code_verifier=verifier,
-            redirect_uri=configured.redirect_uri,
+            redirect_uri=redirect_uri,
             account_id=account.id,
             device_session_id=device_session.id,
             purpose=purpose.value,
@@ -150,7 +159,7 @@ def start(
     parameters = {
         "response_type": "code",
         "client_id": configured.client_id,
-        "redirect_uri": configured.redirect_uri,
+        "redirect_uri": redirect_uri,
         "scope": configured.scopes,
         "state": state,
         "nonce": nonce,

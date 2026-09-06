@@ -140,6 +140,7 @@ export * from './ProfilePreferenceView';
 export * from './ProfileVisibility';
 export * from './ReadDescriptor';
 export * from './Readiness';
+export * from './RecentAuthenticationClient';
 export * from './RecentAuthenticationView';
 export * from './RecoveryConsumeRequest';
 export * from './RefreshRequest';

@@ -89,6 +89,11 @@ import {
     ProblemDetailsToJSON,
 } from '../models/ProblemDetails';
 import {
+    type RecentAuthenticationClient,
+    RecentAuthenticationClientFromJSON,
+    RecentAuthenticationClientToJSON,
+} from '../models/RecentAuthenticationClient';
+import {
     type RecentAuthenticationView,
     RecentAuthenticationViewFromJSON,
     RecentAuthenticationViewToJSON,
@@ -138,6 +143,10 @@ import {
     TokenViewFromJSON,
     TokenViewToJSON,
 } from '../models/TokenView';
+
+export interface CapabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequest {
+    client?: RecentAuthenticationClient;
+}
 
 export interface ChangePasswordApiV1AuthPasswordPostRequest {
     changePasswordRequest: ChangePasswordRequest;
@@ -212,6 +221,7 @@ export interface StartOidcApiV1AuthOidcConnectionIdStartPostRequest {
 
 export interface StartOidcApiV1AuthRecentAuthenticationAccountDeletionOidcConnectionIdStartPostRequest {
     connectionId: string;
+    client?: RecentAuthenticationClient;
 }
 
 /**
@@ -222,8 +232,12 @@ export class AuthApi extends runtime.BaseAPI {
     /**
      * Creates request options for capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet without sending the request
      */
-    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequestOpts(): Promise<runtime.RequestOpts> {
+    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequestOpts(requestParameters: CapabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
+
+        if (requestParameters['client'] != null) {
+            queryParameters['client'] = requestParameters['client'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -241,8 +255,8 @@ export class AuthApi extends runtime.BaseAPI {
     /**
      * Capabilities
      */
-    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CapabilitiesView>> {
-        const requestOptions = await this.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequestOpts();
+    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRaw(requestParameters: CapabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CapabilitiesView>> {
+        const requestOptions = await this.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => CapabilitiesViewFromJSON(jsonValue));
@@ -251,8 +265,8 @@ export class AuthApi extends runtime.BaseAPI {
     /**
      * Capabilities
      */
-    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CapabilitiesView> {
-        const response = await this.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRaw(initOverrides);
+    async capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGet(requestParameters: CapabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CapabilitiesView> {
+        const response = await this.capabilitiesApiV1AuthRecentAuthenticationAccountDeletionGetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1287,6 +1301,10 @@ export class AuthApi extends runtime.BaseAPI {
         }
 
         const queryParameters: any = {};
+
+        if (requestParameters['client'] != null) {
+            queryParameters['client'] = requestParameters['client'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
