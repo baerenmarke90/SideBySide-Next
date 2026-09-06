@@ -34,6 +34,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import de.sidebyside.next.design.MinimumTouchTarget
@@ -335,6 +336,7 @@ private fun AccountDeletionRecentAuthenticationDialog(
                 label = { Text(stringResource(R.string.account_delete_reauth_password_label)) },
                 singleLine = true,
                 enabled = !busy,
+                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(
