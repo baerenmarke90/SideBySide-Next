@@ -64,11 +64,11 @@ open.
 
 The managed deployment freezes API/Web/worker/migrate/database/media, secret
 ownership, ingress, backup responsibility, capacity assumptions and one versioned
-deployment representation (`deploy/compose.cloud.yml`,
-`deploy/cloud-managed.env.example`). It reuses #375/#190/#519/#189 rather than
+deployment representation: the `cloud` profile in repository-root `compose.yaml`
+plus `deploy/cloud-managed.env.example`. It reuses #375/#190/#519/#189 rather than
 creating Cloud-only Domain semantics. One notable non-stateless exception is
 recorded explicitly: the #520 self-service Account-deletion journal requires a
-shared/ReadWriteMany-equivalent volume across `api` replicas, because its
+shared/ReadWriteMany-equivalent volume across `cloud-api` replicas, because its
 append-only hash-chain contract predates this issue and is not weakened to make
 horizontal scaling simpler.
 

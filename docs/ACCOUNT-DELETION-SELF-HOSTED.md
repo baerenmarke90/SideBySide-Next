@@ -18,7 +18,7 @@ first-install step, **before the API is started for the first time**.
 Do not pre-generate `SBS_ACCOUNT_DELETION_INSTANCE_ID`. Leave it unset and run:
 
 ```bash
-docker compose --env-file .env -f compose.yaml run --rm --no-deps api \
+docker compose --profile self-hosted --env-file .env run --rm --no-deps api \
   python -m sidebyside.identity.deletion_bootstrap \
   --confirm-new-installation
 ```
@@ -134,7 +134,7 @@ starting writers:
 
 ```bash
 SBS_RECOVERY_PROJECT=$(
-  docker compose --env-file .env -f compose.yaml config --format json |
+  docker compose --profile self-hosted --env-file .env config --format json |
     python3 -c 'import json, sys; print(json.load(sys.stdin)["name"])'
 )
 
@@ -146,7 +146,8 @@ python3 scripts/self_hosted_deletion_reconcile.py \
   --confirm-instance-id "$SBS_ACCOUNT_DELETION_INSTANCE_ID"
 ```
 
-For Arcane use `compose.arcane.yaml` consistently.
+Arcane uses the same root `compose.yaml` and `self-hosted` profile; only its
+Backend/Web source contexts differ through environment configuration.
 
 The command:
 

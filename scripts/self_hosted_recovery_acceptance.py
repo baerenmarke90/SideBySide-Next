@@ -84,6 +84,7 @@ def write_environment(path: Path, project_name: str, api_port: int, web_port: in
         "\n".join(
             (
                 f"COMPOSE_PROJECT_NAME={project_name}",
+                "COMPOSE_PROFILES=self-hosted",
                 "POSTGRES_USER=sidebyside",
                 "POSTGRES_PASSWORD=synthetic-recovery-database-password",
                 "POSTGRES_DB=sidebyside",
@@ -126,6 +127,8 @@ class Scenario:
             "compose",
             "--project-name",
             self.project_name,
+            "--profile",
+            "self-hosted",
             "--env-file",
             str(self.env_file),
             "-f",

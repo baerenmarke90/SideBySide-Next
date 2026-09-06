@@ -12,7 +12,6 @@ orchestration/source.
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import re
 import subprocess
@@ -23,7 +22,14 @@ from pathlib import Path
 
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 PROJECT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
-BACKEND_SERVICES = ("migrate", "demo-init", "api", "worker")
+
+# compose.yaml itself defaults these to blank so `docker compose config`
+# keeps succeeding for every profile, including when self-hosted is inactive
+# (a hard `${VAR:?...}` there would break that independence, since Compose
+# interpolates the whole file regardless of which --profile is selected).
+# This wrapper always drives self-hosted, so it is where the fail-closed
+# guarantee for the database credentials actually belongs.
+REQUIRED_SELF_HOSTED_ENV = ("POSTGRES_USER", "POSTGRES_PASSWORD")
 
 
 class CheckoutError(RuntimeError):
@@ -123,23 +129,6 @@ def export_verified_snapshot(root: Path, revision: str, target: Path) -> None:
         archive_path.unlink(missing_ok=True)
 
 
-def compose_override(revision: str, snapshot_root: Path) -> dict[str, object]:
-    backend_build = {
-        "context": str(snapshot_root / "backend"),
-        "args": {"SBS_BUILD_REVISION": revision},
-    }
-    services: dict[str, object] = {
-        service: {"build": backend_build} for service in BACKEND_SERVICES
-    }
-    services["web"] = {
-        "build": {
-            "context": str(snapshot_root / "web"),
-            "args": {"SBS_BUILD_REVISION": revision},
-        }
-    }
-    return {"services": services}
-
-
 def dotenv_value(path: Path, key: str) -> str | None:
     if not path.is_file():
         return None
@@ -159,6 +148,20 @@ def dotenv_value(path: Path, key: str) -> str | None:
             value = value[1:-1]
         return value
     return None
+
+
+def require_self_hosted_secrets(env_file: Path) -> None:
+    """Refuse a verified deployment with an unset/blank database password.
+
+    An operator-provided value in the process environment takes precedence
+    over ``.env``, matching Compose's own interpolation precedence.
+    """
+    for key in REQUIRED_SELF_HOSTED_ENV:
+        value = os.environ.get(key)
+        if value is None:
+            value = dotenv_value(env_file, key)
+        if not value:
+            raise CheckoutError(f"{key} must be set for a verified deployment")
 
 
 def default_project_name(root: Path) -> str:
@@ -194,6 +197,8 @@ def reject_compose_source_overrides(arguments: list[str]) -> None:
             raise CheckoutError("deployment source/config overrides are not allowed by the verified wrapper")
         if argument.startswith("--env-file=") or argument.startswith("--project-directory="):
             raise CheckoutError("deployment source/config overrides are not allowed by the verified wrapper")
+        if argument == "--profile" or argument.startswith("--profile="):
+            raise CheckoutError("profile overrides are not allowed by the verified wrapper")
 
 
 def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
@@ -202,17 +207,13 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
     reject_compose_source_overrides(compose_args)
 
     env_file = root / ".env"
+    require_self_hosted_secrets(env_file)
     project_name = compose_project_name(root, env_file)
 
     try:
         with tempfile.TemporaryDirectory(prefix="sidebyside-source-") as temp_dir:
             snapshot_root = Path(temp_dir)
             export_verified_snapshot(root, revision, snapshot_root)
-            override_path = snapshot_root / "compose.revision.json"
-            override_path.write_text(
-                json.dumps(compose_override(revision, snapshot_root)),
-                encoding="utf-8",
-            )
             command = [
                 "docker",
                 "compose",
@@ -221,16 +222,18 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
             ]
             if env_file.is_file():
                 command.extend(["--env-file", str(env_file)])
-            command.extend(
-                [
-                    "-f",
-                    str(snapshot_root / "compose.yaml"),
-                    "-f",
-                    str(override_path),
-                    *compose_args,
-                ]
-            )
-            completed = subprocess.run(command, cwd=root, check=False)
+            command.extend(["-f", str(snapshot_root / "compose.yaml"), *compose_args])
+
+            compose_env = dict(os.environ)
+            # The verified wrapper always drives the canonical Self-Hosted
+            # profile. Build contexts and revision are injected as environment
+            # values instead of generating a second Compose override file.
+            compose_env["COMPOSE_PROFILES"] = "self-hosted"
+            compose_env["SBS_BACKEND_BUILD_CONTEXT"] = str(snapshot_root / "backend")
+            compose_env["SBS_WEB_BUILD_CONTEXT"] = str(snapshot_root / "web")
+            compose_env["SBS_BUILD_REVISION"] = revision
+
+            completed = subprocess.run(command, cwd=root, check=False, env=compose_env)
             return completed.returncode
     except OSError as exc:
         raise CheckoutError("docker compose could not be executed") from exc

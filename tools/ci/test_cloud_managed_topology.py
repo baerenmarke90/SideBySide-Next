@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed contract checks for the #521 Cloud/Managed v1 deployment recipe.
+"""Fail-closed contract checks for the #521 Cloud/Managed v1 Compose profile.
 
-These are configuration-contract tests, not a live deployment: they read the
-versioned recipe/template text (and, where Docker is available, the resolved
-Compose configuration) to prove the mechanical parts of
-docs/m6/CLOUD-MANAGED-TOPOLOGY.md cannot silently regress. They do not require
-or simulate a real managed provider.
+Cloud/Managed, Self-Hosted, Arcane and the development database now share the
+repository-root compose.yaml. These tests prove that the ``cloud`` profile keeps
+its intentionally different topology and immutable-image contract without a
+second deployment manifest.
 """
 
 from __future__ import annotations
@@ -20,9 +19,14 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPOSE_CLOUD = ROOT / "deploy/compose.cloud.yml"
+COMPOSE = ROOT / "compose.yaml"
 CLOUD_ENV_EXAMPLE = ROOT / "deploy/cloud-managed.env.example"
 DEV_ENV_EXAMPLE = ROOT / "deploy/persistent-development.env.example"
+LEGACY_COMPOSE_REFERENCES = (
+    "compose." + "arcane.yaml",
+    "deploy/" + "compose.cloud.yml",
+    "deploy/" + "docker-compose.dev.yml",
+)
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import check_environment_isolation as isolation  # noqa: E402
@@ -32,81 +36,187 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _service_block(compose: str, name: str) -> str:
+    match = re.search(
+        rf"(?ms)^  {re.escape(name)}:\n(.*?)(?=^  [A-Za-z0-9_-]+:\n|^networks:|^volumes:|\Z)",
+        compose,
+    )
+    if match is None:
+        raise AssertionError(f"Compose service {name!r} is missing")
+    return match.group(1)
+
+
+def _tracked_files() -> list[Path]:
+    result = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    )
+    return [ROOT / raw.decode("utf-8") for raw in result.stdout.split(b"\0") if raw]
+
+
+class CanonicalComposeRepositoryContractTest(unittest.TestCase):
+    """Prevent deployment topology from splitting into parallel manifests again."""
+
+    def test_exactly_one_compose_manifest_is_tracked(self) -> None:
+        manifests: list[str] = []
+        for path in _tracked_files():
+            relative = path.relative_to(ROOT)
+            name = relative.name.lower()
+            if relative.suffix.lower() not in {".yaml", ".yml"}:
+                continue
+            if name in {"compose.yaml", "compose.yml"} or name.startswith(
+                ("compose.", "docker-compose")
+            ):
+                manifests.append(relative.as_posix())
+        self.assertEqual(sorted(manifests), ["compose.yaml"])
+
+    def test_removed_manifest_names_are_not_referenced(self) -> None:
+        findings: list[str] = []
+        for path in _tracked_files():
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            relative = path.relative_to(ROOT).as_posix()
+            for legacy in LEGACY_COMPOSE_REFERENCES:
+                if legacy in text:
+                    findings.append(f"{relative}: {legacy}")
+        self.assertEqual(findings, [])
+
+    def test_no_other_tracked_file_defines_compose_services(self) -> None:
+        """Catch a differently-named orchestration file, not just known filenames.
+
+        A file matching neither the ``compose.*``/``docker-compose*`` naming
+        convention nor any of ``LEGACY_COMPOSE_REFERENCES`` (for example
+        ``stack.yaml`` or ``infra/orchestration.yml``) would slip past both of
+        the checks above. This looks at content instead: a top-level
+        ``services:`` mapping is what makes a YAML file a Compose manifest, so
+        no tracked file except the canonical one may define one (#746 review).
+        """
+        offenders: list[str] = []
+        for path in _tracked_files():
+            relative = path.relative_to(ROOT)
+            if relative.suffix.lower() not in {".yaml", ".yml"}:
+                continue
+            if relative == COMPOSE.relative_to(ROOT):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            if re.search(r"(?m)^services:\s*$", text):
+                offenders.append(relative.as_posix())
+        self.assertEqual(offenders, [])
+
+
 class CloudComposeTextContractTest(unittest.TestCase):
-    """Structural checks on the raw recipe text (no Docker required)."""
+    """Structural checks on the canonical recipe text (no Docker required)."""
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.compose = _read(COMPOSE_CLOUD)
+        cls.compose = _read(COMPOSE)
 
-    def test_no_bundled_postgres_service(self) -> None:
-        self.assertNotRegex(self.compose, r"(?m)^\s{2}postgres:")
+    def test_cloud_is_a_profile_in_the_canonical_manifest(self) -> None:
+        self.assertIn('profiles: ["cloud"]', self.compose)
+        for service in ("cloud-api", "cloud-worker", "cloud-migrate", "cloud-web"):
+            self.assertIn('profiles: ["cloud"]', _service_block(self.compose, service))
 
-    def test_no_demo_init_service(self) -> None:
-        self.assertNotRegex(self.compose, r"(?m)^\s{2}demo-init:")
-        self.assertNotIn("scripts.demo_space", self.compose)
+    def test_cloud_processes_use_images_not_source_builds(self) -> None:
+        for service in ("cloud-api", "cloud-worker", "cloud-migrate"):
+            block = _service_block(self.compose, service)
+            self.assertIn("*cloud-backend-image", block)
+            self.assertNotIn("build:", block)
+        web = _service_block(self.compose, "cloud-web")
+        self.assertIn("<<: *cloud-web-image", web)
+        self.assertNotIn("build:", web)
 
-    def test_media_store_defaults_to_local_like_self_hosted(self) -> None:
-        # docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.3: the MediaStore backend is an
-        # operator/topology choice, not a fixed requirement. `local` (with a
-        # persistent media_data volume) must remain fully supported, exactly
-        # as compose.yaml already defaults for Self-Hosted.
-        self.assertIn("SBS_MEDIA_STORE: \"${SBS_MEDIA_STORE:-local}\"", self.compose)
-        self.assertIn("media_data:/var/lib/sidebyside/media", self.compose)
-        self.assertRegex(self.compose, r"(?m)^  media_data:\s*$")
+    def test_cloud_has_no_runtime_dependency_on_bundled_postgres_or_demo_init(self) -> None:
+        for service in ("cloud-api", "cloud-worker", "cloud-migrate", "cloud-web"):
+            block = _service_block(self.compose, service)
+            self.assertNotIn("postgres:", block)
+            self.assertNotIn("demo-init:", block)
+            self.assertNotIn("scripts.demo_space", block)
 
-    def test_s3_variables_are_optional_not_required(self) -> None:
-        # Selecting s3 is still possible (SBS_MEDIA_STORE=s3 plus these
-        # variables), but the recipe must not force S3 on every deployment.
+    def test_media_store_defaults_to_local(self) -> None:
+        self.assertIn('SBS_MEDIA_STORE: "${SBS_MEDIA_STORE:-local}"', self.compose)
+        for service in ("cloud-api", "cloud-worker"):
+            self.assertIn(
+                "cloud_media_data:/var/lib/sidebyside/media",
+                _service_block(self.compose, service),
+            )
+        self.assertRegex(self.compose, r"(?m)^  cloud_media_data:\s*$")
+
+    def test_s3_variables_remain_optional(self) -> None:
         for var in (
             "SBS_S3_ENDPOINT",
             "SBS_S3_BUCKET",
             "SBS_S3_ACCESS_KEY_ID",
             "SBS_S3_SECRET_ACCESS_KEY",
         ):
-            self.assertIn(f"${{{var}:-", self.compose, msg=f"{var} must not fail closed")
-            self.assertNotIn(f"${{{var}:?", self.compose)
+            self.assertIn(f"${{{var}:-", self.compose)
 
-    def test_processes_use_immutable_images_not_source_builds(self) -> None:
-        self.assertNotRegex(self.compose, r"(?m)^\s{4,}build:")
-        for service in ("api", "worker", "migrate", "web"):
-            self.assertIn(f"<<: *{'web-image' if service == 'web' else 'backend-image'}", self.compose)
-
-    def test_image_references_fail_closed_without_a_floating_default(self) -> None:
-        for var in ("SBS_BACKEND_IMAGE", "SBS_WEB_IMAGE"):
-            self.assertIn(f"${{{var}:?", self.compose)
-        self.assertNotRegex(self.compose, r"SBS_(BACKEND|WEB)_IMAGE:-")
+    def test_missing_cloud_images_use_non_runnable_sentinels(self) -> None:
+        # ``.invalid`` is an IANA-reserved special-use TLD (RFC 2606) that is
+        # guaranteed to never resolve, so a deployment that forgets to set the
+        # real image still fails closed at pull time even though `docker
+        # compose config` itself must keep succeeding for every profile.
+        for var, image in (
+            ("SBS_BACKEND_IMAGE", "sidebyside-backend"),
+            ("SBS_WEB_IMAGE", "sidebyside-web"),
+        ):
+            sentinel = f"invalid.invalid/{image}:configuration-required"
+            self.assertIn(f"${{{var}:-{sentinel}}}", self.compose)
+            self.assertTrue(sentinel.split("/", 1)[0].endswith(".invalid"))
 
     def test_migrate_never_restarts_automatically(self) -> None:
-        match = re.search(r"(?ms)^  migrate:\n(.*?)^  \w", self.compose)
-        self.assertIsNotNone(match)
-        self.assertIn('restart: "no"', match.group(1))
+        self.assertIn('restart: "no"', _service_block(self.compose, "cloud-migrate"))
 
     def test_deletion_journal_uses_a_dedicated_named_volume(self) -> None:
-        self.assertIn("deletion_journal_data:/var/lib/sidebyside/deletion-journal", self.compose)
-        self.assertRegex(self.compose, r"(?m)^  deletion_journal_data:\s*$")
+        self.assertIn(
+            "cloud_deletion_journal_data:/var/lib/sidebyside/deletion-journal",
+            _service_block(self.compose, "cloud-api"),
+        )
+        self.assertRegex(self.compose, r"(?m)^  cloud_deletion_journal_data:\s*$")
 
-    def test_required_secrets_fail_closed(self) -> None:
-        for var in (
-            "SBS_DATABASE_URL",
-            "SBS_CURSOR_SIGNING_KEY",
-            "SBS_ACCOUNT_DELETION_INSTANCE_ID",
-            "SBS_ALLOWED_HOSTS",
-            "SBS_PUBLIC_BASE_URL",
-        ):
-            self.assertIn(f"${{{var}:?", self.compose, msg=f"{var} must fail closed when unset")
+    def test_cloud_volumes_are_disjoint_from_self_hosted_volumes(self) -> None:
+        """Cloud and Self-Hosted must never be able to share local storage.
+
+        Both profiles live in one file now, so nothing prevents an operator
+        mistake like ``COMPOSE_PROFILES=self-hosted,cloud`` from starting both
+        at once (#746 review). Distinct volume names are what actually makes
+        that mistake harmless instead of a cross-instance data collision.
+        """
+        self_hosted_volumes = {
+            volume
+            for service in ("api", "worker")
+            for volume in re.findall(
+                r"^\s+- (\w+):", _service_block(self.compose, service), re.MULTILINE
+            )
+        }
+        cloud_volumes = {
+            volume
+            for service in ("cloud-api", "cloud-worker")
+            for volume in re.findall(
+                r"^\s+- (\w+):", _service_block(self.compose, service), re.MULTILINE
+            )
+        }
+        self.assertTrue(self_hosted_volumes, "expected self-hosted services to mount volumes")
+        self.assertTrue(cloud_volumes, "expected cloud services to mount volumes")
+        self.assertEqual(self_hosted_volumes & cloud_volumes, set())
 
     def test_production_mail_default_is_not_log(self) -> None:
-        # Environment.PRODUCTION rejects SBS_MAIL_TRANSPORT=log at startup
-        # (backend/src/sidebyside/config.py); the Cloud recipe must not default
-        # into a configuration that always fails to start.
-        self.assertIn("SBS_MAIL_TRANSPORT:-none", self.compose)
-        self.assertNotIn("SBS_MAIL_TRANSPORT:-log", self.compose)
+        cloud_anchor = self.compose.split("x-cloud-runtime-environment:", 1)[1].split(
+            "x-self-hosted-backend-build:", 1
+        )[0]
+        self.assertIn("SBS_MAIL_TRANSPORT:-none", cloud_anchor)
+        self.assertNotIn("SBS_MAIL_TRANSPORT:-log", cloud_anchor)
 
 
 @unittest.skipUnless(shutil.which("docker"), "docker is required to resolve compose config")
 class CloudComposeResolvedConfigTest(unittest.TestCase):
-    """Validates the recipe actually resolves the way the text implies."""
+    """Validates that the cloud profile resolves to the managed topology."""
 
     def _resolve(self, env_overrides: dict[str, str]) -> dict:
         with tempfile.TemporaryDirectory() as tmp:
@@ -121,8 +231,8 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
                 [
                     "docker",
                     "compose",
-                    "-f",
-                    str(COMPOSE_CLOUD),
+                    "--profile",
+                    "cloud",
                     "--env-file",
                     str(env_path),
                     "config",
@@ -145,29 +255,36 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
             "SBS_ACCOUNT_DELETION_INSTANCE_ID": "00000000-0000-0000-0000-000000000000",
         }
 
-    def test_resolved_recipe_has_no_postgres_or_demo_init_service(self) -> None:
+    def test_resolved_recipe_has_only_cloud_process_services(self) -> None:
         config = self._resolve(self._valid_overrides())
-        self.assertEqual(sorted(config["services"]), ["api", "migrate", "web", "worker"])
+        self.assertEqual(
+            sorted(config["services"]),
+            ["cloud-api", "cloud-migrate", "cloud-web", "cloud-worker"],
+        )
 
     def test_resolved_services_reference_images_not_builds(self) -> None:
         config = self._resolve(self._valid_overrides())
-        for name in ("api", "migrate", "worker"):
+        for name in ("cloud-api", "cloud-migrate", "cloud-worker"):
             self.assertEqual(
                 config["services"][name]["image"],
                 "registry.example/sidebyside-backend:v1.0.0",
             )
             self.assertNotIn("build", config["services"][name])
         self.assertEqual(
-            config["services"]["web"]["image"], "registry.example/sidebyside-web:v1.0.0"
+            config["services"]["cloud-web"]["image"],
+            "registry.example/sidebyside-web:v1.0.0",
         )
+        self.assertNotIn("build", config["services"]["cloud-web"])
 
-    def test_resolved_media_store_defaults_to_local_without_any_s3_variable(self) -> None:
-        # No SBS_MEDIA_STORE / SBS_S3_* override at all: the example template's
-        # own default (local) must resolve successfully and mount media_data.
+    def test_resolved_media_store_defaults_to_local_without_s3(self) -> None:
         config = self._resolve(self._valid_overrides())
-        self.assertEqual(config["services"]["api"]["environment"]["SBS_MEDIA_STORE"], "local")
-        api_volume_sources = [volume["source"] for volume in config["services"]["api"]["volumes"]]
-        self.assertIn("media_data", api_volume_sources)
+        self.assertEqual(
+            config["services"]["cloud-api"]["environment"]["SBS_MEDIA_STORE"], "local"
+        )
+        api_volume_sources = [
+            volume["source"] for volume in config["services"]["cloud-api"]["volumes"]
+        ]
+        self.assertIn("cloud_media_data", api_volume_sources)
 
     def test_resolved_media_store_can_opt_into_s3(self) -> None:
         overrides = self._valid_overrides()
@@ -181,44 +298,26 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
             }
         )
         config = self._resolve(overrides)
-        self.assertEqual(config["services"]["api"]["environment"]["SBS_MEDIA_STORE"], "s3")
-        endpoint = config["services"]["api"]["environment"]["SBS_S3_ENDPOINT"]
-        self.assertEqual(endpoint, "https://s3.example.com")
-        self.assertTrue(endpoint.startswith("https://"))
         self.assertEqual(
-            config["services"]["web"]["environment"]["SBS_WEB_CSP_CONNECT_ORIGINS"],
+            config["services"]["cloud-api"]["environment"]["SBS_MEDIA_STORE"], "s3"
+        )
+        endpoint = config["services"]["cloud-api"]["environment"]["SBS_S3_ENDPOINT"]
+        self.assertEqual(endpoint, "https://s3.example.com")
+        self.assertEqual(
+            config["services"]["cloud-web"]["environment"]["SBS_WEB_CSP_CONNECT_ORIGINS"],
             endpoint,
         )
 
-    def test_missing_backend_image_fails_closed(self) -> None:
+    def test_missing_backend_image_cannot_fall_back_to_source_build(self) -> None:
         overrides = self._valid_overrides()
         del overrides["SBS_BACKEND_IMAGE"]
-        with tempfile.TemporaryDirectory() as tmp:
-            env_path = Path(tmp) / "cloud.env"
-            merged: dict[str, str] = dict(_pairs(_read(CLOUD_ENV_EXAMPLE).splitlines()))
-            merged.update(overrides)
-            del merged["SBS_BACKEND_IMAGE"]
-            env_path.write_text(
-                "\n".join(f"{key}={value}" for key, value in merged.items()) + "\n",
-                encoding="utf-8",
+        config = self._resolve(overrides)
+        for name in ("cloud-api", "cloud-migrate", "cloud-worker"):
+            self.assertEqual(
+                config["services"][name]["image"],
+                "invalid.invalid/sidebyside-backend:configuration-required",
             )
-            result = subprocess.run(
-                [
-                    "docker",
-                    "compose",
-                    "-f",
-                    str(COMPOSE_CLOUD),
-                    "--env-file",
-                    str(env_path),
-                    "config",
-                    "--quiet",
-                ],
-                cwd=ROOT,
-                capture_output=True,
-                text=True,
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertIn("SBS_BACKEND_IMAGE", result.stderr)
+            self.assertNotIn("build", config["services"][name])
 
 
 def _pairs(lines: list[str]):
@@ -235,18 +334,14 @@ class CloudEnvironmentTemplateTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.values = dict(_pairs(_read(CLOUD_ENV_EXAMPLE).splitlines()))
 
-    def test_declares_production_cloud_deployment(self) -> None:
+    def test_selects_canonical_cloud_profile(self) -> None:
+        self.assertEqual(self.values["COMPOSE_PROFILES"], "cloud")
         self.assertEqual(self.values["SBS_ENVIRONMENT"], "production")
         self.assertEqual(self.values["SBS_DEPLOYMENT"], "cloud")
 
-    def test_declares_local_media_store_as_the_supported_default(self) -> None:
-        # docs/m6/CLOUD-MANAGED-TOPOLOGY.md §3.3: MediaStore backend is an
-        # operator choice; the template declares the supported default
-        # explicitly rather than silently omitting it, and documents the S3
-        # alternative as an opt-in, commented-out block.
+    def test_declares_local_media_store_as_supported_default(self) -> None:
         self.assertEqual(self.values["SBS_MEDIA_STORE"], "local")
-        text = _read(CLOUD_ENV_EXAMPLE)
-        self.assertIn("# SBS_MEDIA_STORE=s3", text)
+        self.assertIn("# SBS_MEDIA_STORE=s3", _read(CLOUD_ENV_EXAMPLE))
 
     def test_image_placeholders_are_not_floating_tags(self) -> None:
         for var in ("SBS_BACKEND_IMAGE", "SBS_WEB_IMAGE"):

@@ -166,7 +166,8 @@ available.
 The exact source revision must first pass the persistent Development gates in
 `DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md`. For complete-checkout Production,
 perform the actual deploy with `scripts/compose_checked.py`; for Arcane, pin
-`SBS_SOURCE_REF` to the exact approved commit SHA.
+`SBS_BACKEND_BUILD_CONTEXT`, `SBS_WEB_BUILD_CONTEXT`, and `SBS_BUILD_REVISION`
+to that same exact approved commit SHA (see `ARCANE.md`).
 
 ## Account deletion authority
 

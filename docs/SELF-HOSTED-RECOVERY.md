@@ -1,6 +1,6 @@
 # Self-Hosted Backup, Restore, and Upgrade
 
-**Status:** authoritative operator contract for the canonical Compose deployments
+**Status:** authoritative operator contract for the canonical Compose deployment
 
 **Scope:** PostgreSQL 17 plus `LocalMediaStore`; S3 boundary documented separately
 
@@ -70,7 +70,7 @@ from the data archive:
 - mail, OIDC, WebAuthn, S3, and other provider configuration/credentials in use;
 - the Compose project name and public origin;
 - reverse-proxy, TLS, DNS, firewall, and scheduler configuration;
-- the exact deployed commit SHA and SideBySide Compose variant;
+- the exact deployed commit SHA and the canonical `compose.yaml` profile/configuration;
 - any external backup encryption keys and restore instructions.
 
 Protect the forward deletion journal separately from both this configuration
@@ -87,14 +87,15 @@ credential.
 
 Run from a complete repository checkout containing the deployed recovery helper.
 The environment file must identify the actual project through
-`COMPOSE_PROJECT_NAME`. Create the destination directory with operator-only
-permissions first.
+`COMPOSE_PROJECT_NAME`. The helper accepts only repository-root `compose.yaml`
+and explicitly selects the `self-hosted` profile. Create the destination directory
+with operator-only permissions first.
 
 ```bash
 install -d -m 0700 /srv/sidebyside-backups
 
 SBS_RECOVERY_PROJECT=$(
-  docker compose --env-file .env -f compose.yaml config --format json |
+  docker compose --profile self-hosted --env-file .env config --format json |
     python3 -c 'import json, sys; print(json.load(sys.stdin)["name"])'
 )
 SBS_RECOVERY_ARCHIVE="/srv/sidebyside-backups/sidebyside-$(date -u +%Y%m%dT%H%M%SZ).tar"
@@ -106,9 +107,11 @@ python3 scripts/self_hosted_recovery.py backup \
   --output "$SBS_RECOVERY_ARCHIVE"
 ```
 
-Use `compose.arcane.yaml` in both commands for an Arcane deployment. Keep the
-maintenance interval free of other database writers, including direct operator
-sessions. API and worker are unavailable while the stable snapshot is created.
+Arcane uses the same `compose.yaml` and `self-hosted` profile. Its Git build
+contexts come from environment configuration and do not change the recovery
+contract. Keep the maintenance interval free of other database writers,
+including direct operator sessions. API and worker are unavailable while the
+stable snapshot is created.
 
 The command's successful exit proves archive structure, source revision capture,
 and component checksums at creation time. It does not prove the offsite copy,
@@ -133,11 +136,11 @@ permissions.
 
 ```bash
 # In the clean target checkout, with the separately recovered .env in place:
-docker compose --env-file .env -f compose.yaml \
+docker compose --profile self-hosted --env-file .env \
   up -d --wait --wait-timeout 120 postgres
 
 SBS_RECOVERY_PROJECT=$(
-  docker compose --env-file .env -f compose.yaml config --format json |
+  docker compose --profile self-hosted --env-file .env config --format json |
     python3 -c 'import json, sys; print(json.load(sys.stdin)["name"])'
 )
 SBS_RECOVERY_ARCHIVE=/srv/sidebyside-backups/sidebyside-YYYYmmddTHHMMSSZ.tar
@@ -171,7 +174,7 @@ python3 scripts/self_hosted_deletion_reconcile.py \
   --confirm-instance-id "$SBS_ACCOUNT_DELETION_INSTANCE_ID"
 ```
 
-Use `compose.arcane.yaml` consistently for Arcane. A missing, corrupt, foreign-
+Arcane uses this same canonical Compose target. A missing, corrupt, foreign-
 instance, or older substituted journal is not a condition to bypass. Keep normal
 writers stopped and repair the recovery inputs instead. This step is what prevents
 a pre-deletion database backup from restoring stale authentication or private data.
@@ -191,9 +194,10 @@ python3 scripts/deployment_smoke.py \
   --expected-revision "$CANDIDATE"
 ```
 
-For Arcane, pin `SBS_SOURCE_REF` to the exact candidate SHA, run the deletion
-reconciliation against that candidate, recreate the complete stack, and perform
-the same revision-aware smoke check.
+For Arcane, pin `SBS_BACKEND_BUILD_CONTEXT`, `SBS_WEB_BUILD_CONTEXT`, and
+`SBS_BUILD_REVISION` to the exact same candidate SHA, run deletion reconciliation
+against that candidate, recreate the complete stack, and perform the same
+revision-aware smoke check.
 
 Also verify an authenticated shared-content read and an owner-only content path
 with fictional operator accounts appropriate for the target. A restore is accepted

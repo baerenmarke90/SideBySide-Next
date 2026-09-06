@@ -122,7 +122,8 @@ traceably the same approved source/release identity.
 
 Self-Hosted keeps #375/#190 as the supported baseline:
 
-- Docker Compose/Arcane deployment primitives;
+- the canonical root `compose.yaml` with `self-hosted` profile for complete
+  checkouts and Arcane;
 - immutable commit/release identity;
 - dedicated secrets/data/media;
 - pre-production migration verification;
@@ -136,10 +137,10 @@ Self-Hosted product merely to simplify managed hosting.
 
 ## 8. Cloud/Managed production
 
-`docs/m6/CLOUD-MANAGED-TOPOLOGY.md` (#521) freezes the supported launch topology
-and deployment representation (`deploy/compose.cloud.yml`,
-`deploy/cloud-managed.env.example`), preserving the same Domain/API/privacy
-semantics while deciding operational responsibilities for:
+`docs/m6/CLOUD-MANAGED-TOPOLOGY.md` (#521) freezes the supported launch topology.
+Its deployment representation is the `cloud` profile in the same root
+`compose.yaml` together with `deploy/cloud-managed.env.example`, preserving the
+same Domain/API/privacy semantics while deciding operational responsibilities for:
 
 - API/Web/worker/migrate processes;
 - PostgreSQL;

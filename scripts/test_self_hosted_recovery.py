@@ -9,6 +9,7 @@ import tarfile
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts import self_hosted_recovery
 
@@ -160,6 +161,33 @@ class RecoveryArchiveValidationTest(unittest.TestCase):
                 "member set",
             ):
                 self_hosted_recovery.validate_archive(archive_path, extraction)
+
+
+class ComposeSubprocessEnvironmentTest(unittest.TestCase):
+    """An operator-supplied environment must not widen the active profile.
+
+    Docker Compose's active profile set is the union of ``--profile`` and
+    ``COMPOSE_PROFILES``, not an override. Without pinning ``COMPOSE_PROFILES``
+    in the subprocess environment, a ``--env-file`` that sets
+    ``COMPOSE_PROFILES=cloud`` would silently add cloud services alongside
+    self-hosted recovery instead of being excluded (#746 review).
+    """
+
+    def test_forces_self_hosted_regardless_of_ambient_profiles(self) -> None:
+        with mock.patch.dict("os.environ", {"COMPOSE_PROFILES": "cloud,dev-db"}, clear=False):
+            env = self_hosted_recovery._compose_subprocess_env()
+        self.assertEqual(env["COMPOSE_PROFILES"], "self-hosted")
+
+    def test_every_compose_invocation_uses_the_forced_environment(self) -> None:
+        with (
+            mock.patch.dict("os.environ", {"COMPOSE_PROFILES": "cloud"}, clear=False),
+            mock.patch(
+                "subprocess.run",
+                return_value=mock.Mock(returncode=0, stdout=b"", stderr=b""),
+            ) as mock_run,
+        ):
+            self_hosted_recovery._run(["docker", "volume", "inspect", "x"], check=False)
+        self.assertEqual(mock_run.call_args.kwargs["env"]["COMPOSE_PROFILES"], "self-hosted")
 
 
 if __name__ == "__main__":
