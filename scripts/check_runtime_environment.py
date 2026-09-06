@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -27,6 +28,14 @@ PROFILE_RUNTIME_SERVICES = {
     "self-hosted": frozenset({"api", "worker", "demo-init"}),
     "cloud": frozenset({"cloud-api", "cloud-worker"}),
 }
+SELF_HOSTED_BUILD_SUBDIRS = {
+    "migrate": "backend",
+    "demo-init": "backend",
+    "api": "backend",
+    "worker": "backend",
+    "web": "web",
+}
+FULL_COMMIT_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 
 
 class RuntimeEnvironmentError(RuntimeError):
@@ -128,6 +137,82 @@ def check_dotenv_to_rendered(
                 problems.append(
                     f"rendered service {service_name} differs from env file for {key}"
                 )
+
+    return problems
+
+
+def _production_source_revision(context: Any, expected_subdir: str) -> str | None:
+    if not isinstance(context, str):
+        return None
+    repository, separator, fragment = context.rpartition("#")
+    if not separator or not repository:
+        return None
+    revision, subdir_separator, subdir = fragment.partition(":")
+    if (
+        not subdir_separator
+        or subdir != expected_subdir
+        or FULL_COMMIT_SHA_PATTERN.fullmatch(revision) is None
+    ):
+        return None
+    return revision
+
+
+def check_production_source_identity(
+    dotenv: dict[str, str],
+    config: dict[str, Any],
+    rendered: dict[str, dict[str, str]],
+) -> list[str]:
+    """Require one immutable Git source revision for every Self-Hosted Production build."""
+
+    dotenv_is_production = dotenv.get("SBS_ENVIRONMENT") == "production"
+    rendered_is_production = any(
+        environment.get("SBS_ENVIRONMENT") == "production" for environment in rendered.values()
+    )
+    if not dotenv_is_production and not rendered_is_production:
+        return []
+
+    services = config.get("services")
+    if not isinstance(services, dict):
+        return ["Production source identity requires rendered Compose services"]
+
+    problems: list[str] = []
+    accepted_revisions: list[str] = []
+    for service_name, expected_subdir in SELF_HOSTED_BUILD_SUBDIRS.items():
+        service = services.get(service_name)
+        if not isinstance(service, dict):
+            problems.append(f"Production source identity is missing service {service_name}")
+            continue
+        build = service.get("build")
+        if not isinstance(build, dict):
+            problems.append(f"Production service {service_name} has no rendered build configuration")
+            continue
+
+        context_revision = _production_source_revision(build.get("context"), expected_subdir)
+        if context_revision is None:
+            problems.append(
+                f"Production service {service_name} build context must pin {expected_subdir} "
+                "to a full 40-character lowercase commit SHA"
+            )
+        else:
+            accepted_revisions.append(context_revision)
+
+        build_args = build.get("args") or {}
+        build_revision = build_args.get("SBS_BUILD_REVISION") if isinstance(build_args, dict) else None
+        if (
+            not isinstance(build_revision, str)
+            or FULL_COMMIT_SHA_PATTERN.fullmatch(build_revision) is None
+        ):
+            problems.append(
+                f"Production service {service_name} SBS_BUILD_REVISION must be a full "
+                "40-character lowercase commit SHA"
+            )
+        else:
+            accepted_revisions.append(build_revision)
+
+    if len(set(accepted_revisions)) > 1:
+        problems.append(
+            "Production Backend/Web build contexts and SBS_BUILD_REVISION must use the same commit SHA"
+        )
 
     return problems
 
@@ -242,10 +327,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         dotenv = parse_dotenv(args.env_file)
         selected_services = PROFILE_RUNTIME_SERVICES.get(args.profile)
-        rendered = rendered_runtime_environments(
-            load_rendered_config(args), service_names=selected_services
-        )
+        config = load_rendered_config(args)
+        rendered = rendered_runtime_environments(config, service_names=selected_services)
         problems = check_dotenv_to_rendered(dotenv, rendered)
+        if args.profile == "self-hosted":
+            problems.extend(check_production_source_identity(dotenv, config, rendered))
         if args.check_running:
             running = inspect_running_services(args, rendered)
             problems.extend(check_rendered_to_running(rendered, running))
