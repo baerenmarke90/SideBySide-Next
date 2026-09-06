@@ -5208,12 +5208,18 @@ class ReferenceViewModel(
      * The M2-D18 persistent-cache wipe. Unlike every other `clearXxx`
      * function here, this one does not touch in-memory [ReferenceUiState] —
      * it wipes the on-disk Room database, which a fresh `_uiState` value
-     * (as [logout] assigns) does nothing to by itself. Fire-and-forget: the
-     * caller's own session/state transition does not wait on disk I/O, and
-     * nothing reads the cache again until a later screen asks for it.
+     * (as [logout] assigns) does nothing to by itself.
+     *
+     * The wipe itself stays fire-and-forget, because this caller's own
+     * session/state transition has no reason to wait on disk I/O. What must
+     * not wait is the *decision*: a read that is still in flight would
+     * otherwise finish against a cache context this transition has already
+     * abandoned, so the context is ended synchronously here and only the
+     * removal of rows is left to the coroutine.
      */
     private fun clearProductReadCache() {
         val cache = productReadCache ?: return
+        cache.invalidateContextNow()
         viewModelScope.launch { cache.clearAll() }
     }
 
