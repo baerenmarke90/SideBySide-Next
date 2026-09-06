@@ -62,9 +62,9 @@ class Provider:
         if request.url.path.endswith("/jwks"):
             return httpx.Response(200, json=self.jwks)
         if request.url.path.endswith("/token"):
-            self.last_code_verifier = httpx.QueryParams(
-                request.content.decode("utf-8")
-            ).get("code_verifier")
+            self.last_code_verifier = httpx.QueryParams(request.content.decode("utf-8")).get(
+                "code_verifier"
+            )
             if self.token_status != 200:
                 return httpx.Response(self.token_status, json={"error": "invalid_grant"})
             return httpx.Response(
