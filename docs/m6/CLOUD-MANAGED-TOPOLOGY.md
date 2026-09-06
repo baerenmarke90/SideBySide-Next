@@ -12,8 +12,10 @@ portability and entitlement contracts. It introduces no Cloud-only Domain branch
 no second migration mechanism and no mandatory Kubernetes/Redis/Celery/Kafka
 dependency.
 
-`deploy/compose.cloud.yml` and `deploy/cloud-managed.env.example` are the versioned
-deployment representation this document points to.
+Repository-root `compose.yaml` with profile `cloud`, together with
+`deploy/cloud-managed.env.example`, is the versioned deployment representation
+this document points to. SideBySide does not maintain a second Cloud-specific
+Compose manifest.
 
 ## 1. Reuse baseline
 
@@ -39,6 +41,10 @@ what Self-Hosted uses, the reuse justification is stated inline (see §3.5).
 
 ## 2. Runtime topology
 
+The canonical `cloud` profile uses service names `cloud-migrate`, `cloud-api`,
+`cloud-worker`, and `cloud-web`. The table below uses their functional role names
+for readability.
+
 | Process | Image | Replicas | State |
 |---|---|---|---|
 | `migrate` | backend runtime image, `alembic upgrade head` | exactly one execution per release, run to completion before `api`/`worker` start | none (must not run concurrently against the same database) |
@@ -48,10 +54,11 @@ what Self-Hosted uses, the reuse justification is stated inline (see §3.5).
 | PostgreSQL | managed provider service | provider-managed (primary + standby/read-replica per provider offering) | authoritative persistent state |
 | Media storage | `local` (persistent/shared volume) or a provider S3-compatible service — operator choice, see §3.3 | provider-managed (S3) or operator-provisioned durable volume (`local`) | durable media |
 
-This is the same five-process shape `compose.yaml` already uses for Self-Hosted;
-Cloud/Managed removes the bundled `postgres` container in favor of a managed
-database, keeps the existing `MediaStore` choice between `local` and `s3`
-(§3.3) rather than mandating one, and removes `demo-init` (§5).
+This is the same application-process shape the canonical Compose contract uses
+for Self-Hosted. The `cloud` profile removes the bundled `postgres` container in
+favor of a managed database, keeps the existing `MediaStore` choice between
+`local` and `s3` (§3.3) rather than mandating one, and does not activate the
+Self-Hosted `demo-init` service (§5).
 
 ## 3. Required launch-topology decisions
 
@@ -64,10 +71,9 @@ database, keeps the existing `MediaStore` choice between `local` and `s3`
   Queue claims work with `FOR UPDATE SKIP LOCKED`; concurrent workers do not
   double-process a job.
 - `migrate` is **not** safe to run concurrently. Alembic does not provide its own
-  cross-process advisory lock; the deployment must serialize `migrate` as a single
-  run-to-completion step (a one-shot job/init container, exactly as `compose.yaml`
-  already gates `api`/`worker` behind `migrate`'s `service_completed_successfully`)
-  before any `api`/`worker` replica using incompatible schema starts.
+  cross-process advisory lock; the deployment must serialize `cloud-migrate` as a
+  single run-to-completion step before `cloud-api`/`cloud-worker` replicas using an
+  incompatible schema start.
 - Restart/rollout behavior: replace replicas only after the new revision's
   `/api/v1/health/ready` reports `200`; do not route traffic to a replica before
   its readiness check passes. This is the same gate `#375`'s promotion smoke
@@ -245,7 +251,8 @@ own promotion chain entirely — it is not "Cloud staging."
 - `migrate` never restarts automatically; a failed migration must stop the
   rollout rather than retry blindly against a partially-migrated schema.
 - Health checks reuse `/api/v1/health` (liveness) and `/api/v1/health/ready`
-  (readiness, checks the database) exactly as `compose.yaml` already configures.
+  (readiness, checks the database) exactly as the canonical `compose.yaml`
+  configures.
 
 ### 3.9 Operator / break-glass access
 
@@ -297,38 +304,30 @@ this topology.
 
 ## 4. Deployment representation
 
-`deploy/compose.cloud.yml` is the versioned, reviewable deployment representation
-for this topology, reusing the existing Compose-based recipe rather than
-introducing Terraform/Kubernetes/a custom orchestrator (no demonstrated launch
-need for those exists yet, per Reuse-before-build). It differs from `compose.yaml`
-only as required by this document:
+The `cloud` profile in repository-root `compose.yaml` is the versioned, reviewable
+deployment representation for this topology. It reuses the same Compose contract
+as Self-Hosted rather than introducing Terraform/Kubernetes/a custom orchestrator
+or a second Compose file. Its profile-specific services intentionally differ from
+the `self-hosted` profile only where this topology requires it:
 
-- no bundled `postgres` service — `SBS_DATABASE_URL` must point at the managed
+- no bundled `postgres` service — `SBS_DATABASE_URL` points at the managed
   database;
-- `SBS_MEDIA_STORE` defaults to `local` (matching Self-Hosted's own default) with
-  a `media_data` volume, exactly as `compose.yaml` already models; setting
-  `SBS_MEDIA_STORE=s3` plus the `SBS_S3_*` variables switches to the S3-compatible
-  backend instead — an operator choice, not a fixed requirement (§3.3);
+- `SBS_MEDIA_STORE` defaults to `local` with the same `media_data` volume contract;
+  setting `SBS_MEDIA_STORE=s3` plus the `SBS_S3_*` variables switches to the
+  S3-compatible backend instead (§3.3);
 - no `demo-init` service (§5);
-- `api`/`worker`/`web`/`migrate` use `image:` references to the exact `#519`
-  released image archives (loaded/pushed by the operator to a registry the
-  managed platform can pull from — see §4.1) instead of `build:` — Cloud/Managed
+- `cloud-api`/`cloud-worker`/`cloud-web`/`cloud-migrate` use `image:` references to
+  the exact `#519` released image archives instead of `build:` — Cloud/Managed
   never builds from source at deploy time;
 - explicit named volumes for the deletion-journal path (§3.5) and, when `local`
   MediaStore is selected, the media directory (§3.3), documented as requiring a
-  shared/network-backed implementation whenever more than one `api`/`worker`
-  replica is deployed (Compose's own named-volume driver is the
-  local/single-host expression of this; the managed platform's actual
-  multi-replica deployment descriptor generated from this Compose file must
-  bind that mount to its ReadWriteMany-equivalent volume type for a
-  multi-replica deployment).
+  shared/network-backed implementation whenever more than one API/worker replica
+  is deployed.
 
-This file is the reviewable *contract* (process shape, environment variables,
-health checks, volume/network boundaries); the operator's actual managed-platform
-deployment descriptor (whichever container platform is selected) is generated
-from it, the same way `scripts/compose_checked.py` already treats `compose.yaml`
-as the verified source of truth for Self-Hosted rather than hand-maintaining a
-second recipe.
+`deploy/cloud-managed.env.example` selects `COMPOSE_PROFILES=cloud` and supplies
+the environment-specific contract. The operator's actual managed-platform
+deployment descriptor (whichever container platform is selected) is derived from
+this canonical Compose profile; there is no hand-maintained alternate manifest.
 
 ### 4.1 Image provenance
 
@@ -341,8 +340,8 @@ GitHub Release, not a registry push. For Cloud/Managed:
 3. `docker load`s the archives and pushes them, unmodified, to the registry the
    managed platform pulls from, tagged with the immutable release tag
    (`v<product-version>`) — never `latest`;
-4. `deploy/compose.cloud.yml`'s `SBS_BACKEND_IMAGE`/`SBS_WEB_IMAGE` variables are
-   set to that exact pushed reference.
+4. set `SBS_BACKEND_IMAGE` and `SBS_WEB_IMAGE` in the Cloud environment to those
+   exact pushed references before rendering/using the `cloud` profile.
 
 No image is rebuilt from source for Cloud/Managed promotion; this is the "build
 once, publish immutable artifacts" decision `#519` already made, applied at the
@@ -351,11 +350,11 @@ reference) is never an acceptable Production image reference (§7).
 
 ## 5. Demo exclusion
 
-`compose.yaml`'s `demo-init` service (`python -m scripts.demo_space ensure`) is
-intentionally **not** part of `deploy/compose.cloud.yml`. The canonical public Demo
-(`#304`) is its own isolated deployment, not a step inside the Cloud/Managed
-Production topology; Cloud/Managed Production must never auto-provision demo
-content.
+The `self-hosted` profile's `demo-init` service (`python -m scripts.demo_space
+ensure`) is intentionally **not** part of the `cloud` profile. The canonical
+public Demo (`#304`) is its own isolated deployment, not a step inside the
+Cloud/Managed Production topology; Cloud/Managed Production must never
+auto-provision demo content.
 
 ## 6. Recovery and rollback
 
@@ -399,36 +398,30 @@ explicitly rather than silently assumed away.
 
 ## 7. Contract tests
 
-`tools/ci/test_cloud_managed_topology.py` (added by this change) enforces the
-mechanical parts of this contract so they cannot silently regress:
+`tools/ci/test_cloud_managed_topology.py` enforces the mechanical parts of this
+contract so they cannot silently regress:
 
-- `deploy/compose.cloud.yml` declares no `postgres` service;
-- `demo-init` is absent from the Cloud Compose file;
-- `api`/`worker`/`web`/`migrate` use `image:` (not `build:`);
-- the default/example image reference is neither empty nor `latest`/`main`
-  (fails closed rather than silently defaulting to a floating tag);
-- `migrate` has no automatic restart policy;
-- the deletion-journal path is mounted from a dedicated named volume, not an
-  ephemeral container-local path, for both the `local`-media and `s3`-media
-  resolved configurations;
-- the media directory is likewise mounted from a dedicated named volume when
-  `local` MediaStore is selected (the default), and the S3 variables become
-  required only when `SBS_MEDIA_STORE=s3` is explicitly chosen — neither
-  backend is silently unavailable;
-- `deploy/cloud-managed.env.example` requires `SBS_ENVIRONMENT=production` and
-  `SBS_DEPLOYMENT=cloud`, and documents both supported `SBS_MEDIA_STORE`
-  values rather than assuming one;
-- `scripts/check_environment_isolation.py`, unmodified, accepts the Cloud
-  template paired with the existing Development template and rejects a Cloud
-  Production file that reuses a Development signing key or bootstrap token.
+- the canonical `cloud` profile resolves to exactly `cloud-api`, `cloud-worker`,
+  `cloud-web`, and `cloud-migrate` and does not activate bundled PostgreSQL or
+  `demo-init`;
+- all Cloud process services use `image:` rather than source `build:`;
+- missing image configuration resolves only to a deliberately non-runnable
+  sentinel, never `latest`, `main`, or a source-build fallback;
+- `cloud-migrate` has no automatic restart policy;
+- the deletion-journal path is mounted from a dedicated named volume for both
+  `local`-media and `s3`-media resolved configurations;
+- the media directory is mounted from a dedicated named volume when `local`
+  MediaStore is selected (the default), while S3 variables apply when
+  `SBS_MEDIA_STORE=s3` is explicitly selected;
+- `deploy/cloud-managed.env.example` requires `COMPOSE_PROFILES=cloud`,
+  `SBS_ENVIRONMENT=production`, and `SBS_DEPLOYMENT=cloud`;
+- `scripts/check_environment_isolation.py` accepts the Cloud template paired with
+  the Development template and rejects reused sensitive values.
 
 These are configuration-contract tests, not a new deployment platform or a second
-CI environment; they reuse the existing `tools/ci` `unittest` layout used by the
-`#519` release tooling tests, and run as the "Cloud/Managed deployment recipe
-contract (#521)" step inside the existing `Self-Hosted Deployment Guard` workflow
-(`.github/workflows/self-hosted-deployment-guard.yml`), gated by the same
-`deployment_guard` change-scope classification as the Self-Hosted Compose
-contract (`tools/ci/change_scope.py`).
+CI environment. They run inside the existing `Self-Hosted Deployment Guard`
+workflow and are gated by the same `deployment_guard` change-scope classification
+as the canonical Compose contract.
 
 ## 8. Security / privacy
 
