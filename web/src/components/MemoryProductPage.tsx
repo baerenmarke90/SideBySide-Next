@@ -26,7 +26,10 @@ import {
 import { invalidateDashboard } from '../client/dashboardQueries';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
 import { postSnackbar } from '../client/snackbar';
-import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
+import {
+  formatAttachmentDraftContextKey,
+  useAttachmentDrafts,
+} from '../client/useAttachmentDrafts';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { AttachmentDraftPicker } from './AttachmentDraftPicker';
 import { CommentsPanel } from './CommentsPanel';
@@ -74,15 +77,24 @@ export function MemoryProductPage({
   const queryClient = useQueryClient();
   const memoryId = params.memoryId;
   const memoryKey = authorSummaryQueryKeys.memory(spaceId, memoryId);
+  const contextKey = formatAttachmentDraftContextKey(currentAccountId, spaceId);
+  const [prevContextKey, setPrevContextKey] = useState(contextKey);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removedAttachmentIds, setRemovedAttachmentIds] = useState<Set<string>>(
     () => new Set(),
   );
+
+  if (prevContextKey !== contextKey) {
+    setPrevContextKey(contextKey);
+    setRemovedAttachmentIds(new Set());
+  }
+
   const attachments = useAttachmentDrafts({
     apis,
     apiBaseUrl,
     accessToken,
     spaceId,
+    accountId: currentAccountId,
   });
 
   const memoryQuery = useQuery({

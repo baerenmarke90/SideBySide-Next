@@ -22,7 +22,10 @@ import {
 } from '../client/routes';
 import { invalidateDashboard } from '../client/dashboardQueries';
 import { authorSummaryQueryKeys } from '../client/authorSummaryConsumers';
-import { useAttachmentDrafts } from '../client/useAttachmentDrafts';
+import {
+  formatAttachmentDraftContextKey,
+  useAttachmentDrafts,
+} from '../client/useAttachmentDrafts';
 import { resolvedLocale, useTranslation } from '../i18n';
 import { AttachmentDraftPicker } from './AttachmentDraftPicker';
 import { CommentsPanel } from './CommentsPanel';
@@ -80,13 +83,22 @@ export function HeartMomentProductPage({
   const queryClient = useQueryClient();
   const heartMomentId = params.heartMomentId;
   const queryKey = authorSummaryQueryKeys.heartMoment(spaceId, heartMomentId);
+  const contextKey = formatAttachmentDraftContextKey(currentAccountId, spaceId);
+  const [prevContextKey, setPrevContextKey] = useState(contextKey);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removeExistingPhoto, setRemoveExistingPhoto] = useState(false);
+
+  if (prevContextKey !== contextKey) {
+    setPrevContextKey(contextKey);
+    setRemoveExistingPhoto(false);
+  }
+
   const attachments = useAttachmentDrafts({
     apis,
     apiBaseUrl,
     accessToken,
     spaceId,
+    accountId: currentAccountId,
   });
 
   const heartMomentQuery = useQuery({

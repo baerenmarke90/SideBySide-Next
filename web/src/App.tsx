@@ -211,11 +211,13 @@ function MemoryCreatePage({
   accessToken,
   apiBaseUrl,
   spaceId,
+  accountId,
   onSaved,
 }: {
   accessToken: string;
   apiBaseUrl: string;
   spaceId: string;
+  accountId: string;
   onSaved: () => Promise<void>;
 }) {
   const { t } = useTranslation();
@@ -231,6 +233,7 @@ function MemoryCreatePage({
     apiBaseUrl,
     accessToken,
     spaceId,
+    accountId,
   });
 
   const mutation = useMutation({
@@ -690,6 +693,7 @@ function AuthenticatedApp({
                 accessToken={tokens.accessToken}
                 apiBaseUrl={apiBaseUrl}
                 spaceId={spaceId}
+                accountId={account.id}
                 onSaved={refreshStory}
               />
             }
