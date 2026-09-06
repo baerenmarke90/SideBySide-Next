@@ -14,10 +14,12 @@ from scripts.check_runtime_environment import (
 INSTANCE_ID = "9e8bd148-d0f3-4568-9319-5b21a29fbdf3"
 
 
-def rendered(instance_id: str = INSTANCE_ID) -> dict[str, dict[str, str]]:
+def rendered(
+    instance_id: str = INSTANCE_ID, environment: str = "production"
+) -> dict[str, dict[str, str]]:
     common = {
         "SBS_ACCOUNT_DELETION_INSTANCE_ID": instance_id,
-        "SBS_ENVIRONMENT": "production",
+        "SBS_ENVIRONMENT": environment,
         "SBS_DEPLOYMENT": "self_hosted",
         "SBS_PUBLIC_BASE_URL": "https://example.invalid",
         "SBS_CURSOR_SIGNING_KEY": "not-printed-secret",
@@ -43,26 +45,41 @@ class DotenvToRenderedTest(unittest.TestCase):
             "SBS_ACCOUNT_DELETION_INSTANCE_ID": INSTANCE_ID,
         }
         problems = check_dotenv_to_rendered(dotenv, rendered(instance_id=""))
-        self.assertEqual(len(problems), 3)
+        self.assertEqual(len(problems), 4)
         self.assertTrue(all("SBS_ACCOUNT_DELETION_INSTANCE_ID" in p for p in problems))
         self.assertTrue(all(INSTANCE_ID not in p for p in problems))
 
-    def test_production_requires_deletion_authority_in_env_file(self) -> None:
+    def test_production_requires_deletion_authority_in_env_file_and_render(self) -> None:
         problems = check_dotenv_to_rendered(
             {"SBS_ENVIRONMENT": "production", "SBS_ACCOUNT_DELETION_INSTANCE_ID": ""},
             rendered(instance_id=""),
         )
         self.assertEqual(
             problems,
-            ["production env file must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID"],
+            [
+                "production env file must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID",
+                "rendered Production runtime must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID",
+            ],
         )
 
     def test_development_may_omit_deletion_authority(self) -> None:
         problems = check_dotenv_to_rendered(
             {"SBS_ENVIRONMENT": "development", "SBS_ACCOUNT_DELETION_INSTANCE_ID": ""},
-            rendered(instance_id=""),
+            rendered(instance_id="", environment="development"),
         )
         self.assertEqual(problems, [])
+
+    def test_detects_process_override_of_environment_mode(self) -> None:
+        dotenv = {"SBS_ENVIRONMENT": "development", "SBS_ACCOUNT_DELETION_INSTANCE_ID": ""}
+        problems = check_dotenv_to_rendered(dotenv, rendered(instance_id=""))
+        self.assertIn(
+            "rendered Production runtime must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID",
+            problems,
+        )
+        self.assertEqual(
+            sum("differs from env file for SBS_ENVIRONMENT" in problem for problem in problems),
+            3,
+        )
 
 
 class RenderedToRunningTest(unittest.TestCase):
