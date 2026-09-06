@@ -18,6 +18,10 @@ CRITICAL_RUNTIME_KEYS = (
     "SBS_CURSOR_SIGNING_KEY",
 )
 DOTENV_AUTHORITATIVE_KEYS = ("SBS_ACCOUNT_DELETION_INSTANCE_ID",)
+PROFILE_RUNTIME_SERVICES = {
+    "self-hosted": frozenset({"api", "worker", "demo-init"}),
+    "cloud": frozenset({"cloud-api", "cloud-worker"}),
+}
 
 
 class RuntimeEnvironmentError(RuntimeError):
@@ -65,7 +69,9 @@ def service_environment(service: dict[str, Any]) -> dict[str, str]:
     raise RuntimeEnvironmentError("Compose rendered an unsupported service environment shape")
 
 
-def rendered_runtime_environments(config: dict[str, Any]) -> dict[str, dict[str, str]]:
+def rendered_runtime_environments(
+    config: dict[str, Any], service_names: frozenset[str] | None = None
+) -> dict[str, dict[str, str]]:
     services = config.get("services")
     if not isinstance(services, dict):
         raise RuntimeEnvironmentError("Compose config does not contain a services object")
@@ -73,6 +79,8 @@ def rendered_runtime_environments(config: dict[str, Any]) -> dict[str, dict[str,
     rendered: dict[str, dict[str, str]] = {}
     for name, service in services.items():
         if not isinstance(name, str) or not isinstance(service, dict):
+            continue
+        if service_names is not None and name not in service_names:
             continue
         environment = service_environment(service)
         if any(key in environment for key in CRITICAL_RUNTIME_KEYS):
@@ -218,7 +226,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     try:
         dotenv = parse_dotenv(args.env_file)
-        rendered = rendered_runtime_environments(load_rendered_config(args))
+        selected_services = PROFILE_RUNTIME_SERVICES.get(args.profile)
+        rendered = rendered_runtime_environments(
+            load_rendered_config(args), service_names=selected_services
+        )
         problems = check_dotenv_to_rendered(dotenv, rendered)
         if args.check_running:
             running = inspect_running_services(args, rendered)
