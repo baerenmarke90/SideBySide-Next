@@ -110,9 +110,8 @@ Clients do not redundantly write `privacyClass` as a second source of truth.
 backend/             FastAPI, SQLAlchemy 2, Alembic, PostgreSQL
 web/                 React, TypeScript, Vite
 android/             Kotlin, Jetpack Compose
-compose.yaml         Docker Compose for complete Self-Hosted checkouts
-compose.arcane.yaml  remote-Git builds for Arcane/remote workspaces
-deploy/              Docker Compose for the development database
+compose.yaml         the single Docker Compose manifest for all supported profiles
+deploy/              deployment environment templates and PostgreSQL init data
 docs/                architecture, security, Privacy model, dependencies
 specification/       product specification as the binding requirement
 tools/               helper scripts
@@ -132,8 +131,11 @@ false sense of confidence rather than equivalent coverage.
 
 ### Backend
 
+The development database uses the `dev-db` profile of the canonical
+`compose.yaml`:
+
 ```bash
-docker compose -f deploy/docker-compose.dev.yml up -d
+docker compose --profile dev-db up -d dev-postgres
 python -m pip install uv==0.12.5
 cd backend && uv sync --frozen
 uv run alembic upgrade head
@@ -150,9 +152,10 @@ npm run dev
 ### Tests
 
 Integration tests run against a dedicated `sidebyside_test` database created
-by `deploy/docker-compose.dev.yml` on first startup. The test fixture creates
-its own schema there and removes it again at the end — running that lifecycle
-against the development database would be data loss, not a test run.
+by `deploy/postgres-init/01-create-test-db.sql` when the `dev-db` profile starts
+with an empty volume. The test fixture creates its own schema there and removes
+it again at the end — running that lifecycle against the development database
+would be data loss, not a test run.
 
 ```bash
 export SBS_TEST_DATABASE_URL=postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside_test
@@ -171,7 +174,7 @@ If the database volume predates the initialization script,
 only for an empty data directory. Create it once manually:
 
 ```bash
-docker compose -f deploy/docker-compose.dev.yml exec postgres \
+docker compose --profile dev-db exec dev-postgres \
   createdb -U sidebyside sidebyside_test
 ```
 
@@ -184,8 +187,8 @@ schema of the actual application.
 
 ## Self-Hosted
 
-For a complete repository checkout, `compose.yaml` remains the normal entry
-point:
+SideBySide supports exactly one Docker Compose manifest: root `compose.yaml`.
+`.env.example` selects the `self-hosted` profile for a normal complete checkout:
 
 ```bash
 cp .env.example .env    # then fill in the required values
@@ -197,12 +200,12 @@ is deliberately restricted to the local host. Access from a LAN or the
 Internet requires an HTTPS reverse proxy; the API must not be published
 directly on all interfaces for that purpose.
 
-Management surfaces such as **Arcane**, whose project workspace does not
-contain the complete repository checkout, use `compose.arcane.yaml` instead.
-This variant builds `backend` and `web` directly from the configured Git
-repository and therefore does not require local `./backend` or `./web`
-directories in the workspace. Setup, private repositories, and Release refs
-are documented in [docs/ARCANE.md](docs/ARCANE.md).
+Management surfaces such as **Arcane** use the same `compose.yaml` and
+`self-hosted` profile. When the Arcane workspace does not contain a full
+checkout, Backend and Web build contexts are configured as Git/BuildKit URLs
+through environment values rather than through another Compose file. Setup,
+private repositories, and Release refs are documented in
+[docs/ARCANE.md](docs/ARCANE.md).
 
 The `migrate` service upgrades the schema once before `api` and `worker`
 start. The application does not migrate itself; otherwise two starting API
