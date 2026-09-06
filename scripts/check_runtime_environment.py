@@ -17,7 +17,12 @@ CRITICAL_RUNTIME_KEYS = (
     "SBS_PUBLIC_BASE_URL",
     "SBS_CURSOR_SIGNING_KEY",
 )
-DOTENV_AUTHORITATIVE_KEYS = ("SBS_ACCOUNT_DELETION_INSTANCE_ID",)
+DOTENV_AUTHORITATIVE_KEYS = (
+    "SBS_ACCOUNT_DELETION_INSTANCE_ID",
+    "SBS_ENVIRONMENT",
+    "SBS_PUBLIC_BASE_URL",
+    "SBS_CURSOR_SIGNING_KEY",
+)
 PROFILE_RUNTIME_SERVICES = {
     "self-hosted": frozenset({"api", "worker", "demo-init"}),
     "cloud": frozenset({"cloud-api", "cloud-worker"}),
@@ -93,11 +98,21 @@ def check_dotenv_to_rendered(
 ) -> list[str]:
     problems: list[str] = []
 
-    if dotenv.get("SBS_ENVIRONMENT") == "production" and not dotenv.get(
-        "SBS_ACCOUNT_DELETION_INSTANCE_ID"
-    ):
+    dotenv_is_production = dotenv.get("SBS_ENVIRONMENT") == "production"
+    rendered_is_production = any(
+        environment.get("SBS_ENVIRONMENT") == "production" for environment in rendered.values()
+    )
+    if dotenv_is_production and not dotenv.get("SBS_ACCOUNT_DELETION_INSTANCE_ID"):
         problems.append(
             "production env file must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID"
+        )
+    if rendered_is_production and any(
+        not environment.get("SBS_ACCOUNT_DELETION_INSTANCE_ID")
+        for environment in rendered.values()
+        if environment.get("SBS_ENVIRONMENT") == "production"
+    ):
+        problems.append(
+            "rendered Production runtime must set non-empty SBS_ACCOUNT_DELETION_INSTANCE_ID"
         )
 
     for key in DOTENV_AUTHORITATIVE_KEYS:
