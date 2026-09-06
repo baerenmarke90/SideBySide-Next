@@ -15,7 +15,7 @@ from sidebyside.observability.formatting import configure_logging
 
 
 @pytest.fixture
-def configured_log_stream(monkeypatch):  # type: ignore[no-untyped-def]
+def configured_log_stream():  # type: ignore[no-untyped-def]
     """Capture the real configured logging pipeline without leaking global state."""
     root_logger = logging.getLogger()
     mail_logger = logging.getLogger("sidebyside.mail.log")
@@ -28,10 +28,13 @@ def configured_log_stream(monkeypatch):  # type: ignore[no-untyped-def]
     original_noisy_levels = {name: logging.getLogger(name).level for name in noisy_loggers}
 
     stream = io.StringIO()
-    monkeypatch.setattr("sidebyside.observability.formatting.sys.stdout", stream)
 
     def configure(settings):  # type: ignore[no-untyped-def]
         configure_logging(settings)
+        for logger in (root_logger, mail_logger):
+            for handler in logger.handlers:
+                if isinstance(handler, logging.StreamHandler):
+                    handler.setStream(stream)
         return stream
 
     yield configure
