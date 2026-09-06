@@ -418,6 +418,26 @@ class TestSearchRequestContract:
         assert secret not in response.text
         assert secret not in caplog.text
 
+    def test_successful_query_never_reaches_access_or_application_logs(
+        self, client, session, couple, caplog
+    ) -> None:  # type: ignore[no-untyped-def]
+        # A valid (200) Search request is the common case, and the one most
+        # likely to actually contain OWNER_ONLY-derived text: unlike the
+        # rejected-query test above, this one drives the request through the
+        # real ASGI middleware stack (RequestLoggingMiddleware included), not
+        # only the application's own error handling.
+        import logging
+
+        _seed_all_targets(session, couple)
+        canary = "private-heart-moment-canary-" + "y" * 40
+
+        with caplog.at_level(logging.INFO, logger="sidebyside.access"):
+            response = _search(client, couple, q=canary)
+
+        assert response.status_code == 200
+        assert canary not in response.text
+        assert canary not in caplog.text
+
     def test_response_is_not_cacheable(self, client, session, couple) -> None:  # type: ignore[no-untyped-def]
         _seed_all_targets(session, couple)
         response = _search(client, couple)
