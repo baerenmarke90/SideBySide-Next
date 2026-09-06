@@ -5,18 +5,26 @@ on:
     paths:
       - compose.yaml
       - .env.example
+      - deploy/persistent-development.env.example
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
+      - backend/src/sidebyside/identity/deletion_bootstrap.py
+      - docs/ACCOUNT-DELETION-SELF-HOSTED.md
       - docs/ARCANE.md
+      - docs/SELF-HOSTING.md
       - .github/workflows/runtime-environment-drift-guard.yml
   push:
     branches: [main]
     paths:
       - compose.yaml
       - .env.example
+      - deploy/persistent-development.env.example
       - scripts/check_runtime_environment.py
       - scripts/test_check_runtime_environment.py
+      - backend/src/sidebyside/identity/deletion_bootstrap.py
+      - docs/ACCOUNT-DELETION-SELF-HOSTED.md
       - docs/ARCANE.md
+      - docs/SELF-HOSTING.md
       - .github/workflows/runtime-environment-drift-guard.yml
   workflow_dispatch:
 
@@ -37,8 +45,35 @@ jobs:
           set -euo pipefail
           python3 -m py_compile \
             scripts/check_runtime_environment.py \
-            scripts/test_check_runtime_environment.py
+            scripts/test_check_runtime_environment.py \
+            backend/src/sidebyside/identity/deletion_bootstrap.py
           python3 -m unittest scripts.test_check_runtime_environment
+
+      - name: Account-deletion bootstrap guidance stays canonical
+        run: |
+          set -euo pipefail
+          operator_surfaces=(
+            .env.example
+            deploy/persistent-development.env.example
+            docs/SELF-HOSTING.md
+            docs/ACCOUNT-DELETION-SELF-HOSTED.md
+            docs/ARCANE.md
+          )
+
+          if grep -nE 'uuid\.uuid4|print\(uuid\.uuid4\(\)\)' "${operator_surfaces[@]}"; then
+            echo 'Standalone UUID generation must not be documented for the Account-deletion authority.'
+            exit 1
+          fi
+
+          for path in "${operator_surfaces[@]}"; do
+            grep -Fq 'sidebyside.identity.deletion_bootstrap' "$path" || {
+              echo "$path does not point operators at the explicit deletion-authority bootstrap."
+              exit 1
+            }
+          done
+
+          grep -Fq -- '--confirm-new-installation' docs/ACCOUNT-DELETION-SELF-HOSTED.md
+          grep -Fq 'recovery failure' docs/ACCOUNT-DELETION-SELF-HOSTED.md
 
       - name: Arcane-style deletion authority render cannot drift from dotenv
         run: |
