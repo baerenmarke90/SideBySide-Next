@@ -36,6 +36,7 @@ from sidebyside.heart_moments.models import HeartMoment
 from sidebyside.identity import effects as account_effects
 from sidebyside.memories.models import Memory
 from sidebyside.milestones.models import Milestone
+from sidebyside.observability import safe_exception_summary
 from sidebyside.outbox import service as outbox_service
 from sidebyside.outbox.models import OutboxEvent
 from sidebyside.places.models import Place
@@ -117,7 +118,12 @@ def project_pending(session: Session, *, limit: int = 50) -> int:
             with session.begin_nested():
                 project_event(session, event)
         except Exception as exc:
-            outbox_service.mark_failed(event, f"{type(exc).__name__}: {exc}")
+            # Same rationale as jobs/worker.py: an unexpected projection
+            # failure's own text is not developer-authored and must not be
+            # persisted verbatim (#680, extended to Outbox per its own
+            # follow-up comment; #695 tracks whether Outbox needs anything
+            # beyond this).
+            outbox_service.mark_failed(event, safe_exception_summary(exc))
         else:
             outbox_service.mark_processed(event)
     return len(events)

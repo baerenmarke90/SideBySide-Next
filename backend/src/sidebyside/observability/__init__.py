@@ -18,6 +18,12 @@ from sidebyside.observability.context import (
     set_space_id,
     space_id_var,
 )
+from sidebyside.observability.diagnostics import (
+    UNKNOWN_CODE,
+    safe_exception_summary,
+    safe_traceback_text,
+    sanitize_error_code,
+)
 from sidebyside.observability.formatting import (
     ConsoleLogFormatter,
     JsonLogFormatter,
@@ -38,6 +44,7 @@ from sidebyside.observability.redaction import (
 
 __all__ = [
     "REDACTED",
+    "UNKNOWN_CODE",
     "ConsoleLogFormatter",
     "JsonLogFormatter",
     "RedactingFilter",
@@ -53,6 +60,9 @@ __all__ = [
     "get_space_id",
     "request_id_var",
     "reset_context",
+    "safe_exception_summary",
+    "safe_traceback_text",
+    "sanitize_error_code",
     "scrub_data",
     "scrub_headers",
     "scrub_message",
