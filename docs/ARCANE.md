@@ -65,14 +65,18 @@ Arcane/process override must be treated as deployment failure; do not weaken API
 startup or re-bootstrap the deletion journal to work around it.
 
 From a complete SideBySide checkout, the shared guard can verify the rendered
-Compose contract before a deployment:
+Compose contract before a deployment. Point it at the Arcane project's actual
+Compose directory and Compose project name:
 
 ```bash
+ARCANE_PROJECT_DIR=/path/to/arcane-project
+ARCANE_COMPOSE_PROJECT=sidebyside-production
+
 python3 scripts/check_runtime_environment.py \
-  --env-file /opt/arcane-data/projects/sbs/.env \
-  --compose-file /opt/arcane-data/projects/sbs/compose.yaml \
+  --env-file "$ARCANE_PROJECT_DIR/.env" \
+  --compose-file "$ARCANE_PROJECT_DIR/compose.yaml" \
   --profile self-hosted \
-  --project-name sbs
+  --project-name "$ARCANE_COMPOSE_PROJECT"
 ```
 
 The check fails without printing secret values when a non-empty deletion-authority
@@ -89,10 +93,10 @@ After Arcane has recreated the stack, run the same guard with runtime inspection
 
 ```bash
 python3 scripts/check_runtime_environment.py \
-  --env-file /opt/arcane-data/projects/sbs/.env \
-  --compose-file /opt/arcane-data/projects/sbs/compose.yaml \
+  --env-file "$ARCANE_PROJECT_DIR/.env" \
+  --compose-file "$ARCANE_PROJECT_DIR/compose.yaml" \
   --profile self-hosted \
-  --project-name sbs \
+  --project-name "$ARCANE_COMPOSE_PROJECT" \
   --check-running
 ```
 
@@ -105,14 +109,12 @@ check for the deletion authority can be run directly inside the Arcane project
 directory without printing the UUID:
 
 ```bash
-cd /opt/arcane-data/projects/sbs
+cd /path/to/arcane-project
 
 expected=$(grep '^SBS_ACCOUNT_DELETION_INSTANCE_ID=' .env | cut -d= -f2-)
 rendered=$(docker compose --profile self-hosted --env-file .env config --format json \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["api"]["environment"].get("SBS_ACCOUNT_DELETION_INSTANCE_ID", ""))')
-container=$(docker ps -aq \
-  --filter label=com.docker.compose.project=sbs \
-  --filter label=com.docker.compose.service=api | head -n1)
+container=$(docker compose --profile self-hosted --env-file .env ps -aq api | head -n1)
 running=$(docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' \
   | sed -n 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=//p')
 
