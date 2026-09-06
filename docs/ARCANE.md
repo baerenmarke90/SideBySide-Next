@@ -52,6 +52,84 @@ The API exposes `SBS_BUILD_REVISION` through `X-SideBySide-Revision`; the Web
 image exposes it through `/.well-known/sidebyside-revision`. Release smoke
 requires both values to equal the expected commit.
 
+## Runtime environment and container recreation
+
+Compose interpolation has an important precedence rule: an explicitly defined
+process variable, including an explicitly empty value, overrides the value in the
+project `.env` file. Arcane project variables therefore must not contain stale or
+blank duplicates of non-empty runtime settings from `.env`.
+
+`SBS_ACCOUNT_DELETION_INSTANCE_ID` is recovery-critical. The Production `.env`
+file is the operator-backed source for that stable authority identifier. A blank
+Arcane/process override must be treated as deployment failure; do not weaken API
+startup or re-bootstrap the deletion journal to work around it.
+
+From a complete SideBySide checkout, the shared guard can verify the rendered
+Compose contract before a deployment:
+
+```bash
+python3 scripts/check_runtime_environment.py \
+  --env-file /opt/arcane-data/projects/sbs/.env \
+  --compose-file /opt/arcane-data/projects/sbs/compose.yaml \
+  --profile self-hosted \
+  --project-name sbs
+```
+
+The check fails without printing secret values when a non-empty deletion-authority
+ID in `.env` is rendered differently, or when Production omits the authority.
+
+After changing any runtime environment setting, **recreate the affected
+containers**. In Arcane use the deployment option that force-recreates containers;
+a plain Restart is not sufficient because Docker fixes container environment at
+container creation time. Do **not** enable any option that recreates or deletes
+named volumes. In particular, `deletion_journal_data`, `postgres_data`, and
+`media_data` must survive a normal configuration update.
+
+After Arcane has recreated the stack, run the same guard with runtime inspection:
+
+```bash
+python3 scripts/check_runtime_environment.py \
+  --env-file /opt/arcane-data/projects/sbs/.env \
+  --compose-file /opt/arcane-data/projects/sbs/compose.yaml \
+  --profile self-hosted \
+  --project-name sbs \
+  --check-running
+```
+
+This compares selected critical settings from the canonical Compose render with
+the resulting `api`, `worker`, and other consuming Compose containers. It reports
+only variable names/service names, never the compared values.
+
+If a full checkout is not available on the Docker host, the minimum incident
+check for the deletion authority can be run directly inside the Arcane project
+directory without printing the UUID:
+
+```bash
+cd /opt/arcane-data/projects/sbs
+
+expected=$(grep '^SBS_ACCOUNT_DELETION_INSTANCE_ID=' .env | cut -d= -f2-)
+rendered=$(docker compose --profile self-hosted --env-file .env config --format json \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["api"]["environment"].get("SBS_ACCOUNT_DELETION_INSTANCE_ID", ""))')
+container=$(docker ps -aq \
+  --filter label=com.docker.compose.project=sbs \
+  --filter label=com.docker.compose.service=api | head -n1)
+running=$(docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' \
+  | sed -n 's/^SBS_ACCOUNT_DELETION_INSTANCE_ID=//p')
+
+test -n "$expected" && test "$expected" = "$rendered" && test "$rendered" = "$running"
+```
+
+Interpret failures as follows:
+
+- `.env` differs from the rendered Compose value: inspect Arcane/project process
+  environment for an override, especially an explicitly blank duplicate;
+- rendered Compose differs from the container: the container is stale or was
+  created from different deployment environment; correct the project environment
+  and force-recreate the affected containers;
+- journal validation still fails with matching rendered/runtime values: stop and
+  follow the Account-deletion recovery procedure. Never synthesize a replacement
+  journal for an established authority.
+
 ## Persistent Development in Arcane
 
 A long-lived Development instance is a separate Arcane project, not a mode of
