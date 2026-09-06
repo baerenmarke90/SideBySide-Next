@@ -2,31 +2,45 @@
 
 **Status:** binding operational supplement to `SELF-HOSTED-RECOVERY.md`
 
-**Related:** #520, #644, #190
+**Related:** #520, #644, #190, #666
 
 SideBySide Account deletion uses a forward-only deletion journal outside the
 point-in-time PostgreSQL backup. That separation is intentional: restoring a
 database backup created before an accepted deletion must never resurrect the
 Account, its credentials, sessions, or `OWNER_ONLY` data.
 
-## 1. Two independent identities
+## 1. Bootstrap the authority exactly once
 
-A normal Self-Hosted instance needs one stable deletion-authority UUID:
+A normal Self-Hosted installation needs one stable deletion-authority UUID and
+one matching forward journal. They are created together by an explicit
+first-install step, **before the API is started for the first time**.
+
+Do not pre-generate `SBS_ACCOUNT_DELETION_INSTANCE_ID`. Leave it unset and run:
 
 ```bash
-python3 -c 'import uuid; print(uuid.uuid4())'
+docker compose --env-file .env -f compose.yaml run --rm --no-deps api \
+  python -m sidebyside.identity.deletion_bootstrap \
+  --confirm-new-installation
 ```
 
-Store the resulting value as:
+The command creates the empty journal in the mounted `deletion_journal_data`
+volume and prints exactly one new value:
 
 ```dotenv
 SBS_ACCOUNT_DELETION_INSTANCE_ID=<stable-instance-uuid>
 ```
 
-Generate it once per installation. Keep it stable across application upgrades,
-container recreation, and database/media restores. Development and Production
-must use different values. Do not derive it from an Account ID, Space ID,
-database credential, hostname, or another secret.
+Store that value in `.env` and in the protected operator configuration backup
+before normal startup. Keep it stable across application upgrades, container
+recreation, and database/media restores. Development and Production must use
+different values. Do not derive it from an Account ID, Space ID, database
+credential, hostname, or another secret.
+
+The bootstrap command refuses to run when an instance ID is already configured or
+when a journal already exists. This is the control-plane distinction between a
+brand-new installation and an established deletion authority. If an established
+instance loses its journal, **do not unset the instance ID and do not bootstrap a
+replacement**. Recover the newest independently protected journal instead.
 
 The UUID is not a credential, but it is part of the recovery identity and belongs
 in the protected operator configuration backup. A journal from another instance
@@ -62,7 +76,7 @@ journal. Do not replace a newer journal with an older backup. Retain the forward
 journal until every database/media backup from before the represented deletions
 has expired and can no longer be restored.
 
-## 3. Live acceptance ordering
+## 3. Normal startup only validates and replays
 
 The public self-service API follows one fixed order:
 
@@ -77,9 +91,20 @@ Android remaining open.
 
 There is an unavoidable process-crash boundary between the filesystem fsync and
 the PostgreSQL commit. API startup therefore validates/replays the configured
-journal before normal traffic is served. If the journal exists but the matching
-instance UUID is unavailable, startup fails closed rather than serving stale
-credentials.
+journal before normal traffic is served. Normal runtime **never** creates the
+journal or its parent directory.
+
+Fail-closed cases include:
+
+- `SBS_ACCOUNT_DELETION_INSTANCE_ID` is configured but the expected journal is
+  missing;
+- the journal is corrupt, truncated, unreadable, or belongs to another instance;
+- a journal exists but the matching instance UUID is unavailable;
+- Production starts without an explicitly bootstrapped deletion authority.
+
+Development/test may omit the authority while Account deletion is not being used.
+Production may not. Demo Accounts cannot use self-service deletion and remain the
+separate exception described in §7.
 
 ## 4. Backup rules
 
@@ -131,6 +156,11 @@ The command:
 - validates the complete forward journal and exact instance UUID;
 - replays deletion convergence before normal traffic may resume;
 - leaves writers stopped so the rest of the recovery verification can finish.
+
+A missing journal after restore is a recovery failure, not a bootstrap condition.
+Never run `deletion_bootstrap` to make that failure disappear. The restored API
+must remain stopped until the newest protected journal and its matching stable
+instance ID have been recovered and validated.
 
 Only after successful reconciliation, readiness/revision checks, and the remaining
 `SELF-HOSTED-RECOVERY.md` acceptance steps may API and worker resume.
