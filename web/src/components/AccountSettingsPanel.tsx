@@ -8,8 +8,15 @@ import {
 } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AccountApi } from '../api/generated/apis/AccountApi';
+import type { CapabilitiesView } from '../api/generated/models/CapabilitiesView';
 import { AccountDeletionRequestConfirmationEnum } from '../api/generated/models/AccountDeletionRequest';
 import { Configuration } from '../api/generated/runtime';
+import {
+  authenticateRecentOidc,
+  authenticateRecentPasskey,
+  authenticateRecentPassword,
+  loadRecentAuthenticationCapabilities,
+} from '../client/recentAuthentication';
 import { normalizeClientError } from '../client/problemDetails';
 import { clearProductReadCache } from '../client/productReadCache';
 import { clearStoredSession } from '../client/sessionPersistence';
@@ -17,7 +24,11 @@ import { useTranslation } from '../i18n';
 import { ProblemState } from './ProblemState';
 import './AccountSettingsPanel.css';
 
-type DeletionStep = 'consequences' | 'confirm' | null;
+type DeletionStep = 'consequences' | 'reauthenticate' | 'confirm' | null;
+type RecentAuthenticationMethod =
+  | { kind: 'password'; password: string }
+  | { kind: 'passkey' }
+  | { kind: 'oidc'; connectionId: string };
 
 export interface AccountSettingsPanelProps {
   apiBaseUrl: string;
@@ -37,6 +48,10 @@ export function AccountSettingsPanel({
   const queryClient = useQueryClient();
   const [step, setStep] = useState<DeletionStep>(null);
   const [confirmation, setConfirmation] = useState('');
+  const [password, setPassword] = useState('');
+  const [capabilities, setCapabilities] = useState<CapabilitiesView | null>(
+    null,
+  );
   const dialogRef = useRef<HTMLElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -51,7 +66,7 @@ export function AccountSettingsPanel({
     [accessToken, apiBaseUrl],
   );
 
-  const mutation = useMutation({
+  const deletionMutation = useMutation({
     mutationFn: async () => {
       try {
         return await accountApi.deleteOwnAccountApiV1AccountDeletionPost({
@@ -66,6 +81,8 @@ export function AccountSettingsPanel({
     onSuccess: async () => {
       setStep(null);
       setConfirmation('');
+      setPassword('');
+      setCapabilities(null);
 
       if (onDeletionAccepted) {
         await onDeletionAccepted();
@@ -86,6 +103,43 @@ export function AccountSettingsPanel({
     },
   });
 
+  const capabilitiesMutation = useMutation({
+    mutationFn: () =>
+      loadRecentAuthenticationCapabilities(apiBaseUrl, accessToken),
+    onSuccess: (available) => setCapabilities(available),
+  });
+
+  const recentAuthenticationMutation = useMutation({
+    mutationFn: async (method: RecentAuthenticationMethod) => {
+      if (method.kind === 'password') {
+        return authenticateRecentPassword(
+          apiBaseUrl,
+          accessToken,
+          method.password,
+        );
+      }
+      if (method.kind === 'passkey') {
+        return authenticateRecentPasskey(apiBaseUrl, accessToken);
+      }
+      return authenticateRecentOidc(
+        apiBaseUrl,
+        accessToken,
+        method.connectionId,
+      );
+    },
+    onSuccess: () => {
+      setPassword('');
+      setConfirmation('');
+      deletionMutation.reset();
+      setStep('confirm');
+    },
+  });
+
+  const busy =
+    deletionMutation.isPending ||
+    capabilitiesMutation.isPending ||
+    recentAuthenticationMutation.isPending;
+
   useEffect(() => {
     if (!step) return;
     const previousFocus =
@@ -102,21 +156,29 @@ export function AccountSettingsPanel({
     };
   }, [step]);
 
+  function resetRecentAuthentication() {
+    setPassword('');
+    setCapabilities(null);
+    capabilitiesMutation.reset();
+    recentAuthenticationMutation.reset();
+  }
+
   function closeDialog() {
-    if (mutation.isPending) return;
+    if (busy) return;
     setStep(null);
     setConfirmation('');
-    mutation.reset();
+    resetRecentAuthentication();
+    deletionMutation.reset();
   }
 
   function goToDataExport() {
-    if (mutation.isPending) return;
+    if (busy) return;
     closeDialog();
     window.location.hash = 'settings-data';
   }
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === 'Escape' && !mutation.isPending) {
+    if (event.key === 'Escape' && !busy) {
       event.preventDefault();
       closeDialog();
       return;
@@ -141,15 +203,40 @@ export function AccountSettingsPanel({
     }
   }
 
+  function beginRecentAuthentication() {
+    setConfirmation('');
+    resetRecentAuthentication();
+    deletionMutation.reset();
+    setStep('reauthenticate');
+    capabilitiesMutation.mutate();
+  }
+
+  function submitPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!password || recentAuthenticationMutation.isPending) return;
+    recentAuthenticationMutation.mutate({ kind: 'password', password });
+  }
+
   function submitDeletion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const phrase = t('accountSettings.confirmPhrase');
-    if (confirmation !== phrase || mutation.isPending || demoMode) return;
-    mutation.mutate();
+    if (
+      confirmation !== phrase ||
+      deletionMutation.isPending ||
+      demoMode
+    )
+      return;
+    deletionMutation.mutate();
   }
 
   const confirmationPhrase = t('accountSettings.confirmPhrase');
   const confirmationMatches = confirmation === confirmationPhrase;
+  const hasRecentAuthenticationMethod = Boolean(
+    capabilities &&
+      (capabilities.localPassword ||
+        capabilities.passkey ||
+        capabilities.oidcConnections.length > 0),
+  );
 
   return (
     <>
@@ -181,7 +268,8 @@ export function AccountSettingsPanel({
               type="button"
               className="account-delete-button"
               onClick={() => {
-                mutation.reset();
+                deletionMutation.reset();
+                resetRecentAuthentication();
                 setStep('consequences');
               }}
             >
@@ -242,16 +330,135 @@ export function AccountSettingsPanel({
                   <button
                     type="button"
                     className="account-delete-button"
-                    onClick={() => {
-                      setConfirmation('');
-                      mutation.reset();
-                      setStep('confirm');
-                    }}
+                    onClick={beginRecentAuthentication}
                   >
                     {t('accountSettings.continueAction')}
                   </button>
                 </div>
               </>
+            ) : step === 'reauthenticate' ? (
+              <div className="form-grid">
+                <div className="account-deletion-dialog-head">
+                  <div>
+                    <p className="eyebrow">
+                      {t('accountSettings.reauthEyebrow')}
+                    </p>
+                    <h2 id="account-deletion-dialog-title">
+                      {t('accountSettings.reauthTitle')}
+                    </h2>
+                  </div>
+                </div>
+                <p id="account-deletion-dialog-description">
+                  {t('accountSettings.reauthIntro')}
+                </p>
+
+                {capabilitiesMutation.isPending ? (
+                  <p className="status" role="status" aria-live="polite">
+                    {t('accountSettings.reauthLoading')}
+                  </p>
+                ) : null}
+                {capabilitiesMutation.error ? (
+                  <ProblemState error={capabilitiesMutation.error} />
+                ) : null}
+
+                {capabilities?.localPassword ? (
+                  <form onSubmit={submitPassword} className="form-grid">
+                    <div className="field-group">
+                      <label htmlFor="account-deletion-password">
+                        {t('accountSettings.reauthPasswordLabel')}
+                      </label>
+                      <input
+                        id="account-deletion-password"
+                        type="password"
+                        value={password}
+                        onChange={(event) =>
+                          setPassword(event.currentTarget.value)
+                        }
+                        autoComplete="current-password"
+                        disabled={recentAuthenticationMutation.isPending}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={
+                        !password || recentAuthenticationMutation.isPending
+                      }
+                    >
+                      {t('accountSettings.reauthPasswordAction')}
+                    </button>
+                  </form>
+                ) : null}
+
+                {capabilities?.passkey ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      recentAuthenticationMutation.mutate({ kind: 'passkey' })
+                    }
+                    disabled={recentAuthenticationMutation.isPending}
+                  >
+                    {t('accountSettings.reauthPasskeyAction')}
+                  </button>
+                ) : null}
+
+                {capabilities?.oidcConnections.map((connectionId) => (
+                  <button
+                    key={connectionId}
+                    type="button"
+                    onClick={() =>
+                      recentAuthenticationMutation.mutate({
+                        kind: 'oidc',
+                        connectionId,
+                      })
+                    }
+                    disabled={recentAuthenticationMutation.isPending}
+                  >
+                    {t('accountSettings.reauthOidcAction', {
+                      provider: connectionId,
+                    })}
+                  </button>
+                ))}
+
+                {capabilities && !hasRecentAuthenticationMethod ? (
+                  <div className="inline-message" role="alert">
+                    <strong>{t('accountSettings.reauthUnavailableTitle')}</strong>
+                    <span>{t('accountSettings.reauthUnavailableBody')}</span>
+                  </div>
+                ) : null}
+
+                {recentAuthenticationMutation.error ? (
+                  <ProblemState error={recentAuthenticationMutation.error} />
+                ) : null}
+                {recentAuthenticationMutation.isPending ? (
+                  <p className="status" role="status" aria-live="polite">
+                    {t('accountSettings.reauthPending')}
+                  </p>
+                ) : null}
+
+                <div className="form-actions account-deletion-actions">
+                  <button
+                    ref={cancelButtonRef}
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      if (busy) return;
+                      resetRecentAuthentication();
+                      setStep('consequences');
+                    }}
+                    disabled={busy}
+                  >
+                    {t('accountSettings.backAction')}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={closeDialog}
+                    disabled={busy}
+                  >
+                    {t('accountSettings.cancelAction')}
+                  </button>
+                </div>
+              </div>
             ) : (
               <form onSubmit={submitDeletion} className="form-grid">
                 <div className="account-deletion-dialog-head">
@@ -287,7 +494,7 @@ export function AccountSettingsPanel({
                     }
                     autoComplete="off"
                     spellCheck={false}
-                    disabled={mutation.isPending}
+                    disabled={deletionMutation.isPending}
                     aria-describedby="account-deletion-confirmation-help"
                   />
                   <p
@@ -298,10 +505,10 @@ export function AccountSettingsPanel({
                   </p>
                 </div>
 
-                {mutation.error ? (
-                  <ProblemState error={mutation.error} />
+                {deletionMutation.error ? (
+                  <ProblemState error={deletionMutation.error} />
                 ) : null}
-                {mutation.isPending ? (
+                {deletionMutation.isPending ? (
                   <p className="status" role="status" aria-live="polite">
                     {t('accountSettings.submitting')}
                   </p>
@@ -313,12 +520,13 @@ export function AccountSettingsPanel({
                     type="button"
                     className="secondary"
                     onClick={() => {
-                      if (mutation.isPending) return;
+                      if (deletionMutation.isPending) return;
                       setConfirmation('');
-                      mutation.reset();
+                      deletionMutation.reset();
+                      resetRecentAuthentication();
                       setStep('consequences');
                     }}
-                    disabled={mutation.isPending}
+                    disabled={deletionMutation.isPending}
                   >
                     {t('accountSettings.backAction')}
                   </button>
@@ -326,16 +534,18 @@ export function AccountSettingsPanel({
                     type="button"
                     className="secondary"
                     onClick={closeDialog}
-                    disabled={mutation.isPending}
+                    disabled={deletionMutation.isPending}
                   >
                     {t('accountSettings.cancelAction')}
                   </button>
                   <button
                     type="submit"
                     className="account-delete-button"
-                    disabled={!confirmationMatches || mutation.isPending}
+                    disabled={
+                      !confirmationMatches || deletionMutation.isPending
+                    }
                   >
-                    {mutation.isPending
+                    {deletionMutation.isPending
                       ? t('accountSettings.submitting')
                       : t('accountSettings.submitAction')}
                   </button>
