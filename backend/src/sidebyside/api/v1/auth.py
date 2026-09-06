@@ -16,15 +16,7 @@ from fastapi import APIRouter, Depends, Path, Request, Response, status
 from sidebyside.api.deps import CurrentAccount, CurrentSession, DbSession
 from sidebyside.api.errors import problem_responses
 from sidebyside.api.schema import ApiModel
-from sidebyside.auth import (
-    cloud,
-    local,
-    oidc,
-    passkey_abuse,
-    passkeys,
-    recent_auth,
-    sessions,
-)
+from sidebyside.auth import cloud, local, oidc, passkey_abuse, passkeys, sessions
 from sidebyside.auth.local import SignedIn
 from sidebyside.auth.policy import AuthPolicy
 from sidebyside.config import get_settings
@@ -33,7 +25,6 @@ from sidebyside.mail import MailSender, sender
 router = APIRouter(tags=["auth"])
 
 MAX_DEVICE_NAME = 120
-ACCOUNT_DELETION_PURPOSE = recent_auth.RecentAuthenticationPurpose.ACCOUNT_DELETION
 
 Mail = Annotated[MailSender, Depends(sender)]
 """Mail delivery dependency.
@@ -100,10 +91,6 @@ class PasskeyAuthenticationRequest(ApiModel):
     platform: str = ""
 
 
-class PasskeyRecentAuthenticationRequest(ApiModel):
-    credential: dict[str, Any]
-
-
 class PasskeyView(ApiModel):
     id: UUID
     name: str
@@ -121,33 +108,10 @@ class OidcCallbackRequest(ApiModel):
     platform: str = ""
 
 
-class OidcRecentAuthenticationCallbackRequest(ApiModel):
-    code: str
-    state: str
-
-
 class OidcStartView(ApiModel):
     authorization_url: str
     state: str
     """The client retains state and sends it back on the callback."""
-
-
-class RecentAuthenticationPasswordRequest(ApiModel):
-    password: str
-
-
-class RecentAuthenticationCapabilitiesView(ApiModel):
-    local_password: bool
-    passkey: bool
-    oidc_connections: list[str]
-    expires_in_seconds: int
-
-
-class RecentAuthenticationView(ApiModel):
-    purpose: str
-    method: str
-    achieved_at: datetime
-    expires_at: datetime
 
 
 class RecoveryConsumeRequest(ApiModel):
@@ -183,17 +147,6 @@ def _view(result: SignedIn | cloud.SignedIn | oidc.SignedIn | passkeys.SignedIn)
             access_expires_at=result.tokens.access_expires_at,
             refresh_expires_at=result.tokens.refresh_expires_at,
         ),
-    )
-
-
-def _recent_authentication_view(
-    result: recent_auth.RecentAuthenticationResult,
-) -> RecentAuthenticationView:
-    return RecentAuthenticationView(
-        purpose=result.purpose.value,
-        method=result.method.value,
-        achieved_at=result.achieved_at,
-        expires_at=result.expires_at,
     )
 
 
@@ -257,7 +210,7 @@ def refresh(body: RefreshRequest, session: DbSession) -> TokenView:
         access_token=tokens.access_token,
         refresh_token=tokens.refresh_token,
         access_expires_at=tokens.access_expires_at,
-        refresh_expires_at=tokens.expires_at if hasattr(tokens, "expires_at") else tokens.refresh_expires_at,
+        refresh_expires_at=tokens.refresh_expires_at,
     )
 
 
@@ -521,148 +474,5 @@ def finish_passkey_authentication(
             credential=body.credential,
             device_name=body.device_name[:MAX_DEVICE_NAME],
             platform=body.platform,
-        )
-    )
-
-
-@router.get(
-    "/auth/recent-authentication/account-deletion",
-    response_model=RecentAuthenticationCapabilitiesView,
-    responses=problem_responses(401, 403),
-)
-def account_deletion_recent_authentication_capabilities(
-    account: CurrentAccount,
-    device_session: CurrentSession,
-    session: DbSession,
-    policy: AuthPolicy,
-) -> RecentAuthenticationCapabilitiesView:
-    """Describe usable step-up methods for this Account and current session."""
-    available = recent_auth.capabilities(session, account, device_session, policy)
-    return RecentAuthenticationCapabilitiesView(
-        local_password=available.local_password,
-        passkey=available.passkey,
-        oidc_connections=list(available.oidc_connections),
-        expires_in_seconds=int(recent_auth.RECENT_AUTH_LIFETIME.total_seconds()),
-    )
-
-
-@router.post(
-    "/auth/recent-authentication/account-deletion/password",
-    response_model=RecentAuthenticationView,
-    responses=problem_responses(401, 403, 429),
-)
-def authenticate_account_deletion_with_password(
-    body: RecentAuthenticationPasswordRequest,
-    account: CurrentAccount,
-    device_session: CurrentSession,
-    session: DbSession,
-    policy: AuthPolicy,
-) -> RecentAuthenticationView:
-    policy.ensure_local_password_allowed()
-    return _recent_authentication_view(
-        recent_auth.authenticate_password(
-            session,
-            account,
-            device_session,
-            password=body.password,
-            purpose=ACCOUNT_DELETION_PURPOSE,
-        )
-    )
-
-
-@router.post(
-    "/auth/recent-authentication/account-deletion/passkeys/start",
-    status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403, 422, 429),
-)
-def start_account_deletion_passkey_step_up(
-    request: Request,
-    account: CurrentAccount,
-    device_session: CurrentSession,
-    session: DbSession,
-    policy: AuthPolicy,
-) -> dict[str, Any]:
-    policy.ensure_passkey_allowed()
-    client_host = request.client.host if request.client is not None else None
-    passkey_abuse.reserve_authentication_start(session, client_host)
-    return passkeys.start_step_up(
-        session,
-        account,
-        device_session,
-        purpose=ACCOUNT_DELETION_PURPOSE,
-    )
-
-
-@router.post(
-    "/auth/recent-authentication/account-deletion/passkeys/finish",
-    response_model=RecentAuthenticationView,
-    responses=problem_responses(401, 403, 422),
-)
-def finish_account_deletion_passkey_step_up(
-    body: PasskeyRecentAuthenticationRequest,
-    account: CurrentAccount,
-    device_session: CurrentSession,
-    session: DbSession,
-    policy: AuthPolicy,
-) -> RecentAuthenticationView:
-    policy.ensure_passkey_allowed()
-    return _recent_authentication_view(
-        passkeys.finish_step_up(
-            session,
-            account,
-            device_session,
-            purpose=ACCOUNT_DELETION_PURPOSE,
-            credential=body.credential,
-        )
-    )
-
-
-@router.post(
-    "/auth/recent-authentication/account-deletion/oidc/{connectionId}/start",
-    response_model=OidcStartView,
-    status_code=status.HTTP_201_CREATED,
-    responses=problem_responses(401, 403, 422, 429),
-)
-def start_account_deletion_oidc_step_up(
-    account: CurrentAccount,
-    device_session: CurrentSession,
-    session: DbSession,
-    policy: AuthPolicy,
-    connection_id: Annotated[str, Path(alias="connectionId")],
-) -> OidcStartView:
-    policy.ensure_oidc_allowed()
-    started = oidc.start_step_up(
-        session,
-        connection_id,
-        account,
-        device_session,
-        purpose=ACCOUNT_DELETION_PURPOSE,
-    )
-    return OidcStartView(authorization_url=started.authorization_url, state=started.state)
-
-
-@router.post(
-    "/auth/recent-authentication/account-deletion/oidc/{connectionId}/callback",
-    response_model=RecentAuthenticationView,
-    responses=problem_responses(401, 403, 422),
-)
-def complete_account_deletion_oidc_step_up(
-    body: OidcRecentAuthenticationCallbackRequest,
-    account: CurrentAccount,
-    device_session: CurrentSession,
-    session: DbSession,
-    policy: AuthPolicy,
-    connection_id: Annotated[str, Path(alias="connectionId")],
-) -> RecentAuthenticationView:
-    policy.ensure_oidc_allowed()
-    return _recent_authentication_view(
-        oidc.complete_step_up(
-            session,
-            connection_id,
-            account,
-            device_session,
-            purpose=ACCOUNT_DELETION_PURPOSE,
-            code=body.code,
-            state=body.state,
         )
     )

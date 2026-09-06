@@ -10,14 +10,11 @@ import pytest
 from sqlalchemy import func, select
 
 from sidebyside.auth import passwords, recent_auth, sessions
+from sidebyside.auth.recent_auth_models import RecentAuthenticationGrant
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ForbiddenError, UnauthenticatedError
 from sidebyside.identity import service as accounts
-from sidebyside.identity.models import (
-    Account,
-    DeviceSession,
-    RecentAuthenticationGrant,
-)
+from sidebyside.identity.models import Account, DeviceSession
 from tests.conftest import requires_database
 
 PASSWORD = "correct horse battery staple 667!"
@@ -35,10 +32,10 @@ def _create_local_account(maker, *, email: str, session_count: int = 1):  # type
         )
         created = [sessions.start_session(session, account) for _ in range(session_count)]
         account_id = account.id
-        device_session_ids = [device_session.id for device_session, _ in created]
+        session_ids = [device_session.id for device_session, _ in created]
         tokens = [issued for _, issued in created]
         session.commit()
-    return account_id, device_session_ids, tokens
+    return account_id, session_ids, tokens
 
 
 def _grant(maker, account_id, device_session_id):  # type: ignore[no-untyped-def]
@@ -80,16 +77,16 @@ class TestRecentAuthenticationBinding:
 
     def test_grant_is_concrete_session_bound(self, production_client) -> None:  # type: ignore[no-untyped-def]
         _, maker = production_client
-        account_id, device_sessions, _ = _create_local_account(
+        account_id, session_ids, _ = _create_local_account(
             maker,
             email="sessions@example.org",
             session_count=2,
         )
-        _grant(maker, account_id, device_sessions[0])
+        _grant(maker, account_id, session_ids[0])
 
         with maker() as session:
             account = session.get(Account, account_id)
-            second = session.get(DeviceSession, device_sessions[1])
+            second = session.get(DeviceSession, session_ids[1])
             assert account is not None and second is not None
             with pytest.raises(ForbiddenError) as rejected:
                 recent_auth.require_grant(session, account, second, purpose=PURPOSE)
@@ -100,11 +97,11 @@ class TestRecentAuthenticationBinding:
         production_client,
     ) -> None:
         _, maker = production_client
-        account_id, device_sessions, issued = _create_local_account(
+        account_id, session_ids, issued = _create_local_account(
             maker,
             email="rotation@example.org",
         )
-        _grant(maker, account_id, device_sessions[0])
+        _grant(maker, account_id, session_ids[0])
 
         with maker() as session:
             rotated = sessions.refresh_session(session, issued[0].refresh_token)
@@ -113,32 +110,33 @@ class TestRecentAuthenticationBinding:
 
         with maker() as session:
             account = session.get(Account, account_id)
-            device_session = session.get(DeviceSession, device_sessions[0])
+            device_session = session.get(DeviceSession, session_ids[0])
             assert account is not None and device_session is not None
-            assert recent_auth.require_grant(
+            grant = recent_auth.require_grant(
                 session,
                 account,
                 device_session,
                 purpose=PURPOSE,
-            ).device_session_id == device_session.id
+            )
+            assert grant.device_session_id == device_session.id
 
     def test_revocation_invalidates_existing_grant(self, production_client) -> None:  # type: ignore[no-untyped-def]
         _, maker = production_client
-        account_id, device_sessions, _ = _create_local_account(
+        account_id, session_ids, _ = _create_local_account(
             maker,
             email="revoked@example.org",
         )
-        _grant(maker, account_id, device_sessions[0])
+        _grant(maker, account_id, session_ids[0])
 
         with maker() as session:
-            device_session = session.get(DeviceSession, device_sessions[0])
+            device_session = session.get(DeviceSession, session_ids[0])
             assert device_session is not None
             sessions.revoke(device_session)
             session.commit()
 
         with maker() as session:
             account = session.get(Account, account_id)
-            device_session = session.get(DeviceSession, device_sessions[0])
+            device_session = session.get(DeviceSession, session_ids[0])
             assert account is not None and device_session is not None
             with pytest.raises(ForbiddenError) as rejected:
                 recent_auth.require_grant(
@@ -151,11 +149,11 @@ class TestRecentAuthenticationBinding:
 
     def test_expired_grant_is_rejected(self, production_client) -> None:  # type: ignore[no-untyped-def]
         _, maker = production_client
-        account_id, device_sessions, _ = _create_local_account(
+        account_id, session_ids, _ = _create_local_account(
             maker,
             email="expired@example.org",
         )
-        _grant(maker, account_id, device_sessions[0])
+        _grant(maker, account_id, session_ids[0])
 
         with maker() as session:
             grant = session.execute(select(RecentAuthenticationGrant)).scalar_one()
@@ -164,7 +162,7 @@ class TestRecentAuthenticationBinding:
 
         with maker() as session:
             account = session.get(Account, account_id)
-            device_session = session.get(DeviceSession, device_sessions[0])
+            device_session = session.get(DeviceSession, session_ids[0])
             assert account is not None and device_session is not None
             with pytest.raises(ForbiddenError) as rejected:
                 recent_auth.require_grant(
@@ -175,20 +173,20 @@ class TestRecentAuthenticationBinding:
                 )
         assert rejected.value.code == recent_auth.RecentAuthenticationErrorCode.REQUIRED
 
-    def test_grant_is_reusable_only_inside_its_short_purpose_window(
+    def test_grant_reuse_is_limited_to_the_short_purpose_window(
         self,
         production_client,
     ) -> None:
         _, maker = production_client
-        account_id, device_sessions, _ = _create_local_account(
+        account_id, session_ids, _ = _create_local_account(
             maker,
             email="retry@example.org",
         )
-        _grant(maker, account_id, device_sessions[0])
+        _grant(maker, account_id, session_ids[0])
 
         with maker() as session:
             account = session.get(Account, account_id)
-            device_session = session.get(DeviceSession, device_sessions[0])
+            device_session = session.get(DeviceSession, session_ids[0])
             assert account is not None and device_session is not None
             first = recent_auth.require_grant(session, account, device_session, purpose=PURPOSE)
             second = recent_auth.require_grant(session, account, device_session, purpose=PURPOSE)
@@ -200,14 +198,14 @@ class TestRecentAuthenticationBinding:
 class TestRecentAuthenticationPassword:
     def test_wrong_password_creates_no_grant(self, production_client) -> None:  # type: ignore[no-untyped-def]
         _, maker = production_client
-        account_id, device_sessions, _ = _create_local_account(
+        account_id, session_ids, _ = _create_local_account(
             maker,
             email="wrong-password@example.org",
         )
 
         with maker() as session:
             account = session.get(Account, account_id)
-            device_session = session.get(DeviceSession, device_sessions[0])
+            device_session = session.get(DeviceSession, session_ids[0])
             assert account is not None and device_session is not None
             with pytest.raises(UnauthenticatedError) as rejected:
                 recent_auth.authenticate_password(
@@ -220,21 +218,21 @@ class TestRecentAuthenticationPassword:
         assert rejected.value.code == recent_auth.RecentAuthenticationErrorCode.PASSWORD_INVALID
 
         with maker() as session:
-            assert (
-                session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-                == 0
-            )
+            count = session.execute(
+                select(func.count()).select_from(RecentAuthenticationGrant)
+            ).scalar_one()
+            assert count == 0
 
     def test_correct_password_issues_bound_grant(self, production_client) -> None:  # type: ignore[no-untyped-def]
         _, maker = production_client
-        account_id, device_sessions, _ = _create_local_account(
+        account_id, session_ids, _ = _create_local_account(
             maker,
             email="correct-password@example.org",
         )
 
         with maker() as session:
             account = session.get(Account, account_id)
-            device_session = session.get(DeviceSession, device_sessions[0])
+            device_session = session.get(DeviceSession, session_ids[0])
             assert account is not None and device_session is not None
             result = recent_auth.authenticate_password(
                 session,
@@ -250,18 +248,20 @@ class TestRecentAuthenticationPassword:
         with maker() as session:
             grant = session.execute(select(RecentAuthenticationGrant)).scalar_one()
             assert grant.account_id == account_id
-            assert grant.device_session_id == device_sessions[0]
+            assert grant.device_session_id == session_ids[0]
             assert grant.purpose == PURPOSE.value
 
 
 @requires_database
-def test_concurrent_grant_issuance_serializes_to_one_context_row(production_client) -> None:  # type: ignore[no-untyped-def]
+def test_concurrent_grant_issuance_serializes_to_one_context_row(
+    production_client,
+) -> None:  # type: ignore[no-untyped-def]
     _, maker = production_client
-    account_id, device_sessions, _ = _create_local_account(
+    account_id, session_ids, _ = _create_local_account(
         maker,
         email="concurrent@example.org",
     )
-    device_session_id = device_sessions[0]
+    device_session_id = session_ids[0]
     start = Barrier(2)
 
     def issue() -> str:
@@ -285,20 +285,22 @@ def test_concurrent_grant_issuance_serializes_to_one_context_row(production_clie
 
     assert results == [METHOD.value, METHOD.value]
     with maker() as session:
-        assert (
-            session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-            == 1
-        )
+        count = session.execute(
+            select(func.count()).select_from(RecentAuthenticationGrant)
+        ).scalar_one()
+        assert count == 1
 
 
 @requires_database
-def test_concurrent_revocation_and_step_up_end_fail_closed(production_client) -> None:  # type: ignore[no-untyped-def]
+def test_concurrent_revocation_and_step_up_end_fail_closed(
+    production_client,
+) -> None:  # type: ignore[no-untyped-def]
     _, maker = production_client
-    account_id, device_sessions, _ = _create_local_account(
+    account_id, session_ids, _ = _create_local_account(
         maker,
         email="revoke-race@example.org",
     )
-    device_session_id = device_sessions[0]
+    device_session_id = session_ids[0]
     start = Barrier(2)
 
     def issue() -> str:

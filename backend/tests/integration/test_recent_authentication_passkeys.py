@@ -6,7 +6,8 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from sidebyside.identity.models import DeviceSession, RecentAuthenticationGrant
+from sidebyside.auth.recent_auth_models import RecentAuthenticationGrant
+from sidebyside.identity.models import DeviceSession
 from tests.conftest import auth, make_account, requires_database, sign_in
 from tests.support.authenticator import VirtualAuthenticator
 
@@ -37,6 +38,12 @@ def _account(session: Session):  # type: ignore[no-untyped-def]
     return account, auth(token)
 
 
+def _grant_count(session: Session) -> int:
+    return session.execute(
+        select(func.count()).select_from(RecentAuthenticationGrant)
+    ).scalar_one()
+
+
 def test_step_up_requires_user_verification_and_creates_no_new_session(
     client,
     session: Session,
@@ -56,14 +63,9 @@ def test_step_up_requires_user_verification_and_creates_no_new_session(
     finish = client.post(STEP_UP_FINISH, headers=headers, json={"credential": assertion})
     assert finish.status_code == 200, finish.text
     assert finish.json()["method"] == "PASSKEY"
-    assert (
-        session.execute(select(func.count()).select_from(DeviceSession)).scalar_one()
-        == before
-    )
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 1
-    )
+    after = session.execute(select(func.count()).select_from(DeviceSession)).scalar_one()
+    assert after == before
+    assert _grant_count(session) == 1
 
 
 def test_step_up_without_authenticator_user_verification_is_rejected(
@@ -80,10 +82,7 @@ def test_step_up_without_authenticator_user_verification_is_rejected(
 
     assert finish.status_code == 422
     assert finish.json()["code"] == "PASSKEY_CEREMONY_INVALID"
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 0
-    )
+    assert _grant_count(session) == 0
 
 
 def test_step_up_assertion_is_not_replayable(client, session: Session) -> None:  # type: ignore[no-untyped-def]
@@ -99,10 +98,7 @@ def test_step_up_assertion_is_not_replayable(client, session: Session) -> None: 
     assert first.status_code == 200, first.text
     assert second.status_code == 422
     assert second.json()["code"] == "PASSKEY_CEREMONY_INVALID"
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 1
-    )
+    assert _grant_count(session) == 1
 
 
 def test_step_up_challenge_is_bound_to_the_session_that_started_it(
@@ -122,10 +118,7 @@ def test_step_up_challenge_is_bound_to_the_session_that_started_it(
         json={"credential": assertion},
     )
     assert wrong_session.status_code == 422
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 0
-    )
+    assert _grant_count(session) == 0
 
     correct_session = client.post(
         STEP_UP_FINISH,

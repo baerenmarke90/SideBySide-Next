@@ -84,7 +84,9 @@ class TestSelfServiceAccountDeletion:
         )
 
         def forbidden_authority() -> DeletionJournal:
-            raise AssertionError("Recent-auth rejection must happen before deletion authority access")
+            raise AssertionError(
+                "Recent-auth rejection must happen before deletion authority access"
+            )
 
         monkeypatch.setattr(deletion_self_service, "_configured_journal", forbidden_authority)
         response = client.post(
@@ -110,7 +112,10 @@ class TestSelfServiceAccountDeletion:
     ) -> None:
         client, maker = production_client
         account_id, device_session_id, token = _account_with_session(maker)
-        journal = DeletionJournal.initialize(tmp_path / "deletions.journal", instance_id=uuid4())
+        journal = DeletionJournal.initialize(
+            tmp_path / "deletions.journal",
+            instance_id=uuid4(),
+        )
         mail = RecordingMailSender()
         monkeypatch.setattr(deletion_self_service, "_configured_journal", lambda: journal)
         monkeypatch.setattr(deletion_self_service, "configured_mail_sender", lambda: mail)
@@ -133,7 +138,10 @@ class TestSelfServiceAccountDeletion:
             assert account is not None and account.disabled_at is not None
             assert device_session is not None and device_session.revoked_at is not None
             assert deletion is not None
-            assert deletion.confirmation_mail_status == DeletionConfirmationMailStatus.SENT.value
+            assert (
+                deletion.confirmation_mail_status
+                == DeletionConfirmationMailStatus.SENT.value
+            )
             assert (
                 session.execute(
                     select(func.count())
@@ -146,8 +154,6 @@ class TestSelfServiceAccountDeletion:
                 == 1
             )
 
-        # The client is no longer involved. The normal PostgreSQL worker owns
-        # the remaining idempotent Core -> Media -> Async -> COMPLETED path.
         deletion_jobs.register_handlers()
         assert run_once("deletion-test-worker", limit=1) == 1
 
@@ -180,7 +186,10 @@ class TestSelfServiceAccountDeletion:
     ) -> None:
         client, maker = production_client
         account_id, device_session_id, token = _account_with_session(maker)
-        journal = DeletionJournal.initialize(tmp_path / "deletions.journal", instance_id=uuid4())
+        journal = DeletionJournal.initialize(
+            tmp_path / "deletions.journal",
+            instance_id=uuid4(),
+        )
         monkeypatch.setattr(deletion_self_service, "_configured_journal", lambda: journal)
         monkeypatch.setattr(
             deletion_self_service,
@@ -268,13 +277,17 @@ class TestSelfServiceAccountDeletion:
         account_id, device_session_id, token = _account_with_session(maker)
         journal_path = tmp_path / "must-not-exist.journal"
         base = get_settings()
-        demo_settings = base.model_copy(update={"environment": Environment.DEMO, "demo_mode": True})
-        # The Demo-deployment predicate is shared by every Demo guard and
-        # lives in sidebyside.demo.canonical, so patch it there.
-        monkeypatch.setattr(deletion_self_service.canonical, "get_settings", lambda: demo_settings)
+        demo_settings = base.model_copy(
+            update={"environment": Environment.DEMO, "demo_mode": True}
+        )
+        monkeypatch.setattr(
+            deletion_self_service.canonical,
+            "get_settings",
+            lambda: demo_settings,
+        )
 
         def forbidden_authority() -> DeletionJournal:
-            raise AssertionError("Demo rejection must happen before deletion authority access")
+            raise AssertionError("Demo rejection must precede deletion authority access")
 
         monkeypatch.setattr(deletion_self_service, "_configured_journal", forbidden_authority)
 
@@ -285,7 +298,10 @@ class TestSelfServiceAccountDeletion:
         )
 
         assert response.status_code == 403
-        assert response.json()["code"] == deletion_self_service.SelfDeletionErrorCode.DEMO_ACCOUNT
+        assert (
+            response.json()["code"]
+            == deletion_self_service.SelfDeletionErrorCode.DEMO_ACCOUNT
+        )
         assert not journal_path.exists()
         with maker() as session:
             account = session.get(Account, account_id)
@@ -311,7 +327,7 @@ class TestSelfServiceAccountDeletion:
         _, _, token = _account_with_session(maker)
 
         def forbidden_authority() -> DeletionJournal:
-            raise AssertionError("Validation must happen before deletion authority access")
+            raise AssertionError("Validation must precede deletion authority access")
 
         monkeypatch.setattr(deletion_self_service, "_configured_journal", forbidden_authority)
         response = client.post(

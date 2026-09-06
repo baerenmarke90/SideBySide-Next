@@ -7,8 +7,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from sidebyside.auth import passwords, recent_auth
+from sidebyside.auth.recent_auth_models import RecentAuthenticationGrant
 from sidebyside.identity import service as accounts
-from sidebyside.identity.models import RecentAuthenticationGrant
 from tests.conftest import auth, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -59,10 +59,10 @@ def test_password_endpoint_fails_closed_then_issues_no_client_bearer_proof(
     )
     assert rejected.status_code == 401
     assert rejected.json()["code"] == recent_auth.RecentAuthenticationErrorCode.PASSWORD_INVALID
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 0
-    )
+    count = session.execute(
+        select(func.count()).select_from(RecentAuthenticationGrant)
+    ).scalar_one()
+    assert count == 0
 
     accepted = client.post(
         PASSWORD_STEP_UP,
@@ -74,7 +74,7 @@ def test_password_endpoint_fails_closed_then_issues_no_client_bearer_proof(
     assert body["purpose"] == "ACCOUNT_DELETION"
     assert body["method"] == "LOCAL_PASSWORD"
     assert set(body) == {"purpose", "method", "achievedAt", "expiresAt"}
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 1
-    )
+    count = session.execute(
+        select(func.count()).select_from(RecentAuthenticationGrant)
+    ).scalar_one()
+    assert count == 1

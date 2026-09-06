@@ -1,4 +1,4 @@
-"""WebAuthn passkey registration, authentication, and recent-authentication step-up.
+"""WebAuthn passkey registration and authentication.
 
 ``py_webauthn`` performs the cryptographic work. This module answers the
 questions a library cannot decide: which challenge belongs to which account,
@@ -37,14 +37,13 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
 )
 
-from sidebyside.auth import recent_auth, sessions
+from sidebyside.auth import sessions
 from sidebyside.auth.sessions import IssuedTokens
 from sidebyside.config import get_settings
 from sidebyside.core.clock import now
-from sidebyside.core.errors import ForbiddenError, UnauthenticatedError, ValidationError
+from sidebyside.core.errors import UnauthenticatedError, ValidationError
 from sidebyside.identity.models import (
     Account,
-    DeviceSession,
     WebAuthnChallenge,
     WebAuthnCredential,
 )
@@ -56,7 +55,6 @@ CHALLENGE_LIFETIME = timedelta(minutes=5)
 
 REGISTRATION = "REGISTRATION"
 AUTHENTICATION = "AUTHENTICATION"
-STEP_UP = "STEP_UP"
 
 MAX_CREDENTIAL_NAME = 120
 
@@ -83,27 +81,13 @@ def _invalid() -> ValidationError:
     )
 
 
-def _method_unavailable() -> ForbiddenError:
-    return ForbiddenError(
-        "Passkey recent authentication is not available for this Account.",
-        recent_auth.RecentAuthenticationErrorCode.METHOD_UNAVAILABLE,
-    )
-
-
 def _issue_challenge(
-    session: Session,
-    *,
-    purpose: str,
-    account_id: UUID | None,
-    device_session_id: UUID | None = None,
-    step_up_purpose: str | None = None,
+    session: Session, *, purpose: str, account_id: UUID | None
 ) -> WebAuthnChallenge:
     entry = WebAuthnChallenge(
         purpose=purpose,
         challenge=webauthn.helpers.generate_challenge(),
         account_id=account_id,
-        device_session_id=device_session_id,
-        step_up_purpose=step_up_purpose,
         expires_at=now() + CHALLENGE_LIFETIME,
     )
     session.add(entry)
@@ -150,8 +134,6 @@ def _consume_challenge_row(
     purpose: str,
     account_id: UUID | None,
     challenge: bytes,
-    device_session_id: UUID | None = None,
-    step_up_purpose: str | None = None,
 ) -> WebAuthnChallenge:
     """Lock and consume exactly one matching open challenge row."""
     current_time = now()
@@ -165,14 +147,6 @@ def _consume_challenge_row(
         conditions.append(WebAuthnChallenge.account_id.is_(None))
     else:
         conditions.append(WebAuthnChallenge.account_id == account_id)
-    if device_session_id is None:
-        conditions.append(WebAuthnChallenge.device_session_id.is_(None))
-    else:
-        conditions.append(WebAuthnChallenge.device_session_id == device_session_id)
-    if step_up_purpose is None:
-        conditions.append(WebAuthnChallenge.step_up_purpose.is_(None))
-    else:
-        conditions.append(WebAuthnChallenge.step_up_purpose == step_up_purpose)
 
     entries = (
         session.execute(select(WebAuthnChallenge).where(*conditions).with_for_update())
@@ -194,8 +168,6 @@ def _consume_challenge(
     purpose: str,
     account_id: UUID | None,
     challenge: bytes,
-    device_session_id: UUID | None = None,
-    step_up_purpose: str | None = None,
 ) -> bytes:
     """Atomically consume the exact challenge presented by this ceremony.
 
@@ -222,8 +194,6 @@ def _consume_challenge(
                 purpose=purpose,
                 account_id=account_id,
                 challenge=challenge,
-                device_session_id=device_session_id,
-                step_up_purpose=step_up_purpose,
             )
             expected_challenge = bytes(entry.challenge)
             security_session.commit()
@@ -239,8 +209,6 @@ def _consume_challenge(
         purpose=purpose,
         account_id=account_id,
         challenge=challenge,
-        device_session_id=device_session_id,
-        step_up_purpose=step_up_purpose,
     )
     return bytes(entry.challenge)
 
@@ -370,12 +338,22 @@ def _credential_account_id(session: Session, credential_id: bytes) -> UUID | Non
     ).scalar_one_or_none()
 
 
-def _lock_account_credential(
+def _lock_authentication_credential(
     session: Session,
-    account_id: UUID,
     credential_id: bytes,
 ) -> tuple[WebAuthnCredential, Account]:
-    """Lock one Account then one of its credentials for an auth transition."""
+    """Lock Account then credential for one authentication transition.
+
+    Account deletion already locks the Account before removing WebAuthn
+    credentials. Authentication follows the same Account -> Credential order so
+    a concurrent deletion cannot deadlock with sign-counter serialization and a
+    disable that wins the Account lock is observed before a new session is
+    issued.
+    """
+    account_id = _credential_account_id(session, credential_id)
+    if account_id is None:
+        raise _invalid()
+
     account = session.execute(
         select(Account).where(Account.id == account_id).with_for_update()
     ).scalar_one_or_none()
@@ -391,27 +369,12 @@ def _lock_account_credential(
         .with_for_update()
     ).scalar_one_or_none()
     if passkey is None:
+        # The Account lock makes account deletion/removal serialize with this
+        # transition. A missing row therefore remains the same privacy-safe
+        # unknown-credential ceremony failure.
         raise _invalid()
 
     return passkey, account
-
-
-def _lock_authentication_credential(
-    session: Session,
-    credential_id: bytes,
-) -> tuple[WebAuthnCredential, Account]:
-    """Lock Account then credential for one username-less authentication transition.
-
-    Account deletion already locks the Account before removing WebAuthn
-    credentials. Authentication follows the same Account -> Credential order so
-    a concurrent deletion cannot deadlock with sign-counter serialization and a
-    disable that wins the Account lock is observed before a new session is
-    issued.
-    """
-    account_id = _credential_account_id(session, credential_id)
-    if account_id is None:
-        raise _invalid()
-    return _lock_account_credential(session, account_id, credential_id)
 
 
 def start_authentication(session: Session) -> dict[str, Any]:
@@ -481,111 +444,11 @@ def finish_authentication(
     # Authentication has no allow-list, so successful credential selection also
     # confirms the discoverable registration contract at runtime.
     passkey.is_discoverable = True
-    passkey.backup_state = bool(
-        getattr(verified, "credential_backed_up", passkey.backup_state)
-    )
+    passkey.backup_state = bool(getattr(verified, "credential_backed_up", passkey.backup_state))
 
     _, issued = sessions.start_session(session, account, device_name=device_name, platform=platform)
     session.flush()
     return SignedIn(account=account, tokens=issued)
-
-
-def start_step_up(
-    session: Session,
-    account: Account,
-    device_session: DeviceSession,
-    *,
-    purpose: recent_auth.RecentAuthenticationPurpose,
-) -> dict[str, Any]:
-    """Start a user-verifying assertion bound to this session and purpose."""
-    recent_auth.ensure_context(account, device_session)
-    settings = get_settings()
-    credentials = (
-        session.execute(
-            select(WebAuthnCredential).where(WebAuthnCredential.account_id == account.id)
-        )
-        .scalars()
-        .all()
-    )
-    if not credentials:
-        raise _method_unavailable()
-
-    entry = _issue_challenge(
-        session,
-        purpose=STEP_UP,
-        account_id=account.id,
-        device_session_id=device_session.id,
-        step_up_purpose=purpose.value,
-    )
-    options = webauthn.generate_authentication_options(
-        rp_id=settings.relying_party_id,
-        challenge=entry.challenge,
-        allow_credentials=[
-            PublicKeyCredentialDescriptor(id=credential.credential_id)
-            for credential in credentials
-        ],
-        # A normal sign-in may let the authenticator decide whether explicit
-        # user verification is needed. A high-risk step-up may not: biometric,
-        # PIN, or equivalent authenticator verification is mandatory here.
-        user_verification=UserVerificationRequirement.REQUIRED,
-    )
-    return cast(dict[str, Any], json.loads(options_to_json(options)))
-
-
-def finish_step_up(
-    session: Session,
-    account: Account,
-    device_session: DeviceSession,
-    *,
-    purpose: recent_auth.RecentAuthenticationPurpose,
-    credential: dict[str, Any],
-) -> recent_auth.RecentAuthenticationResult:
-    """Verify a session-bound step-up assertion without creating a new session."""
-    recent_auth.ensure_context(account, device_session)
-    settings = get_settings()
-    challenge = _challenge_from_client_data(credential)
-    expected_challenge = _consume_challenge(
-        session,
-        purpose=STEP_UP,
-        account_id=account.id,
-        challenge=challenge,
-        device_session_id=device_session.id,
-        step_up_purpose=purpose.value,
-    )
-
-    try:
-        raw_id = base64url_to_bytes(str(credential["rawId"]))
-    except (KeyError, ValueError, TypeError) as error:
-        raise _invalid() from error
-
-    passkey, locked_account = _lock_account_credential(session, account.id, raw_id)
-    try:
-        verified = webauthn.verify_authentication_response(
-            credential=credential,
-            expected_challenge=expected_challenge,
-            expected_rp_id=settings.relying_party_id,
-            expected_origin=settings.relying_party_origins,
-            credential_public_key=passkey.public_key,
-            credential_current_sign_count=passkey.sign_count,
-            require_user_verification=True,
-        )
-    except (InvalidAuthenticationResponse, ValueError, KeyError) as error:
-        log.info("passkey recent authentication rejected")
-        raise _invalid() from error
-
-    passkey.sign_count = verified.new_sign_count
-    passkey.last_used_at = now()
-    passkey.backup_state = bool(
-        getattr(verified, "credential_backed_up", passkey.backup_state)
-    )
-    session.flush()
-    return recent_auth.issue_grant(
-        session,
-        locked_account,
-        device_session,
-        purpose=purpose,
-        method=recent_auth.RecentAuthenticationMethod.PASSKEY,
-    )
 
 
 def prune_challenges(session: Session) -> int:

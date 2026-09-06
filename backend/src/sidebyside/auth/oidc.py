@@ -14,11 +14,6 @@ If any check is omitted the rest cannot restore the trust chain. These checks
 therefore live here rather than in individual endpoints, and every provider
 uses the same path. Pocket ID is an ordinary configured connection rather than
 a special case.
-
-Recent-authentication flows reuse this same verification chain but are a
-separate intent: they are bound to the already-authenticated DeviceSession,
-request active provider reauthentication, require a fresh ``auth_time`` claim,
-and never mint a new SideBySide session.
 """
 
 from __future__ import annotations
@@ -28,7 +23,7 @@ import hashlib
 import logging
 import secrets
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import urlencode, urlsplit
@@ -42,7 +37,7 @@ if TYPE_CHECKING:
     from sqlalchemy import CursorResult
 from sqlalchemy.orm import Session
 
-from sidebyside.auth import rate_limit, recent_auth, sessions
+from sidebyside.auth import rate_limit, sessions
 from sidebyside.auth.sessions import IssuedTokens
 from sidebyside.auth.tokens import generate_token, hash_token
 from sidebyside.config import OidcConnection, get_settings
@@ -50,20 +45,13 @@ from sidebyside.core.clock import now
 from sidebyside.core.errors import (
     ConflictError,
     ErrorCode,
-    ForbiddenError,
     UnauthenticatedError,
     ValidationError,
 )
 from sidebyside.db.locks import lock_subject
 from sidebyside.db.session import schedule_after_rollback
 from sidebyside.identity import service as accounts
-from sidebyside.identity.models import (
-    Account,
-    AuthIdentity,
-    AuthProvider,
-    DeviceSession,
-    OidcAuthRequest,
-)
+from sidebyside.identity.models import Account, AuthIdentity, OidcAuthRequest
 from sidebyside.relationship import invitations
 from sidebyside.relationship.invitations import InvitationErrorCode
 
@@ -75,9 +63,6 @@ AUTH_REQUEST_LIFETIME = timedelta(minutes=10)
 Long enough for provider sign-in including a two-factor step, but short enough
 that an abandoned row does not become permanent state.
 """
-
-OIDC_AUTH_TIME_SKEW = timedelta(seconds=60)
-"""Maximum clock skew accepted around a provider-reported reauthentication time."""
 
 ACTION_OIDC_START = "oidc_start"
 
@@ -97,16 +82,7 @@ Every start creates a row. Without a limit, the anonymous start endpoint would
 be a simple way to fill the table before any session exists.
 """
 
-ALLOWED_ALGORITHMS = (
-    "RS256",
-    "RS384",
-    "RS512",
-    "ES256",
-    "ES384",
-    "PS256",
-    "PS384",
-    "PS512",
-)
+ALLOWED_ALGORITHMS = ("RS256", "RS384", "RS512", "ES256", "ES384", "PS256", "PS384", "PS512")
 """Accepted asymmetric signing algorithms only.
 
 ``none`` and HMAC algorithms are excluded. With ``HS256`` the signing key would
@@ -220,10 +196,7 @@ def _https_discovery_endpoint(value: object, *, connection_id: str, field: str) 
 
 def discover(configured: OidcConnection) -> Discovery:
     """Fetch discovery metadata and verify that the document identifies itself."""
-    document = _get_json(
-        f"{configured.issuer}/.well-known/openid-configuration",
-        kind="discovery",
-    )
+    document = _get_json(f"{configured.issuer}/.well-known/openid-configuration", kind="discovery")
     discovered_issuer = str(document.get("issuer", "")).rstrip("/")
     if discovered_issuer != configured.issuer:
         log.warning("oidc discovery issuer mismatch", extra={"connection": configured.id})
@@ -268,83 +241,6 @@ def _challenge(verifier: str) -> str:
     return base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
 
 
-def _authorization_parameters(
-    configured: OidcConnection,
-    *,
-    state: str,
-    nonce: str,
-    verifier: str,
-    recent_authentication: bool,
-) -> dict[str, str]:
-    parameters = {
-        "response_type": "code",
-        "client_id": configured.client_id,
-        "redirect_uri": configured.redirect_uri,
-        "scope": configured.scopes,
-        "state": state,
-        "nonce": nonce,
-        "code_challenge": _challenge(verifier),
-        "code_challenge_method": "S256",
-    }
-    if recent_authentication:
-        # OIDC Core defines max_age=0 as requiring active reauthentication and
-        # requires auth_time in the returned ID Token. prompt=login makes the
-        # requested interaction explicit to providers and users. The callback
-        # still verifies auth_time rather than trusting request parameters.
-        parameters["prompt"] = "login"
-        parameters["max_age"] = "0"
-    return parameters
-
-
-def _started_flow(
-    session: Session,
-    configured: OidcConnection,
-    discovery: Discovery,
-    *,
-    account_id: UUID | None,
-    invitation_token: str | None,
-    device_session_id: UUID | None = None,
-    step_up_purpose: str | None = None,
-    recent_authentication: bool = False,
-) -> StartedFlow:
-    state = generate_token()
-    nonce = generate_token()
-    verifier = secrets.token_urlsafe(64)
-    started_at = now()
-
-    session.add(
-        OidcAuthRequest(
-            connection_id=configured.id,
-            state_hash=hash_token(state),
-            nonce=nonce,
-            code_verifier=verifier,
-            redirect_uri=configured.redirect_uri,
-            account_id=account_id,
-            device_session_id=device_session_id,
-            step_up_purpose=step_up_purpose,
-            invitation_token_hash=(hash_token(invitation_token) if invitation_token else None),
-            expires_at=started_at + AUTH_REQUEST_LIFETIME,
-            created_at=started_at,
-        )
-    )
-    session.flush()
-
-    parameters = _authorization_parameters(
-        configured,
-        state=state,
-        nonce=nonce,
-        verifier=verifier,
-        recent_authentication=recent_authentication,
-    )
-    separator = "&" if "?" in discovery.authorization_endpoint else "?"
-    return StartedFlow(
-        authorization_url=(
-            f"{discovery.authorization_endpoint}{separator}{urlencode(parameters)}"
-        ),
-        state=state,
-    )
-
-
 def start(
     session: Session,
     connection_id: str,
@@ -366,53 +262,41 @@ def start(
     configured = connection(connection_id)
     rate_limit.check(session, ACTION_OIDC_START, configured.id, OIDC_START)
     rate_limit.record_attempt(session, ACTION_OIDC_START, configured.id)
+
     discovery = discover(configured)
-    return _started_flow(
-        session,
-        configured,
-        discovery,
-        account_id=account_id,
-        invitation_token=invitation_token,
+
+    state = generate_token()
+    nonce = generate_token()
+    verifier = secrets.token_urlsafe(64)
+
+    session.add(
+        OidcAuthRequest(
+            connection_id=configured.id,
+            state_hash=hash_token(state),
+            nonce=nonce,
+            code_verifier=verifier,
+            redirect_uri=configured.redirect_uri,
+            account_id=account_id,
+            invitation_token_hash=(hash_token(invitation_token) if invitation_token else None),
+            expires_at=now() + AUTH_REQUEST_LIFETIME,
+        )
     )
+    session.flush()
 
-
-def start_step_up(
-    session: Session,
-    connection_id: str,
-    account: Account,
-    device_session: DeviceSession,
-    *,
-    purpose: recent_auth.RecentAuthenticationPurpose,
-) -> StartedFlow:
-    """Start provider reauthentication bound to this Account/session/purpose."""
-    recent_auth.ensure_context(account, device_session)
-    configured = connection(connection_id)
-
-    linked = session.execute(
-        select(AuthIdentity.id).where(
-            AuthIdentity.account_id == account.id,
-            AuthIdentity.provider == AuthProvider.OIDC.value,
-            AuthIdentity.connection_id == configured.id,
-        )
-    ).scalar_one_or_none()
-    if linked is None:
-        raise ForbiddenError(
-            "OIDC recent authentication is not available for this Account.",
-            recent_auth.RecentAuthenticationErrorCode.METHOD_UNAVAILABLE,
-        )
-
-    rate_limit.check(session, ACTION_OIDC_START, configured.id, OIDC_START)
-    rate_limit.record_attempt(session, ACTION_OIDC_START, configured.id)
-    discovery = discover(configured)
-    return _started_flow(
-        session,
-        configured,
-        discovery,
-        account_id=account.id,
-        invitation_token=None,
-        device_session_id=device_session.id,
-        step_up_purpose=purpose.value,
-        recent_authentication=True,
+    parameters = {
+        "response_type": "code",
+        "client_id": configured.client_id,
+        "redirect_uri": configured.redirect_uri,
+        "scope": configured.scopes,
+        "state": state,
+        "nonce": nonce,
+        "code_challenge": _challenge(verifier),
+        "code_challenge_method": "S256",
+    }
+    separator = "&" if "?" in discovery.authorization_endpoint else "?"
+    return StartedFlow(
+        authorization_url=(f"{discovery.authorization_endpoint}{separator}{urlencode(parameters)}"),
+        state=state,
     )
 
 
@@ -497,33 +381,12 @@ def _audience_is_trusted(claims: dict[str, Any], client_id: str) -> bool:
     return azp is None or azp == client_id
 
 
-def _fresh_auth_time(
-    claims: dict[str, Any],
-    *,
-    started_at: datetime,
-) -> bool:
-    raw_auth_time = claims.get("auth_time")
-    if isinstance(raw_auth_time, bool) or not isinstance(raw_auth_time, (int, float)):
-        return False
-    try:
-        authenticated_at = datetime.fromtimestamp(float(raw_auth_time), tz=timezone.utc)
-    except (OverflowError, OSError, ValueError):
-        return False
-
-    current_time = now()
-    return (
-        authenticated_at >= started_at - OIDC_AUTH_TIME_SKEW
-        and authenticated_at <= current_time + OIDC_AUTH_TIME_SKEW
-    )
-
-
 def _verified_claims(
     configured: OidcConnection,
     discovery: Discovery,
     *,
     id_token: str,
     nonce: str,
-    recent_authentication_started_at: datetime | None = None,
 ) -> dict[str, Any]:
     """Verify the ID-token signature and required claims."""
     invalid = ValidationError(
@@ -531,10 +394,6 @@ def _verified_claims(
     )
     if not id_token:
         raise invalid
-
-    required_claims = ["exp", "iat", "iss", "aud", "sub"]
-    if recent_authentication_started_at is not None:
-        required_claims.append("auth_time")
 
     key_set = jwt.PyJWKSet.from_dict(_get_json(discovery.jwks_uri, kind="jwks"))
     try:
@@ -546,7 +405,7 @@ def _verified_claims(
             algorithms=list(ALLOWED_ALGORITHMS),
             audience=configured.client_id,
             issuer=discovery.issuer,
-            options={"require": required_claims},
+            options={"require": ["exp", "iat", "iss", "aud", "sub"]},
         )
     except (jwt.PyJWTError, KeyError, ValueError) as error:
         log.info("oidc id token rejected", extra={"connection": configured.id})
@@ -561,13 +420,6 @@ def _verified_claims(
         raise invalid
 
     if not str(claims.get("sub", "")).strip():
-        raise invalid
-
-    if recent_authentication_started_at is not None and not _fresh_auth_time(
-        claims,
-        started_at=recent_authentication_started_at,
-    ):
-        log.info("oidc recent authentication time rejected", extra={"connection": configured.id})
         raise invalid
 
     return claims
@@ -730,20 +582,13 @@ def complete(
     account. Only a flow without one resolves an existing identity into its own
     account, which is ordinary sign-in.
 
-    A request marked as recent authentication is rejected here: it has its own
-    callback that may issue only a purpose grant and never a new DeviceSession.
-    This intent split prevents a step-up state from being confused with a link
-    or sign-in callback.
+    The result is always a normal ``DeviceSession``. Token creation has no
+    separate path for external authentication.
     """
     configured = connection(connection_id)
     request = _open_request(session, configured.id, state)
-    if request.device_session_id is not None or request.step_up_purpose is not None:
-        _keep_state_consumed(session, request)
-        raise ValidationError(
-            "This sign-in attempt is no longer valid.", OidcErrorCode.INVALID_STATE
-        )
-
     discovery = discover(configured)
+
     response = _exchange_code(configured, discovery, code=code, request=request)
     claims = _verified_claims(
         configured,
@@ -801,70 +646,6 @@ def complete(
     return SignedIn(account=account, tokens=issued)
 
 
-def complete_step_up(
-    session: Session,
-    connection_id: str,
-    account: Account,
-    device_session: DeviceSession,
-    *,
-    purpose: recent_auth.RecentAuthenticationPurpose,
-    code: str,
-    state: str,
-) -> recent_auth.RecentAuthenticationResult:
-    """Complete fresh provider authentication into a session-bound purpose grant."""
-    recent_auth.ensure_context(account, device_session)
-    configured = connection(connection_id)
-    request = _open_request(session, configured.id, state)
-    # A callback state is a one-shot correlation value, including on every
-    # rejected step-up path. Persist that fact even if the request transaction
-    # rolls back after provider exchange or claim verification.
-    _keep_state_consumed(session, request)
-
-    if (
-        request.account_id != account.id
-        or request.device_session_id != device_session.id
-        or request.step_up_purpose != purpose.value
-        or request.invitation_token_hash is not None
-    ):
-        raise ValidationError(
-            "This sign-in attempt is no longer valid.", OidcErrorCode.INVALID_STATE
-        )
-
-    discovery = discover(configured)
-    response = _exchange_code(configured, discovery, code=code, request=request)
-    claims = _verified_claims(
-        configured,
-        discovery,
-        id_token=str(response.get("id_token", "")),
-        nonce=request.nonce,
-        recent_authentication_started_at=request.created_at,
-    )
-    subject = str(claims["sub"])
-
-    lock_subject(session, IDENTITY_LOCK, discovery.issuer, subject)
-    identity = accounts.oidc_identity(session, issuer=discovery.issuer, subject=subject)
-    if (
-        identity is None
-        or identity.account_id != account.id
-        or identity.connection_id != configured.id
-    ):
-        log.info("oidc recent authentication identity mismatch", extra={"connection": configured.id})
-        raise UnauthenticatedError(
-            "Recent authentication failed.",
-            recent_auth.RecentAuthenticationErrorCode.METHOD_UNAVAILABLE,
-        )
-
-    identity.last_used_at = now()
-    rate_limit.clear(session, ACTION_OIDC_START, configured.id)
-    return recent_auth.issue_grant(
-        session,
-        account,
-        device_session,
-        purpose=purpose,
-        method=recent_auth.RecentAuthenticationMethod.OIDC,
-    )
-
-
 def prune_auth_requests(session: Session) -> int:
     """Remove expired and consumed authentication requests."""
     cutoff = now()
@@ -889,10 +670,8 @@ __all__ = [
     "SignedIn",
     "StartedFlow",
     "complete",
-    "complete_step_up",
     "connection",
     "discover",
     "prune_auth_requests",
     "start",
-    "start_step_up",
 ]

@@ -15,15 +15,13 @@ from sqlalchemy.orm import Session
 
 from sidebyside import config
 from sidebyside.auth import oidc
+from sidebyside.auth.recent_auth_models import (
+    RecentAuthenticationGrant,
+    RecentAuthenticationOidcRequest,
+)
 from sidebyside.auth.tokens import hash_token
 from sidebyside.config import MailTransport, OidcConnection, Settings
-from sidebyside.identity.models import (
-    AuthIdentity,
-    AuthProvider,
-    DeviceSession,
-    OidcAuthRequest,
-    RecentAuthenticationGrant,
-)
+from sidebyside.identity.models import AuthIdentity, AuthProvider, DeviceSession
 from tests.conftest import auth, make_account, requires_database, sign_in
 
 pytestmark = [pytest.mark.integration, requires_database]
@@ -159,15 +157,22 @@ def account_context(session: Session):  # type: ignore[no-untyped-def]
     return account, first, second
 
 
-def _nonce(session: Session, state: str) -> str:
-    request = session.execute(
-        select(OidcAuthRequest).where(OidcAuthRequest.state_hash == hash_token(state))
+def _request(session: Session, state: str) -> RecentAuthenticationOidcRequest:
+    return session.execute(
+        select(RecentAuthenticationOidcRequest).where(
+            RecentAuthenticationOidcRequest.state_hash == hash_token(state)
+        )
     ).scalar_one()
-    return request.nonce
 
 
 def _fresh_auth_time() -> int:
     return int(datetime.now(UTC).timestamp())
+
+
+def _grant_count(session: Session) -> int:
+    return session.execute(
+        select(func.count()).select_from(RecentAuthenticationGrant)
+    ).scalar_one()
 
 
 def test_start_requests_active_reauthentication_and_binds_current_session(
@@ -185,12 +190,10 @@ def test_start_requests_active_reauthentication_and_binds_current_session(
     assert parameters["prompt"] == "login"
     assert parameters["max_age"] == "0"
 
-    request = session.execute(
-        select(OidcAuthRequest).where(OidcAuthRequest.state_hash == hash_token(body["state"]))
-    ).scalar_one()
+    request = _request(session, body["state"])
     assert request.account_id == account.id
     assert request.device_session_id is not None
-    assert request.step_up_purpose == "ACCOUNT_DELETION"
+    assert request.purpose == "ACCOUNT_DELETION"
 
 
 def test_missing_auth_time_fails_closed_without_grant(
@@ -204,7 +207,7 @@ def test_missing_auth_time_fails_closed_without_grant(
     started = client.post(START, headers=headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_nonce(session, started["state"]),
+        nonce=_request(session, started["state"]).nonce,
         auth_time=None,
     )
 
@@ -215,10 +218,7 @@ def test_missing_auth_time_fails_closed_without_grant(
     )
     assert response.status_code == 422
     assert response.json()["code"] == "OIDC_TOKEN_INVALID"
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 0
-    )
+    assert _grant_count(session) == 0
 
 
 def test_stale_provider_authentication_fails_closed_without_grant(
@@ -232,7 +232,7 @@ def test_stale_provider_authentication_fails_closed_without_grant(
     started = client.post(START, headers=headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_nonce(session, started["state"]),
+        nonce=_request(session, started["state"]).nonce,
         auth_time=int((datetime.now(UTC) - timedelta(minutes=5)).timestamp()),
     )
 
@@ -243,13 +243,10 @@ def test_stale_provider_authentication_fails_closed_without_grant(
     )
     assert response.status_code == 422
     assert response.json()["code"] == "OIDC_TOKEN_INVALID"
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 0
-    )
+    assert _grant_count(session) == 0
 
 
-def test_fresh_provider_reauthentication_issues_grant_without_new_session(
+def test_fresh_reauthentication_issues_grant_without_new_session(
     client,
     session: Session,
     provider: Provider,
@@ -261,7 +258,7 @@ def test_fresh_provider_reauthentication_issues_grant_without_new_session(
     started = client.post(START, headers=headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_nonce(session, started["state"]),
+        nonce=_request(session, started["state"]).nonce,
         auth_time=_fresh_auth_time(),
     )
 
@@ -272,14 +269,12 @@ def test_fresh_provider_reauthentication_issues_grant_without_new_session(
     )
     assert response.status_code == 200, response.text
     assert response.json()["method"] == "OIDC"
-    assert session.execute(select(func.count()).select_from(DeviceSession)).scalar_one() == before
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 1
-    )
+    after = session.execute(select(func.count()).select_from(DeviceSession)).scalar_one()
+    assert after == before
+    assert _grant_count(session) == 1
 
 
-def test_provider_failure_creates_no_grant(
+def test_provider_failure_creates_no_grant_and_state_cannot_replay(
     client,
     session: Session,
     provider: Provider,
@@ -288,23 +283,21 @@ def test_provider_failure_creates_no_grant(
     _, headers, _ = account_context
     started = client.post(START, headers=headers).json()
     provider.token_status = 400
+    payload = {"code": "bad-code", "state": started["state"]}
 
-    response = client.post(
-        CALLBACK,
-        headers=headers,
-        json={"code": "bad-code", "state": started["state"]},
-    )
-    assert response.status_code == 422
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 0
-    )
+    first = client.post(CALLBACK, headers=headers, json=payload)
+    second = client.post(CALLBACK, headers=headers, json=payload)
+    assert first.status_code == 422
+    assert second.status_code == 422
+    assert second.json()["code"] == "OIDC_STATE_INVALID"
+    assert _grant_count(session) == 0
 
 
-def test_step_up_state_cannot_be_completed_by_normal_oidc_callback(
+def test_step_up_state_is_not_a_normal_sign_in_state(
     client,
     session: Session,
-    provider,
+    provider: Provider,
+    signing_key: rsa.RSAPrivateKey,
     account_context,
 ) -> None:  # type: ignore[no-untyped-def]
     _, headers, _ = account_context
@@ -317,13 +310,17 @@ def test_step_up_state_cannot_be_completed_by_normal_oidc_callback(
     assert wrong_intent.status_code == 422
     assert wrong_intent.json()["code"] == "OIDC_STATE_INVALID"
 
-    replay = client.post(
+    provider.id_token = _token(
+        signing_key,
+        nonce=_request(session, started["state"]).nonce,
+        auth_time=_fresh_auth_time(),
+    )
+    correct_intent = client.post(
         CALLBACK,
         headers=headers,
         json={"code": "provider-code", "state": started["state"]},
     )
-    assert replay.status_code == 422
-    assert replay.json()["code"] == "OIDC_STATE_INVALID"
+    assert correct_intent.status_code == 200, correct_intent.text
 
 
 def test_successful_step_up_state_is_one_shot(
@@ -337,7 +334,7 @@ def test_successful_step_up_state_is_one_shot(
     started = client.post(START, headers=headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_nonce(session, started["state"]),
+        nonce=_request(session, started["state"]).nonce,
         auth_time=_fresh_auth_time(),
     )
     payload = {"code": "provider-code", "state": started["state"]}
@@ -360,7 +357,7 @@ def test_step_up_callback_is_bound_to_the_starting_session(
     started = client.post(START, headers=first_headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_nonce(session, started["state"]),
+        nonce=_request(session, started["state"]).nonce,
         auth_time=_fresh_auth_time(),
     )
 
@@ -371,7 +368,4 @@ def test_step_up_callback_is_bound_to_the_starting_session(
     )
     assert response.status_code == 422
     assert response.json()["code"] == "OIDC_STATE_INVALID"
-    assert (
-        session.execute(select(func.count()).select_from(RecentAuthenticationGrant)).scalar_one()
-        == 0
-    )
+    assert _grant_count(session) == 0
