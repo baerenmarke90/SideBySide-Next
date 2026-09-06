@@ -22,6 +22,11 @@ ROOT = Path(__file__).resolve().parents[2]
 COMPOSE = ROOT / "compose.yaml"
 CLOUD_ENV_EXAMPLE = ROOT / "deploy/cloud-managed.env.example"
 DEV_ENV_EXAMPLE = ROOT / "deploy/persistent-development.env.example"
+LEGACY_COMPOSE_REFERENCES = (
+    "compose." + "arcane.yaml",
+    "deploy/" + "compose.cloud.yml",
+    "deploy/" + "docker-compose.dev.yml",
+)
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import check_environment_isolation as isolation  # noqa: E402
@@ -39,6 +44,46 @@ def _service_block(compose: str, name: str) -> str:
     if match is None:
         raise AssertionError(f"Compose service {name!r} is missing")
     return match.group(1)
+
+
+def _tracked_files() -> list[Path]:
+    result = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    )
+    return [ROOT / raw.decode("utf-8") for raw in result.stdout.split(b"\0") if raw]
+
+
+class CanonicalComposeRepositoryContractTest(unittest.TestCase):
+    """Prevent deployment topology from splitting into parallel manifests again."""
+
+    def test_exactly_one_compose_manifest_is_tracked(self) -> None:
+        manifests: list[str] = []
+        for path in _tracked_files():
+            relative = path.relative_to(ROOT)
+            name = relative.name.lower()
+            if relative.suffix.lower() not in {".yaml", ".yml"}:
+                continue
+            if name in {"compose.yaml", "compose.yml"} or name.startswith(
+                ("compose.", "docker-compose")
+            ):
+                manifests.append(relative.as_posix())
+        self.assertEqual(sorted(manifests), ["compose.yaml"])
+
+    def test_removed_manifest_names_are_not_referenced(self) -> None:
+        findings: list[str] = []
+        for path in _tracked_files():
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            relative = path.relative_to(ROOT).as_posix()
+            for legacy in LEGACY_COMPOSE_REFERENCES:
+                if legacy in text:
+                    findings.append(f"{relative}: {legacy}")
+        self.assertEqual(findings, [])
 
 
 class CloudComposeTextContractTest(unittest.TestCase):
@@ -135,8 +180,6 @@ class CloudComposeResolvedConfigTest(unittest.TestCase):
                     "cloud",
                     "--env-file",
                     str(env_path),
-                    "-f",
-                    str(COMPOSE),
                     "config",
                     "--format",
                     "json",
