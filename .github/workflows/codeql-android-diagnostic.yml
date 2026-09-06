@@ -1,9 +1,7 @@
 name: CodeQL Android diagnostic
 
 on:
-  push:
-    branches:
-      - fix/667-provider-neutral-recent-auth
+  pull_request:
 
 permissions:
   contents: read
