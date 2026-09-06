@@ -26,6 +26,7 @@ from sidebyside.authorization import (
 from sidebyside.core.clock import now
 from sidebyside.core.errors import ConflictError, ErrorCode, ForbiddenError, ValidationError
 from sidebyside.core.ids import parse_id
+from sidebyside.demo import canonical
 from sidebyside.identity import service as identity_service
 from sidebyside.identity.models import Account
 from sidebyside.profiles.models import (
@@ -258,7 +259,16 @@ def update_profile_identity(
         )
 
     if "display_name" in changed_fields:
-        account.display_name = identity_service.normalize_display_name(display_name or "")
+        requested_name = identity_service.normalize_display_name(display_name or "")
+        if requested_name != account.display_name:
+            # Account-global presentation identity is the one thing here the
+            # demo reset cannot rebuild: it resolves its reserved personas by
+            # address and then refuses to run unless each still carries its
+            # canonical name. The avatar above stays mutable because the reset
+            # purges the Space it lives in. An unchanged name is not a
+            # mutation, so a combined save that keeps it is still accepted.
+            canonical.ensure_account_identity_mutable(session, account)
+        account.display_name = requested_name
 
     # The avatar relation is a separate table. Mark the Account aggregate
     # dirty so an avatar-only mutation advances the same global version.

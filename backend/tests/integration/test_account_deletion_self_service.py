@@ -227,7 +227,9 @@ class TestSelfServiceAccountDeletion:
         journal_path = tmp_path / "must-not-exist.journal"
         base = get_settings()
         demo_settings = base.model_copy(update={"environment": Environment.DEMO, "demo_mode": True})
-        monkeypatch.setattr(deletion_self_service, "get_settings", lambda: demo_settings)
+        # The Demo-deployment predicate is shared by every Demo guard and
+        # lives in sidebyside.demo.canonical, so patch it there.
+        monkeypatch.setattr(deletion_self_service.canonical, "get_settings", lambda: demo_settings)
 
         def forbidden_authority() -> DeletionJournal:
             raise AssertionError("Demo rejection must happen before deletion authority access")

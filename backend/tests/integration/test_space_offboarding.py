@@ -151,7 +151,9 @@ class TestSelfLeaveHttp:
         setup = _setup_relationship(maker)
         base = get_settings()
         demo_settings = base.model_copy(update={"environment": Environment.DEMO, "demo_mode": True})
-        monkeypatch.setattr(offboarding, "get_settings", lambda: demo_settings)
+        # The Demo-deployment predicate is shared by every Demo guard and
+        # lives in sidebyside.demo.canonical, so patch it there.
+        monkeypatch.setattr(offboarding.canonical, "get_settings", lambda: demo_settings)
 
         response = client.post(
             f"/api/v1/spaces/{setup['space_id']}/membership/leave",
