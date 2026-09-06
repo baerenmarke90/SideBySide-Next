@@ -23,6 +23,14 @@ from pathlib import Path
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 PROJECT_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
+# compose.yaml itself defaults these to blank so `docker compose config`
+# keeps succeeding for every profile, including when self-hosted is inactive
+# (a hard `${VAR:?...}` there would break that independence, since Compose
+# interpolates the whole file regardless of which --profile is selected).
+# This wrapper always drives self-hosted, so it is where the fail-closed
+# guarantee for the database credentials actually belongs.
+REQUIRED_SELF_HOSTED_ENV = ("POSTGRES_USER", "POSTGRES_PASSWORD")
+
 
 class CheckoutError(RuntimeError):
     """The checkout cannot be used as a verified deployment source."""
@@ -142,6 +150,20 @@ def dotenv_value(path: Path, key: str) -> str | None:
     return None
 
 
+def require_self_hosted_secrets(env_file: Path) -> None:
+    """Refuse a verified deployment with an unset/blank database password.
+
+    An operator-provided value in the process environment takes precedence
+    over ``.env``, matching Compose's own interpolation precedence.
+    """
+    for key in REQUIRED_SELF_HOSTED_ENV:
+        value = os.environ.get(key)
+        if value is None:
+            value = dotenv_value(env_file, key)
+        if not value:
+            raise CheckoutError(f"{key} must be set for a verified deployment")
+
+
 def default_project_name(root: Path) -> str:
     value = root.name.lower()
     value = re.sub(r"[^a-z0-9_-]+", "", value)
@@ -185,6 +207,7 @@ def invoke_compose(root: Path, revision: str, compose_args: list[str]) -> int:
     reject_compose_source_overrides(compose_args)
 
     env_file = root / ".env"
+    require_self_hosted_secrets(env_file)
     project_name = compose_project_name(root, env_file)
 
     try:

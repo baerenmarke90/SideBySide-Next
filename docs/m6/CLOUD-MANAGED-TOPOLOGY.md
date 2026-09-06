@@ -312,8 +312,11 @@ the `self-hosted` profile only where this topology requires it:
 
 - no bundled `postgres` service — `SBS_DATABASE_URL` points at the managed
   database;
-- `SBS_MEDIA_STORE` defaults to `local` with the same `media_data` volume contract;
-  setting `SBS_MEDIA_STORE=s3` plus the `SBS_S3_*` variables switches to the
+- `SBS_MEDIA_STORE` defaults to `local` with the same LocalMediaStore contract as
+  Self-Hosted, backed by its own `cloud_media_data` volume (kept separate from
+  Self-Hosted's `media_data` so the two profiles can never write to the same
+  local storage if both were accidentally activated in one project); setting
+  `SBS_MEDIA_STORE=s3` plus the `SBS_S3_*` variables switches to the
   S3-compatible backend instead (§3.3);
 - no `demo-init` service (§5);
 - `cloud-api`/`cloud-worker`/`cloud-web`/`cloud-migrate` use `image:` references to

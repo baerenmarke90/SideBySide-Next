@@ -152,7 +152,7 @@ npm run dev
 ### Tests
 
 Integration tests run against a dedicated `sidebyside_test` database created
-by `deploy/postgres-init/01-create-test-db.sql` when the `dev-db` profile starts
+by `deploy/postgres-init/10-testdatenbank.sql` when the `dev-db` profile starts
 with an empty volume. The test fixture creates its own schema there and removes
 it again at the end — running that lifecycle against the development database
 would be data loss, not a test run.
