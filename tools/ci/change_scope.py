@@ -39,6 +39,39 @@ SAFE_DOC_EXACT = (
 )
 SELF_HOSTED_COMPOSE_FILES = ("compose.yaml", "compose.arcane.yaml")
 
+# Account-deletion recovery authority is intentionally classified by semantic
+# module namespace rather than an exact-file allowlist. ``deletion.py`` is the
+# historical root module; every ``deletion_*`` module participates in, or may
+# extend, the forward-only deletion/convergence boundary and must fail closed
+# into Backup/Restore/Upgrade evidence when changed.
+ACCOUNT_DELETION_RECOVERY_PREFIXES = (
+    "backend/src/sidebyside/identity/deletion_",
+)
+ACCOUNT_DELETION_RECOVERY_EXACT = (
+    "backend/src/sidebyside/identity/deletion.py",
+    "backend/src/sidebyside/authorization/retention.py",
+)
+
+# Recovery scripts are grouped by their stable semantic stems so additions to
+# an existing recovery family cannot silently bypass the expensive gate.
+RECOVERY_SCRIPT_PREFIXES = (
+    "scripts/self_hosted_recovery",
+    "scripts/self_hosted_deletion_reconcile",
+    "scripts/account_deletion_recovery",
+    "scripts/test_self_hosted_recovery",
+    "scripts/test_self_hosted_deletion_reconcile",
+)
+
+RECOVERY_CONTRACT_EXACT = (
+    ".github/workflows/self-hosted-recovery.yml",
+    ".env.example",
+    *SELF_HOSTED_COMPOSE_FILES,
+    "docs/SELF-HOSTED-RECOVERY.md",
+    "docs/SELF-HOSTING.md",
+    "docs/DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md",
+    "docs/ARCANE.md",
+)
+
 
 def _matches(path: str, *, prefixes: tuple[str, ...] = (), exact: tuple[str, ...] = ()) -> bool:
     return path in exact or any(path.startswith(prefix) for prefix in prefixes)
@@ -169,30 +202,19 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             known = True
 
         # Recovery acceptance is expensive and is needed for actual recovery
-        # tooling/contracts plus schema migrations and deletion reconciliation
-        # that an old snapshot must survive.
+        # tooling/contracts plus schema migrations and the complete Account-
+        # deletion authority/convergence namespace that an old snapshot must
+        # survive. New deletion_* modules therefore inherit Recovery by default.
         if _matches(
             path,
-            prefixes=("backend/alembic/",),
+            prefixes=(
+                "backend/alembic/",
+                *ACCOUNT_DELETION_RECOVERY_PREFIXES,
+                *RECOVERY_SCRIPT_PREFIXES,
+            ),
             exact=(
-                ".github/workflows/self-hosted-recovery.yml",
-                ".env.example",
-                *SELF_HOSTED_COMPOSE_FILES,
-                "scripts/self_hosted_recovery.py",
-                "scripts/self_hosted_deletion_reconcile.py",
-                "scripts/self_hosted_recovery_acceptance.py",
-                "scripts/account_deletion_recovery_acceptance.py",
-                "scripts/test_self_hosted_recovery.py",
-                "scripts/test_self_hosted_deletion_reconcile.py",
-                "backend/src/sidebyside/identity/deletion.py",
-                "backend/src/sidebyside/identity/deletion_journal.py",
-                "backend/src/sidebyside/identity/deletion_reconcile.py",
-                "backend/src/sidebyside/identity/deletion_models.py",
-                "backend/src/sidebyside/authorization/retention.py",
-                "docs/SELF-HOSTED-RECOVERY.md",
-                "docs/SELF-HOSTING.md",
-                "docs/DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md",
-                "docs/ARCANE.md",
+                *ACCOUNT_DELETION_RECOVERY_EXACT,
+                *RECOVERY_CONTRACT_EXACT,
             ),
         ):
             result["recovery"] = True

@@ -5,6 +5,29 @@ import unittest
 
 from change_scope import SCOPES, classify_paths
 
+ACCOUNT_DELETION_RECOVERY_RUNTIME_PATHS = (
+    "backend/src/sidebyside/identity/deletion.py",
+    "backend/src/sidebyside/identity/deletion_async.py",
+    "backend/src/sidebyside/identity/deletion_jobs.py",
+    "backend/src/sidebyside/identity/deletion_journal.py",
+    "backend/src/sidebyside/identity/deletion_lifecycle.py",
+    "backend/src/sidebyside/identity/deletion_media.py",
+    "backend/src/sidebyside/identity/deletion_models.py",
+    "backend/src/sidebyside/identity/deletion_reconcile.py",
+    "backend/src/sidebyside/identity/deletion_self_service.py",
+    "backend/src/sidebyside/authorization/retention.py",
+)
+
+RECOVERY_TOOLING_PATHS = (
+    "scripts/self_hosted_recovery.py",
+    "scripts/self_hosted_deletion_reconcile.py",
+    "scripts/self_hosted_recovery_acceptance.py",
+    "scripts/account_deletion_recovery_acceptance.py",
+    "scripts/test_self_hosted_recovery.py",
+    "scripts/test_self_hosted_deletion_reconcile.py",
+    "docs/SELF-HOSTED-RECOVERY.md",
+)
+
 
 class ChangeScopeTest(unittest.TestCase):
     def assert_scope(self, paths: list[str], *, enabled: set[str]) -> None:
@@ -112,29 +135,29 @@ class ChangeScopeTest(unittest.TestCase):
         )
 
     def test_recovery_tooling_only_enables_recovery_gate(self) -> None:
-        for path in (
-            "scripts/self_hosted_recovery.py",
-            "scripts/self_hosted_deletion_reconcile.py",
-            "scripts/self_hosted_recovery_acceptance.py",
-            "scripts/account_deletion_recovery_acceptance.py",
-            "scripts/test_self_hosted_recovery.py",
-            "scripts/test_self_hosted_deletion_reconcile.py",
-            "docs/SELF-HOSTED-RECOVERY.md",
-        ):
+        for path in RECOVERY_TOOLING_PATHS:
             with self.subTest(path=path):
                 self.assert_scope([path], enabled={"recovery"})
 
-    def test_deletion_runtime_surfaces_also_enable_recovery(self) -> None:
-        for path in (
-            "backend/src/sidebyside/identity/deletion.py",
-            "backend/src/sidebyside/identity/deletion_journal.py",
-            "backend/src/sidebyside/identity/deletion_reconcile.py",
-        ):
+    def test_complete_account_deletion_recovery_runtime_enables_recovery(self) -> None:
+        for path in ACCOUNT_DELETION_RECOVERY_RUNTIME_PATHS:
             with self.subTest(path=path):
                 self.assert_scope(
                     [path],
                     enabled={"backend", "backend_integration", "recovery"},
                 )
+
+    def test_future_account_deletion_recovery_module_fails_closed_to_recovery(self) -> None:
+        self.assert_scope(
+            ["backend/src/sidebyside/identity/deletion_future_authority.py"],
+            enabled={"backend", "backend_integration", "recovery"},
+        )
+
+    def test_unrelated_identity_runtime_does_not_enable_recovery(self) -> None:
+        self.assert_scope(
+            ["backend/src/sidebyside/identity/preferences.py"],
+            enabled={"backend", "backend_integration"},
+        )
 
     def test_filter_changes_fail_closed(self) -> None:
         self.assertTrue(all(classify_paths(["tools/ci/change_scope.py"]).values()))
