@@ -11,6 +11,7 @@ from uuid import UUID
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from sidebyside.auth.demo_authority import lock_demo_auth_authority
 from sidebyside.config import get_settings
 from sidebyside.demo import reset_demo_space
 from sidebyside.identity.models import (
@@ -117,6 +118,16 @@ def run_demo_reset(session: Session, payload: dict[str, Any]) -> None:
     settings = get_settings()
     if not settings.demo_mode or not settings.demo_mode_reset_timer:
         return
+
+    # This is the outer authority boundary for the runtime reset transaction.
+    # A demo proof issue/consume that acquired it first must commit before this
+    # reset can continue and is then swept by _clear_demo_auth_state. A proof
+    # operation arriving after this point waits until reset commits and is
+    # therefore unambiguously post-reset. Keep this before reset_demo_space so
+    # future canonical-dataset serialization (#690) follows the documented
+    # auth-authority -> dataset -> scheduler ordering rather than creating a
+    # reverse edge through token/session cleanup.
+    lock_demo_auth_authority(session)
 
     result = reset_demo_space(
         session,
