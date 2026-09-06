@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '53 4 * * 1'
   workflow_dispatch:
 
 concurrency:
@@ -27,17 +29,39 @@ jobs:
       - name: Determine relevant change scopes
         id: scope
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" != "pull_request" ]; then
+
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              base_sha="$PR_BASE_SHA"
+              head_sha="$PR_HEAD_SHA"
+              ;;
+            push)
+              base_sha="$PUSH_BASE_SHA"
+              head_sha="$PUSH_HEAD_SHA"
+              ;;
+            *)
+              echo "recovery=true" >> "$GITHUB_OUTPUT"
+              echo "Scheduled/manual run: Self-Hosted Recovery remains fully active."
+              exit 0
+              ;;
+          esac
+
+          if [ -z "$base_sha" ] || [ -z "$head_sha" ] \
+            || [[ "$base_sha" =~ ^0+$ ]] \
+            || ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null \
+            || ! git cat-file -e "${head_sha}^{commit}" 2>/dev/null; then
             echo "recovery=true" >> "$GITHUB_OUTPUT"
-            echo "Push/manual run: Self-Hosted Recovery remains active."
+            echo "Change range unavailable; failing closed to Self-Hosted Recovery."
             exit 0
           fi
 
-          git diff --name-only --no-renames "$BASE_SHA" "$HEAD_SHA" > /tmp/changed-files.txt
+          git diff --name-only --no-renames "$base_sha" "$head_sha" > /tmp/changed-files.txt
           echo "Changed files:"
           cat /tmp/changed-files.txt
           python3 tools/ci/change_scope.py /tmp/changed-files.txt >> "$GITHUB_OUTPUT"
