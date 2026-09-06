@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -30,6 +31,10 @@ ISSUER = "https://recent-id.example"
 CLIENT_ID = "sidebyside-recent"
 CONNECTION = "recent-provider"
 SUBJECT = "recent-anna"
+CLIENT_SECRET = secrets.token_urlsafe(32)
+PROVIDER_ACCESS_TOKEN = secrets.token_urlsafe(32)
+PROVIDER_CODE = secrets.token_urlsafe(32)
+BAD_PROVIDER_CODE = secrets.token_urlsafe(32)
 START = f"/api/v1/auth/recent-authentication/account-deletion/oidc/{CONNECTION}/start"
 CALLBACK = f"/api/v1/auth/recent-authentication/account-deletion/oidc/{CONNECTION}/callback"
 NORMAL_CALLBACK = f"/api/v1/auth/oidc/{CONNECTION}/callback"
@@ -61,7 +66,7 @@ class Provider:
             return httpx.Response(
                 200,
                 json={
-                    "access_token": "provider-token",
+                    "access_token": PROVIDER_ACCESS_TOKEN,
                     "token_type": "Bearer",
                     "id_token": self.id_token,
                 },
@@ -124,7 +129,7 @@ def provider(
                 id=CONNECTION,
                 issuer=ISSUER,
                 client_id=CLIENT_ID,
-                client_secret="recent-secret",  # type: ignore[arg-type]
+                client_secret=CLIENT_SECRET,  # type: ignore[arg-type]
                 redirect_uri="https://app.example/recent-oidc",
             )
         ],
@@ -212,7 +217,7 @@ def test_missing_auth_time_fails_closed_without_grant(
     response = client.post(
         CALLBACK,
         headers=headers,
-        json={"code": "provider-code", "state": started["state"]},
+        json={"code": PROVIDER_CODE, "state": started["state"]},
     )
     assert response.status_code == 422
     assert response.json()["code"] == "OIDC_TOKEN_INVALID"
@@ -237,7 +242,7 @@ def test_stale_provider_authentication_fails_closed_without_grant(
     response = client.post(
         CALLBACK,
         headers=headers,
-        json={"code": "provider-code", "state": started["state"]},
+        json={"code": PROVIDER_CODE, "state": started["state"]},
     )
     assert response.status_code == 422
     assert response.json()["code"] == "OIDC_TOKEN_INVALID"
@@ -263,7 +268,7 @@ def test_fresh_reauthentication_issues_grant_without_new_session(
     response = client.post(
         CALLBACK,
         headers=headers,
-        json={"code": "provider-code", "state": started["state"]},
+        json={"code": PROVIDER_CODE, "state": started["state"]},
     )
     assert response.status_code == 200, response.text
     assert response.json()["method"] == "OIDC"
@@ -281,7 +286,7 @@ def test_provider_failure_creates_no_grant_and_state_cannot_replay(
     _, headers, _ = account_context
     started = client.post(START, headers=headers).json()
     provider.token_status = 400
-    payload = {"code": "bad-code", "state": started["state"]}
+    payload = {"code": BAD_PROVIDER_CODE, "state": started["state"]}
 
     first = client.post(CALLBACK, headers=headers, json=payload)
     second = client.post(CALLBACK, headers=headers, json=payload)
@@ -303,7 +308,7 @@ def test_step_up_state_is_not_a_normal_sign_in_state(
 
     wrong_intent = client.post(
         NORMAL_CALLBACK,
-        json={"code": "provider-code", "state": started["state"]},
+        json={"code": PROVIDER_CODE, "state": started["state"]},
     )
     assert wrong_intent.status_code == 422
     assert wrong_intent.json()["code"] == "OIDC_STATE_INVALID"
@@ -316,7 +321,7 @@ def test_step_up_state_is_not_a_normal_sign_in_state(
     correct_intent = client.post(
         CALLBACK,
         headers=headers,
-        json={"code": "provider-code", "state": started["state"]},
+        json={"code": PROVIDER_CODE, "state": started["state"]},
     )
     assert correct_intent.status_code == 200, correct_intent.text
 
@@ -335,7 +340,7 @@ def test_successful_step_up_state_is_one_shot(
         nonce=_request(session, started["state"]).nonce,
         auth_time=_fresh_auth_time(),
     )
-    payload = {"code": "provider-code", "state": started["state"]}
+    payload = {"code": PROVIDER_CODE, "state": started["state"]}
 
     first = client.post(CALLBACK, headers=headers, json=payload)
     second = client.post(CALLBACK, headers=headers, json=payload)
@@ -362,7 +367,7 @@ def test_step_up_callback_is_bound_to_the_starting_session(
     response = client.post(
         CALLBACK,
         headers=second_headers,
-        json={"code": "provider-code", "state": started["state"]},
+        json={"code": PROVIDER_CODE, "state": started["state"]},
     )
     assert response.status_code == 422
     assert response.json()["code"] == "OIDC_STATE_INVALID"
