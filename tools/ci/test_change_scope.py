@@ -51,16 +51,10 @@ class ChangeScopeTest(unittest.TestCase):
         self.assert_scope(["web/src/App.tsx"], enabled=set())
 
     def test_android_change_does_not_enable_backend_gates(self) -> None:
-        self.assert_scope(
-            ["android/app/src/main/java/example/App.kt"],
-            enabled=set(),
-        )
+        self.assert_scope(["android/app/src/main/java/example/App.kt"], enabled=set())
 
     def test_backend_unit_test_only_enables_fast_backend_gate(self) -> None:
-        self.assert_scope(
-            ["backend/tests/test_config.py"],
-            enabled={"backend"},
-        )
+        self.assert_scope(["backend/tests/test_config.py"], enabled={"backend"})
 
     def test_backend_runtime_change_enables_postgres_integration(self) -> None:
         self.assert_scope(
@@ -80,18 +74,21 @@ class ChangeScopeTest(unittest.TestCase):
             },
         )
 
-    def test_compose_changes_only_enable_stack_and_recovery_gates(self) -> None:
-        for path in ("compose.yaml", "compose.arcane.yaml"):
-            with self.subTest(path=path):
-                self.assert_scope(
-                    [path],
-                    enabled={"self_hosted", "deployment_guard", "recovery"},
-                )
+    def test_canonical_compose_enables_stack_and_recovery_gates(self) -> None:
+        self.assert_scope(
+            ["compose.yaml"],
+            enabled={"self_hosted", "deployment_guard", "recovery"},
+        )
 
-    def test_cloud_managed_deployment_files_enable_deployment_guard_and_recovery(self) -> None:
-        for path in ("deploy/compose.cloud.yml", "deploy/cloud-managed.env.example"):
-            with self.subTest(path=path):
-                self.assert_scope([path], enabled={"deployment_guard", "recovery"})
+    def test_environment_profiles_enable_expected_deployment_gates(self) -> None:
+        self.assert_scope(
+            ["deploy/cloud-managed.env.example"],
+            enabled={"deployment_guard", "recovery"},
+        )
+        self.assert_scope(
+            ["deploy/persistent-development.env.example"],
+            enabled={"self_hosted", "deployment_guard", "recovery"},
+        )
 
     def test_web_dockerfile_enables_build_and_deployment_gates(self) -> None:
         self.assert_scope(
@@ -106,22 +103,13 @@ class ChangeScopeTest(unittest.TestCase):
         )
 
     def test_openapi_contract_enables_generated_client_check(self) -> None:
-        self.assert_scope(
-            ["backend/openapi.json"],
-            enabled={"backend", "api_clients"},
-        )
+        self.assert_scope(["backend/openapi.json"], enabled={"backend", "api_clients"})
 
     def test_openapi_generator_only_enables_client_check(self) -> None:
-        self.assert_scope(
-            ["tools/openapi/generate.sh"],
-            enabled={"api_clients"},
-        )
+        self.assert_scope(["tools/openapi/generate.sh"], enabled={"api_clients"})
 
     def test_dependency_inventory_only_enables_supply_chain(self) -> None:
-        self.assert_scope(
-            ["docs/DEPENDENCIES.md"],
-            enabled={"supply_chain"},
-        )
+        self.assert_scope(["docs/DEPENDENCIES.md"], enabled={"supply_chain"})
 
     def test_self_hosting_contract_enables_stack_deployment_and_recovery(self) -> None:
         for path in ("docs/SELF-HOSTING.md", "docs/ARCANE.md"):

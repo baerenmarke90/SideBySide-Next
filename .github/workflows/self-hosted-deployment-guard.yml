@@ -52,16 +52,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare test configuration
+      - name: Prepare and validate canonical Compose profiles
         run: |
+          set -euo pipefail
           cp .env.example .env
           sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-only-for-the-test-run/' .env
           sed -i 's/^API_PORT=.*/API_PORT=18081/' .env
           sed -i 's/^WEB_PORT=.*/WEB_PORT=18082/' .env
           sed -i 's|^SBS_PUBLIC_BASE_URL=.*|SBS_PUBLIC_BASE_URL=http://localhost:18082|' .env
           printf '%s\n' 'COMPOSE_PROJECT_NAME=sidebyside-verified-ci' >> .env
-          docker compose config --quiet
-          docker compose -f compose.arcane.yaml --env-file .env config --quiet
+
+          docker compose --profile self-hosted --env-file .env config --quiet
+          docker compose --profile cloud --env-file deploy/cloud-managed.env.example config --quiet
+          docker compose --profile dev-db config --quiet
 
       - name: Deployment helper syntax and isolation contract
         run: |
@@ -70,8 +73,10 @@ jobs:
             scripts/deployment_smoke.py \
             scripts/check_environment_isolation.py \
             scripts/compose_checked.py \
-            scripts/test_deployment_smoke.py
+            scripts/test_deployment_smoke.py \
+            scripts/test_compose_checked.py
           python3 -m unittest scripts.test_deployment_smoke
+          python3 -m unittest scripts.test_compose_checked
 
           if python3 scripts/deployment_smoke.py \
             --base-url http://127.0.0.1:9 \
@@ -82,6 +87,7 @@ jobs:
 
           cat >/tmp/production.env <<'EOF'
           COMPOSE_PROJECT_NAME=sidebyside-production-ci
+          COMPOSE_PROFILES=self-hosted
           SBS_ENVIRONMENT=production
           SBS_PUBLIC_BASE_URL=https://production.example.invalid
           POSTGRES_PASSWORD=production-only-ci-secret
@@ -101,7 +107,7 @@ jobs:
             exit 1
           fi
 
-      - name: Cloud/Managed deployment recipe contract (#521)
+      - name: Cloud/Managed deployment profile contract (#521)
         run: python3 tools/ci/test_cloud_managed_topology.py -v
 
       - name: Verified checkout revision contract
@@ -156,25 +162,18 @@ jobs:
             exit 1
           fi
 
-      - name: Arcane variant remains semantically equivalent
+      - name: Arcane remote source uses the canonical Self-Hosted profile
         run: |
           set -euo pipefail
-          NORMALIZE='del(.name) | walk(if type == "object" and has("build") and (.build | type == "object") then .build.context = "__BUILD_CONTEXT__" | if ((.build.args? | type) == "object" and (.build.args.SBS_BUILD_REVISION? != null)) then .build.args.SBS_BUILD_REVISION = "__BUILD_REVISION__" else . end else . end)'
+          cp .env .env-arcane
+          cat >>.env-arcane <<'EOF'
+          SBS_BACKEND_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:backend
+          SBS_WEB_BUILD_CONTEXT=https://github.com/baerenmarke90/SideBySide-Next.git#main:web
+          SBS_BUILD_REVISION=main
+          EOF
 
-          docker compose --env-file .env config --format json > /tmp/compose-standard-raw.json
-          docker compose -f compose.arcane.yaml --env-file .env config --format json > /tmp/compose-arcane-raw.json
-
-          jq -S "$NORMALIZE" /tmp/compose-standard-raw.json > /tmp/compose-standard.json
-          jq -S "$NORMALIZE" /tmp/compose-arcane-raw.json > /tmp/compose-arcane.json
-          diff -u /tmp/compose-standard.json /tmp/compose-arcane.json
-
-          jq -e '
-            (.services.api.build.args.SBS_BUILD_REVISION == "unverified-local-checkout") and
-            (.services.worker.build.args.SBS_BUILD_REVISION == "unverified-local-checkout") and
-            (.services.migrate.build.args.SBS_BUILD_REVISION == "unverified-local-checkout") and
-            (.services["demo-init"].build.args.SBS_BUILD_REVISION == "unverified-local-checkout") and
-            (.services.web.build.args.SBS_BUILD_REVISION == "unverified-local-checkout")
-          ' /tmp/compose-standard-raw.json
+          docker compose --profile self-hosted --env-file .env-arcane config --format json \
+            > /tmp/compose-arcane.json
 
           jq -e '
             (.services.migrate.build.context | startswith("https://github.com/baerenmarke90/SideBySide-Next.git#")) and
@@ -187,13 +186,13 @@ jobs:
             (.services.web.build.args.SBS_BUILD_REVISION == "main") and
             (.services.web.build.context | endswith(":web")) and
             (.services.migrate.build.context | endswith(":backend"))
-          ' /tmp/compose-arcane-raw.json
+          ' /tmp/compose-arcane.json
 
       - name: Bind address is safe and explicitly configurable
         run: |
           set -euo pipefail
 
-          docker compose config --format json > /tmp/compose-default.json
+          docker compose --profile self-hosted --env-file .env config --format json > /tmp/compose-default.json
           jq -e '
             .services.api.ports[0].host_ip == "127.0.0.1" and
             .services.web.ports[0].host_ip == "127.0.0.1"
@@ -201,7 +200,7 @@ jobs:
 
           cp .env .env-bind
           sed -i 's/^SBS_BIND_IP=.*/SBS_BIND_IP=127.0.0.2/' .env-bind
-          docker compose --env-file .env-bind config --format json > /tmp/compose-bind.json
+          docker compose --profile self-hosted --env-file .env-bind config --format json > /tmp/compose-bind.json
           jq -e '
             .services.api.ports[0].host_ip == "127.0.0.2" and
             .services.web.ports[0].host_ip == "127.0.0.2"
@@ -214,11 +213,11 @@ jobs:
 
           python3 -m http.server 18080 --bind 0.0.0.0 >/tmp/occupied-api-port.log 2>&1 &
           blocker_pid=$!
-          trap 'kill "$blocker_pid" 2>/dev/null || true; docker compose -p sidebyside-port-conflict --env-file .env-conflict down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
+          trap 'kill "$blocker_pid" 2>/dev/null || true; docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict down -v --remove-orphans >/dev/null 2>&1 || true' EXIT
           sleep 1
 
           set +e
-          output=$(timeout 300 docker compose -p sidebyside-port-conflict --env-file .env-conflict up -d --build api 2>&1)
+          output=$(timeout 300 docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict up -d --build api 2>&1)
           status=$?
           set -e
 
@@ -228,7 +227,7 @@ jobs:
             exit 1
           fi
 
-          api_id=$(docker compose -p sidebyside-port-conflict --env-file .env-conflict ps -aq api)
+          api_id=$(docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict ps -aq api)
           if [ -n "$api_id" ]; then
             state=$(docker inspect "$api_id" --format '{{.State.Status}}')
             networks=$(docker inspect "$api_id" --format '{{len .NetworkSettings.Networks}}')
@@ -240,16 +239,16 @@ jobs:
           fi
 
           kill "$blocker_pid" 2>/dev/null || true
-          docker compose -p sidebyside-port-conflict --env-file .env-conflict down -v --remove-orphans
+          docker compose -p sidebyside-port-conflict --profile self-hosted --env-file .env-conflict down -v --remove-orphans
           trap - EXIT
 
       - name: Start normal Self-Hosted stack
-        run: docker compose up -d --build --wait --wait-timeout 300
+        run: docker compose --profile self-hosted --env-file .env up -d --build --wait --wait-timeout 300
 
       - name: Shared Compose network is active
         run: |
           for service in postgres api worker web; do
-            id=$(docker compose ps -q "$service")
+            id=$(docker compose --profile self-hosted --env-file .env ps -q "$service")
             if [ -z "$id" ]; then
               echo "$service has no running container."
               exit 1
@@ -262,7 +261,7 @@ jobs:
             fi
           done
 
-          migrate_id=$(docker compose ps -aq migrate)
+          migrate_id=$(docker compose --profile self-hosted --env-file .env ps -aq migrate)
           if [ -z "$migrate_id" ]; then
             echo "migrate container is missing."
             exit 1
@@ -276,7 +275,7 @@ jobs:
 
       - name: API can reach postgres through Docker DNS
         run: |
-          docker compose exec -T api python - <<'PY'
+          docker compose --profile self-hosted --env-file .env exec -T api python - <<'PY'
           import socket
 
           address = socket.gethostbyname("postgres")
@@ -308,19 +307,19 @@ jobs:
       - name: Runtime containers are healthy
         run: |
           for service in api web; do
-            id=$(docker compose ps -q "$service")
+            id=$(docker compose --profile self-hosted --env-file .env ps -q "$service")
             health=$(docker inspect "$id" --format '{{.State.Health.Status}}')
             test "$health" = "healthy" || {
               echo "$service health=$health"
-              docker compose logs "$service"
+              docker compose --profile self-hosted --env-file .env logs "$service"
               exit 1
             }
           done
 
       - name: Logs on failure
         if: failure()
-        run: docker compose logs
+        run: docker compose --profile self-hosted --env-file .env logs
 
       - name: Clean up
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: docker compose --profile self-hosted --env-file .env down -v --remove-orphans

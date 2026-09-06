@@ -37,7 +37,7 @@ SAFE_DOC_EXACT = (
     ".gitleaksignore",
     ".gitignore",
 )
-SELF_HOSTED_COMPOSE_FILES = ("compose.yaml", "compose.arcane.yaml")
+CANONICAL_COMPOSE_FILE = "compose.yaml"
 
 # Account-deletion recovery authority is intentionally classified by semantic
 # module namespace plus a small exact set of orchestration/retention owners
@@ -69,9 +69,9 @@ RECOVERY_SCRIPT_PREFIXES = (
 RECOVERY_CONTRACT_EXACT = (
     ".github/workflows/self-hosted-recovery.yml",
     ".env.example",
-    *SELF_HOSTED_COMPOSE_FILES,
-    "deploy/compose.cloud.yml",
+    CANONICAL_COMPOSE_FILE,
     "deploy/cloud-managed.env.example",
+    "deploy/persistent-development.env.example",
     "docs/SELF-HOSTED-RECOVERY.md",
     "docs/SELF-HOSTING.md",
     "docs/DEVELOPMENT-AND-RELEASE-ENVIRONMENTS.md",
@@ -131,14 +131,15 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             result["backend_integration"] = True
             known = True
 
-        # The documented self-hosted stack is sensitive to container/runtime
-        # wiring, not ordinary application UI source.
+        # The documented Self-Hosted/Arcane stack is sensitive to the canonical
+        # Compose contract and container/runtime wiring, not ordinary UI source.
         if _matches(
             path,
             prefixes=("web/docker-entrypoint.d/",),
             exact=(
                 ".env.example",
-                *SELF_HOSTED_COMPOSE_FILES,
+                CANONICAL_COMPOSE_FILE,
+                "deploy/persistent-development.env.example",
                 "backend/Dockerfile",
                 "web/Dockerfile",
                 "web/nginx.conf",
@@ -191,9 +192,9 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
             exact=(
                 ".github/workflows/self-hosted-deployment-guard.yml",
                 ".env.example",
-                *SELF_HOSTED_COMPOSE_FILES,
-                "deploy/compose.cloud.yml",
+                CANONICAL_COMPOSE_FILE,
                 "deploy/cloud-managed.env.example",
+                "deploy/persistent-development.env.example",
                 "backend/Dockerfile",
                 "web/Dockerfile",
                 "web/nginx.conf",

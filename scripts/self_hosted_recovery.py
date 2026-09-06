@@ -28,7 +28,8 @@ from typing import BinaryIO
 ARCHIVE_FORMAT = "sidebyside-self-hosted-backup"
 ARCHIVE_VERSION = 1
 ARCHIVE_MEMBERS = frozenset({"manifest.json", "database.dump", "media.tar"})
-ALLOWED_COMPOSE_FILES = frozenset({"compose.yaml", "compose.arcane.yaml"})
+ALLOWED_COMPOSE_FILES = frozenset({"compose.yaml"})
+COMPOSE_PROFILE = "self-hosted"
 WRITER_SERVICES = frozenset({"api", "worker"})
 TRANSIENT_WRITER_SERVICES = frozenset({"migrate", "demo-init"})
 VOLUME_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -39,6 +40,20 @@ MEDIA_MOUNT_PATH = "/sidebyside-recovery-media"
 
 class RecoveryError(RuntimeError):
     """The requested backup or restore operation is unsafe or failed."""
+
+
+def _compose_subprocess_env() -> dict[str, str]:
+    """Force the self-hosted profile regardless of any ambient ``COMPOSE_PROFILES``.
+
+    Docker Compose's active profile set is the union of ``--profile`` flags
+    and ``COMPOSE_PROFILES`` from the environment or an ``--env-file``, not an
+    override. Without this, an operator-supplied ``--env-file`` that sets
+    ``COMPOSE_PROFILES=cloud`` (or ``dev-db``) would silently add those
+    services alongside self-hosted recovery instead of being rejected.
+    """
+    env = dict(os.environ)
+    env["COMPOSE_PROFILES"] = COMPOSE_PROFILE
+    return env
 
 
 def _run(
@@ -59,6 +74,7 @@ def _run(
             stdin=input_file,
             stdout=output_file if output_file is not None else subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=_compose_subprocess_env(),
         )
     except OSError as exc:
         raise RecoveryError("A required Docker command could not be executed.") from exc
@@ -86,9 +102,7 @@ class ComposeTarget:
         root = Path(__file__).resolve().parents[1]
         resolved_compose = compose_file.resolve()
         if resolved_compose.parent != root or resolved_compose.name not in ALLOWED_COMPOSE_FILES:
-            raise RecoveryError(
-                "Only the repository's canonical compose.yaml or compose.arcane.yaml is supported."
-            )
+            raise RecoveryError("Only the repository's canonical compose.yaml is supported.")
         resolved_env = env_file.resolve()
         if not resolved_env.is_file():
             raise RecoveryError("The requested environment file does not exist.")
@@ -96,6 +110,8 @@ class ComposeTarget:
         command = [
             "docker",
             "compose",
+            "--profile",
+            COMPOSE_PROFILE,
             "--env-file",
             str(resolved_env),
             "-f",
@@ -146,6 +162,8 @@ class ComposeTarget:
             "compose",
             "--project-name",
             self.project_name,
+            "--profile",
+            COMPOSE_PROFILE,
             "--env-file",
             str(self.env_file),
             "-f",
@@ -690,7 +708,7 @@ def _common_arguments(parser: argparse.ArgumentParser) -> None:
         "--compose-file",
         type=Path,
         default=Path("compose.yaml"),
-        help="Canonical compose.yaml or compose.arcane.yaml from this checkout",
+        help="Canonical compose.yaml from this checkout",
     )
     parser.add_argument("--env-file", type=Path, required=True, help="Target dotenv file")
     parser.add_argument(

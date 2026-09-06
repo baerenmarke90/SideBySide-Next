@@ -31,7 +31,6 @@ SCOPED_FILES = (
     Path("tools/ci/status_drift.py"),
     Path("tools/ci/test_status_drift.py"),
     Path("compose.yaml"),
-    Path("compose.arcane.yaml"),
 )
 
 BACKEND_ROOTS = (
