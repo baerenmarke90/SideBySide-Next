@@ -161,9 +161,7 @@ def start(
     }
     separator = "&" if "?" in discovery.authorization_endpoint else "?"
     return oidc.StartedFlow(
-        authorization_url=(
-            f"{discovery.authorization_endpoint}{separator}{urlencode(parameters)}"
-        ),
+        authorization_url=(f"{discovery.authorization_endpoint}{separator}{urlencode(parameters)}"),
         state=state,
     )
 
