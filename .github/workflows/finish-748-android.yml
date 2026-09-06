@@ -1,0 +1,33 @@
+name: Finish 748 Android
+
+on:
+  push:
+    branches:
+      - work/748-finish
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: work/748-finish
+          fetch-depth: 0
+      - name: Apply Android wiring
+        run: python tools/finish_748_android.py
+      - name: Compile and run Android unit tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
+      - name: Remove one-time tooling
+        run: rm tools/finish_748_android.py .github/workflows/finish-748-android.yml
+      - name: Commit verified Android flow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(android): require recent authentication before Account deletion"
+          git push origin HEAD:work/748-finish
