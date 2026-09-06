@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 
 from sidebyside.core.clock import now
 from sidebyside.domain.events import DomainEvent
-from sidebyside.observability import scrub_message
 from sidebyside.outbox.models import OutboxEvent
 
 
@@ -61,7 +60,4 @@ def mark_failed(event: OutboxEvent, error: str) -> None:
     truncated so an excessively long error cannot make the row unbounded.
     """
     event.attempts += 1
-    # Same second, cheap layer as `jobs.queue.fail`: callers are expected to
-    # pass an already-safe summary, this only catches a mistake at a future
-    # call site.
-    event.last_error = scrub_message(error)[:2000]
+    event.last_error = error[:2000]
