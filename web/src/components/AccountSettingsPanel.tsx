@@ -220,7 +220,8 @@ export function AccountSettingsPanel({
   function submitDeletion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const phrase = t('accountSettings.confirmPhrase');
-    if (confirmation !== phrase || deletionMutation.isPending || demoMode) return;
+    if (confirmation !== phrase || deletionMutation.isPending || demoMode)
+      return;
     deletionMutation.mutate();
   }
 
