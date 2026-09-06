@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useCallback, useLayoutEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { MemoryDetail } from '../api/generated/models/MemoryDetail';
@@ -78,16 +78,39 @@ export function MemoryProductPage({
   const memoryId = params.memoryId;
   const memoryKey = authorSummaryQueryKeys.memory(spaceId, memoryId);
   const contextKey = formatAttachmentDraftContextKey(currentAccountId, spaceId);
-  const [prevContextKey, setPrevContextKey] = useState(contextKey);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [removedAttachmentIds, setRemovedAttachmentIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [removedAttachmentState, setRemovedAttachmentState] = useState<{
+    contextKey: string;
+    ids: Set<string>;
+  }>(() => ({
+    contextKey,
+    ids: new Set(),
+  }));
 
-  if (prevContextKey !== contextKey) {
-    setPrevContextKey(contextKey);
-    setRemovedAttachmentIds(new Set());
-  }
+  const removedAttachmentIds =
+    removedAttachmentState.contextKey === contextKey
+      ? removedAttachmentState.ids
+      : new Set<string>();
+
+  useLayoutEffect(() => {
+    setRemovedAttachmentState((current) =>
+      current.contextKey === contextKey
+        ? current
+        : { contextKey, ids: new Set() },
+    );
+  }, [contextKey]);
+
+  const setRemovedAttachmentIds = useCallback(
+    (updater: Set<string> | ((prev: Set<string>) => Set<string>)) => {
+      setRemovedAttachmentState((current) => {
+        const active =
+          current.contextKey === contextKey ? current.ids : new Set<string>();
+        const next = typeof updater === 'function' ? updater(active) : updater;
+        return { contextKey, ids: next };
+      });
+    },
+    [contextKey],
+  );
 
   const attachments = useAttachmentDrafts({
     apis,

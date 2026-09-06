@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useCallback, useLayoutEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ContentVisibility } from '../api/generated/models/ContentVisibility';
@@ -84,14 +84,39 @@ export function HeartMomentProductPage({
   const heartMomentId = params.heartMomentId;
   const queryKey = authorSummaryQueryKeys.heartMoment(spaceId, heartMomentId);
   const contextKey = formatAttachmentDraftContextKey(currentAccountId, spaceId);
-  const [prevContextKey, setPrevContextKey] = useState(contextKey);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [removeExistingPhoto, setRemoveExistingPhoto] = useState(false);
+  const [removeExistingPhotoState, setRemoveExistingPhotoState] = useState<{
+    contextKey: string;
+    remove: boolean;
+  }>(() => ({
+    contextKey,
+    remove: false,
+  }));
 
-  if (prevContextKey !== contextKey) {
-    setPrevContextKey(contextKey);
-    setRemoveExistingPhoto(false);
-  }
+  const removeExistingPhoto =
+    removeExistingPhotoState.contextKey === contextKey
+      ? removeExistingPhotoState.remove
+      : false;
+
+  useLayoutEffect(() => {
+    setRemoveExistingPhotoState((current) =>
+      current.contextKey === contextKey
+        ? current
+        : { contextKey, remove: false },
+    );
+  }, [contextKey]);
+
+  const setRemoveExistingPhoto = useCallback(
+    (updater: boolean | ((prev: boolean) => boolean)) => {
+      setRemoveExistingPhotoState((current) => {
+        const active =
+          current.contextKey === contextKey ? current.remove : false;
+        const next = typeof updater === 'function' ? updater(active) : updater;
+        return { contextKey, remove: next };
+      });
+    },
+    [contextKey],
+  );
 
   const attachments = useAttachmentDrafts({
     apis,

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -339,5 +340,112 @@ describe('Attachment form state context binding (#700)', () => {
 
     // Verify reset on Account change -> photo & remove button reappear
     expect(screen.getByText(i18n.t('memory.photoRemove'))).toBeDefined();
+  });
+
+  it('MemoryProductPage and HeartMomentProductPage operate cleanly under React.StrictMode', async () => {
+    const memory = {
+      id: 'mem-strict',
+      spaceId: 'space-1',
+      title: 'StrictMode Memory',
+      body: 'Body text',
+      happenedOn: null,
+      version: 1,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+      updatedAt: new Date('2026-01-01T00:00:00Z'),
+      comments: [],
+      author: { id: 'acc-1', displayName: 'Alex' },
+      capabilities: { canEdit: true, canDelete: true, canComment: true },
+      attachments: [
+        {
+          id: 'att-strict-1',
+          mediaType: 'IMAGE',
+          mimeType: 'image/jpeg',
+          size: 100,
+          status: 'READY',
+          version: 1,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+          position: 0,
+          hasThumbnail: false,
+        },
+      ],
+    };
+
+    getMemoryMock.mockResolvedValue(memory);
+    queryClient.setQueryData(
+      authorSummaryQueryKeys.memory('space-1', 'mem-strict'),
+      { value: memory, source: 'network' },
+    );
+    queryClient.setQueryData(
+      authorSummaryQueryKeys.memory('space-2', 'mem-strict'),
+      { value: { ...memory, spaceId: 'space-2' }, source: 'network' },
+    );
+
+    const { rerender } = render(
+      <React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/memories/mem-strict/edit']}>
+            <Routes>
+              <Route
+                path="/memories/:memoryId/edit"
+                element={
+                  <MemoryProductPage
+                    mode="edit"
+                    apis={mockApis}
+                    apiBaseUrl="https://api.example.com"
+                    accessToken="tok-1"
+                    spaceId="space-1"
+                    currentAccountId="acc-1"
+                    loadMemoryImage={vi.fn().mockResolvedValue('blob:loaded')}
+                  />
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </React.StrictMode>,
+    );
+
+    const markButton = screen.getByText(
+      i18n.t('memoryProduct.markPhotoForRemoval'),
+    );
+    await act(async () => {
+      fireEvent.click(markButton);
+    });
+    expect(
+      screen.getByText(i18n.t('memoryProduct.photoMarkedForRemoval')),
+    ).toBeDefined();
+
+    // Rerender under StrictMode with Space 2
+    await act(async () => {
+      rerender(
+        <React.StrictMode>
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter initialEntries={['/memories/mem-strict/edit']}>
+              <Routes>
+                <Route
+                  path="/memories/:memoryId/edit"
+                  element={
+                    <MemoryProductPage
+                      mode="edit"
+                      apis={mockApis}
+                      apiBaseUrl="https://api.example.com"
+                      accessToken="tok-1"
+                      spaceId="space-2"
+                      currentAccountId="acc-1"
+                      loadMemoryImage={vi.fn().mockResolvedValue('blob:loaded')}
+                    />
+                  }
+                />
+              </Routes>
+            </MemoryRouter>
+          </QueryClientProvider>
+        </React.StrictMode>,
+      );
+    });
+
+    // Verify reset under StrictMode: photo is not marked for removal
+    expect(
+      screen.queryByText(i18n.t('memoryProduct.photoMarkedForRemoval')),
+    ).toBeNull();
   });
 });
