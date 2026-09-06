@@ -3,7 +3,11 @@ package de.sidebyside.next.cache
 import de.sidebyside.next.reference.ReferenceApiException
 import java.io.IOException
 import java.time.Instant
+import java.util.Collections
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * The shared Story kinds this cache covers, matching the Web client's own
@@ -86,6 +90,15 @@ private const val PROTECTED_SCOPE = "OWNER_ONLY"
  * memory-only (fresh reads succeed, nothing survives to fall back to), which
  * is also what M2-D18 requires when Keystore-backed encryption cannot be set
  * up safely on a given device.
+ *
+ * This class is the single authority for *when* either store may be touched.
+ * Every read takes a [CacheLease] naming the Account+Space and the cache
+ * generation it started under, and no row is written or served without that
+ * lease still being the current one — so the invariant a caller can rely on
+ * is: once a context has been invalidated, no read that began under it can
+ * persist or return `SPACE_SHARED` or `OWNER_ONLY` data, however late it
+ * finishes. Both stores share that one boundary rather than each being
+ * cleared by whoever remembers to.
  */
 class ProductReadCache(
     private val productDao: ProductCacheDao,
@@ -105,20 +118,122 @@ class ProductReadCache(
     ): String = "$accountId:$spaceId:$PROTECTED_SCOPE:$ownerId:${kind.segment}:$resourceId"
 
     /**
-     * Wipes every cached row when the recorded Account+Space marker does not
-     * match [accountId]/[spaceId] — the defensive half of M2-D18's clearing
-     * rule, catching a context change that happened without this instance
-     * ever seeing the matching `clearAll()` call (e.g. process death between
-     * sessions). Idempotent and cheap enough to call before every read/write.
+     * The Account+Space context a read was started under, together with the
+     * cache generation that context carried at the time. Captured before
+     * network I/O and revalidated immediately before every persistence
+     * decision, so a read that outlives its own context cannot write.
      */
-    private suspend fun ensureContext(accountId: UUID, spaceId: UUID) {
-        val next = CacheContextEntity(accountId = accountId.toString(), spaceId = spaceId.toString())
-        val current = contextDao.get()
-        if (current != null && (current.accountId != next.accountId || current.spaceId != next.spaceId)) {
-            productDao.clearAll()
-        }
-        contextDao.set(next)
+    private data class CacheLease(val accountId: String, val spaceId: String, val generation: String)
+
+    /**
+     * Serializes every context transition and every persistence decision, so
+     * "is this lease still current?" and the write it authorizes cannot be
+     * separated by a wipe. Deliberately never held across [load] — network
+     * I/O runs unlocked, between two short critical sections.
+     */
+    private val contextMutex = Mutex()
+
+    /**
+     * The generation currently published on disk, mirrored in memory so
+     * [invalidateContextNow] can end it without suspending.
+     */
+    @Volatile
+    private var activeGeneration: String? = null
+
+    /**
+     * Generations this instance has ended but whose on-disk wipe may not have
+     * run yet, so a lease can be refused before [clearAll] gets its turn.
+     * Emptied again as soon as the marker is provably gone, which is the
+     * point from which the marker alone already refuses those leases.
+     */
+    private val endedGenerations: MutableSet<String> =
+        Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+
+    /**
+     * Ends the current cache context at once, without waiting for the wipe
+     * that follows it.
+     *
+     * Logout, Account switch, Space switch, membership loss and leaving the
+     * demo all happen on a caller that cannot suspend, so they can only start
+     * [clearAll] and move on. That leaves a window in which the marker on
+     * disk still names the outgoing context — long enough for a read that was
+     * already in flight to come back and persist into it. Calling this first
+     * closes the window: the generation is dead from this line on, and the
+     * wipe that follows is then only about removing rows, not about deciding
+     * who may still write.
+     */
+    fun invalidateContextNow() {
+        activeGeneration?.let { endedGenerations.add(it) }
+        activeGeneration = null
     }
+
+    /**
+     * Establishes the caller's Account+Space as the cache context and returns
+     * a lease for it, or `null` when nothing may be persisted or served.
+     *
+     * When the recorded marker names a different Account+Space — a context
+     * change this instance never saw the matching [clearAll] for, e.g. after
+     * process death — **both** persistent stores are wiped before the new
+     * marker is published, which is the defensive half of M2-D18's clearing
+     * rule. Publishing last is what makes the wipe atomic in effect: if any
+     * step fails, the old marker stays, no lease is issued, and the cache
+     * neither writes nor serves until a later attempt completes the wipe.
+     */
+    private suspend fun captureLease(accountId: UUID, spaceId: UUID): CacheLease? = contextMutex.withLock {
+        val account = accountId.toString()
+        val space = spaceId.toString()
+        val current = runCatching { contextDao.get() }.getOrElse { return@withLock null }
+        if (current != null &&
+            current.accountId == account &&
+            current.spaceId == space &&
+            // A marker this instance already ended is not reusable, even for
+            // the same Account+Space: its rows are still owed a wipe.
+            current.generation !in endedGenerations
+        ) {
+            activeGeneration = current.generation
+            return@withLock CacheLease(account, space, current.generation)
+        }
+
+        val next = CacheContextEntity(
+            accountId = account,
+            spaceId = space,
+            // A fresh generation even when returning to a previously cached
+            // Account+Space: leases from before the transition must not be
+            // able to match the context again once it is re-established.
+            generation = UUID.randomUUID().toString(),
+        )
+        val published = runCatching {
+            productDao.clearAll()
+            protectedDao?.clearAll()
+            contextDao.set(next)
+        }
+        if (published.isFailure) return@withLock null
+        activeGeneration = next.generation
+        CacheLease(account, space, next.generation)
+    }
+
+    /**
+     * Whether the on-disk marker still names exactly the context and
+     * generation [lease] was captured under. The marker, not this instance's
+     * memory, is the authority: a second [ProductReadCache] over the same
+     * database (and a fresh process) reaches the same verdict.
+     */
+    private suspend fun isLeaseCurrent(lease: CacheLease): Boolean {
+        if (lease.generation in endedGenerations) return false
+        val current = runCatching { contextDao.get() }.getOrNull() ?: return false
+        return current.accountId == lease.accountId &&
+            current.spaceId == lease.spaceId &&
+            current.generation == lease.generation
+    }
+
+    /**
+     * Runs [block] only while [lease] is still the current context, with the
+     * check and the work in one critical section so an invalidation cannot
+     * land between them. Returns `null` when the lease has been invalidated,
+     * which every caller treats as "no cache" rather than as an error.
+     */
+    private suspend fun <R> withCurrentLease(lease: CacheLease, block: suspend () -> R): R? =
+        contextMutex.withLock { if (isLeaseCurrent(lease)) block() else null }
 
     /**
      * Runs [load]; on success, caches the result (unless [canPersist]
@@ -139,26 +254,32 @@ class ProductReadCache(
         serialize: (T) -> String,
         deserialize: (String) -> T,
     ): Result<ProductReadResult<T>> {
-        ensureContext(accountId, spaceId)
+        val lease = captureLease(accountId, spaceId)
         val key = cacheKey(accountId, spaceId, kind, resourceId)
 
+        // The network call runs without the context lock held: a slow or
+        // hanging request must never block a logout/Space switch from wiping.
         val networkResult = runCatching { load() }
         val value = networkResult.getOrNull()
         if (value != null) {
-            if (canPersist(value)) {
-                productDao.put(
-                    ProductCacheEntity(
-                        cacheKey = key,
-                        accountId = accountId.toString(),
-                        spaceId = spaceId.toString(),
-                        kind = kind.segment,
-                        resourceId = resourceId.toString(),
-                        payloadJson = serialize(value),
-                        refreshedAtEpochMs = System.currentTimeMillis(),
-                    ),
-                )
-            } else {
-                productDao.delete(key)
+            if (lease != null) {
+                withCurrentLease(lease) {
+                    if (canPersist(value)) {
+                        productDao.put(
+                            ProductCacheEntity(
+                                cacheKey = key,
+                                accountId = accountId.toString(),
+                                spaceId = spaceId.toString(),
+                                kind = kind.segment,
+                                resourceId = resourceId.toString(),
+                                payloadJson = serialize(value),
+                                refreshedAtEpochMs = System.currentTimeMillis(),
+                            ),
+                        )
+                    } else {
+                        productDao.delete(key)
+                    }
+                }
             }
             return Result.success(ProductReadResult(value, fromCache = false, refreshedAt = Instant.now()))
         }
@@ -166,25 +287,30 @@ class ProductReadCache(
         val throwable = networkResult.exceptionOrNull()
             ?: return Result.failure(IllegalStateException("Neither a value nor a failure was produced."))
         if (!isServerAvailabilityFailure(throwable)) return Result.failure(throwable)
+        // No lease means the context this read started under is gone, or the
+        // wipe that a context change owes has not completed: fail closed onto
+        // the original network failure rather than serve a row from either.
+        if (lease == null) return Result.failure(throwable)
 
-        val cached = productDao.get(key)
-        if (cached == null || !isFresh(cached.refreshedAtEpochMs)) {
-            if (cached != null) productDao.delete(key)
-            return Result.failure(throwable)
-        }
-
-        val cachedValue = deserialize(cached.payloadJson)
-        if (!canPersist(cachedValue)) {
-            productDao.delete(key)
-            return Result.failure(throwable)
-        }
-        return Result.success(
+        val cached = withCurrentLease(lease) {
+            val row = productDao.get(key)
+            if (row == null || !isFresh(row.refreshedAtEpochMs)) {
+                if (row != null) productDao.delete(key)
+                return@withCurrentLease null
+            }
+            val cachedValue = deserialize(row.payloadJson)
+            if (!canPersist(cachedValue)) {
+                productDao.delete(key)
+                return@withCurrentLease null
+            }
             ProductReadResult(
                 cachedValue,
                 fromCache = true,
-                refreshedAt = Instant.ofEpochMilli(cached.refreshedAtEpochMs),
-            ),
-        )
+                refreshedAt = Instant.ofEpochMilli(row.refreshedAtEpochMs),
+            )
+        } ?: return Result.failure(throwable)
+
+        return Result.success(cached)
     }
 
     /**
@@ -205,33 +331,37 @@ class ProductReadCache(
         serialize: (T) -> String,
         deserialize: (String) -> T,
     ): Result<ProductReadResult<T>> {
-        ensureContext(accountId, spaceId)
+        val lease = captureLease(accountId, spaceId)
         val dao = protectedDao
         val cipher = protectedCipher
         val key = protectedCacheKey(accountId, spaceId, ownerId, kind, resourceId)
 
+        // Unlocked for the same reason as the shared path: no lock over I/O.
         val networkResult = runCatching { load() }
         val value = networkResult.getOrNull()
         if (value != null) {
-            if (dao != null && cipher != null) {
-                // A failure here (e.g. the Keystore key became unusable) means
-                // falling back to memory-only owner content, per M2-D18 — not
-                // persisting the plaintext as a weaker substitute.
-                runCatching {
-                    val encrypted = cipher.encrypt(serialize(value))
-                    dao.put(
-                        ProtectedCacheEntity(
-                            cacheKey = key,
-                            accountId = accountId.toString(),
-                            spaceId = spaceId.toString(),
-                            ownerId = ownerId.toString(),
-                            kind = kind.segment,
-                            resourceId = resourceId.toString(),
-                            ciphertext = encrypted.ciphertext,
-                            iv = encrypted.iv,
-                            refreshedAtEpochMs = System.currentTimeMillis(),
-                        ),
-                    )
+            if (lease != null && dao != null && cipher != null) {
+                withCurrentLease(lease) {
+                    // A failure here (e.g. the Keystore key became unusable)
+                    // means falling back to memory-only owner content, per
+                    // M2-D18 — not persisting the plaintext as a weaker
+                    // substitute.
+                    runCatching {
+                        val encrypted = cipher.encrypt(serialize(value))
+                        dao.put(
+                            ProtectedCacheEntity(
+                                cacheKey = key,
+                                accountId = accountId.toString(),
+                                spaceId = spaceId.toString(),
+                                ownerId = ownerId.toString(),
+                                kind = kind.segment,
+                                resourceId = resourceId.toString(),
+                                ciphertext = encrypted.ciphertext,
+                                iv = encrypted.iv,
+                                refreshedAtEpochMs = System.currentTimeMillis(),
+                            ),
+                        )
+                    }
                 }
             }
             return Result.success(ProductReadResult(value, fromCache = false, refreshedAt = Instant.now()))
@@ -242,33 +372,63 @@ class ProductReadCache(
         if (!isServerAvailabilityFailure(throwable)) return Result.failure(throwable)
         // No persistence configured at all: there is nothing to fall back to.
         if (dao == null || cipher == null) return Result.failure(throwable)
+        // Same fail-closed rule as the shared path — and it matters more here,
+        // because what an invalidated lease would otherwise unlock is the
+        // previous owner's `OWNER_ONLY` content.
+        if (lease == null) return Result.failure(throwable)
 
-        val cached = dao.get(key)
-        if (cached == null || !isFresh(cached.refreshedAtEpochMs)) {
-            if (cached != null) dao.delete(key)
-            return Result.failure(throwable)
-        }
-
-        val decrypted = runCatching {
-            deserialize(cipher.decrypt(EncryptedPayload(cached.ciphertext, cached.iv)))
-        }.getOrElse {
-            dao.delete(key)
-            return Result.failure(throwable)
-        }
-        return Result.success(
+        val cached = withCurrentLease(lease) {
+            val row = dao.get(key)
+            if (row == null || !isFresh(row.refreshedAtEpochMs)) {
+                if (row != null) dao.delete(key)
+                return@withCurrentLease null
+            }
+            val decrypted = runCatching {
+                deserialize(cipher.decrypt(EncryptedPayload(row.ciphertext, row.iv)))
+            }.getOrElse {
+                dao.delete(key)
+                return@withCurrentLease null
+            }
             ProductReadResult(
                 decrypted,
                 fromCache = true,
-                refreshedAt = Instant.ofEpochMilli(cached.refreshedAtEpochMs),
-            ),
-        )
+                refreshedAt = Instant.ofEpochMilli(row.refreshedAtEpochMs),
+            )
+        } ?: return Result.failure(throwable)
+
+        return Result.success(cached)
     }
 
-    /** The full wipe M2-D18 requires on logout, Account switch, and Space switch. */
+    /**
+     * The full wipe M2-D18 requires on logout, Account switch, Space switch,
+     * membership loss and leaving the demo.
+     *
+     * The marker is dropped first and under the same lock every persistence
+     * decision takes, so the moment this returns — and in fact the moment the
+     * marker is gone — every lease captured before it has already stopped
+     * being current. An in-flight read finishing afterwards therefore finds
+     * no lease to write under, whichever of the two stores it belongs to.
+     * Both row wipes are attempted even if an earlier step fails; the first
+     * failure is rethrown once none of them can still be tried.
+     */
     suspend fun clearAll() {
-        productDao.clearAll()
-        protectedDao?.clearAll()
-        contextDao.clear()
+        invalidateContextNow()
+        contextMutex.withLock {
+            val markerCleared = runCatching { contextDao.clear() }
+            if (markerCleared.isSuccess) {
+                // With no marker on disk, no lease can pass the context check
+                // any more, so the in-memory list of ended generations has
+                // nothing left to refuse and does not need to keep growing.
+                endedGenerations.clear()
+            }
+            val failures = listOf(
+                markerCleared,
+                runCatching { productDao.clearAll() },
+                runCatching { protectedDao?.clearAll() },
+            ).mapNotNull { it.exceptionOrNull() }
+            val firstFailure = failures.firstOrNull()
+            if (firstFailure != null) throw firstFailure
+        }
     }
 }
 

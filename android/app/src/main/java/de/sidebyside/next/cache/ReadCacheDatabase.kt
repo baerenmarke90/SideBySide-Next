@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
  */
 @Database(
     entities = [ProductCacheEntity::class, CacheContextEntity::class, ProtectedCacheEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 abstract class ReadCacheDatabase : RoomDatabase() {
