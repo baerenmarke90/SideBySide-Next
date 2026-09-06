@@ -546,3 +546,91 @@ class TestExpiryUnchanged:
             model = open_tokens(check, MagicLinkToken)[0]
             remaining = model.expires_at - now()
             assert timedelta(minutes=14) < remaining <= action_tokens.MAGIC_LINK_LIFETIME
+
+
+class TestDemoEntryAuthorityDomain:
+    """#730: a demo entry proof and an emailed magic link never supersede
+    each other, even though both are ``MagicLinkToken`` rows for the same
+    ``account_email_id``. Regression coverage that the true concurrent race
+    (independent visitors) lives in ``test_demo_entry_concurrency.py``; this
+    class isolates the underlying authority-domain rule itself.
+    """
+
+    def _email_id(self, session):  # type: ignore[no-untyped-def]
+        return session.execute(
+            select(AccountEmail.id).where(AccountEmail.email == ADDRESS)
+        ).scalar_one()
+
+    def test_a_second_demo_entry_proof_does_not_supersede_the_first(self, cloud_client) -> None:  # type: ignore[no-untyped-def]
+        client, maker, _mailbox = cloud_client
+        register(client)
+        with maker() as session:
+            email_id = self._email_id(session)
+            _, first = action_tokens.issue_demo_entry_proof(session, email_id)
+            session.commit()
+        with maker() as session:
+            _, second = action_tokens.issue_demo_entry_proof(session, email_id)
+            session.commit()
+
+        with maker() as check:
+            assert len(open_tokens(check, MagicLinkToken)) == 2
+
+        assert client.post(MAGIC_LINK_CONSUME, json={"token": first.token}).status_code == 201
+        assert client.post(MAGIC_LINK_CONSUME, json={"token": second.token}).status_code == 201
+
+    def test_a_normal_magic_link_request_does_not_revoke_an_open_demo_entry_proof(
+        self, cloud_client
+    ) -> None:  # type: ignore[no-untyped-def]
+        client, maker, mailbox = cloud_client
+        register(client)
+        with maker() as session:
+            email_id = self._email_id(session)
+            _, demo_proof = action_tokens.issue_demo_entry_proof(session, email_id)
+            session.commit()
+
+        assert client.post(MAGIC_LINK_REQUEST, json={"email": ADDRESS}).status_code == 202
+        normal_token = mailbox.tokens()[-1]
+
+        assert client.post(MAGIC_LINK_CONSUME, json={"token": demo_proof.token}).status_code == 201
+        assert client.post(MAGIC_LINK_CONSUME, json={"token": normal_token}).status_code == 201
+
+    def test_a_demo_entry_proof_does_not_revoke_an_open_normal_magic_link(
+        self, cloud_client
+    ) -> None:  # type: ignore[no-untyped-def]
+        client, maker, mailbox = cloud_client
+        register(client)
+        assert client.post(MAGIC_LINK_REQUEST, json={"email": ADDRESS}).status_code == 202
+        normal_token = mailbox.tokens()[-1]
+
+        with maker() as session:
+            email_id = self._email_id(session)
+            _, demo_proof = action_tokens.issue_demo_entry_proof(session, email_id)
+            session.commit()
+
+        assert client.post(MAGIC_LINK_CONSUME, json={"token": normal_token}).status_code == 201
+        assert client.post(MAGIC_LINK_CONSUME, json={"token": demo_proof.token}).status_code == 201
+
+    def test_normal_magic_links_still_supersede_only_each_other_around_a_demo_proof(
+        self, cloud_client
+    ) -> None:  # type: ignore[no-untyped-def]
+        """#724 regression: latest-generation-only still holds for real links,
+        undisturbed by an unrelated demo proof issued in between.
+        """
+        client, maker, mailbox = cloud_client
+        register(client)
+        with maker() as session:
+            email_id = self._email_id(session)
+            _, demo_proof = action_tokens.issue_demo_entry_proof(session, email_id)
+            session.commit()
+
+        assert client.post(MAGIC_LINK_REQUEST, json={"email": ADDRESS}).status_code == 202
+        first_normal = mailbox.tokens()[-1]
+        assert client.post(MAGIC_LINK_REQUEST, json={"email": ADDRESS}).status_code == 202
+        second_normal = mailbox.tokens()[-1]
+
+        rejected = client.post(MAGIC_LINK_CONSUME, json={"token": first_normal})
+        assert rejected.status_code == 422
+        assert rejected.json()["code"] == "ACTION_TOKEN_INVALID"
+
+        assert client.post(MAGIC_LINK_CONSUME, json={"token": demo_proof.token}).status_code == 201
+        assert client.post(MAGIC_LINK_CONSUME, json={"token": second_normal}).status_code == 201

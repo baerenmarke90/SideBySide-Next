@@ -89,6 +89,6 @@ def create_demo_entry(
     if email_record is None:
         raise NotFoundError("Canonical demo identity is not available.", "DEMO_IDENTITY_MISSING")
 
-    _, issued = action_tokens.issue_magic_link(session, email_record.id)
+    _, issued = action_tokens.issue_demo_entry_proof(session, email_record.id)
     response.headers["Cache-Control"] = "no-store"
     return DemoEntryView(token=issued.token)
