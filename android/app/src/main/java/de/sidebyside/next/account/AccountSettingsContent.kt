@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import de.sidebyside.next.design.MinimumTouchTarget
 import de.sidebyside.next.design.SideBySideTheme
+import de.sidebyside.next.reference.AccountDeletionRecentAuthenticationCapabilities
 import de.sidebyside.next.reference.R
 import de.sidebyside.next.shell.UiProblem
 import de.sidebyside.next.shell.UiProblemPanel
@@ -46,20 +47,39 @@ import de.sidebyside.next.shell.UiProblemPanel
  * Account-level settings inside the existing More destination.
  *
  * Relationship/Space actions intentionally live elsewhere. This surface owns
- * only the signed-in Account and delegates the destructive authority to the
- * server-side deletion contract.
+ * only the signed-in Account and delegates both recent-authentication and the
+ * destructive authority to server-side contracts.
  */
 @Composable
 fun AccountSettingsContent(
     demoMode: Boolean,
     busy: Boolean,
     problem: UiProblem?,
+    recentAuthenticationCapabilities: AccountDeletionRecentAuthenticationCapabilities?,
+    recentAuthenticationBusy: Boolean,
+    recentAuthenticationProblem: UiProblem?,
+    recentAuthenticationComplete: Boolean,
+    onLoadRecentAuthentication: () -> Unit,
+    onRecentAuthenticationPassword: (String) -> Unit,
+    onRecentAuthenticationPasskey: () -> Unit,
+    onRecentAuthenticationOidc: (String) -> Unit,
+    onResetRecentAuthentication: () -> Unit,
     onOpenDataExport: () -> Unit,
     onDeleteAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var dialogStep by rememberSaveable { mutableIntStateOf(DialogStepNone) }
     var confirmation by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    val operationBusy = busy || recentAuthenticationBusy
+
+    LaunchedEffect(recentAuthenticationComplete, dialogStep) {
+        if (recentAuthenticationComplete && dialogStep == DialogStepRecentAuthentication) {
+            password = ""
+            confirmation = ""
+            dialogStep = DialogStepConfirmation
+        }
+    }
 
     Surface(
         shape = RoundedCornerShape(SideBySideTheme.radii.card),
@@ -127,8 +147,13 @@ fun AccountSettingsContent(
                         }
                     } else {
                         Button(
-                            onClick = { dialogStep = DialogStepConsequences },
-                            enabled = !busy,
+                            onClick = {
+                                confirmation = ""
+                                password = ""
+                                onResetRecentAuthentication()
+                                dialogStep = DialogStepConsequences
+                            },
+                            enabled = !operationBusy,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = SideBySideTheme.colors.error,
                                 contentColor = SideBySideTheme.colors.onAccent,
@@ -145,17 +170,51 @@ fun AccountSettingsContent(
 
     when (dialogStep) {
         DialogStepConsequences -> AccountDeletionConsequencesDialog(
-            busy = busy,
-            onDismiss = { if (!busy) dialogStep = DialogStepNone },
+            busy = operationBusy,
+            onDismiss = {
+                if (!operationBusy) {
+                    onResetRecentAuthentication()
+                    dialogStep = DialogStepNone
+                }
+            },
             onOpenDataExport = {
-                if (!busy) {
+                if (!operationBusy) {
+                    onResetRecentAuthentication()
                     dialogStep = DialogStepNone
                     onOpenDataExport()
                 }
             },
             onContinue = {
                 confirmation = ""
-                dialogStep = DialogStepConfirmation
+                password = ""
+                onResetRecentAuthentication()
+                dialogStep = DialogStepRecentAuthentication
+                onLoadRecentAuthentication()
+            },
+        )
+
+        DialogStepRecentAuthentication -> AccountDeletionRecentAuthenticationDialog(
+            capabilities = recentAuthenticationCapabilities,
+            password = password,
+            busy = recentAuthenticationBusy,
+            problem = recentAuthenticationProblem,
+            onPasswordChange = { password = it },
+            onPassword = { onRecentAuthenticationPassword(password) },
+            onPasskey = onRecentAuthenticationPasskey,
+            onOidc = onRecentAuthenticationOidc,
+            onBack = {
+                if (!recentAuthenticationBusy) {
+                    password = ""
+                    onResetRecentAuthentication()
+                    dialogStep = DialogStepConsequences
+                }
+            },
+            onDismiss = {
+                if (!recentAuthenticationBusy) {
+                    password = ""
+                    onResetRecentAuthentication()
+                    dialogStep = DialogStepNone
+                }
             },
         )
 
@@ -167,12 +226,16 @@ fun AccountSettingsContent(
             onBack = {
                 if (!busy) {
                     confirmation = ""
+                    password = ""
+                    onResetRecentAuthentication()
                     dialogStep = DialogStepConsequences
                 }
             },
             onDismiss = {
                 if (!busy) {
                     confirmation = ""
+                    password = ""
+                    onResetRecentAuthentication()
                     dialogStep = DialogStepNone
                 }
             },
@@ -208,29 +271,137 @@ private fun AccountDeletionConsequencesDialog(
         OutlinedButton(
             onClick = onOpenDataExport,
             enabled = !busy,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = MinimumTouchTarget),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
         ) {
             Text(stringResource(R.string.account_delete_export_first))
         }
         OutlinedButton(
             onClick = onDismiss,
             enabled = !busy,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = MinimumTouchTarget),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
         ) {
             Text(stringResource(R.string.account_delete_cancel))
         }
         Button(
             onClick = onContinue,
             enabled = !busy,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = MinimumTouchTarget),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
         ) {
             Text(stringResource(R.string.account_delete_continue))
+        }
+    }
+}
+
+@Composable
+private fun AccountDeletionRecentAuthenticationDialog(
+    capabilities: AccountDeletionRecentAuthenticationCapabilities?,
+    password: String,
+    busy: Boolean,
+    problem: UiProblem?,
+    onPasswordChange: (String) -> Unit,
+    onPassword: () -> Unit,
+    onPasskey: () -> Unit,
+    onOidc: (String) -> Unit,
+    onBack: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AccountDeletionDialog(onDismiss = onDismiss) {
+        Text(
+            text = stringResource(R.string.account_delete_reauth_title),
+            style = MaterialTheme.typography.headlineSmall,
+            color = SideBySideTheme.colors.textPrimary,
+            modifier = Modifier.semantics { heading() },
+        )
+        Text(
+            text = stringResource(R.string.account_delete_reauth_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = SideBySideTheme.colors.textSecondary,
+        )
+
+        if (capabilities == null && problem == null) {
+            Column(
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                verticalArrangement = Arrangement.spacedBy(SideBySideTheme.spacing.step2),
+            ) {
+                CircularProgressIndicator()
+                Text(stringResource(R.string.account_delete_reauth_loading))
+            }
+        }
+
+        if (capabilities?.localPassword == true) {
+            OutlinedTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = { Text(stringResource(R.string.account_delete_reauth_password_label)) },
+                singleLine = true,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(
+                onClick = onPassword,
+                enabled = !busy && password.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.account_delete_reauth_password_action))
+            }
+        }
+
+        if (capabilities?.passkey == true) {
+            OutlinedButton(
+                onClick = onPasskey,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.account_delete_reauth_passkey_action))
+            }
+        }
+
+        capabilities?.oidcConnections?.forEach { connectionId ->
+            OutlinedButton(
+                onClick = { onOidc(connectionId) },
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
+            ) {
+                Text(stringResource(R.string.account_delete_reauth_oidc_action, connectionId))
+            }
+        }
+
+        if (
+            capabilities != null &&
+            !capabilities.localPassword &&
+            !capabilities.passkey &&
+            capabilities.oidcConnections.isEmpty()
+        ) {
+            Text(
+                text = stringResource(R.string.account_delete_reauth_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = SideBySideTheme.colors.error,
+            )
+        }
+
+        if (problem != null) UiProblemPanel(problem = problem)
+        if (busy) {
+            Text(
+                text = stringResource(R.string.account_delete_reauth_pending),
+                style = MaterialTheme.typography.bodyMedium,
+                color = SideBySideTheme.colors.textSecondary,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
+
+        OutlinedButton(
+            onClick = onBack,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
+        ) {
+            Text(stringResource(R.string.account_delete_back))
+        }
+        OutlinedButton(
+            onClick = onDismiss,
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
+        ) {
+            Text(stringResource(R.string.account_delete_cancel))
         }
     }
 }
@@ -286,14 +457,10 @@ private fun AccountDeletionConfirmationDialog(
             supportingText = { Text(stringResource(R.string.account_delete_confirmation_help)) },
             singleLine = true,
             enabled = !busy,
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester),
+            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         )
 
-        if (problem != null) {
-            UiProblemPanel(problem = problem)
-        }
+        if (problem != null) UiProblemPanel(problem = problem)
         if (busy) {
             Column(
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
@@ -311,18 +478,14 @@ private fun AccountDeletionConfirmationDialog(
         OutlinedButton(
             onClick = onBack,
             enabled = !busy,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = MinimumTouchTarget),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
         ) {
             Text(stringResource(R.string.account_delete_back))
         }
         OutlinedButton(
             onClick = onDismiss,
             enabled = !busy,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = MinimumTouchTarget),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
         ) {
             Text(stringResource(R.string.account_delete_cancel))
         }
@@ -333,9 +496,7 @@ private fun AccountDeletionConfirmationDialog(
                 containerColor = SideBySideTheme.colors.error,
                 contentColor = SideBySideTheme.colors.onAccent,
             ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = MinimumTouchTarget),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MinimumTouchTarget),
         ) {
             Text(stringResource(R.string.account_delete_confirm_action))
         }
@@ -376,5 +537,6 @@ private fun Consequence(resourceId: Int) {
 
 private const val DialogStepNone = 0
 private const val DialogStepConsequences = 1
-private const val DialogStepConfirmation = 2
+private const val DialogStepRecentAuthentication = 2
+private const val DialogStepConfirmation = 3
 private val ReadingMeasure = 560.dp
