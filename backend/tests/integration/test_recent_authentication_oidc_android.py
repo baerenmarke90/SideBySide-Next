@@ -32,7 +32,7 @@ def _settings(*, android_redirect_uri: str | None) -> Settings:
                 id=base.CONNECTION,
                 issuer=base.ISSUER,
                 client_id=base.CLIENT_ID,
-                client_secret="recent-secret",  # type: ignore[arg-type]
+                client_secret=base.CLIENT_SECRET,  # type: ignore[arg-type]
                 redirect_uri="https://app.example/recent-oidc",
                 android_redirect_uri=android_redirect_uri,
             )
