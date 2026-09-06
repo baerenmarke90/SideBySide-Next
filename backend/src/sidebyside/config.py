@@ -102,7 +102,7 @@ class OidcConnection(BaseModel):
         return address
 
 
-# The default points to the database from ``deploy/docker-compose.dev.yml``.
+# The default points to the ``dev-db`` profile in the canonical ``compose.yaml``.
 # It lives here once because two configurations need it and divergence between
 # the two would otherwise be easy to miss.
 DEFAULT_DATABASE_URL = "postgresql+psycopg://sidebyside:sidebyside@localhost:5432/sidebyside"
