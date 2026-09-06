@@ -12,15 +12,24 @@ hoping two requests do not overlap. Issuing and consuming both take the same
 subject lock before they read the state they are about to decide on, in the
 same order, so the outcome of a race is decided by the lock rather than by
 timing, and neither can resurrect a superseded proof.
+
+Public demo entry proofs are the one deliberate exception. They share the
+magic-link table and its consume path, because redemption is identical
+either way, but ``issue_demo_entry_proof`` is a second authority domain on
+that same subject column: it never supersedes and is never superseded by an
+emailed magic link for the same address. See ``MagicLinkToken.is_demo_entry``
+and ``issue_demo_entry_proof`` for why, and ``issue_magic_link`` for how the
+emailed-link domain excludes demo rows from what it treats as open.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.orm import InstrumentedAttribute, Session
 
 from sidebyside.auth.tokens import generate_token, hash_token
@@ -72,6 +81,7 @@ def _supersede_open[TokenModel: OneTimeTokenMixin](
     subject_id: UUID,
     *,
     flow: str,
+    extra_where: Sequence[ColumnElement[bool]] = (),
 ) -> datetime:
     """Serialize the subject and close every older open generation.
 
@@ -81,6 +91,12 @@ def _supersede_open[TokenModel: OneTimeTokenMixin](
     tables cannot catch that: only ``token_hash`` is unique, and a partial
     unique index cannot express "open" because expiry depends on the current
     time.
+
+    ``extra_where`` narrows what counts as an "open predecessor" for callers
+    whose subject column is shared by more than one authority domain. It does
+    not change what gets locked: the lock still serializes the whole subject,
+    because a caller that reads a narrower set still needs to be ordered
+    against anything else deciding on the same subject at the same time.
 
     Returns the time the generation was established, so the caller derives the
     new expiry from the same instant the predecessors were revoked.
@@ -94,6 +110,7 @@ def _supersede_open[TokenModel: OneTimeTokenMixin](
                 subject_column == subject_id,
                 model_type.consumed_at.is_(None),
                 model_type.revoked_at.is_(None),
+                *extra_where,
             )
         )
         .scalars()
@@ -129,18 +146,56 @@ def issue_email_verification(
 def issue_magic_link(
     session: Session, account_email_id: UUID
 ) -> tuple[MagicLinkToken, IssuedActionToken]:
+    """Issue an emailed magic link, superseding older open emailed links.
+
+    Only other emailed links for this address are treated as predecessors
+    here: a public demo entry proof for the same address (see
+    ``issue_demo_entry_proof``) lives in a different authority domain and is
+    never superseded by this call, and this call is never superseded by one.
+    """
     issued_at = _supersede_open(
         session,
         MagicLinkToken,
         MagicLinkToken.account_email_id,
         account_email_id,
         flow=FLOW_MAGIC_LINK,
+        extra_where=(MagicLinkToken.is_demo_entry.is_(False),),
     )
     token = generate_token(ACTION_TOKEN_BYTES)
     model = MagicLinkToken(
         account_email_id=account_email_id,
         token_hash=hash_token(token),
         expires_at=issued_at + MAGIC_LINK_LIFETIME,
+    )
+    session.add(model)
+    session.flush()
+    return model, IssuedActionToken(token)
+
+
+def issue_demo_entry_proof(
+    session: Session, account_email_id: UUID
+) -> tuple[MagicLinkToken, IssuedActionToken]:
+    """Issue a one-time entry proof for a public demo persona.
+
+    Unlike ``issue_magic_link``, this never supersedes anything: the public
+    demo deliberately lets independent visitors hold separate, simultaneously
+    valid proofs for the same shared canonical persona, so one visitor
+    requesting entry must not revoke another visitor's still-unconsumed
+    proof. Nothing here reads "open predecessors" or takes the generation
+    lock, because there is no revoke decision to serialize; each call is an
+    independent insert. Redemption still goes through the ordinary
+    ``consume_magic_link``, which is one-time and replay-safe regardless of
+    which of the two domains issued the row, and the demo reset's bulk
+    deletion of this account's ``MagicLinkToken`` rows still invalidates any
+    outstanding proof issued here exactly as it does for emailed links.
+    """
+    issued_at = now()
+    token = generate_token(ACTION_TOKEN_BYTES)
+    model = MagicLinkToken(
+        account_email_id=account_email_id,
+        token_hash=hash_token(token),
+        expires_at=issued_at + MAGIC_LINK_LIFETIME,
+        is_demo_entry=True,
     )
     session.add(model)
     session.flush()

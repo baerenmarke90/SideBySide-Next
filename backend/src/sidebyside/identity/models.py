@@ -274,7 +274,18 @@ class EmailVerificationToken(IdMixin, OneTimeTokenMixin, Base):
 
 
 class MagicLinkToken(IdMixin, OneTimeTokenMixin, Base):
-    """One-time passwordless authentication proof for an email address."""
+    """One-time passwordless authentication proof for an email address.
+
+    ``is_demo_entry`` splits this table into two independent authority
+    domains that happen to share a schema and a consume path. An emailed
+    magic link (``is_demo_entry=False``) still supersedes every older open
+    link for the same address, one live generation at a time. A public demo
+    entry proof (``is_demo_entry=True``) never supersedes anything: separate
+    visitors entering the same shared canonical persona get separate proofs
+    that must both stay redeemable. The flag is read only by
+    ``auth.action_tokens``, which is the sole place that must know the two
+    domains cannot invalidate each other; consumption does not branch on it.
+    """
 
     __tablename__ = "magic_link_tokens"
 
@@ -282,6 +293,9 @@ class MagicLinkToken(IdMixin, OneTimeTokenMixin, Base):
         postgresql.UUID(as_uuid=True),
         ForeignKey("account_emails.id", ondelete="CASCADE"),
         nullable=False,
+    )
+    is_demo_entry: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
     )
 
     __table_args__ = (
