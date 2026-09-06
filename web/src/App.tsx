@@ -33,7 +33,7 @@ import { createPeopleApi } from './client/peopleApi';
 import { createPrivateAreaApi } from './client/privateArea';
 import { invalidateDashboard } from './client/dashboardQueries';
 import { normalizeClientError } from './client/problemDetails';
-import { clearProductReadCache } from './client/productReadCache';
+import { clearProductReadCacheInBackground } from './client/productReadCache';
 import { rememberCurrentAuthReturnTarget } from './client/deepLinks';
 import {
   clearStoredSession,
@@ -438,7 +438,7 @@ function AuthenticatedApp({
   useEffect(() => {
     if (previousSpaceId.current === spaceId) return;
     queryClient.clear();
-    void clearProductReadCache();
+    clearProductReadCacheInBackground();
     previousSpaceId.current = spaceId;
   }, [queryClient, spaceId]);
 
@@ -813,7 +813,7 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
     setAccount(null);
     setTokens(null);
     queryClient.clear();
-    void clearProductReadCache();
+    clearProductReadCacheInBackground();
   }, [queryClient]);
 
   useEffect(() => {
@@ -973,7 +973,7 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
 
   function selectSpace(selectedSpaceId: string) {
     queryClient.clear();
-    void clearProductReadCache();
+    clearProductReadCacheInBackground();
     setSpaceId(selectedSpaceId);
     if (account && tokens) {
       storeSession({ account, tokens, spaceId: selectedSpaceId });
@@ -1009,7 +1009,7 @@ export function App({ demoMode = false }: { demoMode?: boolean }) {
               setAccount(session.account);
               setTokens(session.tokens);
               queryClient.clear();
-              void clearProductReadCache();
+              clearProductReadCacheInBackground();
             }}
           />
         )}
