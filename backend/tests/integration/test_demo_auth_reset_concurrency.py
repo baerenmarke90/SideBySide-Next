@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 from sidebyside.auth import action_tokens, cloud, sessions
 from sidebyside.config import Environment, Settings
+from sidebyside.core.clock import now
 from sidebyside.core.errors import UnauthenticatedError, ValidationError
 from sidebyside.demo import reset as demo_reset
 from sidebyside.demo.service import LEA_EMAIL, create_demo_space
@@ -163,7 +164,7 @@ def test_issuance_waiting_behind_reset_is_deterministically_post_reset(
         proof = check.get(MagicLinkToken, proof_id)
         assert proof is not None
         assert proof.is_demo_entry is True
-        assert proof.is_open()
+        assert proof.is_open(now())
         consumed = action_tokens.consume_magic_link(check, token)
         assert consumed.id == proof_id
         check.commit()
