@@ -17,6 +17,8 @@ import {
 
 class MemoryLocalStorage implements Storage {
   private readonly values = new Map<string, string>();
+  failNextSet = false;
+  failRemoves = false;
 
   get length(): number {
     return this.values.size;
@@ -35,10 +37,15 @@ class MemoryLocalStorage implements Storage {
   }
 
   removeItem(key: string): void {
+    if (this.failRemoves) throw new Error('marker remove failed');
     this.values.delete(key);
   }
 
   setItem(key: string, value: string): void {
+    if (this.failNextSet) {
+      this.failNextSet = false;
+      throw new Error('marker write failed');
+    }
     this.values.set(key, value);
   }
 }
@@ -130,12 +137,14 @@ function storedRecords(storage: MemoryProductReadCacheStorage) {
 
 describe('M5 Web S6 persistent read cache policy', () => {
   let storage: MemoryProductReadCacheStorage;
+  let browserStorage: MemoryLocalStorage;
 
   beforeEach(() => {
     __resetProductReadCacheStateForTests();
     storage = new MemoryProductReadCacheStorage();
+    browserStorage = new MemoryLocalStorage();
     __setProductReadCacheStorageForTests(storage);
-    vi.stubGlobal('localStorage', new MemoryLocalStorage());
+    vi.stubGlobal('localStorage', browserStorage);
   });
 
   afterEach(async () => {
@@ -366,6 +375,92 @@ describe('M5 Web S6 persistent read cache policy', () => {
       }),
     ).rejects.toMatchObject({ kind: 'offline' });
     expect(contextMarker()?.generation).not.toBe(oldGeneration);
+  });
+
+  it('does not revive an invalidated generation when marker removal fails', async () => {
+    await loadMemory('account-a', 'space-a', 'seed', async () => ({
+      id: 'seed',
+      label: 'seed',
+    }));
+    const oldGeneration = contextMarker()?.generation;
+    expect(oldGeneration).toBeTruthy();
+
+    const pending = deferred<MemoryPayload>();
+    const oldRead = loadMemory(
+      'account-a',
+      'space-a',
+      'late',
+      () => pending.promise,
+    );
+
+    browserStorage.failRemoves = true;
+    await clearProductReadCache();
+    expect(contextMarker()?.generation).toBe(oldGeneration);
+    expect(storage.records.size).toBe(0);
+
+    pending.resolve({ id: 'late', label: 'late' });
+    await oldRead;
+    expect(storage.records.size).toBe(0);
+
+    await loadMemory('account-a', 'space-a', 'fresh', async () => ({
+      id: 'fresh',
+      label: 'fresh',
+    }));
+    const freshMarker = contextMarker();
+    expect(freshMarker?.generation).not.toBe(oldGeneration);
+    expect(storedRecords(storage)).toMatchObject([
+      {
+        accountId: 'account-a',
+        spaceId: 'space-a',
+        generation: freshMarker?.generation,
+      },
+    ]);
+  });
+
+  it('fails closed when a context switch cannot persist its new marker', async () => {
+    await loadMemory('account-1', 'space-a', 'seed', async () => ({
+      id: 'seed',
+      label: 'seed',
+    }));
+    const oldGeneration = contextMarker()?.generation;
+    expect(oldGeneration).toBeTruthy();
+
+    const spaceA = deferred<MemoryPayload>();
+    const spaceB = deferred<MemoryPayload>();
+    const readA = loadMemory(
+      'account-1',
+      'space-a',
+      'late-a',
+      () => spaceA.promise,
+    );
+
+    browserStorage.failNextSet = true;
+    const readB = loadMemory(
+      'account-1',
+      'space-b',
+      'memory-b',
+      () => spaceB.promise,
+    );
+    await __waitForProductReadCacheMutationsForTests();
+    expect(contextMarker()?.generation).toBe(oldGeneration);
+
+    spaceA.resolve({ id: 'late-a', label: 'stale A' });
+    spaceB.resolve({ id: 'memory-b', label: 'B without marker' });
+    await Promise.all([readA, readB]);
+    expect(storage.records.size).toBe(0);
+
+    await loadMemory('account-1', 'space-b', 'fresh-b', async () => ({
+      id: 'fresh-b',
+      label: 'fresh B',
+    }));
+    expect(contextMarker()).toMatchObject({
+      accountId: 'account-1',
+      spaceId: 'space-b',
+    });
+    expect(contextMarker()?.generation).not.toBe(oldGeneration);
+    expect(storedRecords(storage)).toMatchObject([
+      { accountId: 'account-1', spaceId: 'space-b' },
+    ]);
   });
 
   it('rejects malformed rows and removes them instead of using them offline', async () => {
