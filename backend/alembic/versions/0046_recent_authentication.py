@@ -113,8 +113,6 @@ def upgrade() -> None:
         sa.Column("id", UUID, nullable=False),
         sa.Column("connection_id", sa.String(length=64), nullable=False),
         sa.Column("state_hash", sa.String(length=64), nullable=False),
-        sa.Column("nonce", sa.String(length=128), nullable=False),
-        sa.Column("code_verifier", sa.String(length=128), nullable=False),
         sa.Column("redirect_uri", sa.String(length=512), nullable=False),
         sa.Column("account_id", UUID, nullable=False),
         sa.Column("device_session_id", UUID, nullable=False),

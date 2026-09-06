@@ -8,8 +8,11 @@ nonce, signature, issuer, and audience primitives.
 
 from __future__ import annotations
 
-import secrets
+import base64
+import hashlib
+import hmac
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from typing import Any, cast
 from urllib.parse import urlencode
 from uuid import UUID
@@ -17,6 +20,7 @@ from uuid import UUID
 from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
+from sidebyside import config
 from sidebyside.auth import oidc, rate_limit, recent_auth
 from sidebyside.auth.recent_auth_models import RecentAuthenticationOidcRequest
 from sidebyside.auth.tokens import generate_token, hash_token
@@ -29,6 +33,26 @@ from sidebyside.identity.models import Account, AuthIdentity, AuthProvider, Devi
 
 AUTH_REQUEST_LIFETIME = timedelta(minutes=10)
 AUTH_TIME_SKEW = timedelta(seconds=60)
+_OIDC_PROOF_CONTEXT = b"sidebyside:recent-authentication:oidc:v1"
+
+
+def _derived_proof(state: str, *, label: bytes) -> str:
+    """Derive one ephemeral OIDC proof without persisting its plaintext value."""
+    message = _OIDC_PROOF_CONTEXT + b"\x00" + label + b"\x00" + state.encode("utf-8")
+    digest = hmac.new(
+        config.get_settings().cursor_signing_secret,
+        message,
+        hashlib.sha256,
+    ).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+
+
+def _nonce(state: str) -> str:
+    return _derived_proof(state, label=b"nonce")
+
+
+def _code_verifier(state: str) -> str:
+    return _derived_proof(state, label=b"pkce-verifier")
 
 
 def _invalid_state() -> ValidationError:
@@ -137,15 +161,13 @@ def start(
     discovery = oidc.discover(configured)
 
     state = generate_token()
-    nonce = generate_token()
-    verifier = secrets.token_urlsafe(64)
+    nonce = _nonce(state)
+    verifier = _code_verifier(state)
     started_at = now()
     session.add(
         RecentAuthenticationOidcRequest(
             connection_id=configured.id,
             state_hash=hash_token(state),
-            nonce=nonce,
-            code_verifier=verifier,
             redirect_uri=redirect_uri,
             account_id=account.id,
             device_session_id=device_session.id,
@@ -197,17 +219,24 @@ def complete(
         raise _invalid_state()
 
     discovery = oidc.discover(configured)
+    verifier = _code_verifier(state)
     response = oidc._exchange_code(
         configured,
         discovery,
         code=code,
-        request=cast(Any, request),
+        request=cast(
+            Any,
+            SimpleNamespace(
+                redirect_uri=request.redirect_uri,
+                code_verifier=verifier,
+            ),
+        ),
     )
     claims = oidc._verified_claims(
         configured,
         discovery,
         id_token=str(response.get("id_token", "")),
-        nonce=request.nonce,
+        nonce=_nonce(state),
     )
     if not _fresh_auth_time(claims, started_at=request.created_at):
         raise ValidationError(

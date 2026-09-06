@@ -100,8 +100,6 @@ class RecentAuthenticationOidcRequest(IdMixin, Base):
 
     connection_id: Mapped[str] = mapped_column(String(64), nullable=False)
     state_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    nonce: Mapped[str] = mapped_column(String(128), nullable=False)
-    code_verifier: Mapped[str] = mapped_column(String(128), nullable=False)
     redirect_uri: Mapped[str] = mapped_column(String(512), nullable=False)
     account_id: Mapped[UUID] = mapped_column(
         postgresql.UUID(as_uuid=True),

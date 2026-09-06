@@ -46,6 +46,7 @@ class Provider:
         self.jwks = jwks
         self.id_token: str | None = None
         self.token_status = 200
+        self.last_code_verifier: str | None = None
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/.well-known/openid-configuration"):
@@ -61,6 +62,9 @@ class Provider:
         if request.url.path.endswith("/jwks"):
             return httpx.Response(200, json=self.jwks)
         if request.url.path.endswith("/token"):
+            self.last_code_verifier = httpx.QueryParams(
+                request.content.decode("utf-8")
+            ).get("code_verifier")
             if self.token_status != 200:
                 return httpx.Response(self.token_status, json={"error": "invalid_grant"})
             return httpx.Response(
@@ -170,6 +174,10 @@ def _request(session: Session, state: str) -> RecentAuthenticationOidcRequest:
     ).scalar_one()
 
 
+def _authorization_parameters(started: dict[str, Any]) -> dict[str, str]:
+    return dict(httpx.URL(str(started["authorizationUrl"])).params)
+
+
 def _fresh_auth_time() -> int:
     return int(datetime.now(UTC).timestamp())
 
@@ -189,14 +197,18 @@ def test_start_requests_active_reauthentication_and_binds_current_session(
     assert response.status_code == 201, response.text
 
     body = response.json()
-    parameters = dict(httpx.URL(body["authorizationUrl"]).params)
+    parameters = _authorization_parameters(body)
     assert parameters["prompt"] == "login"
     assert parameters["max_age"] == "0"
+    assert parameters["nonce"]
+    assert parameters["code_challenge"]
 
     request = _request(session, body["state"])
     assert request.account_id == account.id
     assert request.device_session_id is not None
     assert request.purpose == "ACCOUNT_DELETION"
+    assert "nonce" not in RecentAuthenticationOidcRequest.__table__.columns
+    assert "code_verifier" not in RecentAuthenticationOidcRequest.__table__.columns
 
 
 def test_missing_auth_time_fails_closed_without_grant(
@@ -210,7 +222,7 @@ def test_missing_auth_time_fails_closed_without_grant(
     started = client.post(START, headers=headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_request(session, started["state"]).nonce,
+        nonce=_authorization_parameters(started)["nonce"],
         auth_time=None,
     )
 
@@ -235,7 +247,7 @@ def test_stale_provider_authentication_fails_closed_without_grant(
     started = client.post(START, headers=headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_request(session, started["state"]).nonce,
+        nonce=_authorization_parameters(started)["nonce"],
         auth_time=int((datetime.now(UTC) - timedelta(minutes=5)).timestamp()),
     )
 
@@ -259,9 +271,10 @@ def test_fresh_reauthentication_issues_grant_without_new_session(
     _, headers, _ = account_context
     before = session.execute(select(func.count()).select_from(DeviceSession)).scalar_one()
     started = client.post(START, headers=headers).json()
+    parameters = _authorization_parameters(started)
     provider.id_token = _token(
         signing_key,
-        nonce=_request(session, started["state"]).nonce,
+        nonce=parameters["nonce"],
         auth_time=_fresh_auth_time(),
     )
 
@@ -272,6 +285,8 @@ def test_fresh_reauthentication_issues_grant_without_new_session(
     )
     assert response.status_code == 200, response.text
     assert response.json()["method"] == "OIDC"
+    assert provider.last_code_verifier is not None
+    assert oidc._challenge(provider.last_code_verifier) == parameters["code_challenge"]
     after = session.execute(select(func.count()).select_from(DeviceSession)).scalar_one()
     assert after == before
     assert _grant_count(session) == 1
@@ -315,7 +330,7 @@ def test_step_up_state_is_not_a_normal_sign_in_state(
 
     provider.id_token = _token(
         signing_key,
-        nonce=_request(session, started["state"]).nonce,
+        nonce=_authorization_parameters(started)["nonce"],
         auth_time=_fresh_auth_time(),
     )
     correct_intent = client.post(
@@ -337,7 +352,7 @@ def test_successful_step_up_state_is_one_shot(
     started = client.post(START, headers=headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_request(session, started["state"]).nonce,
+        nonce=_authorization_parameters(started)["nonce"],
         auth_time=_fresh_auth_time(),
     )
     payload = {"code": PROVIDER_CODE, "state": started["state"]}
@@ -360,7 +375,7 @@ def test_step_up_callback_is_bound_to_the_starting_session(
     started = client.post(START, headers=first_headers).json()
     provider.id_token = _token(
         signing_key,
-        nonce=_request(session, started["state"]).nonce,
+        nonce=_authorization_parameters(started)["nonce"],
         auth_time=_fresh_auth_time(),
     )
 
