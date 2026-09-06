@@ -130,7 +130,6 @@ def start_passkey(
         account,
         device_session,
         purpose=PURPOSE,
-        client=client,
     )
 
 
@@ -181,6 +180,7 @@ def start_oidc(
         account,
         device_session,
         purpose=PURPOSE,
+        client=client,
     )
     return OidcStartView(
         authorization_url=started.authorization_url,
